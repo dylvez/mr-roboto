@@ -149,6 +149,11 @@ public final class Engine {
         self.players = (0..<playerCount).map { _ in AVAudioPlayerNode() }
 
         engine.attach(sampler)
+        // The explicit `format` here is load-bearing, not tidiness. `scheduleMIDIEventBlock`
+        // timestamps are in the sampler's OUTPUT BUS sample rate. Connecting with `format: nil`
+        // leaves that bus at 44.1 kHz while the engine renders at 48 kHz, and every scheduled hit
+        // drifts 8.84% late, cumulatively (measured: 176 ms of error 2 s in). Silent and very hard
+        // to diagnose. Keep the format explicit here and in `reconnect(format:)`.
         try engine.connectNode(sampler, to: mainMixer, format: format)
         for player in players {
             engine.attach(player)
@@ -175,6 +180,7 @@ public final class Engine {
 
     /// Reconnect every source to the mixer with a new format.
     private func reconnect(format newFormat: AVAudioFormat) throws {
+        // See the note in the initializer: an implicit format here reintroduces sampler drift.
         try avEngine.connectNode(sampler, to: mainMixer, format: newFormat)
         for player in players {
             try avEngine.connectNode(player, to: mainMixer, format: newFormat)

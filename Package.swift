@@ -11,6 +11,7 @@ let package = Package(
         .library(name: "AnalysisMLX", targets: ["AnalysisMLX"]),
         .library(name: "AnalysisONNX", targets: ["AnalysisONNX"]),
         .library(name: "AudioEngine", targets: ["AudioEngine"]),
+        .library(name: "Instrument", targets: ["Instrument"]),
         .executable(name: "m0", targets: ["m0"]),
     ],
     dependencies: [
@@ -42,6 +43,11 @@ let package = Package(
         ], linkerSettings: [.linkedFramework("AVFoundation")]),
         .target(name: "AudioEngine", dependencies: ["MusicTheory", "SongGraph"],
                 linkerSettings: [.linkedFramework("AVFoundation")]),
+        // The realtime render core. macOS 27 marks the realtime-safe AVAudioSourceNode render
+        // block unavailable to Swift, so voice rendering lives in C and Swift owns lifetime.
+        .target(name: "CVoiceRender"),
+        .target(name: "Instrument", dependencies: ["MusicTheory", "SongGraph", "CVoiceRender", "AudioEngine"],
+                linkerSettings: [.linkedFramework("AVFoundation"), .linkedFramework("Accelerate")]),
         .executableTarget(name: "m0", dependencies: [
             "MusicTheory", "SongGraph", "Analysis", "AnalysisMLX", "AnalysisONNX", "AudioEngine",
             .product(name: "ArgumentParser", package: "swift-argument-parser"),
@@ -52,6 +58,7 @@ let package = Package(
         .testTarget(name: "AnalysisMLXTests", dependencies: ["AnalysisMLX"]),
         .testTarget(name: "AnalysisONNXTests", dependencies: ["AnalysisONNX"]),
         .testTarget(name: "AudioEngineTests", dependencies: ["AudioEngine"]),
+        .testTarget(name: "InstrumentTests", dependencies: ["Instrument", "AudioEngine"]),
     ],
     swiftLanguageModes: [.v6],
     cxxLanguageStandard: .cxx17
