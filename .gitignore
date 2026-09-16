@@ -8,3 +8,5 @@ Bench/python/.venv/
 Bench/python/out/
 .DS_Store
 Bench/models/
+default.profraw
+*.profraw
