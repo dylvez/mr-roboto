@@ -1,0 +1,18 @@
+[project]
+name = "mr-roboto-bench"
+version = "0.1.0"
+description = "Research bench for Mr. Roboto: golden outputs and checkpoint conversion. Never shipped in the app."
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "numpy>=2.0",
+  "soundfile>=0.12",
+  "librosa>=0.10",
+  "torch>=2.8",
+  "torchaudio>=2.8",
+  "mlx>=0.31",
+  "demucs-mlx>=1.4",
+  "beat_this @ git+https://github.com/CPJKU/beat_this",
+]
+
+[tool.uv]
+package = false
