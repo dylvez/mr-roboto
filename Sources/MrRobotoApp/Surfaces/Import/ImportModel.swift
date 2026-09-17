@@ -13,7 +13,7 @@ public struct ImportSurface: Surface {
     public var bound: [VersionID]
     public var title: String
 
-    public init(id: SurfaceID = SurfaceID(), bound: [VersionID] = [], title: String = "Import") {
+    public init(id: SurfaceID = SurfaceID(), bound: [VersionID] = [], title: String = "Record") {
         self.id = id
         self.bound = bound
         self.title = title
@@ -215,11 +215,11 @@ public final class ImportModel {
 
     public var title: String {
         switch state {
-        case .empty: return "Import"
+        case .empty: return "Record"
         case .reading(let url), .analyzing(let url), .analyzed(let url),
              .separating(let url), .writing(let url):
             return url.deletingPathExtension().lastPathComponent
-        case .ready: return draft?.song.title ?? "Import"
+        case .ready: return draft?.song.title ?? "Record"
         case .cancelled: return "Import — cancelled"
         case .failed: return "Import — failed"
         }
@@ -307,10 +307,199 @@ public final class ImportModel {
         }
     }
 
-    /// Awaits whatever `drop(_:)` started. Tests use this; so does a caller that wants to sequence
-    /// two imports.
+    /// Awaits whatever `drop(_:)`, `open(_:record:)` or `separateStems()` started. Tests use this;
+    /// so does a caller that wants to sequence two runs.
     public func waitForCompletion() async {
         await runTask?.value
+    }
+
+    // MARK: Opening a song that was already imported
+
+    /// Shows a song that is already in the library, in the state an import leaves behind.
+    ///
+    /// This is the same surface reached from the other end. An import *produces* the record view —
+    /// waveform, key, tempo, bars, sections, stem lanes, and the Promote lever that starts the chop
+    /// — and until now that view existed only for the ninety seconds after a file was dropped. A
+    /// song opened from the library had made all of it already and could see none of it.
+    ///
+    /// So rather than a second surface that would have to draw the same panels and re-plumb the same
+    /// hand-off, the draft is reconstituted from the graph: the analysis version, the take, and the
+    /// stems are what the import wrote, and reading the take's peaks back off disk is the only work
+    /// left. `promote` then behaves exactly as it does after an import, which is the whole reason to
+    /// do it this way.
+    ///
+    /// One deliberate difference: `packageURL` stays nil. A fresh import owns the package it just
+    /// wrote and re-saves it on every promotion; an adopted song is the *frame's* song, and the frame
+    /// saves it. Writing the draft's copy back over the library from here would clobber whatever else
+    /// the session has recorded into the song since.
+    public func open(_ song: Song, record: Record? = nil) {
+        guard !state.isBusy else { return }
+        // Idempotent: this surface is already showing that song. Without the guard a second call
+        // cancels the first run and the surface flickers through `.cancelled` on its way back to
+        // where it already was.
+        if draft?.song.id == song.id, case .ready = state { return }
+        runTask?.cancel()
+        runTask = Task { [weak self] in
+            await self?.adopt(song, record: record)
+        }
+    }
+
+    private func adopt(_ song: Song, record: Record?) async {
+        startedAt = ContinuousClock.now
+        lastError = nil
+        promoted = []
+        stems = []
+        packageURL = nil
+        draft = nil
+        phaseLog = []
+        selection = nil
+
+        guard let analysisVersion = song.versions.last(where: { $0.type == .analysis }),
+              case .analysis(let analysis) = analysisVersion.kind,
+              let takeVersion = song.versions.last(where: { Self.audio($0)?.role == .take }),
+              case .audio(let take) = takeVersion.kind else {
+            transition(to: .failed("\(song.title) holds no analysed record to show."),
+                       detail: "no analysis and take in the song")
+            return
+        }
+
+        let library = host.library
+        let songID = song.id
+        do {
+            // The package is found once, off the main actor: `LibraryStore.mediaURL(for:song:)`
+            // rediscovers it by decoding every package header, and doing that per stem would be four
+            // directory walks on the main actor to draw four lanes.
+            let (url, package) = try await offMainActor { () -> (URL, SongStore?) in
+                (try library.mediaURL(for: take.media, song: songID), try? library.songStore(for: songID))
+            }
+            transition(to: .reading(url), detail: "reading \(song.title)")
+            let peaks = try await offMainActor { try ImportWaveform.read(url) }
+            try Task.checkCancellation()
+            waveform = peaks
+            downbeats = analysis.downbeats
+
+            let seed = song.seeds.first
+            let resolved = record ?? Record(title: song.title, artist: song.artist, media: take.media,
+                                            analysis: analysisVersion)
+            provenance = ImportProvenance(title: resolved.title, artist: resolved.artist)
+            draft = ImportDraft(sourceURL: url, record: resolved,
+                                seed: seed ?? Seed(kind: .importedRecord(resolved.id)),
+                                song: song,
+                                analysisVersion: analysisVersion, takeVersion: takeVersion,
+                                analysis: analysis,
+                                info: AudioFileInfo(sampleRate: take.sampleRate,
+                                                    channelCount: take.channelCount,
+                                                    duration: take.duration))
+            adoptStems(of: song, in: package)
+            transition(to: .ready(songID), detail: "ready", fraction: 1)
+        } catch is CancellationError {
+            cancelled()
+        } catch {
+            lastError = "\(error)"
+            transition(to: .failed("\(error)"), detail: "\(error)")
+        }
+    }
+
+    /// Stem lanes for the stems the song already holds. A stem whose media the package has lost is
+    /// left out rather than drawn as a lane that will not play.
+    private func adoptStems(of song: Song, in package: SongStore?) {
+        guard let package else { return }
+        var lanes: [StemLane] = []
+        for version in song.versions {
+            guard let audio = Self.audio(version), audio.role == .stem,
+                  let name = audio.stem.flatMap({ StemName(rawValue: $0) }),
+                  let url = try? package.mediaURL(for: audio.media) else { continue }
+            lanes.append(StemLane(name: name, url: url, duration: audio.duration))
+        }
+        stems = lanes.sorted { $0.name.rawValue < $1.name.rawValue }
+    }
+
+    static func audio(_ version: PartVersion) -> Audio? {
+        if case .audio(let audio) = version.kind { return audio }
+        return nil
+    }
+
+    // MARK: Separating the stems of a record already on the bench
+
+    /// True when "separate the stems" is a thing this surface could do right now.
+    ///
+    /// The toggle covers the drop path; this covers the other one — a record that is already a song,
+    /// which is most of them after the first session.
+    public var canSeparateStems: Bool { draft != nil && stems.isEmpty && !state.isBusy }
+
+    /// Runs separation on the record this surface is showing and hands each stem back as a part
+    /// version, exactly as an import with the toggle on would have.
+    ///
+    /// Stems are written into the song's own package, and separation runs into a scratch directory
+    /// rather than beside the media: the package's `media/` is addressed by content hash and a
+    /// `<hash>.stems/` folder sitting in it would read back as a media file.
+    public func separateStems() {
+        guard canSeparateStems, let draft else { return }
+        runTask?.cancel()
+        let url = draft.sourceURL
+        let songID = draft.song.id
+        runTask = Task { [weak self] in
+            await self?.runSeparation(url, songID: songID)
+        }
+    }
+
+    private func runSeparation(_ url: URL, songID: SongID) async {
+        startedAt = ContinuousClock.now
+        lastError = nil
+        do {
+            transition(to: .separating(url), detail: "separating", fraction: 0.05)
+            let scratch = FileManager.default.temporaryDirectory
+                .appendingPathComponent("MrRoboto/Separate/\(UUID().uuidString)", isDirectory: true)
+            _ = try await host.separate(url, into: scratch) { [weak self] step in
+                Task { @MainActor [weak self] in self?.note(step) }
+            } stemDidLand: { [weak self] name, fileURL in
+                Task { @MainActor [weak self] in self?.stemDidLand(name, at: fileURL) }
+            }
+            try Task.checkCancellation()
+            transition(to: .writing(url), detail: "writing the stems", fraction: 0.95)
+            try await commitStems()
+            transition(to: .ready(songID), detail: "ready", fraction: 1)
+            try? FileManager.default.removeItem(at: scratch)
+        } catch is CancellationError {
+            // Unlike an import, there is a package here already and it is untouched: the stems are
+            // in a scratch directory and no version was recorded, so cancelling really is nothing.
+            stems = []
+            state = .ready(songID)
+            progress = ImportProgress(phase: .ready, fraction: 1, detail: "cancelled", elapsed: elapsed)
+        } catch {
+            lastError = "\(error)"
+            transition(to: .failed("\(error)"), detail: "\(error)")
+        }
+    }
+
+    /// Copies each separated stem into the song's package and hands it to the host as a version.
+    private func commitStems() async throws {
+        guard var draft, !stems.isEmpty else { return }
+        let library = host.library
+        let songID = draft.song.id
+        let store = try await offMainActor { try library.songStore(for: songID) }
+        let take = draft.takeVersion
+
+        var lanes = stems
+        for (index, lane) in stems.enumerated() {
+            let laneURL = lane.url
+            let media = try await offMainActor { try store.addMedia(copying: laneURL) }
+            let info = try await offMainActor { try AudioFileInfo.read(laneURL) }
+            let audio = Audio(media: media, role: .stem, stem: lane.name.rawValue,
+                              sampleRate: info.sampleRate, channelCount: info.channelCount,
+                              duration: info.duration)
+            let version = PartVersion(partID: PartID(), kind: .audio(audio), author: .user,
+                                      parents: [take.id], operation: Operation.separate,
+                                      note: "\(lane.name.rawValue) stem of \(draft.record.title)",
+                                      origin: draft.seed.id)
+            try? draft.song.append(version)
+            // The lane now plays out of the package rather than out of the scratch directory, which
+            // is about to be deleted.
+            lanes[index].url = (try? store.mediaURL(for: media)) ?? laneURL
+            await host.didCommit(version, in: draft.song)
+        }
+        stems = lanes
+        self.draft = draft
     }
 
     /// The whole import, start to finish. Every long call is `await`ed off this actor; nothing here

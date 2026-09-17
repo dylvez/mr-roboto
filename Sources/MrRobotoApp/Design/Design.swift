@@ -109,6 +109,10 @@ public enum Design {
         /// A control a finger or a hurried cursor has to hit.
         public static let controlHeight: CGFloat = 36
         public static let chipHeight: CGFloat = 28
+        /// A label you read but do not aim at: the verb on a parts-ledger row, which is part of the
+        /// row's own hit area rather than a control of its own. Deliberately below `chipHeight` so it
+        /// cannot be mistaken for something separately clickable.
+        public static let tagHeight: CGFloat = 20
 
         public static let gutter: CGFloat = 18
         public static let inset: CGFloat = 18

@@ -157,16 +157,20 @@ final class ChopLaneBinding {
 }
 
 /// The Chop lane as a bench panel: the lane once its bar is loaded, and an honest line until then.
+///
+/// "Until then" used to be an explanation of why the panel was empty. It is now an offer: a lane
+/// with no bar knows what a bar would have to come from, and the song either has one or has the stem
+/// a bar is cut out of. Both are one press away, and when the song has neither the panel says so
+/// rather than pointing at a lever that is not there.
 struct ChopLanePanel: View {
     @Bindable var binding: ChopLaneBinding
+    let app: AppState
 
     var body: some View {
         Group {
             switch binding.state {
             case .unbound:
-                note("No bar is bound to this lane.",
-                     "A lane chops a bar of a record. Promote a region in the Import surface — the "
-                     + "lane opens on it — or select a chopped part in the ledger and open one here.")
+                unbound
             case .loading(let label):
                 note("Reading \(label)…", "Finding the bar in the record and loading its audio.")
             case .ready(let lane):
@@ -176,6 +180,34 @@ struct ChopLanePanel: View {
             }
         }
         .onAppear { binding.load() }
+    }
+
+    /// The ways into a lane, in the order they are worth trying. Every one of these is filtered by
+    /// `canPerform`, so an offer on screen is an offer that works.
+    private var offers: [Proposal] {
+        guard let song = app.song else { return [] }
+        let chops = Guidance.samples(in: song).reversed().compactMap { PartActions.primary(for: $0, in: song) }
+        let stems = Guidance.stems(in: song).compactMap { PartActions.primary(for: $0, in: song) }
+        return (chops + stems).filter { app.canPerform($0.action) && $0.action.surface == .chopLane }
+    }
+
+    private var unbound: some View {
+        let offers = self.offers
+        return VStack(alignment: .leading, spacing: 12) {
+            EmptyNote(title: "No bar is bound to this lane.",
+                      detail: offers.isEmpty
+                          ? "A lane chops a bar of a record. This song has no chop and no stem to cut one from "
+                            + "— open the record and promote a region, or separate its stems first."
+                          : "A lane chops a bar of a record. Here is what this song can give it:")
+            ForEach(Array(offers.enumerated()), id: \.element.id) { index, offer in
+                ProposalButton(proposal: offer, isLeading: index == 0) {
+                    app.perform(offer.action)
+                }
+            }
+        }
+        .padding(Design.Metric.inset)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Design.Palette.panelAlt)
     }
 
     private func note(_ title: String, _ detail: String) -> some View {

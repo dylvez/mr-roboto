@@ -344,24 +344,34 @@ public final class SampleCache: @unchecked Sendable {
             try file.read(into: scratch, frameCount: min(limit - filled, scratch.frameCapacity))
             let produced = scratch.frameLength
             if produced == 0 { break }
-            copy(scratch, into: buffer, at: filled)
-            filled += produced
+            let written = copy(scratch, into: buffer, at: filled)
+            filled += written
+            if written < produced { break }
         }
         buffer.frameLength = filled
     }
 
-    /// Appends `source`'s frames to `destination` starting at frame `offset`.
+    /// Appends `source`'s frames to `destination` starting at frame `offset`, and returns how many
+    /// frames it actually wrote.
+    ///
+    /// That is all of them, as long as the caller bounds its reads by the destination's capacity.
+    /// It is returned rather than assumed so that a caller which *stops* bounding them reports a
+    /// short buffer instead of a `frameLength` counting frames nobody wrote: dropping the copy
+    /// silently and letting the count run on is the one outcome worse than the overrun it guards.
     private static func copy(_ source: AVAudioPCMBuffer, into destination: AVAudioPCMBuffer,
-                             at offset: AVAudioFrameCount) {
-        guard let src = source.floatChannelData, let dst = destination.floatChannelData else { return }
-        let n = Int(source.frameLength)
+                             at offset: AVAudioFrameCount) -> AVAudioFrameCount {
+        guard let src = source.floatChannelData, let dst = destination.floatChannelData else { return 0 }
+        let room = Int(destination.frameCapacity) - Int(offset)
+        let n = min(Int(source.frameLength), max(0, room))
+        assert(n == Int(source.frameLength),
+               "copy dropped \(Int(source.frameLength) - n) frames: \(source.frameLength) read into \(room) frames of room")
         let channels = min(Int(source.format.channelCount), Int(destination.format.channelCount))
-        guard Int(offset) + n <= Int(destination.frameCapacity) else { return }
         for c in 0..<channels {
             for i in 0..<n {
                 dst[c][(Int(offset) + i) * destination.stride] = src[c][i * source.stride]
             }
         }
+        return AVAudioFrameCount(n)
     }
 
     /// Converts a buffer to deinterleaved Float32 at `targetRate`, one array per channel.

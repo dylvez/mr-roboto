@@ -256,4 +256,46 @@ struct SampleCacheReadAllBoundsTests {
         #expect(small.frameLength == wanted)
         #expect(small.frameLength <= small.frameCapacity)
     }
+
+    /// One bar out of a longer record: seek partway in, then read into a buffer sized to the bar
+    /// rather than to the rest of the file. The frames that come back have to be the ones starting
+    /// at the seek — a buffer that is merely the right *length* would pass the bound check above
+    /// while holding the wrong audio.
+    @Test("a read from partway through the file lands the frames at that offset")
+    func readsFromFramePosition() throws {
+        let temp = try TempDirectory()
+        defer { temp.remove() }
+        let total = 12_000
+        let channels: AVAudioChannelCount = 2
+        // Each frame carries its own index, so a misplaced read is off by a readable amount rather
+        // than by a phase a sine would hide. The channels differ so a copy cannot cross them.
+        func expected(_ channel: Int, _ frame: Int) -> Float {
+            Float(frame) / Float(total) * (channel == 0 ? 1 : -1)
+        }
+        let url = try AudioFixtures.writeWAV(at: temp.url.appendingPathComponent("record.wav"),
+                                             sampleRate: 44_100, channels: channels,
+                                             frames: total, generator: expected)
+
+        let file = try AVAudioFile(forReading: url)
+        #expect(file.length == AVAudioFramePosition(total))
+        let offset = 5_000
+        let bar = AVAudioFrameCount(3_000)
+        #expect(AVAudioFramePosition(offset) + AVAudioFramePosition(bar) < file.length,
+                "the buffer must be smaller than what is left in the file after the seek")
+
+        file.framePosition = AVAudioFramePosition(offset)
+        let buffer = try #require(AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: bar))
+        try SampleCache.readAll(file, into: buffer)
+
+        #expect(buffer.frameLength == bar)
+        let data = try #require(buffer.floatChannelData)
+        let stride = buffer.stride
+        for channel in 0..<Int(channels) {
+            for frame in 0..<Int(buffer.frameLength) {
+                let got = data[channel][frame * stride]
+                #expect(abs(got - expected(channel, offset + frame)) < 1e-5,
+                        "channel \(channel) frame \(frame): got \(got)")
+            }
+        }
+    }
 }

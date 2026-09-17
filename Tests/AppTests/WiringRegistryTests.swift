@@ -52,7 +52,7 @@ struct WiringRegistryTests {
         let model = wiring.importModel(for: importItem, app: app)
         #expect(model.state == .empty)
         #expect(model.state.phase == .empty)
-        #expect(model.title == "Import")
+        #expect(model.title == "Record")
         app.closeSurface(importItem.id)
 
         // Grid with nothing bound is an empty pattern at the song's tempo and meter.

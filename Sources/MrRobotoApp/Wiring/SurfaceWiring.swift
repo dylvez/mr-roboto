@@ -52,26 +52,74 @@ final class SurfaceWiring {
 
     // MARK: Models
 
+    /// The Import surface, in one of its two lives.
+    ///
+    /// Opened with nothing bound it is the drop target it has always been. Opened bound to the open
+    /// song's take — which is what opening a song from the library now does — it *shows that song*:
+    /// the same waveform, readings, stem lanes and Promote lever, reconstituted from the graph by
+    /// `ImportModel.open(_:record:)`. Deciding that here rather than inside the model is the point of
+    /// this file: the model is handed a song, not taught about the frame.
     func importModel(for item: BenchItem, app: AppState) -> ImportModel {
         prune(app)
-        if let existing = imports[item.id] { return existing }
-        guard let store = app.store else {
-            // No library directory (tests, previews). The surface is still a drop target; it simply
-            // has nowhere to write, which its own failure path already says out loud.
-            let adapter = ImportAdapter(app: app, service: service(for: app),
-                                        live: LiveImportHost(library: LibraryStore(directoryURL: Self.scratchLibrary)))
-            let model = ImportModel(host: adapter)
-            importAdapters[item.id] = adapter
-            imports[item.id] = model
-            return model
+        if let existing = imports[item.id] {
+            resume(existing, item: item, app: app, adopting: false)
+            return existing
         }
+        let library = app.store ?? LibraryStore(directoryURL: Self.scratchLibrary)
+        // With no library directory (tests, previews) the surface is still a drop target; it simply
+        // has nowhere to write, which its own failure path already says out loud.
         let adapter = ImportAdapter(app: app, service: service(for: app),
-                                    live: LiveImportHost(library: store))
+                                    live: LiveImportHost(library: library))
         let model = ImportModel(host: adapter)
         importAdapters[item.id] = adapter
         imports[item.id] = model
+        resume(model, item: item, app: app, adopting: app.store != nil)
         return model
     }
+
+    /// Adopts the open song into a freshly built surface, and starts whatever the frame asked that
+    /// surface to do — both on the next main-actor turn rather than now.
+    ///
+    /// The registry's builder runs inside a SwiftUI body, on every render. Touching the model or
+    /// consuming an `AppState` request from in there is mutating observed state during a view update,
+    /// which is how a frame turns into a render loop. So the work is scheduled, never done here, and
+    /// nothing is scheduled at all unless there is something to do.
+    private func resume(_ model: ImportModel, item: BenchItem, app: AppState, adopting: Bool) {
+        let song = app.song
+        let adopt = adopting && song != nil && adoptsSong(item, app: app)
+        let requested = app.requests[item.id] != nil
+        guard adopt || requested else { return }
+        let record = song.flatMap { recordFor($0, in: app.library) }
+        Task { @MainActor in
+            if adopt, let song { model.open(song, record: record) }
+            if case .separateStems = app.takeRequest(for: item.id) {
+                // The adoption above has to land first: separation runs on the record the surface is
+                // showing, and until the draft exists there is no record to run it on.
+                await model.waitForCompletion()
+                model.separateStems()
+            }
+        }
+    }
+
+    /// Whether this bench item is the open song's record rather than a blank import.
+    private func adoptsSong(_ item: BenchItem, app: AppState) -> Bool {
+        app.bound(for: item.id).contains { id in
+            guard let version = app.version(id) else { return false }
+            return version.type == .analysis || ImportModel.audio(version) != nil
+        }
+    }
+
+    /// The library's own `Record` for a song, so the surface shows the imported title and artist
+    /// rather than reconstructing them from the song.
+    private func recordFor(_ song: Song, in library: Library) -> Record? {
+        let seeded = song.seeds.compactMap { seed -> RecordID? in
+            if case .importedRecord(let id) = seed.kind { return id }
+            return nil
+        }
+        for id in seeded { if let record = library.record(id) { return record } }
+        return nil
+    }
+
 
     /// A grid, opened against a bound groove version when there is one.
     ///
@@ -156,20 +204,38 @@ final class SurfaceWiring {
 ///
 /// The surface itself is happy with nothing selected — it starts a new part from a machine preset,
 /// which is a legitimate way to make a sound — but a panel that silently did that would leave you
-/// wondering what it was editing. So the panel says which it is doing.
+/// wondering what it was editing. So the panel says which it is doing, and when the song *does* hold
+/// sounds it offers them rather than telling you to go and find them in the ledger.
 struct SoundSurfacePanel: View {
     @Bindable var surface: SoundSurface
     let hasSelection: Bool
+    let app: AppState
+
+    private var offers: [Proposal] {
+        guard !hasSelection, let song = app.song else { return [] }
+        return Guidance.sounds(in: song).reversed()
+            .compactMap { PartActions.primary(for: $0, in: song) }
+            .filter { app.canPerform($0.action) }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if !hasSelection {
-                EmptyNote(title: "Nothing selected: this is a new sound.",
-                          detail: "Select a sound part in the parts ledger to edit that one. Otherwise "
-                          + "every knob here is shaping a new part from the machine preset, and the "
-                          + "first commit starts it.")
-                    .padding(.horizontal, Design.Metric.inset)
-                    .padding(.top, Design.Metric.inset)
+                VStack(alignment: .leading, spacing: 12) {
+                    EmptyNote(title: "Nothing selected: this is a new sound.",
+                              detail: offers.isEmpty
+                                  ? "Every knob here is shaping a new part from the machine preset, and the "
+                                    + "first commit starts it. This song holds no sound to edit instead."
+                                  : "Every knob here is shaping a new part from the machine preset. To edit "
+                                    + "one this song already has instead:")
+                    ForEach(Array(offers.enumerated()), id: \.element.id) { index, offer in
+                        ProposalButton(proposal: offer, isLeading: index == 0) {
+                            app.perform(offer.action)
+                        }
+                    }
+                }
+                .padding(.horizontal, Design.Metric.inset)
+                .padding(.top, Design.Metric.inset)
             }
             SoundSurfaceView(surface: surface)
         }

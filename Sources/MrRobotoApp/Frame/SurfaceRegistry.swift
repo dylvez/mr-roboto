@@ -58,14 +58,14 @@ public final class SurfaceRegistry {
             ImportSurfaceView(model: SurfaceWiring.shared.importModel(for: item, app: app))
         }
         shared.register(.chopLane) { item, app in
-            ChopLanePanel(binding: SurfaceWiring.shared.chopBinding(for: item, app: app))
+            ChopLanePanel(binding: SurfaceWiring.shared.chopBinding(for: item, app: app), app: app)
         }
         shared.register(.grid) { item, app in
             GridSurfaceView(model: SurfaceWiring.shared.gridModel(for: item, app: app))
         }
         shared.register(.sound) { item, app in
             let (surface, adapter) = SurfaceWiring.shared.soundSurface(for: item, app: app)
-            SoundSurfacePanel(surface: surface, hasSelection: adapter.selectedPart != nil)
+            SoundSurfacePanel(surface: surface, hasSelection: adapter.selectedPart != nil, app: app)
         }
     }
 

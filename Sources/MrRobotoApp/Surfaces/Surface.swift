@@ -37,7 +37,10 @@ public struct SurfaceID: Hashable, Sendable, CustomStringConvertible {
 /// The fixed catalog. The Director picks from this list and fills the surface; it never invents a
 /// layout. Twenty-two in the full spec; these are the ones Gate A builds.
 public enum SurfaceKind: String, CaseIterable, Sendable {
-    case importRecord = "Import"
+    /// The record: its waveform, key, tempo, bars, sections and stems. Named for what it shows
+    /// rather than for how it got there — you meet it far more often by opening a song than by
+    /// importing a file, and the dock reads as the workflow: Record, Chop lane, Grid, Sound.
+    case importRecord = "Record"
     case chopLane = "Chop lane"
     case grid = "Grid"
     case sound = "Sound"

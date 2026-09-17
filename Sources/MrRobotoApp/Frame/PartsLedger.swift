@@ -1,8 +1,13 @@
 import SongGraph
 import SwiftUI
 
-/// Every part version in the open song, with the line that says where it came from. The selected one
-/// is the only accented thing in the column — that is the whole budget for accent on this side.
+/// Every part version in the open song, with the line that says where it came from and the one
+/// obvious thing to do with it.
+///
+/// A row is a verb, not a label. Clicking it accents the row *and* opens the surface that kind of
+/// part belongs in — a stem chops, a chop re-grooves, a groove opens in the Grid, the record shows
+/// itself — because a ledger whose rows only highlight is a list of nouns you cannot use. The rows
+/// Gate A has no surface for say nothing rather than offering an action that opens nothing.
 struct PartsLedger: View {
     let app: AppState
 
@@ -48,14 +53,22 @@ struct PartsLedger: View {
 
     private func row(_ version: PartVersion) -> some View {
         let isSelected = app.selectedVersion == version.id
+        let action = app.song.flatMap { PartActions.primary(for: version, in: $0) }
         return Button {
-            app.select(version.id)
+            // Select either way — an inert kind still accents — but when the kind has a surface,
+            // selecting it is what opens it. `perform` selects as part of carrying the action out.
+            if let action, app.canPerform(action.action) {
+                app.perform(action.action)
+            } else {
+                app.select(version.id)
+            }
         } label: {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline) {
-                    Text(version.type.rawValue.capitalized)
+                    Text(PartLabel.title(of: version))
                         .font(Design.Typography.ui(14.5, weight: .medium))
                         .foregroundStyle(isSelected ? Design.Palette.accent : Design.Palette.ink)
+                        .lineLimit(1)
                     Spacer()
                     Text(app.versionNumber(of: version.id).map { "v\($0)" } ?? "")
                         .font(Design.Typography.numeric(11))
@@ -66,12 +79,39 @@ struct PartsLedger: View {
                     .foregroundStyle(Design.Palette.inkSecondary)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
+                if let action {
+                    ActionTag(title: action.title, isSelected: isSelected)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Design.Metric.inset)
             .padding(.vertical, 10)
+            .background(isSelected ? Design.Palette.accentSoft : .clear)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .help(action.map { "\($0.title) — \($0.rationale)" } ?? "Gate A has no surface for this kind of part yet")
+    }
+}
+
+/// The verb on a ledger row: what clicking it will do, said before you click it.
+private struct ActionTag: View {
+    let title: String
+    let isSelected: Bool
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "arrow.forward")
+                .font(.system(size: 8, weight: .semibold))
+            Text(title)
+                .font(Design.Typography.ui(11, weight: .medium))
+                .lineLimit(1)
+        }
+        .foregroundStyle(Design.Palette.accent)
+        .padding(.horizontal, 6)
+        .frame(height: Design.Metric.tagHeight)
+        .background(isSelected ? Design.Palette.panel : Design.Palette.accentSoft)
+        .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+        .padding(.top, 2)
     }
 }

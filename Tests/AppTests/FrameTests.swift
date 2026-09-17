@@ -559,7 +559,7 @@ struct OpenSurfaceTests {
     @Test("Retitling keeps the surface in place, pinned and un-retired, and is not an event")
     func retitle() {
         let app = AppState(song: FrameFixture.song(), transportHost: StubTransportHost())
-        let id = app.openSurface(.importRecord, title: "Import")
+        let id = app.openSurface(.importRecord, title: "Record")
         app.setPinned(true, for: id)
         let entries = app.log.count
 

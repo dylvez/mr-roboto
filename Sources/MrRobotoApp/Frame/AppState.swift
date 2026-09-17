@@ -176,10 +176,35 @@ public final class AppState {
     /// what the frame draws, so the binding lives here; a surface reads it with `bound(for:)`.
     public private(set) var bindings: [SurfaceID: [VersionID]] = [:]
 
+    /// Work a surface was asked to start the moment the wiring builds it.
+    ///
+    /// Some preparations cannot be done by the frame: separating a record takes a minute, reports as
+    /// it goes and belongs on the surface that shows the result. So `perform(_:)` opens the surface
+    /// and leaves the request here; `SurfaceWiring` hands it to the model on the next build and
+    /// takes it, so it fires exactly once.
+    public private(set) var requests: [SurfaceID: SurfaceAction.Preparation] = [:]
+
+    /// Files a request. Internal to the guidance path; nothing else queues work for a surface.
+    func file(_ preparation: SurfaceAction.Preparation, for id: SurfaceID) { requests[id] = preparation }
+
+    /// Consumes the request for a surface, if any.
+    public func takeRequest(for id: SurfaceID) -> SurfaceAction.Preparation? {
+        guard let request = requests[id] else { return nil }
+        requests[id] = nil
+        return request
+    }
+
     // MARK: Rail
 
     /// The conversation rail, oldest first.
     public private(set) var log: [SessionEntry] = []
+
+    /// Proposals from the band, when there is one.
+    ///
+    /// Empty through the whole of Gate A, and that is the point: the rail already renders
+    /// `[Proposal]`, so when the Director starts answering, its replies land in this array and the
+    /// rail does not change. Until then `proposals` derives the same shape from the song graph.
+    public var director: [Proposal] = []
 
     // MARK: Transport
 
@@ -262,13 +287,20 @@ public final class AppState {
         open(found)
     }
 
-    /// Opens a song. Clears the bench — surfaces are bound to versions of the song that was open — and
-    /// selects the newest version so the ledger and the surfaces have something to work from.
+    /// Opens a song. Clears the bench — surfaces are bound to versions of the song that was open —
+    /// selects the newest version, and puts the song itself on the bench.
+    ///
+    /// That last step is the difference between opening a song and being handed an empty room. A
+    /// song *is* something: a record with a waveform, a key, a tempo and its stems, or failing that
+    /// the newest thing anyone made in it. `Guidance.opening(_:)` decides which, and a song holding
+    /// nothing Gate A can show opens on nothing rather than on a surface with a shrug in it.
     public func open(_ song: Song) {
         for item in bench.items { bench.close(item.id) }
         bindings.removeAll()
+        requests.removeAll()
         openSongWithoutLogging(song)
         note(.you, "Opened \(song.title)", detail: provenanceSummary(of: song))
+        if let opening = Guidance.opening(song) { perform(opening) }
     }
 
     private func openSongWithoutLogging(_ song: Song) {
@@ -333,7 +365,7 @@ public final class AppState {
         guard selectedVersion != id else { return }
         selectedVersion = id
         guard let id, let version = version(id) else { return }
-        note(.you, "Selected \(version.type.rawValue)\(versionNumber(of: id).map { " v\($0)" } ?? "")",
+        note(.you, "Selected \(PartLabel.title(of: version))\(versionNumber(of: id).map { " v\($0)" } ?? "")",
              detail: provenanceLine(for: version))
     }
 

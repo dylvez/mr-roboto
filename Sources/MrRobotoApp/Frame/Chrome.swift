@@ -101,6 +101,57 @@ struct FrameButton: View {
     }
 }
 
+/// A proposal, as a thing you press: the verb, the surface it opens, and the quiet line saying why.
+///
+/// Shared by the rail's "What next" block and by the surfaces that are empty because nothing is bound
+/// to them, so an offer looks the same wherever it is made — and, more to the point, so there is one
+/// control that takes a `Proposal` and no second way to render one when the Director starts sending
+/// them.
+///
+/// The leading one carries the accent: one accented thing per region is the catalog's rule, and the
+/// next step is what it is spent on.
+struct ProposalButton: View {
+    let proposal: Proposal
+    var isLeading: Bool = false
+    let perform: () -> Void
+
+    var body: some View {
+        Button(action: perform) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(proposal.title)
+                        .font(Design.Typography.prose(15, weight: isLeading ? .medium : .regular))
+                        .foregroundStyle(isLeading ? Design.Palette.accent : Design.Palette.ink)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .multilineTextAlignment(.leading)
+                    Spacer(minLength: 4)
+                    Text(proposal.action.surface.rawValue)
+                        .font(Design.Typography.label)
+                        .tracking(1.1)
+                        .foregroundStyle(Design.Palette.inkTertiary)
+                }
+                Text(proposal.rationale)
+                    .font(Design.Typography.ui(11.5, weight: .regular))
+                    .foregroundStyle(Design.Palette.inkSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.leading)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .background(isLeading ? Design.Palette.accentSoft : Design.Palette.panel)
+            .overlay(
+                RoundedRectangle(cornerRadius: Design.Metric.corner)
+                    .stroke(isLeading ? Design.Palette.accent : Design.Palette.line,
+                            lineWidth: Design.Metric.hairline)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(proposal.rationale)
+    }
+}
+
 /// A one-pixel rule in the frame's line colour. `Divider()` picks its own grey, which is not ours.
 struct Hairline: View {
     var axis: Axis = .horizontal

@@ -126,8 +126,13 @@ struct GridSurfaceTests {
         guard case .groove(let baseGroove) = base.kind else { return }
         #expect(baseGroove.patterns.allSatisfy { $0.steps.allSatisfy { $0 == .rest } })
 
+        // Both commits reach the host, but not in a promised order: `commit()` notifies through an
+        // unstructured Task, which is right for a UI and gives Swift no ordering guarantee between
+        // two of them. Order is asserted above on `model.versions`, which is synchronous and is
+        // where the ledger reads from. Asserting it here instead was flaky, and was testing
+        // something the surface never promised.
         await settle { host.log.commits.count == 2 }
-        #expect(host.log.commits.map(\.id) == [first.id, second.id])
+        #expect(Set(host.log.commits.map(\.id)) == Set([first.id, second.id]))
     }
 
     // MARK: The swing lever

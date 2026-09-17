@@ -330,12 +330,33 @@ private struct PromoteBar: View {
             .buttonStyle(.plain)
             .disabled(model.selection == nil)
 
-            Toggle(isOn: $model.separatesStems) {
-                Text("Separate stems")
-                    .font(Design.Typography.ui(13, weight: .semibold))
+            // Two ways to the same place. The toggle arms separation for the *next* drop; the button
+            // runs it on the record already on screen, which is the case a song opened from the
+            // library is always in.
+            if model.canSeparateStems {
+                Button {
+                    model.separateStems()
+                } label: {
+                    Text("Separate stems")
+                        .font(Design.Typography.ui(13, weight: .semibold))
+                        .padding(.horizontal, 14)
+                        .frame(height: Design.Metric.controlHeight)
+                        .foregroundStyle(Design.Palette.ink)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Design.Metric.corner)
+                                .stroke(Design.Palette.ink, lineWidth: Design.Metric.hairline)
+                        )
+                }
+                .buttonStyle(.plain)
+                .help("Split this record into drums, bass, vocals and other, into this song's package")
+            } else {
+                Toggle(isOn: $model.separatesStems) {
+                    Text("Separate stems")
+                        .font(Design.Typography.ui(13, weight: .semibold))
+                }
+                .toggleStyle(.switch)
+                .disabled(model.state.isBusy)
             }
-            .toggleStyle(.switch)
-            .disabled(model.state.isBusy)
 
             Spacer()
 
@@ -357,9 +378,7 @@ private struct StemLanesPanel: View {
         VStack(alignment: .leading, spacing: 6) {
             PanelLabel("Stems")
             if model.stems.isEmpty {
-                Text(model.state.phase == .separating
-                     ? "Separating — lanes appear as each stem lands."
-                     : "No stems. Turn on Separate stems before dropping a record.")
+                Text(emptyLine)
                     .font(Design.Typography.ui(12, weight: .regular))
                     .foregroundStyle(Design.Palette.inkTertiary)
             } else {
@@ -368,6 +387,13 @@ private struct StemLanesPanel: View {
                 }
             }
         }
+    }
+
+    /// The empty state names the lever that fills it rather than explaining the absence.
+    private var emptyLine: String {
+        if model.state.phase == .separating { return "Separating — lanes appear as each stem lands." }
+        if model.canSeparateStems { return "No stems yet. Separate stems, above, splits this record into four." }
+        return "No stems. Turn on Separate stems before dropping a record."
     }
 }
 

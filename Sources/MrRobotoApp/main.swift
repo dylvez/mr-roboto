@@ -40,7 +40,7 @@ struct FrameCommands: Commands {
         CommandGroup(replacing: .newItem) {
             Button("New Song") { app.open(Song(title: MrRobotoApp.untitledName())) }
                 .keyboardShortcut("n", modifiers: .command)
-            Button("Import Record…") { app.openSurface(.importRecord, title: "Import") }
+            Button("Import Record…") { app.openSurface(.importRecord, title: "Record") }
                 .keyboardShortcut("i", modifiers: .command)
         }
 
@@ -68,9 +68,11 @@ struct FrameCommands: Commands {
         }
 
         CommandMenu("Surfaces") {
+            // The same call the bench dock makes, so the menu and the chips cannot drift: a surface
+            // picked by name opens on the most useful thing the song has for it.
             ForEach(Array(SurfaceKind.gateA.enumerated()), id: \.element) { index, kind in
                 Button(kind.rawValue) {
-                    app.openSurface(kind, title: app.song?.title ?? "Untitled")
+                    app.perform(Guidance.dockAction(for: kind, in: app.song))
                 }
                 .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: .command)
             }
