@@ -21,11 +21,15 @@ build:
 test:
 	swift test --skip AnalysisMLXTests
 
+# Note the tee on these two: piping xcodebuild straight into grep reports grep's exit status, so
+# a failing test would print a failure and still leave `make check` green.
 test-mlx:
-	$(XCT) test -scheme MrRoboto-Package -only-testing:AnalysisMLXTests 2>&1 | grep -E "Test run with|\*\* TEST"
+	@$(XCT) test -scheme MrRoboto-Package -only-testing:AnalysisMLXTests 2>&1 | tee .build/mlx-test.log | grep -E "Test run with|\*\* TEST" || true
+	@grep -q "\*\* TEST SUCCEEDED" .build/mlx-test.log || (echo "MLX tests failed; see .build/mlx-test.log" && exit 1)
 
 cli:
-	$(XC) build -scheme m0 -configuration Debug 2>&1 | grep -E "\*\* BUILD"
+	@$(XC) build -scheme m0 -configuration Debug 2>&1 | tee .build/cli-build.log | grep -E "\*\* BUILD" || true
+	@grep -q "\*\* BUILD SUCCEEDED" .build/cli-build.log || (echo "m0 build failed; see .build/cli-build.log" && exit 1)
 	@test -x $(DD)/Build/Products/Debug/m0 || (echo "m0 missing from xcodebuild products" && exit 1)
 	@test -d $(DD)/Build/Products/Debug/mlx-swift_Cmlx.bundle || (echo "MLX metal bundle missing from xcodebuild products" && exit 1)
 

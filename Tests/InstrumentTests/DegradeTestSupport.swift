@@ -64,7 +64,7 @@ enum DegradeFixtures {
 
     /// Where the listening artifacts go. Under `.build`, which is already gitignored, so the files
     /// survive the test run and do not pollute the working tree.
-    static let demoDirectory = repoRoot.appending(path: ".build/degrade-demo")
+    static let demoDirectory = repoRoot.appending(path: "Demos/degradation")
 
     static func exists(_ url: URL) -> Bool { FileManager.default.fileExists(atPath: url.path) }
 

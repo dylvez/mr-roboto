@@ -10,6 +10,13 @@ public enum ProcessMemory {
     /// Peak resident set size since process start, in bytes.
     public static func peakResidentBytes() -> UInt64 { basicInfo()?.resident_size_max ?? 0 }
 
+    /// Resident and peak-resident in one read. Two separate calls can disagree — the process can
+    /// grow between them, making "current" exceed a "peak" sampled earlier — so anything comparing
+    /// the two must use this.
+    public static func snapshot() -> (resident: UInt64, peak: UInt64)? {
+        basicInfo().map { ($0.resident_size, $0.resident_size_max) }
+    }
+
     /// Peak MLX allocation (active + cache high-water mark) since process start, in bytes.
     public static func mlxPeakBytes() -> Int { Memory.peakMemory }
 

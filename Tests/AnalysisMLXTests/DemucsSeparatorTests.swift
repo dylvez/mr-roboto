@@ -162,7 +162,11 @@ import Testing
 
 @Test func processMemoryReads() {
     #expect(ProcessMemory.residentBytes() > 1 << 20)
-    #expect(ProcessMemory.peakResidentBytes() >= ProcessMemory.residentBytes())
+    // One read: sampling the two separately lets the process grow in between, so a fresh
+    // "current" can exceed a "peak" that was read a moment earlier.
+    let memory = ProcessMemory.snapshot()
+    #expect(memory != nil)
+    if let memory { #expect(memory.peak >= memory.resident) }
 }
 
 // MARK: - Parity against the Python-MLX goldens (needs weights, GPU, and the local corpus)

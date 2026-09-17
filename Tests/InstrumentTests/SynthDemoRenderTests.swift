@@ -21,9 +21,20 @@ struct SynthDemoRenderTests {
 
     @Test("demo bars", .enabled(if: ProcessInfo.processInfo.environment["SYNTH_DEMO"] != nil))
     func synthDemoBars() throws {
-        let root = FileManager.default.temporaryDirectory
-            .appendingPathComponent("mr-roboto-synth-demo-\(Int(Date().timeIntervalSince1970))",
-                                    isDirectory: true)
+        // Renders into the repo's Demos/ folder (gitignored) so re-running this refreshes the
+        // files the user actually listens to, rather than leaving a new temp directory each time.
+        // SYNTH_DEMO_DIR overrides it.
+        let root: URL
+        if let override = ProcessInfo.processInfo.environment["SYNTH_DEMO_DIR"] {
+            root = URL(fileURLWithPath: override, isDirectory: true)
+        } else {
+            root = URL(fileURLWithPath: #filePath)
+                .deletingLastPathComponent()   // InstrumentTests
+                .deletingLastPathComponent()   // Tests
+                .deletingLastPathComponent()   // repo root
+                .appendingPathComponent("Demos/drum-machines", isDirectory: true)
+        }
+        try? FileManager.default.removeItem(at: root)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
 
         print("")
@@ -87,7 +98,6 @@ struct SynthDemoRenderTests {
         }
         print("")
         print("Everything is under: \(root.path)")
-        print("Remove it with: rm -rf \(root.path)")
         print("")
 
         for url in written { #expect(FileManager.default.fileExists(atPath: url.path)) }
