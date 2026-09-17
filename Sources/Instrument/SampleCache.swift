@@ -310,12 +310,53 @@ public final class SampleCache: @unchecked Sendable {
             throw KitError.decodeFailed(path: url.path, reason: "could not allocate a \(frames)-frame buffer")
         }
         do {
-            try file.read(into: input, frameCount: frames)
+            try readAll(file, into: input)
         } catch {
             throw KitError.decodeFailed(path: url.path, reason: "\(error)")
         }
         let converted = try convert(input, to: targetSampleRate, path: url.path)
         return DecodedAudio(sampleRate: targetSampleRate, channels: converted)
+    }
+
+    /// Fills `buffer` with the whole of `file`, looping until `file.length` frames have been read.
+    ///
+    /// **One `read(into:frameCount:)` call is a short read.** On this toolchain it hands back whole
+    /// internal blocks and stops, without throwing: asking for all 102,720 frames of a
+    /// 102,720-frame file returns 102,400. Up to a block goes missing from the end of every
+    /// decode — inaudible on a one-shot whose tail has already decayed, and audible on a chopped
+    /// bar, whose last zone ends exactly at the end of the file. So nothing here reads a file in
+    /// one call.
+    public static func readAll(_ file: AVAudioFile, into buffer: AVAudioPCMBuffer) throws {
+        let wanted = AVAudioFrameCount(max(0, file.length - file.framePosition))
+        guard wanted > 0, let scratch = AVAudioPCMBuffer(pcmFormat: file.processingFormat,
+                                                         frameCapacity: min(wanted, 1 << 16)) else {
+            buffer.frameLength = 0
+            return
+        }
+        var filled: AVAudioFrameCount = 0
+        while filled < min(wanted, buffer.frameCapacity) {
+            scratch.frameLength = 0
+            try file.read(into: scratch, frameCount: min(wanted - filled, scratch.frameCapacity))
+            let produced = scratch.frameLength
+            if produced == 0 { break }
+            copy(scratch, into: buffer, at: filled)
+            filled += produced
+        }
+        buffer.frameLength = filled
+    }
+
+    /// Appends `source`'s frames to `destination` starting at frame `offset`.
+    private static func copy(_ source: AVAudioPCMBuffer, into destination: AVAudioPCMBuffer,
+                             at offset: AVAudioFrameCount) {
+        guard let src = source.floatChannelData, let dst = destination.floatChannelData else { return }
+        let n = Int(source.frameLength)
+        let channels = min(Int(source.format.channelCount), Int(destination.format.channelCount))
+        guard Int(offset) + n <= Int(destination.frameCapacity) else { return }
+        for c in 0..<channels {
+            for i in 0..<n {
+                dst[c][(Int(offset) + i) * destination.stride] = src[c][i * source.stride]
+            }
+        }
     }
 
     /// Converts a buffer to deinterleaved Float32 at `targetRate`, one array per channel.

@@ -12,6 +12,7 @@ let package = Package(
         .library(name: "AnalysisONNX", targets: ["AnalysisONNX"]),
         .library(name: "AudioEngine", targets: ["AudioEngine"]),
         .library(name: "Instrument", targets: ["Instrument"]),
+        .library(name: "Performance", targets: ["Performance"]),
         .executable(name: "m0", targets: ["m0"]),
     ],
     dependencies: [
@@ -52,8 +53,12 @@ let package = Package(
         .target(name: "CDegrade"),
         .target(name: "Instrument", dependencies: ["MusicTheory", "SongGraph", "CVoiceRender", "CDegrade", "AudioEngine"],
                 linkerSettings: [.linkedFramework("AVFoundation"), .linkedFramework("Accelerate")]),
+        // Turning parts into scheduled events: grooves, feels, and chopping a sample onto a feel.
+        .target(name: "Performance", dependencies: ["MusicTheory", "SongGraph", "Analysis",
+                                                    "Instrument", "AudioEngine"]),
         .executableTarget(name: "m0", dependencies: [
             "MusicTheory", "SongGraph", "Analysis", "AnalysisMLX", "AnalysisONNX", "AudioEngine",
+            "Instrument", "Performance",
             .product(name: "ArgumentParser", package: "swift-argument-parser"),
         ]),
         .testTarget(name: "MusicTheoryTests", dependencies: ["MusicTheory"]),
@@ -63,6 +68,7 @@ let package = Package(
         .testTarget(name: "AnalysisONNXTests", dependencies: ["AnalysisONNX"]),
         .testTarget(name: "AudioEngineTests", dependencies: ["AudioEngine"]),
         .testTarget(name: "InstrumentTests", dependencies: ["Instrument", "AudioEngine"]),
+        .testTarget(name: "PerformanceTests", dependencies: ["Performance"]),
     ],
     swiftLanguageModes: [.v6],
     cxxLanguageStandard: .cxx17

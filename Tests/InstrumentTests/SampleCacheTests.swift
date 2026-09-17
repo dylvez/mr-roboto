@@ -177,3 +177,52 @@ final class DecodeCounter: @unchecked Sendable {
         try SampleCache().buffer(for: folder.appendingPathComponent("nope.wav"), sampleRate: 44_100)
     }
 }
+
+// MARK: - The end of the file
+
+// 102,720 frames is 100 blocks of 1024 plus 320. `AVAudioFile.read(into:frameCount:)` hands back
+// whole internal blocks and stops without throwing, so one call for the whole file returns 102,400
+// — up to 1023 frames missing from the end of every decode. Inaudible on a one-shot whose tail has
+// already decayed; audible on a chopped bar, whose last zone ends exactly at the end of the file.
+// `Tests/PerformanceTests/ChopKitTests.swift` has the same pair from the chop's side.
+
+@Test func cacheDecodesTheLastPartialBlock() throws {
+    let temp = TempDirectory()
+    defer { temp.remove() }
+    let frames = 102_720
+    let wav = try AudioFixtures.writeWAV(at: temp.file("long.wav"), sampleRate: 44_100, channels: 2,
+                                         frames: frames) { channel, frame in
+        let ramp = Float(frame) / Float(frames)
+        return channel == 0 ? ramp : -ramp
+    }
+
+    let buffer = try SampleCache().buffer(for: wav, sampleRate: 44_100)
+    #expect(buffer.frameCount == frames)
+    // Not just the count: the tail has to hold the samples that were written there.
+    for frame in (frames - 4)..<frames {
+        let expected = Float(frame) / Float(frames)
+        #expect(abs(buffer.sample(channel: 0, frame: frame) - expected) < 1e-5)
+        #expect(abs(buffer.sample(channel: 1, frame: frame) + expected) < 1e-5)
+    }
+    // The resampling path runs the same read, so it must not lose the block either.
+    let resampled = try SampleCache().buffer(for: wav, sampleRate: 48_000)
+    #expect(abs(resampled.frameCount - Int((Double(frames) * 48_000 / 44_100).rounded())) < 128)
+}
+
+@Test func synthesizedWAVsAreReadableAsSoonAsTheyAreWritten() throws {
+    let temp = TempDirectory()
+    defer { temp.remove() }
+    let frames = 102_720
+    let samples = (0..<frames).map { Float($0) / Float(frames) }
+    let url = temp.file("synth/tom.wav")
+
+    // Read back in the same scope as the write: without an explicit `close()` the header is not
+    // finalised yet and the file reads as empty.
+    try SynthesizedKit.writeWAV(samples, to: url, sampleRate: 48_000)
+    let buffer = try SampleCache().buffer(for: url, sampleRate: 48_000)
+    #expect(buffer.channelCount == 1)
+    #expect(buffer.frameCount == frames)
+    for frame in (frames - 4)..<frames {
+        #expect(abs(buffer.sample(channel: 0, frame: frame) - Float(frame) / Float(frames)) < 1e-5)
+    }
+}

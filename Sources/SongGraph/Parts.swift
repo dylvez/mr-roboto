@@ -214,7 +214,9 @@ public struct Groove: Hashable, Codable, Sendable {
     /// Steps per bar (16 for sixteenths in 4/4).
     public var stepsPerBar: Int
     public var bars: Int
-    /// 0 = straight, 1 = full triplet swing on the off-steps.
+    /// Swing on the odd steps, spanning the MPC's own 50–75% range: 0 = 50% (straight),
+    /// 2/3 = 66.67% (triplet), 1 = 75% (the machine's maximum, the odd step halfway to the next).
+    /// Triplet is therefore 2/3, not 1. See `Performance.Swing` for the conversion a UI shows.
     public var swing: Double
     public var patterns: [GroovePattern]
 

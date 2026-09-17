@@ -131,6 +131,9 @@ enum AudioFixtures {
             for frame in 0..<frames { data[channel][frame] = generator(channel, frame) }
         }
         try file.write(from: buffer)
+        // Explicitly, so the header is finalised before the caller reads the file back: releasing
+        // the object closes it too, but only whenever the last reference goes.
+        file.close()
         return url
     }
 }

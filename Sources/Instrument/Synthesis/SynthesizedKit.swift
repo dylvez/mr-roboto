@@ -187,7 +187,11 @@ public enum SynthesizedKit {
         do {
             try FileManager.default.createDirectory(at: url.deletingLastPathComponent(),
                                                     withIntermediateDirectories: true)
-            let file = try AVAudioFile(forWriting: url, settings: format.settings)
+            // The `commonFormat`/`interleaved` initializer, not the two-argument one, so the
+            // processing format is the float32 the samples already are and nothing converts on
+            // the way out. `ChopAudio.writeWAV` writes its WAVs the same way.
+            let file = try AVAudioFile(forWriting: url, settings: format.settings,
+                                       commonFormat: .pcmFormatFloat32, interleaved: false)
             let frames = AVAudioFrameCount(max(1, samples.count))
             guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames) else {
                 throw KitError.writeFailed(path: url.path, reason: "could not allocate \(frames) frames")
@@ -197,6 +201,11 @@ public enum SynthesizedKit {
                 for i in 0..<Int(frames) { data[0][i] = i < samples.count ? samples[i] : 0 }
             }
             try file.write(from: buffer)
+            // Not optional: until the file is closed the header is not finalised, and a read that
+            // follows in the same scope sees a length of 0. Releasing the object closes it too, but
+            // only whenever the last reference goes — `AVAudioEngine`'s `OfflineRenderer` closes
+            // explicitly for the same reason.
+            file.close()
         } catch let error as KitError {
             throw error
         } catch {
