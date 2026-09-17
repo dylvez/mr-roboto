@@ -18,6 +18,10 @@ final class ActivationDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         NSApplication.shared.setActivationPolicy(.regular)
+        // Before the first window is ordered front: a theme that pins the appearance (Petrol) has to
+        // have done so already, or the window opens with light AppKit furniture over a dark ground
+        // and then corrects itself in view of the user.
+        Design.applyPinnedAppearance()
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {

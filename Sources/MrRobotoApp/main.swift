@@ -13,8 +13,8 @@ struct MrRobotoApp: App {
     @NSApplicationDelegateAdaptor(ActivationDelegate.self) private var activation
 
     init() {
-        // Before anything renders: the app ships Newsreader and Karla rather than hoping the
-        // machine has them. Any face that will not register says so on stderr and in the log.
+        // Before anything renders: the app ships IBM Plex Sans and IBM Plex Mono rather than hoping
+        // the machine has them. Any face that will not register says so on stderr and in the log.
         FontRegistration.registerBundledFonts()
         SurfaceRegistry.registerGateASurfaces()
     }
@@ -67,6 +67,24 @@ struct FrameCommands: Commands {
                 .keyboardShortcut("l", modifiers: .command)
         }
 
+        // The three visual directions, live. Switching repaints every body that reads a token and
+        // touches nothing else — the bench, the loaded song and the transport are not disturbed —
+        // and the choice is remembered in UserDefaults for the next launch.
+        //
+        // In the standard View menu rather than a menu of its own: this is how a window looks, not a
+        // thing the instrument does.
+        CommandGroup(after: .toolbar) {
+            Divider()
+            ForEach(Design.Theme.allCases) { theme in
+                Toggle(theme.displayName, isOn: Binding(
+                    get: { Design.theme == theme },
+                    set: { if $0 { Design.select(theme) } }))
+                .keyboardShortcut(KeyEquivalent(Character("\(themeShortcutNumber(theme))")),
+                                  modifiers: [.command, .control])
+            }
+            Divider()
+        }
+
         CommandMenu("Surfaces") {
             // The same call the bench dock makes, so the menu and the chips cannot drift: a surface
             // picked by name opens on the most useful thing the song has for it.
@@ -83,6 +101,11 @@ struct FrameCommands: Commands {
             .disabled(app.bench.items.isEmpty)
         }
     }
+}
+
+/// ⌃⌘1/2/3. Plain ⌘1–3 already belong to the Surfaces menu, and these are pressed far less often.
+private func themeShortcutNumber(_ theme: Design.Theme) -> Int {
+    (Design.Theme.allCases.firstIndex(of: theme) ?? 0) + 1
 }
 
 extension MrRobotoApp {

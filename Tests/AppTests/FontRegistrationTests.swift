@@ -5,9 +5,9 @@ import Testing
 
 @testable import MrRobotoApp
 
-/// The app ships Newsreader and Karla instead of hoping the machine has them. These tests are the
-/// guard on that: they fail if a font file goes missing from the bundle, if a face stops resolving,
-/// or if a weight the design actually asks for quietly stops matching.
+/// The app ships IBM Plex Sans and IBM Plex Mono instead of hoping the machine has them. These tests
+/// are the guard on that: they fail if a font file goes missing from the bundle, if a face stops
+/// resolving, or if a weight the design actually asks for quietly stops matching.
 @Suite("Bundled font registration")
 struct FontRegistrationTests {
 
@@ -43,27 +43,58 @@ struct FontRegistrationTests {
         }
     }
 
+    /// Nothing from the old pairing should still be in the bundle. Newsreader and Karla went out
+    /// with the warm palette; a leftover file would ship 600 KB of dead weight and, worse, would let
+    /// a stale `Design.Typography` stack keep resolving and hide the mistake.
+    @Test("The families that were dropped are actually gone")
+    func retiredFamiliesAreNotBundled() {
+        for resource in ["Karla-Variable", "Newsreader-Variable", "Newsreader-Italic-Variable"] {
+            #expect(Bundle.module.url(forResource: resource, withExtension: "ttf",
+                                      subdirectory: FontRegistration.subdirectory) == nil,
+                    "\(resource).ttf is still in the bundle")
+        }
+        for licence in ["OFL-Karla", "OFL-Newsreader"] {
+            #expect(Bundle.module.url(forResource: licence, withExtension: "txt",
+                                      subdirectory: FontRegistration.subdirectory) == nil,
+                    "\(licence).txt is still in the bundle")
+        }
+    }
+
     /// The licence has to travel with the fonts.
     @Test("The OFL text ships alongside the fonts")
     func licenceIsBundled() throws {
-        for name in ["OFL-Karla", "OFL-Newsreader"] {
+        for name in ["OFL-IBMPlexSans", "OFL-IBMPlexMono"] {
             let url = try #require(Bundle.module.url(forResource: name, withExtension: "txt",
                                                      subdirectory: FontRegistration.subdirectory),
                                    "\(name).txt is missing from the bundle")
             let text = try String(contentsOf: url, encoding: .utf8)
             #expect(text.contains("SIL Open Font License"))
+            #expect(text.contains("IBM Corp."), "\(name).txt is not IBM's copy of the licence")
         }
     }
 
-    @Test("Karla and Newsreader resolve after registration")
+    @Test("Both Plex families resolve after registration")
     func familiesResolve() throws {
         register()
 
-        let karla = try #require(NSFont(name: "Karla", size: 13), "Karla did not resolve")
-        #expect(karla.familyName == "Karla")
+        let sans = try #require(NSFont(name: "IBM Plex Sans", size: 13), "IBM Plex Sans did not resolve")
+        #expect(sans.familyName == "IBM Plex Sans")
 
-        let newsreader = try #require(NSFont(name: "Newsreader", size: 15), "Newsreader did not resolve")
-        #expect(newsreader.familyName == "Newsreader")
+        let mono = try #require(NSFont(name: "IBM Plex Mono", size: 12), "IBM Plex Mono did not resolve")
+        #expect(mono.familyName == "IBM Plex Mono")
+    }
+
+    /// The sans is a variable font with a `wdth` axis as well as `wght`. If CoreText ever decided to
+    /// surface the condensed end as its own family, `Font.custom("IBM Plex Sans", …)` would still
+    /// work but the family list would gain a sibling nobody asked for.
+    @Test("The variable sans registers as one family, not a family per width")
+    func widthAxisDoesNotLeakFamilies() {
+        register()
+        let plex = NSFontManager.shared.availableFontFamilies.filter {
+            $0.localizedCaseInsensitiveContains("plex")
+        }
+        #expect(Set(plex) == Set(["IBM Plex Sans", "IBM Plex Mono"]),
+                "unexpected Plex families registered: \(plex)")
     }
 
     /// `registerBundledFonts()` is called once from `MrRobotoApp.init()`, but a test calling it again
@@ -76,13 +107,14 @@ struct FontRegistrationTests {
 
         #expect(first == second)
         #expect(second == third)
-        #expect(second == Set(["Karla", "Newsreader"]))
+        #expect(second == Set(["IBM Plex Sans", "IBM Plex Mono"]))
 
-        // And the family is still a single family, not two copies of one.
-        let karlaFamilies = NSFontManager.shared.availableFontFamilies.filter { $0 == "Karla" }
-        #expect(karlaFamilies.count == 1)
-        let newsreaderFamilies = NSFontManager.shared.availableFontFamilies.filter { $0 == "Newsreader" }
-        #expect(newsreaderFamilies.count == 1)
+        // And each family is still a single family, not two copies of one — the mono in particular
+        // arrives as two separate files, which is exactly how a family gets registered twice.
+        for family in ["IBM Plex Sans", "IBM Plex Mono"] {
+            let matches = NSFontManager.shared.availableFontFamilies.filter { $0 == family }
+            #expect(matches.count == 1, "\(family) registered \(matches.count) times")
+        }
     }
 
     /// Resolve a family + weight the way SwiftUI's `.custom(_:size:).weight(_:)` does, and report
@@ -100,11 +132,11 @@ struct FontRegistrationTests {
         return CTFontDescriptorCopyAttribute(matched, kCTFontNameAttribute) as? String
     }
 
-    /// The weights `Design.Typography` actually passes: `.regular`, `.medium` and `.semibold` for
-    /// Karla (`ui`, `label`), `.regular` and `.medium` for Newsreader (`prose`).
+    /// The weights `Design.Typography` actually passes: `.regular`, `.medium` and `.semibold` for the
+    /// sans (`prose`, `ui`, `label`), `.regular` and `.medium` for the mono (`numeric`).
     @Test("Every weight the design asks for resolves within its own family",
-          arguments: [("Karla", 0.0), ("Karla", 0.23), ("Karla", 0.3),
-                      ("Newsreader", 0.0), ("Newsreader", 0.23)])
+          arguments: [("IBM Plex Sans", 0.0), ("IBM Plex Sans", 0.23), ("IBM Plex Sans", 0.3),
+                      ("IBM Plex Mono", 0.0), ("IBM Plex Mono", 0.23)])
     func designWeightsResolve(family: String, weight: CGFloat) throws {
         register()
         let face = try #require(match(family: family, weight: weight),
@@ -117,29 +149,30 @@ struct FontRegistrationTests {
     @Test("Weights are distinct faces, not one face three times")
     func weightsAreDistinct() throws {
         register()
-        let karla = try [0.0, 0.23, 0.3].map { try #require(match(family: "Karla", weight: $0)) }
-        #expect(Set(karla).count == 3, "Karla weights collapsed onto \(Set(karla))")
+        let sans = try [0.0, 0.23, 0.3].map { try #require(match(family: "IBM Plex Sans", weight: $0)) }
+        #expect(Set(sans).count == 3, "IBM Plex Sans weights collapsed onto \(Set(sans))")
 
-        let newsreader = try [0.0, 0.23].map { try #require(match(family: "Newsreader", weight: $0)) }
-        #expect(Set(newsreader).count == 2, "Newsreader weights collapsed onto \(Set(newsreader))")
+        let mono = try [0.0, 0.23].map { try #require(match(family: "IBM Plex Mono", weight: $0)) }
+        #expect(Set(mono).count == 2, "IBM Plex Mono weights collapsed onto \(Set(mono))")
     }
 
-    /// The conversation rail's italic. Newsreader ships a separate italic file; it has to be there.
-    @Test("Newsreader italic resolves")
+    /// The sans ships a separate italic file; it has to be there, or `.italic()` gets a synthesised
+    /// oblique that slants the mono columns beside it differently.
+    @Test("The sans italic resolves")
     func italicResolves() throws {
         register()
         let attributes: [CFString: Any] = [
-            kCTFontFamilyNameAttribute: "Newsreader",
+            kCTFontFamilyNameAttribute: "IBM Plex Sans",
             kCTFontTraitsAttribute: [kCTFontSymbolicTrait: CTFontSymbolicTraits.traitItalic.rawValue],
         ]
         let descriptor = CTFontDescriptorCreateWithAttributes(attributes as CFDictionary)
         let matched = try #require(CTFontDescriptorCreateMatchingFontDescriptor(descriptor, nil),
-                                   "no italic face matched in Newsreader")
+                                   "no italic face matched in IBM Plex Sans")
 
         let traits = CTFontDescriptorCopyAttribute(matched, kCTFontTraitsAttribute) as? [CFString: Any]
         let symbolic = traits?[kCTFontSymbolicTrait] as? UInt32 ?? 0
         #expect(symbolic & CTFontSymbolicTraits.traitItalic.rawValue != 0,
-                "Newsreader matched a face, but not an italic one")
+                "IBM Plex Sans matched a face, but not an italic one")
 
         let name = CTFontDescriptorCopyAttribute(matched, kCTFontNameAttribute) as? String
         #expect(name?.localizedCaseInsensitiveContains("italic") == true)
@@ -152,21 +185,40 @@ struct FontRegistrationTests {
     func fallbacksAreSane() {
         register()
 
-        #expect(Design.Typography.proseFamily == "Newsreader")
-        #expect(Design.Typography.uiFamily == "Karla")
+        // Prose and UI are one family told apart by size and weight, not two families.
+        #expect(Design.Typography.proseFamily == "IBM Plex Sans")
+        #expect(Design.Typography.uiFamily == "IBM Plex Sans")
+        #expect(Design.Typography.numericFamily == "IBM Plex Mono")
 
-        // Every name in each stack past the first must be a family this machine can render.
-        for name in Design.Typography.proseStack.dropFirst() + Design.Typography.uiStack.dropFirst() {
-            #expect(NSFont(name: name, size: 12) != nil, "fallback \(name) does not exist")
+        // Every name in every stack past the first must be a family this machine can render.
+        for stack in Design.Typography.allStacks {
+            for name in stack.dropFirst() {
+                #expect(NSFont(name: name, size: 12) != nil, "fallback \(name) does not exist")
+            }
         }
 
-        // And the advertised fallback for each family is one of those real names, not the family itself.
-        let proseFallback = Design.Typography.fallbackName(for: "Newsreader")
-        #expect(proseFallback != "Newsreader")
-        #expect(Design.Typography.proseStack.contains(proseFallback))
+        // And the advertised fallback for each bundled family is one of those real names, not the
+        // family itself.
+        for family in Set(FontRegistration.faces.map(\.family)) {
+            let fallback = Design.Typography.fallbackName(for: family)
+            #expect(fallback != family, "\(family) advertises itself as its own fallback")
+            #expect(Design.Typography.allStacks.contains { $0.contains(fallback) },
+                    "\(family) falls back to \(fallback), which is in no stack")
+        }
+    }
 
-        let uiFallback = Design.Typography.fallbackName(for: "Karla")
-        #expect(uiFallback != "Karla")
-        #expect(Design.Typography.uiStack.contains(uiFallback))
+    /// Whatever theme is current, the families it asks for are families that resolve. A theme that
+    /// named a face nobody bundled would degrade silently to Helvetica everywhere.
+    @Test("Every theme's typeface stack resolves to a bundled family",
+          arguments: Design.Theme.allCases)
+    func themeFacesResolve(theme: Design.Theme) {
+        register()
+        let bundled = Set(FontRegistration.faces.map(\.family))
+        for stack in theme.typeface.all {
+            let head = stack[0]
+            #expect(bundled.contains(head), "\(theme.displayName) asks for \(head), which is not bundled")
+            #expect(Design.Typography.firstAvailable(in: stack) == head,
+                    "\(theme.displayName) falls back off \(head)")
+        }
     }
 }

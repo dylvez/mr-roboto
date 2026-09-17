@@ -5,27 +5,38 @@ import os
 /// The app ships its own typefaces rather than hoping the machine has them.
 ///
 /// Both families are SIL Open Font License 1.1, which permits bundling inside an application; the
-/// licence text travels with them in `Resources/Fonts/OFL-*.txt` as the licence requires. Provenance,
-/// so the next person can re-fetch or bump them deliberately:
+/// licence text travels with them in `Resources/Fonts/OFL-*.txt` as the licence requires. The
+/// licence was read before the files were fetched: both are "Copyright © 2017 IBM Corp. with
+/// Reserved Font Name \"Plex\"", licensed under OFL 1.1. The reserved name binds *modified*
+/// versions; these bytes are unmodified, so the families keep their names.
 ///
-///   Karla-Variable.ttf            — upstream `Karla[wght].ttf`, version 2.004, wght 200–800.
-///                                   google/fonts @ ea9bc40cb0323afec81e7f1005453eea36f51708,
-///                                   path `ofl/karla/Karla[wght].ttf`. METADATA.pb: `license: "OFL"`.
-///                                   Upstream project: github.com/googlefonts/karla @ 69b25f66.
-///   Newsreader-Variable.ttf       — upstream `Newsreader[opsz,wght].ttf`, opsz 6–72, wght 200–800.
-///   Newsreader-Italic-Variable.ttf— upstream `Newsreader-Italic[opsz,wght].ttf`, same axes.
-///                                   Both google/fonts @ ea9bc40cb0323afec81e7f1005453eea36f51708,
-///                                   path `ofl/newsreader/`. METADATA.pb: `license: "OFL"`.
-///                                   Upstream project: github.com/productiontype/Newsreader.
+/// Provenance, so the next person can re-fetch or bump them deliberately. Everything comes from
+/// google/fonts @ a54f7446f84a1125ef6bf08baa46f3639e8905e0; both METADATA.pb files say
+/// `license: "OFL"`:
 ///
-/// The files are renamed only to drop the `[axis]` brackets, which are awkward in build systems and
-/// URLs; the bytes are the upstream bytes.
+///   IBMPlexSans-Variable.ttf        — upstream `IBMPlexSans[wdth,wght].ttf`, version 3.201,
+///                                     wght 100–700, wdth 75–100. Path `ofl/ibmplexsans/`.
+///   IBMPlexSans-Italic-Variable.ttf — upstream `IBMPlexSans-Italic[wdth,wght].ttf`, same axes.
+///                                     Path `ofl/ibmplexsans/`.
+///   IBMPlexMono-Regular.ttf         — upstream `IBMPlexMono-Regular.ttf`, version 2.3.
+///   IBMPlexMono-Medium.ttf          — upstream `IBMPlexMono-Medium.ttf`, version 2.3.
+///                                     Both path `ofl/ibmplexmono/`.
+///                                     Upstream project for all four: github.com/IBM/plex, by way of
+///                                     the googlefonts/plex fork Google Fonts builds from.
 ///
-/// Why the variable fonts and not the static instances: Newsreader's static TTFs carry the optical
-/// size in the *family* name — CoreText reads `Newsreader16pt-Regular.ttf` as family "Newsreader 16pt",
-/// so `Font.custom("Newsreader", …)` would never match one. The variable font registers as family
-/// "Newsreader" with named instances for each weight, which is what `Design.Typography` asks for.
-/// Karla follows the same form for consistency, and one 94 KB file covers every weight.
+/// The sans files are renamed only to drop the `[axis]` brackets, which are awkward in build systems
+/// and URLs; the bytes are the upstream bytes.
+///
+/// Why the variable font for the sans: one 525 KB file covers every weight the design asks for, and
+/// CoreText registers it as the single family "IBM Plex Sans" with a named instance per weight,
+/// which is what `Design.Typography` asks for. The condensed end of the `wdth` axis does not leak
+/// out as a separate family. The mono has no variable build on Google Fonts, so it ships as the two
+/// static instances the design actually uses — Regular for every numeric column, Medium for the few
+/// places a column is emphasised — rather than all fourteen.
+///
+/// What is *not* here any more: Newsreader and Karla. The serif carried as much of the old warmth as
+/// the paper did, and with Plex covering prose and UI alike there is no second family for Karla to
+/// be. Both were removed with their licence files.
 enum FontRegistration {
 
     /// A face the design depends on, and the file that provides it.
@@ -35,9 +46,10 @@ enum FontRegistration {
     }
 
     static let faces: [BundledFace] = [
-        BundledFace(family: "Karla", resource: "Karla-Variable"),
-        BundledFace(family: "Newsreader", resource: "Newsreader-Variable"),
-        BundledFace(family: "Newsreader", resource: "Newsreader-Italic-Variable"),
+        BundledFace(family: "IBM Plex Sans", resource: "IBMPlexSans-Variable"),
+        BundledFace(family: "IBM Plex Sans", resource: "IBMPlexSans-Italic-Variable"),
+        BundledFace(family: "IBM Plex Mono", resource: "IBMPlexMono-Regular"),
+        BundledFace(family: "IBM Plex Mono", resource: "IBMPlexMono-Medium"),
     ]
 
     /// `.copy("Resources")` keeps the tree verbatim, so the fonts sit here inside the bundle.
