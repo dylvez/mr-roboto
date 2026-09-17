@@ -46,7 +46,11 @@ let package = Package(
         // The realtime render core. macOS 27 marks the realtime-safe AVAudioSourceNode render
         // block unavailable to Swift, so voice rendering lives in C and Swift owns lifetime.
         .target(name: "CVoiceRender"),
-        .target(name: "Instrument", dependencies: ["MusicTheory", "SongGraph", "CVoiceRender", "AudioEngine"],
+        // The degradation chain: bit/rate reduction, saturation, wow and flutter, vinyl noise.
+        // In C for the same reason as the render core, and reachable both as a post-mix stage
+        // inside a voice render and as an offline buffer processor.
+        .target(name: "CDegrade"),
+        .target(name: "Instrument", dependencies: ["MusicTheory", "SongGraph", "CVoiceRender", "CDegrade", "AudioEngine"],
                 linkerSettings: [.linkedFramework("AVFoundation"), .linkedFramework("Accelerate")]),
         .executableTarget(name: "m0", dependencies: [
             "MusicTheory", "SongGraph", "Analysis", "AnalysisMLX", "AnalysisONNX", "AudioEngine",

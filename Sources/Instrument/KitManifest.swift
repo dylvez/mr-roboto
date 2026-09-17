@@ -119,10 +119,61 @@ public enum KitKind: String, Codable, Sendable, Hashable, CaseIterable {
     case hybrid
 }
 
-/// The A3 seam: synthesized voice definitions. Empty on purpose — A3 adds its fields, and because
-/// the member is optional, kits written today decode unchanged afterwards.
+/// The synthesized voices of a kit whose `kind` is `.synthesized` (A3).
+///
+/// A synthesized kit is an ordinary sampled kit on disk: `SynthesizedKit.build` renders each voice
+/// at two or three velocity layers into WAV files and emits normal zones, so `KitStore`,
+/// `SampleCache` and `VoiceSampler` need no special case. This block is the *recipe* those samples
+/// came from, kept so a parameter change can re-render them (`SynthesizedKit.rerender`) rather than
+/// leaving the kit as opaque audio.
+///
+/// Filling this in did **not** need `formatVersion` to change: the member was already optional, so
+/// kits written before A3 decode unchanged and kits written after it are readable by a build that
+/// ignores the field.
 public struct SynthesizedVoiceSet: Hashable, Codable, Sendable {
-    public init() {}
+    /// The machine preset the specs came from, e.g. `"tr808"`. Free text: a kit whose parameters
+    /// have been edited still says where it started.
+    public var machine: String
+    /// The rate the WAVs were rendered at. Re-rendering at a different rate is allowed; recording it
+    /// is what lets a re-render reproduce the originals.
+    public var sampleRate: Double
+    /// The velocity layers, in ascending order.
+    public var layers: [SynthVelocityLayer]
+    /// One spec per voice, in the order they were rendered.
+    public var voices: [SynthVoiceSpec]
+
+    public init(machine: String = "", sampleRate: Double = 48_000,
+                layers: [SynthVelocityLayer] = [], voices: [SynthVoiceSpec] = []) {
+        self.machine = machine
+        self.sampleRate = sampleRate
+        self.layers = layers
+        self.voices = voices
+    }
+
+    /// The spec for a voice kind, if the kit has one.
+    public func spec(for kind: SynthVoiceKind) -> SynthVoiceSpec? {
+        voices.first { $0.kind == kind }
+    }
+
+    /// Replaces one voice's spec, leaving everything else alone. The kit's WAVs are stale until
+    /// `SynthesizedKit.rerender` runs.
+    public mutating func setSpec(_ spec: SynthVoiceSpec) {
+        if let index = voices.firstIndex(where: { $0.kind == spec.kind }) {
+            voices[index] = spec
+        } else {
+            voices.append(spec)
+        }
+    }
+
+    private enum CodingKeys: String, CodingKey { case machine, sampleRate, layers, voices }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        machine = try c.decodeIfPresent(String.self, forKey: .machine) ?? ""
+        sampleRate = try c.decodeIfPresent(Double.self, forKey: .sampleRate) ?? 48_000
+        layers = try c.decodeIfPresent([SynthVelocityLayer].self, forKey: .layers) ?? []
+        voices = try c.decodeIfPresent([SynthVoiceSpec].self, forKey: .voices) ?? []
+    }
 }
 
 // MARK: - Zone
