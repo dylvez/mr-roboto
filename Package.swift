@@ -13,6 +13,7 @@ let package = Package(
         .library(name: "AudioEngine", targets: ["AudioEngine"]),
         .library(name: "Instrument", targets: ["Instrument"]),
         .library(name: "Performance", targets: ["Performance"]),
+        .executable(name: "MrRobotoApp", targets: ["MrRobotoApp"]),
         .executable(name: "m0", targets: ["m0"]),
     ],
     dependencies: [
@@ -56,6 +57,15 @@ let package = Package(
         // Turning parts into scheduled events: grooves, feels, and chopping a sample onto a feel.
         .target(name: "Performance", dependencies: ["MusicTheory", "SongGraph", "Analysis",
                                                     "Instrument", "AudioEngine"]),
+        // The app itself. An executable rather than an .app bundle for now: everything stays in
+        // the package and `make check` still covers it. Bundling comes when it needs entitlements.
+        .executableTarget(name: "MrRobotoApp", dependencies: [
+            "MusicTheory", "SongGraph", "Analysis", "AnalysisMLX", "AnalysisONNX",
+            "AudioEngine", "Instrument", "Performance",
+        // The bundled typefaces (OFL; see Sources/MrRobotoApp/FontRegistration.swift for provenance).
+        // `.copy` rather than `.process`: these are registered by URL at launch, so the tree has to
+        // arrive in Bundle.module verbatim and unflattened, at Resources/Fonts/.
+        ], resources: [.copy("Resources")]),
         .executableTarget(name: "m0", dependencies: [
             "MusicTheory", "SongGraph", "Analysis", "AnalysisMLX", "AnalysisONNX", "AudioEngine",
             "Instrument", "Performance",
@@ -69,6 +79,7 @@ let package = Package(
         .testTarget(name: "AudioEngineTests", dependencies: ["AudioEngine"]),
         .testTarget(name: "InstrumentTests", dependencies: ["Instrument", "AudioEngine"]),
         .testTarget(name: "PerformanceTests", dependencies: ["Performance"]),
+        .testTarget(name: "AppTests", dependencies: ["MrRobotoApp"]),
     ],
     swiftLanguageModes: [.v6],
     cxxLanguageStandard: .cxx17

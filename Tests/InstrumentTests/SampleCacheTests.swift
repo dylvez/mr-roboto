@@ -233,3 +233,27 @@ final class DecodeCounter: @unchecked Sendable {
         #expect(abs(buffer.sample(channel: 0, frame: frame) - Float(frame) / Float(frames)) < 1e-5)
     }
 }
+
+@Suite("readAll bounds")
+struct SampleCacheReadAllBoundsTests {
+
+    /// Reading into a buffer smaller than the file must fill it and stop, not overrun it. This
+    /// aborted the process before the destination was part of the bound.
+    @Test("a destination smaller than the file is filled, not overrun")
+    func destinationBound() throws {
+        let temp = try TempDirectory()
+        defer { temp.remove() }
+        let url = try AudioFixtures.writeSamples(
+            AudioFixtures.sine(frequency: 440, seconds: 2.0, sampleRate: 44_100),
+            to: temp.url.appendingPathComponent("long.wav"), sampleRate: 44_100)
+
+        let file = try AVAudioFile(forReading: url)
+        let wanted = AVAudioFrameCount(4_096)
+        #expect(AVAudioFramePosition(wanted) < file.length, "the fixture must be longer than the buffer")
+        let small = try #require(AVAudioPCMBuffer(pcmFormat: file.processingFormat,
+                                                  frameCapacity: wanted))
+        try SampleCache.readAll(file, into: small)
+        #expect(small.frameLength == wanted)
+        #expect(small.frameLength <= small.frameCapacity)
+    }
+}

@@ -334,9 +334,14 @@ public final class SampleCache: @unchecked Sendable {
             return
         }
         var filled: AVAudioFrameCount = 0
-        while filled < min(wanted, buffer.frameCapacity) {
+        let limit = min(wanted, buffer.frameCapacity)
+        while filled < limit {
             scratch.frameLength = 0
-            try file.read(into: scratch, frameCount: min(wanted - filled, scratch.frameCapacity))
+            // Bounded by the destination too, not just the file and the scratch buffer. Reading a
+            // region into a smaller buffer otherwise overruns it and aborts the process — latent
+            // while every caller sizes the buffer to the whole file, and immediate the first time
+            // one does not.
+            try file.read(into: scratch, frameCount: min(limit - filled, scratch.frameCapacity))
             let produced = scratch.frameLength
             if produced == 0 { break }
             copy(scratch, into: buffer, at: filled)
