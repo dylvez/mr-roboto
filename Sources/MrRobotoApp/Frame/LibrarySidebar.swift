@@ -53,13 +53,14 @@ struct LibrarySidebar: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
+            HStack(spacing: 8) {
                 SmallLabel("Library")
                 Spacer()
                 ChipButton(systemImage: "arrow.clockwise", help: "Re-read the library directory",
                            isEnabled: app.store != nil) {
                     app.reloadLibrary()
                 }
+                CollapseButton(region: .library, app: app)
             }
             .padding(.horizontal, Design.Metric.inset)
             .frame(height: FrameLayout.headerHeight)

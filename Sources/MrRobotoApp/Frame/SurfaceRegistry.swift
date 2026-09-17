@@ -96,7 +96,12 @@ struct SurfaceHost: View {
             header
             Divider().overlay(Design.Palette.line)
             content
+                // The surface takes everything the bench gives it. This is the other half of drawing
+                // one at a time: a panel that sized itself to its content left the rest of the bench
+                // blank, which looked like the frame had simply run out of things to say.
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Design.Palette.panel)
         .overlay(
             RoundedRectangle(cornerRadius: Design.Metric.corner)
@@ -117,7 +122,9 @@ struct SurfaceHost: View {
                 .lineLimit(1)
             Spacer(minLength: 8)
             ChipButton(systemImage: item.isPinned ? "pin.fill" : "pin",
-                       help: item.isPinned ? "Unpin this surface" : "Pin this surface so the next answer does not replace it",
+                       help: item.isPinned
+                           ? "Unpin this surface — the one you are working in fills the bench again"
+                           : "Pin this surface: it stays on screen, splitting the bench, while you work in another",
                        isOn: item.isPinned) {
                 app.setPinned(!item.isPinned, for: item.id)
             }

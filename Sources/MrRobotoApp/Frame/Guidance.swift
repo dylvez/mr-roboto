@@ -516,6 +516,21 @@ extension AppState {
         return derived.filter { canPerform($0.action) }
     }
 
+    /// The next step, when the rail it normally lives in is folded away.
+    ///
+    /// Collapsing a region must not lose anything, and the rail is the one region where that is a
+    /// real risk: "What next" is the only part of Gate A that tells you what to do. So when the rail
+    /// is collapsed the leading proposal moves into the bench dock, above the surface you are working
+    /// in — which is arguably where it belonged all along, since it is an instruction about the work
+    /// rather than a line of conversation. The rest stay one keystroke away (⌥⌘2), and the collapsed
+    /// strip carries their count in the accent so you can see there are more.
+    ///
+    /// Nil when the rail is open (the rail is showing them) or when there is nothing to propose.
+    public var dockProposal: Proposal? {
+        guard regions.isCollapsed(.rail) else { return nil }
+        return proposals.first
+    }
+
     /// Whether the frame could actually carry this out, right now, with this song and this library.
     ///
     /// The rail filters on this rather than trusting the derivation, so a proposal that arrives from

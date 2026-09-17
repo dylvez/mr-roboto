@@ -13,12 +13,13 @@ struct PartsLedger: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
+            HStack(spacing: 8) {
                 SmallLabel("Parts")
                 Spacer()
                 Text("\(app.versions.count)")
                     .font(Design.Typography.numeric(10.5))
                     .foregroundStyle(Design.Palette.inkTertiary)
+                CollapseButton(region: .ledger, app: app)
             }
             .padding(.horizontal, Design.Metric.inset)
             .frame(height: FrameLayout.headerHeight)

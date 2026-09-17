@@ -1,12 +1,15 @@
 import SwiftUI
 
-/// The bench: the dock of surfaces, then up to three of them, stacked, newest at the bottom. The
-/// `Bench` owns the rule (replace the oldest unpinned); this only draws what it holds.
+/// The bench: the dock of surfaces, then the surface you are working in, filling everything below it.
 ///
-/// The dock exists because the catalog used to be reachable only from the Surfaces menu and ⌘1–⌘4,
-/// which is to say it was not reachable at all: nothing on screen said the four surfaces existed.
-/// It is a shelf, not advice — the advice is in the rail. Picking a surface off the shelf opens it
-/// on the most useful thing the song has for it (`Guidance.dockAction`) rather than on nothing.
+/// One surface at a time is the change. The `Bench` still holds three and still retires the oldest
+/// unpinned one; it now draws `Bench.visible` — the active surface, plus anything pinned — so the
+/// instrument gets the whole bench instead of a third of it. Pinning a second surface splits the
+/// bench between them, which is the one case where two at once is what you asked for.
+///
+/// The dock is therefore load-bearing: it is no longer only a shelf saying the four surfaces exist,
+/// it is how you move between the ones that are open. A lit chip brings its surface forward; an
+/// unlit one opens it on the most useful thing the song has for it (`Guidance.dockAction`).
 struct BenchColumn: View {
     let app: AppState
     var registry: SurfaceRegistry = .shared
@@ -15,29 +18,34 @@ struct BenchColumn: View {
         VStack(spacing: 0) {
             SurfaceDock(app: app)
             Hairline()
-            ScrollView {
-                VStack(spacing: 18) {
-                    if app.bench.items.isEmpty {
-                        empty
-                    } else {
-                        ForEach(app.bench.items) { item in
-                            SurfaceHost(item: item, app: app, registry: registry)
-                        }
-                    }
-                }
-                .padding(.horizontal, Design.Metric.gutter)
-                .padding(.vertical, 24)
-                .frame(maxWidth: .infinity, alignment: .top)
-            }
+            content
         }
         .background(Design.Palette.paper)
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        let visible = app.bench.visible
+        VStack(spacing: FrameLayout.benchSpacing) {
+            if visible.isEmpty {
+                empty
+                Spacer(minLength: 0)
+            } else {
+                ForEach(visible) { item in
+                    SurfaceHost(item: item, app: app, registry: registry)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                }
+            }
+        }
+        .padding(FrameLayout.benchPadding)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
     private var empty: some View {
         EmptyNote(title: app.song == nil ? "Nothing open." : "The bench is empty.",
                   detail: app.song == nil
-                      ? "Open a song from the library and its record lands here. Or press Import above and drop an audio file on it."
-                      : "Press a surface above, or take the next step from the rail on the left. At most three stay open at once; pin one to keep it.")
+                      ? "Open a song from the library and its record lands here. Or press Record above and drop an audio file on it."
+                      : "Press a surface above and it fills the bench. Pin one to keep it on screen while you work in another.")
             .padding(Design.Metric.inset)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Design.Palette.panelAlt)
@@ -49,11 +57,12 @@ struct BenchColumn: View {
     }
 }
 
-/// The four surfaces, on screen, with the shortcuts that also open them.
+/// The four surfaces, on screen, with the shortcuts that also open them — and, when the session rail
+/// is folded away, the next step, so collapsing the rail never costs you the one thing in it that
+/// tells you what to do.
 ///
-/// A chip is lit while its surface is on the bench, so the dock doubles as "what am I looking at".
-/// Pressing a lit chip reopens rather than duplicates — `AppState.perform` reuses an open surface
-/// bound to the same versions.
+/// A chip is lit while its surface is open and accented while it is the one filling the bench, so the
+/// dock doubles as "what am I looking at" and "what else is open".
 struct SurfaceDock: View {
     let app: AppState
 
@@ -63,11 +72,15 @@ struct SurfaceDock: View {
             ForEach(Array(SurfaceKind.gateA.enumerated()), id: \.element) { index, kind in
                 DockChip(kind: kind,
                          shortcut: "⌘\(index + 1)",
-                         isOpen: app.bench.items.contains { $0.kind == kind }) {
-                    app.perform(Guidance.dockAction(for: kind, in: app.song))
+                         isOpen: app.bench.items.contains { $0.kind == kind },
+                         isActive: app.bench.active?.kind == kind) {
+                    app.showSurface(kind)
                 }
             }
             Spacer(minLength: 8)
+            if let proposal = app.dockProposal {
+                NextStepChip(proposal: proposal) { app.perform(proposal.action) }
+            }
             if !app.bench.items.isEmpty {
                 FrameButton(title: "Close all", emphasis: .quiet) {
                     for item in app.bench.items { app.closeSurface(item.id) }
@@ -75,7 +88,7 @@ struct SurfaceDock: View {
             }
         }
         .padding(.horizontal, Design.Metric.gutter)
-        .frame(height: FrameLayout.headerHeight)
+        .frame(height: FrameLayout.dockHeight)
         .background(Design.Palette.paper)
     }
 }
@@ -84,30 +97,71 @@ private struct DockChip: View {
     let kind: SurfaceKind
     let shortcut: String
     let isOpen: Bool
+    let isActive: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 6) {
                 Text(kind.rawValue)
-                    .font(Design.Typography.ui(12.5, weight: isOpen ? .semibold : .medium))
+                    .font(Design.Typography.ui(12.5, weight: isActive ? .semibold : .medium))
                 Text(shortcut)
                     .font(Design.Typography.numeric(10))
-                    .foregroundStyle(isOpen ? Design.Palette.accent : Design.Palette.inkTertiary)
+                    .foregroundStyle(isActive ? Design.Palette.accent : Design.Palette.inkTertiary)
             }
-            .foregroundStyle(isOpen ? Design.Palette.accent : Design.Palette.ink)
+            .foregroundStyle(isActive ? Design.Palette.accent : Design.Palette.ink)
             .padding(.horizontal, 10)
             .frame(height: Design.Metric.controlHeight)
-            .background(isOpen ? Design.Palette.accentSoft : Design.Palette.panel)
+            .background(isActive ? Design.Palette.accentSoft : Design.Palette.panel)
             .overlay(
                 RoundedRectangle(cornerRadius: Design.Metric.corner)
-                    .stroke(isOpen ? Design.Palette.accent : Design.Palette.lineStrong,
+                    .stroke(isActive ? Design.Palette.accent : (isOpen ? Design.Palette.ink : Design.Palette.lineStrong),
                             lineWidth: Design.Metric.hairline)
             )
             .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help("Open \(kind.rawValue) (\(shortcut))")
+        .help(helpText)
+    }
+
+    private var helpText: String {
+        if isActive { return "\(kind.rawValue) is filling the bench (\(shortcut))" }
+        if isOpen { return "Bring \(kind.rawValue) forward (\(shortcut))" }
+        return "Open \(kind.rawValue) (\(shortcut))"
+    }
+}
+
+/// The leading proposal, in the dock, shown only while the rail is collapsed. One line, the accent,
+/// and the same `perform` the rail's own control calls — there is no second way to take a step.
+private struct NextStepChip: View {
+    let proposal: Proposal
+    let perform: () -> Void
+
+    var body: some View {
+        Button(action: perform) {
+            HStack(spacing: 8) {
+                SmallLabel("Next", color: Design.Palette.accent)
+                Text(proposal.title)
+                    .font(Design.Typography.ui(12.5, weight: .medium))
+                    .foregroundStyle(Design.Palette.accent)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    // Capped so the next step cannot push the four surface chips off a narrow dock:
+                    // the chips are the navigation and they win.
+                    .frame(maxWidth: 200, alignment: .leading)
+            }
+            .padding(.horizontal, 10)
+            .frame(height: Design.Metric.controlHeight)
+            .background(Design.Palette.accentSoft)
+            .overlay(
+                RoundedRectangle(cornerRadius: Design.Metric.corner)
+                    .stroke(Design.Palette.accent, lineWidth: Design.Metric.hairline)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help("\(proposal.title) — \(proposal.rationale)")
     }
 }

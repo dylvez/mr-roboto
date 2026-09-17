@@ -169,8 +169,15 @@ public final class AppState {
     // MARK: Bench
 
     /// At most three open surfaces, oldest unpinned replaced. Owned here, mutated through `openSurface`,
-    /// `closeSurface` and `setPinned` so every change is logged.
+    /// `closeSurface` and `setPinned` so every change is logged. The bench draws the one you are
+    /// working in, plus anything pinned — see `Bench.visible`.
     public let bench: Bench
+
+    // MARK: Regions
+
+    /// Which of the three flanking regions are folded away, remembered between launches. The frame
+    /// reads this for its widths and for its own window minimum.
+    public let regions: RegionVisibility
 
     /// Which part versions each open surface was opened against. `BenchItem` deliberately carries only
     /// what the frame draws, so the binding lives here; a surface reads it with `bound(for:)`.
@@ -221,15 +228,19 @@ public final class AppState {
     ///   - song: the song to open immediately, if any.
     ///   - store: where `save()` writes and `reloadLibrary()` reads.
     ///   - transportHost: the audio. Inject a double in tests.
+    ///   - regions: which flanking regions are folded away. Defaults to what `UserDefaults`
+    ///     remembers; a test injects one over a scratch suite rather than writing the app's own.
     public init(library: Library = Library(),
                 song: Song? = nil,
                 store: LibraryStore? = nil,
                 status: LibraryStatus? = nil,
-                transportHost: TransportHost = LiveTransportHost()) {
+                transportHost: TransportHost = LiveTransportHost(),
+                regions: RegionVisibility? = nil) {
         self.library = library
         self.store = store
         self.transportHost = transportHost
         self.bench = Bench()
+        self.regions = regions ?? RegionVisibility()
         self.libraryStatus = status ?? store.map { library.isEmpty ? .empty($0.directoryURL) : .loaded($0.directoryURL) } ?? .unset
         if let song { openSongWithoutLogging(song) }
     }
@@ -442,12 +453,37 @@ public final class AppState {
     /// The versions a surface was opened against.
     public func bound(for id: SurfaceID) -> [VersionID] { bindings[id] ?? [] }
 
-    /// Renames an open surface in place, keeping its pin and its position on the bench. A surface that
-    /// only learns its title after it loads something ("Bar 9 of Arrival") calls this; it is not an event,
-    /// so nothing is logged.
+    /// Brings an open surface forward so it fills the bench. Not an event — you are moving between
+    /// things that are already open — so nothing is logged.
+    public func focusSurface(_ id: SurfaceID) { bench.focus(id) }
+
+    /// What a dock chip does: bring this kind of surface forward if it is already open, otherwise
+    /// open it on the most useful thing the song has for it.
+    ///
+    /// The difference matters now that one surface fills the bench. Pressing a lit chip used to
+    /// reopen — which, if the binding had moved on, retired something to make room for a near-twin.
+    /// Now it is the switcher: the dock is how you move between surfaces.
+    /// Pressing the chip of the kind you are already in steps to the next one of that kind, so two
+    /// lanes open on different bars are both reachable from the dock rather than only the newest.
+    public func showSurface(_ kind: SurfaceKind) {
+        let ofKind = bench.items.filter { $0.kind == kind }
+        guard let newest = ofKind.last else {
+            perform(Guidance.dockAction(for: kind, in: song))
+            return
+        }
+        if let active = bench.activeID, let index = ofKind.firstIndex(where: { $0.id == active }) {
+            focusSurface(ofKind[(index + 1) % ofKind.count].id)
+        } else {
+            focusSurface(newest.id)
+        }
+    }
+
+    /// Renames an open surface in place, keeping its pin, its position on the bench and whatever you
+    /// are currently working in. A surface that only learns its title after it loads something
+    /// ("Bar 9 of Arrival") calls this; it is not an event, so nothing is logged.
     public func retitleSurface(_ id: SurfaceID, to title: String) {
         guard let item = bench.items.first(where: { $0.id == id }), item.title != title else { return }
-        bench.open(BenchItem(id: id, kind: item.kind, title: title, isPinned: item.isPinned, openedAt: item.openedAt))
+        bench.rename(id, to: title)
     }
 
     /// Changes what an open surface is bound to, after the surface has resolved its own versions.

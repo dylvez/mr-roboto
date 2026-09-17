@@ -68,20 +68,38 @@ public struct BenchItem: Identifiable, Sendable {
     }
 }
 
-/// The bench: at most three surfaces, replacing the oldest unpinned one.
+/// The bench: at most three surfaces, replacing the oldest unpinned one — and, of those three, the
+/// one you are working in is what gets drawn.
+///
+/// `items` is the model and has not changed: three surfaces, oldest unpinned retired, pinning
+/// protects. What changed is `visible`, which is what the bench draws. In Gate B, where a Director
+/// opens a Compare and a Check beside the decision you are making, `Design.maximumVisibleSurfaces`
+/// rises to three and the bench stacks them again. In Gate A there is no Director, you drive one
+/// surface at a time, and stacking three of them cost the instrument two thirds of its height for a
+/// mechanic that does not exist yet.
+///
+/// Pinning is the exception, and it is exactly the right one: a pinned surface is the case where you
+/// have said you want to keep looking at something while you work on something else. So one surface
+/// fills the bench, and pinning a second splits it.
 @MainActor
 @Observable
 public final class Bench {
     public private(set) var items: [BenchItem] = []
 
+    /// The surface you are working in: the one that fills the bench. Set by opening a surface and by
+    /// bringing one forward from the dock; never nil while anything is open.
+    public private(set) var activeID: SurfaceID?
+
     public init() {}
 
-    /// Opens a surface, retiring the oldest unpinned one if the bench is full. Returns what it
-    /// retired, so the frame can animate the swap rather than having a panel vanish.
+    /// Opens a surface, retiring the oldest unpinned one if the bench is full, and makes it the one
+    /// you are working in. Returns what it retired, so the frame can say what it closed rather than
+    /// having a panel vanish.
     @discardableResult
     public func open(_ item: BenchItem) -> BenchItem? {
         if let existing = items.firstIndex(where: { $0.id == item.id }) {
             items[existing] = item
+            activeID = item.id
             return nil
         }
         var retired: BenchItem?
@@ -96,13 +114,49 @@ public final class Bench {
             }
         }
         items.append(item)
+        activeID = item.id
         return retired
     }
 
-    public func close(_ id: SurfaceID) { items.removeAll { $0.id == id } }
+    public func close(_ id: SurfaceID) {
+        items.removeAll { $0.id == id }
+        if activeID == id { activeID = items.last?.id }
+    }
 
     public func setPinned(_ pinned: Bool, for id: SurfaceID) {
         guard let i = items.firstIndex(where: { $0.id == id }) else { return }
         items[i].isPinned = pinned
+    }
+
+    /// Brings an already-open surface forward without reopening it: no retirement, no new binding,
+    /// nothing retitled. This is what a dock chip does for a surface that is already on the bench.
+    public func focus(_ id: SurfaceID) {
+        guard items.contains(where: { $0.id == id }) else { return }
+        activeID = id
+    }
+
+    /// Renames a surface in place, keeping its pin, its position and — unlike `open` — whatever you
+    /// are currently working in. A surface that learns its title after it loads must not steal focus.
+    public func rename(_ id: SurfaceID, to title: String) {
+        guard let i = items.firstIndex(where: { $0.id == id }) else { return }
+        items[i] = BenchItem(id: id, kind: items[i].kind, title: title,
+                             isPinned: items[i].isPinned, openedAt: items[i].openedAt)
+    }
+
+    public var active: BenchItem? { items.first { $0.id == activeID } }
+
+    /// What the bench draws, in bench order: everything pinned, plus the one you are working in.
+    ///
+    /// Capped at `Design.maximumVisibleSurfaces`; when pins would overflow that, the oldest pinned
+    /// one gives up its place on screen rather than the surface you are actually in. It stays open —
+    /// it is still in `items`, and its dock chip is still lit — so nothing is lost, only undrawn.
+    public var visible: [BenchItem] {
+        guard let active else { return [] }
+        var shown = items.filter { $0.isPinned || $0.id == active.id }
+        while shown.count > Design.maximumVisibleSurfaces {
+            guard let drop = shown.firstIndex(where: { $0.id != active.id }) else { break }
+            shown.remove(at: drop)
+        }
+        return shown
     }
 }

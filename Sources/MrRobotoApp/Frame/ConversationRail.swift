@@ -17,12 +17,13 @@ struct ConversationRail: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
+            HStack(spacing: 8) {
                 SmallLabel("Session")
                 Spacer()
                 Text("\(app.log.count)")
                     .font(Design.Typography.numeric(10.5))
                     .foregroundStyle(Design.Palette.inkTertiary)
+                CollapseButton(region: .rail, app: app)
             }
             .padding(.horizontal, 28)
             .frame(height: FrameLayout.headerHeight)
@@ -65,14 +66,14 @@ struct ConversationRail: View {
     /// The honest version of an empty list. A song with nothing in it gets no invented work.
     private var emptyLine: String {
         guard let song = app.song else {
-            return "No song open. Pick one from the library on the left, or open Import from the bench "
-                + "above the surfaces and drop a record on it."
+            return "No song open. Pick one from the library on the left, or press Record in the dock "
+                + "above the bench and drop an audio file on it."
         }
         if song.versions.isEmpty {
             return "\(song.title) is empty — nothing has been imported or made in it yet, so there is "
-                + "nothing to suggest. Open Import from the bench and drop a record on it."
+                + "nothing to suggest. Press Record in the dock above the bench and drop a file on it."
         }
-        return "Nothing obvious left. Every surface is still open from the bench above."
+        return "Nothing obvious left. Every surface is a press away in the dock above the bench."
     }
 
     // MARK: The session log

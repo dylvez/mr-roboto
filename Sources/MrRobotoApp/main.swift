@@ -22,11 +22,14 @@ struct MrRobotoApp: App {
     var body: some Scene {
         WindowGroup {
             FrameView(app: app)
+                // The floor: every region folded away, one surface at the size it needs. `FrameView`
+                // raises it to whatever the regions you have open actually require, so asking for a
+                // region back asks the window for its width rather than crushing the instrument.
                 .frame(minWidth: FrameLayout.minimumWindowWidth, minHeight: FrameLayout.minimumWindowHeight)
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentMinSize)
-        .defaultSize(width: 1440, height: 900)
+        .defaultSize(width: FrameLayout.defaultWindowWidth, height: FrameLayout.defaultWindowHeight)
         .commands { FrameCommands(app: app) }
     }
 }
@@ -74,6 +77,15 @@ struct FrameCommands: Commands {
         // In the standard View menu rather than a menu of its own: this is how a window looks, not a
         // thing the instrument does.
         CommandGroup(after: .toolbar) {
+            Divider()
+            // The three flanking regions, foldable. ⌥⌘1/2/3, left to right as they sit on screen:
+            // the instrument dominates the window and these are on call.
+            ForEach(FrameRegion.allCases) { region in
+                Toggle("Show \(region.title)", isOn: Binding(
+                    get: { !app.regions.isCollapsed(region) },
+                    set: { app.regions.setCollapsed(!$0, for: region) }))
+                .keyboardShortcut(KeyEquivalent(region.shortcut), modifiers: [.command, .option])
+            }
             Divider()
             ForEach(Design.Theme.allCases) { theme in
                 Toggle(theme.displayName, isOn: Binding(

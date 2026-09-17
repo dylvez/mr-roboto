@@ -449,32 +449,10 @@ struct SurfaceRegistryTests {
 
 // MARK: - Layout
 
+/// The geometry itself lives in `LayoutTests`, where the numbers are asserted rather than described.
+/// What is left here is the one measurement that belongs to a control rather than to the frame.
 @Suite("Frame layout")
 struct FrameLayoutTests {
-    @Test("The fixed regions are the approved widths, from the design metrics")
-    func fixedWidths() {
-        #expect(FrameLayout.librarySidebarWidth == 220)
-        #expect(FrameLayout.conversationRailWidth == 380)
-        #expect(FrameLayout.partsLedgerWidth == 230)
-        #expect(FrameLayout.headerHeight == 56)
-        #expect(FrameLayout.transportHeight == 84)
-        #expect(FrameLayout.fixedWidth == 830)
-    }
-
-    @Test("The window minimum leaves the bench at least its minimum width")
-    func windowMinimum() {
-        #expect(FrameLayout.benchWidth(inWindowOfWidth: FrameLayout.minimumWindowWidth) == FrameLayout.benchMinimumWidth)
-        #expect(FrameLayout.minimumWindowWidth > FrameLayout.fixedWidth + FrameLayout.benchMinimumWidth)
-        #expect(FrameLayout.minimumWindowHeight > FrameLayout.headerHeight + FrameLayout.transportHeight)
-    }
-
-    @Test("The bench takes every point the fixed regions do not, and never goes below its minimum")
-    func benchIsTheElasticOne() {
-        let wide = FrameLayout.benchWidth(inWindowOfWidth: 1920)
-        #expect(wide == 1920 - FrameLayout.fixedWidth - 2 * Design.Metric.gutter)
-        #expect(FrameLayout.benchWidth(inWindowOfWidth: 200) == FrameLayout.benchMinimumWidth)
-    }
-
     @Test("Section blocks are proportional to bars, floored and capped so the strip stays usable")
     func sectionBlocks() {
         #expect(TransportBar.blockWidth(bars: 16) == 80)

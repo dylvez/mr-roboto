@@ -458,12 +458,27 @@ public enum Design {
     // MARK: - Metrics
 
     public enum Metric {
-        /// The persistent frame. These are fixed because the frame never moves; only the bench does.
+        /// The side regions, at the width they are drawn when they are open. They no longer set the
+        /// window's minimum — every one of them collapses to `collapsedRegionWidth` — so these are
+        /// what a region costs when you have asked for it, not what the frame costs you always.
         public static let librarySidebarWidth: CGFloat = 220
         public static let conversationRailWidth: CGFloat = 380
         public static let partsLedgerWidth: CGFloat = 230
         public static let headerHeight: CGFloat = 56
         public static let transportHeight: CGFloat = 84
+
+        /// A collapsed region: wide enough for a rotated title, a count and the control that brings
+        /// it back, and nothing else. A region never disappears entirely — the strip is the way back.
+        public static let collapsedRegionWidth: CGFloat = 44
+
+        /// What one surface actually needs to be worth opening, and therefore what the window's
+        /// minimum is built from rather than from the sum of the furniture.
+        ///
+        /// The Chop lane is the demanding one: a waveform with draggable slice markers, a four-by-four
+        /// pad grid with a classification on each pad, the per-slice controls under it and the
+        /// re-groove picker beside them. Below this it is not cramped, it is unusable.
+        public static let surfaceMinimumWidth: CGFloat = 640
+        public static let surfaceMinimumHeight: CGFloat = 460
 
         public static let corner: CGFloat = 3
         public static let hairline: CGFloat = 1
@@ -482,6 +497,16 @@ public enum Design {
 
     /// At most three surfaces in the bench, from the catalog's own rule.
     public static let maximumOpenSurfaces = 3
+
+    /// How many of those are drawn at once.
+    ///
+    /// The catalog's three-at-once rule was written for Gate B, where a Director opens a Compare and
+    /// a Check *beside* the decision you are making — evidence next to a choice. Gate A has no
+    /// Director: you drive one surface at a time, and handing an instrument a third of the bench to
+    /// pay for a mechanic that does not exist yet is what made the frame unusable. So the bench
+    /// holds three and draws the one you are working in, plus anything you pinned. Raising this to
+    /// `maximumOpenSurfaces` is all Gate B needs.
+    public static let maximumVisibleSurfaces = 2
 }
 
 extension Color {
