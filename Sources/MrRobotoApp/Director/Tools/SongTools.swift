@@ -1,0 +1,210 @@
+import Foundation
+import MusicTheory
+import Performance
+import SongGraph
+
+// Reading the song graph, and writing one immutable version back into it.
+
+// MARK: - read_song
+
+/// What is open, and what is in it.
+public struct ReadSongTool: DirectorTool {
+    public struct Input: Decodable, Sendable {}
+
+    public struct Output: Encodable, Sendable {
+        public var isOpen: Bool
+        public var title: String?
+        public var artist: String?
+        public var tempo: Double?
+        public var key: String?
+        public var timeSignature: String?
+        public var lengthInBars: Int?
+        public var sections: [Section]
+        public var versions: [Version]
+        public var note: String?
+
+        public struct Section: Encodable, Sendable {
+            public var name: String
+            public var bars: Int
+            public var layers: Int
+        }
+
+        public struct Version: Encodable, Sendable {
+            public var id: String
+            public var part: String
+            public var type: String
+            public var operation: String
+            public var author: String
+            public var note: String?
+        }
+
+        enum CodingKeys: String, CodingKey {
+            case title, artist, tempo, key, sections, versions, note
+            case isOpen = "is_open"
+            case timeSignature = "time_signature"
+            case lengthInBars = "length_in_bars"
+        }
+    }
+
+    let workspace: any DirectorWorkspace
+
+    public init(workspace: any DirectorWorkspace) { self.workspace = workspace }
+
+    public let name = "read_song"
+    public var purpose: String {
+        "Read the open song: its tempo, key, metre, sections, and every part version anyone has "
+        + "made in it, newest last. Call this before proposing anything, so a proposal is about "
+        + "what is actually there."
+    }
+    public var schema: DirectorJSON {
+        Schema.object([], required: [])
+    }
+
+    public func run(_ input: Input) async throws -> Output {
+        guard let song = await workspace.song else {
+            return Output(isOpen: false, title: nil, artist: nil, tempo: nil, key: nil,
+                          timeSignature: nil, lengthInBars: nil, sections: [], versions: [],
+                          note: "No song is open. Everything made now has nowhere to be recorded.")
+        }
+        return Output(isOpen: true,
+                      title: song.title,
+                      artist: song.artist.isEmpty ? nil : song.artist,
+                      tempo: song.tempo,
+                      key: song.key.map { "\($0)" },
+                      timeSignature: "\(song.timeSignature)",
+                      lengthInBars: song.lengthInBars,
+                      sections: song.sections.map {
+                          Output.Section(name: $0.name, bars: $0.lengthInBars, layers: $0.stitch.count)
+                      },
+                      versions: song.versions.map { version in
+                          Output.Version(id: version.id.description,
+                                         part: version.partID.description,
+                                         type: version.type.rawValue,
+                                         operation: version.operation,
+                                         author: version.author.description,
+                                         note: version.note)
+                      },
+                      note: nil)
+    }
+}
+
+// MARK: - create_part_version
+
+/// Hands finished work back to the song graph.
+public struct CreatePartVersionTool: DirectorTool {
+    public struct Input: Decodable, Sendable {
+        /// A groove handle or a chop handle.
+        public var from: String
+        public var note: String
+        public var persona: String?
+        /// Derive from an existing version rather than starting a new part.
+        public var parent: String?
+    }
+
+    public struct Output: Encodable, Sendable {
+        public var version: String
+        public var part: String
+        public var type: String
+        public var operation: String
+        public var author: String
+        public var note: String
+        public var recorded: Bool
+        public var detail: String?
+    }
+
+    let workbench: DirectorWorkbench
+    let workspace: any DirectorWorkspace
+
+    public init(workbench: DirectorWorkbench, workspace: any DirectorWorkspace) {
+        self.workbench = workbench
+        self.workspace = workspace
+    }
+
+    public let name = "create_part_version"
+    public var purpose: String {
+        "Record something the band made into the song as a new, immutable part version — a groove "
+        + "from regroove_chop, or a chop's slice markers from chop_bar. Nothing is ever edited in "
+        + "place; this appends. The note is what the user will read in the ledger, so write it for them."
+    }
+    public var schema: DirectorJSON {
+        Schema.object([
+            ("from", Schema.string("A groove handle from regroove_chop, or a chop handle from chop_bar.")),
+            ("note", Schema.string("One line saying what this is and why, in the user's language rather than the tool's.")),
+            ("persona", Schema.optional(Schema.string("Which member of the band made it. Omit for work the user asked for directly."))),
+            ("parent", Schema.optional(Schema.string("A version id this derives from, from read_song. Omit to start a new part."))),
+        ], required: ["from", "note", "persona", "parent"])
+    }
+
+    public func run(_ input: Input) async throws -> Output {
+        let author: Author = input.persona.map { .persona($0) } ?? .user
+        let parentVersion = try await resolveParent(input.parent)
+
+        let kind: PartKind
+        let operation: String
+        if input.from.hasPrefix("groove") {
+            let stored = try await workbench.groove(input.from)
+            kind = .groove(try await groove(for: stored.plan))
+            operation = Operation.regroove
+        } else if input.from.hasPrefix("chop") {
+            let stored = try await workbench.chop(input.from)
+            let audio = try await workbench.audio(stored.audio)
+            guard let media = audio.media else {
+                throw DirectorToolFailure(
+                    tool: name,
+                    reason: "\(stored.audio) was never stored in the library, so a sample version would point at nothing.",
+                    suggestion: "Record the groove instead, or import the record into a session that has a library.")
+            }
+            kind = .sample(stored.chop.samplePart(media: media))
+            operation = Operation.chop
+        } else {
+            throw DirectorToolFailure(
+                tool: name,
+                reason: "\"\(input.from)\" is neither a groove nor a chop.",
+                suggestion: "Pass a handle from regroove_chop or chop_bar.")
+        }
+
+        // Every version the band makes is a new part spawned from its parent rather than a new
+        // version of that part: the drums the band arrived at are not a revision of the record.
+        let version = parentVersion.map {
+            $0.spawning(kind, by: author, operation: operation, note: input.note)
+        } ?? PartVersion(partID: PartID(), kind: kind, author: author,
+                         operation: operation, note: input.note)
+
+        let recorded = await workspace.record(version)
+        if recorded {
+            await workspace.note(input.note, detail: "\(operation) · \(author.description)")
+        }
+        return Output(version: version.id.description,
+                      part: version.partID.description,
+                      type: version.type.rawValue,
+                      operation: operation,
+                      author: author.description,
+                      note: input.note,
+                      recorded: recorded,
+                      detail: recorded ? nil : "No song is open, so this was not recorded anywhere.")
+    }
+
+    private func resolveParent(_ id: String?) async throws -> PartVersion? {
+        guard let id else { return nil }
+        guard let versionID = VersionID(uuidString: id) else {
+            throw DirectorToolFailure(tool: name, reason: "\"\(id)\" is not a version id.",
+                                      suggestion: "Take one from read_song.")
+        }
+        guard let found = await workspace.version(versionID) else {
+            throw DirectorToolFailure(tool: name, reason: "This song has no version \(id).",
+                                      suggestion: "Call read_song to see what it has.")
+        }
+        return found
+    }
+
+    /// The groove a plan produced, as the graph stores it: the feel's pattern with the plan's
+    /// swing. The velocity scale is a performance decision and lives in the note, not the payload.
+    private func groove(for plan: DirectorGroovePlan) async throws -> Groove {
+        let library = workbench.engines.feels
+        guard var feel = library.feel(named: plan.feel) else {
+            throw DirectorToolFailure(tool: name, reason: "The feel \"\(plan.feel)\" is no longer in the library.")
+        }
+        if let percent = plan.swingPercent { feel = feel.swung(percent: percent) }
+        return feel.groove
+    }
+}
