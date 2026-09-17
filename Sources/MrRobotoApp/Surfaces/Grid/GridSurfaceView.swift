@@ -16,17 +16,23 @@ public struct GridSurfaceView: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: Design.Metric.gutter) {
-            header
-            levers
-            StepGrid(model: model)
-            pickers
-            if let line = model.provenanceLine { ProvenanceLine(text: line) }
-            if let error = model.lastError { GridFailureNote(text: error) }
-            Spacer(minLength: 0)
+        // The grid is the surface, so it is what the panel's spare width and height are spent on:
+        // steps across, voice rows down. Everything else keeps the size it was designed at.
+        GeometryReader { geometry in
+            let layout = GridLayout(size: geometry.size,
+                                    voices: model.voices.count, steps: model.stepCount)
+            VStack(alignment: .leading, spacing: Design.Metric.gutter) {
+                header
+                levers
+                StepGrid(model: model, layout: layout)
+                pickers
+                if let line = model.provenanceLine { ProvenanceLine(text: line) }
+                if let error = model.lastError { GridFailureNote(text: error) }
+                Spacer(minLength: 0)
+            }
+            .padding(Design.Metric.inset)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .padding(Design.Metric.inset)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Design.Palette.panel)
     }
 
@@ -207,27 +213,32 @@ private struct TierBrush: View {
 
 private struct StepGrid: View {
     @Bindable var model: GridModel
-
-    private let rowHeight: CGFloat = 26
-    private let labelWidth: CGFloat = 78
+    let layout: GridLayout
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            ruler
-            ForEach(model.voices, id: \.rawValue) { voice in
-                GridRowView(model: model, voice: voice, rowHeight: rowHeight, labelWidth: labelWidth)
+        ScrollView(.vertical, showsIndicators: layout.gridScrolls) {
+            VStack(alignment: .leading, spacing: GridLayout.rowSpacing) {
+                ruler
+                ForEach(model.voices, id: \.rawValue) { voice in
+                    GridRowView(model: model, voice: voice,
+                                rowHeight: layout.rowHeight, labelWidth: layout.labelWidth)
+                }
             }
         }
+        // The rows only scroll at the window minimum, where five voices at a legible height do not
+        // fit under the levers. At the default window they simply fill the panel.
+        .scrollDisabled(!layout.gridScrolls)
+        .frame(height: layout.gridAreaHeight)
     }
 
     private var ruler: some View {
-        HStack(spacing: 2) {
-            Color.clear.frame(width: labelWidth, height: 12)
+        HStack(spacing: GridLayout.stepSpacing) {
+            Color.clear.frame(width: layout.labelWidth, height: GridLayout.rulerHeight)
             ForEach(Array(0..<model.stepCount), id: \.self) { step in
                 Text(step % model.stepsPerBeat == 0 ? "\(step / model.stepsPerBeat + 1)" : "")
                     .font(Design.Typography.numeric(9))
                     .foregroundStyle(Design.Palette.inkTertiary)
-                    .frame(maxWidth: .infinity, minHeight: 12)
+                    .frame(maxWidth: .infinity, minHeight: GridLayout.rulerHeight)
             }
         }
     }
@@ -244,7 +255,7 @@ private struct GridRowView: View {
     @State private var isPainting = false
 
     var body: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: GridLayout.stepSpacing) {
             Button { model.audition(voice) } label: {
                 Text(voice.rawValue)
                     .font(Design.Typography.ui(11.5, weight: .regular))
@@ -254,7 +265,7 @@ private struct GridRowView: View {
             .buttonStyle(.plain)
 
             GeometryReader { geometry in
-                HStack(spacing: 2) {
+                HStack(spacing: GridLayout.stepSpacing) {
                     ForEach(Array(0..<model.stepCount), id: \.self) { step in
                         StepCellView(cell: model.cell(voice, step: step),
                                      isBeat: step % model.stepsPerBeat == 0,

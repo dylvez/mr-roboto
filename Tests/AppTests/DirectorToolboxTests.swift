@@ -1,0 +1,164 @@
+import Foundation
+import Testing
+
+@testable import MrRobotoApp
+
+/// The tool list as a cached artefact.
+///
+/// These are the tests that stop a careless edit costing every session in the field its cache: the
+/// list has a fixed order, the schemas have fixed key order, and the whole thing is byte-stable.
+@Suite("Director: the toolbox")
+@MainActor
+struct DirectorToolboxTests {
+
+    private func toolbox() -> DirectorToolbox {
+        DirectorTools.toolbox(workbench: DirectorWorkbench(engines: DirectorTestEngines.make()),
+                             workspace: DirectorScratchWorkspace(song: DirectorSongFixture.song()),
+                             audition: DirectorSilentAudition())
+    }
+
+    @Test("The list is exactly the tools the first proof needs, in the order the work happens")
+    func theList() {
+        #expect(toolbox().names == DirectorTools.names)
+        #expect(DirectorTools.names.count == 14)
+        // The first thing is reading the song: a proposal about a song nobody read is a guess.
+        #expect(DirectorTools.names.first == "read_song")
+        #expect(DirectorTools.names.last == "create_part_version")
+    }
+
+    @Test("Every tool has a name the API accepts, a sentence, and an object schema")
+    func everyToolIsWellFormed() {
+        for tool in toolbox().tools {
+            #expect(tool.name.allSatisfy { $0.isLowercase || $0 == "_" || $0.isNumber },
+                    "\(tool.name) should be snake_case")
+            #expect(tool.definition.description.count > 40, "\(tool.name) needs a real sentence")
+            let schema = tool.definition.inputSchema
+            #expect(schema["type"]?.stringValue == "object", "\(tool.name)")
+            #expect(schema["additionalProperties"]?.boolValue == false, "\(tool.name) is strict")
+            #expect(schema["properties"] != nil, "\(tool.name)")
+            #expect(schema["required"]?.arrayValue != nil, "\(tool.name)")
+        }
+    }
+
+    @Test("Strict tool use needs every property listed as required, optionality by nullable type")
+    func strictSchemas() {
+        for tool in toolbox().tools {
+            let schema = tool.definition.inputSchema
+            guard case .object(let properties)? = schema["properties"] else {
+                Issue.record("\(tool.name) has no properties object")
+                continue
+            }
+            let required = Set((schema["required"]?.arrayValue ?? []).compactMap(\.stringValue))
+            #expect(Set(properties.keys) == required,
+                    "\(tool.name): strict mode requires every property to be listed")
+            #expect(tool.definition.strict)
+        }
+    }
+
+    @Test("Every property says what it is for")
+    func everyPropertyIsDescribed() {
+        for tool in toolbox().tools {
+            guard case .object(let properties)? = tool.definition.inputSchema["properties"] else { continue }
+            for member in properties.members {
+                let description = member.value["description"]?.stringValue ?? ""
+                #expect(description.count > 10, "\(tool.name).\(member.key) needs a description")
+            }
+        }
+    }
+
+    @Test("The schemas serialise the same way every time")
+    func schemasAreByteStable() {
+        let first = toolbox().fingerprint
+        for _ in 0..<5 { #expect(toolbox().fingerprint == first) }
+        // And a fresh toolbox over fresh engines agrees with it, so nothing about a session leaks
+        // into position 0 of the request.
+        #expect(toolbox().definitions.map(\.inputSchema).map(\.jsonText)
+                == toolbox().definitions.map(\.inputSchema).map(\.jsonText))
+    }
+
+    @Test("There is one breakpoint on the tool list, on the last tool")
+    func toolListBreakpoint() {
+        let definitions = toolbox().definitions
+        #expect(definitions.dropLast().allSatisfy { $0.cacheControl == nil })
+        #expect(definitions.last?.cacheControl != nil)
+    }
+
+    @Test("A tool list plus a system prompt is two breakpoints, well under the four allowed")
+    func breakpointBudget() {
+        let request = ClaudeRequest(model: .opus5,
+                                    system: DirectorPrompt.systemBlocks,
+                                    tools: toolbox().definitions,
+                                    messages: [.user("hi")])
+        #expect(ClaudeClient.cacheBreakpoints(in: request) == 2)
+        #expect(ClaudeClient.cacheBreakpoints(in: request) <= ClaudeClient.maximumCacheBreakpoints)
+    }
+
+    @Test("The frozen prefix holds nothing that changes between requests")
+    func thePrefixIsFrozen() {
+        let prompt = DirectorPrompt.system
+        let year = Calendar(identifier: .gregorian).component(.year, from: Date())
+        #expect(!prompt.contains("\(year)"), "no date in the prefix")
+        // The prefix is a stored constant, so two reads of it are the same bytes by construction;
+        // the test that matters is that nothing interpolates into it.
+        #expect(DirectorPrompt.system == DirectorPrompt.system)
+        #expect(DirectorPrompt.systemBlocks.map(\.text) == DirectorPrompt.systemBlocks.map(\.text))
+        for tool in toolbox().tools {
+            #expect(!tool.definition.description.contains("\(year)"), "\(tool.name)")
+        }
+    }
+
+    @Test("The prefix is long enough to be worth caching on every model it runs on")
+    func prefixIsCacheable() {
+        // Four characters to a token is the rough rule; the minimum is 512 on Opus and Fable and
+        // 1024 on Sonnet, so a prefix this size caches everywhere.
+        let characters = DirectorPrompt.system.count
+            + toolbox().definitions.reduce(0) { $0 + $1.description.count + $1.inputSchema.jsonText.count }
+        let tokens = characters / 4
+        for model in ClaudeModel.allCases {
+            #expect(tokens > model.minimumCacheablePrefix,
+                    "\(model): roughly \(tokens) tokens against a minimum of \(model.minimumCacheablePrefix)")
+        }
+    }
+
+    @Test("A tool the model asks for by the wrong name comes back as an answer, not a throw")
+    func unknownToolIsAnAnswer() async {
+        let result = await toolbox().run(ClaudeToolUse(id: "t", name: "nope", input: .object([])))
+        #expect(result.isError)
+        #expect(result.toolUseID == "t")
+        #expect(result.content.contains("read_song"))
+    }
+
+    @Test("A tool that fails comes back as an answer too, with what it suggested")
+    func toolFailureIsAnAnswer() async {
+        let result = await toolbox().run(
+            ClaudeToolUse(id: "t", name: "describe_feel",
+                          input: .object([.init("name", .string("Nothing Like It"))])))
+        #expect(result.isError)
+        #expect(result.content.contains("list_feels"))
+    }
+
+    @Test("A tool that succeeds comes back as JSON the model can read")
+    func toolSuccessIsJSON() async throws {
+        let result = await toolbox().run(ClaudeToolUse(id: "t", name: "read_song", input: .object([])))
+        #expect(!result.isError)
+        let value = try DirectorJSON.parse(Data(result.content.utf8))
+        #expect(value["is_open"]?.boolValue == true)
+        #expect(value["title"]?.stringValue == "Arrival")
+    }
+
+    @Test("A decode failure names the key rather than dumping a Swift error")
+    func decodeFailureIsReadable() async {
+        let result = await toolbox().run(
+            ClaudeToolUse(id: "t", name: "chop_bar",
+                          input: .object([.init("bar", .string("the loud one"))])))
+        #expect(result.isError)
+        #expect(result.content.contains("chop_bar"))
+    }
+
+    @Test("The schema DSL makes an optional field nullable rather than absent")
+    func optionalSchema() {
+        let optional = Schema.optional(Schema.integer("A number, or nothing."))
+        #expect(optional["type"]?.arrayValue?.compactMap(\.stringValue) == ["integer", "null"])
+        #expect(optional["description"]?.stringValue == "A number, or nothing.")
+    }
+}

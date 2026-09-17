@@ -1,0 +1,309 @@
+import AVFAudio
+import AudioEngine
+import Foundation
+import Instrument
+import MusicTheory
+import Performance
+import SongGraph
+import Testing
+
+@testable import MrRobotoApp
+
+// The transport, actually playing — driven offline.
+//
+// This shell has no audio device, and neither does CI, so "does it play" is asked the only way it
+// can honestly be asked: the engine is put in manual rendering mode (`Engine.prepare(offlineSampleRate:)`,
+// the same door `InstrumentTests` and `AudioEngineTests` go through), the transport is started, and
+// the render is inspected for samples at the frames the plan put them on. Nothing here waits to hear
+// anything.
+//
+// Serialized: each test builds a whole `AVAudioEngine` graph and, for the groove, a synthesized kit.
+@Suite("Transport: a started transport renders what the plan said", .serialized)
+struct TransportPlaybackTests {
+
+    private static let sampleRate: Double = 48_000
+
+    // MARK: Harness
+
+    @AudioActor
+    private func engine(players: Int = 4, channels: AVAudioChannelCount = 2) throws -> Engine {
+        let engine = try Engine(playerCount: players, sampleRate: Self.sampleRate, channels: channels)
+        try engine.prepare(offlineSampleRate: Self.sampleRate, maximumFrames: 4_096)
+        try engine.start()
+        return engine
+    }
+
+    private var clock: TransportClock {
+        TransportClock(tempo: 120, timeSignature: .fourFour, sampleRate: Self.sampleRate)
+    }
+
+    @AudioActor
+    private func teardown(_ player: LiveSongPlayer, _ service: AuditionService, _ engine: Engine) async {
+        await player.end()
+        await service.shutdown()
+        engine.stopTransport()
+        engine.stop()
+    }
+
+    /// Peak magnitude over a window of one channel, in seconds.
+    private func peak(_ buffer: AVAudioPCMBuffer, from: Double, to: Double, channel: Int = 0) -> Float {
+        guard let data = buffer.floatChannelData,
+              buffer.format.channelCount > AVAudioChannelCount(channel) else { return 0 }
+        let stride = buffer.stride
+        let first = max(0, Int(from * Self.sampleRate))
+        let last = min(Int(buffer.frameLength), Int(to * Self.sampleRate))
+        guard last > first else { return 0 }
+        return (first..<last).reduce(Float(0)) { max($0, abs(data[channel][$1 * stride])) }
+    }
+
+    /// A WAV of a steady tone on disk, so a track test plays a real file through a real decode.
+    private func writeTone(_ directory: URL, seconds: Double = 1.0,
+                           frequency: Double = 220, rate: Double = 44_100) throws -> URL {
+        let url = directory.appendingPathComponent("take-\(UUID().uuidString).wav")
+        let settings: [String: Any] = [
+            AVFormatIDKey: kAudioFormatLinearPCM,
+            AVSampleRateKey: rate,
+            AVNumberOfChannelsKey: 1,
+            AVLinearPCMBitDepthKey: 32,
+            AVLinearPCMIsFloatKey: true,
+            AVLinearPCMIsBigEndianKey: false,
+            AVLinearPCMIsNonInterleaved: false,
+        ]
+        let file = try AVAudioFile(forWriting: url, settings: settings,
+                                   commonFormat: .pcmFormatFloat32, interleaved: false)
+        let frames = AVAudioFrameCount(seconds * rate)
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: frames),
+              let data = buffer.floatChannelData else {
+            throw EngineError.renderFailed("could not build a tone buffer")
+        }
+        buffer.frameLength = frames
+        for frame in 0..<Int(frames) {
+            data[0][frame] = Float(sin(2 * .pi * frequency * Double(frame) / rate) * 0.6)
+        }
+        try file.write(from: buffer)
+        return url
+    }
+
+    // MARK: A groove
+
+    @Test("A song with a groove schedules hits when started, and renders them")
+    @AudioActor
+    func aGrooveSchedulesAndSounds() async throws {
+        let kits = TransportFixture.temporaryDirectory("kits")
+        defer { try? FileManager.default.removeItem(at: kits) }
+        let engine = try engine()
+        let service = AuditionService(engine: { engine }, kitsDirectory: kits)
+        let player = LiveSongPlayer(service: service)
+
+        var plan = SongPlayback(tempo: 120, groove: TransportFixture.groove(bars: 1))
+        plan.machine = SynthMachine.tr808.id
+
+        try await player.begin(plan, clock: clock)
+        _ = try engine.startTransport(clock: clock)
+
+        // Started means scheduled: the engine hands every source its transport and the first
+        // look-ahead window before a frame is rendered.
+        var reading = await player.reading()
+        #expect(reading.isRunning)
+        #expect(reading.scheduledHits > 0, "the groove player queued nothing at transport start")
+
+        // Two seconds at 120 bpm is four beats, so four kicks: 0, 0.5, 1.0, 1.5.
+        let out = try OfflineRenderer.renderBuffer(engine: engine,
+                                                   frames: AVAudioFramePosition(2 * Self.sampleRate))
+        #expect(out.frameLength == AVAudioFrameCount(2 * Self.sampleRate))
+        #expect(peak(out, from: 0, to: 2) > 0.001, "nothing came out of the graph")
+
+        // At the frames the plan put them on, not merely somewhere.
+        for beat in [0.0, 0.5, 1.0, 1.5] {
+            #expect(peak(out, from: beat, to: beat + 0.06) > 0.001,
+                    "no hit at beat starting \(beat) s")
+        }
+        // And the gap before the second kick is quieter than the kick itself: the hits are spread
+        // across the bar rather than fired at once.
+        #expect(peak(out, from: 0.40, to: 0.49) < peak(out, from: 0.5, to: 0.56))
+
+        reading = await player.reading()
+        #expect(reading.seconds > 1.9)
+        #expect(reading.scheduledHits >= 4)
+
+        await teardown(player, service, engine)
+    }
+
+    @Test("Stopping is clean: the sources come off the engine and nothing is left running")
+    @AudioActor
+    func stoppingIsClean() async throws {
+        let kits = TransportFixture.temporaryDirectory("kits")
+        defer { try? FileManager.default.removeItem(at: kits) }
+        let engine = try engine()
+        let service = AuditionService(engine: { engine }, kitsDirectory: kits)
+        let player = LiveSongPlayer(service: service)
+
+        try await player.begin(SongPlayback(tempo: 120, groove: TransportFixture.groove()),
+                               clock: clock)
+        _ = try engine.startTransport(clock: clock)
+        _ = try OfflineRenderer.renderBuffer(engine: engine,
+                                             frames: AVAudioFramePosition(Self.sampleRate / 4))
+
+        await player.end()
+        #expect(await player.reading() == .stopped)
+
+        // The engine itself is untouched — stopping playback is not shutting the app's audio down —
+        // and it can be started again.
+        #expect(engine.isRunning)
+        engine.stopTransport()
+        _ = try engine.startTransport(clock: clock)
+        #expect(engine.isTransportRunning)
+
+        // Starting again after a stop is an ordinary thing to do.
+        engine.stopTransport()
+        try await player.begin(SongPlayback(tempo: 120, groove: TransportFixture.groove()),
+                               clock: clock)
+        _ = try engine.startTransport(clock: clock)
+        #expect(await player.reading().isRunning)
+
+        await teardown(player, service, engine)
+    }
+
+    // MARK: A take
+
+    @Test("A song with a take plays it, from the transport position it was placed at")
+    @AudioActor
+    func aTakePlays() async throws {
+        let directory = TransportFixture.temporaryDirectory("take")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let engine = try engine()
+        let service = AuditionService(engine: { engine }, kitsDirectory: directory)
+        let player = LiveSongPlayer(service: service)
+
+        let url = try writeTone(directory, seconds: 1.0)
+        let track = SongPlayback.Track(version: VersionID(), name: "Record", url: url,
+                                       startsAt: 0.5, duration: 1.0)
+        try await player.begin(SongPlayback(tempo: 120, tracks: [track]), clock: clock)
+        _ = try engine.startTransport(clock: clock)
+
+        let out = try OfflineRenderer.renderBuffer(engine: engine,
+                                                   frames: AVAudioFramePosition(2 * Self.sampleRate))
+
+        // Placed at half a second: quiet before it, loud after it, quiet again once it has run out.
+        #expect(peak(out, from: 0, to: 0.45) < 0.01, "the take sounded before its start")
+        #expect(peak(out, from: 0.55, to: 1.4) > 0.1, "the take never sounded")
+        #expect(peak(out, from: 1.6, to: 2.0) < 0.01, "the take outlasted its own length")
+
+        // The file is 44.1 kHz and the graph is 48: the conversion happens on the way in, so a
+        // second of audio is still a second rather than 1.09 of one.
+        #expect(peak(out, from: 1.30, to: 1.45) > 0.1, "the take ended early")
+
+        await teardown(player, service, engine)
+    }
+
+    @Test("A groove and a take together, on one engine")
+    @AudioActor
+    func both() async throws {
+        let directory = TransportFixture.temporaryDirectory("both")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let engine = try engine()
+        let service = AuditionService(engine: { engine }, kitsDirectory: directory)
+        let player = LiveSongPlayer(service: service)
+
+        let url = try writeTone(directory, seconds: 1.5)
+        var plan = SongPlayback(tempo: 120, groove: TransportFixture.groove())
+        plan.tracks = [SongPlayback.Track(version: VersionID(), name: "Record", url: url,
+                                          startsAt: 0, duration: 1.5)]
+
+        try await player.begin(plan, clock: clock)
+        _ = try engine.startTransport(clock: clock)
+
+        let reading = await player.reading()
+        #expect(reading.scheduledHits > 0)
+
+        let out = try OfflineRenderer.renderBuffer(engine: engine,
+                                                   frames: AVAudioFramePosition(Self.sampleRate))
+        #expect(peak(out, from: 0, to: 1) > 0.1)
+
+        await teardown(player, service, engine)
+    }
+
+    @Test("A looping take repeats end to end; one that does not, does not")
+    @AudioActor
+    func looping() async throws {
+        let directory = TransportFixture.temporaryDirectory("loop")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let engine = try engine()
+        let service = AuditionService(engine: { engine }, kitsDirectory: directory)
+        let player = LiveSongPlayer(service: service)
+
+        let url = try writeTone(directory, seconds: 0.5)
+        var plan = SongPlayback(tempo: 120,
+                                tracks: [SongPlayback.Track(version: VersionID(), name: "Record",
+                                                            url: url, startsAt: 0, duration: 0.5)])
+        plan.loops = true
+
+        try await player.begin(plan, clock: clock)
+        _ = try engine.startTransport(clock: clock)
+        let out = try OfflineRenderer.renderBuffer(engine: engine,
+                                                   frames: AVAudioFramePosition(1.5 * Self.sampleRate))
+
+        // Half a second of audio, still sounding a second later.
+        #expect(peak(out, from: 0.1, to: 0.4) > 0.1)
+        #expect(peak(out, from: 1.0, to: 1.4) > 0.1, "the loop did not come round")
+
+        await teardown(player, service, engine)
+    }
+
+    // MARK: Refusing
+
+    @Test("A plan with nothing schedulable throws rather than starting a silent transport")
+    @AudioActor
+    func nothingSchedulable() async throws {
+        let kits = TransportFixture.temporaryDirectory("empty")
+        defer { try? FileManager.default.removeItem(at: kits) }
+        let engine = try engine()
+        let service = AuditionService(engine: { engine }, kitsDirectory: kits)
+        let player = LiveSongPlayer(service: service)
+
+        await #expect(throws: LiveSongPlayer.Failure.self) {
+            try await player.begin(SongPlayback(tempo: 120), clock: clock)
+        }
+        #expect(await player.reading() == .stopped)
+
+        await teardown(player, service, engine)
+    }
+
+    @Test("A track whose file cannot be read names the track rather than trapping")
+    @AudioActor
+    func unreadableTrack() async throws {
+        let directory = TransportFixture.temporaryDirectory("missing")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let engine = try engine()
+        let service = AuditionService(engine: { engine }, kitsDirectory: directory)
+        let player = LiveSongPlayer(service: service)
+
+        let track = SongPlayback.Track(version: VersionID(), name: "Drums stem",
+                                       url: directory.appendingPathComponent("gone.wav"),
+                                       startsAt: 0, duration: 4)
+        do {
+            try await player.begin(SongPlayback(tempo: 120, tracks: [track]), clock: clock)
+            Issue.record("a missing file should not begin")
+        } catch let failure as LiveSongPlayer.Failure {
+            #expect("\(failure)".contains("Drums stem"))
+        }
+
+        await teardown(player, service, engine)
+    }
+
+    @Test("With no engine at all, beginning fails and says why")
+    @AudioActor
+    func noEngine() async {
+        let kits = TransportFixture.temporaryDirectory("noengine")
+        defer { try? FileManager.default.removeItem(at: kits) }
+        let service = AuditionService(engine: { throw NoAudioDevice() }, kitsDirectory: kits)
+        let player = LiveSongPlayer(service: service)
+
+        await #expect(throws: (any Error).self) {
+            try await player.begin(SongPlayback(tempo: 120, groove: TransportFixture.groove()),
+                                   clock: clock)
+        }
+        #expect(await player.reading() == .stopped)
+        await player.end()
+    }
+}

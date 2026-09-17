@@ -15,17 +15,24 @@ public struct ImportSurfaceView: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: Design.Metric.gutter) {
-            header
-            switch model.state {
-            case .empty, .cancelled, .failed:
-                DropWell(model: model)
-            default:
-                content
+        // The layout is computed from the panel, not from inside the scroll view: the content below
+        // is scrollable, so its own height is unbounded and could never tell the waveform or the
+        // stem lanes how much room the record actually has.
+        GeometryReader { geometry in
+            let layout = ImportLayout(size: geometry.size,
+                                      sectionLanes: model.instruments.count + 1)
+            VStack(alignment: .leading, spacing: Design.Metric.gutter) {
+                header
+                switch model.state {
+                case .empty, .cancelled, .failed:
+                    DropWell(model: model, layout: layout)
+                default:
+                    content(layout)
+                }
             }
+            .padding(Design.Metric.inset)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .padding(Design.Metric.inset)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Design.Palette.panel)
     }
 
@@ -51,14 +58,14 @@ public struct ImportSurfaceView: View {
 
     // MARK: Body
 
-    private var content: some View {
+    private func content(_ layout: ImportLayout) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Design.Metric.gutter) {
-                WaveformPanel(model: model)
+                WaveformPanel(model: model, layout: layout)
                 ReadingsRow(model: model)
-                if !model.sections.isEmpty { SectionsStrip(model: model) }
+                if !model.sections.isEmpty { SectionsStrip(model: model, layout: layout) }
                 PromoteBar(model: model)
-                StemLanesPanel(model: model)
+                StemLanesPanel(model: model, layout: layout)
                 ProvenancePanel(model: model)
                 if let error = model.lastError { FailureNote(text: error) }
             }
@@ -70,6 +77,7 @@ public struct ImportSurfaceView: View {
 
 private struct DropWell: View {
     @Bindable var model: ImportModel
+    let layout: ImportLayout
     @State private var isTargeted = false
 
     var body: some View {
@@ -93,7 +101,9 @@ private struct DropWell: View {
                     .multilineTextAlignment(.center)
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 220)
+        // The well is the panel when there is nothing else in it: a 220-point box floating at the
+        // top of 665 points of bench reads as a surface that failed to load, not as a drop target.
+        .frame(maxWidth: .infinity, minHeight: layout.dropWellHeight)
         .padding(Design.Metric.inset)
         .background(isTargeted ? Design.Palette.accentSoft : Design.Palette.panelAlt)
         .overlay(
@@ -150,6 +160,7 @@ private struct ImportProgressStrip: View {
 
 private struct WaveformPanel: View {
     @Bindable var model: ImportModel
+    let layout: ImportLayout
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -166,7 +177,10 @@ private struct WaveformPanel: View {
                 .contentShape(Rectangle())
                 .gesture(dragGesture(width: geometry.size.width))
             }
-            .frame(height: 132)
+            // Just under a third of the panel. You pick a region here by eye, against the downbeat
+            // marks drawn over the trace; 132 points showed that the file had audio in it and not
+            // where a bar started.
+            .frame(height: layout.waveformHeight)
             .background(Design.Palette.plate)
             .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
         }
@@ -268,6 +282,7 @@ private struct Reading: View {
 
 private struct SectionsStrip: View {
     let model: ImportModel
+    let layout: ImportLayout
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -282,29 +297,30 @@ private struct SectionsStrip: View {
                     }
                 }
             }
-            .frame(height: CGFloat(model.instruments.count + 1) * 20)
+            .frame(height: layout.sectionStripHeight)
         }
     }
 
     private func laneRow(ranges: [SongGraph.TimeRange], label: String, colour: Color, width: CGFloat) -> some View {
         let duration = max(0.001, model.waveform.duration)
+        let lanes = max(1, width - layout.laneLabelWidth - 8)
         return HStack(spacing: 8) {
             Text(label)
                 .font(Design.Typography.ui(10.5, weight: .regular))
                 .foregroundStyle(Design.Palette.inkTertiary)
-                .frame(width: 60, alignment: .leading)
+                .frame(width: layout.laneLabelWidth, alignment: .leading)
             ZStack(alignment: .leading) {
                 Rectangle().fill(Design.Palette.panelAlt)
                 ForEach(Array(ranges.enumerated()), id: \.offset) { _, range in
-                    let lead = (width - 68) * CGFloat(range.start / duration)
-                    let span = (width - 68) * CGFloat(range.duration / duration)
+                    let lead = lanes * CGFloat(range.start / duration)
+                    let span = lanes * CGFloat(range.duration / duration)
                     Rectangle()
                         .fill(colour.opacity(0.35))
                         .frame(width: max(1, span))
                         .offset(x: lead)
                 }
             }
-            .frame(height: 12)
+            .frame(height: layout.sectionBarHeight)
         }
     }
 }
@@ -373,6 +389,7 @@ private struct PromoteBar: View {
 
 private struct StemLanesPanel: View {
     let model: ImportModel
+    let layout: ImportLayout
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -383,7 +400,7 @@ private struct StemLanesPanel: View {
                     .foregroundStyle(Design.Palette.inkTertiary)
             } else {
                 ForEach(model.stems) { lane in
-                    StemLaneRow(lane: lane, model: model)
+                    StemLaneRow(lane: lane, model: model, layout: layout)
                 }
             }
         }
@@ -400,12 +417,13 @@ private struct StemLanesPanel: View {
 private struct StemLaneRow: View {
     let lane: StemLane
     let model: ImportModel
+    let layout: ImportLayout
 
     var body: some View {
         HStack(spacing: 10) {
             Text(lane.name.rawValue)
                 .font(Design.Typography.ui(12.5))
-                .frame(width: 70, alignment: .leading)
+                .frame(width: layout.laneLabelWidth, alignment: .leading)
             LaneButton(title: "S", isOn: lane.isSoloed) { model.toggleSolo(lane.name) }
             LaneButton(title: "M", isOn: lane.isMuted) { model.toggleMute(lane.name) }
             Button { model.audition(stem: lane.name) } label: {
@@ -419,7 +437,9 @@ private struct StemLaneRow: View {
                 .font(Design.Typography.numeric(11))
                 .foregroundStyle(Design.Palette.inkTertiary)
         }
-        .frame(height: Design.Metric.chipHeight)
+        // Four lanes at 28 points each read as a list of file names. Given the room they are the
+        // four things the record was split into, and each one is something you can aim at.
+        .frame(height: layout.stemLaneHeight)
         .opacity(model.audibleStems.contains(lane.name) ? 1 : 0.45)
     }
 }

@@ -157,6 +157,31 @@ public final class AuditionService {
         }
     }
 
+    // MARK: The transport
+    //
+    // The frame's transport plays the *song*, which is a different job from auditioning — but it
+    // must be the same graph. These two are the whole of what `LiveSongPlayer` needs, and they are
+    // deliberately the only way in: it gets the engine this service already owns and the sampler
+    // this service already attached, so a groove playing and a pad being touched are one sampler on
+    // one engine rather than two of each fighting over the output device.
+
+    /// The app's engine, built on first use exactly as an audition builds it. Not started: the
+    /// transport's own host starts it, in whichever mode it was prepared for.
+    public func playbackEngine() async throws -> Engine {
+        try await liveEngine()
+    }
+
+    /// The one sampler, holding `machine`'s kit.
+    ///
+    /// Goes through `prepare(machine:)`, so a machine already loaded costs nothing and one that is
+    /// not displaces whatever a surface had put there — which is correct: the transport is playing
+    /// the song, and the song's own machine is what it should sound like.
+    public func playbackSampler(machine: SynthMachine) async throws -> VoiceSampler {
+        try await prepare(machine: machine)
+        guard let sampler else { throw AuditionUnavailable(what: "the sampler was not prepared") }
+        return sampler
+    }
+
     // MARK: Stopping
 
     /// Silence everything this service is playing. Never throws: stopping is always allowed.
@@ -294,4 +319,12 @@ public final class AuditionService {
         let scrubbed = id.unicodeScalars.map { allowed.contains($0) ? Character($0) : "-" }
         return String(scrubbed)
     }
+}
+
+/// The audition rig could not give something out. Carries the reason verbatim: nothing in this
+/// layer ever fails with a shrug.
+public struct AuditionUnavailable: Error, CustomStringConvertible, Sendable {
+    public let what: String
+    public init(what: String) { self.what = what }
+    public var description: String { what }
 }

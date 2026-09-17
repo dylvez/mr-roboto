@@ -30,6 +30,14 @@ enum FrameFixture {
                     note: "8 bars")
     }
 
+    /// The same song with a groove in it, so the transport has something to play. A melody is not
+    /// something Gate A can sound, and the transport now says so rather than pretending.
+    static func playableSong(title: String = "Arrival") -> Song {
+        var song = self.song(title: title)
+        try? song.append(TransportFixture.grooveVersion())
+        return song
+    }
+
     static func state(song: Song? = nil, library: Library = Library()) -> AppState {
         AppState(library: library, song: song, transportHost: StubTransportHost())
     }
@@ -309,7 +317,11 @@ struct AppStateTests {
     @Test("Play and stop move the transport and reach the host")
     func transport() async {
         let host = StubTransportHost()
-        let app = AppState(song: FrameFixture.song(), transportHost: host)
+        // A song the transport can actually play. It used to be enough to hand this a melody: the
+        // frame started a clock, nothing was scheduled against it, and the bar lit up regardless.
+        // `TransportPlanTests` holds the other half — a song with nothing playable says so.
+        let app = AppState(song: FrameFixture.playableSong(), transportHost: host)
+        app.attach(playback: StubPlaybackHost())
 
         await app.toggleTransport()
         #expect(app.transport == .playing)
@@ -325,7 +337,8 @@ struct AppStateTests {
     func transportFailure() async {
         let host = StubTransportHost()
         host.failure = NoAudioDevice()
-        let app = AppState(song: FrameFixture.song(), transportHost: host)
+        let app = AppState(song: FrameFixture.playableSong(), transportHost: host)
+        app.attach(playback: StubPlaybackHost())
 
         await app.startTransport()
 

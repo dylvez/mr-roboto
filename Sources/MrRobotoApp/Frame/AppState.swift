@@ -63,9 +63,25 @@ public enum TransportState: Equatable, Sendable {
     case starting
     case playing
     case unavailable(String)
+    /// The song holds nothing this transport can sound: no groove with a hit in it, no take, no
+    /// stems. Pressing play says which, rather than lighting up and playing silence.
+    case nothingToPlay(SongPlayback.Silence)
 
     public var isPlaying: Bool { self == .playing }
     public var isBusy: Bool { self == .starting }
+
+    /// Why it is not playing, when there is a reason worth putting on screen.
+    public var silence: SongPlayback.Silence? {
+        if case .nothingToPlay(let silence) = self { return silence }
+        return nil
+    }
+}
+
+/// No player was attached to this `AppState`. The app attaches one in `live()`; a test that means
+/// to drive the transport injects a double. Reaching this is a wiring mistake, and it says so.
+public struct SongPlaybackUnavailable: Error, CustomStringConvertible, Sendable {
+    public init() {}
+    public var description: String { "this session has no player attached" }
 }
 
 /// The audio the frame drives. `LiveTransportHost` owns the real `AudioEngine.Engine`; tests inject a
@@ -216,10 +232,24 @@ public final class AppState {
     // MARK: Transport
 
     public private(set) var transport: TransportState = .stopped
-    /// Whether playback should loop. The frame owns the flag; sources honour it.
+    /// Whether playback should loop. The frame owns the flag; the sources honour it, through
+    /// `SongPlayback.loops`.
     public private(set) var isLooping = false
 
+    /// What the transport would play, from the song graph.
+    ///
+    /// Recomputed whenever the song changes rather than on every render, because resolving a
+    /// `MediaRef` touches the file system and the transport bar reads this to decide what to say.
+    public private(set) var playback = SongPlayback()
+
+    /// Transport seconds, followed while playing. 0 when stopped.
+    public private(set) var playhead: Double = 0
+
     @ObservationIgnored private let transportHost: TransportHost
+    @ObservationIgnored private var playbackHost: SongPlaybackHost?
+    /// The poll that makes the readout, the section strip and the play control follow the engine
+    /// rather than follow what was last asked of it.
+    @ObservationIgnored private var following: Task<Void, Never>?
 
     // MARK: Init
 
@@ -242,7 +272,13 @@ public final class AppState {
         self.bench = Bench()
         self.regions = regions ?? RegionVisibility()
         self.libraryStatus = status ?? store.map { library.isEmpty ? .empty($0.directoryURL) : .loaded($0.directoryURL) } ?? .unset
-        if let song { openSongWithoutLogging(song) }
+        if let song {
+            openSongWithoutLogging(song)
+        } else {
+            // With nothing open the transport still has an honest answer ready, rather than an
+            // empty plan that only says so once you have pressed play.
+            refreshPlayback()
+        }
     }
 
     /// The app's own state: the library under Application Support, read now.
@@ -250,7 +286,16 @@ public final class AppState {
         let store = LibraryStore(directoryURL: AppState.defaultLibraryDirectory)
         let state = AppState(store: store, status: .empty(store.directoryURL))
         state.reloadLibrary()
+        // The transport plays through the same engine and the same sampler the surfaces audition
+        // through. `SurfaceWiring` owns that service, so this is where the two halves meet.
+        state.attach(playback: LiveSongPlayer(service: SurfaceWiring.shared.service(for: state)))
         return state
+    }
+
+    /// Installs what actually plays the song. The app does this in `live()`; a test injects a
+    /// double so `AppState`'s transitions can be asserted with no audio device anywhere.
+    public func attach(playback host: SongPlaybackHost) {
+        playbackHost = host
     }
 
     /// `~/Library/Application Support/MrRoboto/Library`, created on demand. Songs are `.roboto` packages
@@ -319,6 +364,7 @@ public final class AppState {
         selectedVersion = song.versions.last?.id
         activeSection = song.sections.first?.id
         hasUnsavedChanges = false
+        refreshPlayback()
     }
 
     private func provenanceSummary(of song: Song) -> String {
@@ -394,6 +440,9 @@ public final class AppState {
             song = current
             hasUnsavedChanges = true
             selectedVersion = version.id
+            // A stem that just landed, or a groove that just committed, is playable now: the bar
+            // should not need a reopen to notice.
+            refreshPlayback()
             note(.you, "\(version.operation.capitalized) → \(version.type.rawValue)\(versionNumber(of: version.id).map { " v\($0)" } ?? "")",
                  detail: provenanceLine(for: version))
             return true
@@ -517,18 +566,57 @@ public final class AppState {
     public func toggleTransport() async {
         switch transport {
         case .playing, .starting: await stopTransport()
-        case .stopped, .unavailable: await startTransport()
+        case .stopped, .unavailable, .nothingToPlay: await startTransport()
         }
     }
 
+    /// Re-reads what the song has that can be played. Cheap, but it resolves media on disk, so it
+    /// is called when the song changes rather than from a view body.
+    public func refreshPlayback() {
+        playback = SongPlayback.plan(for: song) { [store, song] ref in
+            guard let store else { return nil }
+            return try? store.mediaURL(for: ref, song: song?.id)
+        }.looping(isLooping)
+    }
+
+    /// Play what the song actually has.
+    ///
+    /// Three outcomes, and each is a different thing:
+    ///
+    /// * **nothing playable** — the song holds no groove with a hit in it and no audio whose media
+    ///   is on disk. The transport says which and does not start. This is the case the old
+    ///   implementation got wrong: it started a clock, nothing was scheduled against it, and the bar
+    ///   lit up as though it were playing.
+    /// * **playable, and the graph is there** — the plan is handed to the player (which schedules a
+    ///   `GroovePlayer` and/or the take and stems as `ScheduledSource`s on the one engine), then the
+    ///   transport is started, then the frame begins following the engine's own position.
+    /// * **playable, but no audio device** — the engine's error, verbatim, in `.unavailable`.
     public func startTransport() async {
         guard transport != .playing, transport != .starting else { return }
+        refreshPlayback()
+        let plan = playback
+        guard plan.isPlayable else {
+            let silence = plan.silence ?? SongPlayback.Silence(headline: "Nothing to play", detail: "")
+            transport = .nothingToPlay(silence)
+            note(.session, silence.headline, detail: silence.detail)
+            return
+        }
         transport = .starting
         do {
+            guard let playbackHost else { throw SongPlaybackUnavailable() }
+            // The sources are added to the engine *before* the transport starts, so `startTransport`
+            // hands each of them its `Transport` and schedules the first look-ahead window before a
+            // single frame is rendered.
+            try await playbackHost.begin(plan, clock: clock)
             try await transportHost.start(clock: clock)
             transport = .playing
-            note(.you, "Play", detail: String(format: "%.0f bpm · %@", clock.tempo, clock.timeSignature.description))
+            playhead = 0
+            follow()
+            note(.you, "Play",
+                 detail: plan.summary + String(format: " · %.0f bpm · %@",
+                                               clock.tempo, clock.timeSignature.description))
         } catch {
+            await playbackHost?.end()
             transport = .unavailable("\(error)")
             note(.session, "The transport could not start", detail: "\(error)")
         }
@@ -536,14 +624,75 @@ public final class AppState {
 
     public func stopTransport() async {
         guard transport != .stopped else { return }
+        following?.cancel()
+        following = nil
         await transportHost.stop()
+        await playbackHost?.end()
         transport = .stopped
+        playhead = 0
         note(.you, "Stop")
     }
 
     public func toggleLoop() {
         isLooping.toggle()
-        note(.you, isLooping ? "Loop on" : "Loop off")
+        playback = playback.looping(isLooping)
+        note(.you, isLooping ? "Loop on" : "Loop off",
+             detail: transport.isPlaying ? "Takes effect the next time you press play." : nil)
+    }
+
+    // MARK: Following what is actually playing
+
+    /// Polls the player and moves the readout, the section strip and — when the plan runs out — the
+    /// play control itself. This is what makes the bar report the engine rather than report the last
+    /// thing it was asked to do.
+    private func follow() {
+        following?.cancel()
+        following = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                guard let self, let host = self.playbackHost, self.transport.isPlaying else { return }
+                let reading = await host.reading()
+                guard !Task.isCancelled, self.transport.isPlaying else { return }
+                self.playhead = reading.seconds
+                self.followSection(atSeconds: reading.seconds)
+                if !reading.isRunning {
+                    await self.stopTransport()
+                    return
+                }
+                try? await Task.sleep(for: .milliseconds(33))
+            }
+        }
+    }
+
+    /// Which section the playhead is in, from the sections' own bar lengths laid end to end.
+    public func section(atSeconds seconds: Double) -> SectionID? {
+        guard let song, !song.sections.isEmpty else { return nil }
+        let beatsPerBar = Double(max(1, clock.timeSignature.beatsPerBar))
+        let bar = Int((clock.beat(forSeconds: max(0, seconds)) / beatsPerBar).rounded(.down))
+        var start = 0
+        for section in song.sections {
+            start += max(1, section.lengthInBars)
+            if bar < start { return section.id }
+        }
+        return song.sections.last?.id
+    }
+
+    /// Lights the section the playhead is in. Deliberately not `setActiveSection`: following
+    /// playback is not something you did, and the rail should not fill with it.
+    private func followSection(atSeconds seconds: Double) {
+        guard let id = section(atSeconds: seconds), activeSection != id else { return }
+        activeSection = id
+    }
+
+    /// Bar and beat, 1-based, the way a transport reads: `"12.3"`.
+    public var positionText: String {
+        let position = clock.position(forSeconds: max(0, playhead))
+        return "\(max(1, position.bar + 1)).\(Int(position.beat) + 1)"
+    }
+
+    /// Elapsed time: `"1:04"`.
+    public var elapsedText: String {
+        let total = Int(max(0, playhead).rounded(.down))
+        return String(format: "%d:%02d", total / 60, total % 60)
     }
 }
 

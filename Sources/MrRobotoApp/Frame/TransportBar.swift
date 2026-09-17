@@ -1,9 +1,14 @@
 import SongGraph
 import SwiftUI
 
-/// Play, stop, loop, the key and tempo the clock runs at, and the section strip with the active
-/// section lit. The strip's blocks are proportional to each section's length in bars, as in the
-/// mockups: a bridge is visibly shorter than a chorus.
+/// Play, stop, loop, the key and tempo the clock runs at, where the playhead is, and the section
+/// strip with the section it is *in* lit. The strip's blocks are proportional to each section's
+/// length in bars, as in the mockups: a bridge is visibly shorter than a chorus.
+///
+/// Everything here reports the engine rather than a flag. The play control reads `app.transport`,
+/// which now only reaches `.playing` once sources have been scheduled and the transport started;
+/// the position and the lit section come from `AppState`'s poll of the player's own reading; and a
+/// song with nothing to sound says so in the middle of the bar instead of lighting up.
 struct TransportBar: View {
     let app: AppState
 
@@ -11,11 +16,34 @@ struct TransportBar: View {
         HStack(spacing: 36) {
             controls
             keyAndTempo
+            position
             sectionStrip
         }
         .padding(.horizontal, 40)
         .frame(height: FrameLayout.transportHeight)
         .background(Design.Palette.paper)
+    }
+
+    /// Where the playhead is, and what is sounding. Quiet while stopped — a transport that has not
+    /// been started should not claim a position — and the plan's own summary while it plays.
+    private var position: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(app.transport == .stopped ? "—.—" : app.positionText)
+                .font(Design.Typography.numeric(17))
+                .foregroundStyle(app.transport.isPlaying ? Design.Palette.accent : Design.Palette.inkTertiary)
+            Text(playingLine)
+                .font(Design.Typography.ui(11, weight: .regular))
+                .foregroundStyle(Design.Palette.inkTertiary)
+                .lineLimit(1)
+        }
+        .frame(width: 150, alignment: .leading)
+        .help(app.transport.silence?.detail ?? "Bar and beat, and what the transport is playing")
+    }
+
+    private var playingLine: String {
+        if let silence = app.transport.silence { return silence.headline }
+        if app.transport.isPlaying { return "\(app.elapsedText) · \(app.playback.summary)" }
+        return app.playback.summary
     }
 
     private var controls: some View {
@@ -55,6 +83,14 @@ struct TransportBar: View {
                     .font(.system(size: 13))
                     .foregroundStyle(Design.Palette.warn)
                     .help("The transport could not start: \(reason)")
+            }
+            // Not a failure: the song simply holds nothing that can be sounded. Said quietly, with
+            // the thing that would fix it in the tooltip.
+            if let silence = app.transport.silence {
+                Image(systemName: "info.circle")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Design.Palette.inkTertiary)
+                    .help("\(silence.headline). \(silence.detail)")
             }
         }
     }

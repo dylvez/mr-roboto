@@ -14,20 +14,28 @@ public struct ChopLaneView: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: Design.Metric.gutter) {
-            header
-            ChopLanePlate(surface: surface)
-                .frame(minHeight: 168)
-            ChopLanePads(surface: surface)
-            levers
-            ChopLaneInspector(surface: surface)
-            if let error = surface.lastError {
-                Text(error)
-                    .font(Design.Typography.ui(11))
-                    .foregroundStyle(Design.Palette.warn)
+        // The lane is laid out against the room it is actually handed rather than against its own
+        // content: the plate takes the height the pads do not need, and the pad grid's column count
+        // comes from the real width. `ChopLaneLayout` is the whole decision, as a value.
+        GeometryReader { geometry in
+            let layout = ChopLaneLayout(size: geometry.size, sliceCount: surface.sliceCount)
+            VStack(alignment: .leading, spacing: Design.Metric.gutter) {
+                header
+                ChopLanePlate(surface: surface)
+                    .frame(height: layout.plateHeight)
+                ChopLanePads(surface: surface, layout: layout)
+                levers
+                ChopLaneInspector(surface: surface)
+                if let error = surface.lastError {
+                    Text(error)
+                        .font(Design.Typography.ui(11))
+                        .foregroundStyle(Design.Palette.warn)
+                }
+                Spacer(minLength: 0)
             }
+            .padding(Design.Metric.inset)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .padding(Design.Metric.inset)
         .background(Design.Palette.panel)
     }
 
@@ -281,17 +289,32 @@ struct ChopLanePlate: View {
 ///
 /// Touching a pad plays it. That is the whole interaction, and it is why the kit is refreshed on
 /// edits rather than on touches.
+///
+/// The column count is `layout.padColumns`, from the lane's real width, and the pads then share that
+/// width exactly. The old `.adaptive(minimum: 104)` was a fixed rule in adaptive clothing: it packed
+/// as many 104-point pads as fit and left whatever was over as a ragged gutter, which at 1269 points
+/// was a whole pad's worth of nothing.
 struct ChopLanePads: View {
     @Bindable var surface: ChopLaneSurface
+    let layout: ChopLaneLayout
 
-    private let columns = [GridItem(.adaptive(minimum: 104), spacing: 8)]
+    private var columns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: ChopLaneLayout.padSpacing),
+              count: max(1, layout.padColumns))
+    }
 
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 8) {
-            ForEach(surface.chop.slices) { slice in
-                pad(for: slice.index)
+        ScrollView(.vertical, showsIndicators: layout.padsScroll) {
+            LazyVGrid(columns: columns, spacing: ChopLaneLayout.padSpacing) {
+                ForEach(surface.chop.slices) { slice in
+                    pad(for: slice.index)
+                }
             }
         }
+        // Only the pads scroll, and only when the slices genuinely do not fit — at the window
+        // minimum with sixteen of them. Everywhere else this is an ordinary block.
+        .scrollDisabled(!layout.padsScroll)
+        .frame(height: layout.padAreaHeight)
     }
 
     private func pad(for index: Int) -> some View {
@@ -313,10 +336,13 @@ struct ChopLanePads: View {
             Text(classification?.kind.rawValue ?? "—")
                 .font(Design.Typography.ui(13, weight: .medium))
                 .foregroundStyle(Design.Palette.ink)
+            // A taller pad puts the air between the name and the confidence bar rather than under
+            // the bar: the bar stays on the pad's floor, where it reads as a level.
+            Spacer(minLength: 0)
             confidence(classification)
         }
         .padding(8)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: layout.padHeight, alignment: .topLeading)
         .background(selected ? Design.Palette.accentSoft : Design.Palette.panelAlt)
         .overlay(
             RoundedRectangle(cornerRadius: Design.Metric.corner)
@@ -391,7 +417,7 @@ struct ChopLaneInspector: View {
                     .foregroundStyle(Design.Palette.inkTertiary)
             }
         }
-        .frame(height: 26, alignment: .leading)
+        .frame(height: ChopLaneLayout.inspectorHeight, alignment: .leading)
     }
 
     private func controls(for index: Int) -> some View {
