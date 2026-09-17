@@ -20,6 +20,14 @@ import MusicTheory
 /// A slice runs from its own start to the next start, and the last one runs to the end of the
 /// buffer. Nothing is dropped and nothing overlaps, so playing every slice in order at its own
 /// start time reproduces the source sample for sample (`ChopKitTests` asserts exactly that).
+///
+/// ## Where a slice is actually cut
+///
+/// The marked start — a transient, a grid line, an equal division — is a musical decision. The
+/// frame the buffer is *cut* on is a signal one, and the two are allowed to differ by up to
+/// `zeroCrossingWindow`: every start is backed up to the nearest quiet frame inside that window so
+/// a pad does not begin, and the pad before it does not end, on a step. The search only runs
+/// backwards, so no attack is ever shaved. See `quietestFrame(before:in:notBefore:window:)`.
 public struct Chopper: Sendable {
     /// The onset detector used by `sliceByOnsets`. Its defaults are already tuned for drums.
     public var detector: SpectralFluxOnsetDetector
@@ -33,15 +41,33 @@ public struct Chopper: Sendable {
     /// Keep the audio before the first detected transient as a slice of its own (`.leadIn`), so a
     /// chop played back in order starts with what the bar starts with.
     public var includeLeadIn: Bool
+    /// How far **back** from a marked start the chopper may look for a quieter frame to begin on,
+    /// in seconds. 0 disables the search and leaves every start exactly where it was marked.
+    ///
+    /// A transient does not arrive at a zero crossing: the onset detector marks the frame where
+    /// the energy jumped, which is usually most of the way up the first cycle. Firing a pad there
+    /// steps the output from silence to that value in one sample, which is a click — and because
+    /// a slice ends where the next one starts, the *previous* slice ends on the same non-zero
+    /// value and has to be ramped out. Backing the start up to the nearest quiet frame removes
+    /// both at the source rather than masking them with an envelope.
+    ///
+    /// The search only ever goes backwards, so a drum's attack can never be shaved: the worst
+    /// case is that a slice starts a fraction of a millisecond early and picks up the very end of
+    /// what came before. 1.5 ms is about a seventieth of a note at 90 bpm — below the ear's
+    /// resolution for a drum's placement, and long enough to cover a zero crossing of anything
+    /// above roughly 350 Hz.
+    public var zeroCrossingWindow: Double
 
     public init(detector: SpectralFluxOnsetDetector = SpectralFluxOnsetDetector(),
                 snapTolerance: Double = 0.025,
                 minimumSliceDuration: Double = 0.015,
-                includeLeadIn: Bool = true) {
+                includeLeadIn: Bool = true,
+                zeroCrossingWindow: Double = 0.0015) {
         self.detector = detector
         self.snapTolerance = snapTolerance
         self.minimumSliceDuration = minimumSliceDuration
         self.includeLeadIn = includeLeadIn
+        self.zeroCrossingWindow = zeroCrossingWindow
     }
 
     // MARK: Onsets
@@ -167,6 +193,43 @@ public struct Chopper: Sendable {
         BeatGrid.nearestIndex(in: times, to: t).map { times[$0] }
     }
 
+    // MARK: Zero crossings
+
+    /// How much quieter a candidate frame has to be before the start is moved onto it. A start
+    /// that is already close to a crossing is left alone rather than nudged for nothing, and a
+    /// window with nothing quiet in it — a slice cut out of the middle of a sustained note — keeps
+    /// its marked frame and is dealt with by the pad's fade-in instead.
+    static let zeroCrossingImprovement: Float = 0.25
+    /// A start this close to zero is a crossing already; nothing to gain by moving.
+    static let zeroCrossingFloor: Float = 1e-4
+
+    /// The frame in `[frame - window, frame]` with the smallest absolute value, or `frame` itself
+    /// when the search is off, has no room, or finds nothing meaningfully quieter.
+    ///
+    /// Ties go to the **latest** frame, so a run of silence before a transient starts the slice as
+    /// late as it can — as close to the marked position as the material allows.
+    static func quietestFrame(before frame: Int, in signal: [Float], notBefore limit: Int,
+                              window: Int) -> Int {
+        guard window > 0, frame > 0, frame < signal.count else { return frame }
+        let low = max(max(0, limit), frame - window)
+        guard low < frame else { return frame }
+        let here = abs(signal[frame])
+        guard here > zeroCrossingFloor else { return frame }
+
+        var best = frame
+        var bestValue = here
+        var i = frame - 1
+        while i >= low {
+            let value = abs(signal[i])
+            if value < bestValue {
+                bestValue = value
+                best = i
+            }
+            i -= 1
+        }
+        return bestValue <= here * zeroCrossingImprovement ? best : frame
+    }
+
     // MARK: Building
 
     struct Start {
@@ -202,11 +265,24 @@ public struct Chopper: Sendable {
         while kept.count > 1, frames - Int((kept[kept.count - 1].time * sampleRate).rounded()) < minimumFrames {
             kept.removeLast()
         }
+        // Where each start actually cuts the buffer: the marked frame, backed up to the nearest
+        // quiet frame within `zeroCrossingWindow`. Resolved for every start before any slice is
+        // built, because a start is also the previous slice's end and both must agree.
+        var cuts: [Int] = []
+        cuts.reserveCapacity(kept.count)
+        let searchFrames = Int((zeroCrossingWindow * sampleRate).rounded())
+        for start in kept {
+            let marked = Int((start.time * sampleRate).rounded())
+            cuts.append(Chopper.quietestFrame(before: marked, in: signal,
+                                              notBefore: (cuts.last ?? -1) + 1,
+                                              window: searchFrames))
+        }
+
         var slices: [Slice] = []
         slices.reserveCapacity(kept.count)
         for (i, start) in kept.enumerated() {
-            let from = Int((start.time * sampleRate).rounded())
-            let to = i + 1 < kept.count ? Int((kept[i + 1].time * sampleRate).rounded()) : frames
+            let from = cuts[i]
+            let to = i + 1 < kept.count ? cuts[i + 1] : frames
             var slice = Slice(index: i, start: from, end: to, sampleRate: sampleRate,
                               origin: start.origin, snapOffset: start.snapOffset)
             slice.measure(in: signal)

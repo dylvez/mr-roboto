@@ -619,6 +619,32 @@ static inline float vr_env_step(vr_voice_t *v) {
     }
 }
 
+/// Renders `frames` frames of a voice in the zombie stage: it holds its last source value and
+/// rides the ramp down, reading no sample memory.
+///
+/// Broken out of `vr_render_voice` so the *same* call can both stop reading the sample and render
+/// the ramp. A voice that runs off the end of its window does so in the middle of a segment, and
+/// before this existed the transition simply returned: the voice produced nothing for the rest of
+/// the segment and then reappeared at its held value when the next segment began. On a 4096-frame
+/// block that is a hard cut to zero followed, up to 85 ms later, by a step back up to the held
+/// value — two clicks per slice rather than none, and the ramp never doing its job.
+static inline void vr_render_zombie(vr_voice_t *v, float *outL, float *outR,
+                                    float gl, float gr, int32_t offset, int32_t frames) {
+    for (int32_t i = 0; i < frames; i++) {
+        float env = vr_env_step(v);
+        if (env < 0.0f) return;
+        float l = v->lastL * gl * env;
+        float r = v->lastR * gr * env;
+        if (outR) {
+            outL[offset + i] += l;
+            outR[offset + i] += r;
+        } else {
+            outL[offset + i] += (l + r) * 0.5f;
+        }
+        if (v->stage == VR_STAGE_FREE) return;
+    }
+}
+
 static void vr_render_voice(vr_engine_t *e, vr_voice_t *v, float *const *out, int32_t channelCount,
                             int32_t offset, int32_t frames) {
     if (v->stage == VR_STAGE_FREE || frames <= 0) return;
@@ -630,20 +656,7 @@ static void vr_render_voice(vr_engine_t *e, vr_voice_t *v, float *const *out, in
     float *outR = channelCount >= 2 ? out[1] : NULL;
 
     if (v->stage == VR_STAGE_ZOMBIE) {
-        // Holds the last source value and rides the ramp down; reads no sample memory.
-        for (int32_t i = 0; i < frames; i++) {
-            float env = vr_env_step(v);
-            if (env < 0.0f) return;
-            float l = v->lastL * gl * env;
-            float r = v->lastR * gr * env;
-            if (outR) {
-                outL[offset + i] += l;
-                outR[offset + i] += r;
-            } else {
-                outL[offset + i] += (l + r) * 0.5f;
-            }
-            if (v->stage == VR_STAGE_FREE) return;
-        }
+        vr_render_zombie(v, outL, outR, gl, gr, offset, frames);
         return;
     }
 
@@ -710,10 +723,14 @@ static void vr_render_voice(vr_engine_t *e, vr_voice_t *v, float *const *out, in
             }
         } else if (pos >= (double)endFrame) {
             // Ran off the end. If the sample did not end near zero, ramp the last value out
-            // rather than dropping it on the floor.
+            // rather than dropping it on the floor — and ramp it *here*, in the frames of this
+            // segment that are left, because the next segment may not begin for a whole block.
             v->pos = pos;
             if (v->env > 0.0005f && (fabsf(v->lastL * gl) > 0.0005f || fabsf(v->lastR * gr) > 0.0005f)) {
                 vr_start_zombie(e, v);
+                if (v->stage == VR_STAGE_ZOMBIE) {
+                    vr_render_zombie(v, outL, outR, gl, gr, offset + i + 1, frames - i - 1);
+                }
             } else {
                 vr_free_voice(v);
             }

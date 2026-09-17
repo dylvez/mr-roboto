@@ -229,6 +229,49 @@ import Testing
         #expect(tailOfRamp < peakInRamp)
     }
 
+    // MARK: Running off the end of a window
+
+    @Test("a one-shot that ends mid-waveform rides its ramp down where it ends, not a block later")
+    func windowEndRampsInPlace() throws {
+        let dir = TempDirectory("window-end")
+        defer { dir.remove() }
+        // A sine that never fades, windowed to stop at a frame where it is nowhere near zero:
+        // sin(2π · 100 · 20000/48000) = -0.866, so the voice is at -0.69 the instant it runs out.
+        let end = 20_000
+        let kit = try AudioFixtures.kit(
+            in: dir.url, name: "Window", sampleRate: Self.sr,
+            samples: ["tone.wav": AudioFixtures.sine(frequency: 100, seconds: 1.0,
+                                                     sampleRate: Self.sr, amplitude: 0.8,
+                                                     fadeOut: false)],
+            zones: [Zone(id: "tone", sample: "tone.wav", key: .note(36),
+                         sampleStart: 0, sampleEnd: end)],
+            voices: [.kick: 36])
+        let (sampler, host, _) = try Self.hostedSampler(kit: kit)
+        defer { host.stop(); sampler.unprepare() }
+
+        let declick = sampler.declickFrames
+        host.startTransport()
+        sampler.enqueue([.init(.kick, velocity: 127, at: 0)])
+        let x = Signal.samples(try host.render(frames: 48_000))
+
+        // `end` is 4 blocks of 4096 plus 3616: the window runs out in the middle of a block, which
+        // is the case that used to break. The voice stopped producing output there and its held
+        // value reappeared, at full level, when the *next* block began — a hard cut followed 480
+        // frames later by a step back up. So: sounding up to the end...
+        #expect(Signal.maxAbs(x[(end - 2_000)..<end]) > 0.3)
+        // ...ramping down over the declick window immediately after it...
+        #expect(Signal.maxAbs(x[end..<(end + declick)]) > 0.05)
+        // ...silent from the end of that window, with nothing coming back at the block boundary.
+        let after = Signal.maxAbs(x[(end + declick)...])
+        #expect(after == 0, "voice reappeared at \(after) after the ramp should have finished")
+
+        // And the whole thing is smooth: the largest single-sample step anywhere is the sine's own
+        // slope, not a cut. Before the fix this measured about 0.49.
+        var worst: Float = 0
+        for i in 1..<x.count { worst = max(worst, abs(x[i] - x[i - 1])) }
+        #expect(worst < 0.02, "largest single-sample step \(worst)")
+    }
+
     // MARK: Determinism
 
     @Test("two offline renders of the same sequence are byte-identical")

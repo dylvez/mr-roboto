@@ -70,6 +70,56 @@ public struct ChopMap: Hashable, Sendable {
     /// Frames of silence between appended variants, so nothing can interpolate across a seam.
     static let variantGuardFrames = 64
 
+    /// The fade-in a chopped pad gets when its window does not begin near zero.
+    ///
+    /// `Chopper.zeroCrossingWindow` already backs a slice start up to the nearest quiet frame, and
+    /// when it finds one there is nothing left to fade. But on dense material there is no quiet
+    /// frame to find — a hat landing on top of a ringing kick starts wherever the transient is,
+    /// part-way up a cycle — and a voice that begins at full amplitude steps the output from
+    /// silence to that value in a single sample. That is the click.
+    ///
+    /// The fade is sized from the sample it has to climb rather than fixed, which is the point:
+    /// a slice that starts at 0.003 gets nothing, and only a slice that starts at 0.8 pays the
+    /// full millisecond. Sampler practice is a few hundred microseconds to about a millisecond —
+    /// short enough that a kick still hits (a kick's own attack is tens of milliseconds, a hat's
+    /// one or two), long enough that the step is gone. `maximumSeconds` is the hard ceiling, so
+    /// no transient can ever be softened by more than that however loud the first sample is.
+    public struct Declick: Hashable, Sendable {
+        /// Largest amplitude change per sample the fade itself may contribute. Chosen well under
+        /// the slope ordinary drum material already has, so the fade is never the steepest thing
+        /// in the signal.
+        public var slopePerSample: Float
+        /// Ceiling on the fade, in seconds.
+        public var maximumSeconds: Double
+        /// A window starting quieter than this is at a crossing already and gets no fade, which
+        /// keeps the transient completely untouched in the common case.
+        public var floor: Float
+
+        public init(slopePerSample: Float = 0.02, maximumSeconds: Double = 0.001,
+                    floor: Float = 0.002) {
+            self.slopePerSample = slopePerSample
+            self.maximumSeconds = maximumSeconds
+            self.floor = floor
+        }
+
+        public static let `default` = Declick()
+        /// No fade at all. The chop then relies entirely on zero-crossing placement.
+        public static let none = Declick(slopePerSample: 1, maximumSeconds: 0, floor: .infinity)
+
+        /// Attack time for a window whose first sample is `first`, quantised to whole frames so
+        /// the core's `(int32_t)(attack * sampleRate + 0.5)` recovers exactly this many.
+        public func attack(forFirstSample first: Float, sampleRate: Double) -> Float {
+            let height = abs(first)
+            guard maximumSeconds > 0, sampleRate > 0, slopePerSample > 0,
+                  height.isFinite, height > floor else { return 0 }
+            let ceiling = (maximumSeconds * sampleRate).rounded(.down)
+            let wanted = (Double(height / slopePerSample)).rounded(.up)
+            let frames = min(wanted, ceiling)
+            guard frames >= 1 else { return 0 }
+            return Float(frames / sampleRate)
+        }
+    }
+
     public var name: String
     public var chop: Chop
     public var mappings: [SliceMapping]
@@ -78,16 +128,21 @@ public struct ChopMap: Hashable, Sendable {
     public var voices: [String: Int]
     /// The one sample the kit references, relative to the kit folder.
     public var sampleFileName: String
+    /// The fade-in applied by `render(source:stretch:)` to any pad whose mapping does not already
+    /// ask for an attack of its own. `.none` turns it off.
+    public var declick: Declick
 
     public init(name: String, chop: Chop, mappings: [SliceMapping],
                 velocityCurve: VelocityCurve = .squared, voices: [String: Int] = [:],
-                sampleFileName: String = "samples/chop.wav") {
+                sampleFileName: String = "samples/chop.wav",
+                declick: Declick = .default) {
         self.name = name
         self.chop = chop
         self.mappings = mappings
         self.velocityCurve = velocityCurve
         self.voices = voices
         self.sampleFileName = sampleFileName
+        self.declick = declick
     }
 
     /// Every slice on its own pad, in order, from `firstNote` upwards, at unity everything.
@@ -186,9 +241,16 @@ public struct ChopMap: Hashable, Sendable {
             let start = max(0, min(slice.start, frames))
             let end = max(start, min(slice.end, frames))
             let window: (start: Int, end: Int)
+            // The loudest first sample across the channels of whatever this pad will actually
+            // play — for a reversed or stretched pad that is the rendered region, not the source.
+            // It is what the fade-in has to climb.
+            var firstSample: Float = 0
 
             if mapping.playsFromSource {
                 window = (start, end)
+                if start < end {
+                    for c in 0..<channels { firstSample = max(firstSample, abs(source[c][start])) }
+                }
             } else {
                 // A reversed or stretched pad needs audio that does not exist in the source, so it
                 // is rendered and appended to the tail of the same buffer. Still one file.
@@ -207,6 +269,16 @@ public struct ChopMap: Hashable, Sendable {
                     audio[c].append(contentsOf: region[c].prefix(length))
                 }
                 window = (appendedStart, appendedStart + length)
+                if length > 0 {
+                    for c in 0..<channels { firstSample = max(firstSample, abs(region[c][0])) }
+                }
+            }
+
+            // A mapping that asks for its own attack keeps it; the declick only fills the gap the
+            // SFZ default (`attack == 0`) leaves.
+            var envelope = mapping.envelope
+            if !(envelope.attack > 0) {
+                envelope.attack = declick.attack(forFirstSample: firstSample, sampleRate: sampleRate)
             }
 
             zones.append(Zone(
@@ -218,7 +290,7 @@ public struct ChopMap: Hashable, Sendable {
                 gainDB: mapping.gainDB,
                 pan: mapping.pan,
                 tuneCents: mapping.tuneCents,
-                envelope: mapping.envelope
+                envelope: envelope
             ))
             if let group = mapping.group { zones[zones.count - 1].group = group }
             if let offBy = mapping.offBy { zones[zones.count - 1].offBy = offBy }

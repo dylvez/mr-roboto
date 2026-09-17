@@ -184,29 +184,36 @@ final class DecodeCounter: @unchecked Sendable {
 // whole internal blocks and stops without throwing, so one call for the whole file returns 102,400
 // — up to 1023 frames missing from the end of every decode. Inaudible on a one-shot whose tail has
 // already decayed; audible on a chopped bar, whose last zone ends exactly at the end of the file.
+// It bites on the mono files the synthesizer and the chopper write, where the read deinterleaves;
+// a stereo file whose processing format is the file's own reads straight through and does not
+// short-read, which is why both are here.
 // `Tests/PerformanceTests/ChopKitTests.swift` has the same pair from the chop's side.
 
 @Test func cacheDecodesTheLastPartialBlock() throws {
     let temp = TempDirectory()
     defer { temp.remove() }
     let frames = 102_720
-    let wav = try AudioFixtures.writeWAV(at: temp.file("long.wav"), sampleRate: 44_100, channels: 2,
-                                         frames: frames) { channel, frame in
-        let ramp = Float(frame) / Float(frames)
-        return channel == 0 ? ramp : -ramp
-    }
 
-    let buffer = try SampleCache().buffer(for: wav, sampleRate: 44_100)
-    #expect(buffer.frameCount == frames)
-    // Not just the count: the tail has to hold the samples that were written there.
-    for frame in (frames - 4)..<frames {
-        let expected = Float(frame) / Float(frames)
-        #expect(abs(buffer.sample(channel: 0, frame: frame) - expected) < 1e-5)
-        #expect(abs(buffer.sample(channel: 1, frame: frame) + expected) < 1e-5)
+    for channels in [1, 2] as [AVAudioChannelCount] {
+        let wav = try AudioFixtures.writeWAV(at: temp.file("long-\(channels).wav"), sampleRate: 44_100,
+                                             channels: channels, frames: frames) { channel, frame in
+            let ramp = Float(frame) / Float(frames)
+            return channel == 0 ? ramp : -ramp
+        }
+        let buffer = try SampleCache().buffer(for: wav, sampleRate: 44_100)
+        #expect(buffer.frameCount == frames, "\(channels) ch decoded \(buffer.frameCount) of \(frames)")
+        // Not just the count: the tail has to hold the samples that were written there.
+        for frame in (frames - 4)..<frames {
+            let expected = Float(frame) / Float(frames)
+            #expect(abs(buffer.sample(channel: 0, frame: frame) - expected) < 1e-5)
+            if channels == 2 {
+                #expect(abs(buffer.sample(channel: 1, frame: frame) + expected) < 1e-5)
+            }
+        }
+        // The resampling path runs the same read, so it must not lose the block either.
+        let resampled = try SampleCache().buffer(for: wav, sampleRate: 48_000)
+        #expect(abs(resampled.frameCount - Int((Double(frames) * 48_000 / 44_100).rounded())) < 128)
     }
-    // The resampling path runs the same read, so it must not lose the block either.
-    let resampled = try SampleCache().buffer(for: wav, sampleRate: 48_000)
-    #expect(abs(resampled.frameCount - Int((Double(frames) * 48_000 / 44_100).rounded())) < 128)
 }
 
 @Test func synthesizedWAVsAreReadableAsSoonAsTheyAreWritten() throws {
