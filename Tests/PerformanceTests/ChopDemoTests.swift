@@ -183,11 +183,28 @@ struct ChopDemoTests {
         }.joined(separator: ", "))
         print("")
 
+        // A bar cut out of a record starts and ends mid-waveform, so playing the excerpt on its
+        // own jumps from silence to the first sample and drops from the last — two clicks that
+        // belong to the excerpt, not to anything this code does. Everything rendered through the
+        // sampler already starts and ends at zero. Top and tail the raw one so a listener is
+        // comparing the audio rather than the edit.
+        func topAndTail(_ x: [Float], milliseconds: Double = 5) -> [Float] {
+            var y = x
+            let n = min(Int(milliseconds * 0.001 * Self.sr), y.count / 2)
+            guard n > 1 else { return y }
+            for i in 0..<n {
+                let g = Float(i) / Float(n - 1)
+                y[i] *= g
+                y[y.count - 1 - i] *= g
+            }
+            return y
+        }
+
         var written: [(label: String, url: URL)] = []
 
         // 1. The bar as it came.
         let originalURL = root.appendingPathComponent("00-original-bar.wav")
-        try ChopAudio.writeWAV([Self.normalised(bar)], to: originalURL, sampleRate: Self.sr)
+        try ChopAudio.writeWAV([topAndTail(Self.normalised(bar))], to: originalURL, sampleRate: Self.sr)
         written.append(("the bar as it came off the record", originalURL))
 
         // 2. The chop, played back in its own order. Should be indistinguishable from (1): if it
