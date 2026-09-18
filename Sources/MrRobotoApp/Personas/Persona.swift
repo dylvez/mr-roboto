@@ -136,6 +136,39 @@ public struct Feature: RawRepresentable, Hashable, Sendable, Codable, CustomStri
     public static let crackleDensity = Feature("degrade.crackle.hz")
     /// Linear gain into the saturation curve.
     public static let drive = Feature("degrade.drive")
+
+    // Placement, length and harmony of a bass line — the Bassist's vocabulary.
+
+    /// Median bass onset minus the nearest kick onset, in milliseconds. Positive is behind the kick.
+    public static let bassKickOffsetMS = Feature("bass.kick.offset.ms")
+    /// The furthest any bass onset sits from its kick, in milliseconds, signed like the median.
+    public static let bassMaxOffsetMS = Feature("bass.kick.offset.max.ms")
+    /// Median sounding length over the interval to the next onset, 0…1.
+    public static let bassNoteLengthRatio = Feature("bass.note.length.ratio")
+    /// Fraction of the loop in which no bass note sounds.
+    public static let bassRestRatio = Feature("bass.rest.ratio")
+    /// Onsets off the quarter-note grid over all onsets.
+    public static let bassSyncopation = Feature("bass.syncopation")
+    /// Root moves of a third or more that are preceded by a note a half-step below the new root.
+    public static let bassChromaticApproachRate = Feature("bass.approach.rate")
+    /// Muted (ghost) attacks over all attacks.
+    public static let bassGhostRate = Feature("bass.ghost.rate")
+    /// Lowest and highest notes, as MIDI numbers.
+    public static let bassRegisterLow = Feature("bass.register.low")
+    public static let bassRegisterHigh = Feature("bass.register.high")
+    public static let bassAttacksPerBar = Feature("bass.attacks.per.bar")
+    /// Note-offs that land within 15 ms of a beat line, over all note-offs.
+    public static let bassNoteOffOnBeatRate = Feature("bass.noteoff.onbeat.rate")
+    /// Bars whose downbeat carries a bass attack, over all bars.
+    public static let bassDownbeatCoverage = Feature("bass.downbeat.coverage")
+    /// Whether every other onset lands early rather than late — R2's one sanctioned pattern.
+    public static let bassEarlyAlternation = Feature("bass.early.alternation")
+    /// How far the groove's straight reference (the hats) has itself moved, in milliseconds.
+    public static let referenceLagMS = Feature("reference.lag.ms")
+    /// The kick's decay, T60 seconds: past 0.4 s it is an 808 and it owns the sub.
+    public static let kickDecaySeconds = Feature("kick.decay.s")
+    /// Whether the bass line's sound is itself the sub (`"sub"`) rather than a played bass.
+    public static let bassIsSub = Feature("bass.is.sub")
 }
 
 /// What a feature *is*, where it is measured from, and how small a change is worth mentioning.
@@ -708,6 +741,15 @@ public enum PersonaProposal: Hashable, Sendable {
     case stackDegrade(first: String, second: String)
     /// Leave the source alone.
     case leaveAlone(sourceBandwidthHz: Double)
+    /// Write a bass line in a lineage's hands, this far behind the kick, under a groove whose
+    /// straight reference (the hats) and kick have moved by these amounts, with this kick decay,
+    /// through this bass sound. The Bassist's own proposal; the others defer it.
+    case writeBassline(lineage: String, lagMS: Double, tempo: Double, hatLagMS: Double,
+                       kickLagMS: Double, kickDecaySeconds: Double, sound: String)
+    /// Push the bass ahead of the kick by this much, either on every note or alternating.
+    case pushBassAhead(milliseconds: Double, alternating: Bool)
+    /// Sustain a played bass under a kick that decays this long.
+    case sustainUnder808(sound: String, kickDecaySeconds: Double)
     /// Something outside the persona's competence, named so the refusal can be specific.
     case outOfScope(what: String)
 }

@@ -738,6 +738,9 @@ public struct Beatmaker: Persona {
             return .defer_(to: .sampler,
                            because: "Nothing here measures a source's character or where it should be cut.")
 
+        case .writeBassline, .pushBassAhead, .sustainUnder808:
+            return .defer_(to: .bassist, because: "Where the bass sits and what it plays is the Bassist's call.")
+
         case .outOfScope(let what):
             return .defer_(to: .sampler, because: "\(what) is outside feel, swing and pocket.")
         }

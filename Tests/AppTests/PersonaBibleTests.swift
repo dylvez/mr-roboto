@@ -15,7 +15,7 @@ import Testing
 // Nothing here is about music. These tests would pass for a Bassist or a Mixer; they are about
 // whether a bible is the shape the method requires.
 
-private let bibles: [PersonaBible] = [Beatmaker.bible, Sampler.bible]
+private let bibles: [PersonaBible] = [Beatmaker.bible, Sampler.bible, Bassist.bible]
 
 @Suite("Persona: the method holds for every bible")
 struct PersonaMethodTests {

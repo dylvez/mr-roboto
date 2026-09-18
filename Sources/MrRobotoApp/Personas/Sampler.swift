@@ -705,6 +705,9 @@ public struct Sampler: Persona {
             return .defer_(to: .beatmaker,
                            because: "Nothing here measures where a hit sits against a grid.")
 
+        case .writeBassline, .pushBassAhead, .sustainUnder808:
+            return .defer_(to: .bassist, because: "Where the bass sits and what it plays is the Bassist's call.")
+
         case .outOfScope(let what):
             return .defer_(to: .beatmaker,
                            because: "\(what) is outside chop, source and degradation.")

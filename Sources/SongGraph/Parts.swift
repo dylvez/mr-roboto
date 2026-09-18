@@ -94,12 +94,36 @@ public struct Melody: Hashable, Codable, Sendable {
 }
 
 /// A bassline: notes, like a melody, kept as its own kind because personas treat it differently.
-public struct Bassline: Hashable, Codable, Sendable {
+public struct Bassline: Hashable, Sendable {
     public var notes: [NoteEvent]
+    /// The bass sound it plays through, by the synthesized voice's id (`"finger"`, `"sub"`). Nil
+    /// is the app's default. Carried on the part because which bass it is decides who owns the
+    /// sub — the Bassist's R9 — and that is a fact about the line, not a playback preference.
+    public var sound: String?
 
-    public init(notes: [NoteEvent]) { self.notes = notes }
+    public init(notes: [NoteEvent], sound: String? = nil) {
+        self.notes = notes
+        self.sound = sound
+    }
 
     public var lengthInBeats: Double { notes.map(\.end).max() ?? 0 }
+}
+
+extension Bassline: Codable {
+    private enum CodingKeys: String, CodingKey { case notes, sound }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(notes: try c.decode([NoteEvent].self, forKey: .notes),
+                  sound: try c.decodeIfPresent(String.self, forKey: .sound))
+    }
+
+    /// `sound` is omitted when nil, so a bassline written before it existed round-trips byte for byte.
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(notes, forKey: .notes)
+        try c.encodeIfPresent(sound, forKey: .sound)
+    }
 }
 
 // MARK: - Lyric
