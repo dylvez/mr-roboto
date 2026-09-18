@@ -1,6 +1,5 @@
 import AVFAudio
 import Analysis
-import AnalysisMLX
 import Foundation
 import SongGraph
 
@@ -111,8 +110,8 @@ public struct AudioFileInfo: Sendable, Equatable {
 /// The host the app installs: Music Understanding through the provider registry, Demucs on MLX for
 /// stems, an `AVAudioEngine` for auditioning, and a `LibraryStore` for the package.
 ///
-/// The registry is built the same way `m0` builds it, so the app and the CLI analyse a file with
-/// exactly the same providers.
+/// The registry is `AnalysisProviders.app()`, built the same way `m0` builds it, so the app and the
+/// CLI analyse a file with exactly the same providers — and the band separates with the same Demucs.
 public struct LiveImportHost: ImportHosting {
     public let library: LibraryStore
     private let providers: AnalysisProviders
@@ -120,13 +119,7 @@ public struct LiveImportHost: ImportHosting {
 
     public init(library: LibraryStore, providers: AnalysisProviders? = nil) {
         self.library = library
-        if let providers {
-            self.providers = providers
-        } else {
-            var registry = AnalysisProviders.makeDefault()
-            registry.register(DemucsSeparator(), for: [.stemSeparation])
-            self.providers = registry
-        }
+        self.providers = providers ?? .app()
         auditioner = RegionAuditioner()
     }
 

@@ -23,8 +23,10 @@ struct SoundSurfaceView: View {
                 header(layout)
                 Divider().overlay(Design.Palette.line)
                 if layout.showsVoiceReadout { VoiceReadout(surface: surface, layout: layout) }
+                if surface.subject.isPart { partStatus }
                 if surface.panel == .chain { chainPresets }
                 controls(layout)
+                if !surface.chainFindings.isEmpty { findings }
                 Spacer(minLength: 0)
                 footer
             }
@@ -47,14 +49,62 @@ struct SoundSurfaceView: View {
                 // here, because two chips in a corner is still better than no A/B at all.
                 if !layout.showsLargeMonitorSwitch { monitorSwitch }
             }
-            HStack(spacing: 6) {
-                ForEach(SoundPanel.allCases, id: \.self) { panel in
-                    chip(panel.title, isOn: surface.panel == panel) { surface.panel = panel }
+            if surface.subject.isPart {
+                // A chop or a groove has no voice to edit: the chain is the whole panel. What there
+                // is instead is the choice between editing the chain it has and stacking another.
+                HStack(spacing: 6) {
+                    chip("Edit its chain", isOn: !surface.stacksPass) { surface.setStacking(false) }
+                    chip("Stack a pass", isOn: surface.stacksPass) { surface.setStacking(true) }
                 }
-                Divider().frame(height: 14).overlay(Design.Palette.line)
-                voicePicker
+            } else {
+                HStack(spacing: 6) {
+                    ForEach(SoundPanel.allCases, id: \.self) { panel in
+                        chip(panel.title, isOn: surface.panel == panel) { surface.panel = panel }
+                    }
+                    Divider().frame(height: 14).overlay(Design.Palette.line)
+                    voicePicker
+                }
             }
         }
+    }
+
+    /// Where the dry part is: still rendering, could not be read, or what the chain goes over.
+    @ViewBuilder
+    private var partStatus: some View {
+        if let failure = surface.dryFailure {
+            Text("The dry part could not be rendered, so nothing plays. \(failure)")
+                .font(Design.Typography.prose(12))
+                .foregroundStyle(Design.Palette.warn)
+                .fixedSize(horizontal: false, vertical: true)
+        } else if surface.dryPart == nil {
+            Text("Rendering the dry part…")
+                .font(Design.Typography.prose(12))
+                .foregroundStyle(Design.Palette.inkTertiary)
+        } else if !surface.beneath.isEmpty {
+            Text("Over \(Dust.describe(surface.beneath)), which this version already plays through.")
+                .font(Design.Typography.prose(12))
+                .foregroundStyle(Design.Palette.inkSecondary)
+        }
+    }
+
+    /// The chain critic, flagging and never fixing: one line per finding, in the Sampler's words.
+    private var findings: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            ForEach(surface.chainFindings) { finding in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(finding.headline)
+                        .font(Design.Typography.ui(12, weight: .semibold))
+                        .foregroundStyle(finding.severity == .warn ? Design.Palette.warn : Design.Palette.inkSecondary)
+                    Text(finding.why)
+                        .font(Design.Typography.prose(12))
+                        .foregroundStyle(Design.Palette.inkTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(Design.Palette.warnSoft, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
     }
 
     /// The A/B. `DRY` is a true bypass, not the chain set to clean — the chain can only ever
@@ -71,7 +121,9 @@ struct SoundSurfaceView: View {
                 }
             }
         }
-        .help("Dry is a true bypass: the synthesizer's own samples, untouched.")
+        .help(surface.subject.isPart
+              ? "Dry is a true bypass: the part with no chain on it at all."
+              : "Dry is a true bypass: the synthesizer's own samples, untouched.")
     }
 
     private var voicePicker: some View {
@@ -282,7 +334,7 @@ private struct VoiceReadout: View {
                     .font(Design.Typography.label)
                     .tracking(1.1)
                     .foregroundStyle(Design.Palette.inkTertiary)
-                Text(surface.draft.voice.rawValue)
+                Text(surface.subject.isPart ? surface.subjectName : surface.draft.voice.rawValue)
                     .font(Design.Typography.prose(layout.readoutNameSize, weight: .medium))
                     .foregroundStyle(Design.Palette.ink)
                     .lineLimit(1)
@@ -322,6 +374,10 @@ private struct VoiceReadout: View {
 
     /// Where this sound came from: the machine, and the chain preset when one is doing something.
     private var provenance: String {
+        if surface.subject.isPart {
+            let passes = surface.chainPasses
+            return passes.isEmpty ? "dry · chain off" : Dust.describe(passes)
+        }
         let machine = surface.draft.synthMachine.name
         guard !surface.draft.degrade.isBypass else { return "\(machine) · chain off" }
         return "\(machine) · \(surface.draft.degrade.matchingPreset?.rawValue ?? "chain")"

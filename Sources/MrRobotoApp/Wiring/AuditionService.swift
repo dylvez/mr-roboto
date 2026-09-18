@@ -111,6 +111,111 @@ public final class AuditionService {
         }
     }
 
+    // MARK: A dirtied part — what Sound, the Compare and the Check play
+    //
+    // A dusty chop or groove is played through its own chain, and through `Dust.render`, which is
+    // the one definition of what a pass sounds like. The transport's bounce goes through the same
+    // call, so an audition of a version and the transport playing it are the same samples.
+
+    /// Play planar audio as the part it came from sounds: through every pass of its chain, in order.
+    /// No passes is the dry signal, bit for bit.
+    public func play(planar: [[Float]], sampleRate: Double, through passes: [Degradation]) async {
+        do {
+            let wet = try Dust.render(planar, sampleRate: sampleRate, passes: passes)
+            await play(planar: wet, sampleRate: sampleRate)
+        } catch {
+            lastFailure = "the chain could not run: \(error)"
+        }
+    }
+
+    /// Play a groove through its chain. A dry groove goes to the shared sampler as hits, exactly as
+    /// the Grid plays it; a dusty one is bounced (`bounce(_:machine:seconds:)`), put through its
+    /// passes and played as audio, because the chain is a buffer process and the sampler's output
+    /// is not a buffer anything here can reach while it renders.
+    public func play(groove: Groove, machine: SynthMachine, tempo: Double,
+                     timeSignature: TimeSignature, through passes: [Degradation]) async {
+        let hits = Dust.hits(for: groove, tempo: tempo, timeSignature: timeSignature)
+        guard !hits.isEmpty else { return }
+        guard !passes.isEmpty else {
+            do {
+                try await prepare(machine: machine)
+            } catch {
+                lastFailure = "\(error)"
+                return
+            }
+            await play(hits)
+            return
+        }
+        do {
+            let seconds = Dust.duration(of: groove, tempo: tempo, timeSignature: timeSignature) + Dust.tail
+            let dry = try await bounce(hits, machine: machine, seconds: seconds)
+            await play(planar: dry.planar, sampleRate: dry.sampleRate, through: passes)
+        } catch {
+            lastFailure = "\(error)"
+        }
+    }
+
+    /// Hits on a machine, rendered offline to planar floats: a bounce.
+    ///
+    /// On its **own** engine in manual rendering mode with its own sampler, never the shared one —
+    /// an offline graph touches no output device, and borrowing the shared sampler would cut off
+    /// whatever a surface was auditioning. The kit is the same cached one the shared sampler plays,
+    /// and the sampler core is the same C, so a bounce of a dry groove is the groove the transport
+    /// plays; and `VoiceSampler.transportDidStart` resets its round robin, so two bounces of the same
+    /// hits are the same bytes.
+    ///
+    /// - Parameters:
+    ///   - seconds: how much to render, tail included.
+    ///   - sampleRate: the bounce's rate. The live graph's when there is one, so the transport does
+    ///     not resample what it bounced; 48 kHz otherwise.
+    public func bounce(_ hits: [VoiceSampler.Hit], machine: SynthMachine, seconds: Double,
+                       sampleRate: Double? = nil, channels: Int = 2) async throws -> Bounce {
+        let rate = sampleRate ?? engine?.format.sampleRate ?? 48_000
+        let offline = try Engine(playerCount: 1, sampleRate: rate, channels: AVAudioChannelCount(channels))
+        try offline.prepare(offlineSampleRate: rate, maximumFrames: 4_096)
+        let folder = kitsDirectory.appendingPathComponent(machine.id, isDirectory: true)
+        let kit: LoadedKit
+        if let existing = try? KitStore.load(from: folder) {
+            kit = existing
+        } else {
+            kit = try SynthesizedKit.build(machine, in: folder, sampleRate: rate)
+        }
+        let sampler = VoiceSampler(cache: cache)
+        try sampler.prepare(kit, sampleRate: offline.format.sampleRate, channels: Int(offline.format.channelCount))
+        guard let node = sampler.node else {
+            sampler.unprepare()
+            throw AuditionUnavailable(what: "the bounce sampler has no node")
+        }
+        offline.avEngine.attach(node)
+        defer {
+            offline.stopTransport()
+            offline.stop()
+            offline.avEngine.detach(node)
+            sampler.unprepare()
+        }
+        try offline.avEngine.connectNode(node, to: offline.mainMixer, format: offline.format)
+        try offline.start()
+        offline.add(sampler)
+        sampler.enqueue(hits)
+        _ = try offline.startTransport(clock: TransportClock(tempo: 120, sampleRate: rate))
+        let frames = AVAudioFramePosition((max(0, seconds) * rate).rounded())
+        let out = try OfflineRenderer.renderBuffer(engine: offline, frames: frames)
+        offline.remove(sampler)
+        return Bounce(planar: Self.planar(out), sampleRate: rate)
+    }
+
+    /// Planar floats out of a buffer, whatever its stride.
+    static func planar(_ buffer: AVAudioPCMBuffer) -> [[Float]] {
+        guard let data = buffer.floatChannelData else { return [] }
+        let stride = buffer.stride
+        let frames = Int(buffer.frameLength)
+        return (0..<Int(buffer.format.channelCount)).map { channel in
+            stride == 1
+                ? Array(UnsafeBufferPointer(start: data[channel], count: frames))
+                : (0..<frames).map { data[channel][$0 * stride] }
+        }
+    }
+
     // MARK: Kits and hits — what the Chop lane and the Grid play
 
     /// Make a synthesized drum machine playable. Kits are built once into the cache and reused.
@@ -318,6 +423,21 @@ public final class AuditionService {
         let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_"))
         let scrubbed = id.unicodeScalars.map { allowed.contains($0) ? Character($0) : "-" }
         return String(scrubbed)
+    }
+}
+
+/// A rendered stretch of audio: planar floats at one rate.
+public struct Bounce: Sendable {
+    public var planar: [[Float]]
+    public var sampleRate: Double
+
+    public init(planar: [[Float]], sampleRate: Double) {
+        self.planar = planar
+        self.sampleRate = sampleRate
+    }
+
+    public var duration: Double {
+        sampleRate > 0 ? Double(planar.first?.count ?? 0) / sampleRate : 0
     }
 }
 

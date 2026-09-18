@@ -87,7 +87,12 @@ final class ChopLaneBinding {
             case .failure(let error):
                 self.state = .failed("\(error)")
             case .success(let span):
+                // Analysis and drawing read the dry bar; the pads play it through the chop's own
+                // chain. A dusty chop's slices are found on the clean transients — the noise bed
+                // would otherwise read as onsets — and heard the way the version says it sounds.
                 let mono = ChopAudio.mono(span.planar)
+                let playing = (try? Dust.render(span.planar, sampleRate: span.sampleRate,
+                                                passes: sample.degradation)) ?? span.planar
                 guard !mono.isEmpty else {
                     self.state = .failed("The bar's audio is empty: \(sample.media.fileName) held nothing between "
                         + String(format: "%.2f s and %.2f s.", region.start, region.end))
@@ -97,7 +102,7 @@ final class ChopLaneBinding {
                                             partID: version.partID,
                                             record: sample.sourceRecord,
                                             mono: mono,
-                                            planar: span.planar,
+                                            planar: playing,
                                             sampleRate: span.sampleRate,
                                             sourceOffset: region.start,
                                             grid: analysis.flatMap(Self.grid(of:)),
@@ -153,7 +158,7 @@ final class ChopLaneBinding {
     /// bars of the record's own analysis that the markers fall in, which is exactly what
     /// `ImportModel.promote` cut on. With no analysis to hand, one bar at the detected tempo per
     /// marker is the honest approximation; with no markers at all, the first eight seconds.
-    static func region(of sample: Sample, bars: [SongGraph.TimeRange], tempo: Double?) -> SongGraph.TimeRange {
+    nonisolated static func region(of sample: Sample, bars: [SongGraph.TimeRange], tempo: Double?) -> SongGraph.TimeRange {
         let markers = sample.slices.map(\.position).sorted()
         guard let first = markers.first, let last = markers.last else {
             return SongGraph.TimeRange(start: 0, end: 8)

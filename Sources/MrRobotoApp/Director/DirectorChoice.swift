@@ -23,8 +23,14 @@ extension SurfaceKind {
     /// The part types this surface can actually draw.
     ///
     /// Rule 1 — *answer in the notation the question is about* — made checkable. A question about a
-    /// feel gets the Grid because the Grid draws grooves; binding a groove to the Sound surface is
+    /// feel gets the Grid because the Grid draws grooves; binding a melody to the Sound surface is
     /// not a stylistic mistake, it is a surface asked to draw something it has no marks for.
+    ///
+    /// The Sound surface draws a drum voice (`.sound`) and a **chain** — and a chain is drawn over
+    /// the thing it dirties, so a chop or a groove bound to Sound opens its degradation chain with a
+    /// true bypass against the dry part. "Make it dustier" is a sound question about a chop, and the
+    /// notation it is answered in is the chain. A take, a stem, an analysis or anything melodic is
+    /// still refused: dust is carried by a sample or a groove (`Degradation`), and nothing else.
     ///
     /// The two answer surfaces take anything, because what they draw is the comparison and the
     /// finding rather than the part: a Compare of three grooves and a Compare of three chops are the
@@ -34,7 +40,7 @@ extension SurfaceKind {
         case .importRecord: return [.audio, .analysis]
         case .chopLane: return [.sample, .audio]
         case .grid: return [.groove]
-        case .sound: return [.sound]
+        case .sound: return [.sound, .sample, .groove]
         case .compare, .check: return Set(PartType.allCases)
         }
     }

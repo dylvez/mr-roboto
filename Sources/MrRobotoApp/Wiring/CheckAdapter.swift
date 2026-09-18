@@ -38,7 +38,9 @@ final class CheckAdapter: CheckHosting {
     // MARK: Hearing it
 
     func auditionProblem(_ finding: Finding) async {
-        await playSpan(from: finding.locus.start, to: finding.locus.end, named: finding.subject.named)
+        // As the version sounds: a dusty chop's problem is heard through its own chain.
+        await playSpan(from: finding.locus.start, to: finding.locus.end, named: finding.subject.named,
+                       through: subjectKind?.degradation ?? [])
     }
 
     func auditionFix(_ fix: Fix, of finding: Finding) async {
@@ -50,14 +52,9 @@ final class CheckAdapter: CheckHosting {
         }
         // The one change this host can honestly preview: the chain is a buffer transform, so the
         // fixed audio is the same span with the new settings over it.
-        let mix: Double
-        switch fix.change {
-        case .setDegradeMix(let value): mix = value
-        case .setDegradePreset(let preset): mix = preset == nil ? 0 : 1
-        default: mix = 0
-        }
         await playSpan(from: finding.locus.start, to: finding.locus.end,
-                       named: finding.subject.named, dust: mix)
+                       named: finding.subject.named,
+                       through: CheckAdapter.previewPasses(for: fix.change, over: subjectKind))
     }
 
     /// True only for the changes this host can render without applying them. Everything else says so
@@ -126,6 +123,23 @@ final class CheckAdapter: CheckHosting {
         case (.setSwing(let percent), .groove(var groove)):
             groove.swing = Swing(percent: percent).factor
             return .groove(groove)
+        case (.setDegradeMix(let mix), _) where !kind.degradation.isEmpty:
+            // A dirtied part carries its chain, so moving the chain *is* a new version of it: the
+            // top pass — the one the chain check is about — at the new mix, everything beneath kept.
+            var passes = kind.degradation
+            let top = passes.removeLast()
+            var settings = DegradeSettings(top)
+            settings.mix = min(1, max(0, mix))
+            passes.append(settings.degradation(from: top.preset.flatMap(DegradeSettings.Preset.init(rawValue:))))
+            return kind.withDegradation(passes)
+        case (.setDegradePreset(let name), _) where !kind.degradation.isEmpty:
+            // Nil takes the top pass off; a name replaces it with that preset, seed and all.
+            var passes = kind.degradation
+            passes.removeLast()
+            if let name, let preset = DegradeSettings.Preset(rawValue: name), preset != .clean {
+                passes.append(DegradeSettings(preset: preset).degradation(from: preset))
+            }
+            return kind.withDegradation(passes)
         case (.accept, _):
             // Accepting changes nothing about the part and everything about the record of it: the
             // version note is the point, which is why this is a version rather than a rail line.
@@ -156,10 +170,29 @@ final class CheckAdapter: CheckHosting {
         }
     }
 
+    /// The chain a fix's preview plays through. Over a dirtied part it is the part's own chain with
+    /// the fix applied — exactly the version `apply` would record. Over a dry one it is the fix's
+    /// chain on its own, which for the mix is the `dust` lever at that amount (`Dust.pass`).
+    static func previewPasses(for change: EngineChange, over kind: PartKind?) -> [Degradation] {
+        if let kind, !kind.degradation.isEmpty, let changed = applying(change, to: kind) {
+            return changed.degradation
+        }
+        switch change {
+        case .setDegradeMix(let mix):
+            return mix > 0 ? [Dust.pass(mix)] : []
+        case .setDegradePreset(let name):
+            guard let name, let preset = DegradeSettings.Preset(rawValue: name) else { return [] }
+            return [DegradeSettings(preset: preset).degradation(from: preset)]
+        default:
+            return kind?.degradation ?? []
+        }
+    }
+
     static func operation(for change: EngineChange) -> String {
         switch change {
         case .moveSliceStart, .dropSlice: return Operation.chop
         case .setSwing: return Operation.regroove
+        case .setDegradeMix, .setDegradePreset: return Operation.degrade
         default: return Operation.edit
         }
     }
@@ -175,7 +208,7 @@ final class CheckAdapter: CheckHosting {
     // MARK: Reading the audio a finding is about
 
     private func playSpan(from start: Double, to end: Double, named name: String,
-                          dust: Double? = nil) async {
+                          through passes: [Degradation]) async {
         guard let media = subjectMedia else {
             app.note(.session, "There is no audio behind \(name) to play",
                      detail: "The finding is about a part this session cannot read samples for.")
@@ -200,9 +233,12 @@ final class CheckAdapter: CheckHosting {
             return
         }
         guard !span.planar.isEmpty else { return }
-        let planar = dust.map { CompareAdapter.dusted(span.planar, sampleRate: span.sampleRate, mix: $0) }
-            ?? span.planar
-        await service.play(planar: planar, sampleRate: span.sampleRate)
+        await service.play(planar: span.planar, sampleRate: span.sampleRate, through: passes)
+    }
+
+    private var subjectKind: PartKind? {
+        guard let subject else { return nil }
+        return app.version(subject)?.kind
     }
 
     private var subjectMedia: MediaRef? {

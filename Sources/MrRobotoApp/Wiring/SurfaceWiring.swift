@@ -57,6 +57,10 @@ final class SurfaceWiring {
         return built
     }
 
+    /// Hands the wiring a service rather than letting it build one against the frame's engine. For a
+    /// test that needs the rig on its own kit cache and engine; the app never calls this.
+    func use(_ service: AuditionService) { self.service = service }
+
     // MARK: Models
 
     /// The Import surface, in one of its two lives.
@@ -153,7 +157,7 @@ final class SurfaceWiring {
         prune(app)
         if let surface = sounds[item.id], let adapter = soundAdapters[item.id] { return (surface, adapter) }
         let adapter = SoundAdapter(app: app, service: service(for: app),
-                                   bound: app.bound(for: item.id).first)
+                                   bound: app.bound(for: item.id).first, surface: item.id)
         let surface = SoundSurface(id: item.id, host: adapter)
         soundAdapters[item.id] = adapter
         sounds[item.id] = surface

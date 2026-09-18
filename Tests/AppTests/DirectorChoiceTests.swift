@@ -61,9 +61,17 @@ struct DirectorChoiceTests {
         #expect(lane.action.surface == .chopLane)
         #expect(lane.action.bound == [built.sample])
 
-        // A groove does not. This is rule 1 as an error rather than as a style note.
+        // A take does not belong on Sound: dust is carried by a chop or a groove, not by the record.
+        // This is rule 1 as an error rather than as a style note. (A groove on Sound is legal now —
+        // it opens the groove's chain; see `DustTests`.)
         #expect(throws: DirectorChoiceProblem.self) {
             try DirectorSurfaceChoice.make(surface: .sound, title: "Wrong",
+                                           fill: .parts([built.take]),
+                                           because: "", in: built.stage)
+        }
+        // Nor does a groove belong in the Chop lane.
+        #expect(throws: DirectorChoiceProblem.self) {
+            try DirectorSurfaceChoice.make(surface: .chopLane, title: "Wrong",
                                            fill: .parts([built.grooves[0]]),
                                            because: "", in: built.stage)
         }
@@ -78,7 +86,7 @@ struct DirectorChoiceTests {
     @Test("Every Gate A surface has a notation, and the answer surfaces take anything")
     func everySurfaceSaysWhatItDraws() {
         #expect(SurfaceKind.grid.notation == [.groove])
-        #expect(SurfaceKind.sound.notation == [.sound])
+        #expect(SurfaceKind.sound.notation == [.sound, .sample, .groove])
         #expect(SurfaceKind.chopLane.notation.contains(.sample))
         #expect(SurfaceKind.importRecord.notation.contains(.audio))
         for kind in SurfaceKind.answers {

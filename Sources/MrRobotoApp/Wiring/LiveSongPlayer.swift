@@ -51,6 +51,9 @@ final class LiveSongPlayer: SongPlaybackHost {
     private var engine: Engine?
     private var groovePlayer: GroovePlayer?
     private var tracks: [AudioTrackSource] = []
+    /// Hits a dusty groove's bounce held, reported as scheduled: the bounce is the groove, so the
+    /// reading must not say nothing was scheduled because no `GroovePlayer` was involved.
+    private var bouncedHits = 0
     /// Transport seconds at which the plan runs out, or nil when it loops forever.
     private var endsAt: Double?
 
@@ -65,7 +68,7 @@ final class LiveSongPlayer: SongPlaybackHost {
         let engine = try await service.playbackEngine()
         self.engine = engine
 
-        if let groove = plan.groove {
+        if let groove = plan.groove, plan.grooveChain.isEmpty {
             let machine = SynthMachine.preset(id: plan.machine) ?? .tr808
             let sampler = try await service.playbackSampler(machine: machine)
             let timeline = GrooveTimeline.tempo(clock.tempo, timeSignature: clock.timeSignature)
@@ -94,12 +97,42 @@ final class LiveSongPlayer: SongPlaybackHost {
             tracks.append(source)
         }
 
+        // The dusty sources, on the player nodes after the tracks. `SongPlayback.plan` left room
+        // for them; a hand-built plan that did not is told so rather than silently dropping one.
+        var next = tracks.count
+        if let groove = plan.groove, !plan.grooveChain.isEmpty {
+            guard next < engine.players.count else { throw Failure.unreadable("The dusty groove", "no player node is free") }
+            let bounce = try await Self.dustyGroove(groove, plan: plan, clock: clock, service: service,
+                                                    format: engine.format)
+            let source = AudioTrackSource(player: try engine.player(next), buffer: bounce.buffer,
+                                          startsAt: 0, loops: plan.loops)
+            engine.add(source)
+            tracks.append(source)
+            bouncedHits = bounce.hits
+            next += 1
+        }
+        if let chop = plan.chop {
+            guard next < engine.players.count else { throw Failure.unreadable(chop.name, "no player node is free") }
+            let buffer: AVAudioPCMBuffer
+            do {
+                buffer = try Self.dustyChop(chop, format: engine.format)
+            } catch {
+                throw Failure.unreadable(chop.name, "\(error)")
+            }
+            let source = AudioTrackSource(player: try engine.player(next), buffer: buffer,
+                                          startsAt: 0, loops: plan.loops)
+            engine.add(source)
+            tracks.append(source)
+            next += 1
+        }
+
         guard groovePlayer != nil || !tracks.isEmpty else { throw Failure.nothingScheduled }
 
         // When only audio is playing and nothing loops, the plan has an end; a groove loops (or runs
         // to the song's length, which `GroovePlayer.endTime` already knows) so the reading below
         // asks it rather than guessing.
-        endsAt = plan.loops ? nil : Self.end(of: plan, groove: groovePlayer)
+        endsAt = plan.loops ? nil : Self.end(of: plan, groove: groovePlayer,
+                                             longestTrack: tracks.map { $0.startsAt + $0.duration }.max())
     }
 
     func end() async {
@@ -111,6 +144,7 @@ final class LiveSongPlayer: SongPlaybackHost {
         for track in tracks { track.transportWillStop() }
         groovePlayer = nil
         tracks = []
+        bouncedHits = 0
         endsAt = nil
         engine = nil
     }
@@ -119,7 +153,7 @@ final class LiveSongPlayer: SongPlaybackHost {
         guard let engine, engine.isTransportRunning else { return .stopped }
         // Negative during the realtime lead time, when transport zero is still in the future.
         let seconds = max(0, engine.transportSeconds ?? 0)
-        let hits = groovePlayer?.scheduledHitCount ?? 0
+        let hits = (groovePlayer?.scheduledHitCount ?? 0) + bouncedHits
         if let endsAt, seconds >= endsAt {
             return PlaybackReading(isRunning: false, seconds: endsAt, scheduledHits: hits)
         }
@@ -128,11 +162,57 @@ final class LiveSongPlayer: SongPlaybackHost {
 
     // MARK: Internals
 
-    private static func end(of plan: SongPlayback, groove: GroovePlayer?) -> Double? {
-        let audio = plan.audioDuration
+    private static func end(of plan: SongPlayback, groove: GroovePlayer?, longestTrack: Double?) -> Double? {
+        let audio = [plan.audioDuration, longestTrack].compactMap { $0 }.max()
         guard let groove else { return audio }
         guard let grooveEnd = groove.endTime else { return nil }
         return max(grooveEnd, audio ?? 0)
+    }
+
+    // MARK: The dusty sources
+
+    /// A dusty groove as a buffer: bounced on the song's machine and put through its chain.
+    ///
+    /// Looping, it is one pass rendered as the *second* of two, so the buffer carries the tails the
+    /// previous pass rings into it and loops without a gap where the kick's decay should be. Not
+    /// looping, it is the song's length in whole passes — `GroovePlayer`'s own rounding — plus the
+    /// last hit's tail. Either way it goes through `Dust.render`, the same call an audition makes,
+    /// so the transport and the audition service play the same samples of the same version.
+    static func dustyGroove(_ groove: Groove, plan: SongPlayback, clock: TransportClock,
+                            service: AuditionService, format: AVAudioFormat) async throws
+        -> (buffer: AVAudioPCMBuffer, hits: Int) {
+        let machine = SynthMachine.preset(id: plan.machine) ?? .tr808
+        let pass = Dust.duration(of: groove, tempo: clock.tempo, timeSignature: clock.timeSignature)
+        let barsPerPass = max(1, groove.bars)
+        let passes = plan.loops ? 2 : max(1, ((plan.lengthInBars ?? barsPerPass) + barsPerPass - 1) / barsPerPass)
+        let hits = Dust.hits(for: groove, tempo: clock.tempo, timeSignature: clock.timeSignature, repeats: passes)
+        let seconds = plan.loops ? 2 * pass : Double(passes) * pass + Dust.tail
+        let bounce = try await service.bounce(hits, machine: machine, seconds: seconds,
+                                              sampleRate: format.sampleRate,
+                                              channels: Int(format.channelCount))
+        var wet = try Dust.render(bounce.planar, sampleRate: bounce.sampleRate, passes: plan.grooveChain)
+        if plan.loops {
+            let frames = Int((pass * bounce.sampleRate).rounded())
+            wet = wet.map { Array($0.suffix(frames)) }
+        }
+        guard let buffer = AuditionService.buffer(planar: wet, sampleRate: bounce.sampleRate, in: format) else {
+            throw EngineError.renderFailed("the dusty groove could not be put in the graph's format")
+        }
+        return (buffer, plan.loops ? hits.count / 2 : hits.count)
+    }
+
+    /// A dusty chop as a buffer: its bar of the record, through its chain, in the graph's format.
+    static func dustyChop(_ chop: SongPlayback.ChopTrack, format: AVAudioFormat) throws -> AVAudioPCMBuffer {
+        let span = try AudioRegion.read(chop.url, from: chop.region.start, to: chop.region.end)
+        guard !span.planar.isEmpty, span.planar[0].count > 0 else {
+            throw EngineError.invalidRegion("\(chop.name) is empty between "
+                + String(format: "%.2f s and %.2f s", chop.region.start, chop.region.end))
+        }
+        let wet = try Dust.render(span.planar, sampleRate: span.sampleRate, passes: chop.passes)
+        guard let buffer = AuditionService.buffer(planar: wet, sampleRate: span.sampleRate, in: format) else {
+            throw EngineError.renderFailed("\(chop.name) could not be put in the graph's format")
+        }
+        return buffer
     }
 
     /// The whole file, in the graph's format.

@@ -26,6 +26,21 @@ public enum SoundMonitor: String, Hashable, Sendable, CaseIterable {
     case dry
 }
 
+/// What the surface is shaping.
+///
+/// A drum voice is the surface's first job: a `.sound` part, or a new one from a machine preset,
+/// with the voice's knobs and a chain over it. The second is the one this app's first idiom turns
+/// on — a clean chop made dusty — and there the surface binds to the chop (or a groove) itself and
+/// is only the chain: the part is not a voice, so there are no voice knobs to show.
+public enum SoundSubject: Hashable, Sendable {
+    /// A drum voice: a `.sound` part, or nothing bound.
+    case voice
+    /// A sample or a groove being put through the chain. The payload is which.
+    case part(PartType)
+
+    public var isPart: Bool { if case .part = self { return true } else { return false } }
+}
+
 /// The Sound surface: four to six controls for the voice or the chain in front of you, every one of
 /// which makes a sound the moment you move it.
 ///
@@ -65,9 +80,19 @@ public final class SoundSurface {
 
     /// `"TR-808 kick"`, or `"TR-808 kick · vinyl"` once the chain is doing something.
     public var title: String {
+        if subject.isPart {
+            let passes = chainPasses
+            return passes.isEmpty ? subjectName : "\(subjectName) · \(Dust.describe(passes))"
+        }
         guard !draft.degrade.isBypass else { return draft.label }
         let chain = draft.degrade.matchingPreset?.rawValue ?? "chain"
         return "\(draft.label) · \(chain)"
+    }
+
+    /// What is being shaped, as the ledger calls it: `"TR-808 kick"`, or the chop's own name.
+    public var subjectName: String {
+        if subject.isPart, let boundVersion { return PartLabel.title(of: boundVersion) }
+        return draft.label
     }
 
     // MARK: Host
@@ -112,6 +137,46 @@ public final class SoundSurface {
 
     public var isDirty: Bool { draft != committed }
 
+    // MARK: Dirtying a part
+
+    /// A voice, or a sample or groove being put through the chain. Decided by what is bound.
+    public private(set) var subject: SoundSubject = .voice
+
+    /// The dry part's audio — the part with no chain on it at all — once the host has rendered it.
+    /// Nil until then, and nil for a voice, which renders its own.
+    public private(set) var dryPart: SoundAudition?
+
+    /// Set when the host could not render the dry part. The panel says so; nothing plays.
+    public private(set) var dryFailure: String?
+
+    /// The bound version's passes *beneath* the one being edited. Empty for a dry part. When
+    /// `stacksPass` is on this is every pass the version has, and the draft is a new one on top.
+    public private(set) var beneath: [Degradation] = []
+
+    /// Whether a commit puts the draft **on top of** the bound version's chain rather than replacing
+    /// its top pass. Stacking is allowed — a second machine over the first is a real thing people
+    /// do — and it is what `chainFindings` exists to flag.
+    public private(set) var stacksPass = false
+
+    /// The chain the part plays through as the draft stands: the passes beneath, then the draft's own
+    /// unless it is bypass.
+    public var chainPasses: [Degradation] {
+        guard subject.isPart else { return [] }
+        return draft.degrade.isBypass ? beneath : beneath + [draft.degrade.degradation(from: draft.chainBase)]
+    }
+
+    /// What the chain critic says about the draft's chain: a corner above the source's own rolloff,
+    /// or a second quantiser over a prior one. Flagged here, before the commit, and never fixed.
+    public var chainFindings: [Finding] {
+        guard subject.isPart, !chainPasses.isEmpty else { return [] }
+        let review = Dust.review(label: subjectName, passes: chainPasses,
+                                 duration: dryPart?.durationSeconds ?? 0,
+                                 sampleRate: dryPart?.sampleRate ?? 0)
+        return DegradeStackCritic().review(review)
+    }
+
+    @ObservationIgnored private var dryLoad: Task<Void, Never>?
+
     // MARK: Init
 
     public init(id: SurfaceID = SurfaceID(),
@@ -126,6 +191,7 @@ public final class SoundSurface {
         self.draft = state
         self.committed = state
         self.boundVersion = host.selectedPart
+        bindPart(host.selectedPart, lever: host.dustLever)
     }
 
     /// Re-reads the host's selection, discarding any draft. The frame calls this when the selection
@@ -137,6 +203,71 @@ public final class SoundSurface {
         draft = state
         committed = state
         chainFailure = nil
+        bindPart(version, lever: nil)
+    }
+
+    /// Opens onto a sample or a groove, when that is what is bound: chain panel only, the draft at
+    /// the part's top pass, and the dry part asked for from the host.
+    private func bindPart(_ version: PartVersion?, lever: Double?) {
+        dryLoad?.cancel()
+        dryPart = nil
+        dryFailure = nil
+        stacksPass = false
+        guard let version, version.kind.canCarryDegradation else {
+            subject = .voice
+            beneath = []
+            return
+        }
+        subject = .part(version.type)
+        panel = .chain
+        rebase()
+        if let lever {
+            // The Director's lever means what the Compare's does: `Dust.lever`, as a draft to hear
+            // and keep or not.
+            draft.degrade = Dust.lever(lever)
+            draft.chainBase = Dust.leverPreset
+        }
+        dryLoad = Task { [weak self] in await self?.loadDry(version) }
+    }
+
+    /// Draft and committed at the pass being edited: the top one, or a fresh one when stacking.
+    private func rebase() {
+        let passes = boundVersion?.kind.degradation ?? []
+        let top = stacksPass ? nil : passes.last
+        beneath = stacksPass ? passes : Array(passes.dropLast())
+        let base = top?.preset.flatMap(DegradeSettings.Preset.init(rawValue:)) ?? .clean
+        let state = SoundState(degrade: top.map(DegradeSettings.init) ?? .clean, chainBase: base)
+        draft = state
+        committed = state
+    }
+
+    private func loadDry(_ version: PartVersion) async {
+        guard let host else { return }
+        do {
+            let audio = try await host.dryAudio(of: version)
+            guard !Task.isCancelled, boundVersion?.id == version.id || boundVersion?.parents.contains(version.id) == true
+            else { return }
+            dryPart = audio
+            dryFailure = nil
+        } catch {
+            guard !Task.isCancelled else { return }
+            dryFailure = "\(error)"
+        }
+    }
+
+    /// Waits for the dry part the binding asked for. Tests use this; so does anything that wants to
+    /// render before the panel draws.
+    public func waitForDry() async {
+        await dryLoad?.value
+    }
+
+    /// Switches between editing the chain's top pass and stacking a new pass on top of it. Drops
+    /// the draft either way: they are two different edits.
+    public func setStacking(_ on: Bool) {
+        guard subject.isPart, on != stacksPass else { return }
+        stacksPass = on
+        rebase()
+        chainFailure = nil
     }
 
     // MARK: Controls
@@ -146,7 +277,7 @@ public final class SoundSurface {
 
     public func controls(for panel: SoundPanel) -> [SoundControl] {
         switch panel {
-        case .voice: SoundControl.voiceControls(for: draft.spec)
+        case .voice: subject.isPart ? [] : SoundControl.voiceControls(for: draft.spec)
         case .chain: SoundControl.chainControls(for: draft.degrade)
         }
     }
@@ -180,7 +311,7 @@ public final class SoundSurface {
     /// Switches voice within the same machine. The chain is unchanged — it is a chain, not part of
     /// the voice — and the new voice's own knob positions come from the machine preset.
     public func select(_ voice: SynthVoiceKind) {
-        guard voice != draft.voice, draft.availableVoices.contains(voice) else { return }
+        guard !subject.isPart, voice != draft.voice, draft.availableVoices.contains(voice) else { return }
         draft.voice = voice
         draft.controls = SoundState.factorySpec(machine: draft.machine, voice: voice).controls
         panel = .voice
@@ -206,6 +337,19 @@ public final class SoundSurface {
         chainFailure = nil
     }
 
+    /// The part being dirtied, on one side of the A/B, as planar channels at `dryPart`'s rate.
+    ///
+    /// `.dry` is the dry part exactly as the host rendered it — not even the passes beneath the one
+    /// being edited — so the comparison is always against the clean chop. `.chain` is that through
+    /// `chainPasses`, by `Dust.render`: the same call the transport and the audition service make.
+    /// Empty until the dry part has arrived, and for a voice.
+    public func renderedPart(_ monitor: SoundMonitor) -> [[Float]] {
+        guard subject.isPart, let dry = dryPart else { return [] }
+        let passes = chainPasses
+        guard monitor == .chain, !passes.isEmpty else { return dry.planar }
+        return (try? Dust.render(dry.planar, sampleRate: dry.sampleRate, passes: passes)) ?? dry.planar
+    }
+
     // MARK: Rendering and audition
 
     /// Renders the current draft. Pure: the same draft and the same monitor always give the same
@@ -213,6 +357,7 @@ public final class SoundSurface {
     ///
     /// `.dry` is a true bypass — the synthesizer's own output, not the chain set to clean.
     public func rendered(_ monitor: SoundMonitor) -> [Float] {
+        if subject.isPart { return renderedPart(monitor).first ?? [] }
         let dry = DrumSynthesizer.render(draft.spec, velocity: auditionVelocity, sampleRate: sampleRate)
         guard monitor == .chain, !draft.degrade.isBypass else { return dry }
         do {
@@ -224,6 +369,10 @@ public final class SoundSurface {
 
     /// Renders the current draft on the current side of the A/B and hands it to the host.
     public func audition() {
+        if subject.isPart {
+            auditionPart()
+            return
+        }
         let dry = DrumSynthesizer.render(draft.spec, velocity: auditionVelocity, sampleRate: sampleRate)
         var samples = dry
         var isDry = true
@@ -240,6 +389,28 @@ public final class SoundSurface {
         }
         host?.audition(SoundAudition(samples: samples, sampleRate: sampleRate,
                                      label: draft.label, isDry: isDry))
+    }
+
+    private func auditionPart() {
+        // Before the dry part arrives there is nothing to put through the chain, and the panel is
+        // already saying so; a touch is not the place to say it again.
+        guard let dry = dryPart else { return }
+        var planar = dry.planar
+        var isDry = true
+        let passes = chainPasses
+        if monitor == .chain, !passes.isEmpty {
+            do {
+                planar = try Dust.render(dry.planar, sampleRate: dry.sampleRate, passes: passes)
+                isDry = false
+                chainFailure = nil
+            } catch {
+                chainFailure = "\(error)"
+            }
+        } else {
+            chainFailure = nil
+        }
+        host?.audition(SoundAudition(planar: planar, sampleRate: dry.sampleRate,
+                                     label: title, isDry: isDry))
     }
 
     /// One offline pass through a fresh chain, latency-compensated, so sample *n* out is sample *n*
@@ -273,6 +444,7 @@ public final class SoundSurface {
     @discardableResult
     public func commit(note: String? = nil) -> PartVersion? {
         guard isDirty else { return nil }
+        if subject.isPart { return commitPart(note: note) }
         let kind = PartKind.sound(draft.sound)
         let version = boundVersion?.deriving(kind, by: .user, operation: Operation.edit, note: note)
             ?? PartVersion(partID: PartID(), kind: kind, author: .user,
@@ -280,6 +452,31 @@ public final class SoundSurface {
         guard host?.record(version) == true else { return nil }
         boundVersion = version
         committed = draft
+        return version
+    }
+
+    /// A dirtied part: a new version of the **same** part — the bound version as its parent,
+    /// `Operation.degrade` as the operation — carrying `chainPasses`. The bound version is not
+    /// touched, so the dry chop is one parent away and still plays clean. The seed goes in as the
+    /// `UInt64` the draft holds; nothing here passes it through a `Double`.
+    private func commitPart(note: String?) -> PartVersion? {
+        guard let bound = boundVersion else { return nil }
+        let passes = chainPasses
+        guard let kind = bound.kind.withDegradation(passes) else { return nil }
+        // The note keeps the part's own name ahead of the em dash, which is where `PartLabel` stops
+        // reading: the ledger row still says "Bar 2 of Arrival", and its second line says the chain.
+        let chain = passes.isEmpty ? "chain off" : Dust.describe(passes)
+        let version = bound.deriving(kind, by: .user, operation: Operation.degrade,
+                                     note: note ?? "\(PartLabel.title(of: bound)) — \(chain)")
+        guard host?.record(version) == true else { return nil }
+        boundVersion = version
+        stacksPass = false
+        let kept = draft
+        rebase()
+        // `rebase` rebuilds the state from the stored pass; the draft is what was heard, so keep it
+        // exactly (it is equal, bar a preset name the pass could not name).
+        draft = kept
+        committed = kept
         return version
     }
 

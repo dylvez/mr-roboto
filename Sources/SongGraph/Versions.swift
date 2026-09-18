@@ -61,6 +61,9 @@ public enum Operation {
     public static let separate = "separate"
     public static let regroove = "regroove"
     public static let edit = "edit"
+    /// A sample or a groove put through a degradation chain: a new version of the same part whose
+    /// parent is the version it dirtied. See `Degradation`.
+    public static let degrade = "degrade"
     /// Filled in by the schema 1 → 2 migration for versions that predate provenance operations.
     public static let unknown = "unknown"
 }

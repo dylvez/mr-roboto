@@ -109,6 +109,10 @@ public final class GridModel {
     public private(set) var versions: [PartVersion] = []
     public private(set) var lastError: String?
 
+    /// The chain the groove plays through, carried across an edit untouched: painting a step is not
+    /// a request to clean the groove. The Grid does not draw or move it — that is the Sound surface's.
+    public private(set) var degradation: [Degradation] = []
+
     // MARK: Collaborators
 
     private let host: any GridHosting
@@ -131,6 +135,7 @@ public final class GridModel {
         stepsPerBar = max(1, groove.stepsPerBar)
         bars = max(1, groove.bars)
         swing = Swing(factor: groove.swing)
+        degradation = groove.degradation
         self.tempo = tempo
         self.timeSignature = timeSignature
         self.machine = machine
@@ -192,7 +197,8 @@ public final class GridModel {
     /// The pattern as the graph stores it. The round trip: `GridModel(groove: g).groove == g`.
     public var groove: Groove {
         Groove(stepsPerBar: stepsPerBar, bars: bars, swing: swing.factor,
-               patterns: voices.map { GroovePattern(voice: $0, steps: steps[$0] ?? []) })
+               patterns: voices.map { GroovePattern(voice: $0, steps: steps[$0] ?? []) },
+               degradation: degradation)
     }
 
     /// Everything the groove engine needs beyond the pattern.

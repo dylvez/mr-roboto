@@ -34,6 +34,34 @@ public protocol SoundSurfaceHost: AnyObject {
     ///   rather than pretending it was kept.
     @discardableResult
     func record(_ version: PartVersion) -> Bool
+
+    /// The dry sound of a sample or a groove — the part with **no chain on it at all**, whatever
+    /// the version carries — for the surface to put through the chain it is editing. A chop is its
+    /// bar of the record; a groove is one pass bounced on the song's machine.
+    ///
+    /// Asynchronous because it reads a file or renders a bounce; called once per binding, never on
+    /// the touch path. A host that cannot render parts throws, and the surface says so.
+    func dryAudio(of version: PartVersion) async throws -> SoundAudition
+
+    /// The `dust` lever the Director hung on this surface, 0…1, when it hung one. A Sound surface
+    /// opened on a sample or a groove with a lever starts its draft at `Dust.lever(amount)` — the same
+    /// pass the Compare's `dust` lever plays at that amount.
+    var dustLever: Double? { get }
+}
+
+public extension SoundSurfaceHost {
+    func dryAudio(of version: PartVersion) async throws -> SoundAudition {
+        throw SoundSurfaceUnavailable(what: "this host cannot render a \(version.type.rawValue) to put through the chain")
+    }
+
+    var dustLever: Double? { nil }
+}
+
+/// Why the Sound surface could not get at the thing it was asked to dirty. Carried verbatim.
+public struct SoundSurfaceUnavailable: Error, CustomStringConvertible, Sendable {
+    public let what: String
+    public init(what: String) { self.what = what }
+    public var description: String { what }
 }
 
 /// One rendered hit, ready to play.
@@ -42,8 +70,9 @@ public protocol SoundSurfaceHost: AnyObject {
 /// is; the host widens it if its output does.
 public struct SoundAudition: Hashable, Sendable {
 
-    /// Mono float samples, peaking below 1.0.
-    public var samples: [Float]
+    /// Planar float channels at `sampleRate`. One channel for a drum voice; a chop keeps the
+    /// channels of the record it was cut from.
+    public var planar: [[Float]]
     public var sampleRate: Double
 
     /// What made it, for a host that wants to label or cache: `"tr808 kick"`.
@@ -58,11 +87,18 @@ public struct SoundAudition: Hashable, Sendable {
     public var isDry: Bool
 
     public init(samples: [Float], sampleRate: Double, label: String, isDry: Bool) {
-        self.samples = samples
+        self.init(planar: [samples], sampleRate: sampleRate, label: label, isDry: isDry)
+    }
+
+    public init(planar: [[Float]], sampleRate: Double, label: String, isDry: Bool) {
+        self.planar = planar
         self.sampleRate = sampleRate
         self.label = label
         self.isDry = isDry
     }
+
+    /// The first channel: all of a drum voice, and the left of a stereo chop.
+    public var samples: [Float] { planar.first ?? [] }
 
     public var durationSeconds: Double {
         sampleRate > 0 ? Double(samples.count) / sampleRate : 0

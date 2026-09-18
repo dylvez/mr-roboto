@@ -130,6 +130,9 @@ public actor Director {
     private let conversation: DirectorConversation
     private let stage: any DirectorStage
     private let pad: DirectorStagePad
+    /// The workbench the tools share, when `live` built them around one. Nil for a Director
+    /// assembled from a hand-made toolbox. Kept so a test can ask what the band was handed.
+    nonisolated let workbench: DirectorWorkbench?
     /// The turn in flight, so `cancel()` has something to cancel.
     private var inFlight: Task<DirectorTurn, Never>?
 
@@ -139,10 +142,12 @@ public actor Director {
                 pad: DirectorStagePad,
                 role: DirectorRole = .judgment,
                 persona: String? = nil,
-                maxRounds: Int = DirectorConversation.defaultMaxRounds) {
+                maxRounds: Int = DirectorConversation.defaultMaxRounds,
+                workbench: DirectorWorkbench? = nil) {
         self.client = client
         self.stage = stage
         self.pad = pad
+        self.workbench = workbench
         self.conversation = DirectorConversation(client: client, toolbox: toolbox, role: role,
                                                  persona: persona, maxRounds: maxRounds)
     }
@@ -159,10 +164,15 @@ public actor Director {
     /// something on the workbench that stored it) and the one `AuditionService` every surface
     /// already plays through. Passing an explicit `audition` still wins, which is how a test keeps
     /// its silence.
+    ///
+    /// And of the engines. They defaulted to `DirectorEngines()`, whose separator is nil, so
+    /// `separate_stems` said "no separation model loaded" in a build with Demucs linked and the
+    /// weights on disk. The default is now `DirectorEngines.app()`: the registry the Import surface
+    /// uses, and its separator — the same instance, so the model is loaded once, on first use.
     @MainActor
     public static func live(for app: AppState,
                             client: ClaudeClient = ClaudeClient(),
-                            engines: DirectorEngines = DirectorEngines(),
+                            engines: DirectorEngines = .app(),
                             audition: (any DirectorAudition)? = nil,
                             persona: String? = nil) -> Director {
         let stage = AppStateStage(app)
@@ -180,7 +190,8 @@ public actor Director {
                                             stage: stage,
                                             pad: pad,
                                             persona: persona)
-        return Director(client: client, toolbox: toolbox, stage: stage, pad: pad, persona: persona)
+        return Director(client: client, toolbox: toolbox, stage: stage, pad: pad, persona: persona,
+                        workbench: workbench)
     }
 
     // MARK: Asking

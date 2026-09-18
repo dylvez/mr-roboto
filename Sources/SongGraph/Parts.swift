@@ -210,7 +210,7 @@ public struct GroovePattern: Hashable, Codable, Sendable {
 }
 
 /// A groove: a step pattern per drum voice with velocity tiers and swing.
-public struct Groove: Hashable, Codable, Sendable {
+public struct Groove: Hashable, Sendable {
     /// Steps per bar (16 for sixteenths in 4/4).
     public var stepsPerBar: Int
     public var bars: Int
@@ -219,15 +219,44 @@ public struct Groove: Hashable, Codable, Sendable {
     /// Triplet is therefore 2/3, not 1. See `Performance.Swing` for the conversion a UI shows.
     public var swing: Double
     public var patterns: [GroovePattern]
+    /// The chain the groove plays through, first pass nearest the kit. Empty is dry. See
+    /// `Degradation` for why dust is carried on the part it dirties.
+    public var degradation: [Degradation]
 
-    public init(stepsPerBar: Int = 16, bars: Int = 1, swing: Double = 0, patterns: [GroovePattern]) {
+    public init(stepsPerBar: Int = 16, bars: Int = 1, swing: Double = 0, patterns: [GroovePattern],
+                degradation: [Degradation] = []) {
         self.stepsPerBar = stepsPerBar
         self.bars = bars
         self.swing = swing
         self.patterns = patterns
+        self.degradation = degradation
     }
 
     public var stepCount: Int { stepsPerBar * bars }
+}
+
+extension Groove: Codable {
+    private enum CodingKeys: String, CodingKey { case stepsPerBar, bars, swing, patterns, degradation }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(stepsPerBar: try c.decode(Int.self, forKey: .stepsPerBar),
+                  bars: try c.decode(Int.self, forKey: .bars),
+                  swing: try c.decode(Double.self, forKey: .swing),
+                  patterns: try c.decode([GroovePattern].self, forKey: .patterns),
+                  degradation: try c.decodeIfPresent([Degradation].self, forKey: .degradation) ?? [])
+    }
+
+    /// A dry groove writes exactly what it always wrote: `degradation` is omitted when empty, so
+    /// documents from before dust existed round-trip byte for byte.
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(stepsPerBar, forKey: .stepsPerBar)
+        try c.encode(bars, forKey: .bars)
+        try c.encode(swing, forKey: .swing)
+        try c.encode(patterns, forKey: .patterns)
+        if !degradation.isEmpty { try c.encode(degradation, forKey: .degradation) }
+    }
 }
 
 // MARK: - Sample
@@ -244,7 +273,7 @@ public struct SliceMarker: Hashable, Codable, Sendable {
 }
 
 /// A chopped sample: media by hash, slice markers, root pitch and detected tempo.
-public struct Sample: Hashable, Codable, Sendable {
+public struct Sample: Hashable, Sendable {
     public var media: MediaRef
     public var slices: [SliceMarker]
     public var rootPitch: Pitch?
@@ -252,13 +281,43 @@ public struct Sample: Hashable, Codable, Sendable {
     public var detectedTempo: Double?
     /// The library record this sample was cut from, when known (drives clearances).
     public var sourceRecord: RecordID?
+    /// The chain the chop plays through, first pass nearest the media. Empty is dry. The media is
+    /// never printed through it, so the dry chop is always one parent away. See `Degradation`.
+    public var degradation: [Degradation]
 
-    public init(media: MediaRef, slices: [SliceMarker] = [], rootPitch: Pitch? = nil, detectedTempo: Double? = nil, sourceRecord: RecordID? = nil) {
+    public init(media: MediaRef, slices: [SliceMarker] = [], rootPitch: Pitch? = nil, detectedTempo: Double? = nil,
+                sourceRecord: RecordID? = nil, degradation: [Degradation] = []) {
         self.media = media
         self.slices = slices
         self.rootPitch = rootPitch
         self.detectedTempo = detectedTempo
         self.sourceRecord = sourceRecord
+        self.degradation = degradation
+    }
+}
+
+extension Sample: Codable {
+    private enum CodingKeys: String, CodingKey { case media, slices, rootPitch, detectedTempo, sourceRecord, degradation }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(media: try c.decode(MediaRef.self, forKey: .media),
+                  slices: try c.decode([SliceMarker].self, forKey: .slices),
+                  rootPitch: try c.decodeIfPresent(Pitch.self, forKey: .rootPitch),
+                  detectedTempo: try c.decodeIfPresent(Double.self, forKey: .detectedTempo),
+                  sourceRecord: try c.decodeIfPresent(RecordID.self, forKey: .sourceRecord),
+                  degradation: try c.decodeIfPresent([Degradation].self, forKey: .degradation) ?? [])
+    }
+
+    /// A dry sample writes exactly what it always wrote; see `Groove.encode(to:)`.
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(media, forKey: .media)
+        try c.encode(slices, forKey: .slices)
+        try c.encodeIfPresent(rootPitch, forKey: .rootPitch)
+        try c.encodeIfPresent(detectedTempo, forKey: .detectedTempo)
+        try c.encodeIfPresent(sourceRecord, forKey: .sourceRecord)
+        if !degradation.isEmpty { try c.encode(degradation, forKey: .degradation) }
     }
 }
 

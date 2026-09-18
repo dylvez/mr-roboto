@@ -661,8 +661,13 @@ public final class ChopLaneSurface: Surface {
     @discardableResult
     public func commitChop(note: String? = nil) throws -> PartVersion {
         guard let host else { throw ChopLaneError.noHost }
+        // A re-cut keeps the chain the chop plays through: dust is a property of the chop's sound,
+        // and moving a slice marker is not a request to clean it.
+        var chain: [Degradation] = []
+        if case .sample(let previous)? = parent?.kind { chain = previous.degradation }
         let sample = Sample(media: source.media, slices: sliceMarkers,
-                            detectedTempo: chop.detectedTempo, sourceRecord: source.record)
+                            detectedTempo: chop.detectedTempo, sourceRecord: source.record,
+                            degradation: chain)
         let version = parent.map {
             $0.deriving(.sample(sample), by: .user, operation: Operation.chop, note: note)
         } ?? PartVersion(partID: partID, kind: .sample(sample), author: .user,

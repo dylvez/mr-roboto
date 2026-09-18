@@ -56,6 +56,31 @@ public struct SongPlayback: Equatable, Sendable {
         }
     }
 
+    /// A dusty chop, placed on the transport: its bar of the record, looped from transport zero,
+    /// through its own chain.
+    public struct ChopTrack: Equatable, Sendable, Identifiable {
+        public var version: VersionID
+        public var name: String
+        /// The media the chop was cut from.
+        public var url: URL
+        /// The span of that media the chop covers, in the media's own seconds.
+        public var region: SongGraph.TimeRange
+        /// The chain it plays through, first pass nearest the media. Never empty: a dry chop is
+        /// the lane's raw material and is not put on the transport.
+        public var passes: [Degradation]
+
+        public var id: VersionID { version }
+
+        public init(version: VersionID, name: String, url: URL, region: SongGraph.TimeRange,
+                    passes: [Degradation]) {
+            self.version = version
+            self.name = name
+            self.url = url
+            self.region = region
+            self.passes = passes
+        }
+    }
+
     /// Why there is nothing to play. Non-nil exactly when `isPlayable` is false.
     public struct Silence: Equatable, Sendable {
         /// The line the transport shows: short, and about this song.
@@ -74,6 +99,11 @@ public struct SongPlayback: Equatable, Sendable {
     /// The pattern, if the song has one.
     public var groove: Groove?
     public var grooveVersion: VersionID?
+    /// The chain the groove plays through. Empty plays it live on the shared sampler, as it always
+    /// did; non-empty bounces it and plays the bounce through these passes.
+    public var grooveChain: [Degradation]
+    /// The song's dusty chop, when its newest chop has been dirtied.
+    public var chop: ChopTrack?
     /// The drum machine the groove is played on: a `SynthMachine.id`.
     public var machine: String
     public var tracks: [Track]
@@ -89,11 +119,14 @@ public struct SongPlayback: Equatable, Sendable {
                 groove: Groove? = nil, grooveVersion: VersionID? = nil,
                 machine: String = SynthMachine.tr808.id,
                 tracks: [Track] = [], silence: Silence? = nil,
-                loops: Bool = false, lengthInBars: Int? = nil) {
+                loops: Bool = false, lengthInBars: Int? = nil,
+                chop: ChopTrack? = nil) {
         self.tempo = tempo
         self.timeSignature = timeSignature
         self.groove = groove
         self.grooveVersion = grooveVersion
+        self.grooveChain = groove?.degradation ?? []
+        self.chop = chop
         self.machine = machine
         self.tracks = tracks
         self.silence = silence
@@ -108,12 +141,19 @@ public struct SongPlayback: Equatable, Sendable {
         return copy
     }
 
-    public var isPlayable: Bool { groove != nil || !tracks.isEmpty }
+    public var isPlayable: Bool { groove != nil || !tracks.isEmpty || chop != nil }
 
-    /// What the transport bar says it is playing: "Groove · 4 stems", "Record".
+    /// How many of the engine's player nodes the plan's dusty sources take: one for a bounced
+    /// groove, one for a chop. The audio tracks get what is left.
+    public var dustyPlayers: Int { (groove != nil && !grooveChain.isEmpty ? 1 : 0) + (chop != nil ? 1 : 0) }
+
+    /// What the transport bar says it is playing: "Groove · 4 stems", "Record", "Groove · sp1200".
     public var summary: String {
         var pieces: [String] = []
-        if groove != nil { pieces.append("Groove") }
+        if groove != nil {
+            pieces.append(grooveChain.isEmpty ? "Groove" : "Groove · \(Dust.describe(grooveChain))")
+        }
+        if let chop { pieces.append("\(chop.name) · \(Dust.describe(chop.passes))") }
         if tracks.count == 1 { pieces.append(tracks[0].name) }
         else if tracks.count > 1 { pieces.append("\(tracks.count) stems") }
         return pieces.isEmpty ? (silence?.headline ?? "Nothing to play") : pieces.joined(separator: " · ")
@@ -153,13 +193,34 @@ public struct SongPlayback: Equatable, Sendable {
            groove.patterns.contains(where: { $0.steps.contains { $0 != .rest } }) {
             plan.groove = groove
             plan.grooveVersion = version.id
+            plan.grooveChain = groove.degradation
+        }
+
+        // A dusty chop. Only the newest chop, and only when it has been dirtied: a clean chop is the
+        // lane's raw material, but a dirtied one is a sound decision about the song, and the one move
+        // this app's first idiom is built around. It stands in for the audio it was cut from — the
+        // drums stem and a loop of one of its bars together would be the drums twice, for the same
+        // reason the stems stand in for the take.
+        var missingMedia = false
+        var shadowed: MediaRef?
+        if let version = Guidance.samples(in: song).last, case .sample(let sample) = version.kind,
+           !sample.degradation.isEmpty {
+            if let url = mediaURL(sample.media) {
+                let region = ChopLaneBinding.region(of: sample, bars: Guidance.analysis(in: song)?.bars ?? [],
+                                                    tempo: sample.detectedTempo ?? song.tempo)
+                plan.chop = ChopTrack(version: version.id, name: PartLabel.title(of: version), url: url,
+                                      region: region, passes: sample.degradation)
+                shadowed = sample.media
+            } else {
+                missingMedia = true
+            }
         }
 
         // Stems rather than the take when both exist: the stems *are* the take.
         let stems = Guidance.stems(in: song)
-        let audioVersions = stems.isEmpty ? [Guidance.take(in: song)].compactMap { $0 } : stems
-        var missingMedia = false
-        for version in audioVersions.prefix(max(0, maximumTracks)) {
+        let audioVersions = (stems.isEmpty ? [Guidance.take(in: song)].compactMap { $0 } : stems)
+            .filter { Guidance.audio(of: $0)?.media != shadowed }
+        for version in audioVersions.prefix(max(0, maximumTracks - plan.dustyPlayers)) {
             guard let audio = Guidance.audio(of: version) else { continue }
             guard let url = mediaURL(audio.media) else { missingMedia = true; continue }
             plan.tracks.append(Track(version: version.id,

@@ -92,28 +92,42 @@ final class CompareAdapter: CompareHosting {
     // MARK: How a version becomes a sound
 
     private func play(_ version: PartVersion, named name: String, levers: [CompareLever: Double]) async {
+        let passes = CompareAdapter.passes(for: version, levers: levers)
         switch version.kind {
         case .groove(let groove):
-            await playGroove(groove, levers: levers)
+            await playGroove(groove, levers: levers, through: passes)
         case .sample(let sample):
-            await playAudio(sample.media, from: 0, named: name, levers: levers)
+            let region = ChopLaneBinding.region(of: sample, bars: Guidance.analysis(in: app.song)?.bars ?? [],
+                                                tempo: sample.detectedTempo ?? app.song?.tempo)
+            await playAudio(sample.media, from: region.start,
+                            to: min(region.end, region.start + CompareAdapter.maximumSeconds),
+                            named: name, through: passes)
         case .audio(let audio):
-            await playAudio(audio.media, from: 0, named: name, levers: levers)
+            await playAudio(audio.media, from: 0, to: CompareAdapter.maximumSeconds, named: name, through: passes)
         default:
             app.note(.session, "A \(version.type.rawValue) cannot be auditioned here",
                      detail: "The Compare plays grooves, chops and recordings; \(name) is neither.")
         }
     }
 
-    /// A groove, rendered at the levers' tempo and swing onto the song's own machine.
-    private func playGroove(_ groove: Groove, levers: [CompareLever: Double]) async {
+    /// The chain a row plays through.
+    ///
+    /// The `dust` lever means exactly what dust means everywhere else: `Dust.pass(_:)`, the pass a
+    /// Sound surface commits when it is set to the same amount. With the lever on the surface every
+    /// row plays its **dry** part through that one pass — a lever is applied to every row alike, so
+    /// a row that was already dusty does not get a second machine on top of the lever's and win the
+    /// comparison for being louder in the noise. With no lever, each row plays as its version says
+    /// it sounds, which for a dusty chop is through its own chain.
+    static func passes(for version: PartVersion, levers: [CompareLever: Double]) -> [Degradation] {
+        if let amount = levers[.degradeMix] { return amount > 0 ? [Dust.pass(amount)] : [] }
+        return Dust.passes(of: version)
+    }
+
+    /// A groove, rendered at the levers' tempo and swing onto the song's own machine — live on the
+    /// shared sampler when it is dry, bounced and put through its chain when it is not.
+    private func playGroove(_ groove: Groove, levers: [CompareLever: Double],
+                            through passes: [Degradation]) async {
         let machine = SynthMachine.preset(id: app.playback.machine) ?? .tr808
-        do {
-            try await service.prepare(machine: machine)
-        } catch {
-            app.note(.session, "Could not load \(machine.name) to play that", detail: "\(error)")
-            return
-        }
         let hits = CompareAdapter.hits(for: groove, levers: levers,
                                        tempo: app.song?.tempo ?? 90,
                                        timeSignature: app.song?.timeSignature ?? .fourFour)
@@ -121,34 +135,45 @@ final class CompareAdapter: CompareHosting {
             app.note(.session, "That groove has no hits in it", detail: "Nothing was played.")
             return
         }
+        guard passes.isEmpty else {
+            let seconds = min(CompareAdapter.maximumSeconds, (hits.map(\.time).max() ?? 0) + Dust.tail)
+            do {
+                let dry = try await service.bounce(hits, machine: machine, seconds: seconds)
+                await service.play(planar: dry.planar, sampleRate: dry.sampleRate, through: passes)
+            } catch {
+                app.note(.session, "Could not bounce that groove through its chain", detail: "\(error)")
+            }
+            return
+        }
+        do {
+            try await service.prepare(machine: machine)
+        } catch {
+            app.note(.session, "Could not load \(machine.name) to play that", detail: "\(error)")
+            return
+        }
         await service.play(hits)
     }
 
-    /// A chop or a stem, read off disk and played as samples, through the chain when a `dust` lever
-    /// asks for one.
-    private func playAudio(_ media: MediaRef, from start: Double, named name: String,
-                           levers: [CompareLever: Double]) async {
+    /// A chop or a stem, read off disk and played as samples, through its chain.
+    private func playAudio(_ media: MediaRef, from start: Double, to end: Double, named name: String,
+                           through passes: [Degradation]) async {
         guard let store = app.store else {
             app.note(.session, "This session has no library directory, so \(name) cannot be read")
             return
         }
         let songID = app.song?.id
-        let seconds = CompareAdapter.maximumSeconds
-        let mix = levers[.degradeMix]
         let span: AudioRegion.Span
         do {
             let url = try store.mediaURL(for: media, song: songID)
             span = try await Task.detached(priority: .userInitiated) {
-                try AudioRegion.read(url, from: start, to: start + seconds)
+                try AudioRegion.read(url, from: start, to: max(start, end))
             }.value
         } catch {
             app.note(.session, "\(name) could not be read", detail: "\(error)")
             return
         }
         guard !span.planar.isEmpty else { return }
-        let planar = mix.map { CompareAdapter.dusted(span.planar, sampleRate: span.sampleRate, mix: $0) }
-            ?? span.planar
-        await service.play(planar: planar, sampleRate: span.sampleRate)
+        await service.play(planar: span.planar, sampleRate: span.sampleRate, through: passes)
     }
 
     // MARK: The levers, as arithmetic
@@ -173,32 +198,11 @@ final class CompareAdapter: CompareHosting {
         return GrooveRenderer.render(groove, on: timeline, options: options)
     }
 
-    /// The degradation chain at one mix, over planar floats. `sp1200` because that is what "dustier"
-    /// means in this instrument's own vocabulary — twelve bits and a 26 kHz hold — rather than a
-    /// number invented here.
+    /// The `dust` lever at one amount, over planar floats: `Dust.pass(mix)` through `Dust.render`,
+    /// which is what a dusty version at that amount sounds like everywhere else in the app.
     static func dusted(_ planar: [[Float]], sampleRate: Double, mix: Double) -> [[Float]] {
-        guard mix > 0, let frames = planar.first?.count, frames > 0 else { return planar }
-        var settings = DegradeSettings(preset: .sp1200)
-        settings.mix = min(1, max(0, mix))
-        guard let chain = try? DegradeChain(sampleRate: sampleRate, channelCount: planar.count,
-                                            settings: settings) else { return planar }
-        // Planar scratch the chain can write through. Allocated rather than borrowed from the
-        // arrays: `dg_process` wants every channel pointer live at once, and nesting one
-        // `withUnsafeMutableBufferPointer` per channel to get that is a recursion, not a loop.
-        let channels = planar.count
-        let scratch = (0..<channels).map { channel -> UnsafeMutablePointer<Float> in
-            let buffer = UnsafeMutablePointer<Float>.allocate(capacity: frames)
-            buffer.initialize(repeating: 0, count: frames)
-            buffer.update(from: planar[channel], count: min(frames, planar[channel].count))
-            return buffer
-        }
-        defer { for buffer in scratch { buffer.deinitialize(count: frames); buffer.deallocate() } }
-        var pointers: [UnsafeMutablePointer<Float>?] = scratch
-        pointers.withUnsafeMutableBufferPointer { buffer in
-            guard let base = buffer.baseAddress else { return }
-            chain.processInPlace(base, channelCount: channels, frameCount: frames)
-        }
-        return scratch.map { Array(UnsafeBufferPointer(start: $0, count: frames)) }
+        guard mix > 0 else { return planar }
+        return (try? Dust.render(planar, sampleRate: sampleRate, passes: [Dust.pass(mix)])) ?? planar
     }
 }
 
