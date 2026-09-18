@@ -548,7 +548,9 @@ public struct Sampler: Persona {
                        premise: "A cut is proposed 9 ms after the transient it was taken from.",
                        passes: "Refused by sampler.cut-before-not-after at 2 ms, with a counter that moves it "
                              + "earlier rather than abandoning the slice.",
-                       exercises: ["sampler.cut-before-not-after"]),
+                       exercises: ["sampler.cut-before-not-after"],
+                       proposal: .moveCutLate(milliseconds: 9),
+                       expects: .refuse(rule: "sampler.cut-before-not-after")),
             GoldenTest("sampler.golden.bar-does-not-fit",
                        premise: "A bar of 4/4 at 90 BPM is offered as one sample in the SP-1200 lineage.",
                        passes: "The bar is 2.67 s against the machine's 2.5 s ceiling, so the answer chops "
@@ -558,43 +560,59 @@ public struct Sampler: Persona {
                        premise: "The cassette chain is proposed over a source whose 95% rolloff is 9 kHz.",
                        passes: "Refused: the chain's corner is at 14 kHz and has nothing left to remove, so "
                              + "the only thing it adds is its noise bed.",
-                       exercises: ["sampler.corner-above-the-source"]),
+                       exercises: ["sampler.corner-above-the-source"],
+                       proposal: .applyDegrade(preset: "cassette", sourceBandwidthHz: 9_000, sourceNoiseFloorDB: -60),
+                       expects: .refuse(rule: "sampler.corner-above-the-source")),
             GoldenTest("sampler.golden.no-stacking",
                        premise: "The vinyl chain is proposed over a source that already went through the "
                               + "SP-1200 chain.",
                        passes: "Refused by sampler.one-effect, with a counter that keeps one chain rather than "
                              + "abandoning both.",
-                       exercises: ["sampler.one-effect"]),
+                       exercises: ["sampler.one-effect"],
+                       proposal: .stackDegrade(first: "sp1200", second: "vinyl"),
+                       expects: .refuse(rule: "sampler.one-effect")),
             GoldenTest("sampler.golden.eight-pads",
                        premise: "Thirty-two slices are asked for on a break, in the SP-303 lineage.",
                        passes: "Refused with the eight-pad bank named and a workable count offered, rather "
                              + "than silently cutting thirty-two.",
-                       exercises: ["sampler.eight-pads", "sampler.fewer-than-the-detector-wants"]),
+                       exercises: ["sampler.eight-pads", "sampler.fewer-than-the-detector-wants"],
+                       proposal: .chopDensity(slicesPerBar: 32, sourceTransients: 40),
+                       expects: .refuse(rule: "sampler.fewer-than-the-detector-wants")),
             GoldenTest("sampler.golden.leave-it-alone",
                        premise: "A source measured at 18 kHz of bandwidth is offered with no chain.",
                        passes: "Agrees, and says what a chain would actually change rather than recommending "
                              + "one by reflex.",
-                       exercises: ["sampler.corner-above-the-source"]),
+                       exercises: ["sampler.corner-above-the-source"],
+                       proposal: .leaveAlone(sourceBandwidthHz: 18_000),
+                       expects: .agree),
             GoldenTest("sampler.golden.pushes-back",
                        premise: "\"Make it lo-fi — put vinyl and cassette and the SP-1200 on it.\"",
                        passes: "Refused rather than carried out, naming sampler.one-effect, with the SP-303's "
                              + "one-effect-at-a-time constraint as the reason and a single chain as the counter.",
-                       exercises: ["sampler.one-effect"]),
+                       exercises: ["sampler.one-effect"],
+                       proposal: .stackDegrade(first: "vinyl", second: "cassette"),
+                       expects: .refuse(rule: "sampler.one-effect")),
             GoldenTest("sampler.golden.defers",
                        premise: "\"Swing the hats to 62%.\"",
                        passes: "Deferred to the Beatmaker rather than answered.",
-                       exercises: []),
+                       exercises: [],
+                       proposal: .setSwing(percent: 62, idiom: "boom-bap", tempo: 90),
+                       expects: .defer_(to: .beatmaker)),
             GoldenTest("sampler.golden.too-far-transposed",
                        premise: "A horn chop cut in G is asked nine semitones up to sit under a line in E.",
                        passes: "Refused by sampler.past-four-semitones, with the counter that takes G as the target "
                              + "and moves the bass line by arithmetic; five semitones is agreed with the timbre "
                              + "caveat, and two is agreed outright.",
-                       exercises: ["sampler.past-four-semitones"]),
+                       exercises: ["sampler.past-four-semitones"],
+                       proposal: .transposeSample(label: "Horns", semitones: 9),
+                       expects: .refuse(rule: "sampler.past-four-semitones")),
             GoldenTest("sampler.golden.two-drum-sources",
                        premise: "A verse is proposed with the Motown break and the Arrival drums chop both in it.",
                        passes: "Refused by sampler.one-drum-source, naming the two, with one break kept as the "
                              + "counter; one break with an uncleared source is agreed with the clearance said aloud.",
-                       exercises: ["sampler.one-drum-source", "sampler.name-both-sources"]),
+                       exercises: ["sampler.one-drum-source", "sampler.name-both-sources"],
+                       proposal: .mergeSources(drumSources: 2, uncleared: []),
+                       expects: .refuse(rule: "sampler.one-drum-source")),
         ],
 
         // MARK: Open questions

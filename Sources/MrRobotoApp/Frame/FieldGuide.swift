@@ -35,7 +35,9 @@ enum FieldGuide {
         Entry(word: "Merge", meaning: "Two fragments in different keys or tempos brought to one: audio is shifted and stretched, a written part moves by arithmetic, a groove stays. The plan says the numbers; stitching makes a section."),
         Entry(word: "Clearance", meaning: "Whether a sampled record may be used: uncleared, pending, cleared, or not required. Said aloud, never assumed."),
         Entry(word: "Director", meaning: "Reads what you ask for, hands it to the right band member, and answers by opening a surface on real parts."),
-        Entry(word: "Band", meaning: "The cast for this project: the Beatmaker for grooves and feels, the Sampler for chops and machines."),
+        Entry(word: "Band", meaning: "The cast for this song: the Beatmaker for grooves and feels, the Sampler for chops, machines and sources, the Bassist for the low end. Who is in the room is set on the Cast surface."),
+        Entry(word: "Bible", meaning: "Everything a persona knows, as data: named lineages, measurable features, cited rules with thresholds, refusals, goldens and open questions. A document the method checks."),
+        Entry(word: "House call", meaning: "What this house decided on a persona's open question, by ear — the snare late, not early. Kept with the song, apart from the evidence."),
         Entry(word: "Critic", meaning: "A rule that looks for one kind of problem. It flags and never fixes."),
         Entry(word: "Lever", meaning: "At most two controls the Director puts on a surface, so you can move the one thing it is asking about."),
     ]

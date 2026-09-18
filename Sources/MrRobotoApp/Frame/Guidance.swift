@@ -320,9 +320,10 @@ public enum Guidance {
         case .structure:
             // Bound to nothing: it draws the song's sections, and the song is what is open.
             return SurfaceAction(surface: kind, title: song.title)
-        case .album, .merge:
-            // Opened from a library row or a ledger row, never from the dock: an album is not
-            // something the open song has, and a merge needs two named versions.
+        case .album, .merge, .cast:
+            // Opened from a library row, a ledger row or the menu, never from the dock: an album
+            // is not something the open song has, a merge needs two named versions, and the cast
+            // is the song's setting.
             return fallback
         case .compare, .check:
             // Nothing reaches here: the dock, ⌘1–⌘4 and the Surfaces menu all iterate

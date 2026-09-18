@@ -1,4 +1,5 @@
 import Foundation
+import SongGraph
 
 /// The personas the app ships, and the one call a Director needs to put a question to all of them.
 ///
@@ -27,6 +28,24 @@ public struct Cast: Sendable {
 
     public func persona(_ id: PersonaID) -> (any Persona)? {
         personas.first { $0.bible.id == id }
+    }
+
+    /// The personas in the room for a song: this cast filtered by the song's own list. A song with
+    /// no list, or an empty one, has everyone.
+    public func inRoom(for song: Song?) -> Cast {
+        guard let ids = song?.cast, !ids.isEmpty else { return self }
+        return Cast(personas.filter { ids.contains($0.bible.id.rawValue) })
+    }
+
+    public var ids: [PersonaID] { personas.map(\.bible.id) }
+
+    /// This cast with a document-only persona added for every bible that is not already a member.
+    public func adding(_ bibles: [PersonaBible]) -> Cast {
+        var out = personas
+        for bible in bibles where !out.contains(where: { $0.bible.id == bible.id }) {
+            out.append(DocumentPersona(bible: bible))
+        }
+        return Cast(out)
     }
 
     public var bibles: [PersonaBible] { personas.map(\.bible) }

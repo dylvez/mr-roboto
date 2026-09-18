@@ -181,7 +181,7 @@ public struct Feature: RawRepresentable, Hashable, Sendable, Codable, CustomStri
 /// `Instrument` or `Analysis`, and `PersonaBibleTests` asserts that every feature a rule thresholds
 /// on has one. That is the mechanical form of "a rule that cannot be expressed against those is a
 /// rule the app cannot apply".
-public struct FeatureDefinition: Claiming, Hashable, Sendable {
+public struct FeatureDefinition: Claiming, Hashable, Sendable, Codable {
     public var feature: Feature
     /// "MPC swing percent", "milliseconds, positive = late".
     public var unit: String
@@ -211,7 +211,7 @@ public struct FeatureDefinition: Claiming, Hashable, Sendable {
 /// One lineage's typical range for one feature. This is the "feature vocabulary with typical ranges
 /// per lineage" the method asks for, and the reason a persona can say "that is a trap number in a
 /// boom-bap groove" instead of "that feels wrong".
-public struct FeatureRange: Claiming, Hashable, Sendable {
+public struct FeatureRange: Claiming, Hashable, Sendable, Codable {
     public var feature: Feature
     /// The lineage this range belongs to, by `Lineage.name`.
     public var lineage: String
@@ -248,7 +248,7 @@ public struct FeatureRange: Claiming, Hashable, Sendable {
 /// "Why" is not decoration: it is the thing that makes a lineage falsifiable. A lineage picked
 /// because the working method is documented can be checked against the documentation; a lineage
 /// picked because the music is good cannot be checked against anything.
-public struct Lineage: Claiming, Hashable, Sendable, Identifiable {
+public struct Lineage: Claiming, Hashable, Sendable, Identifiable, Codable {
     public var name: String
     /// The machine or medium the method was worked out on, when one is central to it.
     public var instrument: String?
@@ -277,7 +277,7 @@ public struct Lineage: Claiming, Hashable, Sendable, Identifiable {
 /// What the persona checks first, and in what order. The order is the persona: two personas given
 /// the same eight bars notice different things, and which one they notice *first* is what makes
 /// them argue.
-public struct ListeningPoint: Hashable, Sendable, Identifiable {
+public struct ListeningPoint: Hashable, Sendable, Identifiable, Codable {
     /// 1 is what it hears before anything else.
     public var priority: Int
     /// "Where the snare sits against the hats."
@@ -297,8 +297,8 @@ public struct ListeningPoint: Hashable, Sendable, Identifiable {
 // MARK: - Rules
 
 /// A threshold with a direction, over one feature. The comparison is the rule's teeth.
-public struct Threshold: Hashable, Sendable, CustomStringConvertible {
-    public enum Comparison: String, Hashable, Sendable, CaseIterable {
+public struct Threshold: Hashable, Sendable, CustomStringConvertible, Codable {
+    public enum Comparison: String, Hashable, Sendable, CaseIterable, Codable {
         case atLeast, atMost, between, outside, equalTo
     }
 
@@ -363,7 +363,7 @@ public struct Threshold: Hashable, Sendable, CustomStringConvertible {
 /// `when` and `then` are the sentences the persona says; `threshold` is the arithmetic behind the
 /// `when`, and `engineAction` is the arithmetic behind the `then` — the engine property the rule
 /// would move, named so a reader can check the rule is not advice the app cannot take.
-public struct PersonaRule: Claiming, Hashable, Sendable, Identifiable {
+public struct PersonaRule: Claiming, Hashable, Sendable, Identifiable, Codable {
     public var id: String
     /// "The source's own onsets already sit 18 ms behind the sixteenths."
     public var when: String
@@ -376,8 +376,20 @@ public struct PersonaRule: Claiming, Hashable, Sendable, Identifiable {
     /// `DegradeSettings.bitDepth`. The proof the rule is applicable.
     public var engineAction: String
     public var evidence: Evidence
+    /// Which way the threshold cuts. Most thresholds state the *allowed* range and the rule fires
+    /// when a value falls outside it (`.thresholdFails`); a few state the *condition* — "the kick
+    /// decays past 400 ms" — and fire when it holds (`.thresholdHolds`). `RuleEngine` reads this.
+    public var firesWhen: Firing
+    /// A precondition on another feature, when the rule only applies in some situations — the
+    /// house-tempo cap only at 120 and over. Nil applies always.
+    public var applies: Threshold?
 
-    public init(_ id: String, when: String, then: String, threshold: Threshold? = nil,
+    public enum Firing: String, Hashable, Sendable, Codable {
+        case thresholdFails, thresholdHolds
+    }
+
+    public init(_ id: String, firesWhen: Firing = .thresholdFails, applies: Threshold? = nil,
+                when: String, then: String, threshold: Threshold? = nil,
                 engineAction: String, evidence: Evidence) {
         self.id = id
         self.when = when
@@ -385,6 +397,34 @@ public struct PersonaRule: Claiming, Hashable, Sendable, Identifiable {
         self.threshold = threshold
         self.engineAction = engineAction
         self.evidence = evidence
+        self.firesWhen = firesWhen
+        self.applies = applies
+    }
+
+    private enum CodingKeys: String, CodingKey { case id, when, then, threshold, engineAction, evidence, firesWhen, applies }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(try c.decode(String.self, forKey: .id),
+                  firesWhen: try c.decodeIfPresent(Firing.self, forKey: .firesWhen) ?? .thresholdFails,
+                  applies: try c.decodeIfPresent(Threshold.self, forKey: .applies),
+                  when: try c.decode(String.self, forKey: .when),
+                  then: try c.decode(String.self, forKey: .then),
+                  threshold: try c.decodeIfPresent(Threshold.self, forKey: .threshold),
+                  engineAction: try c.decode(String.self, forKey: .engineAction),
+                  evidence: try c.decode(Evidence.self, forKey: .evidence))
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(when, forKey: .when)
+        try c.encode(then, forKey: .then)
+        try c.encodeIfPresent(threshold, forKey: .threshold)
+        try c.encode(engineAction, forKey: .engineAction)
+        try c.encode(evidence, forKey: .evidence)
+        if firesWhen != .thresholdFails { try c.encode(firesWhen, forKey: .firesWhen) }
+        try c.encodeIfPresent(applies, forKey: .applies)
     }
 
     public var statement: String { "if \(when) then \(then)" }
@@ -400,7 +440,7 @@ public struct PersonaRule: Claiming, Hashable, Sendable, Identifiable {
 
 /// How the persona talks. Written down rather than left to a prompt, because "terse" and "warm"
 /// produce the same text from a model unless you give it the shape of a sentence.
-public struct PersonaVoice: Hashable, Sendable {
+public struct PersonaVoice: Hashable, Sendable, Codable {
     /// One line: the register.
     public var register: String
     /// The shape of a sentence it makes: "measurement, then verdict, then the one thing to try."
@@ -427,7 +467,7 @@ public struct PersonaVoice: Hashable, Sendable {
 /// A refusal is not a safety rail. It is the edge of the persona's competence written down: a
 /// Beatmaker asked to pick a sample has nothing useful to say, and a persona that answers anyway is
 /// a persona nobody can trust on the things it does know.
-public struct Refusal: Hashable, Sendable, Identifiable {
+public struct Refusal: Hashable, Sendable, Identifiable, Codable {
     public var id: String
     /// What it will not do.
     public var refuses: String
@@ -448,7 +488,7 @@ public struct Refusal: Hashable, Sendable, Identifiable {
 ///
 /// Every persona in the cast gets an entry, including ones not built yet, because the disagreement
 /// is a property of the role rather than of the implementation.
-public struct PersonaDisagreement: Hashable, Sendable, Identifiable {
+public struct PersonaDisagreement: Hashable, Sendable, Identifiable, Codable {
     public var with: PersonaID
     /// What they fight about.
     public var about: String
@@ -476,7 +516,7 @@ public struct PersonaDisagreement: Hashable, Sendable, Identifiable {
 ///
 /// Bars, not "that track" — the whole value of a reference is that two people can put the needle in
 /// the same place and hear the same thing.
-public struct ReferenceTrack: Claiming, Hashable, Sendable, Identifiable {
+public struct ReferenceTrack: Claiming, Hashable, Sendable, Identifiable, Codable {
     public var title: String
     public var artist: String
     public var release: String?
@@ -511,7 +551,7 @@ public struct ReferenceTrack: Claiming, Hashable, Sendable, Identifiable {
 /// Carried as data on purpose. The test file asserts each of these *and* asserts that every golden
 /// declared here has a test with the matching id, so a golden cannot be written down and quietly
 /// left unimplemented.
-public struct GoldenTest: Hashable, Sendable, Identifiable {
+public struct GoldenTest: Hashable, Sendable, Identifiable, Codable {
     public var id: String
     /// What is put in front of the persona.
     public var premise: String
@@ -519,12 +559,91 @@ public struct GoldenTest: Hashable, Sendable, Identifiable {
     public var passes: String
     /// The rules this exercises.
     public var exercises: [String]
+    /// The premise as a proposal the persona can actually be asked, so the golden executes
+    /// (`GoldenRunner`). Nil for a golden that is only prose — which the lint counts.
+    public var proposal: PersonaProposal?
+    /// The shape of the verdict the golden expects.
+    public var expects: VerdictShape?
 
-    public init(_ id: String, premise: String, passes: String, exercises: [String] = []) {
+    public init(_ id: String, premise: String, passes: String, exercises: [String] = [],
+                proposal: PersonaProposal? = nil, expects: VerdictShape? = nil) {
         self.id = id
         self.premise = premise
         self.passes = passes
         self.exercises = exercises
+        self.proposal = proposal
+        self.expects = expects
+    }
+
+    private enum CodingKeys: String, CodingKey { case id, premise, passes, exercises, proposal, expects }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(try c.decode(String.self, forKey: .id),
+                  premise: try c.decode(String.self, forKey: .premise),
+                  passes: try c.decode(String.self, forKey: .passes),
+                  exercises: try c.decodeIfPresent([String].self, forKey: .exercises) ?? [],
+                  proposal: try c.decodeIfPresent(PersonaProposal.self, forKey: .proposal),
+                  expects: try c.decodeIfPresent(VerdictShape.self, forKey: .expects))
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(premise, forKey: .premise)
+        try c.encode(passes, forKey: .passes)
+        try c.encode(exercises, forKey: .exercises)
+        try c.encodeIfPresent(proposal, forKey: .proposal)
+        try c.encodeIfPresent(expects, forKey: .expects)
+    }
+}
+
+/// The shape of a verdict, without its prose: what a golden expects and what an eval scores.
+public enum VerdictShape: Hashable, Sendable, Codable {
+    case agree
+    case caveat
+    case refuse(rule: String)
+    case defer_(to: PersonaID)
+
+    public init(_ verdict: PersonaVerdict) {
+        switch verdict {
+        case .agree: self = .agree
+        case .agreeWithCaveat: self = .caveat
+        case .refuse(let rule, _, _): self = .refuse(rule: rule)
+        case .defer_(let to, _): self = .defer_(to: to)
+        }
+    }
+
+    private enum CodingKeys: String, CodingKey { case shape, rule, to }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        switch try c.decode(String.self, forKey: .shape) {
+        case "agree": self = .agree
+        case "caveat": self = .caveat
+        case "refuse": self = .refuse(rule: try c.decode(String.self, forKey: .rule))
+        case "defer": self = .defer_(to: try c.decode(PersonaID.self, forKey: .to))
+        case let other: throw DecodingError.dataCorruptedError(forKey: .shape, in: c, debugDescription: "unknown verdict shape \(other)")
+        }
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .agree: try c.encode("agree", forKey: .shape)
+        case .caveat: try c.encode("caveat", forKey: .shape)
+        case .refuse(let rule): try c.encode("refuse", forKey: .shape); try c.encode(rule, forKey: .rule)
+        case .defer_(let to): try c.encode("defer", forKey: .shape); try c.encode(to, forKey: .to)
+        }
+    }
+
+    public var description: String {
+        switch self {
+        case .agree: return "agree"
+        case .caveat: return "agree with a caveat"
+        case .refuse(let rule): return "refuse by \(rule)"
+        case .defer_(let to): return "defer to the \(to)"
+        }
     }
 }
 
@@ -533,7 +652,7 @@ public struct GoldenTest: Hashable, Sendable, Identifiable {
 /// This is the part of the method most easily skipped and the part that makes the rest usable: a
 /// rule with a known-contested basis is a rule you can revisit when better evidence turns up, and
 /// a rule that looks equally confident as every other one is not.
-public struct OpenQuestion: Claiming, Hashable, Sendable, Identifiable {
+public struct OpenQuestion: Claiming, Hashable, Sendable, Identifiable, Codable {
     public var id: String
     /// The question.
     public var question: String
@@ -567,11 +686,11 @@ public struct OpenQuestion: Claiming, Hashable, Sendable, Identifiable {
 /// the first. So the research a bible encodes stays exactly as written, and a persona reading a
 /// part consults the house call to decide what it approves of — saying both: what the record
 /// says, and what the house chose.
-public struct HouseCall: Hashable, Sendable, Identifiable {
+public struct HouseCall: Hashable, Sendable, Identifiable, Codable {
     /// The open question this settles, e.g. `beatmaker.oq.snare-direction`.
     public var question: String
     /// Which reading won: the one the bible encoded, or its stated alternative.
-    public enum Choice: String, Hashable, Sendable { case encoded, alternative }
+    public enum Choice: String, Hashable, Sendable, Codable { case encoded, alternative }
     public var choice: Choice
     /// How it was decided, in a sentence a person would say.
     public var how: String
@@ -590,7 +709,7 @@ public struct HouseCall: Hashable, Sendable, Identifiable {
 // MARK: - The bible
 
 /// Everything a persona knows, as data.
-public struct PersonaBible: Sendable {
+public struct PersonaBible: Hashable, Sendable, Codable {
     public var id: PersonaID
     /// What a user calls it: "Beatmaker".
     public var name: String
@@ -799,6 +918,103 @@ public enum PersonaVerdict: Hashable, Sendable {
         case .agreeWithCaveat(let line, let caveat): return "\(line) \(caveat)"
         case .refuse(_, let because, let counter): return "\(because) \(counter)"
         case .defer_(let to, let because): return "\(because) Ask the \(to)."
+        }
+    }
+}
+
+// MARK: - Documents
+
+/// `{"cited": [urls]}` or `{"inferred": "basis"}` — the mark stays visible in the file.
+extension Evidence: Codable {
+    private enum CodingKeys: String, CodingKey { case cited, inferred }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        if let urls = try c.decodeIfPresent([String].self, forKey: .cited) { self = .cited(urls); return }
+        self = .inferred(try c.decode(String.self, forKey: .inferred))
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .cited(let urls): try c.encode(urls, forKey: .cited)
+        case .inferred(let basis): try c.encode(basis, forKey: .inferred)
+        }
+    }
+}
+
+/// A proposal as a document: its case by name, its arguments by theirs. What a golden carries.
+extension PersonaProposal: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case proposal
+        case percent, idiom, tempo, voice, milliseconds, currentRatio, slicesPerBar, sourceTransients
+        case preset, sourceBandwidthHz, sourceNoiseFloorDB, first, second, lineage, lagMS, hatLagMS, kickLagMS
+        case kickDecaySeconds, sound, alternating, label, semitones, drumSources, uncleared, what
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let name = try c.decode(String.self, forKey: .proposal)
+        func d<T: Decodable>(_ key: CodingKeys, _ type: T.Type = T.self) throws -> T { try c.decode(T.self, forKey: key) }
+        switch name {
+        case "setSwing": self = .setSwing(percent: try d(.percent), idiom: try d(.idiom), tempo: try d(.tempo))
+        case "displaceVoice": self = .displaceVoice(voice: try d(.voice), milliseconds: try d(.milliseconds), tempo: try d(.tempo))
+        case "quantiseHard": self = .quantiseHard(idiom: try d(.idiom))
+        case "setHumanizeTiming": self = .setHumanizeTiming(milliseconds: try d(.milliseconds), tempo: try d(.tempo))
+        case "removeGhosts": self = .removeGhosts(currentRatio: try d(.currentRatio), idiom: try d(.idiom))
+        case "chopDensity": self = .chopDensity(slicesPerBar: try d(.slicesPerBar), sourceTransients: try d(.sourceTransients))
+        case "moveCutLate": self = .moveCutLate(milliseconds: try d(.milliseconds))
+        case "applyDegrade": self = .applyDegrade(preset: try d(.preset), sourceBandwidthHz: try d(.sourceBandwidthHz), sourceNoiseFloorDB: try d(.sourceNoiseFloorDB))
+        case "stackDegrade": self = .stackDegrade(first: try d(.first), second: try d(.second))
+        case "leaveAlone": self = .leaveAlone(sourceBandwidthHz: try d(.sourceBandwidthHz))
+        case "writeBassline": self = .writeBassline(lineage: try d(.lineage), lagMS: try d(.lagMS), tempo: try d(.tempo), hatLagMS: try d(.hatLagMS),
+                                                    kickLagMS: try d(.kickLagMS), kickDecaySeconds: try d(.kickDecaySeconds), sound: try d(.sound))
+        case "pushBassAhead": self = .pushBassAhead(milliseconds: try d(.milliseconds), alternating: try d(.alternating))
+        case "sustainUnder808": self = .sustainUnder808(sound: try d(.sound), kickDecaySeconds: try d(.kickDecaySeconds))
+        case "transposeSample": self = .transposeSample(label: try d(.label), semitones: try d(.semitones))
+        case "mergeSources": self = .mergeSources(drumSources: try d(.drumSources), uncleared: try d(.uncleared))
+        case "outOfScope": self = .outOfScope(what: try d(.what))
+        default: throw DecodingError.dataCorruptedError(forKey: .proposal, in: c, debugDescription: "unknown proposal \(name)")
+        }
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .setSwing(let percent, let idiom, let tempo):
+            try c.encode("setSwing", forKey: .proposal); try c.encode(percent, forKey: .percent); try c.encode(idiom, forKey: .idiom); try c.encode(tempo, forKey: .tempo)
+        case .displaceVoice(let voice, let milliseconds, let tempo):
+            try c.encode("displaceVoice", forKey: .proposal); try c.encode(voice, forKey: .voice); try c.encode(milliseconds, forKey: .milliseconds); try c.encode(tempo, forKey: .tempo)
+        case .quantiseHard(let idiom):
+            try c.encode("quantiseHard", forKey: .proposal); try c.encode(idiom, forKey: .idiom)
+        case .setHumanizeTiming(let milliseconds, let tempo):
+            try c.encode("setHumanizeTiming", forKey: .proposal); try c.encode(milliseconds, forKey: .milliseconds); try c.encode(tempo, forKey: .tempo)
+        case .removeGhosts(let currentRatio, let idiom):
+            try c.encode("removeGhosts", forKey: .proposal); try c.encode(currentRatio, forKey: .currentRatio); try c.encode(idiom, forKey: .idiom)
+        case .chopDensity(let slicesPerBar, let sourceTransients):
+            try c.encode("chopDensity", forKey: .proposal); try c.encode(slicesPerBar, forKey: .slicesPerBar); try c.encode(sourceTransients, forKey: .sourceTransients)
+        case .moveCutLate(let milliseconds):
+            try c.encode("moveCutLate", forKey: .proposal); try c.encode(milliseconds, forKey: .milliseconds)
+        case .applyDegrade(let preset, let bandwidth, let floor):
+            try c.encode("applyDegrade", forKey: .proposal); try c.encode(preset, forKey: .preset); try c.encode(bandwidth, forKey: .sourceBandwidthHz); try c.encode(floor, forKey: .sourceNoiseFloorDB)
+        case .stackDegrade(let first, let second):
+            try c.encode("stackDegrade", forKey: .proposal); try c.encode(first, forKey: .first); try c.encode(second, forKey: .second)
+        case .leaveAlone(let bandwidth):
+            try c.encode("leaveAlone", forKey: .proposal); try c.encode(bandwidth, forKey: .sourceBandwidthHz)
+        case .writeBassline(let lineage, let lagMS, let tempo, let hatLagMS, let kickLagMS, let kickDecaySeconds, let sound):
+            try c.encode("writeBassline", forKey: .proposal); try c.encode(lineage, forKey: .lineage); try c.encode(lagMS, forKey: .lagMS)
+            try c.encode(tempo, forKey: .tempo); try c.encode(hatLagMS, forKey: .hatLagMS); try c.encode(kickLagMS, forKey: .kickLagMS)
+            try c.encode(kickDecaySeconds, forKey: .kickDecaySeconds); try c.encode(sound, forKey: .sound)
+        case .pushBassAhead(let milliseconds, let alternating):
+            try c.encode("pushBassAhead", forKey: .proposal); try c.encode(milliseconds, forKey: .milliseconds); try c.encode(alternating, forKey: .alternating)
+        case .sustainUnder808(let sound, let kickDecaySeconds):
+            try c.encode("sustainUnder808", forKey: .proposal); try c.encode(sound, forKey: .sound); try c.encode(kickDecaySeconds, forKey: .kickDecaySeconds)
+        case .transposeSample(let label, let semitones):
+            try c.encode("transposeSample", forKey: .proposal); try c.encode(label, forKey: .label); try c.encode(semitones, forKey: .semitones)
+        case .mergeSources(let drumSources, let uncleared):
+            try c.encode("mergeSources", forKey: .proposal); try c.encode(drumSources, forKey: .drumSources); try c.encode(uncleared, forKey: .uncleared)
+        case .outOfScope(let what):
+            try c.encode("outOfScope", forKey: .proposal); try c.encode(what, forKey: .what)
         }
     }
 }

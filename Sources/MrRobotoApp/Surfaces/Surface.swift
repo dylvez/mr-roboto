@@ -57,6 +57,9 @@ public enum SurfaceKind: String, CaseIterable, Sendable {
     /// M3. Two fragments in different keys and tempos, one plan, one section. Bound to exactly two
     /// versions: a chop, a bass line, a progression or a groove each.
     case merge = "Merge"
+    /// M4. Who is in the room for this song: the personas, what each owns, and the house calls.
+    /// Bound to nothing; it draws the song's cast.
+    case cast = "Cast"
 
     // The two answer surfaces. They are in the catalog because the Director has to be able to
     // *name* one — a question with alternatives gets a Compare, a question with one finding gets a
@@ -74,7 +77,7 @@ public enum SurfaceKind: String, CaseIterable, Sendable {
 
     /// The surfaces that draw the song or the library rather than a version of a part, and so
     /// open on nothing.
-    public var isUnbound: Bool { self == .structure || self == .album }
+    public var isUnbound: Bool { self == .structure || self == .album || self == .cast }
 
     /// The two the Director opens to answer with. You do not pick these off a shelf — a Compare
     /// with nothing to compare is not a surface, it is an empty promise — so they are deliberately

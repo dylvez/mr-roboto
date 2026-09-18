@@ -49,6 +49,10 @@ public enum Primer {
             return ("Album",
                     "An album is songs in order, with the loudness targets they are delivered to and a clearance state for "
                         + "every record their samples came from. Drag songs in from the library; nothing is mastered here.")
+        case .cast:
+            return ("Cast",
+                    "Who is in the room for this song. Each persona owns one thing and listens for it first; take one out "
+                        + "and the Director stops consulting it. The house calls are what you decided on their open questions, by ear.")
         case .merge:
             return ("Merge",
                     "Two fragments, one key, one tempo. The plan says how each moves — semitones and a stretch for audio, "

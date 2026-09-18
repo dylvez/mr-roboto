@@ -49,6 +49,25 @@ public struct Section: Identifiable, Hashable, Codable, Sendable {
     }
 }
 
+/// A decision the house made on one of a persona's open questions, kept with the song.
+public struct HouseCallRecord: Hashable, Codable, Sendable, Identifiable {
+    /// The open question's id, e.g. `beatmaker.oq.snare-direction`.
+    public var question: String
+    /// "encoded" or "alternative".
+    public var choice: String
+    public var how: String
+    public var decidedOn: String
+
+    public var id: String { question }
+
+    public init(question: String, choice: String, how: String, decidedOn: String) {
+        self.question = question
+        self.choice = choice
+        self.how = how
+        self.decidedOn = decidedOn
+    }
+}
+
 /// A proposed combination of versions not yet stitched into a section; personas run these as A/B experiments.
 public struct Experiment: Identifiable, Hashable, Codable, Sendable {
     public let id: ExperimentID
@@ -90,6 +109,11 @@ public struct Song: Identifiable, Hashable, Codable, Sendable {
     public var seeds: [Seed]
     public var experiments: [Experiment]
     public let createdAt: Date
+    /// Who is in the room for this song, by persona id. Nil or empty is the app's standard cast.
+    /// Optional so a song written before casts round-trips byte for byte.
+    public var cast: [String]?
+    /// What this house decided on the cast's open questions, by ear.
+    public var houseCalls: [HouseCallRecord]?
 
     public init(id: SongID = SongID(), title: String, artist: String = "", key: Key? = nil, tempo: Double = 120,
                 timeSignature: TimeSignature = .fourFour, sections: [Section] = [], versions: [PartVersion] = [],

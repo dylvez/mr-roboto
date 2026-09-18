@@ -352,7 +352,9 @@ final class BandDirector: PersonaDirecting {
     @discardableResult
     func ask(_ utterance: String) async -> BandAnswer {
         let proposal = (try? await self.proposal(for: utterance)) ?? .outOfScope(what: utterance)
-        let verdicts = cast.ask(proposal)
+        // Who is in the room is the song's call: a persona outside the cast is not consulted.
+        let room = cast.inRoom(for: app.song)
+        let verdicts = room.ask(proposal)
         for (persona, verdict) in verdicts {
             // A deferral is not a line worth spending the rail on unless *everybody* deferred, which
             // is the case the next block covers: "not my department" from a persona that was never
@@ -366,7 +368,7 @@ final class BandDirector: PersonaDirecting {
                      detail: "The cast covers feel, swing and pocket, and the source, the chop and the "
                          + "chain. Say it in one of those and somebody will have an opinion.")
         }
-        return BandAnswer(proposal: proposal, verdicts: verdicts, owner: cast.owner(of: proposal))
+        return BandAnswer(proposal: proposal, verdicts: verdicts, owner: room.owner(of: proposal))
     }
 
     // MARK: What the frame knows

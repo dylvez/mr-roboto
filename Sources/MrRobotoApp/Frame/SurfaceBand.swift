@@ -24,6 +24,7 @@ struct SurfaceBand: View {
             case .structure: structure(context, size, ink)
             case .album: album(context, size, ink)
             case .merge: merge(context, size, ink)
+            case .cast: cast(context, size, ink)
             case .compare: compare(context, size, ink)
             case .check: check(context, size, ink)
             }
@@ -159,6 +160,23 @@ struct SurfaceBand: View {
             index += 1
         }
         context.stroke(path, with: .color(ink), lineWidth: 1)
+    }
+
+    /// Heads at a table: a row of circles, one in the accent.
+    private func cast(_ context: GraphicsContext, _ size: CGSize, _ ink: Color) {
+        var x: CGFloat = 4
+        var index = 0
+        let r = min(7, size.height / 3)
+        while x + r * 2 < size.width {
+            let head = CGRect(x: x, y: size.height / 2 - r, width: r * 2, height: r * 2)
+            if index % 4 == 1 {
+                context.fill(Path(ellipseIn: head), with: .color(Design.Palette.accent.opacity(0.6)))
+            } else {
+                context.stroke(Path(ellipseIn: head), with: .color(ink), lineWidth: 1)
+            }
+            x += r * 2 + 10
+            index += 1
+        }
     }
 
     /// Two lines converging on one: the merge.

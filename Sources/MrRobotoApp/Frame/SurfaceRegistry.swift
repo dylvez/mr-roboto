@@ -104,6 +104,9 @@ public final class SurfaceRegistry {
         registry.register(.merge) { item, app in
             MergeSurfaceView(model: SurfaceWiring.shared.mergeModel(for: item, app: app))
         }
+        registry.register(.cast) { _, app in
+            CastSurfaceView(app: app)
+        }
     }
 
     /// Everything a running app draws. One call at launch, from `MrRobotoApp.init()`.

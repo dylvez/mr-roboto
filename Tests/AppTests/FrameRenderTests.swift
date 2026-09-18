@@ -135,6 +135,18 @@ struct FrameRenderTests {
         try write(FrameView(app: built.app), size: CGSize(width: 1440, height: 900), name: "frame-merge")
     }
 
+    @Test("the Cast surface with the Bassist out of the room and one house call")
+    func cast() throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        let built = FormFixture.build()
+        let app = app(built.song)
+        app.setCast([.beatmaker, .sampler])
+        app.recordHouseCall(question: "beatmaker.oq.snare-direction", choice: .alternative, how: "late, by ear")
+        app.openSurface(.cast, title: built.song.title)
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-cast")
+    }
+
     @Test("first launch: nothing open")
     func firstLaunch() throws {
         FontRegistration.registerBundledFonts()

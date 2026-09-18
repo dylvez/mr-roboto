@@ -346,6 +346,43 @@ extension AppState {
 
     public func album(for surface: SurfaceID) -> Album? { albumBindings[surface].flatMap { library.album($0) } }
 
+    // MARK: The cast
+
+    /// Who is in the room for the open song. Empty means everyone the app has.
+    public var castInRoom: Cast { Cast.standard.inRoom(for: song) }
+
+    /// Sets the song's cast. An empty list is "everyone". Not a version: the cast is the song's
+    /// setting, like its sections.
+    @discardableResult
+    public func setCast(_ ids: [PersonaID]) -> Bool {
+        guard let song else {
+            note(.session, "No song open to cast")
+            return false
+        }
+        let cleaned = ids.map(\.rawValue)
+        guard cleaned != (song.cast ?? []) else { return true }
+        updateSong { $0.cast = cleaned.isEmpty ? nil : cleaned }
+        let names = cleaned.compactMap { Cast.standard.persona(PersonaID($0))?.bible.name }
+        note(.you, cleaned.isEmpty ? "Everyone is in the room" : "Cast: \(names.joined(separator: ", "))")
+        return true
+    }
+
+    /// Records what this house decided on one of the cast's open questions.
+    @discardableResult
+    public func recordHouseCall(question: String, choice: HouseCall.Choice, how: String) -> Bool {
+        guard song != nil else { return false }
+        let record = HouseCallRecord(question: question, choice: choice.rawValue, how: how,
+                                     decidedOn: ISO8601DateFormatter().string(from: Date()).prefix(10).description)
+        updateSong { song in
+            var calls = song.houseCalls ?? []
+            calls.removeAll { $0.question == question }
+            calls.append(record)
+            song.houseCalls = calls
+        }
+        note(.you, "House call: \(question) → \(choice.rawValue)", detail: how)
+        return true
+    }
+
     // MARK: Helpers
 
     /// Writes `library.json` and keeps the in-memory library in step. False, with the reason in the

@@ -125,6 +125,10 @@ struct FrameCommands: Commands {
                 .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: .command)
             }
             Divider()
+            Button("Cast…") { app.openSurface(.cast, title: app.song?.title ?? "Cast") }
+                .keyboardShortcut("8", modifiers: .command)
+                .disabled(app.song == nil)
+            Divider()
             Button("Close All Surfaces") {
                 for item in app.bench.items { app.closeSurface(item.id) }
             }
