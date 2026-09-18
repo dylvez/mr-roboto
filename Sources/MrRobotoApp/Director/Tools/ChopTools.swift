@@ -218,12 +218,13 @@ public struct ClassifySlicesTool: DirectorTool {
     public var schema: DirectorJSON {
         Schema.object([
             ("chop", Schema.string("A chop handle from chop_bar.")),
-            ("overrides", Schema.optional(Schema.array(
-                "Slices whose kind you are setting by hand, overruling the classifier.",
+            ("overrides", Schema.array(
+                "Slices whose kind you are setting by hand, overruling the classifier. Empty when "
+                + "the classifier got them all right.",
                 of: Schema.object([
                     ("slice", Schema.integer("The slice index.", minimum: 0)),
                     ("kind", Schema.string("What it actually is.", enum: SliceClass.allCases.map(\.rawValue))),
-                ], required: ["slice", "kind"])))),
+                ], required: ["slice", "kind"]))),
         ], required: ["chop", "overrides"])
     }
 

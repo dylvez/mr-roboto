@@ -36,6 +36,24 @@ public struct ReadSongTool: DirectorTool {
             public var operation: String
             public var author: String
             public var note: String?
+            /// Where this version's audio actually is, when it has any and the library holds it.
+            ///
+            /// Without this the Director cannot reach a single sample of the open song. Every audio
+            /// handle comes from `import_record`, which takes an absolute path; a version id is not
+            /// a path, and nothing else in the tool layer turns one into one. The live run made that
+            /// concrete — asked to chop the drums of a song whose drums stem was already separated
+            /// and on disk, the band called `import_record` three times on paths it had guessed,
+            /// failed three times, and said so: *"I hit a wall before the chop, and it's a file one,
+            /// not a musical one."*
+            ///
+            /// It is on the **output** rather than in the schema deliberately: a tool's result is not
+            /// part of the request prefix, so saying where the audio is costs nothing in cache.
+            public var mediaPath: String?
+
+            enum CodingKeys: String, CodingKey {
+                case id, part, type, operation, author, note
+                case mediaPath = "media_path"
+            }
         }
 
         enum CodingKeys: String, CodingKey {
@@ -60,7 +78,21 @@ public struct ReadSongTool: DirectorTool {
         Schema.object([], required: [])
     }
 
+    /// The file behind a version, when it has one and the library can find it. Nil is ordinary — a
+    /// groove has no file, and a session with no library directory has no paths at all.
+    static func path(of version: PartVersion, song: SongID, store: LibraryStore?) -> String? {
+        guard let store else { return nil }
+        let media: MediaRef
+        switch version.kind {
+        case .audio(let audio): media = audio.media
+        case .sample(let sample): media = sample.media
+        default: return nil
+        }
+        return (try? store.mediaURL(for: media, song: song))?.path
+    }
+
     public func run(_ input: Input) async throws -> Output {
+        let store = await workspace.store
         guard let song = await workspace.song else {
             return Output(isOpen: false, title: nil, artist: nil, tempo: nil, key: nil,
                           timeSignature: nil, lengthInBars: nil, sections: [], versions: [],
@@ -82,7 +114,9 @@ public struct ReadSongTool: DirectorTool {
                                          type: version.type.rawValue,
                                          operation: version.operation,
                                          author: version.author.description,
-                                         note: version.note)
+                                         note: version.note,
+                                         mediaPath: ReadSongTool.path(of: version, song: song.id,
+                                                                     store: store))
                       },
                       note: nil)
     }

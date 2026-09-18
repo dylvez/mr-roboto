@@ -11,10 +11,18 @@ import Foundation
 /// changes the cached prefix for every session in the field, and `DirectorToolboxTests` will say
 /// so. That is the point of the test.
 public enum DirectorTools {
+    /// - Parameters:
+    ///   - stage: the frame, when there is one. Given, the two surface tools are **appended** to
+    ///     the list — never inserted — so the fourteen schemas before them keep their bytes and a
+    ///     session that started without a frame and one that started with it share a cached prefix
+    ///     up to the fourteenth tool. Nil is the tool layer on its own, which is how every tool
+    ///     test runs.
     public static func toolbox(workbench: DirectorWorkbench,
                                workspace: any DirectorWorkspace,
-                               audition: (any DirectorAudition)? = nil) -> DirectorToolbox {
-        DirectorToolbox([
+                               audition: (any DirectorAudition)? = nil,
+                               stage: (any DirectorStage)? = nil,
+                               pad: DirectorStagePad? = nil) -> DirectorToolbox {
+        var tools: [AnyDirectorTool] = [
             ReadSongTool(workspace: workspace).erased(),
             ImportRecordTool(workbench: workbench, workspace: workspace).erased(),
             AnalyseRecordTool(workbench: workbench).erased(),
@@ -29,7 +37,13 @@ public enum DirectorTools {
             SetVelocityTool(workbench: workbench).erased(),
             AuditionTool(workbench: workbench, audition: audition).erased(),
             CreatePartVersionTool(workbench: workbench, workspace: workspace).erased(),
-        ])
+        ]
+        if let stage {
+            let pad = pad ?? DirectorStagePad()
+            tools.append(OpenSurfaceTool(stage: stage, pad: pad).erased())
+            tools.append(ProposeTool(stage: stage, pad: pad).erased())
+        }
+        return DirectorToolbox(tools)
     }
 
     /// The names, in order. Written down separately so a test can assert the list rather than
@@ -50,4 +64,11 @@ public enum DirectorTools {
         "audition",
         "create_part_version",
     ]
+
+    /// The two the frame adds. Appended after `names`, never among them: a session with no frame
+    /// (a tool test, a headless run) and a session with one share every byte up to here.
+    public static let stageNames = ["open_surface", "propose"]
+
+    /// The whole list a running app sends.
+    public static var allNames: [String] { names + stageNames }
 }

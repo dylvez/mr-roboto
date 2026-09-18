@@ -38,12 +38,22 @@ public struct SurfaceAction: Sendable, Equatable, Hashable {
     /// The part versions the surface opens against.
     public var bound: [VersionID]
     public var prepare: Preparation
+    /// Controls to hang on the surface once it is open, at most two.
+    ///
+    /// Empty for everything Gate A derives, and that is right: a surface you opened yourself needs
+    /// no lever, because you already know what you came to move. They live on the action rather
+    /// than beside it so that a *proposal* keeps them — a Director's suggestion that loses its two
+    /// knobs between the rail and the bench is a suggestion the user cannot act on the way it was
+    /// meant. `DirectorSurfaceChoice` is what validates them; nothing else may invent one.
+    public var levers: [SurfaceLever]
 
-    public init(surface: SurfaceKind, title: String, bound: [VersionID] = [], prepare: Preparation = .none) {
+    public init(surface: SurfaceKind, title: String, bound: [VersionID] = [],
+                prepare: Preparation = .none, levers: [SurfaceLever] = []) {
         self.surface = surface
         self.title = title
         self.bound = bound
         self.prepare = prepare
+        self.levers = levers
     }
 
     /// Stable across recomputes, so a list of proposals does not reshuffle between renders.
@@ -63,15 +73,18 @@ public struct SurfaceAction: Sendable, Equatable, Hashable {
 public struct Proposal: Identifiable, Sendable, Equatable {
 
     /// Who is proposing. The rail labels the block with this, exactly as it labels a log line.
-    public enum Source: Sendable, Equatable {
+    public enum Source: Sendable, Equatable, Hashable {
         /// Derived from the state of the song. No model wrote it.
         case session
-        /// An AI band member, by name. Nothing produces this yet.
+        /// The Director, answering something you typed.
+        case director
+        /// An AI band member, by name, on its own initiative.
         case persona(String)
 
         public var label: String {
             switch self {
             case .session: return "What next"
+            case .director: return "The Director"
             case .persona(let name): return name
             }
         }
@@ -272,6 +285,12 @@ public enum Guidance {
         case .sound:
             guard let sound = sounds(in: song).last else { return fallback }
             return SurfaceAction(surface: kind, title: PartLabel.title(of: sound), bound: [sound.id])
+        case .compare, .check:
+            // Nothing reaches here: the dock, ⌘1–⌘4 and the Surfaces menu all iterate
+            // `SurfaceKind.gateA`, and an answer surface is not something you pick off a shelf —
+            // a Compare with nothing to compare is not a surface, it is an empty promise. The
+            // unbound action this returns is refused by `canPerform` for exactly that reason.
+            return fallback
         }
     }
 
@@ -537,6 +556,11 @@ extension AppState {
     /// somewhere else — a persona, a restored session — is held to the same standard.
     public func canPerform(_ action: SurfaceAction) -> Bool {
         for id in action.bound where version(id) == nil { return false }
+        // An answer surface with nothing in it is not an answer. Every other surface in the catalog
+        // is legitimate empty — the drop target, an empty grid, a new sound from the machine preset
+        // — but a Compare with nothing to compare and a Check with nothing to check are panels whose
+        // only content is the reason they are blank, which is the one thing this frame will not draw.
+        if action.surface.isAnswer && action.bound.isEmpty { return false }
         switch action.prepare {
         case .none:
             // An unbound surface is legitimate (the drop target, an empty grid), so an action with
@@ -584,6 +608,7 @@ extension AppState {
         } else {
             id = openSurface(action.surface, title: action.title, bound: versions)
         }
+        setLevers(action.levers, for: id)
         // Filed after the reuse branch, not inside the else: "separate the stems" names the surface
         // the open song's record is already on, so reuse is the *normal* path for it, not the corner.
         if case .separateStems = action.prepare { file(action.prepare, for: id) }

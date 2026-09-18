@@ -16,7 +16,7 @@ struct MrRobotoApp: App {
         // Before anything renders: the app ships IBM Plex Sans and IBM Plex Mono rather than hoping
         // the machine has them. Any face that will not register says so on stderr and in the log.
         FontRegistration.registerBundledFonts()
-        SurfaceRegistry.registerGateASurfaces()
+        SurfaceRegistry.registerSurfaces()
     }
 
     var body: some Scene {

@@ -45,8 +45,26 @@ public enum SurfaceKind: String, CaseIterable, Sendable {
     case grid = "Grid"
     case sound = "Sound"
 
-    /// Surfaces the M1 spec defines but Gate B builds: compare, check, proposal, argument.
-    public static var gateA: [SurfaceKind] { allCases }
+    // The two answer surfaces. They are in the catalog because the Director has to be able to
+    // *name* one — a question with alternatives gets a Compare, a question with one finding gets a
+    // Check — and naming is all a `SurfaceAction` does. The views are built separately; until one
+    // is registered the bench draws the labelled placeholder, which is the frame working as
+    // designed rather than a gap.
+    /// Candidates judged against the thing they are meant to beat, which stays visible at the top.
+    case compare = "Compare"
+    /// One finding about one part, flagged and never silently fixed.
+    case check = "Check"
+
+    /// The four the user drives themselves: the dock, ⌘1–⌘4, the Surfaces menu.
+    public static let gateA: [SurfaceKind] = [.importRecord, .chopLane, .grid, .sound]
+
+    /// The two the Director opens to answer with. You do not pick these off a shelf — a Compare
+    /// with nothing to compare is not a surface, it is an empty promise — so they are deliberately
+    /// absent from the dock and from ⌘1–⌘4.
+    public static let answers: [SurfaceKind] = [.compare, .check]
+
+    /// Whether this surface only exists as an answer to something.
+    public var isAnswer: Bool { Self.answers.contains(self) }
 }
 
 /// A surface in the bench, with the state the frame owns rather than the surface.

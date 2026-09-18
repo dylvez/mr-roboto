@@ -19,7 +19,7 @@ struct WiringRegistryTests {
         let registry = SurfaceRegistry.shared
         #expect(registry.registeredKinds == SurfaceKind.gateA)
         #expect(registry.registeredKinds.count == 4)
-        for kind in SurfaceKind.allCases {
+        for kind in SurfaceKind.gateA {
             #expect(registry.hasBuilder(for: kind), "\(kind.rawValue) has no builder")
         }
     }

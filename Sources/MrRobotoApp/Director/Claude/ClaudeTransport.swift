@@ -123,10 +123,24 @@ public struct URLSessionClaudeTransport: ClaudeTransport {
                 do {
                     // Bytes are regrouped into lines here so the SSE parser is handed whole lines
                     // and never has to own a partial-UTF8 buffer.
-                    for try await line in bytes.lines {
+                    //
+                    // Split by hand rather than with `bytes.lines`, and the reason is the whole
+                    // protocol: `AsyncLineSequence` drops empty lines, and in server-sent events the
+                    // empty line *is* the delimiter — it is what says one event has ended. Fed from
+                    // `.lines`, the parser saw every `data:` payload and never a blank line, so it
+                    // accumulated the entire reply and emitted nothing, and every turn ended as
+                    // "the reply ended before message_stop". No offline test could see it: the
+                    // scripted transport hands the parser the bytes it was written with, blank lines
+                    // and all.
+                    var line = Data()
+                    for try await byte in bytes {
                         try Task.checkCancellation()
-                        continuation.yield(Data((line + "\n").utf8))
+                        line.append(byte)
+                        guard byte == UInt8(ascii: "\n") else { continue }
+                        continuation.yield(line)
+                        line.removeAll(keepingCapacity: true)
                     }
+                    if !line.isEmpty { continuation.yield(line) }
                     continuation.finish()
                 } catch is CancellationError {
                     continuation.finish(throwing: CancellationError())

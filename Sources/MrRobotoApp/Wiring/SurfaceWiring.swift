@@ -34,6 +34,13 @@ final class SurfaceWiring {
     private var sounds: [SurfaceID: SoundSurface] = [:]
     private var soundAdapters: [SurfaceID: SoundAdapter] = [:]
     private var chops: [SurfaceID: ChopLaneBinding] = [:]
+    // The two answer surfaces. What they draw is filed on `AppState` by whoever asked the question
+    // (see `SurfaceAnswer`); what is kept here is the built model and the host it plays through,
+    // for exactly as long as the bench holds the item — the same rule as the four above.
+    var compares: [SurfaceID: CompareFilling] = [:]
+    var compareAdapters: [SurfaceID: CompareAdapter] = [:]
+    var checks: [SurfaceID: CheckFilling] = [:]
+    var checkAdapters: [SurfaceID: CheckAdapter] = [:]
 
     init() {}
 
@@ -165,7 +172,7 @@ final class SurfaceWiring {
 
     /// Forget everything the bench no longer holds. Called on every lookup, which is at most three
     /// items, and is what makes a closed surface's engine work and its draft go away together.
-    private func prune(_ app: AppState) {
+    func prune(_ app: AppState) {
         let open = Set(app.bench.items.map(\.id))
         imports = imports.filter { open.contains($0.key) }
         importAdapters = importAdapters.filter { open.contains($0.key) }
@@ -174,12 +181,21 @@ final class SurfaceWiring {
         sounds = sounds.filter { open.contains($0.key) }
         soundAdapters = soundAdapters.filter { open.contains($0.key) }
         chops = chops.filter { open.contains($0.key) }
+        compares = compares.filter { open.contains($0.key) }
+        compareAdapters = compareAdapters.filter { open.contains($0.key) }
+        checks = checks.filter { open.contains($0.key) }
+        checkAdapters = checkAdapters.filter { open.contains($0.key) }
     }
 
     /// Whether anything is still held for this surface. For a test; the app never asks.
     func holds(_ id: SurfaceID) -> Bool {
         imports[id] != nil || grids[id] != nil || sounds[id] != nil || chops[id] != nil
+            || compares[id] != nil || checks[id] != nil
     }
+
+    /// The Chop lane this surface is drawing, when it has one. The only way a critic's marks reach
+    /// a lane — `PersonaDirecting.mark(_:on:)` goes through here, and nothing else writes one.
+    func chopBinding(holding id: SurfaceID) -> ChopLaneBinding? { chops[id] }
 
     /// The first bound version that actually holds a groove. A grid opened on a sample (say, from
     /// the ledger) is an empty grid rather than a crash.

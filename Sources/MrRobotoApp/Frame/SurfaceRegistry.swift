@@ -50,23 +50,46 @@ public final class SurfaceRegistry {
     /// Until a kind is added, the bench shows its placeholder; the frame runs either way, which is what
     /// lets the four surfaces be built in parallel. Registering later (from a surface's own file, before
     /// the first render) works just as well — this is a convenience, not a requirement.
-    public static func registerGateASurfaces() {
+    public static func registerGateASurfaces(in registry: SurfaceRegistry = .shared) {
         // One line per surface. Each builds its model from the bench item and the app through
         // `SurfaceWiring`, which owns the models and the host adapters — the builder runs on every
         // render, so nothing that holds an edit in progress can be built inside it.
-        shared.register(.importRecord) { item, app in
+        registry.register(.importRecord) { item, app in
             ImportSurfaceView(model: SurfaceWiring.shared.importModel(for: item, app: app))
         }
-        shared.register(.chopLane) { item, app in
+        registry.register(.chopLane) { item, app in
             ChopLanePanel(binding: SurfaceWiring.shared.chopBinding(for: item, app: app), app: app)
         }
-        shared.register(.grid) { item, app in
+        registry.register(.grid) { item, app in
             GridSurfaceView(model: SurfaceWiring.shared.gridModel(for: item, app: app))
         }
-        shared.register(.sound) { item, app in
+        registry.register(.sound) { item, app in
             let (surface, adapter) = SurfaceWiring.shared.soundSurface(for: item, app: app)
             SoundSurfacePanel(surface: surface, hasSelection: adapter.selectedPart != nil, app: app)
         }
+    }
+
+    /// The two the Director answers with.
+    ///
+    /// Separate from `registerGateASurfaces` and not folded into it, because the two lists are two
+    /// different promises. The Gate A four are the catalog you drive; these two only ever exist
+    /// because something was asked, and both of them draw content that is not in the binding —
+    /// `AppState.answer(for:)` is where that content is, and `SurfaceWiring` is what turns it into a
+    /// model. A Compare whose brief has gone (a session restored, a song reopened) falls back to
+    /// reading its binding rather than drawing nothing.
+    public static func registerAnswerSurfaces(in registry: SurfaceRegistry = .shared) {
+        registry.register(.compare) { item, app in
+            ComparePanel(filling: SurfaceWiring.shared.compareFilling(for: item, app: app))
+        }
+        registry.register(.check) { item, app in
+            CheckPanel(filling: SurfaceWiring.shared.checkFilling(for: item, app: app))
+        }
+    }
+
+    /// Everything a running app draws. One call at launch, from `MrRobotoApp.init()`.
+    public static func registerSurfaces(in registry: SurfaceRegistry = .shared) {
+        registerGateASurfaces(in: registry)
+        registerAnswerSurfaces(in: registry)
     }
 
     /// What the bench should draw for this item: the registered surface, or the placeholder.

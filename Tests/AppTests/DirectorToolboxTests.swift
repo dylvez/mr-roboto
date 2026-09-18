@@ -40,8 +40,16 @@ struct DirectorToolboxTests {
         }
     }
 
-    @Test("Strict tool use needs every property listed as required, optionality by nullable type")
-    func strictSchemas() {
+    /// The four rules the live API turned out to enforce, each of which this toolbox broke.
+    ///
+    /// This test used to assert the opposite — every property required, optionality as a nullable
+    /// type, `strict: true` — which is another vendor's strict mode and is a 400 here. Not one
+    /// request the app ever sent was accepted, and no scripted transport could have said so, because
+    /// a scripted transport answers whatever it was given. Every clause below quotes the refusal it
+    /// came from, so the next person to "tidy" one of them knows what it costs.
+    @Test("The schemas obey the limits the live API actually enforces")
+    func schemasAreAcceptable() {
+        var optionalParameters = 0
         for tool in toolbox().tools {
             let schema = tool.definition.inputSchema
             guard case .object(let properties)? = schema["properties"] else {
@@ -49,10 +57,29 @@ struct DirectorToolboxTests {
                 continue
             }
             let required = Set((schema["required"]?.arrayValue ?? []).compactMap(\.stringValue))
-            #expect(Set(properties.keys) == required,
-                    "\(tool.name): strict mode requires every property to be listed")
-            #expect(tool.definition.strict)
+            #expect(required.isSubset(of: Set(properties.keys)),
+                    "\(tool.name): required names a property that does not exist")
+            optionalParameters += properties.keys.count - required.count
+
+            for member in properties.members {
+                // "For 'integer' type, properties maximum, minimum are not supported" — and the
+                // same for 'number'. The bound lives in the description instead.
+                #expect(member.value["minimum"] == nil,
+                        "\(tool.name).\(member.key): the API rejects a minimum keyword")
+                #expect(member.value["maximum"] == nil,
+                        "\(tool.name).\(member.key): the API rejects a maximum keyword")
+                // "Schemas contains too many parameters with union types … (limit: 16)". None is
+                // the simplest way under that, and optionality is absence from `required`.
+                #expect(member.value["type"]?.stringValue != nil,
+                        "\(tool.name).\(member.key): a union type counts against the API's limit")
+            }
+            // "The compiled grammar is too large … Simplify your tool schemas or reduce the number
+            // of strict tools." Sixteen tools carrying this vocabulary do not fit in one grammar.
+            #expect(!tool.definition.strict, "\(tool.name): strict mode is refused at this size")
         }
+        // "Schemas contains too many optional parameters (27) … (limit: 24)."
+        #expect(optionalParameters <= 24,
+                "\(optionalParameters) optional parameters across the toolbox; the API's limit is 24")
     }
 
     @Test("Every property says what it is for")

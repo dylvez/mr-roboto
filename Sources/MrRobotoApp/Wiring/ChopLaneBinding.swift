@@ -117,6 +117,25 @@ final class ChopLaneBinding {
         await resolving?.value
     }
 
+    /// Hands the lane a critic's marks.
+    ///
+    /// `ChopLaneSurface.marks` has existed since Gate A and nothing has ever written one — the
+    /// surface draws them in the warn colour and never acts on them, which is "flags, never fixes"
+    /// at the only place it could be broken. This is the single writer, and it replaces rather than
+    /// appends: a re-review of the same lane is the current set of findings, not the union of every
+    /// set anybody has ever produced.
+    ///
+    /// - Returns: false when the lane has no bar loaded, so the caller can say so rather than
+    ///   believing marks landed somewhere.
+    @discardableResult
+    func mark(_ marks: [ChopLaneMark]) -> Bool {
+        guard case .ready(let lane) = state else { return false }
+        // `ChopLaneSurface` is an `@Observable` class, so the waveform redraws off this assignment
+        // without the enum around it being touched.
+        lane.marks = marks
+        return true
+    }
+
     // MARK: Working out which bar was promoted
 
     /// The whole-track analysis the import recorded, if the song still holds one.

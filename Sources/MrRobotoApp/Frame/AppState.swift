@@ -6,14 +6,46 @@ import SongGraph
 
 // MARK: - Session log
 
-/// One line in the conversation rail. In Gate A there is no agent, so the rail is the session's own
-/// history: what you did, in order. Nothing here is ever written by a model.
+/// One line in the conversation rail.
+///
+/// Every line says who said it, and the four voices are different things rather than four labels:
+///
+/// * **you** — something you asked for, or a surface reporting what your edit did.
+/// * **session** — the app itself: a save, a surface retired to make room, a failure. Nothing here
+///   is ever written by a model, which is what makes it the place an honest error goes.
+/// * **director** — the Director's own reply to something you typed. One band member, always
+///   called the same thing, so a line that decides is distinguishable from a line that reports.
+/// * **persona(name)** — a member of the band, by their own name. `.director` deliberately is not
+///   `.persona("Director")`: the Director is the one that turns a sentence into work, and a
+///   persona is one that has an opinion about the work. The rail draws them differently and the
+///   accent follows `isBand`, so a persona's line needs nothing new here to land correctly.
 public struct SessionEntry: Identifiable, Sendable, Equatable {
-    /// Who the line is attributed to. `you` is something you asked for; `session` is the app
-    /// reporting back (a save, a surface retired to make room, a failure).
-    public enum Source: String, Sendable, Equatable {
-        case you = "You"
-        case session = "Session"
+    /// Who the line is attributed to.
+    public enum Source: Sendable, Equatable, Hashable {
+        case you
+        case session
+        case director
+        case persona(String)
+
+        /// What the rail prints above the line. A persona is called by its name and nothing else —
+        /// "Cass", not "Persona: Cass" — because that is how you would refer to them.
+        public var label: String {
+            switch self {
+            case .you: return "You"
+            case .session: return "Session"
+            case .director: return "Director"
+            case .persona(let name): return name.isEmpty ? "The band" : name
+            }
+        }
+
+        /// Whether a model wrote this line. The rail marks these, so "the app said it" and "the
+        /// band said it" are never confusable — the one distinction the whole log exists to keep.
+        public var isBand: Bool {
+            switch self {
+            case .you, .session: return false
+            case .director, .persona: return true
+            }
+        }
     }
 
     public let id: UUID
@@ -207,6 +239,40 @@ public final class AppState {
     /// takes it, so it fires exactly once.
     public private(set) var requests: [SurfaceID: SurfaceAction.Preparation] = [:]
 
+    /// The controls the Director put on a surface it opened, at most two per surface.
+    ///
+    /// Stored beside the binding rather than inside `BenchItem` for the same reason the binding is:
+    /// `BenchItem` carries what the frame *draws*, and a lever is something the surface draws. A
+    /// surface you opened yourself has none, which is correct — you already know what you came to
+    /// move.
+    public private(set) var surfaceLevers: [SurfaceID: [SurfaceLever]] = [:]
+
+    /// What an answer surface is showing, when the surface is one of the two that needs more than a
+    /// binding to be drawn.
+    ///
+    /// Stored here for exactly the reason `bindings` and `surfaceLevers` are: `BenchItem` carries
+    /// what the frame draws, and a comparison's reference, columns and rationales — or a critic's
+    /// measurement and its two fixes — are things the *surface* draws. Nothing derives one: an
+    /// answer is filed by whoever asked the question, and forgotten when its surface goes.
+    public private(set) var answers: [SurfaceID: SurfaceAnswer] = [:]
+
+    /// What this surface is answering, or nothing. A Compare with no brief falls back to reading its
+    /// binding, which is the honest degraded case rather than an empty panel — see `SurfaceWiring`.
+    public func answer(for id: SurfaceID) -> SurfaceAnswer? { answers[id] }
+
+    /// Files what an answer surface is showing. Internal, like `setLevers`: a Compare exists because
+    /// somebody asked a question, and nothing else in the frame gets to invent one.
+    func file(_ answer: SurfaceAnswer, for id: SurfaceID) { answers[id] = answer }
+
+    /// The levers on a surface, or nothing.
+    public func levers(for id: SurfaceID) -> [SurfaceLever] { surfaceLevers[id] ?? [] }
+
+    /// Set by `AppStateStage` when the Director opens a surface. Not public: a lever exists because
+    /// an answer put it there, and nothing else in the frame gets to invent one.
+    func setLevers(_ levers: [SurfaceLever], for id: SurfaceID) {
+        surfaceLevers[id] = levers.isEmpty ? nil : levers
+    }
+
     /// Files a request. Internal to the guidance path; nothing else queues work for a surface.
     func file(_ preparation: SurfaceAction.Preparation, for id: SurfaceID) { requests[id] = preparation }
 
@@ -228,6 +294,26 @@ public final class AppState {
     /// `[Proposal]`, so when the Director starts answering, its replies land in this array and the
     /// rail does not change. Until then `proposals` derives the same shape from the song graph.
     public var director: [Proposal] = []
+
+    /// The band, when this session has one.
+    ///
+    /// Nil in tests and previews, and the rail draws the composer disabled and says why rather than
+    /// hiding it — the same honesty rule the empty states follow. `live()` attaches one; a test
+    /// attaches a Director over a scripted transport.
+    public private(set) var band: DirectorSession?
+
+    /// Installs the band. Called once, by `live()` or by a test.
+    public func attach(band session: DirectorSession) { band = session }
+
+    /// The personas' side of the band: the cast, the critics, and the four calls they are driven
+    /// through (`PersonaDirecting`).
+    ///
+    /// Held here rather than made where it is used because `CompareModel` and `CheckModel` hold
+    /// their hosts weakly — nothing else would keep it alive — and because a persona's line belongs
+    /// to the session rather than to a surface.
+    @ObservationIgnored private(set) var conductor: BandDirector?
+
+    func attach(conductor: BandDirector) { self.conductor = conductor }
 
     // MARK: Transport
 
@@ -289,6 +375,17 @@ public final class AppState {
         // The transport plays through the same engine and the same sampler the surfaces audition
         // through. `SurfaceWiring` owns that service, so this is where the two halves meet.
         state.attach(playback: LiveSongPlayer(service: SurfaceWiring.shared.service(for: state)))
+        // The band. Building it touches nothing and reaches nowhere: the client has no key until it
+        // is asked for one, the workbench holds no audio, and the toolbox is a list of schemas. The
+        // key is looked up once, off the launch path, so the composer can say "the band needs a key"
+        // before anybody types a sentence into it rather than after.
+        let band = DirectorSession.live(for: state)
+        state.attach(band: band)
+        // The cast and the critics, wired to the same frame. Nothing here reaches the network: a
+        // persona's opinion is a pure function of a proposal, and a critic's is a pure function of
+        // a measurement.
+        state.attach(conductor: BandDirector(app: state))
+        Task { await band.refreshKeyStatus() }
         return state
     }
 
@@ -354,6 +451,12 @@ public final class AppState {
         for item in bench.items { bench.close(item.id) }
         bindings.removeAll()
         requests.removeAll()
+        surfaceLevers.removeAll()
+        answers.removeAll()
+        // Proposals are about the song that was open. Carrying them across would offer work on a
+        // part the new song does not hold; `canPerform` would filter them, but silently, and a
+        // Director's answer that vanishes without a word is worse than one that is cleared.
+        director.removeAll()
         openSongWithoutLogging(song)
         note(.you, "Opened \(song.title)", detail: provenanceSummary(of: song))
         if let opening = Guidance.opening(song) { perform(opening) }
@@ -481,6 +584,8 @@ public final class AppState {
         note(.you, "Opened \(kind.rawValue)", detail: title)
         if let retired, retired.id != id {
             bindings[retired.id] = nil
+            surfaceLevers[retired.id] = nil
+            answers[retired.id] = nil
             note(.session, "Closed \(retired.kind.rawValue) to make room", detail: retired.title)
         }
         return id
@@ -490,6 +595,8 @@ public final class AppState {
         guard let item = bench.items.first(where: { $0.id == id }) else { return }
         bench.close(id)
         bindings[id] = nil
+        surfaceLevers[id] = nil
+        answers[id] = nil
         note(.you, "Closed \(item.kind.rawValue)", detail: item.title)
     }
 
