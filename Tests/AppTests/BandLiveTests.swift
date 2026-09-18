@@ -1,4 +1,5 @@
 import Foundation
+import MusicTheory
 import Performance
 import SongGraph
 import SwiftUI
@@ -321,6 +322,76 @@ struct BandLiveTests {
         #expect(!lines.isEmpty, "no bass line was written")
         #expect(lines.allSatisfy { $0.author == .persona("Bassist") })
         #expect(log.opens.contains { $0.hasPrefix("Compare") || $0.hasPrefix("Piano roll") })
+        report("saved", "no — the run is in memory only")
+    }
+
+    /// M2 Gate C's proof line, word for word.
+    static let formLine = "Make this a two-minute song"
+
+    @Test("the Gate C line: a two-minute form the transport plays, live")
+    func formLive() async throws {
+        let state = AppState.live()
+        let registry = SurfaceRegistry()
+        SurfaceRegistry.registerSurfaces(in: registry)
+        let arrival = try #require(state.library.songs.first { $0.title == "Arrival" })
+        state.openSong(arrival.id)
+        // Something to arrange, in memory only: the boom-bap pocket and a Palladino line under it.
+        if state.song.map({ Guidance.grooves(in: $0).isEmpty }) ?? true {
+            let feel = try #require(FeelLibrary.standard.feel(named: "Boom-Bap Pocket"))
+            #expect(state.record(PartVersion(partID: PartID(), kind: .groove(feel.groove), author: .user,
+                                             operation: Operation.written, note: "Boom-Bap Pocket")))
+        }
+        if let song = state.song, Guidance.basslines(in: song).isEmpty,
+           let grooveVersion = Guidance.grooves(in: song).last, case .groove(let groove) = grooveVersion.kind {
+            let key = Guidance.analysis(in: song)?.dominantKey ?? song.key ?? Key(tonic: NoteName(.d))
+            let request = BassRequest(key: key, chords: [], groove: groove, tempo: song.tempo,
+                                      timeSignature: song.timeSignature, lineage: .palladino, lagMS: 40,
+                                      density: 0.4, sound: "finger", seed: 1)
+            #expect(state.record(PartVersion(partID: PartID(), kind: .bassline(BassWriter.write(request)),
+                                             author: .persona("Bassist"), parents: [grooveVersion.id],
+                                             operation: Operation.written, note: "Palladino line, +40 ms")))
+        }
+        let band = try #require(state.band)
+        try #require(await band.director.keyStatus().hasKey, "no API key")
+        report("song", "\(state.song?.title ?? "") · \(state.song?.tempo ?? 0) bpm · \(state.song?.timeSignature.description ?? "") · "
+            + "\(state.song?.sections.count ?? 0) sections before")
+
+        let log = LiveTurnLog()
+        let started = Date()
+        let turn = await band.director.direct(Self.formLine) { event in
+            switch event {
+            case .toolStarted(let name): log.started(name)
+            case .toolFinished(let name, let isError, let message): log.finished(name, isError: isError, message: message)
+            case .opened(let kind, let title): log.opened(kind, title)
+            case .say, .finished: break
+            }
+        }
+        report("form ending", "\(turn.ending)")
+        report("form elapsed", String(format: "%.1f s", Date().timeIntervalSince(started)))
+        report("form calls", log.calls.joined(separator: " → "))
+        for failure in log.errors { report("  failed", failure) }
+        report("form opened", log.opens.joined(separator: " · "))
+        report("form said", turn.say)
+        describeSpend(turn.spend, label: "form turn")
+
+        let song = try #require(state.song)
+        let seconds = Double(song.lengthInBars * song.timeSignature.beatsPerBar) * 60 / song.tempo
+        report("sections after", "\(song.sections.count) · \(song.lengthInBars) bars · \(String(format: "%.0f", seconds)) s")
+        for section in song.sections {
+            report("  section", "\(section.name) \(section.lengthInBars) bars ← "
+                + section.stitch.map { describe($0, in: state) }.joined(separator: ", "))
+        }
+        let plan = state.playback
+        report("plan", "\(plan.summary) · arranged \(plan.isArranged) · playable \(plan.isPlayable) · "
+            + "\(plan.segments.filter(\.isSounding).count) of \(plan.segments.count) segments sound")
+        for entry in state.log.suffix(12) {
+            report("  rail [\(entry.source.label)]", entry.text + (entry.detail.map { " — \($0)" } ?? ""))
+        }
+        #expect(turn.ending == .answered)
+        #expect(!song.sections.isEmpty, "no sections were arranged")
+        #expect(plan.isArranged && plan.isPlayable, "the transport has no form to play")
+        #expect(abs(seconds - 120) <= 15, "the form is \(seconds) s, not two minutes")
+        #expect(log.opens.contains { $0.hasPrefix("Structure") })
         report("saved", "no — the run is in memory only")
     }
 
