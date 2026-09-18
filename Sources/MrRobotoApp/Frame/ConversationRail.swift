@@ -47,7 +47,10 @@ struct ConversationRail: View {
     private var nextBlock: some View {
         let proposals = app.proposals
         return VStack(alignment: .leading, spacing: 10) {
-            SmallLabel(proposals.first?.source.label ?? Proposal.Source.session.label)
+            HStack(spacing: 7) {
+                if let emblem = proposals.first.flatMap({ Art.emblem(for: $0.source) }) { ArtImage(emblem, width: 22) }
+                SmallLabel(proposals.first?.source.label ?? Proposal.Source.session.label)
+            }
             if proposals.isEmpty {
                 Text(emptyLine)
                     .font(Design.Typography.ui(12, weight: .regular))
@@ -98,6 +101,9 @@ struct ConversationRail: View {
                     // by the real entry when it lands. This is the streaming: the rail fills in
                     // while the work is happening, not twenty seconds afterwards.
                     if let band = app.band, band.isWorking {
+                        if band.streaming.isEmpty {
+                            ArtImage("wait-band", width: 150, height: 100)
+                        }
                         LogLine(source: .director,
                                 text: band.streaming.isEmpty ? (band.activity ?? "Working…") : band.streaming,
                                 detail: band.streaming.isEmpty ? nil : band.activity)
@@ -152,8 +158,11 @@ struct LogLine: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            SmallLabel(source.label,
-                       color: source.isBand ? Design.Palette.accent : Design.Palette.inkSecondary)
+            HStack(spacing: 7) {
+                if let emblem = Art.emblem(for: source) { ArtImage(emblem, width: 22) }
+                SmallLabel(source.label,
+                           color: source.isBand ? Design.Palette.accent : Design.Palette.inkSecondary)
+            }
             Text(text)
                 .font(Design.Typography.prose(16))
                 .foregroundStyle(Design.Palette.ink)

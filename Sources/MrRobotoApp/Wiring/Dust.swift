@@ -106,6 +106,7 @@ enum Dust {
         case "cassette": return "Cassette"
         case "vinyl": return "Vinyl"
         case "radio": return "Radio"
+        case "clean": return "Clean"
         default: return preset
         }
     }

@@ -42,6 +42,16 @@ struct BenchColumn: View {
     }
 
     private var empty: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            if app.song == nil {
+                ArtImage("empty-first-launch", width: 420, height: 280)
+                    .frame(maxWidth: .infinity)
+            }
+            emptyNote
+        }
+    }
+
+    private var emptyNote: some View {
         EmptyNote(title: app.song == nil ? "Nothing open." : "The bench is empty.",
                   detail: app.song == nil
                       ? "Open a song from the library and its record lands here. Or press Record above and drop an audio file on it."

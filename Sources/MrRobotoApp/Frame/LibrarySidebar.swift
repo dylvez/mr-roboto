@@ -124,6 +124,7 @@ struct LibrarySidebar: View {
     @ViewBuilder
     private var emptyState: some View {
         VStack(alignment: .leading, spacing: 10) {
+            ArtImage("empty-library", width: 150, height: 100)
             EmptyNote(title: "Nothing in the library yet.",
                       detail: "Import a record with File ▸ Import Record…, or drop audio and .roboto song packages into the library folder.")
             if let directory = app.libraryStatus.directory {

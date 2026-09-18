@@ -56,6 +56,15 @@ struct FrameRenderTests {
         try write(FieldGuideView(), size: CGSize(width: 620, height: 900), name: "field-guide")
     }
 
+    @Test("first launch: nothing open")
+    func firstLaunch() throws {
+        FontRegistration.registerBundledFonts()
+        let defaults = UserDefaults(suiteName: "mrroboto.render.\(UUID().uuidString)")!
+        let app = AppState(library: Library(), transportHost: StubTransportHost(),
+                           regions: RegionVisibility(defaults: defaults), primers: PrimerStore(defaults: defaults))
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-empty")
+    }
+
     @Test("a fresh import: the path says separate the stems")
     func freshImport() throws {
         FontRegistration.registerBundledFonts()

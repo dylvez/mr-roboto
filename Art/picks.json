@@ -1,0 +1,40 @@
+{
+  "anchor": [
+    "picked/cast-director.png",
+    "picked/cast-beatmaker.png",
+    "picked/cast-sampler.png"
+  ],
+  "picks": {
+    "cast-director": "candidates/cast-director/gpt-image-2-2.png",
+    "cast-beatmaker": "candidates/cast-beatmaker/gpt-image-2-2.png",
+    "cast-sampler": "candidates/cast-sampler/gpt-image-2-2.png",
+    "cast-critic": "candidates/cast-critic/gpt-image-2-ref-1.png",
+    "cast-you": "candidates/cast-you/nano-banana-2-ref-1.png",
+    "cast-bassist": "candidates/cast-bassist/nano-banana-2-ref-2.png",
+    "app-icon-concepts": "candidates/app-icon-concepts/nano-banana-2-ref-1.png",
+    "doc-icon": "candidates/doc-icon/nano-banana-2-ref-1.png",
+    "machine-sp1200": "candidates/machine-sp1200/gpt-image-2-ref-1.png",
+    "machine-mpc60": "candidates/machine-mpc60/nano-banana-2-ref-1.png",
+    "machine-cassette": "candidates/machine-cassette/nano-banana-2-ref-2.png",
+    "machine-vinyl": "candidates/machine-vinyl/nano-banana-2-ref-2.png",
+    "machine-radio": "candidates/machine-radio/nano-banana-2-ref-2.png",
+    "empty-first-launch": "candidates/empty-first-launch/gpt-image-2-ref-1.png",
+    "empty-drop-record": "candidates/empty-drop-record/nano-banana-2-ref-2.png",
+    "wait-separating": "candidates/wait-separating/nano-banana-2-ref-2.png",
+    "empty-grid": "candidates/empty-grid/nano-banana-2-ref-2.png",
+    "wait-band": "candidates/wait-band/nano-banana-2-ref-1.png",
+    "empty-library": "candidates/empty-library/nano-banana-2-ref-2.png",
+    "band-record": "candidates/band-record/nano-banana-2-ref-1.png",
+    "band-chop": "candidates/band-chop/nano-banana-2-ref-1.png",
+    "band-grid": "candidates/band-grid/nano-banana-2-ref-1.png",
+    "band-sound": "candidates/band-sound/nano-banana-2-ref-1.png"
+  },
+  "why": {
+    "machine-sp1200": "GPT's version: faders and a small display read as an SP-1200 and stay distinct from the MPC60's big screen and pads.",
+    "machine-cassette": "Seen through a deck's window, as briefed; the other sat in a circle like an emblem.",
+    "machine-vinyl": "A whole turntable with its tonearm, not just a platter.",
+    "empty-first-launch": "GPT's literal version: record in, step keys out. Calmer than the cutaway for an empty screen.",
+    "empty-library": "Genuinely empty.",
+    "cast-bassist": "Cleaner headstock; the other's pegs grew dials."
+  }
+}

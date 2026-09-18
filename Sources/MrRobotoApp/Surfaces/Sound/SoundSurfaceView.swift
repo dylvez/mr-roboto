@@ -248,7 +248,7 @@ struct SoundSurfaceView: View {
                 .foregroundStyle(Design.Palette.inkTertiary)
             HStack(spacing: 6) {
                 ForEach(DegradeSettings.Preset.allCases, id: \.self) { preset in
-                    chip(preset.rawValue, isOn: surface.draft.degrade.matchingPreset == preset) {
+                    machineCard(preset, isOn: surface.draft.degrade.matchingPreset == preset) {
                         surface.apply(preset)
                     }
                 }
@@ -285,6 +285,39 @@ struct SoundSurfaceView: View {
             }
         }
         .frame(height: Design.Metric.chipHeight)
+    }
+
+    // MARK: A machine card
+
+    /// A chain preset as the machine it models: its picture over its name. Falls back to the plain
+    /// chip when the picture is not bundled.
+    @ViewBuilder
+    private func machineCard(_ preset: DegradeSettings.Preset, isOn: Bool, action: @escaping () -> Void) -> some View {
+        let name = Dust.machineName(preset.rawValue)
+        if Art.image(Art.machine(preset.rawValue)) == nil {
+            chip(name, isOn: isOn, action: action)
+        } else {
+            Button(action: action) {
+                VStack(spacing: 3) {
+                    ArtImage(Art.machine(preset.rawValue), width: 64, height: 40)
+                    Text(name)
+                        .font(Design.Typography.ui(11, weight: isOn ? .semibold : .regular))
+                        .foregroundStyle(isOn ? Design.Palette.accent : Design.Palette.inkSecondary)
+                }
+                .padding(.horizontal, 6)
+                .padding(.vertical, 5)
+                .background(isOn ? Design.Palette.accentSoft : Design.Palette.panelAlt,
+                            in: RoundedRectangle(cornerRadius: Design.Metric.corner))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Design.Metric.corner)
+                        .stroke(isOn ? Design.Palette.accent.opacity(0.35) : Design.Palette.line,
+                                lineWidth: Design.Metric.hairline)
+                )
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(name)
+        }
     }
 
     // MARK: A chip

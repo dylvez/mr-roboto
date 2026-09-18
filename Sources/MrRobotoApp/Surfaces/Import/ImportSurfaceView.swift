@@ -82,6 +82,7 @@ private struct DropWell: View {
 
     var body: some View {
         VStack(spacing: 10) {
+            ArtImage("empty-drop-record", width: 240, height: 160)
             Text("Drop a record here")
                 .font(Design.Typography.prose(17))
                 .foregroundStyle(Design.Palette.ink)
@@ -394,6 +395,9 @@ private struct StemLanesPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             PanelLabel("Stems")
+            if model.stems.isEmpty, model.state.phase == .separating {
+                ArtImage("wait-separating", width: 180, height: 120)
+            }
             if model.stems.isEmpty {
                 Text(emptyLine)
                     .font(Design.Typography.ui(12, weight: .regular))

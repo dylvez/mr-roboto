@@ -11,3 +11,6 @@ Bench/models/
 default.profraw
 *.profraw
 Demos/
+Art/candidates/
+Art/contact/
+Art/picked/
