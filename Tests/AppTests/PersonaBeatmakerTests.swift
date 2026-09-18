@@ -305,7 +305,7 @@ struct BeatmakerHouseCallTests {
 
     @Test("an early snare is now the one flagged, with the house's reason")
     func earlyIsFlagged() throws {
-        var feel = Feels.lofiHipHop
+        var feel = try #require(FeelLibrary.standard.feel(named: "Lo-Fi Hip-Hop"))
         feel.voices[.snare] = VoiceFeel(timingOffset: -0.115)
         let reading = Beatmaker().read(GrooveObservation(feel))
         let direction = try #require(reading.first { $0.rule == "beatmaker.snare-direction" })
