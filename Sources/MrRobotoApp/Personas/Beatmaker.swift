@@ -435,6 +435,26 @@ public struct Beatmaker: Persona {
         // MARK: Disagreements
 
         disagreements: [
+            PersonaDisagreement(with: .producer,
+                                about: "whether a groove that is right by the pocket's numbers is right for the song",
+                                position: "the pocket is measurable and mine; a feel that sits where the lineage says it sits is finished",
+                                theirs: "finished is what the brief says, and a perfect pocket in the wrong song is a perfect wrong answer",
+                                settledBy: "the Producer holds the brief; the Beatmaker holds the numbers inside it"),
+            PersonaDisagreement(with: .engineer,
+                                about: "whether the drums should be squashed to sit in the mix",
+                                position: "a crest under 8 dB flattens the ghost-to-accent depth the feel is built on",
+                                theirs: "level and translation are theirs, and a pocket nobody can hear is not a pocket",
+                                settledBy: "the ghost depth in dB after the chain: if it survives, the Engineer wins"),
+            PersonaDisagreement(with: .peer,
+                                about: "whether the groove should change when the section does",
+                                position: "a feel is a phrase and one song has one pocket",
+                                theirs: "a form with one groove for two minutes has no turn",
+                                settledBy: "the form: a section the Peer names as a turn may carry a second groove"),
+            PersonaDisagreement(with: .lyricist,
+                                about: "whether a stressed syllable on a swung offbeat is a problem",
+                                position: "the swing puts the offbeat where it belongs; the words fit the beat",
+                                theirs: "the words come first; a stress against the beat is a flag",
+                                settledBy: "the Lyricist's weak-beat stress rate over the line, against the swing figure"),
             PersonaDisagreement(
                 with: .sampler,
                 about: "whether the swing lives in the grid or in the audio",
@@ -756,6 +776,15 @@ public struct Beatmaker: Persona {
 
         case .writeBassline, .pushBassAhead, .sustainUnder808:
             return .defer_(to: .bassist, because: "Where the bass sits and what it plays is the Bassist's call.")
+
+        case .addPart, .setReference:
+            return .defer_(to: .producer, because: "What the song holds and what it is held to is the Producer's.")
+        case .placeHook, .shapeForm:
+            return .defer_(to: .peer, because: "Where the hook lands and how the form turns is the Peer's ear.")
+        case .writeLine, .rhymeLine, .reuseImage:
+            return .defer_(to: .lyricist, because: "The words are the Lyricist's.")
+        case .setLoudness, .balanceLowEnd, .squashDrums:
+            return .defer_(to: .engineer, because: "Level, balance and the low end's owner are the Engineer's to read.")
 
         case .outOfScope(let what):
             return .defer_(to: .sampler, because: "\(what) is outside feel, swing and pocket.")

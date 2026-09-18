@@ -36,6 +36,7 @@ enum FieldGuide {
         Entry(word: "Clearance", meaning: "Whether a sampled record may be used: uncleared, pending, cleared, or not required. Said aloud, never assumed."),
         Entry(word: "Director", meaning: "Reads what you ask for, hands it to the right band member, and answers by opening a surface on real parts."),
         Entry(word: "Band", meaning: "The cast for this song: the Beatmaker for grooves and feels, the Sampler for chops, machines and sources, the Bassist for the low end. Who is in the room is set on the Cast surface."),
+        Entry(word: "Voice", meaning: "The lyrics this house has written, imported once (File ▸ Import Voice…). The Lyricist reads new words against them and names the images that repeat."),
         Entry(word: "Bible", meaning: "Everything a persona knows, as data: named lineages, measurable features, cited rules with thresholds, refusals, goldens and open questions. A document the method checks."),
         Entry(word: "House call", meaning: "What this house decided on a persona's open question, by ear — the snare late, not early. Kept with the song, apart from the evidence."),
         Entry(word: "Critic", meaning: "A rule that looks for one kind of problem. It flags and never fixes."),

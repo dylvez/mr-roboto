@@ -14,7 +14,7 @@ struct CastTests {
     func inRoom() {
         #expect(Cast.standard.inRoom(for: nil).ids == Cast.standard.ids)
         var song = Song(title: "Blank")
-        #expect(Cast.standard.inRoom(for: song).ids == [.beatmaker, .sampler, .bassist])
+        #expect(Cast.standard.inRoom(for: song).ids == Cast.standard.ids)
         song.cast = ["bassist", "beatmaker"]
         #expect(Cast.standard.inRoom(for: song).ids == [.beatmaker, .bassist], "roster order, not list order")
         song.cast = ["nobody"]
@@ -30,7 +30,7 @@ struct CastTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         let app = LibraryFixture.app(directory)
         app.open(Song(title: "Arrival", tempo: 92))
-        #expect(app.castInRoom.ids.count == 3)
+        #expect(app.castInRoom.ids.count == Cast.standard.ids.count)
         #expect(app.setCast([.beatmaker, .bassist]))
         #expect(app.song?.cast == ["beatmaker", "bassist"])
         #expect(app.castInRoom.ids == [.beatmaker, .bassist])
@@ -65,7 +65,7 @@ struct CastTests {
         let band = BandDirector(app: app)
 
         let everyone = await band.ask("put the swing at 80")
-        #expect(everyone.verdicts.map(\.persona) == [.beatmaker, .sampler, .bassist])
+        #expect(everyone.verdicts.map(\.persona) == Cast.standard.ids)
         #expect(everyone.owner == .beatmaker)
 
         #expect(app.setCast([.sampler, .bassist]))

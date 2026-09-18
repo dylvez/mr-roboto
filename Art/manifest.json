@@ -3,85 +3,380 @@
   "style": "style.txt",
   "background": "Isolated on a plain, flat, uniform pale grey (#eef0f3) background with nothing else in the frame.",
   "assets": [
-    {"name": "cast-director", "group": "cast", "source": "generate", "priority": 1, "size": [512, 512], "cutout": true,
-     "where": "Band rail (the Director's messages), proposals",
-     "brief": "An emblem: a single mixing-desk channel strip seen head-on — one long fader, a pan knob above it, and one lit solo key in step-key orange. Compact, fits inside a circle."},
-    {"name": "cast-beatmaker", "group": "cast", "source": "generate", "priority": 1, "size": [512, 512], "cutout": true,
-     "where": "Band rail, Compare candidates it made",
-     "brief": "An emblem: a 4 by 4 grid of square drum pads in 3/4 isometric view, two pads lit in step-key orange, a row of small swing tick marks along one edge. Compact, fits inside a circle."},
-    {"name": "cast-sampler", "group": "cast", "source": "generate", "priority": 1, "size": [512, 512], "cutout": true,
-     "where": "Band rail, chops and dust it made",
-     "brief": "An emblem: eight slim vertical faders in a row at different heights, with a single audio waveform line drawn across their caps. Compact, fits inside a circle."},
-    {"name": "cast-critic", "group": "cast", "source": "generate", "priority": 2, "size": [512, 512], "cutout": true,
-     "where": "Check surface, refusals in the rail",
-     "brief": "An emblem: an analogue VU meter with its needle resting in a small red zone at the right of the scale. Compact, fits inside a circle."},
-    {"name": "cast-you", "group": "cast", "source": "generate", "priority": 2, "size": [512, 512], "cutout": true,
-     "where": "Band rail, 'made by you' in provenance",
-     "brief": "An emblem: a single confident hand-drawn waveform stroke in signal blue, loose and human, with no machine around it. Compact, fits inside a circle."},
-    {"name": "cast-bassist", "group": "cast", "source": "generate", "priority": 3, "size": [512, 512], "cutout": true,
-     "where": "M2",
-     "brief": "An emblem: a four-string bass guitar headstock seen side-on, tuning pegs drawn precisely, strings as hairlines. Compact, fits inside a circle."},
-
-    {"name": "app-icon-concepts", "group": "identity", "source": "generate", "priority": 1, "size": [1024, 1024], "cutout": false,
-     "where": "Exploration only; the final icon is redrawn in Icon Composer",
-     "brief": "A macOS app icon concept for a music app called Mr. Roboto: the front panel of a drum machine whose sixteen step keys are arranged to read as a friendly robot face — two lit orange keys for eyes, a row for a mouth. Rounded-square icon shape, graphite body."},
-    {"name": "doc-icon", "group": "identity", "source": "generate", "priority": 3, "size": [512, 512], "cutout": true,
-     "where": "Finder, for .roboto packages",
-     "brief": "A document page icon with a thin waveform strip across its top and a single orange step key at its lower corner."},
-
-    {"name": "machine-sp1200", "group": "machines", "source": "generate", "priority": 2, "size": [640, 400], "cutout": true,
-     "where": "Sound machine picker, dusty crumbs",
-     "brief": "A generic 1987 sampling drum machine seen in 3/4 view: a wide warm-grey body, eight slim faders, a small two-line display, a grid of rubber buttons. No brand name or logo anywhere."},
-    {"name": "machine-mpc60", "group": "machines", "source": "generate", "priority": 2, "size": [640, 400], "cutout": true,
-     "where": "Sound machine picker",
-     "brief": "A generic late-1980s grey music production workstation in 3/4 view with a 4 by 4 block of square pads and a large LCD screen. No brand name or logo anywhere."},
-    {"name": "machine-cassette", "group": "machines", "source": "generate", "priority": 2, "size": [640, 400], "cutout": true,
-     "where": "Sound machine picker",
-     "brief": "A cassette tape seen head-on through the window of a tape deck, reels partly wound, tape visible between them."},
-    {"name": "machine-vinyl", "group": "machines", "source": "generate", "priority": 2, "size": [640, 400], "cutout": true,
-     "where": "Sound machine picker",
-     "brief": "A turntable seen from above: platter, a record with fine grooves, the tonearm resting on the record."},
-    {"name": "machine-radio", "group": "machines", "source": "generate", "priority": 2, "size": [640, 400], "cutout": true,
-     "where": "Sound machine picker",
-     "brief": "A 1960s transistor radio in 3/4 view with a round perforated speaker grille and a tuning dial."},
-
-    {"name": "empty-first-launch", "group": "empty", "source": "generate", "priority": 1, "size": [960, 640], "cutout": true,
-     "where": "Bench, nothing open",
-     "brief": "A vinyl record sliding into the front of a drum machine and emerging from the back as a row of lit orange step keys. Side view, left to right."},
-    {"name": "empty-drop-record", "group": "empty", "source": "generate", "priority": 1, "size": [960, 640], "cutout": true,
-     "where": "Record surface, unbound",
-     "brief": "A vinyl record hovering above an open slot shaped like an audio waveform, the slot drawn with a dashed outline."},
-    {"name": "wait-separating", "group": "empty", "source": "generate", "priority": 2, "size": [960, 640], "cutout": true,
-     "where": "Record surface, during stem separation",
-     "brief": "One audio waveform on the left splitting into four parallel lanes on the right, like cables fanning out of a patch bay."},
-    {"name": "empty-grid", "group": "empty", "source": "generate", "priority": 2, "size": [960, 640], "cutout": true,
-     "where": "Grid, unbound",
-     "brief": "A row of sixteen unlit drum-machine step keys in four colour groups — red-orange, orange, yellow, cream — one key pressed halfway down."},
-    {"name": "wait-band", "group": "empty", "source": "generate", "priority": 2, "size": [480, 320], "cutout": true,
-     "where": "Band rail, during a turn",
-     "brief": "A mixing-desk channel strip with two small instrument emblems — a pad grid and a fader bank — patched into it by curving cables."},
-    {"name": "empty-library", "group": "empty", "source": "generate", "priority": 3, "size": [480, 320], "cutout": true,
-     "where": "Library, empty",
-     "brief": "An empty wooden-slat record crate seen from above at an angle."},
-
-    {"name": "band-record", "group": "bands", "source": "generate", "priority": 3, "size": [2400, 160], "cutout": false,
-     "where": "Record surface header",
-     "brief": "A very wide, very faint horizontal strip: one long audio waveform with section brackets along its top. Very low contrast."},
-    {"name": "band-chop", "group": "bands", "source": "generate", "priority": 3, "size": [2400, 160], "cutout": false,
-     "where": "Chop lane header",
-     "brief": "A very wide, very faint horizontal strip: an audio waveform crossed by evenly spaced vertical cut lines, a tiny square pad under each cut. Very low contrast."},
-    {"name": "band-grid", "group": "bands", "source": "generate", "priority": 3, "size": [2400, 160], "cutout": false,
-     "where": "Grid header",
-     "brief": "A very wide, very faint horizontal strip: a long row of drum-machine step keys in four faded colour groups. Very low contrast."},
-    {"name": "band-sound", "group": "bands", "source": "generate", "priority": 3, "size": [2400, 160], "cutout": false,
-     "where": "Sound header",
-     "brief": "A very wide, very faint horizontal strip: a row of knobs above a thin circuit trace. Very low contrast."},
-
-    {"name": "glyphs", "group": "glyphs", "source": "drawn", "priority": 1, "size": [24, 24],
-     "where": "Path strip, Parts groups, crumbs, library",
-     "brief": "Record, four stems, chop, groove, feel, dust, sound, section, song, album, version, idea, seed, compare, check."},
-    {"name": "wordmark", "group": "identity", "source": "drawn", "priority": 2, "size": [0, 0],
-     "where": "Empty window, About, Field Guide",
-     "brief": "Mr. Roboto in IBM Plex Sans SemiBold, the full stop drawn as a lit orange step key."}
+    {
+      "name": "cast-director",
+      "group": "cast",
+      "source": "generate",
+      "priority": 1,
+      "size": [
+        512,
+        512
+      ],
+      "cutout": true,
+      "where": "Band rail (the Director's messages), proposals",
+      "brief": "An emblem: a single mixing-desk channel strip seen head-on — one long fader, a pan knob above it, and one lit solo key in step-key orange. Compact, fits inside a circle."
+    },
+    {
+      "name": "cast-beatmaker",
+      "group": "cast",
+      "source": "generate",
+      "priority": 1,
+      "size": [
+        512,
+        512
+      ],
+      "cutout": true,
+      "where": "Band rail, Compare candidates it made",
+      "brief": "An emblem: a 4 by 4 grid of square drum pads in 3/4 isometric view, two pads lit in step-key orange, a row of small swing tick marks along one edge. Compact, fits inside a circle."
+    },
+    {
+      "name": "cast-sampler",
+      "group": "cast",
+      "source": "generate",
+      "priority": 1,
+      "size": [
+        512,
+        512
+      ],
+      "cutout": true,
+      "where": "Band rail, chops and dust it made",
+      "brief": "An emblem: eight slim vertical faders in a row at different heights, with a single audio waveform line drawn across their caps. Compact, fits inside a circle."
+    },
+    {
+      "name": "cast-critic",
+      "group": "cast",
+      "source": "generate",
+      "priority": 2,
+      "size": [
+        512,
+        512
+      ],
+      "cutout": true,
+      "where": "Check surface, refusals in the rail",
+      "brief": "An emblem: an analogue VU meter with its needle resting in a small red zone at the right of the scale. Compact, fits inside a circle."
+    },
+    {
+      "name": "cast-you",
+      "group": "cast",
+      "source": "generate",
+      "priority": 2,
+      "size": [
+        512,
+        512
+      ],
+      "cutout": true,
+      "where": "Band rail, 'made by you' in provenance",
+      "brief": "An emblem: a single confident hand-drawn waveform stroke in signal blue, loose and human, with no machine around it. Compact, fits inside a circle."
+    },
+    {
+      "name": "cast-bassist",
+      "group": "cast",
+      "source": "generate",
+      "priority": 3,
+      "size": [
+        512,
+        512
+      ],
+      "cutout": true,
+      "where": "M2",
+      "brief": "An emblem: a four-string bass guitar headstock seen side-on, tuning pegs drawn precisely, strings as hairlines. Compact, fits inside a circle."
+    },
+    {
+      "name": "app-icon-concepts",
+      "group": "identity",
+      "source": "generate",
+      "priority": 1,
+      "size": [
+        1024,
+        1024
+      ],
+      "cutout": false,
+      "where": "Exploration only; the final icon is redrawn in Icon Composer",
+      "brief": "A macOS app icon concept for a music app called Mr. Roboto: the front panel of a drum machine whose sixteen step keys are arranged to read as a friendly robot face — two lit orange keys for eyes, a row for a mouth. Rounded-square icon shape, graphite body."
+    },
+    {
+      "name": "doc-icon",
+      "group": "identity",
+      "source": "generate",
+      "priority": 3,
+      "size": [
+        512,
+        512
+      ],
+      "cutout": true,
+      "where": "Finder, for .roboto packages",
+      "brief": "A document page icon with a thin waveform strip across its top and a single orange step key at its lower corner."
+    },
+    {
+      "name": "machine-sp1200",
+      "group": "machines",
+      "source": "generate",
+      "priority": 2,
+      "size": [
+        640,
+        400
+      ],
+      "cutout": true,
+      "where": "Sound machine picker, dusty crumbs",
+      "brief": "A generic 1987 sampling drum machine seen in 3/4 view: a wide warm-grey body, eight slim faders, a small two-line display, a grid of rubber buttons. No brand name or logo anywhere."
+    },
+    {
+      "name": "machine-mpc60",
+      "group": "machines",
+      "source": "generate",
+      "priority": 2,
+      "size": [
+        640,
+        400
+      ],
+      "cutout": true,
+      "where": "Sound machine picker",
+      "brief": "A generic late-1980s grey music production workstation in 3/4 view with a 4 by 4 block of square pads and a large LCD screen. No brand name or logo anywhere."
+    },
+    {
+      "name": "machine-cassette",
+      "group": "machines",
+      "source": "generate",
+      "priority": 2,
+      "size": [
+        640,
+        400
+      ],
+      "cutout": true,
+      "where": "Sound machine picker",
+      "brief": "A cassette tape seen head-on through the window of a tape deck, reels partly wound, tape visible between them."
+    },
+    {
+      "name": "machine-vinyl",
+      "group": "machines",
+      "source": "generate",
+      "priority": 2,
+      "size": [
+        640,
+        400
+      ],
+      "cutout": true,
+      "where": "Sound machine picker",
+      "brief": "A turntable seen from above: platter, a record with fine grooves, the tonearm resting on the record."
+    },
+    {
+      "name": "machine-radio",
+      "group": "machines",
+      "source": "generate",
+      "priority": 2,
+      "size": [
+        640,
+        400
+      ],
+      "cutout": true,
+      "where": "Sound machine picker",
+      "brief": "A 1960s transistor radio in 3/4 view with a round perforated speaker grille and a tuning dial."
+    },
+    {
+      "name": "empty-first-launch",
+      "group": "empty",
+      "source": "generate",
+      "priority": 1,
+      "size": [
+        960,
+        640
+      ],
+      "cutout": true,
+      "where": "Bench, nothing open",
+      "brief": "A vinyl record sliding into the front of a drum machine and emerging from the back as a row of lit orange step keys. Side view, left to right."
+    },
+    {
+      "name": "empty-drop-record",
+      "group": "empty",
+      "source": "generate",
+      "priority": 1,
+      "size": [
+        960,
+        640
+      ],
+      "cutout": true,
+      "where": "Record surface, unbound",
+      "brief": "A vinyl record hovering above an open slot shaped like an audio waveform, the slot drawn with a dashed outline."
+    },
+    {
+      "name": "wait-separating",
+      "group": "empty",
+      "source": "generate",
+      "priority": 2,
+      "size": [
+        960,
+        640
+      ],
+      "cutout": true,
+      "where": "Record surface, during stem separation",
+      "brief": "One audio waveform on the left splitting into four parallel lanes on the right, like cables fanning out of a patch bay."
+    },
+    {
+      "name": "empty-grid",
+      "group": "empty",
+      "source": "generate",
+      "priority": 2,
+      "size": [
+        960,
+        640
+      ],
+      "cutout": true,
+      "where": "Grid, unbound",
+      "brief": "A row of sixteen unlit drum-machine step keys in four colour groups — red-orange, orange, yellow, cream — one key pressed halfway down."
+    },
+    {
+      "name": "wait-band",
+      "group": "empty",
+      "source": "generate",
+      "priority": 2,
+      "size": [
+        480,
+        320
+      ],
+      "cutout": true,
+      "where": "Band rail, during a turn",
+      "brief": "A mixing-desk channel strip with two small instrument emblems — a pad grid and a fader bank — patched into it by curving cables."
+    },
+    {
+      "name": "empty-library",
+      "group": "empty",
+      "source": "generate",
+      "priority": 3,
+      "size": [
+        480,
+        320
+      ],
+      "cutout": true,
+      "where": "Library, empty",
+      "brief": "An empty wooden-slat record crate seen from above at an angle."
+    },
+    {
+      "name": "band-record",
+      "group": "bands",
+      "source": "generate",
+      "priority": 3,
+      "size": [
+        2400,
+        160
+      ],
+      "cutout": false,
+      "where": "Record surface header",
+      "brief": "A very wide, very faint horizontal strip: one long audio waveform with section brackets along its top. Very low contrast."
+    },
+    {
+      "name": "band-chop",
+      "group": "bands",
+      "source": "generate",
+      "priority": 3,
+      "size": [
+        2400,
+        160
+      ],
+      "cutout": false,
+      "where": "Chop lane header",
+      "brief": "A very wide, very faint horizontal strip: an audio waveform crossed by evenly spaced vertical cut lines, a tiny square pad under each cut. Very low contrast."
+    },
+    {
+      "name": "band-grid",
+      "group": "bands",
+      "source": "generate",
+      "priority": 3,
+      "size": [
+        2400,
+        160
+      ],
+      "cutout": false,
+      "where": "Grid header",
+      "brief": "A very wide, very faint horizontal strip: a long row of drum-machine step keys in four faded colour groups. Very low contrast."
+    },
+    {
+      "name": "band-sound",
+      "group": "bands",
+      "source": "generate",
+      "priority": 3,
+      "size": [
+        2400,
+        160
+      ],
+      "cutout": false,
+      "where": "Sound header",
+      "brief": "A very wide, very faint horizontal strip: a row of knobs above a thin circuit trace. Very low contrast."
+    },
+    {
+      "name": "glyphs",
+      "group": "glyphs",
+      "source": "drawn",
+      "priority": 1,
+      "size": [
+        24,
+        24
+      ],
+      "where": "Path strip, Parts groups, crumbs, library",
+      "brief": "Record, four stems, chop, groove, feel, dust, sound, section, song, album, version, idea, seed, compare, check."
+    },
+    {
+      "name": "wordmark",
+      "group": "identity",
+      "source": "drawn",
+      "priority": 2,
+      "size": [
+        0,
+        0
+      ],
+      "where": "Empty window, About, Field Guide",
+      "brief": "Mr. Roboto in IBM Plex Sans SemiBold, the full stop drawn as a lit orange step key."
+    },
+    {
+      "name": "cast-producer",
+      "group": "cast",
+      "source": "generate",
+      "priority": 3,
+      "size": [
+        512,
+        512
+      ],
+      "cutout": true,
+      "where": "M4: the Cast surface, the rail",
+      "brief": "An emblem: a producer's talkback microphone on a short desk stand, one small red button on its base, drawn with a few precise lines. Compact, fits inside a circle."
+    },
+    {
+      "name": "cast-engineer",
+      "group": "cast",
+      "source": "generate",
+      "priority": 3,
+      "size": [
+        512,
+        512
+      ],
+      "cutout": true,
+      "where": "M4: the Cast surface, the rail",
+      "brief": "An emblem: a single channel strip of a mixing console seen from above — a long fader at the bottom, four small knobs above it, one peak light. Compact, fits inside a circle."
+    },
+    {
+      "name": "cast-peer",
+      "group": "cast",
+      "source": "generate",
+      "priority": 3,
+      "size": [
+        512,
+        512
+      ],
+      "cutout": true,
+      "where": "M4: the Cast surface, the rail",
+      "brief": "An emblem: a pair of over-ear headphones hung on a hook, cable looping once, drawn precisely with a few lines. Compact, fits inside a circle."
+    },
+    {
+      "name": "cast-lyricist",
+      "group": "cast",
+      "source": "generate",
+      "priority": 3,
+      "size": [
+        512,
+        512
+      ],
+      "cutout": true,
+      "where": "M4: the Cast surface, the rail",
+      "brief": "An emblem: a fountain pen laid across a small open notebook with three short ruled lines and one word crossed out, drawn with a few precise lines. Compact, fits inside a circle."
+    }
   ]
 }

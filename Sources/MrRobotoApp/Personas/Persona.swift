@@ -33,6 +33,11 @@ public struct PersonaID: RawRepresentable, Hashable, Sendable, Codable, CustomSt
     /// The pilot. Not built here — it was the research that proved the method — but named so the
     /// two bibles below can state how they disagree with it.
     public static let bassist = PersonaID("bassist")
+    /// M4's four: the brief and the call, the ear on the mix, the outside ear, the words.
+    public static let producer = PersonaID("producer")
+    public static let engineer = PersonaID("engineer")
+    public static let peer = PersonaID("peer")
+    public static let lyricist = PersonaID("lyricist")
 
     public var description: String { rawValue }
 }
@@ -124,6 +129,58 @@ public struct Feature: RawRepresentable, Hashable, Sendable, Codable, CustomStri
     public static let transposeSemitones = Feature("merge.transpose.semitones")
     /// How many of a section's fragments carry drums.
     public static let drumSources = Feature("merge.drum.sources")
+
+    // The Producer's: the song as a whole.
+    /// Distinct parts in the song.
+    public static let partsPerSong = Feature("song.parts")
+    /// Parts stitched into no section, once the song has sections.
+    public static let orphanedParts = Feature("song.parts.orphaned")
+    /// Versions of the most-revised part: churn.
+    public static let versionsPerPart = Feature("song.churn")
+    /// Bars a reference names; 0 is an adjective.
+    public static let referenceBars = Feature("song.reference.bars")
+    /// Words in the brief; 0 is no brief.
+    public static let briefWords = Feature("song.brief.words")
+
+    // The Peer's: the form as heard.
+    /// Seconds until the first hook.
+    public static let hookArrivalSeconds = Feature("form.hook.seconds")
+    /// Repeated section names over all sections, 0…1.
+    public static let repetitionRatio = Feature("form.repetition")
+    /// Sections in the form.
+    public static let sectionCount = Feature("form.sections")
+    /// Distinct section names: the turns a form takes.
+    public static let formTurns = Feature("form.turns")
+    /// Layers in the densest section minus the sparsest.
+    public static let densitySpread = Feature("form.density.spread")
+    /// Length of the form in minutes.
+    public static let formMinutes = Feature("form.minutes")
+
+    // The Lyricist's: the words.
+    /// Mean syllables per sung line.
+    public static let syllablesPerLine = Feature("lyric.syllables.per.line")
+    /// How well consecutive lines of a stanza share a stress pattern, 0…1 (Pattison's prosody).
+    public static let patternMatch = Feature("lyric.pattern.match")
+    /// Lines ending in a perfect rhyme with another line of the stanza, over lines, 0…1.
+    public static let perfectRhymeRate = Feature("lyric.perfect.rhyme.rate")
+    /// The most songs of the house corpus one of this lyric's images appears in.
+    public static let imageReuse = Feature("lyric.image.reuse")
+    /// Sung lines in the lyric.
+    public static let lyricLines = Feature("lyric.lines")
+
+    // The Engineer's: the bounce.
+    /// Integrated loudness, LUFS (BS.1770).
+    public static let integratedLUFS = Feature("mix.lufs.integrated")
+    /// Sample peak, dBFS.
+    public static let peakDBFS = Feature("mix.peak.dbfs")
+    /// Peak over RMS, dB.
+    public static let crestDB = Feature("mix.crest.db")
+    /// High band over low band, dB.
+    public static let tiltDB = Feature("mix.tilt.db")
+    /// The gap between the drums' and the bass's energy at 60–120 Hz, dB.
+    public static let lowEndSeparationDB = Feature("mix.lowend.separation.db")
+    /// Where the top end stops, Hz.
+    public static let mixBandwidthHz = Feature("mix.bandwidth.hz")
     /// Quantiser width in bits. 12 is both the SP-1200 and the MPC60; 24 and up is off.
     public static let bitDepth = Feature("degrade.bits")
     /// The rate the decimator holds to, in Hz.
@@ -878,6 +935,26 @@ public enum PersonaProposal: Hashable, Sendable {
     /// Stitch fragments from these sources into one section: how many carry drums, and which of
     /// the records they were cut from are uncleared.
     case mergeSources(drumSources: Int, uncleared: [String])
+    /// Add a part to a song that already holds this many, this many of them stitched into no section.
+    case addPart(partsInSong: Int, orphaned: Int)
+    /// Hold the song to a reference that names this many bars (0: an adjective, not a record).
+    case setReference(bars: Int)
+    /// Put the first hook this many seconds in.
+    case placeHook(atSeconds: Double)
+    /// Give the form this many sections with this many distinct names, over this many minutes.
+    case shapeForm(sections: Int, turns: Int, minutes: Double)
+    /// Write a line of this many syllables whose stress pattern matches its neighbours this well.
+    case writeLine(syllables: Int, patternMatch: Double)
+    /// Rhyme a stanza so that this fraction of its lines end in a perfect rhyme.
+    case rhymeLine(perfectRate: Double)
+    /// Use an image that already appears in this many songs of the house corpus.
+    case reuseImage(songs: Int)
+    /// Deliver at this loudness and this peak.
+    case setLoudness(integratedLUFS: Double, peakDBFS: Double)
+    /// Leave this much room between the drums and the bass at 60–120 Hz.
+    case balanceLowEnd(separationDB: Double)
+    /// Squash the drums to this crest.
+    case squashDrums(crestDB: Double)
     /// Something outside the persona's competence, named so the refusal can be specific.
     case outOfScope(what: String)
 }
@@ -950,6 +1027,9 @@ extension PersonaProposal: Codable {
         case percent, idiom, tempo, voice, milliseconds, currentRatio, slicesPerBar, sourceTransients
         case preset, sourceBandwidthHz, sourceNoiseFloorDB, first, second, lineage, lagMS, hatLagMS, kickLagMS
         case kickDecaySeconds, sound, alternating, label, semitones, drumSources, uncleared, what
+        case partsInSong, orphaned, bars, atSeconds, sections, turns, minutes
+        case syllables, patternMatch, perfectRate, songs
+        case integratedLUFS, peakDBFS, separationDB, crestDB
     }
 
     public init(from decoder: any Decoder) throws {
@@ -973,6 +1053,16 @@ extension PersonaProposal: Codable {
         case "sustainUnder808": self = .sustainUnder808(sound: try d(.sound), kickDecaySeconds: try d(.kickDecaySeconds))
         case "transposeSample": self = .transposeSample(label: try d(.label), semitones: try d(.semitones))
         case "mergeSources": self = .mergeSources(drumSources: try d(.drumSources), uncleared: try d(.uncleared))
+        case "addPart": self = .addPart(partsInSong: try d(.partsInSong), orphaned: try d(.orphaned))
+        case "setReference": self = .setReference(bars: try d(.bars))
+        case "placeHook": self = .placeHook(atSeconds: try d(.atSeconds))
+        case "shapeForm": self = .shapeForm(sections: try d(.sections), turns: try d(.turns), minutes: try d(.minutes))
+        case "writeLine": self = .writeLine(syllables: try d(.syllables), patternMatch: try d(.patternMatch))
+        case "rhymeLine": self = .rhymeLine(perfectRate: try d(.perfectRate))
+        case "reuseImage": self = .reuseImage(songs: try d(.songs))
+        case "setLoudness": self = .setLoudness(integratedLUFS: try d(.integratedLUFS), peakDBFS: try d(.peakDBFS))
+        case "balanceLowEnd": self = .balanceLowEnd(separationDB: try d(.separationDB))
+        case "squashDrums": self = .squashDrums(crestDB: try d(.crestDB))
         case "outOfScope": self = .outOfScope(what: try d(.what))
         default: throw DecodingError.dataCorruptedError(forKey: .proposal, in: c, debugDescription: "unknown proposal \(name)")
         }
@@ -1013,6 +1103,26 @@ extension PersonaProposal: Codable {
             try c.encode("transposeSample", forKey: .proposal); try c.encode(label, forKey: .label); try c.encode(semitones, forKey: .semitones)
         case .mergeSources(let drumSources, let uncleared):
             try c.encode("mergeSources", forKey: .proposal); try c.encode(drumSources, forKey: .drumSources); try c.encode(uncleared, forKey: .uncleared)
+        case .addPart(let partsInSong, let orphaned):
+            try c.encode("addPart", forKey: .proposal); try c.encode(partsInSong, forKey: .partsInSong); try c.encode(orphaned, forKey: .orphaned)
+        case .setReference(let bars):
+            try c.encode("setReference", forKey: .proposal); try c.encode(bars, forKey: .bars)
+        case .placeHook(let atSeconds):
+            try c.encode("placeHook", forKey: .proposal); try c.encode(atSeconds, forKey: .atSeconds)
+        case .shapeForm(let sections, let turns, let minutes):
+            try c.encode("shapeForm", forKey: .proposal); try c.encode(sections, forKey: .sections); try c.encode(turns, forKey: .turns); try c.encode(minutes, forKey: .minutes)
+        case .writeLine(let syllables, let patternMatch):
+            try c.encode("writeLine", forKey: .proposal); try c.encode(syllables, forKey: .syllables); try c.encode(patternMatch, forKey: .patternMatch)
+        case .rhymeLine(let perfectRate):
+            try c.encode("rhymeLine", forKey: .proposal); try c.encode(perfectRate, forKey: .perfectRate)
+        case .reuseImage(let songs):
+            try c.encode("reuseImage", forKey: .proposal); try c.encode(songs, forKey: .songs)
+        case .setLoudness(let lufs, let peak):
+            try c.encode("setLoudness", forKey: .proposal); try c.encode(lufs, forKey: .integratedLUFS); try c.encode(peak, forKey: .peakDBFS)
+        case .balanceLowEnd(let separation):
+            try c.encode("balanceLowEnd", forKey: .proposal); try c.encode(separation, forKey: .separationDB)
+        case .squashDrums(let crest):
+            try c.encode("squashDrums", forKey: .proposal); try c.encode(crest, forKey: .crestDB)
         case .outOfScope(let what):
             try c.encode("outOfScope", forKey: .proposal); try c.encode(what, forKey: .what)
         }

@@ -301,9 +301,9 @@ struct DirectorDustToolboxTests {
         // is not a new surface is the accident this test exists to catch.
         // (And again the same day, for the `lag` lever on a Compare of bass lines; and once more
         // for Gate C's Structure surface; once each for M3's Album and Merge surfaces; and once
-        // for M4's Cast surface.)
-        ("open_surface", "5b2896a7f353a08f497ad10596cdf793799b8acb389882bb1d9c0f2a1c3f955b"),
-        ("propose", "654277c65c6b6fe447df45b34212f4027ffe6c2bb5069b1ffd801585097c4176"),
+        // for M4's Cast surface and again for its Lyrics surface.)
+        ("open_surface", "ac65aa0679d07e2d7964d5078debf7c6d0a2e76e875b489053b1a23262f3039d"),
+        ("propose", "51a862b678567a1e5bb34c5e60ce1132718e39532d1f7300c2c642ef2a0008c0"),
     ]
 
     static func digest(_ definition: ClaudeToolDefinition) throws -> String {

@@ -1,6 +1,34 @@
 {
   "disagreements" : [
     {
+      "about" : "whether a second source belongs in the song",
+      "position" : "a source that earns its bar earns a place; two records is a mashup, which is a form",
+      "settledBy" : "the Producer's orphan count: a source stitched into no section is cut",
+      "theirs" : "fewer parts than you think; a second record is a second song until it isn't",
+      "with" : "producer"
+    },
+    {
+      "about" : "whether the chain's bandwidth is a fault",
+      "position" : "a corner at 13 kHz is the machine; the dust is the decision",
+      "settledBy" : "the corner in Hz, said by both: chosen is fine, accidental is not",
+      "theirs" : "a corner is a corner, and it has to be stated and translated",
+      "with" : "engineer"
+    },
+    {
+      "about" : "whether the break should vary across the form",
+      "position" : "one bar, rearranged, is the whole craft; a second break is a second source",
+      "settledBy" : "slice order and chain can change at a turn; the source may not",
+      "theirs" : "the ear wants a turn at the hook",
+      "with" : "peer"
+    },
+    {
+      "about" : "whether a vocal sample counts as a lyric",
+      "position" : "a chopped voice is a sound; its words are texture",
+      "settledBy" : "intelligibility: a chop with a whole phrase is the Lyricist's too",
+      "theirs" : "if the words are heard they are lyrics and they are read",
+      "with" : "lyricist"
+    },
+    {
       "about" : "whether the swing lives in the grid or in the audio",
       "position" : "Cut on the transients and let each slice carry the time it was actually played at. The source is a performance; the grid is a convenience.",
       "settledBy" : "SourceSwing.estimate against the groove's own swing at this tempo. More than 10 ms apart and the audio already has a feel the grid is arguing with; inside 10 ms it is below the detection threshold and the Beatmaker's lever costs nothing.",

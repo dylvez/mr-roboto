@@ -382,7 +382,7 @@ struct GuidanceLedgerTests {
         .sound: .sound,
         .progression: .chords,
         .melody: nil,
-        .lyric: nil,
+        .lyric: .lyrics,
         .bassline: .pianoRoll,
     ]
 
@@ -479,7 +479,8 @@ struct GuidanceLedgerTests {
     @Test("a part Gate A cannot edit offers nothing rather than a button that opens nothing")
     func inertKindsSayNothing() {
         let built = GuidanceFixture.everyKind()
-        for version in built.song.versions where [.melody, .lyric].contains(version.type) {
+        // Only the melody now: the Lyrics surface arrived with M4.
+        for version in built.song.versions where version.type == .melody {
             #expect(PartActions.primary(for: version, in: built.song) == nil)
         }
     }

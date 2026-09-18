@@ -60,6 +60,8 @@ public enum SurfaceKind: String, CaseIterable, Sendable {
     /// M4. Who is in the room for this song: the personas, what each owns, and the house calls.
     /// Bound to nothing; it draws the song's cast.
     case cast = "Cast"
+    /// M4. The words: lines with their stress shapes and rhyme scheme, read by the Lyricist.
+    case lyrics = "Lyrics"
 
     // The two answer surfaces. They are in the catalog because the Director has to be able to
     // *name* one — a question with alternatives gets a Compare, a question with one finding gets a

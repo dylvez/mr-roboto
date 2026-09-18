@@ -280,6 +280,7 @@ public struct LibraryStore: Sendable {
         var ideas: [PartVersion]
         var records: [Record]
         var samples: [LibrarySample]
+        var voice: [VoiceLyric]?
     }
 
     /// Just enough of `song.json` to identify a package without a full decode.
@@ -315,7 +316,7 @@ public struct LibraryStore: Sendable {
             if seen.insert(song.id).inserted { songs.append(song) }
         }
         var library = Library(songs: songs, albums: document.albums, ideas: document.ideas,
-                              records: document.records, samples: document.samples)
+                              records: document.records, samples: document.samples, voice: document.voice)
         library.songs = songs
         return library
     }
@@ -351,7 +352,8 @@ public struct LibraryStore: Sendable {
             entries.append(.init(id: song.id, title: song.title, package: store.packageURL.lastPathComponent))
         }
         let document = Document(schemaVersion: SongGraphSchema.current, songs: entries, albums: library.albums,
-                                ideas: library.ideas, records: library.records, samples: library.samples)
+                                ideas: library.ideas, records: library.records, samples: library.samples,
+                                voice: library.voice)
         let data = try SongGraphCodec.encode(document)
         try FileCoordination.write(documentURL, options: [.forReplacing]) { url in
             try data.write(to: url, options: .atomic)
@@ -373,7 +375,8 @@ public struct LibraryStore: Sendable {
             entries.append(.init(id: header.id, title: header.title, package: store.packageURL.lastPathComponent))
         }
         let document = Document(schemaVersion: SongGraphSchema.current, songs: entries, albums: library.albums,
-                                ideas: library.ideas, records: library.records, samples: library.samples)
+                                ideas: library.ideas, records: library.records, samples: library.samples,
+                                voice: library.voice)
         let data = try SongGraphCodec.encode(document)
         try FileCoordination.write(documentURL, options: [.forReplacing]) { url in
             try data.write(to: url, options: .atomic)

@@ -63,6 +63,16 @@ struct FrameCommands: Commands {
                 if let id = app.createAlbum(title: "New album") { app.openAlbum(id) }
             }
             .disabled(app.store == nil)
+            Button("Import Voice…") {
+                let panel = NSOpenPanel()
+                panel.allowedContentTypes = [.plainText, .text]
+                panel.message = "A markdown file of the house's lyrics, or plain text with a title line per block."
+                if panel.runModal() == .OK, let url = panel.url { app.importVoice(from: url) }
+            }
+            .disabled(app.store == nil)
+            Button("Lyrics…") { app.perform(Guidance.dockAction(for: .lyrics, in: app.song)) }
+                .keyboardShortcut("9", modifiers: .command)
+                .disabled(app.song == nil)
         }
 
         CommandGroup(replacing: .saveItem) {

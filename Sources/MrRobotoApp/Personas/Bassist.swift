@@ -458,6 +458,26 @@ public struct Bassist: Persona {
         // MARK: Disagreements
 
         disagreements: [
+            PersonaDisagreement(with: .producer,
+                                about: "whether the bass line is a part or the song's floor",
+                                position: "the line is written to the kick and the key and is its own part with its own versions",
+                                theirs: "the bass is the floor everything else is judged against, and one line is enough",
+                                settledBy: "churn: past three versions of the line the Producer calls it"),
+            PersonaDisagreement(with: .engineer,
+                                about: "who owns 80 Hz",
+                                position: "the sub is the bass's when the bass is the sub, and the kick's when it is not — R9",
+                                theirs: "whoever measures louder there owns it, and the other one moves",
+                                settledBy: "the kick–bass overlap in dB at 60–120 Hz, read by the Engineer, resolved by R9"),
+            PersonaDisagreement(with: .peer,
+                                about: "whether the bass should change at the hook",
+                                position: "the line holds the harmony; the hook changes the drums, not the roots",
+                                theirs: "a hook without a lift in the low end is not a hook",
+                                settledBy: "register: the hook may take the line an octave up, not a different line"),
+            PersonaDisagreement(with: .lyricist,
+                                about: "whether the bass should leave room under the vocal",
+                                position: "the line sits behind the kick and under the voice by register, not by resting",
+                                theirs: "a busy line under a dense verse fights the words",
+                                settledBy: "attacks per bar under a sung line: six, the verse budget, and rest on the stressed syllables"),
             PersonaDisagreement(with: .beatmaker,
                                 about: "who moves",
                                 position: "One element stays straight. The hats on \"Don't Say a Word\" were on time; only the snare moved. I lag against the straight one.",
@@ -649,6 +669,15 @@ public struct Bassist: Persona {
 
         case .chopDensity, .moveCutLate, .applyDegrade, .stackDegrade, .leaveAlone, .transposeSample, .mergeSources:
             return .defer_(to: .sampler, because: "That is the source and the chop.")
+
+        case .addPart, .setReference:
+            return .defer_(to: .producer, because: "What the song holds and what it is held to is the Producer's.")
+        case .placeHook, .shapeForm:
+            return .defer_(to: .peer, because: "Where the hook lands and how the form turns is the Peer's ear.")
+        case .writeLine, .rhymeLine, .reuseImage:
+            return .defer_(to: .lyricist, because: "The words are the Lyricist's.")
+        case .setLoudness, .balanceLowEnd, .squashDrums:
+            return .defer_(to: .engineer, because: "Level, balance and the low end's owner are the Engineer's to read.")
 
         case .outOfScope(let what):
             return .defer_(to: .beatmaker, because: "\(what) is outside where the bass sits and what it plays.")

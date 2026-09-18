@@ -64,6 +64,26 @@ public struct ProposalMeasures: Hashable, Sendable {
             return ProposalMeasures(values: [.transposeSemitones: Double(abs(semitones))])
         case .mergeSources(let drumSources, _):
             return ProposalMeasures(values: [.drumSources: Double(drumSources)])
+        case .addPart(let partsInSong, let orphaned):
+            return ProposalMeasures(values: [.partsPerSong: Double(partsInSong + 1), .orphanedParts: Double(orphaned)])
+        case .setReference(let bars):
+            return ProposalMeasures(values: [.referenceBars: Double(bars)])
+        case .placeHook(let atSeconds):
+            return ProposalMeasures(values: [.hookArrivalSeconds: atSeconds])
+        case .shapeForm(let sections, let turns, let minutes):
+            return ProposalMeasures(values: [.sectionCount: Double(sections), .formTurns: Double(turns), .formMinutes: minutes])
+        case .writeLine(let syllables, let patternMatch):
+            return ProposalMeasures(values: [.syllablesPerLine: Double(syllables), .patternMatch: patternMatch])
+        case .rhymeLine(let perfectRate):
+            return ProposalMeasures(values: [.perfectRhymeRate: perfectRate])
+        case .reuseImage(let songs):
+            return ProposalMeasures(values: [.imageReuse: Double(songs)])
+        case .setLoudness(let lufs, let peak):
+            return ProposalMeasures(values: [.integratedLUFS: lufs, .peakDBFS: peak])
+        case .balanceLowEnd(let separation):
+            return ProposalMeasures(values: [.lowEndSeparationDB: separation])
+        case .squashDrums(let crest):
+            return ProposalMeasures(values: [.crestDB: crest])
         case .outOfScope:
             return ProposalMeasures()
         }
@@ -123,7 +143,8 @@ public enum RuleEngine {
             // fires when its threshold holds, the room is measured from the outside.
             let noticeable = bible.noticeable(threshold.feature)
             let room = rule.firesWhen == .thresholdFails ? margin(value, inside: threshold) : -margin(value, inside: threshold)
-            if noticeable > 0, room >= 0, room < noticeable {
+            // Exactly on the edge is inside, not close: a count of zero against "at most zero" holds.
+            if noticeable > 0, room > 0, room < noticeable {
                 caveats.append("\(capitalised(rule.when)) is close — \(threshold.feature) is \(format(value)) \(unit) against \(threshold).")
             }
         }
@@ -163,6 +184,10 @@ extension PersonaID {
         for prefix in ["pocket.", "swing.", "ghost.", "humanize.", "grid.", "backbeat."] where name.hasPrefix(prefix) { return .beatmaker }
         for prefix in ["chop.", "source.", "degrade.", "merge."] where name.hasPrefix(prefix) { return .sampler }
         for prefix in ["bass.", "kick.", "reference."] where name.hasPrefix(prefix) { return .bassist }
+        for prefix in ["song."] where name.hasPrefix(prefix) { return .producer }
+        for prefix in ["form."] where name.hasPrefix(prefix) { return .peer }
+        for prefix in ["mix."] where name.hasPrefix(prefix) { return .engineer }
+        for prefix in ["lyric."] where name.hasPrefix(prefix) { return .lyricist }
         return nil
     }
 

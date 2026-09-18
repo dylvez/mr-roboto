@@ -320,6 +320,11 @@ public enum Guidance {
         case .structure:
             // Bound to nothing: it draws the song's sections, and the song is what is open.
             return SurfaceAction(surface: kind, title: song.title)
+        case .lyrics:
+            if let lyric = song.versions.last(where: { $0.type == .lyric }) {
+                return SurfaceAction(surface: kind, title: PartLabel.title(of: lyric), bound: [lyric.id])
+            }
+            return SurfaceAction(surface: kind, title: "Lyrics")
         case .album, .merge, .cast:
             // Opened from a library row, a ledger row or the menu, never from the dock: an album
             // is not something the open song has, a merge needs two named versions, and the cast
@@ -597,9 +602,14 @@ public enum PartActions {
                             action: SurfaceAction(surface: .chords, title: PartLabel.title(of: version),
                                                   bound: [version.id]))
 
-        case .melody, .lyric:
-            // No surface edits these yet. Saying nothing is the honest answer; their surfaces arrive
-            // with the rest of the catalog.
+        case .lyric:
+            return Proposal(title: "Open in Lyrics",
+                            rationale: "The lines with their stresses and scheme; the Lyricist's readings below.",
+                            action: SurfaceAction(surface: .lyrics, title: PartLabel.title(of: version), bound: [version.id]))
+
+        case .melody:
+            // No surface edits a melody yet. Saying nothing is the honest answer; its surface
+            // arrives with the rest of the catalog.
             return nil
         }
     }

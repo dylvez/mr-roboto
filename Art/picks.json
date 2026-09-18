@@ -27,7 +27,11 @@
     "band-record": "candidates/band-record/nano-banana-2-ref-1.png",
     "band-chop": "candidates/band-chop/nano-banana-2-ref-1.png",
     "band-grid": "candidates/band-grid/nano-banana-2-ref-1.png",
-    "band-sound": "candidates/band-sound/nano-banana-2-ref-1.png"
+    "band-sound": "candidates/band-sound/nano-banana-2-ref-1.png",
+    "cast-producer": "candidates/cast-producer/nano-banana-2-ref-1.png",
+    "cast-engineer": "candidates/cast-engineer/nano-banana-2-ref-1.png",
+    "cast-peer": "candidates/cast-peer/nano-banana-2-ref-1.png",
+    "cast-lyricist": "candidates/cast-lyricist/nano-banana-2-ref-1.png"
   },
   "why": {
     "machine-sp1200": "GPT's version: faders and a small display read as an SP-1200 and stay distinct from the MPC60's big screen and pads.",
@@ -35,6 +39,10 @@
     "machine-vinyl": "A whole turntable with its tonearm, not just a platter.",
     "empty-first-launch": "GPT's literal version: record in, step keys out. Calmer than the cutaway for an empty screen.",
     "empty-library": "Genuinely empty.",
-    "cast-bassist": "Cleaner headstock; the other's pegs grew dials."
+    "cast-bassist": "Cleaner headstock; the other's pegs grew dials.",
+    "cast-producer": "The talkback mic without the motion arrows the other grew.",
+    "cast-engineer": "The channel strip fits inside the circle; the other cropped it off at both ends.",
+    "cast-peer": "Straight-on with the cable coiled, like the strip; the other tilts away and hides the cups.",
+    "cast-lyricist": "An open notebook with lines already written; the other has a pen lying across the cover."
   }
 }

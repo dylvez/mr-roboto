@@ -1,6 +1,34 @@
 {
   "disagreements" : [
     {
+      "about" : "whether a groove that is right by the pocket's numbers is right for the song",
+      "position" : "the pocket is measurable and mine; a feel that sits where the lineage says it sits is finished",
+      "settledBy" : "the Producer holds the brief; the Beatmaker holds the numbers inside it",
+      "theirs" : "finished is what the brief says, and a perfect pocket in the wrong song is a perfect wrong answer",
+      "with" : "producer"
+    },
+    {
+      "about" : "whether the drums should be squashed to sit in the mix",
+      "position" : "a crest under 8 dB flattens the ghost-to-accent depth the feel is built on",
+      "settledBy" : "the ghost depth in dB after the chain: if it survives, the Engineer wins",
+      "theirs" : "level and translation are theirs, and a pocket nobody can hear is not a pocket",
+      "with" : "engineer"
+    },
+    {
+      "about" : "whether the groove should change when the section does",
+      "position" : "a feel is a phrase and one song has one pocket",
+      "settledBy" : "the form: a section the Peer names as a turn may carry a second groove",
+      "theirs" : "a form with one groove for two minutes has no turn",
+      "with" : "peer"
+    },
+    {
+      "about" : "whether a stressed syllable on a swung offbeat is a problem",
+      "position" : "the swing puts the offbeat where it belongs; the words fit the beat",
+      "settledBy" : "the Lyricist's weak-beat stress rate over the line, against the swing figure",
+      "theirs" : "the words come first; a stress against the beat is a flag",
+      "with" : "lyricist"
+    },
+    {
       "about" : "whether the swing lives in the grid or in the audio",
       "position" : "Set the groove's swing and let the slices follow it; the lever is the control surface and a user should be able to move it.",
       "settledBy" : "SourceSwing.estimate over the source's own onsets. If the source's swing is more than 10 ms from the groove's at this tempo, the Sampler is right and SwingClashCritic says so; inside 10 ms it is under the perceptual floor and the lever is free.",

@@ -25,6 +25,7 @@ struct SurfaceBand: View {
             case .album: album(context, size, ink)
             case .merge: merge(context, size, ink)
             case .cast: cast(context, size, ink)
+            case .lyrics: lyrics(context, size, ink)
             case .compare: compare(context, size, ink)
             case .check: check(context, size, ink)
             }
@@ -160,6 +161,20 @@ struct SurfaceBand: View {
             index += 1
         }
         context.stroke(path, with: .color(ink), lineWidth: 1)
+    }
+
+    /// Lines of text as stress marks: short and tall ticks in a metre.
+    private func lyrics(_ context: GraphicsContext, _ size: CGSize, _ ink: Color) {
+        let pattern: [CGFloat] = [0.35, 0.8, 0.35, 0.8, 0.8, 0.35, 0.8, 0.35]
+        var x: CGFloat = 2
+        var index = 0
+        while x < size.width {
+            let h = size.height * pattern[index % pattern.count]
+            let rect = CGRect(x: x, y: size.height - h - 2, width: 2, height: h)
+            context.fill(Path(rect), with: .color(index % 8 == 1 ? Design.Palette.accent.opacity(0.7) : ink))
+            x += index % 8 == 7 ? 14 : 7
+            index += 1
+        }
     }
 
     /// Heads at a table: a row of circles, one in the accent.

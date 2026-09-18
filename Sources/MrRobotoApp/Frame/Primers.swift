@@ -49,6 +49,11 @@ public enum Primer {
             return ("Album",
                     "An album is songs in order, with the loudness targets they are delivered to and a clearance state for "
                         + "every record their samples came from. Drag songs in from the library; nothing is mastered here.")
+        case .lyrics:
+            return ("Lyrics",
+                    "Type the words, a line each, a blank line between stanzas. Every syllable gets its stress from the dictionary, "
+                        + "every stanza its rhyme scheme, and the Lyricist reads the lines against each other and against everything "
+                        + "this house has sung. Keep it and it is a version like any part.")
         case .cast:
             return ("Cast",
                     "Who is in the room for this song. Each persona owns one thing and listens for it first; take one out "

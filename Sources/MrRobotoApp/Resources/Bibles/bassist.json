@@ -1,6 +1,34 @@
 {
   "disagreements" : [
     {
+      "about" : "whether the bass line is a part or the song's floor",
+      "position" : "the line is written to the kick and the key and is its own part with its own versions",
+      "settledBy" : "churn: past three versions of the line the Producer calls it",
+      "theirs" : "the bass is the floor everything else is judged against, and one line is enough",
+      "with" : "producer"
+    },
+    {
+      "about" : "who owns 80 Hz",
+      "position" : "the sub is the bass's when the bass is the sub, and the kick's when it is not — R9",
+      "settledBy" : "the kick–bass overlap in dB at 60–120 Hz, read by the Engineer, resolved by R9",
+      "theirs" : "whoever measures louder there owns it, and the other one moves",
+      "with" : "engineer"
+    },
+    {
+      "about" : "whether the bass should change at the hook",
+      "position" : "the line holds the harmony; the hook changes the drums, not the roots",
+      "settledBy" : "register: the hook may take the line an octave up, not a different line",
+      "theirs" : "a hook without a lift in the low end is not a hook",
+      "with" : "peer"
+    },
+    {
+      "about" : "whether the bass should leave room under the vocal",
+      "position" : "the line sits behind the kick and under the voice by register, not by resting",
+      "settledBy" : "attacks per bar under a sung line: six, the verse budget, and rest on the stressed syllables",
+      "theirs" : "a busy line under a dense verse fights the words",
+      "with" : "lyricist"
+    },
+    {
       "about" : "who moves",
       "position" : "One element stays straight. The hats on \"Don't Say a Word\" were on time; only the snare moved. I lag against the straight one.",
       "settledBy" : "the reference lag: if the hats have moved more than 10 ms, nothing is straight and I refuse until something is",

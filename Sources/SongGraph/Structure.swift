@@ -256,6 +256,22 @@ public struct Record: Identifiable, Hashable, Codable, Sendable {
     public var mediaReferences: [MediaRef] { [media] + (analysis?.mediaReferences ?? []) }
 }
 
+/// One lyric of the house's own, kept whole: a title and its lines.
+public struct VoiceLyric: Hashable, Codable, Sendable, Identifiable {
+    public var title: String
+    public var text: String
+    /// Where it came from: an album, a file, a date.
+    public var source: String?
+
+    public var id: String { title }
+
+    public init(title: String, text: String, source: String? = nil) {
+        self.title = title
+        self.text = text
+        self.source = source
+    }
+}
+
 /// A sample in the library's collection.
 public struct LibrarySample: Identifiable, Hashable, Codable, Sendable {
     public let id: SampleID
@@ -283,15 +299,19 @@ public struct Library: Hashable, Codable, Sendable {
     public var ideas: [PartVersion]
     public var records: [Record]
     public var samples: [LibrarySample]
+    /// The house voice: the lyrics this house has written, for a Lyricist to read new words against.
+    /// Optional so a library from before it round-trips byte for byte.
+    public var voice: [VoiceLyric]?
 
     public init(songs: [Song] = [], albums: [Album] = [], ideas: [PartVersion] = [], records: [Record] = [],
-                samples: [LibrarySample] = []) {
+                samples: [LibrarySample] = [], voice: [VoiceLyric]? = nil) {
         schemaVersion = SongGraphSchema.current
         self.songs = songs
         self.albums = albums
         self.ideas = ideas
         self.records = records
         self.samples = samples
+        self.voice = voice
     }
 
     public func song(_ id: SongID) -> Song? { songs.first { $0.id == id } }

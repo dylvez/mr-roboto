@@ -189,7 +189,7 @@ extension WorkPath {
         case .chords: return .chords
         case .pianoRoll: return .bass
         case .structure: return .arrange
-        case .album, .merge, .cast: return nil
+        case .album, .merge, .cast, .lyrics: return nil
         case .sound:
             let carries = bound.compactMap { song.version($0) }.contains { $0.kind.canCarryDegradation }
             if carries { return .dust }

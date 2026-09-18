@@ -147,6 +147,27 @@ struct FrameRenderTests {
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-cast")
     }
 
+    @Test("the Lyrics surface on a verse, read against a small house voice")
+    func lyrics() throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        let directory = LibraryFixture.directory("render-lyrics")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let defaults = UserDefaults(suiteName: "mrroboto.render.\(UUID().uuidString)")!
+        let app = AppState(library: Library(voice: [
+            VoiceLyric(title: "Fluorescent", text: "Fluorescent window light\nA room that stays the same"),
+            VoiceLyric(title: "The Survey", text: "A window and a form\nA room I never left"),
+            VoiceLyric(title: "Exit Interview", text: "The window was a door\nThe room was every room"),
+        ]), song: nil, store: LibraryStore(directoryURL: directory), status: .empty(directory),
+                           transportHost: StubTransportHost(), regions: RegionVisibility(defaults: defaults), primers: PrimerStore(defaults: defaults))
+        var song = FormFixture.build().song
+        try song.append(PartVersion(partID: PartID(), kind: .lyric(Lyricist.lyric(from: PersonaLyricistTests.verse)), author: .user,
+                                    operation: Operation.written, note: "Soft Machine, verse 1"))
+        app.open(song)
+        app.perform(Guidance.dockAction(for: .lyrics, in: app.song))
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-lyrics")
+    }
+
     @Test("first launch: nothing open")
     func firstLaunch() throws {
         FontRegistration.registerBundledFonts()

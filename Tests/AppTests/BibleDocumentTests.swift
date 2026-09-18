@@ -10,7 +10,7 @@ import Testing
 @Suite("Bible: as a document")
 struct BibleDocumentTests {
 
-    private static let bibles: [PersonaBible] = [Beatmaker.bible, Sampler.bible, Bassist.bible]
+    private static let bibles: [PersonaBible] = Cast.standard.bibles
 
     @Test("every shipped bible round-trips through JSON, value for value and byte for byte", arguments: bibles)
     func roundTrip(_ bible: PersonaBible) throws {
@@ -86,7 +86,7 @@ struct BibleDocumentTests {
     @Test("the bundled documents are the shipped bibles, by value")
     func bundled() {
         let bundled = BibleDocument.bundled()
-        #expect(bundled.map(\.id) == [.bassist, .beatmaker, .sampler], "\(bundled.map(\.id))")
+        #expect(Set(bundled.map(\.id)) == Set(Cast.standard.ids), "\(bundled.map(\.id))")
         for bible in Self.bibles {
             #expect(bundled.first { $0.id == bible.id } == bible, "\(bible.name)'s document has drifted from its Swift value: re-export")
         }
@@ -117,7 +117,7 @@ struct BibleExportTests {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let directory = root.appendingPathComponent("Sources/MrRobotoApp/Resources/\(BibleDocument.directoryName)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        for bible in [Beatmaker.bible, Sampler.bible, Bassist.bible] {
+        for bible in Cast.standard.bibles {
             try BibleDocument.encode(bible).write(to: directory.appendingPathComponent("\(bible.id.rawValue).\(BibleDocument.fileExtension)"))
         }
     }

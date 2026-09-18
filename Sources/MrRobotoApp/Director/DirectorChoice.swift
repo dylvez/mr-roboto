@@ -44,6 +44,7 @@ extension SurfaceKind {
         case .chords: return [.progression]
         case .pianoRoll: return [.bassline, .groove]
         case .structure, .album, .cast: return []
+        case .lyrics: return [.lyric]
         case .merge: return [.sample, .bassline, .progression, .groove]
         case .compare, .check: return Set(PartType.allCases)
         }
@@ -434,6 +435,7 @@ public struct DirectorSurfaceChoice: Sendable, Equatable, Hashable, Identifiable
         case .album: return "nothing bound: it draws a library album"
         case .merge: return "exactly two versions, each a chop, a bass line, a progression or a groove"
         case .cast: return "nothing bound: it draws the song's cast"
+        case .lyrics: return "a lyric version, or nothing for a blank page"
         }
     }
 

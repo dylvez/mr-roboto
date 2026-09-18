@@ -346,6 +346,33 @@ extension AppState {
 
     public func album(for surface: SurfaceID) -> Album? { albumBindings[surface].flatMap { library.album($0) } }
 
+    // MARK: The house voice
+
+    /// The lyrics this house has written, as the Lyricist reads them.
+    public var voice: LyricCorpus { LyricCorpus(library.voice ?? []) }
+
+    /// Reads lyrics out of a file — the house's markdown, or plain text with a title line per
+    /// block — and keeps them as the library's voice. Replaces the lot, so importing twice is not
+    /// sixty songs.
+    @discardableResult
+    public func importVoice(from url: URL) -> Int {
+        guard let text = try? String(contentsOf: url, encoding: .utf8) else {
+            note(.session, "Could not read \(url.lastPathComponent)")
+            return 0
+        }
+        let lyrics = LyricCorpus.parse(markdown: text, source: url.lastPathComponent)
+        guard !lyrics.isEmpty else {
+            note(.session, "No lyrics found in \(url.lastPathComponent)",
+                 detail: "The house's markdown has ### headings with fenced blocks; plain text has a title line per blank-line-separated block.")
+            return 0
+        }
+        var updated = library
+        updated.voice = lyrics
+        guard writeLibrary(updated) else { return 0 }
+        note(.you, "Imported the house voice: \(lyrics.count) lyric\(lyrics.count == 1 ? "" : "s")", detail: url.lastPathComponent)
+        return lyrics.count
+    }
+
     // MARK: The cast
 
     /// Who is in the room for the open song. Empty means everyone the app has.
