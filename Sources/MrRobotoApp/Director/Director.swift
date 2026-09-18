@@ -85,7 +85,10 @@ public enum DirectorEvent: Sendable {
     /// A piece of the reply, as it arrives. The rail appends these; that is the streaming.
     case say(String)
     case toolStarted(String)
-    case toolFinished(name: String, isError: Bool)
+    /// A tool finished. `message` is what it said — for a failure, the reason, which the rail shows.
+    /// The five surface rules refuse through this path, and a refusal whose reason never leaves the
+    /// loop is the app keeping the most useful thing it knows to itself.
+    case toolFinished(name: String, isError: Bool, message: String)
     /// A surface landed on the bench mid-turn.
     case opened(SurfaceKind, title: String)
     case finished(DirectorTurn)
@@ -136,7 +139,7 @@ public actor Director {
                 pad: DirectorStagePad,
                 role: DirectorRole = .judgment,
                 persona: String? = nil,
-                maxRounds: Int = 12) {
+                maxRounds: Int = DirectorConversation.defaultMaxRounds) {
         self.client = client
         self.stage = stage
         self.pad = pad
@@ -160,19 +163,24 @@ public actor Director {
     public static func live(for app: AppState,
                             client: ClaudeClient = ClaudeClient(),
                             engines: DirectorEngines = DirectorEngines(),
-                            audition: (any DirectorAudition)? = nil) -> Director {
+                            audition: (any DirectorAudition)? = nil,
+                            persona: String? = nil) -> Director {
         let stage = AppStateStage(app)
         let pad = DirectorStagePad()
         let workbench = DirectorWorkbench(engines: engines)
         let rig = audition ?? DirectorAuditionRig(workbench: workbench,
                                                   service: SurfaceWiring.shared.service(for: app),
                                                   app: app)
+        // The persona goes to both ends of the same session: the prompt it works under, and the
+        // name it signs with. Passing it to one and not the other is how a band member reads as
+        // somebody in the conversation and as nobody in the ledger.
         let toolbox = DirectorTools.toolbox(workbench: workbench,
                                             workspace: AppStateWorkspace(app),
                                             audition: rig,
                                             stage: stage,
-                                            pad: pad)
-        return Director(client: client, toolbox: toolbox, stage: stage, pad: pad)
+                                            pad: pad,
+                                            persona: persona)
+        return Director(client: client, toolbox: toolbox, stage: stage, pad: pad, persona: persona)
     }
 
     // MARK: Asking
@@ -246,8 +254,8 @@ public actor Director {
                 case .toolStarted(let name, _):
                     log.append(name)
                     onEvent?(.toolStarted(name))
-                case .toolFinished(let name, let isError):
-                    onEvent?(.toolFinished(name: name, isError: isError))
+                case .toolFinished(let name, let isError, let message):
+                    onEvent?(.toolFinished(name: name, isError: isError, message: message))
                 case .stream, .roundFinished:
                     break
                 }
@@ -270,7 +278,8 @@ public actor Director {
                                 detail: "That reply hit its ceiling mid-thought. Ask again to carry on; nothing was lost.")
         case .refused(let refusal):
             return await finish(.refused(refusal), log: log, say: refusal.sentence, detail: nil)
-        case .stoppedAtRoundLimit(let rounds):
+        case .stoppedAtRoundLimit(let rounds, _):
+            // The detail is built in `finish`, where the call log and the pad are both in hand.
             return await finish(.roundLimit(rounds: rounds), log: log, say: outcome.text, detail: nil)
         }
     }
@@ -293,13 +302,101 @@ public actor Director {
         await MainActor.run { stage.setProposals(offered.map(\.proposal)) }
 
         let text = say.trimmingCharacters(in: .whitespacesAndNewlines)
+        let account = Self.account(for: ending, calls: calls, opened: opened, proposals: offered)
         return DirectorTurn(ending: ending,
                             say: text.isEmpty ? Self.wordless(ending, opened: opened) : text,
-                            detail: detail ?? Self.costLine(spend),
+                            detail: detail ?? account ?? Self.costLine(spend),
                             opened: opened,
                             proposals: offered,
                             calls: calls,
                             spend: spend)
+    }
+
+    /// The second line for a turn that ran out of rounds: what it did, and what it did not.
+    ///
+    /// Nil for every other ending. "This went round twelve times without finishing" is a number
+    /// about the loop, and the loop is not a thing the user can see or act on; what they can act on
+    /// is that the record is loaded, the bar is cut, three reads are recorded and nothing has been
+    /// put in front of them yet. Every clause below is read off the call log and the pad — a record
+    /// of what actually happened rather than the model's account of it, which is the one version of
+    /// this that cannot be wrong about its own work.
+    static func account(for ending: DirectorEnding, calls: [String],
+                        opened: [DirectorSurfaceChoice], proposals: [DirectorProposal]) -> String? {
+        guard case .roundLimit(let rounds) = ending else { return nil }
+        let done = Self.did(calls)
+        let left = Self.leftToDo(calls, opened: opened, proposals: proposals)
+        var line = "It ran out of room after \(rounds) rounds and \(calls.count) tool "
+            + "call\(calls.count == 1 ? "" : "s")."
+        if !done.isEmpty { line += " Done: \(Self.list(done))." }
+        if !left.isEmpty { line += " Not yet: \(Self.list(left))." }
+        return line + " Everything already recorded is in the song; say \"carry on\" and it picks up"
+            + " from there."
+    }
+
+    /// What the calls add up to, in the order the work happened rather than in alphabetical order.
+    ///
+    /// Counted rather than listed: "played the chop through 4 feels" is the shape of the turn, and
+    /// four lines saying "played the chop through a feel" is a log.
+    static func did(_ calls: [String]) -> [String] {
+        var order: [String] = []
+        var counts: [String: Int] = [:]
+        for call in calls {
+            if counts[call] == nil { order.append(call) }
+            counts[call, default: 0] += 1
+        }
+        return order.compactMap { name in Self.phrase(name, counts[name] ?? 1) }
+    }
+
+    /// One tool's contribution, in the user's words. Unknown names fall back to the name and a
+    /// count, which is honest and never wrong.
+    static func phrase(_ tool: String, _ times: Int) -> String? {
+        let many = times > 1
+        switch tool {
+        case "read_song": return "read the song"
+        case "import_record": return many ? "loaded \(times) files" : "loaded the record"
+        case "analyse_record": return many ? "analysed \(times) of them" : "analysed it"
+        case "list_bars": return "found the bars"
+        case "separate_stems": return "separated the stems"
+        case "chop_bar": return many ? "cut \(times) bars into slices" : "cut the bar into slices"
+        case "classify_slices": return "named the slices"
+        case "list_feels", "describe_feel": return "looked through the feels"
+        case "regroove_chop": return many ? "played it through \(times) feels" : "played it through a feel"
+        case "set_swing": return "moved the swing"
+        case "set_velocity": return "moved the velocities"
+        case "audition": return many ? "listened back \(times) times" : "listened back"
+        case "create_part_version":
+            return many ? "recorded \(times) versions into the song" : "recorded one version into the song"
+        case "open_surface": return many ? "opened \(times) surfaces" : "opened a surface"
+        case "propose": return many ? "offered \(times) suggestions" : "offered a suggestion"
+        default: return many ? "\(tool) ×\(times)" : tool
+        }
+    }
+
+    /// The gaps, read off the same record. Only things that are certainly outstanding: the Director
+    /// cannot know what the model intended next, but it can see that four grooves were made and two
+    /// were recorded, and that nothing has reached the bench.
+    static func leftToDo(_ calls: [String], opened: [DirectorSurfaceChoice],
+                         proposals: [DirectorProposal]) -> [String] {
+        var left: [String] = []
+        let made = calls.filter { $0 == "regroove_chop" || $0 == "chop_bar" }.count
+        let recorded = calls.filter { $0 == "create_part_version" }.count
+        if made > recorded {
+            let pending = made - recorded
+            left.append("\(pending) thing\(pending == 1 ? "" : "s") made but not recorded into the song")
+        }
+        if opened.isEmpty && proposals.isEmpty {
+            left.append(recorded > 0 ? "nothing shown or offered yet, so the work is in the ledger"
+                            + " rather than in front of you"
+                        : "nothing shown or offered yet")
+        }
+        return left
+    }
+
+    /// A list as a sentence: "a, b and c".
+    static func list(_ items: [String]) -> String {
+        guard let last = items.last else { return "" }
+        guard items.count > 1 else { return last }
+        return items.dropLast().joined(separator: ", ") + " and " + last
     }
 
     /// What to say when the model opened something and said nothing about it. Rare, and silence in

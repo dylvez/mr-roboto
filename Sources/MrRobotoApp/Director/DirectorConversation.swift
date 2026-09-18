@@ -11,22 +11,29 @@ public enum DirectorOutcome: Sendable, Equatable {
     /// The model hit its output ceiling mid-thought.
     case truncated(ClaudeResponse)
     /// The loop ran out of rounds. The transcript is intact and can be continued.
-    case stoppedAtRoundLimit(rounds: Int)
+    ///
+    /// `last` is the reply the round limit interrupted, when there was one. It is carried rather
+    /// than dropped because the model is usually mid-sentence about the work when the loop stops —
+    /// "that's three reads recorded, now to show them" — and that sentence is the most specific
+    /// thing anybody has about where the turn got to. Throwing it away to print a round count was
+    /// the app telling the user a number they cannot act on instead of the news they can.
+    case stoppedAtRoundLimit(rounds: Int, last: ClaudeResponse?)
 
     /// The reply as a person reads it.
     public var text: String {
         switch self {
         case .finished(let response), .truncated(let response): response.text
         case .refused(let refusal): refusal.sentence
-        case .stoppedAtRoundLimit(let rounds):
-            "This went round \(rounds) times without finishing. Nothing was lost; ask again to carry on."
+        case .stoppedAtRoundLimit(_, let last):
+            (last?.text).flatMap { $0.isEmpty ? nil : $0 } ?? "That is as far as this turn got."
         }
     }
 
     public var response: ClaudeResponse? {
         switch self {
         case .finished(let response), .truncated(let response): response
-        case .refused, .stoppedAtRoundLimit: nil
+        case .stoppedAtRoundLimit(_, let last): last
+        case .refused: nil
         }
     }
 }
@@ -42,8 +49,10 @@ public actor DirectorConversation {
         case stream(ClaudeStreamEvent)
         /// A tool is about to run, with the arguments the model chose.
         case toolStarted(name: String, arguments: DirectorJSON)
-        /// It finished. `isError` is the model's own view of it, not a crash.
-        case toolFinished(name: String, isError: Bool)
+        /// It finished. `isError` is the model's own view of it, not a crash, and `message` is what
+        /// the tool actually said — the reason, carried rather than thrown away, because a refusal
+        /// the user can see the name of but not the reason for is worse than no refusal at all.
+        case toolFinished(name: String, isError: Bool, message: String)
         case roundFinished(round: Int)
     }
 
@@ -53,9 +62,24 @@ public actor DirectorConversation {
     private let system: [ClaudeText]
     private let maxTokens: Int
     private let effort: ClaudeEffort
-    /// How many times round the loop before giving up. Twelve is a whole re-groove with room to
-    /// recover from two mistakes.
+    /// How many times round the loop before giving up.
+    ///
+    /// Twelve was measured against a sketch of the work rather than the work. The milestone's own
+    /// acceptance line — chop the drums from bar 9 and give me something slower and dustier — takes
+    /// about twenty-three calls end to end: read the song, load and analyse a stem, find the bars,
+    /// cut one, name the slices, look through the feels, play the chop through three of them,
+    /// adjust two of those, audition, record four versions, open a Compare. The model batches some
+    /// of that, but not most of it, so twelve rounds ran out every single time and the design's
+    /// carry-on path — which works — was being used to paper over a budget that was simply too
+    /// small for the job it was set for.
+    ///
+    /// Thirty-two is that line with room to recover from several mistakes, and it is a ceiling
+    /// rather than a target: a turn that finishes in nine rounds still costs nine.
     public let maxRounds: Int
+
+    /// The budget every Director gets unless a test asks for a smaller one. Written down once so
+    /// there is one number to change rather than three defaults to keep in step.
+    public static let defaultMaxRounds = 32
 
     /// The whole transcript, oldest first.
     public private(set) var messages: [ClaudeTurn] = []
@@ -64,7 +88,7 @@ public actor DirectorConversation {
                 toolbox: DirectorToolbox,
                 role: DirectorRole = .judgment,
                 persona: String? = nil,
-                maxRounds: Int = 12,
+                maxRounds: Int = DirectorConversation.defaultMaxRounds,
                 maxTokens: Int = 16000,
                 effort: ClaudeEffort = .high) {
         self.client = client
@@ -92,6 +116,9 @@ public actor DirectorConversation {
         let committed = messages
         var working = messages
         working.append(first)
+        /// The newest reply, kept so a turn that runs out of rounds can hand back what the model
+        /// was in the middle of saying rather than only how many times it went round.
+        var lastResponse: ClaudeResponse?
 
         do {
             for round in 1...maxRounds {
@@ -106,6 +133,7 @@ public actor DirectorConversation {
                     onProgress?(.stream(event))
                 }
                 working.append(response.turn)
+                lastResponse = response
 
                 switch response.stopReason {
                 case .refusal(let refusal):
@@ -132,7 +160,7 @@ public actor DirectorConversation {
                 }
             }
             messages = working
-            return .stoppedAtRoundLimit(rounds: maxRounds)
+            return .stoppedAtRoundLimit(rounds: maxRounds, last: lastResponse)
         } catch {
             messages = committed
             throw error
@@ -149,7 +177,8 @@ public actor DirectorConversation {
                 group.addTask {
                     onProgress?(.toolStarted(name: use.name, arguments: use.input))
                     let result = await toolbox.run(use)
-                    onProgress?(.toolFinished(name: use.name, isError: result.isError))
+                    onProgress?(.toolFinished(name: use.name, isError: result.isError,
+                                              message: result.content))
                     return (index, result)
                 }
             }

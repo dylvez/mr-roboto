@@ -242,7 +242,14 @@ struct DirectorLoopTests {
         let conversation = DirectorConversation(client: client, toolbox: toolbox, maxRounds: 3)
         let outcome = try await conversation.ask("go")
 
-        #expect(outcome == .stoppedAtRoundLimit(rounds: 3))
+        guard case .stoppedAtRoundLimit(let rounds, let last) = outcome else {
+            Issue.record("expected the round limit, got \(outcome)")
+            return
+        }
+        #expect(rounds == 3)
+        // The reply the limit interrupted is carried out rather than dropped: it is the most
+        // specific thing anybody has about where the turn got to.
+        #expect(last?.toolUses.first?.name == "echo_a")
         #expect(await transport.requestCount == 3)
         #expect(await conversation.messages.count == 7)
     }
@@ -295,6 +302,7 @@ final class DirectorProgressLog: @unchecked Sendable {
     private let lock = NSLock()
     private var startedTools: [String] = []
     private var finishedTools: [String] = []
+    private var messages: [String] = []
     private var roundsSeen: [Int] = []
     private var accumulated = ""
 
@@ -303,7 +311,7 @@ final class DirectorProgressLog: @unchecked Sendable {
         defer { lock.unlock() }
         switch progress {
         case .toolStarted(let name, _): startedTools.append(name)
-        case .toolFinished(let name, _): finishedTools.append(name)
+        case .toolFinished(let name, _, let message): finishedTools.append(name); messages.append(message)
         case .roundFinished(let round): roundsSeen.append(round)
         case .stream(let event):
             if case .textDelta(_, let text) = event { accumulated += text }
@@ -312,6 +320,8 @@ final class DirectorProgressLog: @unchecked Sendable {
 
     var toolsStarted: [String] { lock.withLock { startedTools } }
     var toolsFinished: [String] { lock.withLock { finishedTools } }
+    /// What each finished tool actually said, in the same order.
+    var toolMessages: [String] { lock.withLock { messages } }
     var rounds: [Int] { lock.withLock { roundsSeen } }
     var text: String { lock.withLock { accumulated } }
 }

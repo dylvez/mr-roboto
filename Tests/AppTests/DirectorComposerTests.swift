@@ -168,10 +168,11 @@ struct DirectorEndingTests {
 
     // MARK: The round limit
 
-    @Test("A turn that runs out of rounds says so and can be carried on")
+    @Test("A turn that runs out of rounds says what it did and what it did not, and can be carried on")
     func roundLimit() async {
         let turn = DirectorSSE.start()
-            + DirectorSSE.toolUse(id: "t", name: "read_song", jsonPieces: ["{}"])
+            + DirectorSSE.text("Reading the song first.")
+            + DirectorSSE.toolUse(id: "t", name: "read_song", jsonPieces: ["{}"], index: 1)
             + DirectorSSE.end(stopReason: "tool_use")
         let rig = Self.rig(Array(repeating: .events(turn), count: 3), maxRounds: 3)
         defer { rig.clean() }
@@ -180,8 +181,14 @@ struct DirectorEndingTests {
 
         let last = rig.app.log.last
         #expect(last?.source == .director)
-        #expect(last?.text.contains("went round 3 times") == true)
-        #expect(last?.text.contains("ask again to carry on") == true)
+        // What the model was in the middle of saying, rather than a round count. The count is in
+        // the detail, where it belongs, beside the things the user can act on.
+        #expect(last?.text.contains("Reading the song first.") == true)
+        let detail = last?.detail ?? ""
+        #expect(detail.contains("3 rounds"))
+        #expect(detail.contains("read the song"), "it should say what it did: \(detail)")
+        #expect(detail.contains("nothing shown or offered yet"), "and what it did not: \(detail)")
+        #expect(detail.contains("carry on"))
         #expect(!rig.session.isWorking)
         #expect(rig.session.streaming.isEmpty)
     }

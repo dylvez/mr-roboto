@@ -148,11 +148,34 @@ public struct CreatePartVersionTool: DirectorTool {
 
     let workbench: DirectorWorkbench
     let workspace: any DirectorWorkspace
+    /// Who signs a version the model did not name anybody for.
+    ///
+    /// **Not a default argument on the schema, deliberately.** The model was asked to pass a
+    /// `persona` and never did, so every version the band made in the first live run went into the
+    /// ledger as `user` and the rail read as though Dylan had cut those chops himself. Attribution
+    /// is the product — the point of the ledger is knowing who proposed what — so the fix cannot be
+    /// a stronger sentence in the prompt asking the model to remember. It has to be a thing the
+    /// model cannot forget, which means the tool decides.
+    ///
+    /// `.user` is now unreachable from here, and that is correct rather than merely convenient: the
+    /// user does not call tools. Everything that arrives through `create_part_version` was made by
+    /// the band, and the only open question is *which* of them — a named persona when the model
+    /// says one, the Director itself when it does not.
+    ///
+    /// It is a stored property rather than a constant so a persona-scoped Director signs with its
+    /// own name; it is kept out of `schema` so the frozen prefix does not vary with it.
+    let acting: String
 
-    public init(workbench: DirectorWorkbench, workspace: any DirectorWorkspace) {
+    public init(workbench: DirectorWorkbench, workspace: any DirectorWorkspace,
+                acting: String = CreatePartVersionTool.director) {
         self.workbench = workbench
         self.workspace = workspace
+        self.acting = acting
     }
+
+    /// What the band signs with when nobody more specific made the thing. The same word the rail
+    /// uses for the Director's own voice, so a version and the line announcing it agree.
+    public static let director = "Director"
 
     public let name = "create_part_version"
     public var purpose: String {
@@ -164,13 +187,15 @@ public struct CreatePartVersionTool: DirectorTool {
         Schema.object([
             ("from", Schema.string("A groove handle from regroove_chop, or a chop handle from chop_bar.")),
             ("note", Schema.string("One line saying what this is and why, in the user's language rather than the tool's.")),
-            ("persona", Schema.optional(Schema.string("Which member of the band made it. Omit for work the user asked for directly."))),
+            ("persona", Schema.optional(Schema.string("Which member of the band made it, by name. Leave it out and the version is signed by the Director, which is who made it — a version is never attributed to the user, because the user does not call this tool."))),
             ("parent", Schema.optional(Schema.string("A version id this derives from, from read_song. Omit to start a new part."))),
         ], required: ["from", "note", "persona", "parent"])
     }
 
     public func run(_ input: Input) async throws -> Output {
-        let author: Author = input.persona.map { .persona($0) } ?? .user
+        // Never `.user`: see `acting`. A name the model sent but left blank is the same as no name.
+        let named = input.persona?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let author: Author = .persona(named.flatMap { $0.isEmpty ? nil : $0 } ?? acting)
         let parentVersion = try await resolveParent(input.parent)
 
         let kind: PartKind

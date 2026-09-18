@@ -17,11 +17,15 @@ public enum DirectorTools {
     ///     session that started without a frame and one that started with it share a cached prefix
     ///     up to the fourteenth tool. Nil is the tool layer on its own, which is how every tool
     ///     test runs.
+    ///   - persona: who signs a version the model names nobody for. Nil is the Director itself.
+    ///     It reaches `create_part_version` only, and only its `run`: no schema reads it, so a
+    ///     persona-scoped session and the Director's own share every byte of the frozen prefix.
     public static func toolbox(workbench: DirectorWorkbench,
                                workspace: any DirectorWorkspace,
                                audition: (any DirectorAudition)? = nil,
                                stage: (any DirectorStage)? = nil,
-                               pad: DirectorStagePad? = nil) -> DirectorToolbox {
+                               pad: DirectorStagePad? = nil,
+                               persona: String? = nil) -> DirectorToolbox {
         var tools: [AnyDirectorTool] = [
             ReadSongTool(workspace: workspace).erased(),
             ImportRecordTool(workbench: workbench, workspace: workspace).erased(),
@@ -36,7 +40,8 @@ public enum DirectorTools {
             SetSwingTool(workbench: workbench).erased(),
             SetVelocityTool(workbench: workbench).erased(),
             AuditionTool(workbench: workbench, audition: audition).erased(),
-            CreatePartVersionTool(workbench: workbench, workspace: workspace).erased(),
+            CreatePartVersionTool(workbench: workbench, workspace: workspace,
+                                  acting: persona ?? CreatePartVersionTool.director).erased(),
         ]
         if let stage {
             let pad = pad ?? DirectorStagePad()

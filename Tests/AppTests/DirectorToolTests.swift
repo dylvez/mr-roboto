@@ -525,7 +525,7 @@ struct DirectorToolTests {
         #expect(session.workspace.notes.count == 1)
     }
 
-    @Test("create_part_version records a chop as a sample with its markers")
+    @Test("create_part_version records a chop as a sample with its markers, signed by the band")
     func createChopVersion() async throws {
         let session = try makeSession()
         defer { tearDown(session) }
@@ -536,7 +536,10 @@ struct DirectorToolTests {
                                               persona: nil, parent: nil))
         #expect(output.recorded)
         #expect(output.type == "sample")
-        #expect(output.author == Author.user.description)
+        // The model named nobody, and the version is still the band's: `.user` is unreachable from
+        // this tool, because the user does not call tools. A chop the band cut and attributed to
+        // the user is the ledger saying the one thing it exists to get right, wrongly.
+        #expect(output.author == Author.persona(CreatePartVersionTool.director).description)
 
         let song = try #require(session.workspace.song)
         guard case .sample(let sample) = song.versions[0].kind else {

@@ -97,44 +97,108 @@ public struct AnalysisProviders: Sendable {
     // MARK: Aggregate
 
     /// Runs every selected whole-track analyser on `url` and merges the results into one report.
-    /// Capabilities without a provider are skipped and noted; a provider that throws fails the call.
+    ///
+    /// Three outcomes per capability, and they are three different things:
+    ///
+    ///  * **No provider selected.** Skipped and noted.
+    ///  * **The analyser ran and had nothing to say.** Noted, and the capability is *not* claimed:
+    ///    the field stays nil and the report is returned. A drums stem has no tonal content, so
+    ///    Music Understanding returns no key for it and `estimateKey` — correctly, for a caller
+    ///    who asked for a key and only a key — throws `missingResult`. Letting that fail the whole
+    ///    aggregate meant `analyse_record` failed on every stem in every live run, throwing away a
+    ///    beat grid, a structure, a loudness figure and an instrument curve that had all succeeded,
+    ///    because the record happened not to have a key in it. "This audio has no key" is a finding,
+    ///    not a failure.
+    ///  * **The analyser failed.** Thrown, and the call fails. A missing file, a protected asset or
+    ///    a session that fell over is not a finding about the music, and swallowing it would turn a
+    ///    broken analysis into an empty one.
     public func analyze(url: URL, capabilities: Set<AnalysisCapability> = [.key, .beats, .structure, .loudness, .instrumentActivity]) async throws -> AnalysisReport {
         var report = AnalysisReport(sourcePath: url.path)
         let start = ContinuousClock.now
         for capability in AnalysisCapability.allCases where capabilities.contains(capability) {
             let provider: (any AnalysisProvider)?
+            var found = false
             switch capability {
             case .key:
                 provider = try? keyEstimator()
-                if let p = provider as? any KeyEstimator { report.key = try await p.estimateKey(url: url) }
+                if let p = provider as? any KeyEstimator {
+                    report.key = try await Self.present(capability) { try await p.estimateKey(url: url) }
+                    found = report.key != nil
+                }
             case .beats:
                 provider = try? beatTracker()
-                if let p = provider as? any BeatTracker { report.beats = try await p.trackBeats(url: url) }
+                if let p = provider as? any BeatTracker {
+                    report.beats = try await Self.present(capability) { try await p.trackBeats(url: url) }
+                    found = report.beats != nil
+                }
             case .structure:
                 provider = try? structureAnalyzer()
-                if let p = provider as? any StructureAnalyzer { report.structure = try await p.analyzeStructure(url: url) }
+                if let p = provider as? any StructureAnalyzer {
+                    report.structure = try await Self.present(capability) { try await p.analyzeStructure(url: url) }
+                    found = report.structure != nil
+                }
             case .loudness:
                 provider = try? loudnessMeter()
-                if let p = provider as? any LoudnessMeter { report.loudness = try await p.measureLoudness(url: url) }
+                if let p = provider as? any LoudnessMeter {
+                    report.loudness = try await Self.present(capability) { try await p.measureLoudness(url: url) }
+                    found = report.loudness != nil
+                }
             case .instrumentActivity:
                 provider = try? instrumentActivityAnalyzer()
-                if let p = provider as? any InstrumentActivityAnalyzer { report.instruments = try await p.analyzeInstrumentActivity(url: url) }
+                if let p = provider as? any InstrumentActivityAnalyzer {
+                    report.instruments = try await Self.present(capability) { try await p.analyzeInstrumentActivity(url: url) }
+                    found = report.instruments != nil
+                }
             case .pace, .stemSeparation, .onsets, .timeStretch:
                 continue
             }
-            if let provider {
-                report.capabilities.insert(capability)
-                report.provenance[capability] = provider.providerName
-            } else {
+            guard let provider else {
                 report.notes.append("no \(capability.providerNoun) selected")
+                continue
             }
+            guard found else {
+                report.notes.append("\(provider.providerName) found no \(capability.noun) in this audio")
+                continue
+            }
+            report.capabilities.insert(capability)
+            report.provenance[capability] = provider.providerName
         }
         report.wallTime = start.duration(to: .now).seconds
         return report
     }
+
+    /// Runs one analyser, turning "this audio has none of that" into nil rather than into a throw.
+    ///
+    /// Only `missingResult` for the capability being run is caught, and only that: every other
+    /// error — including a `missingResult` for something else, which would mean an analyser is
+    /// answering a question it was not asked — is a real failure and goes on up.
+    private static func present<T>(_ capability: AnalysisCapability,
+                                   _ body: () async throws -> T) async throws -> T? {
+        do {
+            return try await body()
+        } catch let error as AnalysisError {
+            guard case .missingResult(let absent, _) = error, absent == capability else { throw error }
+            return nil
+        }
+    }
 }
 
 extension AnalysisCapability {
+    /// What the capability finds, as a note about the music reads it ("no key in this audio").
+    var noun: String {
+        switch self {
+        case .key: return "key"
+        case .beats: return "beat grid"
+        case .structure: return "structure"
+        case .loudness: return "loudness"
+        case .instrumentActivity: return "instrument activity"
+        case .pace: return "pace"
+        case .stemSeparation: return "stems"
+        case .onsets: return "onsets"
+        case .timeStretch: return "time stretch"
+        }
+    }
+
     /// The kind of provider the registry looks for, for notes and errors ("beat tracker").
     var providerNoun: String {
         switch self {

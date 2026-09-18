@@ -61,9 +61,22 @@ public final class DirectorSession {
     @ObservationIgnored public let director: Director
     @ObservationIgnored private weak var app: AppState?
     @ObservationIgnored private var turn: Task<Void, Never>?
-    /// Tools that failed during the turn in flight. A failure the model recovered from is not
-    /// worth a line of its own, but a turn that had to recover is worth saying so once.
-    @ObservationIgnored private var stumbles: [String] = []
+    /// Tools that failed during the turn in flight, each with what it actually said. A failure the
+    /// model recovered from is not worth a line of its own, but a turn that had to recover is worth
+    /// saying so once — *with the reason*.
+    ///
+    /// The name on its own was the app withholding the most useful thing it had. In the live run a
+    /// user could read that `open_surface` and `propose` were refused and not why, and those two
+    /// refusals were the five surface rules working: "A Compare needs the thing its candidates are
+    /// judged against." Which is not an internal complaint, it is the instrument saying what a
+    /// comparison is — the sort of thing somebody learns the shape of the app from.
+    @ObservationIgnored private var stumbles: [Stumble] = []
+
+    /// One failed call: the tool, and the sentence it answered with.
+    struct Stumble: Hashable {
+        var tool: String
+        var reason: String
+    }
 
     public init(director: Director, app: AppState) {
         self.director = director
@@ -164,8 +177,8 @@ public final class DirectorSession {
             if snapshot.count > streaming.count { streaming = snapshot }
         case .toolStarted(let name):
             activity = DirectorSession.activity(for: name)
-        case .toolFinished(let name, let isError):
-            if isError { stumbles.append(name) }
+        case .toolFinished(let name, let isError, let message):
+            if isError { stumbles.append(Stumble(tool: name, reason: message)) }
             activity = nil
         case .opened(let kind, let title):
             activity = "Opened \(kind.rawValue.lowercased()): \(title)"
@@ -187,12 +200,41 @@ public final class DirectorSession {
         app?.note(result.ending.voice, result.say, detail: result.detail)
 
         if !stumbles.isEmpty, result.ending.spoke {
-            let names = Array(Set(stumbles)).sorted().joined(separator: ", ")
             app?.note(.session,
                       "\(stumbles.count) tool call\(stumbles.count == 1 ? "" : "s") failed on the way there",
-                      detail: "\(names). The band was told and worked around it; nothing was left half-done.")
+                      detail: DirectorSession.refusals(stumbles)
+                          + " The band was told and worked around it; nothing was left half-done.")
         }
         stumbles = []
+    }
+
+    /// The failures as one line the user can read: what was refused, and what it was refused for.
+    ///
+    /// The same refusal twice is one line — a model that gets the same rule wrong in two rounds has
+    /// made one mistake as far as the reader is concerned — and a long reason is cut, because the
+    /// rail is a column beside the work and not a log viewer. Where the cut falls is after the first
+    /// sentence when there is one, which is where these messages put the reason and before where
+    /// they put the suggestion to the model.
+    static func refusals(_ stumbles: [Stumble], limit: Int = 160) -> String {
+        var seen: Set<Stumble> = []
+        return stumbles.compactMap { stumble -> String? in
+            guard seen.insert(stumble).inserted else { return nil }
+            let reason = DirectorSession.firstSentence(stumble.reason, limit: limit)
+            return reason.isEmpty ? "\(stumble.tool)" : "\(stumble.tool) — \(reason)"
+        }.joined(separator: " · ")
+    }
+
+    /// The first sentence of a tool's message, or the first `limit` characters of it, whichever is
+    /// shorter. Never a bare truncation mid-word.
+    static func firstSentence(_ message: String, limit: Int) -> String {
+        let text = message.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let stop = text.firstIndex(of: "."), text.distance(from: text.startIndex, to: stop) < limit {
+            return String(text[...stop])
+        }
+        guard text.count > limit else { return text }
+        let head = text.prefix(limit)
+        let cut = head.lastIndex(of: " ").map { String(head[..<$0]) } ?? String(head)
+        return cut + "…"
     }
 
     /// What a tool is doing, in the user's words rather than the tool's. Unknown names fall back to

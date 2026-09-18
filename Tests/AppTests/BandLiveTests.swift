@@ -32,9 +32,11 @@ final class LiveTurnLog: @unchecked Sendable {
     private var surfaces: [String] = []
 
     func started(_ name: String) { lock.lock(); toolOrder.append(name); lock.unlock() }
-    func finished(_ name: String, isError: Bool) {
+    /// The reason as well as the name. A run that only reported which tools failed could not tell
+    /// a refusal by one of the five surface rules — which is the instrument working — from a bug.
+    func finished(_ name: String, isError: Bool, message: String) {
         guard isError else { return }
-        lock.lock(); failures.append(name); lock.unlock()
+        lock.lock(); failures.append("\(name): \(message)"); lock.unlock()
     }
     func opened(_ kind: SurfaceKind, _ title: String) {
         lock.lock(); surfaces.append("\(kind.rawValue): \(title)"); lock.unlock()
@@ -145,7 +147,8 @@ struct BandLiveTests {
         let turn = await band.director.direct(Self.acceptance) { event in
             switch event {
             case .toolStarted(let name): log.started(name)
-            case .toolFinished(let name, let isError): log.finished(name, isError: isError)
+            case .toolFinished(let name, let isError, let message):
+                log.finished(name, isError: isError, message: message)
             case .opened(let kind, let title): log.opened(kind, title)
             case .say, .finished: break
             }
@@ -155,7 +158,8 @@ struct BandLiveTests {
         report("turn 1 ending", "\(turn.ending)")
         report("turn 1 elapsed", String(format: "%.1f s", elapsed))
         report("turn 1 calls", log.calls.isEmpty ? "(none)" : log.calls.joined(separator: " → "))
-        report("turn 1 tool failures", log.errors.isEmpty ? "(none)" : log.errors.joined(separator: ", "))
+        report("turn 1 tool failures", log.errors.isEmpty ? "(none)" : "")
+        for failure in log.errors { report("  failed", failure) }
         report("turn 1 said", turn.say)
         describeSpend(turn.spend, label: "turn 1")
 
@@ -168,7 +172,8 @@ struct BandLiveTests {
             let more = await band.director.direct("Carry on.") { event in
                 switch event {
                 case .toolStarted(let name): carry.started(name)
-                case .toolFinished(let name, let isError): carry.finished(name, isError: isError)
+                case .toolFinished(let name, let isError, let message):
+                    carry.finished(name, isError: isError, message: message)
                 case .opened(let kind, let title): carry.opened(kind, title)
                 case .say, .finished: break
                 }
@@ -176,7 +181,8 @@ struct BandLiveTests {
             report("turn 1b ending", "\(more.ending)")
             report("turn 1b elapsed", String(format: "%.1f s", Date().timeIntervalSince(resumed)))
             report("turn 1b calls", carry.calls.isEmpty ? "(none)" : carry.calls.joined(separator: " → "))
-            report("turn 1b tool failures", carry.errors.isEmpty ? "(none)" : carry.errors.joined(separator: ", "))
+            report("turn 1b tool failures", carry.errors.isEmpty ? "(none)" : "")
+            for failure in carry.errors { report("  failed", failure) }
             report("turn 1b opened", carry.opens.isEmpty ? "(none)" : carry.opens.joined(separator: " · "))
             report("turn 1b said", more.say)
             describeSpend(more.spend, label: "after turn 1b")
