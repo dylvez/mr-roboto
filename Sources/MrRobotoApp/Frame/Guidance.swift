@@ -131,7 +131,11 @@ enum PartLabel {
             return note(of: version) ?? "Groove"
         case .sound(let sound):
             return sound.preset.map { "\(sound.instrument) · \($0)" } ?? sound.instrument
-        case .progression, .melody, .lyric, .bassline:
+        case .bassline:
+            return note(of: version) ?? "Bass line"
+        case .progression(let progression):
+            return note(of: version) ?? progression.chords.prefix(4).map { $0.symbol() }.joined(separator: " ")
+        case .melody, .lyric:
             return version.type.rawValue.capitalized
         }
     }
@@ -221,7 +225,17 @@ public enum Guidance {
                                       bound: [groove.id])))
         }
 
-        // 5. A sound to shape.
+        // 5. A groove with no bass under it yet: the band's first written part.
+        if let groove = grooves(in: song).last, basslines(in: song).isEmpty {
+            out.append(Proposal(
+                title: "Write a bass line under \(PartLabel.title(of: groove))",
+                rationale: "The Piano roll writes one in a named player's hands — 40 ms behind the kick by "
+                    + "default — and the Bassist reads it back. \(tempoText(song, analysis)).",
+                action: SurfaceAction(surface: .pianoRoll, title: "Bass under \(PartLabel.title(of: groove))",
+                                      bound: [groove.id])))
+        }
+
+        // 6. A sound to shape.
         if let sound = sounds(in: song).last {
             out.append(Proposal(
                 title: "Shape \(PartLabel.title(of: sound)) in Sound",
@@ -230,7 +244,7 @@ public enum Guidance {
                                       bound: [sound.id])))
         }
 
-        // 6. The record itself, last: it is what opening the song already put on the bench, so it is
+        // 7. The record itself, last: it is what opening the song already put on the bench, so it is
         //    here for getting back to rather than for getting started.
         if canShowRecord(in: song) {
             out.append(Proposal(
@@ -285,6 +299,15 @@ public enum Guidance {
         case .sound:
             guard let sound = sounds(in: song).last else { return fallback }
             return SurfaceAction(surface: kind, title: PartLabel.title(of: sound), bound: [sound.id])
+        case .chords:
+            guard let progression = progressions(in: song).last else { return fallback }
+            return SurfaceAction(surface: kind, title: PartLabel.title(of: progression), bound: [progression.id])
+        case .pianoRoll:
+            if let line = basslines(in: song).last {
+                return SurfaceAction(surface: kind, title: PartLabel.title(of: line), bound: [line.id])
+            }
+            guard let groove = grooves(in: song).last else { return fallback }
+            return SurfaceAction(surface: kind, title: "Bass under \(PartLabel.title(of: groove))", bound: [groove.id])
         case .compare, .check:
             // Nothing reaches here: the dock, ⌘1–⌘4 and the Surfaces menu all iterate
             // `SurfaceKind.gateA`, and an answer surface is not something you pick off a shelf —
@@ -339,6 +362,14 @@ public enum Guidance {
 
     public static func sounds(in song: Song) -> [PartVersion] {
         song.versions.filter { $0.type == .sound }
+    }
+
+    public static func basslines(in song: Song) -> [PartVersion] {
+        song.versions.filter { $0.type == .bassline }
+    }
+
+    public static func progressions(in song: Song) -> [PartVersion] {
+        song.versions.filter { $0.type == .progression }
     }
 
     /// A chop already cut from this audio version, if there is one.
@@ -513,9 +544,21 @@ public enum PartActions {
                             action: SurfaceAction(surface: .sound, title: PartLabel.title(of: version),
                                                   bound: [version.id]))
 
-        case .progression, .melody, .lyric, .bassline:
-            // Gate A builds four surfaces and none of them edits these. Saying nothing is the honest
-            // answer; the surface that would take them arrives with the rest of the catalog.
+        case .bassline:
+            return Proposal(title: "Open in the Piano roll",
+                            rationale: "The notes over the bar with the kicks under them; the Bassist's readings below.",
+                            action: SurfaceAction(surface: .pianoRoll, title: PartLabel.title(of: version),
+                                                  bound: [version.id]))
+
+        case .progression:
+            return Proposal(title: "Open in Chords",
+                            rationale: "The lead sheet, playable bar by bar.",
+                            action: SurfaceAction(surface: .chords, title: PartLabel.title(of: version),
+                                                  bound: [version.id]))
+
+        case .melody, .lyric:
+            // No surface edits these yet. Saying nothing is the honest answer; their surfaces arrive
+            // with the rest of the catalog.
             return nil
         }
     }

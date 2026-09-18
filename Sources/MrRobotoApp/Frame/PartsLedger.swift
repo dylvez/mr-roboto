@@ -189,6 +189,8 @@ public enum LedgerGroups {
         ("Chops", PathStep.Kind.chop.glyph, PathStep.Kind.chop.symbol),
         ("Grooves", PathStep.Kind.groove.glyph, PathStep.Kind.groove.symbol),
         ("Kit", PathStep.Kind.kit.glyph, PathStep.Kind.kit.symbol),
+        ("Chords", "section", "music.note.list"),
+        ("Bass", "stem-bass", "waveform.path"),
         ("Written", "idea", "text.alignleft"),
     ]
 
@@ -199,7 +201,9 @@ public enum LedgerGroups {
         case .sample: return "Chops"
         case .groove: return "Grooves"
         case .sound: return "Kit"
-        case .progression, .melody, .lyric, .bassline: return "Written"
+        case .progression: return "Chords"
+        case .bassline: return "Bass"
+        case .melody, .lyric: return "Written"
         }
     }
 

@@ -295,8 +295,12 @@ struct DirectorDustToolboxTests {
         ("set_velocity", "886ae8216deef152f1773180aa0db83d6f2fdfae811715267e2db41998abc6d1"),
         ("audition", "9193a56ec875043aeaa9686fe15333b25b2e4e10301ac740822e91e0c0fb0dac"),
         ("create_part_version", "7c6cc618b2eea4d7eeb1bba7503086bc9ea84210ac3698116bdcdee71e42d67c"),
-        ("open_surface", "8e7931575a000b7b433d692157f6356ad3ba66d628173dac25f49d863073f035"),
-        ("propose", "ceaa8462993b5a89fdde231df1041344b0f4757fe3238d5fb7283e4b2b945f55"),
+        // Both of these enumerate `SurfaceKind.allCases` in their schema, so they changed bytes
+        // exactly once, on 2026-09-18, when M2 added Chords and the Piano roll to the catalog —
+        // the cached prefix moved once, as it did for degrade_part's prompt. A change here that
+        // is not a new surface is the accident this test exists to catch.
+        ("open_surface", "1d4d533f2fc97873156e721ae65235cd599fbbce5bcd7c4492f0f7d02a8436c8"),
+        ("propose", "fd37b004a2437c1dfc186716d8e825c365e92ac7fd01d580edddcec43d8f0c52"),
     ]
 
     static func digest(_ definition: ClaudeToolDefinition) throws -> String {
@@ -317,7 +321,7 @@ struct DirectorDustToolboxTests {
         let now = try full.tools.filter { $0.name != "degrade_part" }.map { ($0.name, try Self.digest($0.definition)) }
         #expect(now.map(\.0) == Self.before.map(\.0))
         for ((name, hash), (_, old)) in zip(now, Self.before) {
-            #expect(hash == old, "\(name)'s definition changed bytes")
+            #expect(hash == old, "\(name)'s definition changed bytes: now \(hash)")
         }
         // And the frame-free list is the framed one's prefix, degrade_part included.
         let bare = toolbox(stage: false)

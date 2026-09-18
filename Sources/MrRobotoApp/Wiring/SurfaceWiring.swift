@@ -34,6 +34,10 @@ final class SurfaceWiring {
     private var sounds: [SurfaceID: SoundSurface] = [:]
     private var soundAdapters: [SurfaceID: SoundAdapter] = [:]
     private var chops: [SurfaceID: ChopLaneBinding] = [:]
+    private var rolls: [SurfaceID: PianoRollModel] = [:]
+    private var bassAdapters: [SurfaceID: BassAdapter] = [:]
+    private var chordSheets: [SurfaceID: ChordsModel] = [:]
+    private var chordsAdapters: [SurfaceID: ChordsAdapter] = [:]
     // The two answer surfaces. What they draw is filed on `AppState` by whoever asked the question
     // (see `SurfaceAnswer`); what is kept here is the built model and the host it plays through,
     // for exactly as long as the bench holds the item — the same rule as the four above.
@@ -172,6 +176,70 @@ final class SurfaceWiring {
         return binding
     }
 
+    /// A Piano roll: on a bound bass line, editing it; on a bound groove, writing a new line under
+    /// it; on nothing, under the song's newest groove. The song's newest progression is the harmony
+    /// either way, and its newest kit sound says how long the kick rings.
+    func pianoRollModel(for item: BenchItem, app: AppState) -> PianoRollModel {
+        prune(app)
+        if let existing = rolls[item.id] { return existing }
+        let adapter = BassAdapter(app: app, service: service(for: app))
+        let song = app.song
+        let tempo = song?.tempo ?? 90
+        let signature = song?.timeSignature ?? .fourFour
+        let key = Guidance.analysis(in: song)?.dominantKey ?? song?.key ?? Key(tonic: NoteName(.c))
+        var basslineVersion: PartVersion?
+        var grooveVersion: PartVersion?
+        for id in app.bound(for: item.id) {
+            guard let version = app.version(id) else { continue }
+            switch version.kind {
+            case .bassline: basslineVersion = basslineVersion ?? version
+            case .groove: grooveVersion = grooveVersion ?? version
+            default: break
+            }
+        }
+        if grooveVersion == nil, let song { grooveVersion = Guidance.grooves(in: song).last }
+        var groove: Groove?
+        if let grooveVersion, case .groove(let g) = grooveVersion.kind { groove = g }
+        let chords = song.flatMap { Guidance.progressions(in: $0).last }.flatMap { version -> [ChordSpan]? in
+            if case .progression(let p) = version.kind { return p.spans }
+            return nil
+        } ?? []
+        let model = PianoRollModel(host: adapter, groove: groove, grooveVersion: grooveVersion?.id,
+                                   chords: chords, key: key, tempo: tempo, timeSignature: signature,
+                                   kickDecaySeconds: Self.kickDecay(in: song), bassline: basslineVersion,
+                                   surfaceID: item.id)
+        bassAdapters[item.id] = adapter
+        rolls[item.id] = model
+        return model
+    }
+
+    /// A lead sheet: on a bound progression, editing it; otherwise a new one in the song's key.
+    func chordsModel(for item: BenchItem, app: AppState) -> ChordsModel {
+        prune(app)
+        if let existing = chordSheets[item.id] { return existing }
+        let adapter = ChordsAdapter(app: app, service: service(for: app))
+        let song = app.song
+        let key = Guidance.analysis(in: song)?.dominantKey ?? song?.key ?? Key(tonic: NoteName(.c))
+        let bound = app.bound(for: item.id).compactMap { app.version($0) }.first { $0.type == .progression }
+        let model = ChordsModel(host: adapter, key: key, beatsPerBar: song?.timeSignature.beatsPerBar ?? 4,
+                                progression: bound, surfaceID: item.id)
+        chordsAdapters[item.id] = adapter
+        chordSheets[item.id] = model
+        return model
+    }
+
+    /// How long the song's kick rings, from its newest kit sound's decay, for the Bassist's R9.
+    /// 0 when the song has no kit sound: the 808's default kick is well under the 400 ms line.
+    static func kickDecay(in song: Song?) -> Double {
+        guard let song else { return 0 }
+        for version in song.versions.reversed() {
+            guard case .sound(let sound) = version.kind, let machine = SynthMachine.preset(id: sound.instrument),
+                  let kick = machine.voices.first(where: { $0.kind == .kick }) else { continue }
+            return kick.tone.decaySeconds(decay: kick.controls.decay)
+        }
+        return 0
+    }
+
     // MARK: Housekeeping
 
     /// Forget everything the bench no longer holds. Called on every lookup, which is at most three
@@ -185,6 +253,10 @@ final class SurfaceWiring {
         sounds = sounds.filter { open.contains($0.key) }
         soundAdapters = soundAdapters.filter { open.contains($0.key) }
         chops = chops.filter { open.contains($0.key) }
+        rolls = rolls.filter { open.contains($0.key) }
+        bassAdapters = bassAdapters.filter { open.contains($0.key) }
+        chordSheets = chordSheets.filter { open.contains($0.key) }
+        chordsAdapters = chordsAdapters.filter { open.contains($0.key) }
         compares = compares.filter { open.contains($0.key) }
         compareAdapters = compareAdapters.filter { open.contains($0.key) }
         checks = checks.filter { open.contains($0.key) }
@@ -194,7 +266,7 @@ final class SurfaceWiring {
     /// Whether anything is still held for this surface. For a test; the app never asks.
     func holds(_ id: SurfaceID) -> Bool {
         imports[id] != nil || grids[id] != nil || sounds[id] != nil || chops[id] != nil
-            || compares[id] != nil || checks[id] != nil
+            || rolls[id] != nil || chordSheets[id] != nil || compares[id] != nil || checks[id] != nil
     }
 
     /// The Chop lane this surface is drawing, when it has one. The only way a critic's marks reach

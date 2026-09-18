@@ -260,6 +260,11 @@ public struct Bassist: Persona {
             FeatureRange(.bassRegisterHigh, lineage: thundercat, 40, 67, typical: 55,
                          evidence: .cited([thundercatMixdown])),
 
+            FeatureRange(.bassChromaticApproachRate, lineage: jamerson, 0.4, 0.8, typical: 0.6,
+                         evidence: .inferred("Jamerson's chromatic approaches are the documented vocabulary both players cite; the rate is counted by ear")),
+            FeatureRange(.bassSyncopation, lineage: jamerson, 0.5, 0.8, typical: 0.6,
+                         evidence: .inferred("the syncopated-eighth vocabulary, counted by ear off \"What's Going On\"")),
+
             FeatureRange(.bassKickOffsetMS, lineage: programmed, 0, 0, typical: 0,
                          evidence: .cited([dracoSOS])),
             FeatureRange(.bassNoteLengthRatio, lineage: programmed, 0.8, 1, typical: 0.92,
@@ -503,7 +508,7 @@ public struct Bassist: Persona {
                        premise: "92 bpm, hats on the grid, kick on one and the and of two, Dm7 to G7",
                        passes: "median offset in [30, 65]; nothing past 90; ≥80% of note-offs within 15 ms of a beat; rest ≥30%; nothing above D3; at least one chromatic slide into G per four bars",
                        exercises: ["bassist.lag-budget", "bassist.lag-ceiling", "bassist.note-off", "bassist.density", "bassist.chromatic-approach"]),
-            GoldenTest("bassist.g2.lagging-drummer",
+            GoldenTest("bassist.g2.lagging-drummer-pushes-back",
                        premise: "the same, with every drum event 50 ms late",
                        passes: "no line is written; it asks for a straight reference, with the reason",
                        exercises: ["bassist.straight-reference"]),
@@ -635,9 +640,7 @@ public struct Bassist: Persona {
             return .defer_(to: .sampler, because: "That is the source and the chop.")
 
         case .outOfScope(let what):
-            return .refuse(rule: "bassist.refuse.pick-the-sample",
-                           because: "\(what) is not something a bass line decides.",
-                           counter: "Ask whoever owns it; I will say what the bass under it should do.")
+            return .defer_(to: .beatmaker, because: "\(what) is outside where the bass sits and what it plays.")
         }
     }
 

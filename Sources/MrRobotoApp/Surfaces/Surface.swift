@@ -44,6 +44,10 @@ public enum SurfaceKind: String, CaseIterable, Sendable {
     case chopLane = "Chop lane"
     case grid = "Grid"
     case sound = "Sound"
+    /// M2. The lead sheet (catalog #5): chord symbols over bars, as a `.progression` part.
+    case chords = "Chords"
+    /// M2. Catalog #7: a bass line's notes over the bar, with the groove's kicks under them.
+    case pianoRoll = "Piano roll"
 
     // The two answer surfaces. They are in the catalog because the Director has to be able to
     // *name* one — a question with alternatives gets a Compare, a question with one finding gets a
@@ -55,8 +59,9 @@ public enum SurfaceKind: String, CaseIterable, Sendable {
     /// One finding about one part, flagged and never silently fixed.
     case check = "Check"
 
-    /// The four the user drives themselves: the dock, ⌘1–⌘4, the Surfaces menu.
-    public static let gateA: [SurfaceKind] = [.importRecord, .chopLane, .grid, .sound]
+    /// The ones the user drives themselves: the dock, ⌘1–⌘6, the Surfaces menu. In workflow
+    /// order: a record, its chop, the groove, the chords, the bass under them, the sound.
+    public static let gateA: [SurfaceKind] = [.importRecord, .chopLane, .grid, .chords, .pianoRoll, .sound]
 
     /// The two the Director opens to answer with. You do not pick these off a shelf — a Compare
     /// with nothing to compare is not a surface, it is an empty promise — so they are deliberately

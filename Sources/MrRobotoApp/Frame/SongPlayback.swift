@@ -106,6 +106,10 @@ public struct SongPlayback: Equatable, Sendable {
     public var chop: ChopTrack?
     /// The drum machine the groove is played on: a `SynthMachine.id`.
     public var machine: String
+    /// The song's newest bass line, and the voice it plays through (`BassVoiceSpec.id`).
+    public var bassline: Bassline?
+    public var basslineVersion: VersionID?
+    public var bassSound: String?
     public var tracks: [Track]
     public var silence: Silence?
     /// Whether playback repeats. The frame's own loop flag, carried into the plan so the sources
@@ -141,7 +145,7 @@ public struct SongPlayback: Equatable, Sendable {
         return copy
     }
 
-    public var isPlayable: Bool { groove != nil || !tracks.isEmpty || chop != nil }
+    public var isPlayable: Bool { groove != nil || !tracks.isEmpty || chop != nil || bassline != nil }
 
     /// How many of the engine's player nodes the plan's dusty sources take: one for a bounced
     /// groove, one for a chop. The audio tracks get what is left.
@@ -194,6 +198,14 @@ public struct SongPlayback: Equatable, Sendable {
             plan.groove = groove
             plan.grooveVersion = version.id
             plan.grooveChain = groove.degradation
+        }
+
+        // The newest bass line, on its own sampler, alongside the groove.
+        if let version = Guidance.basslines(in: song).last, case .bassline(let bassline) = version.kind,
+           !bassline.notes.isEmpty {
+            plan.bassline = bassline
+            plan.basslineVersion = version.id
+            plan.bassSound = bassline.sound
         }
 
         // A dusty chop. Only the newest chop, and only when it has been dirtied: a clean chop is the

@@ -50,6 +50,7 @@ final class LiveSongPlayer: SongPlaybackHost {
 
     private var engine: Engine?
     private var groovePlayer: GroovePlayer?
+    private var bassPlayer: BasslinePlayer?
     private var tracks: [AudioTrackSource] = []
     /// Hits a dusty groove's bounce held, reported as scheduled: the bounce is the groove, so the
     /// reading must not say nothing was scheduled because no `GroovePlayer` was involved.
@@ -79,6 +80,16 @@ final class LiveSongPlayer: SongPlaybackHost {
             player.bars = plan.loops ? nil : plan.lengthInBars
             engine.add(player)
             groovePlayer = player
+        }
+
+        if let bassline = plan.bassline {
+            let voice = BassVoiceSpec.all.first { $0.id == plan.bassSound } ?? .finger
+            let sampler = try await service.playbackBassSampler(voice: voice)
+            let timeline = GrooveTimeline.tempo(clock.tempo, timeSignature: clock.timeSignature)
+            let player = BasslinePlayer(sampler: sampler, bassline: bassline, timeline: timeline)
+            player.bars = plan.loops ? nil : plan.lengthInBars
+            engine.add(player)
+            bassPlayer = player
         }
 
         for (index, track) in plan.tracks.enumerated() {
@@ -126,23 +137,26 @@ final class LiveSongPlayer: SongPlaybackHost {
             next += 1
         }
 
-        guard groovePlayer != nil || !tracks.isEmpty else { throw Failure.nothingScheduled }
+        guard groovePlayer != nil || bassPlayer != nil || !tracks.isEmpty else { throw Failure.nothingScheduled }
 
         // When only audio is playing and nothing loops, the plan has an end; a groove loops (or runs
         // to the song's length, which `GroovePlayer.endTime` already knows) so the reading below
         // asks it rather than guessing.
-        endsAt = plan.loops ? nil : Self.end(of: plan, groove: groovePlayer,
+        endsAt = plan.loops ? nil : Self.end(of: plan, groove: groovePlayer, bass: bassPlayer,
                                              longestTrack: tracks.map { $0.startsAt + $0.duration }.max())
     }
 
     func end() async {
         if let engine {
             if let groovePlayer { engine.remove(groovePlayer) }
+            if let bassPlayer { engine.remove(bassPlayer) }
             for track in tracks { engine.remove(track) }
         }
         groovePlayer?.transportWillStop()
+        bassPlayer?.transportWillStop()
         for track in tracks { track.transportWillStop() }
         groovePlayer = nil
+        bassPlayer = nil
         tracks = []
         bouncedHits = 0
         endsAt = nil
@@ -153,7 +167,7 @@ final class LiveSongPlayer: SongPlaybackHost {
         guard let engine, engine.isTransportRunning else { return .stopped }
         // Negative during the realtime lead time, when transport zero is still in the future.
         let seconds = max(0, engine.transportSeconds ?? 0)
-        let hits = (groovePlayer?.scheduledHitCount ?? 0) + bouncedHits
+        let hits = (groovePlayer?.scheduledHitCount ?? 0) + (bassPlayer?.scheduledHitCount ?? 0) + bouncedHits
         if let endsAt, seconds >= endsAt {
             return PlaybackReading(isRunning: false, seconds: endsAt, scheduledHits: hits)
         }
@@ -162,11 +176,19 @@ final class LiveSongPlayer: SongPlaybackHost {
 
     // MARK: Internals
 
-    private static func end(of plan: SongPlayback, groove: GroovePlayer?, longestTrack: Double?) -> Double? {
+    private static func end(of plan: SongPlayback, groove: GroovePlayer?, bass: BasslinePlayer?,
+                            longestTrack: Double?) -> Double? {
         let audio = [plan.audioDuration, longestTrack].compactMap { $0 }.max()
-        guard let groove else { return audio }
-        guard let grooveEnd = groove.endTime else { return nil }
-        return max(grooveEnd, audio ?? 0)
+        var end = audio
+        if let groove {
+            guard let grooveEnd = groove.endTime else { return nil }
+            end = max(grooveEnd, end ?? 0)
+        }
+        if let bass {
+            guard let bassEnd = bass.endTime else { return nil }
+            end = max(bassEnd, end ?? 0)
+        }
+        return end
     }
 
     // MARK: The dusty sources

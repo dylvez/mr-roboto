@@ -50,7 +50,7 @@ struct WorkPathTests {
     func afterImport() throws {
         let built = GuidanceFixture.imported()
         let steps = WorkPath.steps(for: built.song, active: nil, canPerform: PathFixture.always).steps
-        #expect(steps.map(\.kind) == [.record, .stems, .chop, .groove, .dust, .arrange])
+        #expect(steps.map(\.kind) == [.record, .stems, .chop, .groove, .chords, .bass, .dust, .arrange])
         #expect(PathFixture.step(.record, steps)?.isDone == true)
         let stems = try #require(PathFixture.step(.stems, steps))
         #expect(stems.isNext)
@@ -77,10 +77,18 @@ struct WorkPathTests {
         #expect(groove.action == SurfaceAction(surface: .chopLane, title: PartLabel.title(of: chopped.sample!),
                                                bound: [chopped.sample!.id]))
 
+        // With a groove, the bass is next — written under it — and chords, being optional, never are.
         let grooved = GuidanceFixture.grooved()
         steps = WorkPath.steps(for: grooved.song, active: nil, canPerform: PathFixture.always).steps
+        let bass = try #require(PathFixture.step(.bass, steps))
+        #expect(bass.isNext)
+        #expect(bass.action?.surface == .pianoRoll)
+        #expect(bass.action?.bound == [grooved.groove!.id])
+        let chords = try #require(PathFixture.step(.chords, steps))
+        #expect(!chords.isNext)
+        #expect(chords.action?.surface == .chords, "optional, but still pressable")
         let dust = try #require(PathFixture.step(.dust, steps))
-        #expect(dust.isNext)
+        #expect(!dust.isNext)
         #expect(dust.action?.surface == .sound)
         #expect(dust.action?.bound == [grooved.groove!.id], "dust goes on the groove before the chop")
     }
@@ -113,7 +121,7 @@ struct WorkPathTests {
         let beat = try PathFixture.beat()
         #expect(lit(.sound, [], in: beat) == [.kit])
         #expect(WorkPath.steps(for: beat, active: nil, canPerform: PathFixture.always).steps.map(\.kind)
-                == [.groove, .kit, .dust, .arrange])
+                == [.groove, .chords, .bass, .kit, .dust, .arrange])
     }
 
     @Test("a step the frame could not carry out offers nothing and is not next")
@@ -187,10 +195,12 @@ struct LedgerGroupTests {
     @Test("parts sit under the path's stage names, in path order")
     func stages() {
         let groups = LedgerGroups.groups(for: GuidanceFixture.everyKind().song)
-        #expect(groups.map(\.title) == ["Record", "Stems", "Chops", "Grooves", "Kit", "Written"])
+        #expect(groups.map(\.title) == ["Record", "Stems", "Chops", "Grooves", "Kit", "Chords", "Bass", "Written"])
         #expect(groups.first { $0.title == "Record" }?.parts.count == 2, "the take and its analysis")
         #expect(groups.first { $0.title == "Stems" }?.parts.count == 4)
-        #expect(groups.first { $0.title == "Written" }?.parts.count == 4)
+        #expect(groups.first { $0.title == "Chords" }?.parts.count == 1)
+        #expect(groups.first { $0.title == "Bass" }?.parts.count == 1)
+        #expect(groups.first { $0.title == "Written" }?.parts.count == 2, "melody and lyric, which no surface edits yet")
     }
 
     @Test("a chop and its dusty version are one row with two versions, each named for what it is")

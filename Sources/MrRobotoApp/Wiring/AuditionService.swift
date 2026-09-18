@@ -50,6 +50,11 @@ public final class AuditionService {
     private var engine: Engine?
     private var sampler: VoiceSampler?
     private var samplerNodeAttached = false
+    /// The bass has a sampler of its own: a sampler holds one kit, and the bass line and the drums
+    /// play at once. Built on first use and kept, with its own node on the same mixer.
+    private var bassSampler: VoiceSampler?
+    private var bassSamplerNodeAttached = false
+    public private(set) var currentBassID: String?
     private var player: AVAudioPlayerNode?
 
     /// Which kit the one sampler is currently holding. Surfaces share the sampler, so a Grid step
@@ -287,11 +292,64 @@ public final class AuditionService {
         return sampler
     }
 
+    // MARK: The bass
+
+    /// The bass sampler, holding `voice`'s kit — built into the kits directory the first time,
+    /// loaded from there after. A voice already loaded costs nothing.
+    public func prepare(bass voice: BassVoiceSpec) async throws {
+        let engine = try await liveEngine()
+        guard currentBassID != voice.id else { return }
+        let folder = kitsDirectory.appendingPathComponent(SynthesizedBass.folderName(for: voice), isDirectory: true)
+        let loaded: LoadedKit
+        if let existing = try? KitStore.load(from: folder) {
+            loaded = existing
+        } else {
+            loaded = try SynthesizedBass.build(voice, in: folder, sampleRate: engine.format.sampleRate)
+        }
+        let format = engine.format
+        let sampler = bassSampler ?? VoiceSampler(cache: cache)
+        bassSampler = sampler
+        if sampler.kit != nil { sampler.unprepare() }
+        try sampler.prepare(loaded, sampleRate: format.sampleRate, channels: Int(format.channelCount))
+        if !bassSamplerNodeAttached, let node = sampler.node {
+            engine.avEngine.attach(node)
+            try engine.avEngine.connectNode(node, to: engine.mainMixer, format: format)
+            bassSamplerNodeAttached = true
+        }
+        currentBassID = voice.id
+    }
+
+    /// The bass sampler for the transport, holding `voice`'s kit.
+    public func playbackBassSampler(voice: BassVoiceSpec) async throws -> VoiceSampler {
+        try await prepare(bass: voice)
+        guard let bassSampler else { throw AuditionUnavailable(what: "the bass sampler was not prepared") }
+        return bassSampler
+    }
+
+    /// Play bass hits now, on whichever bass voice is loaded. `Hit.time` is seconds from this instant.
+    public func playBass(_ hits: [VoiceSampler.Hit]) async {
+        guard !hits.isEmpty else { return }
+        guard let bassSampler, bassSampler.kit != nil else {
+            lastFailure = "no bass is prepared to play"
+            return
+        }
+        do {
+            let engine = try await running()
+            let now = renderPosition(on: engine, node: bassSampler.node)
+            bassSampler.transportDidStart(originSampleTime: now, sampleRate: engine.format.sampleRate)
+            _ = try bassSampler.play(hits)
+            lastFailure = nil
+        } catch {
+            lastFailure = "\(error)"
+        }
+    }
+
     // MARK: Stopping
 
     /// Silence everything this service is playing. Never throws: stopping is always allowed.
     public func stop() async {
         sampler?.allNotesOff()
+        bassSampler?.allNotesOff()
         player?.stop()
     }
 
@@ -302,13 +360,18 @@ public final class AuditionService {
         await stop()
         if let engine {
             if samplerNodeAttached, let node = sampler?.node { engine.avEngine.detach(node) }
+            if bassSamplerNodeAttached, let node = bassSampler?.node { engine.avEngine.detach(node) }
             if let player { engine.avEngine.detach(player) }
         }
         samplerNodeAttached = false
+        bassSamplerNodeAttached = false
         player = nil
         sampler?.unprepare()
         sampler = nil
+        bassSampler?.unprepare()
+        bassSampler = nil
         currentKitID = nil
+        currentBassID = nil
         engine = nil
     }
 
@@ -371,16 +434,17 @@ public final class AuditionService {
     /// Anchor the sampler's clock at the current render position, so hit times are seconds from now.
     private func anchorNow(on engine: Engine) {
         guard let sampler else { return }
-        let now: Int64
-        if engine.mode.isOffline {
-            now = Int64(engine.manualRenderingSampleTime)
-        } else if let anchor = sampler.node?.lastRenderTime ?? engine.mainMixer.lastRenderTime,
-                  anchor.isSampleTimeValid {
-            now = Int64(anchor.sampleTime)
-        } else {
-            now = 0
+        sampler.transportDidStart(originSampleTime: renderPosition(on: engine, node: sampler.node),
+                                  sampleRate: engine.format.sampleRate)
+    }
+
+    /// The current render position, in sample time, from a node's clock or the mixer's.
+    private func renderPosition(on engine: Engine, node: AVAudioNode?) -> Int64 {
+        if engine.mode.isOffline { return Int64(engine.manualRenderingSampleTime) }
+        if let anchor = node?.lastRenderTime ?? engine.mainMixer.lastRenderTime, anchor.isSampleTimeValid {
+            return Int64(anchor.sampleTime)
         }
-        sampler.transportDidStart(originSampleTime: now, sampleRate: engine.format.sampleRate)
+        return 0
     }
 
     /// Planar floats at one rate, as a buffer in the graph's format.

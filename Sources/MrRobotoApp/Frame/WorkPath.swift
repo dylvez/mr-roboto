@@ -41,8 +41,8 @@ public enum WorkPath: String, Sendable, Equatable {
 
     public var steps: [PathStep.Kind] {
         switch self {
-        case .flip: return [.record, .stems, .chop, .groove, .dust, .arrange]
-        case .beat: return [.groove, .kit, .dust, .arrange]
+        case .flip: return [.record, .stems, .chop, .groove, .chords, .bass, .dust, .arrange]
+        case .beat: return [.groove, .chords, .bass, .kit, .dust, .arrange]
         }
     }
 
@@ -60,7 +60,12 @@ public enum WorkPath: String, Sendable, Equatable {
 public struct PathStep: Identifiable, Sendable, Equatable {
 
     public enum Kind: String, Sendable, Equatable, CaseIterable {
-        case record, stems, chop, groove, kit, dust, arrange
+        case record, stems, chop, groove, chords, bass, kit, dust, arrange
+
+        /// A step the path passes through without insisting on: it is never "next". The chords are
+        /// this — the bass writes to the key when none are stated — so the path does not stall on
+        /// a lead sheet nobody needs yet.
+        public var isOptional: Bool { self == .chords }
 
         /// The idiom's own word, as the ledger groups and the field guide use it.
         public var title: String {
@@ -69,6 +74,8 @@ public struct PathStep: Identifiable, Sendable, Equatable {
             case .stems: return "Stems"
             case .chop: return "Chop"
             case .groove: return "Groove"
+            case .chords: return "Chords"
+            case .bass: return "Bass"
             case .kit: return "Kit"
             case .dust: return "Dust"
             case .arrange: return "Arrange"
@@ -82,6 +89,8 @@ public struct PathStep: Identifiable, Sendable, Equatable {
             case .stems: return "stems"
             case .chop: return "chop"
             case .groove: return "groove"
+            case .chords: return "section"
+            case .bass: return "stem-bass"
             case .kit: return "sound"
             case .dust: return "dust"
             case .arrange: return "section"
@@ -95,6 +104,8 @@ public struct PathStep: Identifiable, Sendable, Equatable {
             case .stems: return "square.3.layers.3d"
             case .chop: return "scissors"
             case .groove: return "square.grid.4x3.fill"
+            case .chords: return "music.note.list"
+            case .bass: return "waveform.path"
             case .kit: return "dial.medium"
             case .dust: return "waveform.path.badge.minus"
             case .arrange: return "rectangle.split.3x1"
@@ -108,6 +119,8 @@ public struct PathStep: Identifiable, Sendable, Equatable {
             case .stems: return "The record split into drums, bass, vocals and other."
             case .chop: return "A bar cut from a stem, sliced on its hits, playable on pads."
             case .groove: return "Steps, swing and ghosts for each drum voice, on a feel."
+            case .chords: return "The progression, as a lead sheet says it. Optional: with none, the bass is written to the key."
+            case .bass: return "A bass line under the groove, in a named player's hands, read by the Bassist."
             case .kit: return "The drum sounds a groove plays: synthesized 808, 909 and Linn voices."
             case .dust: return "A chop or groove played through a machine (SP-1200, MPC60, tape, vinyl, radio)."
             case .arrange: return "Parts stitched into sections, and sections into a song."
@@ -156,7 +169,7 @@ extension WorkPath {
             let count = self.count(kind, in: song)
             let later = self.later(kind, in: song)
             let action = later == nil ? self.action(kind, in: song).flatMap { canPerform($0) ? $0 : nil } : nil
-            let isNext = !nextTaken && count == 0 && later == nil && action != nil
+            let isNext = !nextTaken && count == 0 && later == nil && action != nil && !kind.isOptional
             if isNext { nextTaken = true }
             steps.append(PathStep(kind: kind, count: count, isHere: kind == here, isNext: isNext,
                                   later: later, action: action))
@@ -172,6 +185,8 @@ extension WorkPath {
         case .importRecord: return .record
         case .chopLane: return .chop
         case .grid: return .groove
+        case .chords: return .chords
+        case .pianoRoll: return .bass
         case .sound:
             let carries = bound.compactMap { song.version($0) }.contains { $0.kind.canCarryDegradation }
             if carries { return .dust }
@@ -190,6 +205,8 @@ extension WorkPath {
         case .chop: return parts(Guidance.samples(in: song))
         case .groove: return parts(Guidance.grooves(in: song))
         case .kit: return parts(Guidance.sounds(in: song))
+        case .chords: return parts(Guidance.progressions(in: song))
+        case .bass: return parts(Guidance.basslines(in: song))
         case .dust: return parts(song.versions.filter { !$0.kind.degradation.isEmpty })
         case .arrange: return song.sections.count
         }
@@ -243,6 +260,22 @@ extension WorkPath {
                 return SurfaceAction(surface: .chopLane, title: PartLabel.title(of: chop), bound: [chop.id])
             }
             return SurfaceAction(surface: .grid, title: "New groove")
+
+        case .chords:
+            if let progression = Guidance.progressions(in: song).last {
+                return SurfaceAction(surface: .chords, title: PartLabel.title(of: progression), bound: [progression.id])
+            }
+            return SurfaceAction(surface: .chords, title: "Chords")
+
+        case .bass:
+            if let line = Guidance.basslines(in: song).last {
+                return SurfaceAction(surface: .pianoRoll, title: PartLabel.title(of: line), bound: [line.id])
+            }
+            // A new line is written under a groove; with none there is nothing to sit under.
+            if let groove = Guidance.grooves(in: song).last {
+                return SurfaceAction(surface: .pianoRoll, title: "Bass under \(PartLabel.title(of: groove))", bound: [groove.id])
+            }
+            return nil
 
         case .kit:
             if let sound = Guidance.sounds(in: song).last {

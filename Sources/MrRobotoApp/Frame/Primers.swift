@@ -32,6 +32,14 @@ public enum Primer {
             return ("Sound",
                     "Two jobs. On a chop or a groove, it adds dust — a machine at a mix, kept as a new version "
                         + "with the clean one a step back. On a kit sound, it shapes the synthesized voice.")
+        case .chords:
+            return ("Chords",
+                    "A progression, typed the way a lead sheet says it: Dm7 G7 | Cmaj7. Bars are separated by |. "
+                        + "Click a bar to hear it; keep it and the bass writer reads it. With none, the bass is written to the key.")
+        case .pianoRoll:
+            return ("Piano roll",
+                    "A bass line over the bar, with the groove's kicks drawn under it so the lag is visible. The levers "
+                        + "re-run the writer in a named player's hands; drag a note to move it. The Bassist reads the result below.")
         case .compare:
             return ("Compare",
                     "The band's candidates, each judged against the thing at the top that it has to beat. "

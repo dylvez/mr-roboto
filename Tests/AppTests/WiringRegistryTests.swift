@@ -13,12 +13,12 @@ import Testing
 @Suite("Wiring: registration", .serialized) @MainActor
 struct WiringRegistryTests {
 
-    @Test("registerGateASurfaces registers exactly the four Gate A kinds")
+    @Test("registerGateASurfaces registers exactly the kinds you drive yourself")
     func registersFourKinds() {
         SurfaceRegistry.registerGateASurfaces()
         let registry = SurfaceRegistry.shared
-        #expect(registry.registeredKinds == SurfaceKind.gateA)
-        #expect(registry.registeredKinds.count == 4)
+        #expect(Set(registry.registeredKinds) == Set(SurfaceKind.gateA))
+        #expect(registry.registeredKinds.count == 6, "the Gate A four plus M2's Chords and Piano roll")
         for kind in SurfaceKind.gateA {
             #expect(registry.hasBuilder(for: kind), "\(kind.rawValue) has no builder")
         }

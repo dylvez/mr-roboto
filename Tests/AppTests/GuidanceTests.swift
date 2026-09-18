@@ -380,10 +380,10 @@ struct GuidanceLedgerTests {
         .sample: .chopLane,
         .groove: .grid,
         .sound: .sound,
-        .progression: nil,
+        .progression: .chords,
         .melody: nil,
         .lyric: nil,
-        .bassline: nil,
+        .bassline: .pianoRoll,
     ]
 
     @Test("every PartKind has an answer, and it is the right surface")
@@ -479,7 +479,7 @@ struct GuidanceLedgerTests {
     @Test("a part Gate A cannot edit offers nothing rather than a button that opens nothing")
     func inertKindsSayNothing() {
         let built = GuidanceFixture.everyKind()
-        for version in built.song.versions where [.melody, .lyric, .progression, .bassline].contains(version.type) {
+        for version in built.song.versions where [.melody, .lyric].contains(version.type) {
             #expect(PartActions.primary(for: version, in: built.song) == nil)
         }
     }
@@ -522,6 +522,8 @@ struct GuidanceDockTests {
             .chopLane: [built.sample!.id],
             .grid: [built.groove!.id],
             .sound: [built.sound!.id],
+            .chords: [built.song.versions.first { $0.type == .progression }!.id],
+            .pianoRoll: [built.song.versions.first { $0.type == .bassline }!.id],
         ]
         for kind in SurfaceKind.gateA {
             let action = Guidance.dockAction(for: kind, in: app.song)

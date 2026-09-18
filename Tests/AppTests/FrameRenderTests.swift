@@ -76,6 +76,18 @@ struct FrameRenderTests {
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-sound")
     }
 
+    @Test("the Piano roll and the Chords surfaces on the bench")
+    func m2Surfaces() throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        let built = GuidanceFixture.grooved()
+        let app = app(built.song)
+        app.perform(SurfaceAction(surface: .pianoRoll, title: "Bass under Motown, 120", bound: [built.groove!.id]))
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-roll")
+        app.perform(SurfaceAction(surface: .chords, title: "Chords"))
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-chords")
+    }
+
     @Test("first launch: nothing open")
     func firstLaunch() throws {
         FontRegistration.registerBundledFonts()

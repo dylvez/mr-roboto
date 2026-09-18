@@ -41,6 +41,8 @@ extension SurfaceKind {
         case .chopLane: return [.sample, .audio]
         case .grid: return [.groove]
         case .sound: return [.sound, .sample, .groove]
+        case .chords: return [.progression]
+        case .pianoRoll: return [.bassline, .groove]
         case .compare, .check: return Set(PartType.allCases)
         }
     }
@@ -397,7 +399,7 @@ public struct DirectorSurfaceChoice: Sendable, Equatable, Hashable, Identifiable
         switch surface {
         case .compare: return "a reference and two to four candidates"
         case .check: return "one part and one finding"
-        case .importRecord, .chopLane, .grid, .sound: return "part versions, and no reference"
+        case .importRecord, .chopLane, .grid, .sound, .chords, .pianoRoll: return "part versions, and no reference"
         }
     }
 

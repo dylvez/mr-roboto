@@ -67,6 +67,12 @@ public final class SurfaceRegistry {
             let (surface, adapter) = SurfaceWiring.shared.soundSurface(for: item, app: app)
             SoundSurfacePanel(surface: surface, hasSelection: adapter.selectedPart != nil, app: app)
         }
+        registry.register(.chords) { item, app in
+            ChordsSurfaceView(model: SurfaceWiring.shared.chordsModel(for: item, app: app))
+        }
+        registry.register(.pianoRoll) { item, app in
+            PianoRollSurfaceView(model: SurfaceWiring.shared.pianoRollModel(for: item, app: app))
+        }
     }
 
     /// The two the Director answers with.

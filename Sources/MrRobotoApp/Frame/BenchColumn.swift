@@ -82,13 +82,11 @@ struct SurfaceDock: View {
     var body: some View {
         HStack(spacing: 8) {
             SmallLabel("Surfaces")
-            ForEach(Array(SurfaceKind.gateA.enumerated()), id: \.element) { index, kind in
-                DockChip(kind: kind,
-                         shortcut: "⌘\(index + 1)",
-                         isOpen: app.bench.items.contains { $0.kind == kind },
-                         isActive: app.bench.active?.kind == kind) {
-                    app.showSurface(kind)
-                }
+            // Six chips with their shortcuts when the bench is wide enough; without the shortcuts
+            // (they are still in the tooltips and the Surfaces menu) when it is not.
+            ViewThatFits(in: .horizontal) {
+                chips(compact: false)
+                chips(compact: true)
             }
             Spacer(minLength: 8)
             if let proposal = app.dockProposal {
@@ -104,11 +102,26 @@ struct SurfaceDock: View {
         .frame(height: FrameLayout.dockHeight)
         .background(Design.Palette.paper)
     }
+
+    private func chips(compact: Bool) -> some View {
+        HStack(spacing: 8) {
+            ForEach(Array(SurfaceKind.gateA.enumerated()), id: \.element) { index, kind in
+                DockChip(kind: kind,
+                         shortcut: "⌘\(index + 1)",
+                         compact: compact,
+                         isOpen: app.bench.items.contains { $0.kind == kind },
+                         isActive: app.bench.active?.kind == kind) {
+                    app.showSurface(kind)
+                }
+            }
+        }
+    }
 }
 
 private struct DockChip: View {
     let kind: SurfaceKind
     let shortcut: String
+    var compact = false
     let isOpen: Bool
     let isActive: Bool
     let action: () -> Void
@@ -119,9 +132,13 @@ private struct DockChip: View {
                 Glyph(name: kind.glyph.name, symbol: kind.glyph.symbol, size: 13)
                 Text(kind.rawValue)
                     .font(Design.Typography.ui(12.5, weight: isActive ? .semibold : .medium))
-                Text(shortcut)
-                    .font(Design.Typography.numeric(10))
-                    .foregroundStyle(isActive ? Design.Palette.accent : Design.Palette.inkTertiary)
+                    .lineLimit(1)
+                    .fixedSize()
+                if !compact {
+                    Text(shortcut)
+                        .font(Design.Typography.numeric(10))
+                        .foregroundStyle(isActive ? Design.Palette.accent : Design.Palette.inkTertiary)
+                }
             }
             .foregroundStyle(isActive ? Design.Palette.accent : Design.Palette.ink)
             .padding(.horizontal, 10)

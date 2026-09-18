@@ -19,6 +19,8 @@ struct SurfaceBand: View {
             case .chopLane: chop(context, size, ink)
             case .grid: grid(context, size)
             case .sound: sound(context, size, ink)
+            case .chords: chords(context, size, ink)
+            case .pianoRoll: roll(context, size, ink)
             case .compare: compare(context, size, ink)
             case .check: check(context, size, ink)
             }
@@ -136,6 +138,43 @@ struct SurfaceBand: View {
             trace.addLine(to: CGPoint(x: tx, y: up ? base - 5 : base))
         }
         context.stroke(trace, with: .color(ink), lineWidth: 1)
+    }
+
+    /// Bar brackets with a chord's worth of stacked dots in each.
+    private func chords(_ context: GraphicsContext, _ size: CGSize, _ ink: Color) {
+        var path = Path()
+        let barWidth: CGFloat = 56
+        var x: CGFloat = 0
+        var index = 0
+        while x < size.width {
+            path.move(to: CGPoint(x: x, y: 4)); path.addLine(to: CGPoint(x: x, y: size.height - 4))
+            for (i, dy) in [0, 5, 10, 14].enumerated() where i < 3 + index % 2 {
+                let dot = CGRect(x: x + 10 + CGFloat(i) * 2, y: size.height - 8 - CGFloat(dy), width: 4, height: 3)
+                context.fill(Path(ellipseIn: dot), with: .color(ink))
+            }
+            x += barWidth
+            index += 1
+        }
+        context.stroke(path, with: .color(ink), lineWidth: 1)
+    }
+
+    /// Note bars at bass pitches, a kick tick under each beat.
+    private func roll(_ context: GraphicsContext, _ size: CGSize, _ ink: Color) {
+        let beat: CGFloat = 28
+        var x: CGFloat = 2
+        var index = 0
+        let heights: [CGFloat] = [0.55, 0.35, 0.45, 0.6, 0.3, 0.5, 0.4]
+        while x < size.width {
+            let h = heights[index % heights.count]
+            let width = index % 3 == 2 ? beat * 0.45 : beat * 0.85
+            let rect = CGRect(x: x + 3, y: size.height * (1 - h) - 8, width: width, height: 4)
+            context.fill(Path(roundedRect: rect, cornerRadius: 1.5), with: .color(Design.Palette.accent.opacity(0.45)))
+            if index % 2 == 0 {
+                context.fill(Path(CGRect(x: x + 1, y: size.height - 6, width: 2, height: 5)), with: .color(ink))
+            }
+            x += beat
+            index += 1
+        }
     }
 
     private func compare(_ context: GraphicsContext, _ size: CGSize, _ ink: Color) {

@@ -278,8 +278,8 @@ struct PersonaCastTests {
     @Test("The cast routes a proposal to whoever owns it, and to nobody when nobody does")
     func theCastRoutes() {
         let cast = Cast.standard
-        #expect(cast.personas.count == 2)
-        #expect(cast.bibles.map(\.id) == [.beatmaker, .sampler])
+        #expect(cast.personas.count == 3)
+        #expect(cast.bibles.map(\.id) == [.beatmaker, .sampler, .bassist])
 
         #expect(cast.owner(of: .setSwing(percent: 56, idiom: "lo-fi", tempo: 90)) == .beatmaker)
         #expect(cast.owner(of: .moveCutLate(milliseconds: 9)) == .sampler)
@@ -294,7 +294,8 @@ struct PersonaCastTests {
         #expect(cast.objections(to: .leaveAlone(sourceBandwidthHz: 18_000)).isEmpty)
 
         // And asking always gets an answer from everybody.
-        #expect(cast.ask(.quantiseHard(idiom: "lo-fi")).count == 2)
+        #expect(cast.ask(.quantiseHard(idiom: "lo-fi")).count == 3)
+        #expect(cast.owner(of: .pushBassAhead(milliseconds: 30, alternating: false)) == .bassist)
     }
 
     @Test("Every finding a shipped critic can make belongs to a persona in the cast")
