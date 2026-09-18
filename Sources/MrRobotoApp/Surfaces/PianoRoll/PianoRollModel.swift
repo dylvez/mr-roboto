@@ -135,7 +135,7 @@ public final class PianoRollModel {
 
     // MARK: Reading
 
-    public var bassline: Bassline { Bassline(notes: notes, sound: sound) }
+    public var bassline: Bassline { Bassline(notes: notes, sound: sound, key: key) }
 
     public var beatsPerBar: Int { max(1, timeSignature.beatsPerBar) }
     public var bars: Int { max(1, groove?.bars ?? Int((bassline.lengthInBeats / Double(beatsPerBar)).rounded(.up))) }

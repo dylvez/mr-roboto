@@ -23,6 +23,7 @@ struct SurfaceBand: View {
             case .pianoRoll: roll(context, size, ink)
             case .structure: structure(context, size, ink)
             case .album: album(context, size, ink)
+            case .merge: merge(context, size, ink)
             case .compare: compare(context, size, ink)
             case .check: check(context, size, ink)
             }
@@ -158,6 +159,22 @@ struct SurfaceBand: View {
             index += 1
         }
         context.stroke(path, with: .color(ink), lineWidth: 1)
+    }
+
+    /// Two lines converging on one: the merge.
+    private func merge(_ context: GraphicsContext, _ size: CGSize, _ ink: Color) {
+        let mid = size.height / 2
+        var upper = Path(), lower = Path(), joined = Path()
+        var x: CGFloat = 0
+        while x < size.width {
+            upper.move(to: CGPoint(x: x, y: 4)); upper.addLine(to: CGPoint(x: x + 36, y: mid))
+            lower.move(to: CGPoint(x: x, y: size.height - 4)); lower.addLine(to: CGPoint(x: x + 36, y: mid))
+            joined.move(to: CGPoint(x: x + 36, y: mid)); joined.addLine(to: CGPoint(x: x + 64, y: mid))
+            x += 72
+        }
+        context.stroke(upper, with: .color(ink), lineWidth: 1)
+        context.stroke(lower, with: .color(ink), lineWidth: 1)
+        context.stroke(joined, with: .color(Design.Palette.accent.opacity(0.7)), lineWidth: 2)
     }
 
     /// Tracks: numbered ticks of unequal length, like the back of a sleeve.

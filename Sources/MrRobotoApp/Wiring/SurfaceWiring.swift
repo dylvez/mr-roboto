@@ -39,6 +39,7 @@ final class SurfaceWiring {
     private var chordSheets: [SurfaceID: ChordsModel] = [:]
     private var chordsAdapters: [SurfaceID: ChordsAdapter] = [:]
     private var structures: [SurfaceID: StructureModel] = [:]
+    private var merges: [SurfaceID: MergeModel] = [:]
     // The two answer surfaces. What they draw is filed on `AppState` by whoever asked the question
     // (see `SurfaceAnswer`); what is kept here is the built model and the host it plays through,
     // for exactly as long as the bench holds the item — the same rule as the four above.
@@ -244,6 +245,18 @@ final class SurfaceWiring {
         return model
     }
 
+    /// A merge of the two bound versions, planned against the open song's key and tempo.
+    func mergeModel(for item: BenchItem, app: AppState) -> MergeModel {
+        prune(app)
+        if let existing = merges[item.id] { return existing }
+        let adapter = MergeAdapter(app: app, service: service(for: app))
+        let bound = app.bound(for: item.id).compactMap { app.version($0) }
+        let model = MergeModel(host: adapter, a: bound.first, b: bound.dropFirst().first,
+                               song: app.song, library: app.library, surfaceID: item.id)
+        merges[item.id] = model
+        return model
+    }
+
     /// How long the song's kick rings, from its newest kit sound's decay, for the Bassist's R9.
     /// 0 when the song has no kit sound: the 808's default kick is well under the 400 ms line.
     nonisolated static func kickDecay(in song: Song?) -> Double {
@@ -274,6 +287,7 @@ final class SurfaceWiring {
         chordSheets = chordSheets.filter { open.contains($0.key) }
         chordsAdapters = chordsAdapters.filter { open.contains($0.key) }
         structures = structures.filter { open.contains($0.key) }
+        merges = merges.filter { open.contains($0.key) }
         compares = compares.filter { open.contains($0.key) }
         compareAdapters = compareAdapters.filter { open.contains($0.key) }
         checks = checks.filter { open.contains($0.key) }
@@ -283,7 +297,7 @@ final class SurfaceWiring {
     /// Whether anything is still held for this surface. For a test; the app never asks.
     func holds(_ id: SurfaceID) -> Bool {
         imports[id] != nil || grids[id] != nil || sounds[id] != nil || chops[id] != nil
-            || rolls[id] != nil || chordSheets[id] != nil || structures[id] != nil || compares[id] != nil || checks[id] != nil
+            || rolls[id] != nil || chordSheets[id] != nil || structures[id] != nil || merges[id] != nil || compares[id] != nil || checks[id] != nil
     }
 
     /// The Chop lane this surface is drawing, when it has one. The only way a critic's marks reach

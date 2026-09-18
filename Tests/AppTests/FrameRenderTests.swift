@@ -125,6 +125,16 @@ struct FrameRenderTests {
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-library")
     }
 
+    @Test("the Merge surface on a chop and a bass line in different keys")
+    func merge() throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        let built = try MergeFixture.build("render")
+        defer { try? FileManager.default.removeItem(at: built.directory) }
+        built.app.perform(SurfaceAction(surface: .merge, title: "Horns + Bass line", bound: [built.sample.id, built.bass.id]))
+        try write(FrameView(app: built.app), size: CGSize(width: 1440, height: 900), name: "frame-merge")
+    }
+
     @Test("first launch: nothing open")
     func firstLaunch() throws {
         FontRegistration.registerBundledFonts()

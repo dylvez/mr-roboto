@@ -128,6 +128,7 @@ extension SurfaceKind {
         case .pianoRoll: return ("stem-bass", "waveform.path")
         case .structure: return ("section", "rectangle.split.3x1")
         case .album: return ("album", "square.stack")
+        case .merge: return ("merge", "arrow.triangle.merge")
         case .compare: return ("compare", "chart.bar")
         case .check: return ("check", "checkmark.magnifyingglass")
         }

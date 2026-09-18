@@ -67,6 +67,9 @@ public enum Operation {
     /// A version brought into a song from the library — an idea, a sample, a record's take — as a
     /// new part with no parents here. Its note names where it came from.
     public static let adopted = "adopted"
+    /// A fragment moved to sit with another: pitch-shifted and stretched audio, or a written part
+    /// transposed by arithmetic. Its note is the plan's sentence; its parent is what it moved.
+    public static let merge = "merge"
     /// Filled in by the schema 1 → 2 migration for versions that predate provenance operations.
     public static let unknown = "unknown"
 }

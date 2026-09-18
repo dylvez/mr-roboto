@@ -606,7 +606,8 @@ public final class ImportModel {
                             slices: slices,
                             rootPitch: nil,
                             detectedTempo: analysis.dominantTempo,
-                            sourceRecord: draft.record.id)
+                            sourceRecord: draft.record.id,
+                            key: analysis.key(at: range.start))
 
         let label = name ?? defaultRegionName(for: range)
         let citation = provenance.citation

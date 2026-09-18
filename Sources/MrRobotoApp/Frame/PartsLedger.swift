@@ -114,6 +114,20 @@ struct PartsLedger: View {
                     Button("Save to Samples") { app.saveToSamples(version.id) }
                         .disabled(app.store == nil)
                 }
+                if let song = app.song, MergeModel.canMerge(version) {
+                    let partners = MergeModel.partners(for: version, in: song)
+                    if !partners.isEmpty {
+                        Menu("Merge with…") {
+                            ForEach(partners) { partner in
+                                Button(PartLabel.title(of: partner) + (partner.note.map { " — \($0.prefix(40))" } ?? "")) {
+                                    app.perform(SurfaceAction(surface: .merge,
+                                                              title: "\(PartLabel.title(of: version)) + \(PartLabel.title(of: partner))",
+                                                              bound: [version.id, partner.id]))
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             if part.versions.count > 1, let song = app.song {

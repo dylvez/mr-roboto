@@ -159,6 +159,8 @@ final class ChopLaneBinding {
     /// `ImportModel.promote` cut on. With no analysis to hand, one bar at the detected tempo per
     /// marker is the honest approximation; with no markers at all, the first eight seconds.
     nonisolated static func region(of sample: Sample, bars: [SongGraph.TimeRange], tempo: Double?) -> SongGraph.TimeRange {
+        // A chop that says what it covers — a merged render is the whole bar — is believed.
+        if let span = sample.span, span.end > span.start { return span }
         let markers = sample.slices.map(\.position).sorted()
         guard let first = markers.first, let last = markers.last else {
             return SongGraph.TimeRange(start: 0, end: 8)

@@ -54,6 +54,9 @@ public enum SurfaceKind: String, CaseIterable, Sendable {
     /// M3. An album's tracklist, targets and sample clearances. Bound to nothing: it draws a
     /// library album (`AppState.albumBindings`), not a version, and opens from the sidebar.
     case album = "Album"
+    /// M3. Two fragments in different keys and tempos, one plan, one section. Bound to exactly two
+    /// versions: a chop, a bass line, a progression or a groove each.
+    case merge = "Merge"
 
     // The two answer surfaces. They are in the catalog because the Director has to be able to
     // *name* one — a question with alternatives gets a Compare, a question with one finding gets a

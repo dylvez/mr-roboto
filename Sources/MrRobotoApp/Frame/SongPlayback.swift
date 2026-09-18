@@ -384,7 +384,7 @@ public struct SongPlayback: Equatable, Sendable {
 
     /// The song's own drum machine, from its newest `.sound` part. A song that has never opened the
     /// Sound surface plays its groove on the 808, which is what a new Grid opens on.
-    private static func machineID(in song: Song) -> String {
+    static func machineID(in song: Song) -> String {
         for version in song.versions.reversed() {
             guard case .sound(let sound) = version.kind else { continue }
             if SynthMachine.preset(id: sound.instrument) != nil { return sound.instrument }

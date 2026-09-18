@@ -32,6 +32,7 @@ enum FieldGuide {
         Entry(word: "Idea", meaning: "A version kept in the library with no song around it. Keep as idea copies it out; dragging it into a song adopts it."),
         Entry(word: "Adopt", meaning: "Bring a library item into the open song as a new version of its own, audio copied into the song's package. The library copy stays."),
         Entry(word: "Album", meaning: "Songs in order, with delivery targets and a clearance state for every record their samples came from."),
+        Entry(word: "Merge", meaning: "Two fragments in different keys or tempos brought to one: audio is shifted and stretched, a written part moves by arithmetic, a groove stays. The plan says the numbers; stitching makes a section."),
         Entry(word: "Clearance", meaning: "Whether a sampled record may be used: uncleared, pending, cleared, or not required. Said aloud, never assumed."),
         Entry(word: "Director", meaning: "Reads what you ask for, hands it to the right band member, and answers by opening a surface on real parts."),
         Entry(word: "Band", meaning: "The cast for this project: the Beatmaker for grooves and feels, the Sampler for chops and machines."),

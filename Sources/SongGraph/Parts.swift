@@ -100,29 +100,36 @@ public struct Bassline: Hashable, Sendable {
     /// is the app's default. Carried on the part because which bass it is decides who owns the
     /// sub — the Bassist's R9 — and that is a fact about the line, not a playback preference.
     public var sound: String?
+    /// The key the line was written in, so a line kept as an idea still knows where it stands and
+    /// a merge can move it by arithmetic. Nil for a line from before keys were carried.
+    public var key: Key?
 
-    public init(notes: [NoteEvent], sound: String? = nil) {
+    public init(notes: [NoteEvent], sound: String? = nil, key: Key? = nil) {
         self.notes = notes
         self.sound = sound
+        self.key = key
     }
 
     public var lengthInBeats: Double { notes.map(\.end).max() ?? 0 }
 }
 
 extension Bassline: Codable {
-    private enum CodingKeys: String, CodingKey { case notes, sound }
+    private enum CodingKeys: String, CodingKey { case notes, sound, key }
 
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         self.init(notes: try c.decode([NoteEvent].self, forKey: .notes),
-                  sound: try c.decodeIfPresent(String.self, forKey: .sound))
+                  sound: try c.decodeIfPresent(String.self, forKey: .sound),
+                  key: try c.decodeIfPresent(Key.self, forKey: .key))
     }
 
-    /// `sound` is omitted when nil, so a bassline written before it existed round-trips byte for byte.
+    /// `sound` and `key` are omitted when nil, so a bassline written before they existed round-trips
+    /// byte for byte.
     public func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(notes, forKey: .notes)
         try c.encodeIfPresent(sound, forKey: .sound)
+        try c.encodeIfPresent(key, forKey: .key)
     }
 }
 
@@ -308,20 +315,29 @@ public struct Sample: Hashable, Sendable {
     /// The chain the chop plays through, first pass nearest the media. Empty is dry. The media is
     /// never printed through it, so the dry chop is always one parent away. See `Degradation`.
     public var degradation: [Degradation]
+    /// The key the record was in where this chop was cut, when the analysis said. What a merge
+    /// reads to decide how far to move it.
+    public var key: Key?
+    /// The span of the media this chop covers, in the media's own seconds, when the media is not a
+    /// bar of an analysed record — a merged render, which *is* the bar. Nil means "find the bar
+    /// from the slices and the analysis", as every chop cut from a record does.
+    public var span: TimeRange?
 
     public init(media: MediaRef, slices: [SliceMarker] = [], rootPitch: Pitch? = nil, detectedTempo: Double? = nil,
-                sourceRecord: RecordID? = nil, degradation: [Degradation] = []) {
+                sourceRecord: RecordID? = nil, degradation: [Degradation] = [], key: Key? = nil, span: TimeRange? = nil) {
         self.media = media
         self.slices = slices
         self.rootPitch = rootPitch
         self.detectedTempo = detectedTempo
         self.sourceRecord = sourceRecord
         self.degradation = degradation
+        self.key = key
+        self.span = span
     }
 }
 
 extension Sample: Codable {
-    private enum CodingKeys: String, CodingKey { case media, slices, rootPitch, detectedTempo, sourceRecord, degradation }
+    private enum CodingKeys: String, CodingKey { case media, slices, rootPitch, detectedTempo, sourceRecord, degradation, key, span }
 
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -330,10 +346,13 @@ extension Sample: Codable {
                   rootPitch: try c.decodeIfPresent(Pitch.self, forKey: .rootPitch),
                   detectedTempo: try c.decodeIfPresent(Double.self, forKey: .detectedTempo),
                   sourceRecord: try c.decodeIfPresent(RecordID.self, forKey: .sourceRecord),
-                  degradation: try c.decodeIfPresent([Degradation].self, forKey: .degradation) ?? [])
+                  degradation: try c.decodeIfPresent([Degradation].self, forKey: .degradation) ?? [],
+                  key: try c.decodeIfPresent(Key.self, forKey: .key),
+                  span: try c.decodeIfPresent(TimeRange.self, forKey: .span))
     }
 
-    /// A dry sample writes exactly what it always wrote; see `Groove.encode(to:)`.
+    /// A dry sample writes exactly what it always wrote; see `Groove.encode(to:)`. `key` and
+    /// `span` are omitted when nil for the same reason.
     public func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(media, forKey: .media)
@@ -342,6 +361,8 @@ extension Sample: Codable {
         try c.encodeIfPresent(detectedTempo, forKey: .detectedTempo)
         try c.encodeIfPresent(sourceRecord, forKey: .sourceRecord)
         if !degradation.isEmpty { try c.encode(degradation, forKey: .degradation) }
+        try c.encodeIfPresent(key, forKey: .key)
+        try c.encodeIfPresent(span, forKey: .span)
     }
 }
 
@@ -524,6 +545,11 @@ public struct MusicAnalysis: Hashable, Codable, Sendable {
 
     /// The key holding for the longest time, if any.
     public var dominantKey: Key? { keys.max { $0.range.duration < $1.range.duration }?.key }
+
+    /// The key the record is in at `seconds`, or the dominant key when no range covers it.
+    public func key(at seconds: Double) -> Key? {
+        keys.first { $0.start <= seconds && seconds < $0.end }?.key ?? dominantKey
+    }
 
     /// The tempo holding for the longest time, if any.
     public var dominantTempo: Double? { tempo.max { ($0.end - $0.start) < ($1.end - $1.start) }?.bpm }

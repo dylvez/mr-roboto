@@ -664,10 +664,12 @@ public final class ChopLaneSurface: Surface {
         // A re-cut keeps the chain the chop plays through: dust is a property of the chop's sound,
         // and moving a slice marker is not a request to clean it.
         var chain: [Degradation] = []
-        if case .sample(let previous)? = parent?.kind { chain = previous.degradation }
+        var key: Key?
+        var span: SongGraph.TimeRange?
+        if case .sample(let previous)? = parent?.kind { chain = previous.degradation; key = previous.key; span = previous.span }
         let sample = Sample(media: source.media, slices: sliceMarkers,
                             detectedTempo: chop.detectedTempo, sourceRecord: source.record,
-                            degradation: chain)
+                            degradation: chain, key: key, span: span)
         let version = parent.map {
             $0.deriving(.sample(sample), by: .user, operation: Operation.chop, note: note)
         } ?? PartVersion(partID: partID, kind: .sample(sample), author: .user,

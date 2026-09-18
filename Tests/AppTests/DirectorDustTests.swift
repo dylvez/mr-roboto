@@ -300,9 +300,9 @@ struct DirectorDustToolboxTests {
         // the cached prefix moved once, as it did for degrade_part's prompt. A change here that
         // is not a new surface is the accident this test exists to catch.
         // (And again the same day, for the `lag` lever on a Compare of bass lines; and once more
-        // for Gate C's Structure surface; and once for M3's Album surface.)
-        ("open_surface", "0d0c2f308a3e4998fff754c83d34832c79cacb8bd322dafdd2d740f45b96e994"),
-        ("propose", "2c3ccc8c4b830b7c863952b69f341d95f97f1b5d39ca8bb79d8249f34a2f6276"),
+        // for Gate C's Structure surface; and once each for M3's Album and Merge surfaces.)
+        ("open_surface", "8df8a19520340a1e8bc4db3cf8db691990766b0fa42d23ad0aef1579553490f9"),
+        ("propose", "15d86665d03cfc12e87112fda5e8983a8f85d3355a2e6adb37fa787889dc775e"),
     ]
 
     static func digest(_ definition: ClaudeToolDefinition) throws -> String {

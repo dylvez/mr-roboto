@@ -320,9 +320,9 @@ public enum Guidance {
         case .structure:
             // Bound to nothing: it draws the song's sections, and the song is what is open.
             return SurfaceAction(surface: kind, title: song.title)
-        case .album:
-            // Opened from a library row, never from the dock: an album is not something the open
-            // song has.
+        case .album, .merge:
+            // Opened from a library row or a ledger row, never from the dock: an album is not
+            // something the open song has, and a merge needs two named versions.
             return fallback
         case .compare, .check:
             // Nothing reaches here: the dock, ⌘1–⌘4 and the Surfaces menu all iterate
@@ -717,7 +717,8 @@ extension AppState {
                             slices: bar.downbeats.map { SliceMarker(position: $0) },
                             rootPitch: nil,
                             detectedTempo: analysis?.dominantTempo ?? song.tempo,
-                            sourceRecord: sourceRecord)
+                            sourceRecord: sourceRecord,
+                            key: analysis?.key(at: bar.range.start))
         let cut = version.spawning(.sample(sample), by: .user, operation: Operation.chop,
                                    note: "Bar \(bar.number) of \(PartLabel.title(of: version).lowercased())")
         return record(cut) ? cut.id : nil

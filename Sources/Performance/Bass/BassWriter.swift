@@ -188,7 +188,7 @@ public enum BassWriter {
             placed.append(NoteEvent(pitch: Pitch(midi: draft.pitch), start: max(0, start),
                                     duration: end - max(0, start), velocity: draft.velocity))
         }
-        return Bassline(notes: placed, sound: request.sound ?? request.lineage.defaultSound)
+        return Bassline(notes: placed, sound: request.sound ?? request.lineage.defaultSound, key: request.key)
     }
 
     // MARK: Lineage A — Palladino
