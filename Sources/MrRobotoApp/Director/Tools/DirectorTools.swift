@@ -45,6 +45,9 @@ public enum DirectorTools {
             // Appended after the fourteen, never among them: every schema above keeps its bytes.
             DegradePartTool(workbench: workbench, workspace: workspace,
                             acting: persona ?? CreatePartVersionTool.director).erased(),
+            // M2, appended after the fifteen: the band's first written parts.
+            SetProgressionTool(workspace: workspace, acting: persona ?? CreatePartVersionTool.director).erased(),
+            WriteBasslineTool(workspace: workspace).erased(),
         ]
         if let stage {
             let pad = pad ?? DirectorStagePad()
@@ -73,6 +76,9 @@ public enum DirectorTools {
         "create_part_version",
         // The fifteenth, appended: dust written onto the chop or groove it dirties.
         "degrade_part",
+        // M2, appended: harmony as a lead sheet says it, and a bass line in a named player's hands.
+        "set_progression",
+        "write_bassline",
     ]
 
     /// The two the frame adds. Appended after `names`, never among them: a session with no frame

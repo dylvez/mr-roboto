@@ -1,4 +1,5 @@
 import Foundation
+import Performance
 import SongGraph
 import SwiftUI
 import Testing
@@ -256,6 +257,70 @@ struct BandLiveTests {
         #expect(readAfterFirst, "no request after the first read the cached prefix")
 
         // Nothing is saved: this is an exercise, not an edit the user asked for.
+        report("saved", "no — the run is in memory only")
+    }
+
+    /// M2's proof line, word for word.
+    static let bassLine = "Give me a bass line under this, laid back like Pino"
+
+    @Test("the M2 line: a bass line under the groove, live")
+    func bassLineLive() async throws {
+        let state = AppState.live()
+        let registry = SurfaceRegistry()
+        SurfaceRegistry.registerSurfaces(in: registry)
+        let arrival = try #require(state.library.songs.first { $0.title == "Arrival" })
+        state.openSong(arrival.id)
+        // A groove to sit under, in memory only: the boom-bap pocket at the song's own tempo.
+        if state.song.map({ Guidance.grooves(in: $0).isEmpty }) ?? true {
+            let feel = try #require(FeelLibrary.standard.feel(named: "Boom-Bap Pocket"))
+            #expect(state.record(PartVersion(partID: PartID(), kind: .groove(feel.groove), author: .user,
+                                             operation: Operation.written, note: "Boom-Bap Pocket")))
+        }
+        let band = try #require(state.band)
+        try #require(await band.director.keyStatus().hasKey, "no API key")
+
+        let log = LiveTurnLog()
+        let started = Date()
+        let turn = await band.director.direct(Self.bassLine) { event in
+            switch event {
+            case .toolStarted(let name): log.started(name)
+            case .toolFinished(let name, let isError, let message): log.finished(name, isError: isError, message: message)
+            case .opened(let kind, let title): log.opened(kind, title)
+            case .say, .finished: break
+            }
+        }
+        report("bass ending", "\(turn.ending)")
+        report("bass elapsed", String(format: "%.1f s", Date().timeIntervalSince(started)))
+        report("bass calls", log.calls.joined(separator: " → "))
+        for failure in log.errors { report("  failed", failure) }
+        report("bass opened", log.opens.joined(separator: " · "))
+        report("bass said", turn.say)
+        describeSpend(turn.spend, label: "bass turn")
+
+        let lines = (state.song?.versions ?? []).filter { $0.type == .bassline }
+        report("bass lines written", "\(lines.count)")
+        for line in lines {
+            report("  line", "\(line.author) — \(line.note ?? "")")
+        }
+        for item in state.bench.items {
+            report("surface", "\(item.kind.rawValue) \"\(item.title)\" ← "
+                + state.bound(for: item.id).map { describe($0, in: state) }.joined(separator: ", "))
+            report("  levers", state.levers(for: item.id).map(\.line).joined(separator: " · "))
+            if item.kind == .compare, case .ready(let model) = SurfaceWiring.shared.compareFilling(for: item, app: state) {
+                report("  compare", "reference \"\(model.reference.title)\" + \(model.candidates.count) candidates, "
+                    + "\(model.features.count) columns, \(model.levers.count) levers")
+                for candidate in model.candidates {
+                    report("    candidate", "\(candidate.title) — " + candidate.readings.map { "\($0.key) \(String(format: "%.2f", $0.value.value))" }.sorted().joined(separator: ", "))
+                }
+            }
+        }
+        for entry in state.log.suffix(16) {
+            report("  rail [\(entry.source.label)]", entry.text + (entry.detail.map { " — \($0)" } ?? ""))
+        }
+        #expect(turn.ending == .answered)
+        #expect(!lines.isEmpty, "no bass line was written")
+        #expect(lines.allSatisfy { $0.author == .persona("Bassist") })
+        #expect(log.opens.contains { $0.hasPrefix("Compare") || $0.hasPrefix("Piano roll") })
         report("saved", "no — the run is in memory only")
     }
 

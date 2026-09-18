@@ -80,6 +80,18 @@ public enum DirectorPrompt {
         someone move an amount, but it is not a version anyone can keep, so on its own it does not \
         answer the question. To change a dusty version's chain, name its dry parent again. If the \
         chain check refuses a second machine, tell the user its reason, not only that it refused.
+
+        A bass line is the Bassist's, and you write it with write_bassline under a groove the song \
+        holds: name whose hands — palladino, thundercat or programmed — a lag behind the kick in \
+        milliseconds (40 by default, 20 to 65 the window), a density and a seed. Alternatives are \
+        the same call with a different seed, lag or hands, and then one open_surface: a Compare with \
+        the groove as the reference and the lines as candidates, or the Piano roll on one line. The \
+        result carries the Bassist's readings of the line in its own units; repeat what it says, \
+        in milliseconds behind the kick and note-offs on the beat, never as "laid back". If the \
+        Bassist refuses — nothing is straight, ahead of the kick, a played bass under an 808 — tell \
+        the user its reason and its counter, and do not write the line another way to get round it. \
+        Harmony is stated first with set_progression when the user names chords; with none, the \
+        line is written to the key and you say so.
         """
 
     /// The system prompt as blocks, with the one breakpoint on the last of them.

@@ -104,10 +104,63 @@ final class CompareAdapter: CompareHosting {
                             named: name, through: passes)
         case .audio(let audio):
             await playAudio(audio.media, from: 0, to: CompareAdapter.maximumSeconds, named: name, through: passes)
+        case .bassline(let line):
+            await playBassline(line, levers: levers)
         default:
             app.note(.session, "A \(version.type.rawValue) cannot be auditioned here",
                      detail: "The Compare plays grooves, chops and recordings; \(name) is neither.")
         }
+    }
+
+    /// A bass line, with the song's newest groove under it so the lag is heard against a kick:
+    /// the line on the bass sampler, the groove live on the drum sampler, both anchored now. The
+    /// `lag` lever moves every onset by its amount at the song's tempo, and the `tempo` lever
+    /// re-times both.
+    private func playBassline(_ line: Bassline, levers: [CompareLever: Double]) async {
+        let tempo = levers[.tempo].map { CompareLever.tempo.clamp($0) } ?? app.song?.tempo ?? 90
+        let signature = app.song?.timeSignature ?? .fourFour
+        let shifted = CompareAdapter.shifted(line, lagMS: levers[.lag], tempo: tempo)
+        let timeline = GrooveTimeline.tempo(max(20, tempo), timeSignature: signature)
+        let bassHits = BasslinePlayer.hits(for: shifted, on: timeline, offsetBeats: 0)
+            .filter { $0.time < CompareAdapter.maximumSeconds }
+        guard !bassHits.isEmpty else {
+            app.note(.session, "That bass line has no notes in it", detail: "Nothing was played.")
+            return
+        }
+        let voice = BassVoiceSpec.all.first { $0.id == line.sound } ?? .finger
+        do {
+            try await service.prepare(bass: voice)
+        } catch {
+            app.note(.session, "Could not load the \(voice.name) bass to play that", detail: "\(error)")
+            return
+        }
+        // The groove, when the song has one and it is dry: the reference the lag is against.
+        if let song = app.song, let grooveVersion = Guidance.grooves(in: song).last,
+           case .groove(let groove) = grooveVersion.kind, groove.degradation.isEmpty {
+            let machine = SynthMachine.preset(id: app.playback.machine) ?? .tr808
+            var drumLevers = levers
+            drumLevers[.lag] = nil
+            let drumHits = CompareAdapter.hits(for: groove, levers: drumLevers, tempo: tempo, timeSignature: signature)
+                .filter { $0.time < CompareAdapter.maximumSeconds }
+            if !drumHits.isEmpty, (try? await service.prepare(machine: machine)) != nil {
+                await service.play(drumHits)
+            }
+        }
+        await service.playBass(bassHits)
+    }
+
+    /// The line with every onset moved by `lagMS` at `tempo`: what the `lag` lever means.
+    static func shifted(_ line: Bassline, lagMS: Double?, tempo: Double) -> Bassline {
+        guard let lagMS, tempo > 0 else { return line }
+        // The lever states where the line should sit, not an extra shift: it replaces the line's
+        // own median displacement so 40 on the lever is 40 behind the kick whatever was written.
+        let beats = CompareLever.lag.clamp(lagMS) / 1000 * tempo / 60
+        let starts = line.notes.map(\.start)
+        let median = BassObservation.median(starts.map { $0 - ($0 * 4).rounded() / 4 })
+        return Bassline(notes: line.notes.map { note in
+            NoteEvent(pitch: note.pitch, start: max(0, note.start - median + beats),
+                      duration: note.duration, velocity: note.velocity)
+        }, sound: line.sound)
     }
 
     /// The chain a row plays through.
@@ -287,12 +340,15 @@ enum CompareBriefing {
         }
         let candidates = Array(bound.dropFirst())
         let tempo = app.song?.tempo ?? 90
-        let features = self.features(for: reference)
+        // The columns are the candidates' own kind: a Compare of bass lines against the groove they
+        // sit under measures the lines, and the groove row simply has no numbers in those columns.
+        let features = self.features(for: candidates.first ?? reference)
+        let song = app.song
         return CompareBrief(
             title: item.title,
             reference: CompareReference(title: headline(of: reference),
                                         kind: reference.note ?? "what the song already has",
-                                        readings: readings(of: reference, tempo: tempo, features: features),
+                                        readings: readings(of: reference, tempo: tempo, features: features, in: song),
                                         version: reference.id),
             candidates: candidates.map { version in
                 let title = headline(of: version)
@@ -303,7 +359,7 @@ enum CompareBriefing {
                                         // The row already carries the headline; repeating it
                                         // underneath is a rationale that explains nothing.
                                         rationale: note == title ? "" : note,
-                                        readings: readings(of: version, tempo: tempo, features: features),
+                                        readings: readings(of: version, tempo: tempo, features: features, in: song),
                                         version: version)
             },
             features: features,
@@ -333,16 +389,33 @@ enum CompareBriefing {
         switch version.kind {
         case .groove: return grooveFeatures
         case .sample: return sampleFeatures
+        case .bassline: return bassFeatures
         default: return []
         }
     }
 
+    /// The Bassist's columns: where the line sits, how much it plays, how long the notes are, how
+    /// the roots are reached.
+    static let bassFeatures: [Feature] = [.bassKickOffsetMS, .bassAttacksPerBar, .bassRestRatio,
+                                          .bassNoteLengthRatio, .bassChromaticApproachRate]
+
     /// Every feature this version can actually be measured on. A feature it cannot answer is left
     /// out rather than reported as zero — `CompareModel.differences` skips a column the reference
     /// does not carry, and a fabricated zero would turn that into a difference nobody can hear.
-    static func readings(of version: PartVersion, tempo: Double, features: [Feature]) -> [CompareReading] {
+    static func readings(of version: PartVersion, tempo: Double, features: [Feature],
+                         in song: Song? = nil) -> [CompareReading] {
         let values: (Feature) -> Double?
         switch version.kind {
+        case .bassline(let line):
+            // Measured against the groove the song holds and the chords it states, like the tool did.
+            guard let song, let grooveVersion = Guidance.grooves(in: song).last,
+                  case .groove(let groove) = grooveVersion.kind else { return [] }
+            var chords: [ChordSpan] = []
+            if let p = Guidance.progressions(in: song).last, case .progression(let stored) = p.kind { chords = stored.spans }
+            let observation = BassObservation(label: PartLabel.title(of: version), bassline: line, groove: groove,
+                                              chords: chords, tempo: tempo, timeSignature: song.timeSignature,
+                                              kickDecaySeconds: SurfaceWiring.kickDecay(in: song))
+            values = { observation.value(of: $0) }
         case .groove(let groove):
             let observation = GrooveObservation(label: PartLabel.title(of: version), groove: groove,
                                                 options: GrooveRenderOptions(), tempo: tempo)

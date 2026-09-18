@@ -441,6 +441,7 @@ extension BandDirector {
         case .swing: return SurfaceLever(quantity: .swing, label: lever.label, value: lever.defaultValue)
         case .ghostLevel: return SurfaceLever(quantity: .density, label: lever.label, value: lever.defaultValue)
         case .degradeMix: return SurfaceLever(quantity: .dust, label: lever.label, value: lever.defaultValue)
+        case .lag: return SurfaceLever(quantity: .lag, label: lever.label, value: lever.defaultValue)
         }
     }
 }
@@ -457,6 +458,7 @@ extension CompareLever {
         case .swing: self = .swing
         case .density: self = .ghostLevel
         case .dust: self = .degradeMix
+        case .lag: self = .lag
         case .velocity, .pitch, .gain: return nil
         }
     }

@@ -379,6 +379,8 @@ public actor Director {
             return many ? "recorded \(times) versions into the song" : "recorded one version into the song"
         case "degrade_part":
             return many ? "put \(times) parts through a machine" : "put it through a machine"
+        case "set_progression": return "wrote the chords down"
+        case "write_bassline": return many ? "had the Bassist write \(times) lines" : "had the Bassist write a line"
         case "open_surface": return many ? "opened \(times) surfaces" : "opened a surface"
         case "propose": return many ? "offered \(times) suggestions" : "offered a suggestion"
         default: return many ? "\(tool) ×\(times)" : tool

@@ -20,13 +20,14 @@ struct DirectorToolboxTests {
     @Test("The list is exactly the tools the first proof needs, in the order the work happens")
     func theList() {
         #expect(toolbox().names == DirectorTools.names)
-        #expect(DirectorTools.names.count == 15)
+        #expect(DirectorTools.names.count == 17)
         // The first thing is reading the song: a proposal about a song nobody read is a guess.
         #expect(DirectorTools.names.first == "read_song")
         // Recording is the last step of the first proof; dust, written onto what was recorded, is
         // appended after it rather than inserted anywhere above (`DirectorDustToolboxTests`).
-        #expect(DirectorTools.names.dropLast().last == "create_part_version")
-        #expect(DirectorTools.names.last == "degrade_part")
+        #expect(DirectorTools.names[13] == "create_part_version")
+        #expect(DirectorTools.names[14] == "degrade_part")
+        #expect(Array(DirectorTools.names.suffix(2)) == ["set_progression", "write_bassline"], "M2's two, appended")
     }
 
     @Test("Every tool has a name the API accepts, a sentence, and an object schema")

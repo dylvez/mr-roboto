@@ -143,6 +143,9 @@ public enum CompareLever: String, CaseIterable, Sendable, Identifiable {
     case ghostLevel
     /// The degradation chain's dry/wet, 0…1.
     case degradeMix
+    /// How far a bass line sits behind the kick, in milliseconds; negative is ahead. Shifts every
+    /// onset of a bass-line candidate on the spot; does nothing to a groove or a chop.
+    case lag
 
     public var id: String { rawValue }
 
@@ -153,6 +156,7 @@ public enum CompareLever: String, CaseIterable, Sendable, Identifiable {
         case .swing: return "Swing"
         case .ghostLevel: return "Ghost level"
         case .degradeMix: return "Chain"
+        case .lag: return "Behind the kick"
         }
     }
 
@@ -161,6 +165,7 @@ public enum CompareLever: String, CaseIterable, Sendable, Identifiable {
         case .tempo: return "bpm"
         case .swing: return "%"
         case .ghostLevel, .degradeMix: return ""
+        case .lag: return "ms"
         }
     }
 
@@ -169,6 +174,7 @@ public enum CompareLever: String, CaseIterable, Sendable, Identifiable {
         case .tempo: return 60...180
         case .swing: return Swing.minimumPercent...Swing.maximumPercent
         case .ghostLevel, .degradeMix: return 0...1
+        case .lag: return -25...90
         }
     }
 
@@ -178,6 +184,7 @@ public enum CompareLever: String, CaseIterable, Sendable, Identifiable {
         case .swing: return Swing.minimumPercent
         case .ghostLevel: return 0.45
         case .degradeMix: return 1
+        case .lag: return 40
         }
     }
 
@@ -188,6 +195,7 @@ public enum CompareLever: String, CaseIterable, Sendable, Identifiable {
         case .swing: return "SongGraph.Groove.swing, via Performance.Swing(percent:)"
         case .ghostLevel: return "Performance.VelocityMap.ghost against .normal"
         case .degradeMix: return "Instrument.DegradeSettings.mix"
+        case .lag: return "SongGraph.NoteEvent.start of every bass note, shifted by the lag at the tempo"
         }
     }
 

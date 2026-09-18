@@ -80,6 +80,8 @@ public struct SurfaceLever: Sendable, Equatable, Hashable {
         case pitch
         /// Level, in decibels.
         case gain
+        /// How far a bass line sits behind the kick, in milliseconds. Negative is ahead.
+        case lag
 
         /// What the number may be. A lever outside its range is a control that would either do
         /// nothing or break the thing it moves, so it is refused at the door.
@@ -92,6 +94,7 @@ public struct SurfaceLever: Sendable, Equatable, Hashable {
             case .dust: return 0...1
             case .pitch: return -12...12
             case .gain: return -24...6
+            case .lag: return -25...90
             }
         }
 
@@ -103,6 +106,7 @@ public struct SurfaceLever: Sendable, Equatable, Hashable {
             case .density, .dust: return ""
             case .pitch: return "st"
             case .gain: return "dB"
+            case .lag: return "ms"
             }
         }
 
@@ -117,6 +121,7 @@ public struct SurfaceLever: Sendable, Equatable, Hashable {
             case .dust: return [.chopLane, .sound, .compare]
             case .pitch: return [.chopLane, .sound]
             case .gain: return [.chopLane, .grid, .sound, .compare]
+            case .lag: return [.pianoRoll, .compare]
             }
         }
 
@@ -130,6 +135,7 @@ public struct SurfaceLever: Sendable, Equatable, Hashable {
             case .dust: return "the degradation chain as one amount, 0 (clean) to 1 (ruined)"
             case .pitch: return "semitones, -12 to 12"
             case .gain: return "level in decibels, -24 to 6"
+            case .lag: return "how far the bass sits behind the kick in milliseconds, -25 to 90; 40 is the documented default"
             }
         }
     }
@@ -354,10 +360,22 @@ public struct DirectorSurfaceChoice: Sendable, Equatable, Hashable, Identifiable
                 "The \(surface.rawValue) cannot draw a \(type.rawValue).",
                 suggestion: "It draws \(surface.notationSentence). Answer in the notation the question is about.")
         }
-        if surface.isAnswer, types.contains(where: { $0 != notation }) {
-            throw DirectorChoiceProblem(
-                "A \(surface.rawValue) of a \(notation.rawValue) and a \(types.first { $0 != notation }!.rawValue) compares two different things.",
-                suggestion: "Judge like against like.")
+        if surface.isAnswer {
+            // Like against like: the candidates share a kind. The reference shares it too, with
+            // one exception — bass lines are judged against the groove they sit under, because
+            // the thing a bass line has to beat is not another bass line but the kick.
+            let candidates = surface == .compare ? Array(types.dropFirst()) : types
+            if let kind = candidates.first, let other = candidates.first(where: { $0 != kind }) {
+                throw DirectorChoiceProblem(
+                    "A \(surface.rawValue) of a \(kind.rawValue) and a \(other.rawValue) compares two different things.",
+                    suggestion: "Judge like against like.")
+            }
+            if surface == .compare, let kind = candidates.first, kind != notation,
+               !(notation == .groove && kind == .bassline) {
+                throw DirectorChoiceProblem(
+                    "A Compare of \(kind.rawValue)s against a \(notation.rawValue) compares two different things.",
+                    suggestion: "Judge like against like; only bass lines are judged against the groove they sit under.")
+            }
         }
 
         // Levers.

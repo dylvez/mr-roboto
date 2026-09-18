@@ -255,6 +255,8 @@ public final class DirectorSession {
         case "audition": return "Listening back…"
         case "create_part_version": return "Recording it into the song…"
         case "degrade_part": return "Putting it through the machine…"
+        case "set_progression": return "Writing the chords down…"
+        case "write_bassline": return "The Bassist is writing a line…"
         case "open_surface": return "Opening a surface…"
         case "propose": return "Writing a suggestion…"
         default: return "\(tool)…"

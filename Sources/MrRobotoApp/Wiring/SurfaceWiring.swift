@@ -230,7 +230,7 @@ final class SurfaceWiring {
 
     /// How long the song's kick rings, from its newest kit sound's decay, for the Bassist's R9.
     /// 0 when the song has no kit sound: the 808's default kick is well under the 400 ms line.
-    static func kickDecay(in song: Song?) -> Double {
+    nonisolated static func kickDecay(in song: Song?) -> Double {
         guard let song else { return 0 }
         for version in song.versions.reversed() {
             guard case .sound(let sound) = version.kind, let machine = SynthMachine.preset(id: sound.instrument),
