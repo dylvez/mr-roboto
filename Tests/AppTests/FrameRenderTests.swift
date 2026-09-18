@@ -101,6 +101,30 @@ struct FrameRenderTests {
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-structure")
     }
 
+    @Test("the library with an idea, a sample, a record and an album; the Album surface open")
+    func library() throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        let directory = LibraryFixture.directory("render")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = LibraryStore(directoryURL: directory)
+        let defaults = UserDefaults(suiteName: "mrroboto.render.\(UUID().uuidString)")!
+        let app = AppState(library: Library(), song: nil, store: store, status: .empty(directory),
+                           transportHost: StubTransportHost(), regions: RegionVisibility(defaults: defaults),
+                           primers: PrimerStore(defaults: defaults))
+        let record = try LibraryFixture.record("Arrival", in: directory, store: store)
+        #expect(app.writeLibrary(Library(records: [record])))
+        let (song, groove, chop) = try LibraryFixture.songWithChop("Arrival", record: record, app: app)
+        #expect(app.keepAsIdea(groove) != nil)
+        #expect(app.saveToSamples(chop) != nil)
+        app.arrange([Section(name: "Verse", stitch: [groove, chop], lengthInBars: 16), Section(name: "Hook", stitch: [groove], lengthInBars: 8)])
+        app.save()
+        let album = try #require(app.createAlbum(title: "Interior Season", artist: "Vessel"))
+        #expect(app.addSong(song.id, to: album))
+        app.openAlbum(album)
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-library")
+    }
+
     @Test("first launch: nothing open")
     func firstLaunch() throws {
         FontRegistration.registerBundledFonts()

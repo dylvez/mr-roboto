@@ -25,6 +25,10 @@ public protocol StructureHosting: AnyObject {
     /// Play the song from the top, as the space bar does.
     func play() async
     func stop() async
+    /// A library row dropped on a section: adopt it into the song and stitch it in. `false` when
+    /// nothing was stitched, with the host saying why.
+    @discardableResult
+    func receive(_ payload: LibraryDragPayload, into section: SectionID) async -> Bool
 }
 
 /// The Structure surface's model: the sections as a working copy, edited in place and kept as
@@ -72,7 +76,7 @@ public final class StructureModel {
     public private(set) var sections: [Section]
     public private(set) var committed: [Section]
     public private(set) var selected: SectionID?
-    public let layers: [Layer]
+    public private(set) var layers: [Layer]
     public private(set) var lastError: String?
 
     private let host: any StructureHosting
@@ -88,6 +92,27 @@ public final class StructureModel {
         committed = current
         selected = current.first?.id
         layers = song.map(Self.layers(in:)) ?? []
+    }
+
+    /// Follows the song: a part adopted or a section stitched from outside this surface — a drop, the
+    /// Director's `arrange` — shows up here. A working copy with unkept edits is left alone.
+    public func sync(with song: Song?) {
+        layers = song.map(Self.layers(in:)) ?? []
+        let current = song?.sections ?? []
+        guard current != committed else { return }
+        let wasClean = !isDirty
+        committed = current
+        if wasClean {
+            sections = current
+            if selected.map({ id in sections.contains { $0.id == id } }) != true { selected = sections.first?.id }
+        }
+    }
+
+    /// A library row dropped on a section.
+    public func receive(_ payload: LibraryDragPayload, into section: SectionID) async -> Bool {
+        // The host stitches into the *kept* form, so unkept edits are kept first rather than lost.
+        if isDirty { guard await keep() else { return false } }
+        return await host.receive(payload, into: section)
     }
 
     // MARK: Reading

@@ -320,6 +320,10 @@ public enum Guidance {
         case .structure:
             // Bound to nothing: it draws the song's sections, and the song is what is open.
             return SurfaceAction(surface: kind, title: song.title)
+        case .album:
+            // Opened from a library row, never from the dock: an album is not something the open
+            // song has.
+            return fallback
         case .compare, .check:
             // Nothing reaches here: the dock, ⌘1–⌘4 and the Surfaces menu all iterate
             // `SurfaceKind.gateA`, and an answer surface is not something you pick off a shelf —
@@ -342,6 +346,30 @@ public enum Guidance {
     /// The version carrying the analysis, as opposed to the analysis itself.
     public static func analysisVersion(in song: Song) -> PartVersion? {
         song.versions.last { $0.type == .analysis }
+    }
+
+    /// The analysis that describes *this* audio, when the song holds more than one record.
+    ///
+    /// Import stamps the take and its analysis with the same seed (`origin`), and a stem's parent is
+    /// its take; so the analysis for an audio version is the one that shares its seed. A song from
+    /// before seeds were stamped, or one with a single record, falls back to the newest analysis —
+    /// which is what every caller read before a second record could be adopted into a song.
+    public static func analysis(for audio: PartVersion, in song: Song) -> MusicAnalysis? {
+        let seed = audio.origin ?? audio.parents.compactMap { song.version($0)?.origin }.first
+        // The analysis stamped with the audio's seed; for audio with no seed, the newest analysis
+        // that has none either — the song's own, from before a second record could be adopted.
+        if let version = song.versions.last(where: { $0.type == .analysis && $0.origin == seed }),
+           case .analysis(let analysis) = version.kind {
+            return analysis
+        }
+        return analysis(in: song)
+    }
+
+    /// The library record an audio version was imported from, by way of the seed it carries.
+    public static func sourceRecord(of audio: PartVersion, in song: Song) -> RecordID? {
+        let seed = audio.origin ?? audio.parents.compactMap { song.version($0)?.origin }.first
+        guard let seed, let found = song.seed(seed), case .importedRecord(let id) = found.kind else { return nil }
+        return id
     }
 
     /// Whether there is a record to show at all.
@@ -420,7 +448,7 @@ public enum Guidance {
     /// Returns nil when the song has no analysed bars, which is the honest reason a "chop a bar"
     /// suggestion must not appear.
     public static func barToChop(of version: PartVersion, in song: Song) -> Bar? {
-        guard let audio = audio(of: version), let analysis = analysis(in: song) else { return nil }
+        guard let audio = audio(of: version), let analysis = analysis(for: version, in: song) else { return nil }
         let bars = analysis.bars
         guard !bars.isEmpty else { return nil }
 
@@ -681,12 +709,15 @@ extension AppState {
         if let existing = Guidance.chop(of: audioID, in: song) { return existing.id }
         guard let bar = Guidance.barToChop(of: version, in: song) else { return nil }
 
-        let analysis = Guidance.analysis(in: song)
+        let analysis = Guidance.analysis(for: version, in: song)
+        // The record the bar came from, for an album's clearances: the library record with this
+        // media, or the one the song was seeded from.
+        let sourceRecord = library.record(forMedia: audio.media)?.id ?? Guidance.sourceRecord(of: version, in: song)
         let sample = Sample(media: audio.media,
                             slices: bar.downbeats.map { SliceMarker(position: $0) },
                             rootPitch: nil,
                             detectedTempo: analysis?.dominantTempo ?? song.tempo,
-                            sourceRecord: nil)
+                            sourceRecord: sourceRecord)
         let cut = version.spawning(.sample(sample), by: .user, operation: Operation.chop,
                                    note: "Bar \(bar.number) of \(PartLabel.title(of: version).lowercased())")
         return record(cut) ? cut.id : nil

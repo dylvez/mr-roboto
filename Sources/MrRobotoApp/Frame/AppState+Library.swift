@@ -1,0 +1,397 @@
+import Foundation
+import SongGraph
+
+// MARK: - The library, written
+
+/// Where a library row was dropped, which decides what adopting it goes on to do.
+public enum LibraryDrop: Sendable, Equatable {
+    /// The bench: adopt, then open the surface the part belongs on.
+    case bench
+    /// The Parts ledger: adopt, and nothing more.
+    case ledger
+    /// Structure: adopt, then stitch into this section.
+    case section(SectionID)
+}
+
+/// M3's library: ideas kept, samples saved, records flipped again, albums sequenced, and library
+/// rows adopted into the open song.
+///
+/// Two rules hold throughout. A library-level change writes `library.json` alone
+/// (`LibraryStore.saveDocument`), never the song packages, so keeping an idea cannot write a stale
+/// copy of the song you have open. And adopting copies media *into* the song's package, so a song
+/// still opens with the idea or the sample gone from the library.
+extension AppState {
+
+    // MARK: Ideas
+
+    /// Copies a version of the open song into the library as an idea: the same music under a fresh
+    /// id with no parents, and its media in the library's `ideas/`, so it outlives the song.
+    @discardableResult
+    public func keepAsIdea(_ id: VersionID) -> VersionID? {
+        guard let song, let version = song.version(id) else {
+            note(.session, "Nothing to keep", detail: "That version is not in the open song.")
+            return nil
+        }
+        guard let store else {
+            note(.session, "Nowhere to keep an idea", detail: "This session has no library directory.")
+            return nil
+        }
+        do {
+            try copyMedia(of: version, from: song.id, into: .idea, store: store)
+        } catch {
+            note(.session, "Could not copy the idea's audio into the library", detail: "\(error)")
+            return nil
+        }
+        var provenance = "\(PartLabel.title(of: version)) from \(song.title)"
+        if let text = version.note, !text.isEmpty { provenance += " — \(text)" }
+        let idea = PartVersion(partID: PartID(), kind: version.kind, author: version.author,
+                               operation: version.operation, note: provenance)
+        var updated = library
+        updated.ideas.append(idea)
+        guard writeLibrary(updated) else { return nil }
+        note(.you, "Kept \(PartLabel.title(of: version)) as an idea", detail: provenance)
+        return idea.id
+    }
+
+    // MARK: Samples
+
+    /// Saves a chop of the open song to the library's samples, dry or dusty as it is, with its
+    /// slices, tempo, chain and the record it came from.
+    @discardableResult
+    public func saveToSamples(_ id: VersionID, name: String? = nil, tags: [String] = []) -> SampleID? {
+        guard let song, let version = song.version(id), case .sample(var sample) = version.kind else {
+            note(.session, "Only a chop can be saved as a sample")
+            return nil
+        }
+        guard let store else {
+            note(.session, "Nowhere to save a sample", detail: "This session has no library directory.")
+            return nil
+        }
+        do {
+            try copyMedia(of: version, from: song.id, into: .sample, store: store)
+        } catch {
+            note(.session, "Could not copy the sample into the library", detail: "\(error)")
+            return nil
+        }
+        if sample.sourceRecord == nil {
+            sample.sourceRecord = library.record(forMedia: sample.media)?.id
+                ?? version.parents.compactMap { song.version($0) }.compactMap { Guidance.sourceRecord(of: $0, in: song) }.first
+        }
+        let entry = LibrarySample(name: name ?? "\(PartLabel.title(of: version)) — \(song.title)", sample: sample,
+                                  tags: tags.isEmpty ? [song.title] : tags)
+        var updated = library
+        updated.samples.append(entry)
+        guard writeLibrary(updated) else { return nil }
+        note(.you, "Saved \(entry.name) to Samples", detail: entry.tags.joined(separator: " · "))
+        return entry.id
+    }
+
+    // MARK: Adopting
+
+    /// Brings a library item into the open song as a new version, its media copied into the
+    /// package. Songs and albums are opened rather than adopted. Returns nil with a line in the
+    /// rail saying why.
+    @discardableResult
+    public func adopt(_ payload: LibraryDragPayload) -> VersionID? {
+        guard let song else {
+            note(.session, "Open a song first", detail: "There is nothing to adopt \(payload.title) into.")
+            return nil
+        }
+        switch payload.kind {
+        case .song:
+            openSong(SongID(rawValue: payload.id))
+            return nil
+        case .album:
+            openAlbum(AlbumID(rawValue: payload.id))
+            return nil
+        case .idea:
+            guard let idea = library.ideas.first(where: { $0.id.rawValue == payload.id }) else {
+                note(.session, "That idea is not in the library any more")
+                return nil
+            }
+            guard copyMediaIntoPackage(of: idea, song: song) else { return nil }
+            let version = PartVersion(partID: PartID(), kind: idea.kind, author: idea.author,
+                                      operation: Operation.adopted, note: "from idea: \(idea.note ?? PartLabel.title(of: idea))")
+            return record(version) ? version.id : nil
+        case .sample:
+            guard let entry = library.samples.first(where: { $0.id.rawValue == payload.id }) else {
+                note(.session, "That sample is not in the library any more")
+                return nil
+            }
+            let carrier = PartVersion(partID: PartID(), kind: .sample(entry.sample), author: .user, operation: Operation.adopted)
+            guard copyMediaIntoPackage(of: carrier, song: song) else { return nil }
+            let version = PartVersion(partID: PartID(), kind: .sample(entry.sample), author: .user,
+                                      operation: Operation.adopted, note: "from sample \"\(entry.name)\"")
+            return record(version) ? version.id : nil
+        case .record:
+            return adoptRecord(RecordID(rawValue: payload.id), into: song)
+        }
+    }
+
+    /// A record adopted into a song brings its take and its analysis, stamped with one seed, so a
+    /// bar can be chopped from it by the analysis that actually describes it. A record the song
+    /// already holds is returned rather than brought in twice.
+    private func adoptRecord(_ id: RecordID, into song: Song) -> VersionID? {
+        guard let record = library.record(id) else {
+            note(.session, "That record is not in the library any more")
+            return nil
+        }
+        if let existing = song.versions.last(where: { Guidance.audio(of: $0)?.media == record.media && Guidance.audio(of: $0)?.role == .take }) {
+            note(.session, "\(record.title) is already in \(song.title)")
+            return existing.id
+        }
+        guard let store, let url = try? store.mediaURL(for: record.media), let info = try? AudioFileInfo.read(url) else {
+            note(.session, "\(record.title)'s audio is missing from the library")
+            return nil
+        }
+        let seed = Seed(kind: .importedRecord(record.id), note: "adopted from the library")
+        var versions: [PartVersion] = []
+        if let analysis = record.analysis {
+            versions.append(PartVersion(partID: PartID(), kind: analysis.kind, author: .user, operation: Operation.adopted,
+                                        note: "analysis of \(record.title)", origin: seed.id))
+        }
+        let take = Audio(media: record.media, role: .take, stem: nil, sampleRate: info.sampleRate,
+                         channelCount: info.channelCount, duration: info.duration)
+        let takeVersion = PartVersion(partID: PartID(), kind: .audio(take), author: .user, operation: Operation.adopted,
+                                      note: "\(record.title), from the library", origin: seed.id)
+        versions.append(takeVersion)
+        updateSong { $0.seeds.append(seed) }
+        for version in versions { guard self.record(version) else { return nil } }
+        return takeVersion.id
+    }
+
+    /// What a drop does: adopt, then whatever the target implies.
+    @discardableResult
+    public func receive(_ payload: LibraryDragPayload, at drop: LibraryDrop) -> Bool {
+        switch payload.kind {
+        case .song:
+            openSong(SongID(rawValue: payload.id))
+            return true
+        case .album:
+            return openAlbum(AlbumID(rawValue: payload.id)) != nil
+        case .idea, .sample, .record:
+            break
+        }
+        guard let id = adopt(payload), let song, let version = song.version(id) else { return false }
+        switch drop {
+        case .ledger:
+            return true
+        case .bench:
+            if payload.kind == .record {
+                // A record on the bench is there to be chopped: the same path the path strip takes.
+                let action = SurfaceAction(surface: .chopLane, title: "Bar of \(payload.title)", prepare: .chopBar(of: id))
+                if canPerform(action) { perform(action) } else { perform(SurfaceAction(surface: .importRecord, title: song.title, bound: [id])) }
+            } else if let primary = PartActions.primary(for: version, in: song), canPerform(primary.action) {
+                perform(primary.action)
+            }
+            return true
+        case .section(let sectionID):
+            var sections = song.sections
+            guard let index = sections.firstIndex(where: { $0.id == sectionID }) else { return true }
+            guard StructureModel.plays(version) else {
+                note(.session, "\(PartLabel.title(of: version)) does not play on the transport, so it was adopted but not stitched",
+                     detail: version.type == .sample ? "Dust it first; a dry chop is the lane's raw material." : nil)
+                return true
+            }
+            sections[index].stitch.append(id)
+            return arrange(sections)
+        }
+    }
+
+    // MARK: Records, again
+
+    /// A new song from a record already in the library: its analysis and its take, referenced
+    /// where they already are, and no re-import.
+    @discardableResult
+    public func flipAgain(_ id: RecordID) -> Bool {
+        guard let record = library.record(id) else {
+            note(.session, "That record is not in the library any more")
+            return false
+        }
+        guard let store, let url = try? store.mediaURL(for: record.media), let info = try? AudioFileInfo.read(url) else {
+            note(.session, "\(record.title)'s audio is missing from the library")
+            return false
+        }
+        var analysis: MusicAnalysis?
+        if let version = record.analysis, case .analysis(let a) = version.kind { analysis = a }
+        let flips = library.songs.filter { song in song.seeds.contains { if case .importedRecord(id) = $0.kind { return true }; return false } }.count
+        let seed = Seed(kind: .importedRecord(record.id), note: "flipped again from the library")
+        var song = Song(title: flips == 0 ? record.title : "\(record.title) flip \(flips + 1)", artist: record.artist,
+                        key: analysis?.dominantKey, tempo: analysis?.dominantTempo ?? 120)
+        song.seeds.append(seed)
+        if let analysis {
+            try? song.append(PartVersion(partID: PartID(), kind: .analysis(analysis), author: .user, operation: Operation.imported,
+                                         note: "analysis of \(record.title)", origin: seed.id))
+        }
+        let take = Audio(media: record.media, role: .take, stem: nil, sampleRate: info.sampleRate,
+                         channelCount: info.channelCount, duration: info.duration)
+        try? song.append(PartVersion(partID: PartID(), kind: .audio(take), author: .user, operation: Operation.imported,
+                                     note: "the record, from the library", origin: seed.id))
+        open(song)
+        return true
+    }
+
+    // MARK: Albums
+
+    @discardableResult
+    public func createAlbum(title: String, artist: String = "") -> AlbumID? {
+        let album = Album(title: title.isEmpty ? "Untitled album" : title, artist: artist)
+        var updated = library
+        updated.albums.append(album)
+        guard writeLibrary(updated) else { return nil }
+        note(.you, "New album: \(album.title)")
+        return album.id
+    }
+
+    @discardableResult
+    public func renameAlbum(_ id: AlbumID, to title: String) -> Bool {
+        updateAlbum(id) { $0.title = title.isEmpty ? $0.title : title }
+    }
+
+    /// Adds a song to an album's sequence, once.
+    @discardableResult
+    public func addSong(_ songID: SongID, to albumID: AlbumID) -> Bool {
+        guard library.song(songID) != nil || song?.id == songID else {
+            note(.session, "That song is not in the library")
+            return false
+        }
+        return updateAlbum(albumID) { album in
+            guard !album.songs.contains(songID) else { return }
+            album.songs.append(songID)
+        }
+    }
+
+    @discardableResult
+    public func removeSong(_ songID: SongID, from albumID: AlbumID) -> Bool {
+        updateAlbum(albumID) { $0.songs.removeAll { $0 == songID } }
+    }
+
+    /// Moves a song so that it lands at `index` in the album's sequence.
+    @discardableResult
+    public func moveSong(_ songID: SongID, in albumID: AlbumID, to index: Int) -> Bool {
+        updateAlbum(albumID) { album in
+            guard let from = album.songs.firstIndex(of: songID) else { return }
+            let moved = album.songs.remove(at: from)
+            album.songs.insert(moved, at: max(0, min(index, album.songs.count)))
+        }
+    }
+
+    /// Records a clearance state for one source in an album.
+    @discardableResult
+    public func setClearance(_ status: ClearanceStatus, forSource source: String, record: RecordID?, in albumID: AlbumID) -> Bool {
+        updateAlbum(albumID) { album in
+            if let index = album.clearances.firstIndex(where: { $0.record == record && $0.source == source }) {
+                album.clearances[index].status = status
+            } else {
+                album.clearances.append(SampleClearance(source: source, status: status, record: record))
+            }
+        }
+    }
+
+    private func updateAlbum(_ id: AlbumID, _ change: (inout Album) -> Void) -> Bool {
+        guard var album = library.album(id) else {
+            note(.session, "That album is not in the library any more")
+            return false
+        }
+        change(&album)
+        var updated = library
+        updated.upsert(album)
+        return writeLibrary(updated)
+    }
+
+    /// Every source of every sample in the album's songs, with its clearance state — the stored one,
+    /// or *uncleared* until someone says otherwise.
+    public func sources(of album: Album) -> [SampleClearance] {
+        var out: [SampleClearance] = []
+        var seen = Set<String>()
+        func add(_ source: String, record: RecordID?) {
+            let key = record?.description ?? source
+            guard seen.insert(key).inserted else { return }
+            if let stored = album.clearances.first(where: { $0.record == record && ($0.record != nil || $0.source == source) }) {
+                out.append(stored)
+            } else {
+                out.append(SampleClearance(source: source, status: .uncleared, record: record))
+            }
+        }
+        for songID in album.songs {
+            guard let song = (self.song?.id == songID ? self.song : nil) ?? library.song(songID) else { continue }
+            for version in song.versions {
+                guard case .sample(let sample) = version.kind else { continue }
+                let record = sample.sourceRecord.flatMap { library.record($0) } ?? library.record(forMedia: sample.media)
+                if let record {
+                    add(record.artist.isEmpty ? record.title : "\(record.artist) – \(record.title)", record: record.id)
+                } else {
+                    add("\(PartLabel.title(of: version)) in \(song.title)", record: nil)
+                }
+            }
+        }
+        return out
+    }
+
+    /// Opens the Album surface on an album, reusing one already open on it.
+    @discardableResult
+    public func openAlbum(_ id: AlbumID) -> SurfaceID? {
+        guard let album = library.album(id) else {
+            note(.session, "That album is not in the library any more")
+            return nil
+        }
+        if let existing = albumBindings.first(where: { $0.value == id })?.key, bench.items.contains(where: { $0.id == existing }) {
+            focusSurface(existing)
+            return existing
+        }
+        let surface = openSurface(.album, title: album.title)
+        albumBindings[surface] = id
+        return surface
+    }
+
+    public func album(for surface: SurfaceID) -> Album? { albumBindings[surface].flatMap { library.album($0) } }
+
+    // MARK: Helpers
+
+    /// Writes `library.json` and keeps the in-memory library in step. False, with the reason in the
+    /// rail, when there is no store or the write failed.
+    @discardableResult
+    func writeLibrary(_ updated: Library) -> Bool {
+        guard let store else {
+            note(.session, "Nowhere to save the library", detail: "This session has no library directory.")
+            return false
+        }
+        do {
+            try store.saveDocument(updated)
+            library = updated
+            libraryStatus = .loaded(store.directoryURL)
+            return true
+        } catch {
+            note(.session, "Could not write the library", detail: "\(error)")
+            return false
+        }
+    }
+
+    private func copyMedia(of version: PartVersion, from songID: SongID, into kind: LibraryStore.MediaKind,
+                           store: LibraryStore) throws {
+        for media in version.mediaReferences {
+            let url = try store.mediaURL(for: media, song: songID)
+            try store.addMedia(copying: url, kind: kind)
+        }
+    }
+
+    /// Copies a library item's media into the open song's package, so the song keeps playing with
+    /// the library gone. False, with the reason in the rail, when the media cannot be found.
+    private func copyMediaIntoPackage(of version: PartVersion, song: Song) -> Bool {
+        guard !version.mediaReferences.isEmpty else { return true }
+        guard let store else { return true }
+        do {
+            let package = try store.songStore(for: song.id)
+            for media in version.mediaReferences where !package.hasMedia(media) {
+                let url = try store.mediaURL(for: media)
+                try package.addMedia(copying: url)
+            }
+            return true
+        } catch {
+            // A song not yet saved has no package; its media resolves through the library until it is.
+            if (try? store.songStore(for: song.id)) == nil { return true }
+            note(.session, "Could not copy the audio into \(song.title)", detail: "\(error)")
+            return false
+        }
+    }
+}

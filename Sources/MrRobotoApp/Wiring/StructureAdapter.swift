@@ -17,4 +17,8 @@ final class StructureAdapter: StructureHosting {
     }
 
     func stop() async { await app.stopTransport() }
+
+    func receive(_ payload: LibraryDragPayload, into section: SectionID) async -> Bool {
+        app.receive(payload, at: .section(section))
+    }
 }

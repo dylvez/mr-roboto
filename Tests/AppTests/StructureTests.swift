@@ -65,6 +65,7 @@ private final class StubStructureHost: StructureHosting {
     }
     func play() async { played += 1 }
     func stop() async {}
+    func receive(_ payload: LibraryDragPayload, into section: SectionID) async -> Bool { false }
 }
 
 @Suite("Structure: the sections, edited and kept") @MainActor

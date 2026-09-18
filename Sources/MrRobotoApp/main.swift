@@ -59,6 +59,10 @@ struct FrameCommands: Commands {
                 .keyboardShortcut("n", modifiers: .command)
             Button("Import Record…") { app.openSurface(.importRecord, title: "Record") }
                 .keyboardShortcut("i", modifiers: .command)
+            Button("New Album") {
+                if let id = app.createAlbum(title: "New album") { app.openAlbum(id) }
+            }
+            .disabled(app.store == nil)
         }
 
         CommandGroup(replacing: .saveItem) {

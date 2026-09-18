@@ -45,6 +45,10 @@ public enum Primer {
                     "The song's form: sections in order, each a name, a length in bars and the versions stitched into it. "
                         + "Drag a block to reorder, set its bars, duplicate it; keep the arrangement and the transport plays the "
                         + "sections one after another.")
+        case .album:
+            return ("Album",
+                    "An album is songs in order, with the loudness targets they are delivered to and a clearance state for "
+                        + "every record their samples came from. Drag songs in from the library; nothing is mastered here.")
         case .compare:
             return ("Compare",
                     "The band's candidates, each judged against the thing at the top that it has to beat. "

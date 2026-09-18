@@ -39,6 +39,10 @@ struct BenchColumn: View {
         }
         .padding(FrameLayout.benchPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        // A library row dropped on the bench is adopted into the open song and opened on the
+        // surface it belongs on: a sample on the Chop lane, a groove idea in the Grid, a record cut
+        // into a bar. A song opens; an album opens its surface.
+        .acceptsLibraryDrops(app, at: .bench)
     }
 
     private var empty: some View {

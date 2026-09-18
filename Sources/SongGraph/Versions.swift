@@ -64,6 +64,9 @@ public enum Operation {
     /// A sample or a groove put through a degradation chain: a new version of the same part whose
     /// parent is the version it dirtied. See `Degradation`.
     public static let degrade = "degrade"
+    /// A version brought into a song from the library — an idea, a sample, a record's take — as a
+    /// new part with no parents here. Its note names where it came from.
+    public static let adopted = "adopted"
     /// Filled in by the schema 1 → 2 migration for versions that predate provenance operations.
     public static let unknown = "unknown"
 }

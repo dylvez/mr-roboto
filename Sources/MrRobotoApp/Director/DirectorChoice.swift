@@ -43,7 +43,7 @@ extension SurfaceKind {
         case .sound: return [.sound, .sample, .groove]
         case .chords: return [.progression]
         case .pianoRoll: return [.bassline, .groove]
-        case .structure: return []
+        case .structure, .album: return []
         case .compare, .check: return Set(PartType.allCases)
         }
     }
@@ -428,6 +428,7 @@ public struct DirectorSurfaceChoice: Sendable, Equatable, Hashable, Identifiable
         case .check: return "one part and one finding"
         case .importRecord, .chopLane, .grid, .sound, .chords, .pianoRoll: return "part versions, and no reference"
         case .structure: return "nothing bound: it draws the song's sections"
+        case .album: return "nothing bound: it draws a library album"
         }
     }
 

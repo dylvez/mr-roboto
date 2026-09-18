@@ -95,10 +95,19 @@ public final class SurfaceRegistry {
         }
     }
 
+    /// The library's own surface. Apart from the Gate A list because it is not on the dock — an
+    /// album opens from its row in the sidebar — and apart from the answers because nobody asked.
+    public static func registerLibrarySurfaces(in registry: SurfaceRegistry = .shared) {
+        registry.register(.album) { item, app in
+            AlbumSurfaceView(surfaceID: item.id, app: app)
+        }
+    }
+
     /// Everything a running app draws. One call at launch, from `MrRobotoApp.init()`.
     public static func registerSurfaces(in registry: SurfaceRegistry = .shared) {
         registerGateASurfaces(in: registry)
         registerAnswerSurfaces(in: registry)
+        registerLibrarySurfaces(in: registry)
     }
 
     /// What the bench should draw for this item: the registered surface, or the placeholder.

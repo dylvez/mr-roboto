@@ -174,7 +174,7 @@ import Testing
 
         // Layout: library.json, two packages, records/ and samples/ with one file each.
         let entries = try FileManager.default.contentsOfDirectory(atPath: store.directoryURL.path).sorted()
-        #expect(entries == ["First.roboto", "Second.roboto", "library.json", "records", "samples"])
+        #expect(entries == ["First.roboto", "Second.roboto", "ideas", "library.json", "records", "samples"])
         #expect(try store.storedMedia(kind: .record) == [recordMedia])
         #expect(try store.storedMedia(kind: .sample) == [sharedSample])
         // The shared sample is not duplicated into the packages.
@@ -197,7 +197,8 @@ import Testing
         let songStore = try store.songStore(for: first.id)
         let take = try songStore.addMedia(Fixtures.mediaData(60), fileExtension: "wav")
         #expect(try store.mediaURL(for: take, song: first.id) == songStore.mediaDirectoryURL.appendingPathComponent(take.fileName))
-        let expected = SongGraphError.missingMedia(take, searched: [store.recordsDirectoryURL.path, store.samplesDirectoryURL.path])
+        let expected = SongGraphError.missingMedia(take, searched: [store.recordsDirectoryURL.path, store.samplesDirectoryURL.path,
+                                                                    store.ideasDirectoryURL.path])
         #expect(throws: expected) { try store.mediaURL(for: take) }
     }
 

@@ -51,6 +51,9 @@ public enum SurfaceKind: String, CaseIterable, Sendable {
     /// M2. Catalog #14: the form — sections in order, each naming what plays in it and for how
     /// many bars. Bound to nothing: it draws the song's sections, not a version.
     case structure = "Structure"
+    /// M3. An album's tracklist, targets and sample clearances. Bound to nothing: it draws a
+    /// library album (`AppState.albumBindings`), not a version, and opens from the sidebar.
+    case album = "Album"
 
     // The two answer surfaces. They are in the catalog because the Director has to be able to
     // *name* one — a question with alternatives gets a Compare, a question with one finding gets a
@@ -66,8 +69,9 @@ public enum SurfaceKind: String, CaseIterable, Sendable {
     /// order: a record, its chop, the groove, the chords, the bass under them, the sound, the form.
     public static let gateA: [SurfaceKind] = [.importRecord, .chopLane, .grid, .chords, .pianoRoll, .sound, .structure]
 
-    /// The surfaces that draw the song rather than a version of a part, and so open on nothing.
-    public var isUnbound: Bool { self == .structure }
+    /// The surfaces that draw the song or the library rather than a version of a part, and so
+    /// open on nothing.
+    public var isUnbound: Bool { self == .structure || self == .album }
 
     /// The two the Director opens to answer with. You do not pick these off a shelf — a Compare
     /// with nothing to compare is not a surface, it is an empty promise — so they are deliberately

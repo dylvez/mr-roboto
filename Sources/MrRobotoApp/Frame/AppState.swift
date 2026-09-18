@@ -192,10 +192,10 @@ public final class AppState {
     // MARK: Library
 
     /// The library as last read from disk. Replaced wholesale by `reloadLibrary()`; never mutated in place.
-    public private(set) var library: Library
+    public internal(set) var library: Library
 
     /// Whether the library directory had anything in it. The sidebar's empty state reads this.
-    public private(set) var libraryStatus: LibraryStatus
+    public internal(set) var libraryStatus: LibraryStatus
 
     /// The store the library was read from, and that `save()` writes back to. Nil in tests and previews.
     @ObservationIgnored public let store: LibraryStore?
@@ -233,6 +233,10 @@ public final class AppState {
     /// Which part versions each open surface was opened against. `BenchItem` deliberately carries only
     /// what the frame draws, so the binding lives here; a surface reads it with `bound(for:)`.
     public private(set) var bindings: [SurfaceID: [VersionID]] = [:]
+
+    /// Which album an open Album surface shows. Albums are not versions, so they are not in
+    /// `bindings`; the surface reads this the way a part surface reads `bound(for:)`.
+    public internal(set) var albumBindings: [SurfaceID: AlbumID] = [:]
 
     /// Work a surface was asked to start the moment the wiring builds it.
     ///
@@ -530,6 +534,16 @@ public final class AppState {
         if let opening = Guidance.opening(song) { perform(opening) }
     }
 
+    /// One change to the open song that is not a version — a seed added, a title changed. Marks
+    /// the song unsaved and re-reads what the transport can play.
+    func updateSong(_ change: (inout Song) -> Void) {
+        guard var current = song else { return }
+        change(&current)
+        song = current
+        hasUnsavedChanges = true
+        refreshPlayback()
+    }
+
     private func openSongWithoutLogging(_ song: Song) {
         self.song = song
         selectedVersion = song.versions.last?.id
@@ -681,6 +695,7 @@ public final class AppState {
         note(.you, "Opened \(kind.rawValue)", detail: title)
         if let retired, retired.id != id {
             bindings[retired.id] = nil
+            albumBindings[retired.id] = nil
             surfaceLevers[retired.id] = nil
             answers[retired.id] = nil
             note(.session, "Closed \(retired.kind.rawValue) to make room", detail: retired.title)
@@ -692,6 +707,7 @@ public final class AppState {
         guard let item = bench.items.first(where: { $0.id == id }) else { return }
         bench.close(id)
         bindings[id] = nil
+        albumBindings[id] = nil
         surfaceLevers[id] = nil
         answers[id] = nil
         note(.you, "Closed \(item.kind.rawValue)", detail: item.title)

@@ -235,7 +235,10 @@ final class SurfaceWiring {
     /// The form: the song's sections as a working copy, kept through `AppState.arrange`.
     func structureModel(for item: BenchItem, app: AppState) -> StructureModel {
         prune(app)
-        if let existing = structures[item.id] { return existing }
+        if let existing = structures[item.id] {
+            existing.sync(with: app.song)
+            return existing
+        }
         let model = StructureModel(host: StructureAdapter(app: app), song: app.song, surfaceID: item.id)
         structures[item.id] = model
         return model

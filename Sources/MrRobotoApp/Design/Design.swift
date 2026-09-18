@@ -18,6 +18,11 @@ import SwiftUI
 ///
 /// Nothing in a surface should hard-code a colour or a size; take it from here.
 public enum Design {
+    /// True under `MRROBOTO_RENDER`, when the frame is being drawn by `ImageRenderer` for a test
+    /// rather than shown. AppKit-backed controls render as prohibited blocks there, so the few
+    /// that would hide something worth seeing step aside.
+    public static let isOffscreenRender = ProcessInfo.processInfo.environment["MRROBOTO_RENDER"] != nil
+
 
     // MARK: - A colour, defined once for both appearances
 

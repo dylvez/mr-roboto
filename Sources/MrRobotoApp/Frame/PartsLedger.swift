@@ -53,6 +53,8 @@ struct PartsLedger: View {
             Spacer(minLength: 0)
         }
         .background(Design.Palette.panelAlt)
+        // A library row dropped on the ledger is adopted and nothing more: it lands as a part.
+        .acceptsLibraryDrops(app, at: .ledger)
     }
 
     /// A stage's name over its parts, in the words the path strip uses, so the ledger and the path
@@ -105,6 +107,14 @@ struct PartsLedger: View {
             }
             .buttonStyle(.plain)
             .help(action.map { "\($0.title) — \($0.rationale)" } ?? "Gate A has no surface for this kind of part yet")
+            .contextMenu {
+                Button("Keep as idea") { app.keepAsIdea(version.id) }
+                    .disabled(app.store == nil)
+                if version.type == .sample {
+                    Button("Save to Samples") { app.saveToSamples(version.id) }
+                        .disabled(app.store == nil)
+                }
+            }
 
             if part.versions.count > 1, let song = app.song {
                 VersionChips(part: part, song: song, app: app)

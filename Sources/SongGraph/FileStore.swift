@@ -229,21 +229,23 @@ public struct SongStore: Sendable {
 
 // MARK: - Library directory
 
-/// A library on disk: a directory holding `library.json`, one `.roboto` package per song, and `records/` and
-/// `samples/` media by hash. Media shared by songs is stored once, at the library level.
+/// A library on disk: a directory holding `library.json`, one `.roboto` package per song, and `records/`,
+/// `samples/` and `ideas/` media by hash. Media shared by songs is stored once, at the library level.
 public struct LibraryStore: Sendable {
     public static let documentName = "library.json"
     public static let recordsDirectoryName = "records"
     public static let samplesDirectoryName = "samples"
+    public static let ideasDirectoryName = "ideas"
 
     /// Where library-level media lives.
     public enum MediaKind: String, Sendable, CaseIterable {
-        case record, sample
+        case record, sample, idea
 
         var directoryName: String {
             switch self {
             case .record: return LibraryStore.recordsDirectoryName
             case .sample: return LibraryStore.samplesDirectoryName
+            case .idea: return LibraryStore.ideasDirectoryName
             }
         }
     }
@@ -257,6 +259,7 @@ public struct LibraryStore: Sendable {
     public var documentURL: URL { directoryURL.appendingPathComponent(LibraryStore.documentName) }
     public var recordsDirectoryURL: URL { directoryURL.appendingPathComponent(LibraryStore.recordsDirectoryName) }
     public var samplesDirectoryURL: URL { directoryURL.appendingPathComponent(LibraryStore.samplesDirectoryName) }
+    public var ideasDirectoryURL: URL { directoryURL.appendingPathComponent(LibraryStore.ideasDirectoryName) }
 
     public func mediaDirectoryURL(for kind: MediaKind) -> URL { directoryURL.appendingPathComponent(kind.directoryName) }
 
@@ -324,6 +327,7 @@ public struct LibraryStore: Sendable {
             try Files.ensureDirectory(url)
             try Files.ensureDirectory(url.appendingPathComponent(LibraryStore.recordsDirectoryName))
             try Files.ensureDirectory(url.appendingPathComponent(LibraryStore.samplesDirectoryName))
+            try Files.ensureDirectory(url.appendingPathComponent(LibraryStore.ideasDirectoryName))
         }
         var existing: [SongID: SongStore] = [:]
         for store in try songStores() {
@@ -345,6 +349,28 @@ public struct LibraryStore: Sendable {
             taken.insert(store.packageURL.lastPathComponent)
             try store.save(song)
             entries.append(.init(id: song.id, title: song.title, package: store.packageURL.lastPathComponent))
+        }
+        let document = Document(schemaVersion: SongGraphSchema.current, songs: entries, albums: library.albums,
+                                ideas: library.ideas, records: library.records, samples: library.samples)
+        let data = try SongGraphCodec.encode(document)
+        try FileCoordination.write(documentURL, options: [.forReplacing]) { url in
+            try data.write(to: url, options: .atomic)
+        }
+    }
+
+    /// Writes `library.json` only — albums, ideas, records and samples — listing the song packages
+    /// already on disk. For a library-level change (an idea kept, a sample saved, an album made)
+    /// nothing in any song moved, and rewriting every package to record it would touch a song you
+    /// have open with the copy the library last saw.
+    public func saveDocument(_ library: Library) throws {
+        try FileCoordination.write(directoryURL, options: Files.exists(directoryURL) ? [.forMerging] : []) { url in
+            try Files.ensureDirectory(url)
+            for kind in MediaKind.allCases { try Files.ensureDirectory(url.appendingPathComponent(kind.directoryName)) }
+        }
+        var entries: [Document.SongEntry] = []
+        for store in try songStores() {
+            guard let header = try? headerOf(store) else { continue }
+            entries.append(.init(id: header.id, title: header.title, package: store.packageURL.lastPathComponent))
         }
         let document = Document(schemaVersion: SongGraphSchema.current, songs: entries, albums: library.albums,
                                 ideas: library.ideas, records: library.records, samples: library.samples)
@@ -395,10 +421,12 @@ public struct LibraryStore: Sendable {
         if let song, let store = try? songStore(for: song) { directories.append(store.mediaDirectoryURL) }
         directories.append(recordsDirectoryURL)
         directories.append(samplesDirectoryURL)
+        directories.append(ideasDirectoryURL)
         return directories
     }
 
-    /// The file for a media reference, looking in the song's package (when given) then `records/` and `samples/`.
+    /// The file for a media reference, looking in the song's package (when given) then `records/`, `samples/`
+    /// and `ideas/`.
     public func mediaURL(for ref: MediaRef, song: SongID? = nil) throws -> URL {
         let directories = searchDirectories(song: song)
         for directory in directories {

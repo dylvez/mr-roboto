@@ -22,6 +22,7 @@ struct SurfaceBand: View {
             case .chords: chords(context, size, ink)
             case .pianoRoll: roll(context, size, ink)
             case .structure: structure(context, size, ink)
+            case .album: album(context, size, ink)
             case .compare: compare(context, size, ink)
             case .check: check(context, size, ink)
             }
@@ -157,6 +158,22 @@ struct SurfaceBand: View {
             index += 1
         }
         context.stroke(path, with: .color(ink), lineWidth: 1)
+    }
+
+    /// Tracks: numbered ticks of unequal length, like the back of a sleeve.
+    private func album(_ context: GraphicsContext, _ size: CGSize, _ ink: Color) {
+        let widths: [CGFloat] = [48, 36, 60, 30, 54, 42]
+        var x: CGFloat = 0
+        var index = 0
+        while x < size.width {
+            let width = widths[index % widths.count]
+            let y = size.height / 2
+            context.stroke(Path { $0.move(to: CGPoint(x: x, y: y)); $0.addLine(to: CGPoint(x: x + width, y: y)) },
+                           with: .color(ink), lineWidth: 2)
+            context.fill(Path(ellipseIn: CGRect(x: x - 2, y: y - 2, width: 4, height: 4)), with: .color(Design.Palette.accent))
+            x += width + 10
+            index += 1
+        }
     }
 
     /// Section blocks of a form's proportions — a short intro, long verses, shorter hooks.

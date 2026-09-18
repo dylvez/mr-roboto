@@ -15,8 +15,10 @@ struct WiringRegistryTests {
 
     @Test("registerGateASurfaces registers exactly the kinds you drive yourself")
     func registersFourKinds() {
-        SurfaceRegistry.registerGateASurfaces()
-        let registry = SurfaceRegistry.shared
+        // A registry of its own: `.shared` also carries the answer and library surfaces once any
+        // other suite has registered everything, and this test is about the Gate A list alone.
+        let registry = SurfaceRegistry()
+        SurfaceRegistry.registerGateASurfaces(in: registry)
         #expect(Set(registry.registeredKinds) == Set(SurfaceKind.gateA))
         #expect(registry.registeredKinds.count == 7, "the Gate A four plus M2's Chords, Piano roll and Structure")
         for kind in SurfaceKind.gateA {

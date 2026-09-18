@@ -150,7 +150,27 @@ private struct SectionBlock: View {
             model.move(SectionID(rawValue: uuid), before: section.id)
             return true
         }
+        .modifier(SectionDropTarget(model: model, section: section.id))
         .help(model.silence(of: section) ?? "\(section.name) · \(section.lengthInBars) bars")
+    }
+}
+
+/// A library row dropped on a block is adopted and stitched into that section. Off in offscreen
+/// renders, like every drop target: `dropDestination` is AppKit-backed and renders as a block.
+private struct SectionDropTarget: ViewModifier {
+    let model: StructureModel
+    let section: SectionID
+
+    func body(content: Content) -> some View {
+        if Design.isOffscreenRender {
+            content
+        } else {
+            content.dropDestination(for: LibraryDragPayload.self) { payloads, _ in
+                guard let payload = payloads.first else { return false }
+                Task { await model.receive(payload, into: section) }
+                return true
+            }
+        }
     }
 }
 

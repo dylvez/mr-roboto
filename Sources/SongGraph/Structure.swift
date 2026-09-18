@@ -280,6 +280,14 @@ public struct Library: Hashable, Codable, Sendable {
         if let index = songs.firstIndex(where: { $0.id == song.id }) { songs[index] = song } else { songs.append(song) }
     }
 
+    /// Replaces the album with the same id, or appends it.
+    public mutating func upsert(_ album: Album) {
+        if let index = albums.firstIndex(where: { $0.id == album.id }) { albums[index] = album } else { albums.append(album) }
+    }
+
+    /// The record whose media this is, when the library holds one.
+    public func record(forMedia media: MediaRef) -> Record? { records.first { $0.media == media } }
+
     /// Media referenced at the library level (records, samples, ideas), deduplicated.
     public var mediaReferences: [MediaRef] {
         var seen = Set<MediaRef>()

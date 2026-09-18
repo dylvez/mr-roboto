@@ -46,16 +46,47 @@ public struct LibraryDragPayload: Codable, Sendable, Hashable, Transferable, Cus
     }
 }
 
+extension View {
+    /// Accepts library rows dropped here, adopting them into the open song the way `drop` says.
+    ///
+    /// Off during an offscreen render: `dropDestination` is AppKit-backed, and `ImageRenderer`
+    /// draws an AppKit-backed host as one prohibited block — over the whole bench, in this case.
+    /// The renders are how this frame is looked at, so the drop target steps aside for them.
+    func acceptsLibraryDrops(_ app: AppState, at drop: LibraryDrop) -> some View {
+        modifier(LibraryDropTarget(app: app, drop: drop))
+    }
+}
+
+private struct LibraryDropTarget: ViewModifier {
+    let app: AppState
+    let drop: LibraryDrop
+
+    func body(content: Content) -> some View {
+        if Design.isOffscreenRender {
+            content
+        } else {
+            content.dropDestination(for: LibraryDragPayload.self) { payloads, _ in
+                payloads.reduce(false) { app.receive($1, at: drop) || $0 }
+            }
+        }
+    }
+}
+
 /// The library, always on screen. Ideas, songs, albums, imported records, samples — everything the
 /// session can draw on, and anything in it can be dragged into a surface.
 struct LibrarySidebar: View {
     let app: AppState
+    @State private var filter = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 SmallLabel("Library")
                 Spacer()
+                ChipButton(systemImage: "plus.square.on.square", help: "New album",
+                           isEnabled: app.store != nil) {
+                    if let id = app.createAlbum(title: "New album") { app.openAlbum(id) }
+                }
                 ChipButton(systemImage: "arrow.clockwise", help: "Re-read the library directory",
                            isEnabled: app.store != nil) {
                     app.reloadLibrary()
@@ -67,6 +98,14 @@ struct LibrarySidebar: View {
 
             Hairline()
 
+            if !app.library.isEmpty, !Design.isOffscreenRender {
+                TextField("Filter", text: $filter)
+                    .textFieldStyle(.roundedBorder)
+                    .font(Design.Typography.ui(12))
+                    .padding(.horizontal, Design.Metric.inset)
+                    .padding(.top, 10)
+            }
+
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     if case .failed(let url, let reason) = app.libraryStatus {
@@ -75,11 +114,12 @@ struct LibrarySidebar: View {
                     } else if app.library.isEmpty {
                         emptyState
                     } else {
-                        group("Ideas", app.library.ideas.map {
-                            Row(payload: LibraryDragPayload(kind: .idea, id: $0.id.rawValue,
-                                                            title: $0.type.rawValue.capitalized),
-                                title: $0.type.rawValue.capitalized,
-                                detail: $0.operation)
+                        group("Ideas", app.library.ideas.map { idea in
+                            Row(payload: LibraryDragPayload(kind: .idea, id: idea.id.rawValue, title: PartLabel.title(of: idea)),
+                                title: PartLabel.title(of: idea),
+                                detail: idea.note ?? idea.operation,
+                                inSong: Self.holds(idea, app.song),
+                                adopts: true)
                         })
                         group("Songs", app.library.songs.map { song in
                             Row(payload: LibraryDragPayload(kind: .song, id: song.id.rawValue, title: song.title),
@@ -88,20 +128,25 @@ struct LibrarySidebar: View {
                                 isSelected: app.song?.id == song.id,
                                 opens: song.id)
                         })
-                        group("Albums", app.library.albums.map {
-                            Row(payload: LibraryDragPayload(kind: .album, id: $0.id.rawValue, title: $0.title),
-                                title: $0.title,
-                                detail: "\($0.songs.count) song\($0.songs.count == 1 ? "" : "s")")
+                        group("Albums", app.library.albums.map { album in
+                            Row(payload: LibraryDragPayload(kind: .album, id: album.id.rawValue, title: album.title),
+                                title: album.title,
+                                detail: "\(album.songs.count) song\(album.songs.count == 1 ? "" : "s")",
+                                opensAlbum: album.id)
                         })
-                        group("Records", app.library.records.map {
-                            Row(payload: LibraryDragPayload(kind: .record, id: $0.id.rawValue, title: $0.title),
-                                title: $0.title,
-                                detail: $0.artist.isEmpty ? $0.media.fileExtension.uppercased() : $0.artist)
+                        group("Records", app.library.records.map { record in
+                            Row(payload: LibraryDragPayload(kind: .record, id: record.id.rawValue, title: record.title),
+                                title: record.title,
+                                detail: Self.recordDetail(record),
+                                inSong: app.song?.versions.contains { Guidance.audio(of: $0)?.media == record.media } == true,
+                                adopts: true, flips: record.id)
                         })
-                        group("Samples", app.library.samples.map {
-                            Row(payload: LibraryDragPayload(kind: .sample, id: $0.id.rawValue, title: $0.name),
-                                title: $0.name,
-                                detail: $0.tags.joined(separator: " · "))
+                        group("Samples", app.library.samples.map { entry in
+                            Row(payload: LibraryDragPayload(kind: .sample, id: entry.id.rawValue, title: entry.name),
+                                title: entry.name,
+                                detail: Self.sampleDetail(entry),
+                                inSong: app.song?.versions.contains { $0.kind == .sample(entry.sample) } == true,
+                                adopts: true)
                         })
                     }
                 }
@@ -117,8 +162,43 @@ struct LibrarySidebar: View {
         var pieces: [String] = []
         if let key = song.key { pieces.append(key.name) }
         pieces.append("\(Int(song.tempo.rounded())) bpm")
-        if !song.sections.isEmpty { pieces.append("\(song.sections.count) sections") }
+        if song.lengthInBars > 0 { pieces.append("\(song.lengthInBars) bars") }
         return pieces.joined(separator: " · ")
+    }
+
+    /// "D major · 113 bpm · 78 bars", from the record's own analysis.
+    static func recordDetail(_ record: Record) -> String {
+        var pieces: [String] = []
+        if let version = record.analysis, case .analysis(let analysis) = version.kind {
+            if let key = analysis.dominantKey { pieces.append(key.name) }
+            if let tempo = analysis.dominantTempo { pieces.append("\(Int(tempo.rounded())) bpm") }
+            if !analysis.bars.isEmpty { pieces.append("\(analysis.bars.count) bars") }
+        }
+        if pieces.isEmpty { pieces.append(record.artist.isEmpty ? record.media.fileExtension.uppercased() : record.artist) }
+        return pieces.joined(separator: " · ")
+    }
+
+    /// Root, tempo, slices and the chain, from the sample itself.
+    static func sampleDetail(_ entry: LibrarySample) -> String {
+        var pieces: [String] = []
+        if let root = entry.sample.rootPitch { pieces.append("\(root)") }
+        if let tempo = entry.sample.detectedTempo { pieces.append("\(Int(tempo.rounded())) bpm") }
+        if !entry.sample.slices.isEmpty { pieces.append("\(entry.sample.slices.count) slices") }
+        if !entry.sample.degradation.isEmpty { pieces.append(Dust.describe(entry.sample.degradation)) }
+        if pieces.isEmpty { pieces.append(entry.tags.joined(separator: " · ")) }
+        return pieces.joined(separator: " · ")
+    }
+
+    /// Whether the open song already holds this idea's music — the same kind, note for note.
+    static func holds(_ idea: PartVersion, _ song: Song?) -> Bool {
+        song?.versions.contains { $0.kind == idea.kind } == true
+    }
+
+    /// The rows that match the filter, or all of them when there is none.
+    private func matching(_ rows: [Row]) -> [Row] {
+        let needle = filter.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !needle.isEmpty else { return rows }
+        return rows.filter { $0.title.lowercased().contains(needle) || $0.detail.lowercased().contains(needle) }
     }
 
     @ViewBuilder
@@ -141,7 +221,8 @@ struct LibrarySidebar: View {
     }
 
     @ViewBuilder
-    private func group(_ title: String, _ rows: [Row]) -> some View {
+    private func group(_ title: String, _ allRows: [Row]) -> some View {
+        let rows = matching(allRows)
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 if let glyph = Self.glyphs[title] {
@@ -175,8 +256,16 @@ struct LibrarySidebar: View {
         let title: String
         var detail: String = ""
         var isSelected: Bool = false
-        /// Set for songs: the one library row that opens something in Gate A.
+        /// Set for songs: clicking the row opens the song.
         var opens: SongID?
+        /// Set for albums: clicking the row opens the Album surface.
+        var opensAlbum: AlbumID?
+        /// The open song already holds this item's music.
+        var inSong: Bool = false
+        /// Ideas, samples and records: the row can be adopted into the open song from its menu.
+        var adopts: Bool = false
+        /// Records: the row can seed a new song.
+        var flips: RecordID?
 
         var id: UUID { payload.id }
     }
@@ -187,13 +276,19 @@ struct LibrarySidebar: View {
 
         var body: some View {
             Button {
-                if let id = row.opens { app.openSong(id) }
+                if let id = row.opens { app.openSong(id) } else if let id = row.opensAlbum { app.openAlbum(id) }
             } label: {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(row.title)
-                        .font(Design.Typography.ui(13, weight: row.isSelected ? .semibold : .regular))
-                        .foregroundStyle(row.isSelected ? Design.Palette.accent : Design.Palette.ink)
-                        .lineLimit(1)
+                    HStack(spacing: 5) {
+                        Text(row.title)
+                            .font(Design.Typography.ui(13, weight: row.isSelected ? .semibold : .regular))
+                            .foregroundStyle(row.isSelected ? Design.Palette.accent : Design.Palette.ink)
+                            .lineLimit(1)
+                        if row.inSong {
+                            Circle().fill(Design.Palette.accent).frame(width: 5, height: 5)
+                                .help("Already in the open song")
+                        }
+                    }
                     if !row.detail.isEmpty {
                         Text(row.detail)
                             .font(Design.Typography.ui(11, weight: .regular))
@@ -209,8 +304,23 @@ struct LibrarySidebar: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .disabled(row.opens == nil)
+            .disabled(row.opens == nil && row.opensAlbum == nil)
             .draggable(row.payload)
+            .contextMenu {
+                if row.adopts {
+                    Button("Adopt into this song") { app.receive(row.payload, at: .bench) }
+                        .disabled(app.song == nil)
+                }
+                if let record = row.flips {
+                    Button("Flip again (new song)") { app.flipAgain(record) }
+                }
+                if let id = row.opens {
+                    Button("Open") { app.openSong(id) }
+                }
+                if let id = row.opensAlbum {
+                    Button("Open") { app.openAlbum(id) }
+                }
+            }
         }
     }
 }
