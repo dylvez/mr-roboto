@@ -9,6 +9,16 @@ struct HeaderBar: View {
 
     var body: some View {
         HStack(spacing: 14) {
+            // The app's own mark, then a rule, then the song you are in.
+            HStack(spacing: 8) {
+                AppIconArt()
+                    .frame(width: 34, height: 34)
+                Wordmark(size: 16)
+            }
+            .accessibilityElement(children: .combine)
+            Rectangle()
+                .fill(Design.Palette.lineStrong)
+                .frame(width: Design.Metric.hairline, height: 22)
             SmallLabel("Song")
             Text(app.song?.title ?? "No song open")
                 .font(Design.Typography.ui(17, weight: .medium))
