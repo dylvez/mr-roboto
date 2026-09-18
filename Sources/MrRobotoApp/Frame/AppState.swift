@@ -227,6 +227,9 @@ public final class AppState {
     /// reads this for its widths and for its own window minimum.
     public let regions: RegionVisibility
 
+    /// Which surfaces' one-line primers you have dismissed. See `Primer`.
+    public let primers: PrimerStore
+
     /// Which part versions each open surface was opened against. `BenchItem` deliberately carries only
     /// what the frame draws, so the binding lives here; a surface reads it with `bound(for:)`.
     public private(set) var bindings: [SurfaceID: [VersionID]] = [:]
@@ -351,12 +354,14 @@ public final class AppState {
                 store: LibraryStore? = nil,
                 status: LibraryStatus? = nil,
                 transportHost: TransportHost = LiveTransportHost(),
-                regions: RegionVisibility? = nil) {
+                regions: RegionVisibility? = nil,
+                primers: PrimerStore? = nil) {
         self.library = library
         self.store = store
         self.transportHost = transportHost
         self.bench = Bench()
         self.regions = regions ?? RegionVisibility()
+        self.primers = primers ?? PrimerStore()
         self.libraryStatus = status ?? store.map { library.isEmpty ? .empty($0.directoryURL) : .loaded($0.directoryURL) } ?? .unset
         if let song {
             openSongWithoutLogging(song)

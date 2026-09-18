@@ -88,6 +88,28 @@ enum Dust {
         return passes.reversed().map(\.name).joined(separator: " over ")
     }
 
+    /// "SP-1200 at 60%", "Cassette at 100% over SP-1200 at 60%": the chain as a person says it —
+    /// the machine's own name and the amount, never a bit depth. What the lineage crumbs show.
+    static func spoken(_ passes: [Degradation]) -> String {
+        guard !passes.isEmpty else { return "Clean" }
+        return passes.reversed().map { pass in
+            let mix = pass.parameters[DegradeSettings.PassKey.mix] ?? 1
+            return "\(machineName(pass.name)) at \(Int((mix * 100).rounded()))%"
+        }.joined(separator: " over ")
+    }
+
+    /// The machine's name as printed on it, for the five the instrument models.
+    static func machineName(_ preset: String) -> String {
+        switch preset.lowercased() {
+        case "sp1200": return "SP-1200"
+        case "mpc60": return "MPC60"
+        case "cassette": return "Cassette"
+        case "vinyl": return "Vinyl"
+        case "radio": return "Radio"
+        default: return preset
+        }
+    }
+
     // MARK: The critics
 
     /// A chain review of a dirtied part: the top pass is `degrade`, the passes beneath it are prior.

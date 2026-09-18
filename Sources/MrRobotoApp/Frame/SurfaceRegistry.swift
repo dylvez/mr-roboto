@@ -117,6 +117,9 @@ struct SurfaceHost: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
+            if app.primers.isShowing(item.kind) {
+                PrimerBanner(kind: item.kind, store: app.primers)
+            }
             Divider().overlay(Design.Palette.line)
             content
                 // The surface takes everything the bench gives it. This is the other half of drawing
@@ -143,7 +146,19 @@ struct SurfaceHost: View {
                 .font(Design.Typography.ui(16, weight: .medium))
                 .foregroundStyle(Design.Palette.ink)
                 .lineLimit(1)
+                .layoutPriority(1)
+            // Where the bound part came from. It gives way before the title does.
+            if crumbs.count > 1 {
+                LineageCrumbs(crumbs: crumbs, app: app)
+            }
             Spacer(minLength: 8)
+            ChipButton(systemImage: "questionmark",
+                       help: app.primers.isShowing(item.kind)
+                           ? "Hide what \(item.kind.rawValue) is for"
+                           : "What is \(item.kind.rawValue) for?",
+                       isOn: app.primers.isShowing(item.kind)) {
+                app.primers.toggle(item.kind)
+            }
             ChipButton(systemImage: item.isPinned ? "pin.fill" : "pin",
                        help: item.isPinned
                            ? "Unpin this surface — the one you are working in fills the bench again"
@@ -157,6 +172,12 @@ struct SurfaceHost: View {
         }
         .padding(.horizontal, Design.Metric.inset)
         .padding(.vertical, 12)
+    }
+
+    /// The lineage of the first bound part, when there is one.
+    private var crumbs: [PartLineage.Crumb] {
+        guard let song = app.song, let first = app.bound(for: item.id).first else { return [] }
+        return PartLineage.crumbs(for: first, in: song)
     }
 
     @ViewBuilder

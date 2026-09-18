@@ -31,6 +31,12 @@ struct MrRobotoApp: App {
         .windowResizability(.contentMinSize)
         .defaultSize(width: FrameLayout.defaultWindowWidth, height: FrameLayout.defaultWindowHeight)
         .commands { FrameCommands(app: app) }
+
+        // Help ▸ Mr. Roboto Field Guide. A window of its own so it can sit beside the work.
+        Window("Field Guide", id: FieldGuideWindow.id) {
+            FieldGuideView()
+        }
+        .defaultSize(width: 620, height: 720)
     }
 }
 
@@ -38,8 +44,15 @@ struct MrRobotoApp: App {
 /// ones that mean something in Gate A. Space is the transport, as it is in every instrument.
 struct FrameCommands: Commands {
     let app: AppState
+    @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {
+        CommandGroup(replacing: .help) {
+            Button("Mr. Roboto Field Guide") { openWindow(id: FieldGuideWindow.id) }
+                .keyboardShortcut("/", modifiers: [.command, .shift])
+            Button("Show Every Primer Again") { app.primers.resetAll() }
+        }
+
         CommandGroup(replacing: .newItem) {
             Button("New Song") { app.open(Song(title: MrRobotoApp.untitledName())) }
                 .keyboardShortcut("n", modifiers: .command)
@@ -125,4 +138,8 @@ extension MrRobotoApp {
     static func untitledName(_ date: Date = Date()) -> String {
         "Untitled, \(date.formatted(.dateTime.month(.abbreviated).day()))"
     }
+}
+
+enum FieldGuideWindow {
+    static let id = "field-guide"
 }

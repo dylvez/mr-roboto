@@ -18,7 +18,10 @@ struct HeaderBar: View {
                     .font(Design.Typography.label)
                     .foregroundStyle(Design.Palette.warn)
             }
-            Spacer()
+            Spacer(minLength: 16)
+            // Where you are in the work. See `WorkPath`.
+            PathStrip(app: app)
+            Spacer(minLength: 16)
             FrameButton(title: "History", emphasis: .quiet, isEnabled: app.song != nil) {
                 isShowingHistory.toggle()
             }

@@ -135,7 +135,7 @@ public struct LiveImportHost: ImportHosting {
         progress(ImportStep(detail: "Music Understanding: listening to the whole track"))
 
         let steps: [(AnalysisCapability, String)] = [
-            (.key, "key"), (.beats, "beats and downbeats"), (.structure, "sections"),
+            (.key, "key"), (.beats, "beats and downbeats"), (.structure, "form"),
             (.loudness, "loudness"), (.instrumentActivity, "instrument activity"),
         ]
         for (index, step) in steps.enumerated() {

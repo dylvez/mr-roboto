@@ -22,7 +22,7 @@ struct ConversationRail: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
-                SmallLabel("Session")
+                SmallLabel("Band")
                 Spacer()
                 Text("\(app.log.count)")
                     .font(Design.Typography.numeric(10.5))

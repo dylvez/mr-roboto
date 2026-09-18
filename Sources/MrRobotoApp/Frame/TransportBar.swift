@@ -113,7 +113,7 @@ struct TransportBar: View {
     private var sectionStrip: some View {
         let sections = app.song?.sections ?? []
         if sections.isEmpty {
-            Text(app.song == nil ? "No song open" : "No sections yet")
+            Text(app.song == nil ? "No song open" : "No sections arranged yet")
                 .font(Design.Typography.ui(12, weight: .regular))
                 .foregroundStyle(Design.Palette.inkTertiary)
                 .frame(maxWidth: .infinity, alignment: .leading)

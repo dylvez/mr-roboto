@@ -21,7 +21,7 @@ public enum FrameRegion: String, CaseIterable, Sendable, Identifiable {
     public var title: String {
         switch self {
         case .library: return "Library"
-        case .rail: return "Session"
+        case .rail: return "Band"
         case .ledger: return "Parts"
         }
     }

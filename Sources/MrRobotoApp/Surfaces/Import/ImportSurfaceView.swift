@@ -248,7 +248,7 @@ private struct ReadingsRow: View {
             Reading("Key", model.detectedKey?.name ?? "—")
             Reading("Tempo", model.detectedTempo.map { String(format: "%.1f bpm", $0) } ?? "—")
             Reading("Bars", model.barCount == 0 ? "—" : "\(model.barCount)")
-            Reading("Sections", model.sections.isEmpty ? "—" : "\(model.sections.count)")
+            Reading("Form", model.sections.isEmpty ? "—" : "\(model.sections.count)")
             Reading("Loudness", model.loudness.map { String(format: "%.1f LUFS", $0.integrated) } ?? "—")
             Spacer()
         }
@@ -290,7 +290,7 @@ private struct SectionsStrip: View {
             GeometryReader { geometry in
                 VStack(alignment: .leading, spacing: 4) {
                     laneRow(ranges: model.sections.map { SongGraph.TimeRange(start: $0.start, end: $0.end) },
-                            label: "sections", colour: Design.Palette.accent, width: geometry.size.width)
+                            label: "form", colour: Design.Palette.accent, width: geometry.size.width)
                     ForEach(model.instruments, id: \.instrument) { activity in
                         laneRow(ranges: activity.ranges, label: activity.instrument.rawValue,
                                 colour: Design.Palette.inkSecondary, width: geometry.size.width)
