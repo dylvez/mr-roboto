@@ -524,6 +524,7 @@ struct GuidanceDockTests {
             .sound: [built.sound!.id],
             .chords: [built.song.versions.first { $0.type == .progression }!.id],
             .pianoRoll: [built.song.versions.first { $0.type == .bassline }!.id],
+            .structure: [],
         ]
         for kind in SurfaceKind.gateA {
             let action = Guidance.dockAction(for: kind, in: app.song)

@@ -124,8 +124,9 @@ extension SurfaceKind {
         case .chopLane: return ("chop", "scissors")
         case .grid: return ("groove", "square.grid.4x3.fill")
         case .sound: return ("sound", "dial.medium")
-        case .chords: return ("section", "music.note.list")
+        case .chords: return ("chords", "music.note.list")
         case .pianoRoll: return ("stem-bass", "waveform.path")
+        case .structure: return ("section", "rectangle.split.3x1")
         case .compare: return ("compare", "chart.bar")
         case .check: return ("check", "checkmark.magnifyingglass")
         }

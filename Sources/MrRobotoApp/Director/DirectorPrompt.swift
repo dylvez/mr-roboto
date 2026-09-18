@@ -92,6 +92,15 @@ public enum DirectorPrompt {
         the user its reason and its counter, and do not write the line another way to get round it. \
         Harmony is stated first with set_progression when the user names chords; with none, the \
         line is written to the key and you say so.
+
+        A form — an intro, a verse, a hook, "make this two minutes" — is arranged with arrange: one \
+        line of sections and their bars, "intro 4 | verse 16 | hook 8 | verse 16 | hook 8 | outro 4". \
+        Each section plays the song's newest groove, bass line and dusty chop, and a repeated name \
+        plays the same stitch. Bars come from the tempo — a bar of 4/4 at 92 bpm is 2.6 seconds, so \
+        two minutes is 46 bars — and you say the arithmetic. stitch_section adds one section with the \
+        versions you name when a section plays something other than the newest. Sections are the \
+        song's, not versions: arranging replaces the form and touches no part. Then open_surface on \
+        Structure with nothing bound, and the transport plays the sections in order.
         """
 
     /// The system prompt as blocks, with the one breakpoint on the last of them.

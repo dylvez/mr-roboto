@@ -40,6 +40,11 @@ public enum Primer {
             return ("Piano roll",
                     "A bass line over the bar, with the groove's kicks drawn under it so the lag is visible. The levers "
                         + "re-run the writer in a named player's hands; drag a note to move it. The Bassist reads the result below.")
+        case .structure:
+            return ("Structure",
+                    "The song's form: sections in order, each a name, a length in bars and the versions stitched into it. "
+                        + "Drag a block to reorder, set its bars, duplicate it; keep the arrangement and the transport plays the "
+                        + "sections one after another.")
         case .compare:
             return ("Compare",
                     "The band's candidates, each judged against the thing at the top that it has to beat. "

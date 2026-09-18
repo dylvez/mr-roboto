@@ -38,6 +38,7 @@ final class SurfaceWiring {
     private var bassAdapters: [SurfaceID: BassAdapter] = [:]
     private var chordSheets: [SurfaceID: ChordsModel] = [:]
     private var chordsAdapters: [SurfaceID: ChordsAdapter] = [:]
+    private var structures: [SurfaceID: StructureModel] = [:]
     // The two answer surfaces. What they draw is filed on `AppState` by whoever asked the question
     // (see `SurfaceAnswer`); what is kept here is the built model and the host it plays through,
     // for exactly as long as the bench holds the item — the same rule as the four above.
@@ -231,6 +232,15 @@ final class SurfaceWiring {
         return model
     }
 
+    /// The form: the song's sections as a working copy, kept through `AppState.arrange`.
+    func structureModel(for item: BenchItem, app: AppState) -> StructureModel {
+        prune(app)
+        if let existing = structures[item.id] { return existing }
+        let model = StructureModel(host: StructureAdapter(app: app), song: app.song, surfaceID: item.id)
+        structures[item.id] = model
+        return model
+    }
+
     /// How long the song's kick rings, from its newest kit sound's decay, for the Bassist's R9.
     /// 0 when the song has no kit sound: the 808's default kick is well under the 400 ms line.
     nonisolated static func kickDecay(in song: Song?) -> Double {
@@ -260,6 +270,7 @@ final class SurfaceWiring {
         bassAdapters = bassAdapters.filter { open.contains($0.key) }
         chordSheets = chordSheets.filter { open.contains($0.key) }
         chordsAdapters = chordsAdapters.filter { open.contains($0.key) }
+        structures = structures.filter { open.contains($0.key) }
         compares = compares.filter { open.contains($0.key) }
         compareAdapters = compareAdapters.filter { open.contains($0.key) }
         checks = checks.filter { open.contains($0.key) }
@@ -269,7 +280,7 @@ final class SurfaceWiring {
     /// Whether anything is still held for this surface. For a test; the app never asks.
     func holds(_ id: SurfaceID) -> Bool {
         imports[id] != nil || grids[id] != nil || sounds[id] != nil || chops[id] != nil
-            || rolls[id] != nil || chordSheets[id] != nil || compares[id] != nil || checks[id] != nil
+            || rolls[id] != nil || chordSheets[id] != nil || structures[id] != nil || compares[id] != nil || checks[id] != nil
     }
 
     /// The Chop lane this surface is drawing, when it has one. The only way a critic's marks reach

@@ -58,6 +58,14 @@ public final class GroovePlayer: ScheduledSource {
     /// Total bars to play, or nil to loop until the transport stops. Rounded up to whole iterations
     /// of the groove, because a feel is a phrase and half of one is not a feel.
     public var bars: Int?
+    /// Drop the hits past `bars` rather than rounding the last iteration up. For a section of a
+    /// song: five bars of a two-bar groove is five bars, and the sixth belongs to the next section.
+    public var clipsToBars: Bool = false
+    /// Beats after which the whole performance starts again, from its own start, for as long as
+    /// the transport runs. How a section loops with the *form* rather than with itself: an
+    /// eight-bar verse at bar 4 of a 46-bar song plays bars 4–12, then 50–58, and so on. Needs
+    /// `bars`; without it the player already loops.
+    public var cycleBeats: Double?
     /// How far ahead of an iteration's first hit it is queued, in seconds. Larger than the engine's
     /// look-ahead so a hit is never handed over after its own time.
     public var preroll: Double = 0.5
@@ -105,16 +113,39 @@ public final class GroovePlayer: ScheduledSource {
     public var barsPerLoop: Int { max(1, groove.bars) }
     public var beatsPerLoop: Double { Double(barsPerLoop * timeline.beatsPerBar) }
 
-    /// Total loop iterations this player will produce, or nil when it loops forever.
-    public var totalLoops: Int? {
+    /// Iterations in one pass over `bars`, or nil when there is no bound.
+    public var loopsPerPass: Int? {
         guard let bars else { return nil }
         guard bars > 0 else { return 0 }
         return (bars + barsPerLoop - 1) / barsPerLoop
     }
 
+    /// Total loop iterations this player will produce, or nil when it loops forever — which a
+    /// cycling player does, pass after pass.
+    public var totalLoops: Int? {
+        guard cycleBeats == nil || loopsPerPass == 0 else { return nil }
+        return loopsPerPass
+    }
+
+    /// Beats from the timeline's start at which iteration `index` begins.
+    public func startBeat(ofLoop index: Int) -> Double {
+        guard let cycleBeats, let perPass = loopsPerPass, perPass > 0 else {
+            return Double(index) * beatsPerLoop
+        }
+        return Double(index / perPass) * cycleBeats + Double(index % perPass) * beatsPerLoop
+    }
+
     /// Transport seconds where loop iteration `index` begins.
     public func startTime(ofLoop index: Int) -> Double {
-        timeline.time(atBeat: Double(index) * beatsPerLoop)
+        timeline.time(atBeat: startBeat(ofLoop: index))
+    }
+
+    /// Transport seconds at which the pass holding iteration `index` runs out of bars, when
+    /// `clipsToBars` says the hits past it are dropped.
+    func clipTime(ofLoop index: Int) -> Double? {
+        guard clipsToBars, let bars, let perPass = loopsPerPass, perPass > 0 else { return nil }
+        let passStart = Double(index / perPass) * (cycleBeats ?? Double(perPass) * beatsPerLoop)
+        return timeline.time(atBeat: passStart + Double(bars * timeline.beatsPerBar))
     }
 
     /// Transport seconds where the whole performance ends, or nil when it loops forever.
@@ -189,9 +220,10 @@ public final class GroovePlayer: ScheduledSource {
         // humanized differently from the first — a loop that repeats its own mistakes sounds more
         // like a loop, not less. Position still comes entirely from the shifted timeline.
         options.jitterStepOffset = self.options.jitterStepOffset + index * stepsPerLoop
-        let hits = GrooveRenderer.render(groove,
+        var hits = GrooveRenderer.render(groove,
                                          on: shiftedTimeline(forLoop: index),
                                          options: options)
+        if let clip = clipTime(ofLoop: index) { hits = hits.filter { $0.time < clip } }
         guard !hits.isEmpty else {
             scheduledLoopCount += 1
             return
@@ -205,7 +237,7 @@ public final class GroovePlayer: ScheduledSource {
     /// jitter differs from pass to pass.
     private func shiftedTimeline(forLoop index: Int) -> GrooveTimeline {
         var shifted = timeline
-        shifted.startBeat = timeline.startBeat + Int((Double(index) * beatsPerLoop).rounded())
+        shifted.startBeat = timeline.startBeat + Int(startBeat(ofLoop: index).rounded())
         return shifted
     }
 }

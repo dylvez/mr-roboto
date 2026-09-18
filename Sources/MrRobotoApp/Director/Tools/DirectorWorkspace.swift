@@ -31,6 +31,10 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     @discardableResult
     func record(_ version: PartVersion) -> Bool
 
+    /// Replaces the open song's sections. False when there is no song.
+    @discardableResult
+    func arrange(_ sections: [Section]) -> Bool
+
     /// A line in the conversation rail.
     func note(_ text: String, detail: String?)
 }
@@ -55,6 +59,9 @@ public final class AppStateWorkspace: DirectorWorkspace {
 
     @discardableResult
     public func record(_ version: PartVersion) -> Bool { app.record(version) }
+
+    @discardableResult
+    public func arrange(_ sections: [Section]) -> Bool { app.arrange(sections) }
 
     public func note(_ text: String, detail: String?) { app.note(.session, text, detail: detail) }
 }
@@ -129,6 +136,13 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
         } catch {
             return false
         }
+    }
+
+    @discardableResult
+    public func arrange(_ sections: [Section]) -> Bool {
+        guard song != nil else { return false }
+        song?.sections = sections
+        return true
     }
 
     public func note(_ text: String, detail: String?) {

@@ -93,17 +93,32 @@ struct WorkPathTests {
         #expect(dust.action?.bound == [grooved.groove!.id], "dust goes on the groove before the chop")
     }
 
-    @Test("a dusty version counts as one part, and arranging is honestly later")
-    func dustAndLater() throws {
+    @Test("a dusty version counts as one part, and arranging opens Structure once there is something to arrange")
+    func dustAndArrange() throws {
         let (built, dusty) = try PathFixture.dusty()
         let steps = WorkPath.steps(for: built.song, active: nil, canPerform: PathFixture.always).steps
         #expect(PathFixture.step(.chop, steps)?.count == 1, "the dry chop and its dusty version are one chop")
         #expect(PathFixture.step(.dust, steps)?.count == 1)
         #expect(PathFixture.step(.dust, steps)?.action?.bound == [dusty.id])
         let arrange = try #require(PathFixture.step(.arrange, steps))
-        #expect(arrange.later != nil)
-        #expect(arrange.action == nil)
-        #expect(!arrange.isNext, "a step with nothing to press is never offered as next")
+        #expect(arrange.later == nil, "arranging arrived with Gate C")
+        #expect(arrange.action?.surface == .structure)
+        #expect(arrange.action?.bound.isEmpty == true, "Structure draws the song, not a version")
+        #expect(arrange.count == 0)
+    }
+
+    @Test("with nothing that plays there is nothing to arrange, and a form counts its sections")
+    func arrangeNeedsParts() throws {
+        let empty = Song(title: "Blank")
+        let steps = WorkPath.steps(for: empty, active: nil, canPerform: PathFixture.always).steps
+        #expect(PathFixture.step(.arrange, steps)?.action == nil)
+
+        var song = try PathFixture.dusty().built.song
+        song.sections = [Section(name: "Intro", stitch: [], lengthInBars: 4), Section(name: "Verse", stitch: [], lengthInBars: 16)]
+        let arranged = WorkPath.steps(for: song, active: (kind: .structure, bound: []), canPerform: PathFixture.always).steps
+        let arrange = try #require(PathFixture.step(.arrange, arranged))
+        #expect(arrange.count == 2)
+        #expect(arrange.isHere, "the Structure surface lights the Arrange step")
     }
 
     @Test("the surface you are in lights its step; Sound is dust on a chop and the kit on a sound")

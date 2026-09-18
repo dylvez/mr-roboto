@@ -21,6 +21,7 @@ struct SurfaceBand: View {
             case .sound: sound(context, size, ink)
             case .chords: chords(context, size, ink)
             case .pianoRoll: roll(context, size, ink)
+            case .structure: structure(context, size, ink)
             case .compare: compare(context, size, ink)
             case .check: check(context, size, ink)
             }
@@ -156,6 +157,24 @@ struct SurfaceBand: View {
             index += 1
         }
         context.stroke(path, with: .color(ink), lineWidth: 1)
+    }
+
+    /// Section blocks of a form's proportions — a short intro, long verses, shorter hooks.
+    private func structure(_ context: GraphicsContext, _ size: CGSize, _ ink: Color) {
+        let widths: [CGFloat] = [22, 64, 40, 64, 40, 28]
+        var x: CGFloat = 0
+        var index = 0
+        while x < size.width {
+            let width = widths[index % widths.count]
+            let rect = CGRect(x: x, y: 5, width: width, height: size.height - 10)
+            let path = Path(roundedRect: rect, cornerRadius: 2)
+            if index % widths.count == 2 || index % widths.count == 4 {
+                context.fill(path, with: .color(Design.Palette.accent.opacity(0.35)))
+            }
+            context.stroke(path, with: .color(ink), lineWidth: 1)
+            x += width + 4
+            index += 1
+        }
     }
 
     /// Note bars at bass pitches, a kick tick under each beat.

@@ -88,6 +88,19 @@ struct FrameRenderTests {
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-chords")
     }
 
+    @Test("the Structure surface on the bench, with a form kept")
+    func structure() throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        let built = FormFixture.build()
+        let app = app(built.song)
+        app.arrange([Section(name: "Intro", stitch: [built.groove], lengthInBars: 4),
+                     Section(name: "Verse", stitch: [built.groove, built.bass], lengthInBars: 16),
+                     Section(name: "Hook", stitch: [built.groove, built.bass], lengthInBars: 8)])
+        app.perform(SurfaceAction(surface: .structure, title: built.song.title))
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-structure")
+    }
+
     @Test("first launch: nothing open")
     func firstLaunch() throws {
         FontRegistration.registerBundledFonts()

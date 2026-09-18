@@ -24,9 +24,11 @@ public struct ReadSongTool: DirectorTool {
         public var note: String?
 
         public struct Section: Encodable, Sendable {
+            public var id: String
             public var name: String
             public var bars: Int
-            public var layers: Int
+            /// The version ids stitched into it, in layering order.
+            public var versions: [String]
         }
 
         public struct Version: Encodable, Sendable {
@@ -106,7 +108,8 @@ public struct ReadSongTool: DirectorTool {
                       timeSignature: "\(song.timeSignature)",
                       lengthInBars: song.lengthInBars,
                       sections: song.sections.map {
-                          Output.Section(name: $0.name, bars: $0.lengthInBars, layers: $0.stitch.count)
+                          Output.Section(id: $0.id.description, name: $0.name, bars: $0.lengthInBars,
+                                         versions: $0.stitch.map(\.description))
                       },
                       versions: song.versions.map { version in
                           Output.Version(id: version.id.description,

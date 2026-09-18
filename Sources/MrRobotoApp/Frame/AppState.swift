@@ -634,6 +634,35 @@ public final class AppState {
 
     // MARK: Sections
 
+    /// Replaces the song's form. Sections are the one thing in a song that is edited in place
+    /// rather than versioned: they are an ordering of versions, not a version, and the versions
+    /// they name are never touched. Returns false with nothing open.
+    @discardableResult
+    public func arrange(_ sections: [Section]) -> Bool {
+        guard var current = song else {
+            note(.session, "No song open; nothing to arrange")
+            return false
+        }
+        let cleaned = sections.map { section -> Section in
+            var section = section
+            section.lengthInBars = max(1, section.lengthInBars)
+            section.stitch = section.stitch.filter { current.version($0) != nil }
+            return section
+        }
+        guard cleaned != current.sections else { return true }
+        current.sections = cleaned
+        song = current
+        hasUnsavedChanges = true
+        if activeSection.map({ id in cleaned.contains { $0.id == id } }) != true {
+            activeSection = cleaned.first?.id
+        }
+        refreshPlayback()
+        let bars = cleaned.reduce(0) { $0 + $1.lengthInBars }
+        note(.you, cleaned.isEmpty ? "Cleared the arrangement" : "Arranged \(cleaned.count) section\(cleaned.count == 1 ? "" : "s")",
+             detail: cleaned.isEmpty ? nil : cleaned.map { "\($0.name) \($0.lengthInBars)" }.joined(separator: " · ") + " · \(bars) bars")
+        return true
+    }
+
     public func setActiveSection(_ id: SectionID?) {
         guard activeSection != id else { return }
         activeSection = id
@@ -842,7 +871,9 @@ public final class AppState {
     public func section(atSeconds seconds: Double) -> SectionID? {
         guard let song, !song.sections.isEmpty else { return nil }
         let beatsPerBar = Double(max(1, clock.timeSignature.beatsPerBar))
-        let bar = Int((clock.beat(forSeconds: max(0, seconds)) / beatsPerBar).rounded(.down))
+        var bar = Int((clock.beat(forSeconds: max(0, seconds)) / beatsPerBar).rounded(.down))
+        // Looping, the form comes round: bar 46 of a 46-bar song is its first bar again.
+        if isLooping, song.lengthInBars > 0 { bar %= song.lengthInBars }
         var start = 0
         for section in song.sections {
             start += max(1, section.lengthInBars)

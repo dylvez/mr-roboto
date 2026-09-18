@@ -235,7 +235,16 @@ public enum Guidance {
                                       bound: [groove.id])))
         }
 
-        // 6. A sound to shape.
+        // 6. Parts that play and no form yet: the song gets arranged.
+        if song.sections.isEmpty, !grooves(in: song).isEmpty || !samples(in: song).isEmpty {
+            out.append(Proposal(
+                title: "Arrange \(song.title) into sections",
+                rationale: "Structure lays the groove, the bass line and the chop out as intro, verse and hook, "
+                    + "and the transport plays them in order.",
+                action: SurfaceAction(surface: .structure, title: song.title)))
+        }
+
+        // 7. A sound to shape.
         if let sound = sounds(in: song).last {
             out.append(Proposal(
                 title: "Shape \(PartLabel.title(of: sound)) in Sound",
@@ -308,6 +317,9 @@ public enum Guidance {
             }
             guard let groove = grooves(in: song).last else { return fallback }
             return SurfaceAction(surface: kind, title: "Bass under \(PartLabel.title(of: groove))", bound: [groove.id])
+        case .structure:
+            // Bound to nothing: it draws the song's sections, and the song is what is open.
+            return SurfaceAction(surface: kind, title: song.title)
         case .compare, .check:
             // Nothing reaches here: the dock, ⌘1–⌘4 and the Surfaces menu all iterate
             // `SurfaceKind.gateA`, and an answer surface is not something you pick off a shelf —

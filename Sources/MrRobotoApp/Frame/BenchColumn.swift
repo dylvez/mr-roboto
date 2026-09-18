@@ -90,7 +90,10 @@ struct SurfaceDock: View {
             }
             Spacer(minLength: 8)
             if let proposal = app.dockProposal {
+                // Never squeezed: with seven chips and the shortcuts on, the fit fails here and
+                // the dock drops to its compact chips rather than folding this one.
                 NextStepChip(proposal: proposal) { app.perform(proposal.action) }
+                    .fixedSize()
             }
             if !app.bench.items.isEmpty {
                 FrameButton(title: "Close all", emphasis: .quiet) {

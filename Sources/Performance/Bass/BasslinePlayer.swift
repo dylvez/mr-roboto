@@ -19,6 +19,12 @@ public final class BasslinePlayer: ScheduledSource {
     public var bassline: Bassline
     public var timeline: GrooveTimeline
     public var bars: Int?
+    /// Drop the notes past `bars` rather than rounding the last iteration up: a section's bars
+    /// are its own, and the next section's start with the next section.
+    public var clipsToBars: Bool = false
+    /// Beats after which the performance starts again from its own start, for as long as the
+    /// transport runs — a section looping with the form. Needs `bars`.
+    public var cycleBeats: Double?
     public var preroll: Double = 0.5
     /// Forward the transport callbacks to the sampler. On when this player is the only thing on
     /// its sampler, which it is: the bass has a sampler of its own.
@@ -49,14 +55,32 @@ public final class BasslinePlayer: ScheduledSource {
 
     public var beatsPerLoop: Double { Double(barsPerLoop * timeline.beatsPerBar) }
 
-    public var totalLoops: Int? {
+    public var loopsPerPass: Int? {
         guard let bars else { return nil }
         guard bars > 0 else { return 0 }
         return (bars + barsPerLoop - 1) / barsPerLoop
     }
 
+    public var totalLoops: Int? {
+        guard cycleBeats == nil || loopsPerPass == 0 else { return nil }
+        return loopsPerPass
+    }
+
+    public func startBeat(ofLoop index: Int) -> Double {
+        guard let cycleBeats, let perPass = loopsPerPass, perPass > 0 else {
+            return Double(index) * beatsPerLoop
+        }
+        return Double(index / perPass) * cycleBeats + Double(index % perPass) * beatsPerLoop
+    }
+
     public func startTime(ofLoop index: Int) -> Double {
-        timeline.time(atBeat: Double(index) * beatsPerLoop)
+        timeline.time(atBeat: startBeat(ofLoop: index))
+    }
+
+    func clipTime(ofLoop index: Int) -> Double? {
+        guard clipsToBars, let bars, let perPass = loopsPerPass, perPass > 0 else { return nil }
+        let passStart = Double(index / perPass) * (cycleBeats ?? Double(perPass) * beatsPerLoop)
+        return timeline.time(atBeat: passStart + Double(bars * timeline.beatsPerBar))
     }
 
     public var endTime: Double? { totalLoops.map { startTime(ofLoop: $0) } }
@@ -110,7 +134,8 @@ public final class BasslinePlayer: ScheduledSource {
     }
 
     private func queueLoop(_ index: Int) {
-        let hits = Self.hits(for: bassline, on: timeline, offsetBeats: Double(index) * beatsPerLoop)
+        var hits = Self.hits(for: bassline, on: timeline, offsetBeats: startBeat(ofLoop: index))
+        if let clip = clipTime(ofLoop: index) { hits = hits.filter { $0.time < clip } }
         scheduledLoopCount += 1
         guard !hits.isEmpty else { return }
         sampler.enqueue(hits)

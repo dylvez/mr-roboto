@@ -48,6 +48,9 @@ public enum DirectorTools {
             // M2, appended after the fifteen: the band's first written parts.
             SetProgressionTool(workspace: workspace, acting: persona ?? CreatePartVersionTool.director).erased(),
             WriteBasslineTool(workspace: workspace).erased(),
+            // M2's Gate C, appended after the seventeen: the form.
+            StitchSectionTool(workspace: workspace).erased(),
+            ArrangeTool(workspace: workspace).erased(),
         ]
         if let stage {
             let pad = pad ?? DirectorStagePad()
@@ -79,6 +82,9 @@ public enum DirectorTools {
         // M2, appended: harmony as a lead sheet says it, and a bass line in a named player's hands.
         "set_progression",
         "write_bassline",
+        // M2's Gate C, appended: one section with what it plays, and the whole form in a line.
+        "stitch_section",
+        "arrange",
     ]
 
     /// The two the frame adds. Appended after `names`, never among them: a session with no frame

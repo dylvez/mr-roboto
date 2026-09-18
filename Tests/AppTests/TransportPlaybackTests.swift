@@ -250,6 +250,92 @@ struct TransportPlaybackTests {
         await teardown(player, service, engine)
     }
 
+    // MARK: The form
+
+    /// Three sections at 120: a bar of groove, a bar of rest, a bar of groove and bass — so the
+    /// render has sound, then none, then sound again, at the bars the sections say.
+    private func form(loops: Bool) -> SongPlayback {
+        var plan = SongPlayback(tempo: 120, loops: loops)
+        plan.machine = SynthMachine.tr808.id
+        plan.lengthInBars = 3
+        let groove = TransportFixture.groove(bars: 1)
+        let line = Bassline(notes: [NoteEvent(pitch: Pitch(midi: 38), start: 0, duration: 1, velocity: 100)], sound: "finger")
+        plan.segments = [
+            SongPlayback.Segment(section: SectionID(), name: "Intro", startBar: 0, lengthInBars: 1,
+                                 groove: groove, grooveVersion: VersionID()),
+            SongPlayback.Segment(section: SectionID(), name: "Rest", startBar: 1, lengthInBars: 1),
+            SongPlayback.Segment(section: SectionID(), name: "Hook", startBar: 2, lengthInBars: 1,
+                                 groove: groove, grooveVersion: VersionID(),
+                                 bassline: line, basslineVersion: VersionID(), bassSound: "finger"),
+        ]
+        return plan
+    }
+
+    @Test("An arranged song plays its sections in order: sound, a rest, sound again, then it ends")
+    @AudioActor
+    func sectionsInOrder() async throws {
+        let kits = TransportFixture.temporaryDirectory("form")
+        defer { try? FileManager.default.removeItem(at: kits) }
+        let engine = try engine()
+        let service = AuditionService(engine: { engine }, kitsDirectory: kits)
+        let player = LiveSongPlayer(service: service)
+
+        try await player.begin(form(loops: false), clock: clock)
+        _ = try engine.startTransport(clock: clock)
+        #expect(await player.reading().scheduledHits > 0)
+
+        // Bars are two seconds at 120. Seven seconds covers the form and a second past it.
+        let out = try OfflineRenderer.renderBuffer(engine: engine, frames: AVAudioFramePosition(7 * Self.sampleRate))
+        for beat in [0.0, 0.5, 1.0, 1.5] {
+            #expect(peak(out, from: beat, to: beat + 0.06) > 0.001, "no hit at \(beat) s in the intro")
+        }
+        // The rest: the intro's last kick rings on, but nothing new lands for a bar — every window
+        // of it is quieter than the one before, and all of them are well under a hit.
+        let hit = peak(out, from: 0, to: 0.06)
+        #expect(peak(out, from: 2.5, to: 3.95) < 0.1 * hit, "the rest section made a sound")
+        #expect(peak(out, from: 3.0, to: 3.5) <= peak(out, from: 2.5, to: 3.0), "something landed in the rest")
+        #expect(peak(out, from: 3.5, to: 3.95) <= peak(out, from: 3.0, to: 3.5), "something landed in the rest")
+        for beat in [4.0, 4.5, 5.0, 5.5] {
+            #expect(peak(out, from: beat, to: beat + 0.06) > 0.001, "no hit at \(beat) s in the hook")
+        }
+        // The bass is under the hook and not under the intro: its note is longer than a kick.
+        #expect(peak(out, from: 4.3, to: 4.45) > peak(out, from: 0.3, to: 0.45), "no bass under the hook")
+        // And the form ends: nothing new after bar three.
+        #expect(peak(out, from: 6.5, to: 7.0) < 0.1 * hit, "the form did not end")
+        #expect(peak(out, from: 6.5, to: 7.0) <= peak(out, from: 6.0, to: 6.5), "something landed after the form")
+
+        let reading = await player.reading()
+        #expect(!reading.isRunning, "the transport reports the end of the form")
+        #expect(reading.seconds == 6)
+
+        await teardown(player, service, engine)
+    }
+
+    @Test("With the loop on, the form comes round: the intro plays again after the outro")
+    @AudioActor
+    func formLoops() async throws {
+        let kits = TransportFixture.temporaryDirectory("form-loop")
+        defer { try? FileManager.default.removeItem(at: kits) }
+        let engine = try engine()
+        let service = AuditionService(engine: { engine }, kitsDirectory: kits)
+        let player = LiveSongPlayer(service: service)
+
+        try await player.begin(form(loops: true), clock: clock)
+        _ = try engine.startTransport(clock: clock)
+
+        let out = try OfflineRenderer.renderBuffer(engine: engine, frames: AVAudioFramePosition(9 * Self.sampleRate))
+        let hit = peak(out, from: 0, to: 0.06)
+        #expect(peak(out, from: 2.5, to: 3.95) < 0.1 * hit, "the rest section made a sound")
+        for beat in [6.0, 6.5, 7.0, 7.5] {
+            #expect(peak(out, from: beat, to: beat + 0.06) > 0.001, "no hit at \(beat) s: the form did not come round")
+        }
+        #expect(peak(out, from: 8.5, to: 8.95) < 0.1 * hit, "the second pass's rest made a sound")
+        #expect(peak(out, from: 8.5, to: 8.95) <= peak(out, from: 8.0, to: 8.5), "something landed in the second rest")
+        #expect(await player.reading().isRunning)
+
+        await teardown(player, service, engine)
+    }
+
     // MARK: Refusing
 
     @Test("A plan with nothing schedulable throws rather than starting a silent transport")

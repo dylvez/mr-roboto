@@ -167,12 +167,13 @@ extension WorkPath {
         var nextTaken = false
         for kind in path.steps {
             let count = self.count(kind, in: song)
-            let later = self.later(kind, in: song)
-            let action = later == nil ? self.action(kind, in: song).flatMap { canPerform($0) ? $0 : nil } : nil
-            let isNext = !nextTaken && count == 0 && later == nil && action != nil && !kind.isOptional
+            let action = self.action(kind, in: song).flatMap { canPerform($0) ? $0 : nil }
+            let isNext = !nextTaken && count == 0 && action != nil && !kind.isOptional
             if isNext { nextTaken = true }
+            // No step is "later" today: arranging arrived with M2's Gate C. The field stays for
+            // the next milestone's steps, which is what it was drawn for.
             steps.append(PathStep(kind: kind, count: count, isHere: kind == here, isNext: isNext,
-                                  later: later, action: action))
+                                  later: nil, action: action))
         }
         return (path, steps)
     }
@@ -187,6 +188,7 @@ extension WorkPath {
         case .grid: return .groove
         case .chords: return .chords
         case .pianoRoll: return .bass
+        case .structure: return .arrange
         case .sound:
             let carries = bound.compactMap { song.version($0) }.contains { $0.kind.canCarryDegradation }
             if carries { return .dust }
@@ -210,12 +212,6 @@ extension WorkPath {
         case .dust: return parts(song.versions.filter { !$0.kind.degradation.isEmpty })
         case .arrange: return song.sections.count
         }
-    }
-
-    /// Why a step has nothing to press yet. Only arranging, today.
-    static func later(_ kind: PathStep.Kind, in song: Song) -> String? {
-        guard kind == .arrange, song.sections.isEmpty else { return nil }
-        return "Arranging parts into sections arrives with the compose milestone."
     }
 
     /// What pressing a step opens: its newest part if it has one, otherwise the way to make one.
@@ -295,7 +291,10 @@ extension WorkPath {
             return nil
 
         case .arrange:
-            return nil
+            // The form is arranged from parts that play; with none there is nothing to stitch.
+            guard !song.sections.isEmpty || !Guidance.grooves(in: song).isEmpty
+                || !Guidance.basslines(in: song).isEmpty || !Guidance.samples(in: song).isEmpty else { return nil }
+            return SurfaceAction(surface: .structure, title: song.title)
         }
     }
 }

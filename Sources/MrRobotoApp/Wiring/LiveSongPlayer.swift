@@ -52,6 +52,11 @@ final class LiveSongPlayer: SongPlaybackHost {
     private var groovePlayer: GroovePlayer?
     private var bassPlayer: BasslinePlayer?
     private var tracks: [AudioTrackSource] = []
+    /// An arranged song's players: one groove and one bass player per section that has one, all
+    /// on the two shared samplers, and one sequence per dusty kind on a player node.
+    private var sectionGrooves: [GroovePlayer] = []
+    private var sectionBasses: [BasslinePlayer] = []
+    private var sequences: [SequenceTrackSource] = []
     /// Hits a dusty groove's bounce held, reported as scheduled: the bounce is the groove, so the
     /// reading must not say nothing was scheduled because no `GroovePlayer` was involved.
     private var bouncedHits = 0
@@ -68,6 +73,11 @@ final class LiveSongPlayer: SongPlaybackHost {
         await end()
         let engine = try await service.playbackEngine()
         self.engine = engine
+
+        if plan.isArranged {
+            try await beginArranged(plan, clock: clock, engine: engine)
+            return
+        }
 
         if let groove = plan.groove, plan.grooveChain.isEmpty {
             let machine = SynthMachine.preset(id: plan.machine) ?? .tr808
@@ -146,18 +156,107 @@ final class LiveSongPlayer: SongPlaybackHost {
                                              longestTrack: tracks.map { $0.startsAt + $0.duration }.max())
     }
 
+    /// The form: each section's groove and bass line as players of their own on the shared
+    /// samplers, placed at the section's bar and clipped to its length; each section's dusty
+    /// groove bounced and each chop rendered, and laid end to end on one player node per kind.
+    /// With the loop on everything cycles with the form's own length.
+    private func beginArranged(_ plan: SongPlayback, clock: TransportClock, engine: Engine) async throws {
+        let beatsPerBar = clock.timeSignature.beatsPerBar
+        let cycleBeats: Double? = plan.loops ? plan.lengthInBars.map { Double($0 * beatsPerBar) } : nil
+        let cycleSeconds: Double? = plan.loops ? plan.formSeconds : nil
+        func start(_ segment: SongPlayback.Segment) -> Double {
+            clock.seconds(forBeat: Double(segment.startBar * beatsPerBar))
+        }
+        func seconds(_ segment: SongPlayback.Segment) -> Double {
+            clock.seconds(forBeat: Double(segment.endBar * beatsPerBar)) - start(segment)
+        }
+
+        var drumSampler: VoiceSampler?
+        var bassSampler: VoiceSampler?
+        var bounces: [(AVAudioPCMBuffer, Double)] = []
+        var chops: [(AVAudioPCMBuffer, Double)] = []
+
+        for segment in plan.segments {
+            let timeline = GrooveTimeline.tempo(clock.tempo, timeSignature: clock.timeSignature,
+                                                startingAt: start(segment))
+            if let groove = segment.groove, segment.grooveChain.isEmpty {
+                if drumSampler == nil {
+                    let machine = SynthMachine.preset(id: plan.machine) ?? .tr808
+                    drumSampler = try await service.playbackSampler(machine: machine)
+                }
+                let player = GroovePlayer(sampler: drumSampler!, groove: groove, timeline: timeline)
+                player.bars = segment.lengthInBars
+                player.clipsToBars = true
+                player.cycleBeats = cycleBeats
+                // One sampler, many players: only the first forwards the transport to it.
+                player.drivesSampler = sectionGrooves.isEmpty
+                engine.add(player)
+                sectionGrooves.append(player)
+            } else if let groove = segment.groove {
+                let bounce = try await Self.dustyGroove(groove, chain: segment.grooveChain, machine: plan.machine,
+                                                        bars: segment.lengthInBars, seconds: seconds(segment),
+                                                        clock: clock, service: service, format: engine.format)
+                bounces.append((bounce.buffer, start(segment)))
+                bouncedHits += bounce.hits
+            }
+            if let bassline = segment.bassline {
+                let voice = BassVoiceSpec.all.first { $0.id == segment.bassSound } ?? .finger
+                if bassSampler == nil { bassSampler = try await service.playbackBassSampler(voice: voice) }
+                let player = BasslinePlayer(sampler: bassSampler!, bassline: bassline, timeline: timeline)
+                player.bars = segment.lengthInBars
+                player.clipsToBars = true
+                player.cycleBeats = cycleBeats
+                player.drivesSampler = sectionBasses.isEmpty
+                engine.add(player)
+                sectionBasses.append(player)
+            }
+            if let chop = segment.chop {
+                let buffer: AVAudioPCMBuffer
+                do {
+                    buffer = try Self.dustyChop(chop, format: engine.format, repeatedTo: seconds(segment))
+                } catch {
+                    throw Failure.unreadable(chop.name, "\(error)")
+                }
+                chops.append((buffer, start(segment)))
+            }
+        }
+
+        var next = 0
+        for events in [bounces, chops] where !events.isEmpty {
+            guard next < engine.players.count else { throw Failure.unreadable("The dusty sections", "no player node is free") }
+            let source = SequenceTrackSource(player: try engine.player(next), events: events, cycle: cycleSeconds)
+            engine.add(source)
+            sequences.append(source)
+            next += 1
+        }
+
+        guard !sectionGrooves.isEmpty || !sectionBasses.isEmpty || !sequences.isEmpty else {
+            throw Failure.nothingScheduled
+        }
+        endsAt = plan.loops ? nil : plan.formSeconds
+    }
+
     func end() async {
         if let engine {
             if let groovePlayer { engine.remove(groovePlayer) }
             if let bassPlayer { engine.remove(bassPlayer) }
             for track in tracks { engine.remove(track) }
+            for player in sectionGrooves { engine.remove(player) }
+            for player in sectionBasses { engine.remove(player) }
+            for source in sequences { engine.remove(source) }
         }
         groovePlayer?.transportWillStop()
         bassPlayer?.transportWillStop()
         for track in tracks { track.transportWillStop() }
+        for player in sectionGrooves { player.transportWillStop() }
+        for player in sectionBasses { player.transportWillStop() }
+        for source in sequences { source.transportWillStop() }
         groovePlayer = nil
         bassPlayer = nil
         tracks = []
+        sectionGrooves = []
+        sectionBasses = []
+        sequences = []
         bouncedHits = 0
         endsAt = nil
         engine = nil
@@ -168,6 +267,7 @@ final class LiveSongPlayer: SongPlaybackHost {
         // Negative during the realtime lead time, when transport zero is still in the future.
         let seconds = max(0, engine.transportSeconds ?? 0)
         let hits = (groovePlayer?.scheduledHitCount ?? 0) + (bassPlayer?.scheduledHitCount ?? 0) + bouncedHits
+            + sectionGrooves.reduce(0) { $0 + $1.scheduledHitCount } + sectionBasses.reduce(0) { $0 + $1.scheduledHitCount }
         if let endsAt, seconds >= endsAt {
             return PlaybackReading(isRunning: false, seconds: endsAt, scheduledHits: hits)
         }
@@ -223,14 +323,44 @@ final class LiveSongPlayer: SongPlaybackHost {
         return (buffer, plan.loops ? hits.count / 2 : hits.count)
     }
 
+    /// A section's dusty groove: `bars` of it bounced through its chain and cut at the section's
+    /// end, so the next section on the same node starts clean where this one stops.
+    static func dustyGroove(_ groove: Groove, chain: [Degradation], machine machineID: String, bars: Int,
+                            seconds: Double, clock: TransportClock, service: AuditionService,
+                            format: AVAudioFormat) async throws -> (buffer: AVAudioPCMBuffer, hits: Int) {
+        let machine = SynthMachine.preset(id: machineID) ?? .tr808
+        let pass = Dust.duration(of: groove, tempo: clock.tempo, timeSignature: clock.timeSignature)
+        let barsPerPass = max(1, groove.bars)
+        let passes = max(1, (bars + barsPerPass - 1) / barsPerPass)
+        let hits = Dust.hits(for: groove, tempo: clock.tempo, timeSignature: clock.timeSignature, repeats: passes)
+            .filter { $0.time < seconds }
+        let bounce = try await service.bounce(hits, machine: machine, seconds: Double(passes) * pass + Dust.tail,
+                                              sampleRate: format.sampleRate, channels: Int(format.channelCount))
+        let wet = try Dust.render(bounce.planar, sampleRate: bounce.sampleRate, passes: chain)
+        let frames = Int((seconds * bounce.sampleRate).rounded())
+        let cut = wet.map { Array($0.prefix(frames)) }
+        guard let buffer = AuditionService.buffer(planar: cut, sampleRate: bounce.sampleRate, in: format) else {
+            throw EngineError.renderFailed("the dusty groove could not be put in the graph's format")
+        }
+        return (buffer, hits.count)
+    }
+
     /// A dusty chop as a buffer: its bar of the record, through its chain, in the graph's format.
-    static func dustyChop(_ chop: SongPlayback.ChopTrack, format: AVAudioFormat) throws -> AVAudioPCMBuffer {
+    /// `repeatedTo` lays the bar end to end to fill that many seconds — a section's worth — and
+    /// cuts the last copy where the section ends.
+    static func dustyChop(_ chop: SongPlayback.ChopTrack, format: AVAudioFormat,
+                          repeatedTo seconds: Double? = nil) throws -> AVAudioPCMBuffer {
         let span = try AudioRegion.read(chop.url, from: chop.region.start, to: chop.region.end)
         guard !span.planar.isEmpty, span.planar[0].count > 0 else {
             throw EngineError.invalidRegion("\(chop.name) is empty between "
                 + String(format: "%.2f s and %.2f s", chop.region.start, chop.region.end))
         }
-        let wet = try Dust.render(span.planar, sampleRate: span.sampleRate, passes: chop.passes)
+        var wet = try Dust.render(span.planar, sampleRate: span.sampleRate, passes: chop.passes)
+        if let seconds, seconds > 0 {
+            let frames = Int((seconds * span.sampleRate).rounded())
+            let copies = max(1, (frames + wet[0].count - 1) / max(1, wet[0].count))
+            wet = wet.map { channel in Array([[Float]](repeating: channel, count: copies).joined().prefix(frames)) }
+        }
         guard let buffer = AuditionService.buffer(planar: wet, sampleRate: span.sampleRate, in: format) else {
             throw EngineError.renderFailed("\(chop.name) could not be put in the graph's format")
         }
@@ -366,6 +496,56 @@ final class AudioTrackSource: ScheduledSource {
             player.scheduleBuffer(buffer, at: transport.playerTime(atSeconds: start),
                                   options: [], completionHandler: nil)
             iterationsScheduled += 1
+        }
+    }
+
+    func transportWillStop() {
+        player.stop()
+        transport = nil
+    }
+}
+
+
+// MARK: - Buffers laid end to end on one node
+
+/// Several buffers at their own transport times on one player node — an arranged song's dusty
+/// sections, which never sound at once and so never need a node each. `cycle` repeats the whole
+/// list that many seconds on, for as long as the transport runs: the form, looping.
+@AudioActor
+final class SequenceTrackSource: ScheduledSource {
+
+    let player: AVAudioPlayerNode
+    /// Each buffer and the transport second its first frame sounds on, in time order.
+    let events: [(buffer: AVAudioPCMBuffer, startsAt: Double)]
+    let cycle: Double?
+    var preroll: Double = 0.5
+
+    private var transport: Transport?
+    private(set) var scheduled = 0
+
+    init(player: AVAudioPlayerNode, events: [(AVAudioPCMBuffer, Double)], cycle: Double? = nil) {
+        self.player = player
+        self.events = events.map { (buffer: $0.0, startsAt: max(0, $0.1)) }.sorted { $0.startsAt < $1.startsAt }
+        self.cycle = cycle
+    }
+
+    func transportDidStart(_ transport: Transport) {
+        self.transport = transport
+        scheduled = 0
+    }
+
+    func schedule(through seconds: Double) {
+        guard let transport, !events.isEmpty else { return }
+        let horizon = seconds + preroll
+        while true {
+            let pass = scheduled / events.count
+            if pass > 0 && cycle == nil { return }
+            let event = events[scheduled % events.count]
+            let start = event.startsAt + Double(pass) * (cycle ?? 0)
+            guard start < horizon else { return }
+            player.scheduleBuffer(event.buffer, at: transport.playerTime(atSeconds: start),
+                                  options: [], completionHandler: nil)
+            scheduled += 1
         }
     }
 

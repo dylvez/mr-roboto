@@ -43,6 +43,7 @@ extension SurfaceKind {
         case .sound: return [.sound, .sample, .groove]
         case .chords: return [.progression]
         case .pianoRoll: return [.bassline, .groove]
+        case .structure: return []
         case .compare, .check: return Set(PartType.allCases)
         }
     }
@@ -351,31 +352,39 @@ public struct DirectorSurfaceChoice: Sendable, Equatable, Hashable, Identifiable
             }
             types.append(type)
         }
-        guard let notation = types.first else {
+        if surface.isUnbound {
+            // Structure draws the song's sections rather than a version, so it opens on nothing —
+            // and only on nothing.
+            guard types.isEmpty else {
+                throw DirectorChoiceProblem("The \(surface.rawValue) is not bound to versions: it draws the song's sections.",
+                                            suggestion: "Open it with `bound` empty; the arrange tool sets the sections.")
+            }
+        } else if let notation = types.first {
+            for type in types where !surface.notation.contains(type) {
+                throw DirectorChoiceProblem(
+                    "The \(surface.rawValue) cannot draw a \(type.rawValue).",
+                    suggestion: "It draws \(surface.notationSentence). Answer in the notation the question is about.")
+            }
+            if surface.isAnswer {
+                // Like against like: the candidates share a kind. The reference shares it too, with
+                // one exception — bass lines are judged against the groove they sit under, because
+                // the thing a bass line has to beat is not another bass line but the kick.
+                let candidates = surface == .compare ? Array(types.dropFirst()) : types
+                if let kind = candidates.first, let other = candidates.first(where: { $0 != kind }) {
+                    throw DirectorChoiceProblem(
+                        "A \(surface.rawValue) of a \(kind.rawValue) and a \(other.rawValue) compares two different things.",
+                        suggestion: "Judge like against like.")
+                }
+                if surface == .compare, let kind = candidates.first, kind != notation,
+                   !(notation == .groove && kind == .bassline) {
+                    throw DirectorChoiceProblem(
+                        "A Compare of \(kind.rawValue)s against a \(notation.rawValue) compares two different things.",
+                        suggestion: "Judge like against like; only bass lines are judged against the groove they sit under.")
+                }
+            }
+        } else {
             throw DirectorChoiceProblem("Nothing was bound to the \(surface.rawValue).",
                                         suggestion: "A surface with nothing in it answers nothing.")
-        }
-        for type in types where !surface.notation.contains(type) {
-            throw DirectorChoiceProblem(
-                "The \(surface.rawValue) cannot draw a \(type.rawValue).",
-                suggestion: "It draws \(surface.notationSentence). Answer in the notation the question is about.")
-        }
-        if surface.isAnswer {
-            // Like against like: the candidates share a kind. The reference shares it too, with
-            // one exception — bass lines are judged against the groove they sit under, because
-            // the thing a bass line has to beat is not another bass line but the kick.
-            let candidates = surface == .compare ? Array(types.dropFirst()) : types
-            if let kind = candidates.first, let other = candidates.first(where: { $0 != kind }) {
-                throw DirectorChoiceProblem(
-                    "A \(surface.rawValue) of a \(kind.rawValue) and a \(other.rawValue) compares two different things.",
-                    suggestion: "Judge like against like.")
-            }
-            if surface == .compare, let kind = candidates.first, kind != notation,
-               !(notation == .groove && kind == .bassline) {
-                throw DirectorChoiceProblem(
-                    "A Compare of \(kind.rawValue)s against a \(notation.rawValue) compares two different things.",
-                    suggestion: "Judge like against like; only bass lines are judged against the groove they sit under.")
-            }
         }
 
         // Levers.
@@ -418,6 +427,7 @@ public struct DirectorSurfaceChoice: Sendable, Equatable, Hashable, Identifiable
         case .compare: return "a reference and two to four candidates"
         case .check: return "one part and one finding"
         case .importRecord, .chopLane, .grid, .sound, .chords, .pianoRoll: return "part versions, and no reference"
+        case .structure: return "nothing bound: it draws the song's sections"
         }
     }
 

@@ -299,9 +299,10 @@ struct DirectorDustToolboxTests {
         // exactly once, on 2026-09-18, when M2 added Chords and the Piano roll to the catalog —
         // the cached prefix moved once, as it did for degrade_part's prompt. A change here that
         // is not a new surface is the accident this test exists to catch.
-        // (And again the same day, for the `lag` lever on a Compare of bass lines.)
-        ("open_surface", "690d864b64cda777af8b2555db2298567d4440a114d7294332432738bb06503e"),
-        ("propose", "9ba6d0e0aa7655821eba1e26456669ea15bc88bcfa5fa7abf886d001fec08974"),
+        // (And again the same day, for the `lag` lever on a Compare of bass lines; and once more
+        // for Gate C's Structure surface.)
+        ("open_surface", "f6c22636dbaede0cb5c05daa953de49410584893cef995d71470abecac33fc27"),
+        ("propose", "5e22bba03f0f58a35e5d50d254b5a0d1057ffd724107a542ed4624ed03ea0664"),
     ]
 
     static func digest(_ definition: ClaudeToolDefinition) throws -> String {
@@ -314,12 +315,12 @@ struct DirectorDustToolboxTests {
     func existingSchemasAreByteIdentical() throws {
         let full = toolbox(stage: true)
         #expect(full.names == DirectorTools.names + DirectorTools.stageNames)
-        #expect(DirectorTools.names.count == 17)
+        #expect(DirectorTools.names.count == 19)
         #expect(DirectorTools.names[14] == "degrade_part")
         #expect(Array(DirectorTools.names.prefix(14)) == Self.before.prefix(14).map(\.0),
                 "the fourteen are in their old order, with nothing inserted among them")
 
-        let appended: Set<String> = ["degrade_part", "set_progression", "write_bassline"]
+        let appended: Set<String> = ["degrade_part", "set_progression", "write_bassline", "stitch_section", "arrange"]
         let now = try full.tools.filter { !appended.contains($0.name) }.map { ($0.name, try Self.digest($0.definition)) }
         #expect(now.map(\.0) == Self.before.map(\.0))
         for ((name, hash), (_, old)) in zip(now, Self.before) {
@@ -328,7 +329,7 @@ struct DirectorDustToolboxTests {
         // And the frame-free list is the framed one's prefix, degrade_part included.
         let bare = toolbox(stage: false)
         #expect(Array(full.names.prefix(bare.names.count)) == bare.names)
-        #expect(bare.names.last == "write_bassline")
+        #expect(bare.names.last == "arrange")
     }
 
     @Test("Its schema stays inside every limit the API enforced, and spends none of the optional budget")
@@ -376,7 +377,8 @@ struct DirectorDustToolboxTests {
         #expect(prompt.contains("open the Sound surface on the dusty version"))
         #expect(prompt.contains("\"SP-1200 at 60%\""))
         #expect(prompt.contains("not only that it refused."))
-        #expect(prompt.hasSuffix("the line is written to the key and you say so."), "M2's bass paragraph is now the last thing in the prefix")
+        #expect(prompt.contains("the line is written to the key and you say so."))
+        #expect(prompt.hasSuffix("and the transport plays the sections in order."), "M2's form paragraph is now the last thing in the prefix")
         let year = Calendar(identifier: .gregorian).component(.year, from: Date())
         #expect(!prompt.contains("\(year)"))
         #expect(DirectorPrompt.systemBlocks.map(\.text) == [prompt])

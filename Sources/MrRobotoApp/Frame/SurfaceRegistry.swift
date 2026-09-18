@@ -73,6 +73,9 @@ public final class SurfaceRegistry {
         registry.register(.pianoRoll) { item, app in
             PianoRollSurfaceView(model: SurfaceWiring.shared.pianoRollModel(for: item, app: app))
         }
+        registry.register(.structure) { item, app in
+            StructureSurfaceView(model: SurfaceWiring.shared.structureModel(for: item, app: app))
+        }
     }
 
     /// The two the Director answers with.

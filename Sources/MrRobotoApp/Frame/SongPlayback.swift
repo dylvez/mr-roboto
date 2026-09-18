@@ -81,6 +81,51 @@ public struct SongPlayback: Equatable, Sendable {
         }
     }
 
+    /// One section of an arranged song, placed on the transport: its bars, and what its stitch
+    /// plays through them.
+    ///
+    /// The unarranged plan above plays the song's *newest* of everything, looping. A song with
+    /// sections plays *these* — the versions the section names, for the bars it says — one after
+    /// another, so a verse and a hook can hold different grooves and the form is what you hear.
+    public struct Segment: Equatable, Sendable, Identifiable {
+        public var section: SectionID
+        public var name: String
+        /// The bar of the song this section starts on, 0-based.
+        public var startBar: Int
+        public var lengthInBars: Int
+        public var groove: Groove?
+        public var grooveVersion: VersionID?
+        public var grooveChain: [Degradation]
+        public var bassline: Bassline?
+        public var basslineVersion: VersionID?
+        public var bassSound: String?
+        public var chop: ChopTrack?
+
+        public var id: SectionID { section }
+
+        public init(section: SectionID, name: String, startBar: Int, lengthInBars: Int,
+                    groove: Groove? = nil, grooveVersion: VersionID? = nil,
+                    bassline: Bassline? = nil, basslineVersion: VersionID? = nil, bassSound: String? = nil,
+                    chop: ChopTrack? = nil) {
+            self.section = section
+            self.name = name
+            self.startBar = startBar
+            self.lengthInBars = max(1, lengthInBars)
+            self.groove = groove
+            self.grooveVersion = grooveVersion
+            self.grooveChain = groove?.degradation ?? []
+            self.bassline = bassline
+            self.basslineVersion = basslineVersion
+            self.bassSound = bassSound
+            self.chop = chop
+        }
+
+        /// Whether anything in this section makes a sound. A section stitched from nothing is a
+        /// rest of its own length, which is a legitimate thing for a form to hold.
+        public var isSounding: Bool { groove != nil || bassline != nil || chop != nil }
+        public var endBar: Int { startBar + lengthInBars }
+    }
+
     /// Why there is nothing to play. Non-nil exactly when `isPlayable` is false.
     public struct Silence: Equatable, Sendable {
         /// The line the transport shows: short, and about this song.
@@ -111,6 +156,10 @@ public struct SongPlayback: Equatable, Sendable {
     public var basslineVersion: VersionID?
     public var bassSound: String?
     public var tracks: [Track]
+    /// The song's sections in order, when it has any with something stitched into them. Non-empty
+    /// means the transport plays the *form*: the flat fields above are left empty and nothing
+    /// loops on its own.
+    public var segments: [Segment]
     public var silence: Silence?
     /// Whether playback repeats. The frame's own loop flag, carried into the plan so the sources
     /// honour it rather than the flag being a light that nothing reads.
@@ -133,6 +182,7 @@ public struct SongPlayback: Equatable, Sendable {
         self.chop = chop
         self.machine = machine
         self.tracks = tracks
+        self.segments = []
         self.silence = silence
         self.loops = loops
         self.lengthInBars = lengthInBars
@@ -145,15 +195,41 @@ public struct SongPlayback: Equatable, Sendable {
         return copy
     }
 
-    public var isPlayable: Bool { groove != nil || !tracks.isEmpty || chop != nil || bassline != nil }
+    public var isPlayable: Bool {
+        groove != nil || !tracks.isEmpty || chop != nil || bassline != nil || segments.contains(where: \.isSounding)
+    }
+
+    /// Whether the transport is playing sections in order rather than the newest of everything.
+    public var isArranged: Bool { !segments.isEmpty }
 
     /// How many of the engine's player nodes the plan's dusty sources take: one for a bounced
-    /// groove, one for a chop. The audio tracks get what is left.
-    public var dustyPlayers: Int { (groove != nil && !grooveChain.isEmpty ? 1 : 0) + (chop != nil ? 1 : 0) }
+    /// groove, one for a chop. The audio tracks get what is left. An arranged song's dusty
+    /// sections share one node each, because sections never sound at once.
+    public var dustyPlayers: Int {
+        if isArranged {
+            return (segments.contains { $0.groove != nil && !$0.grooveChain.isEmpty } ? 1 : 0)
+                + (segments.contains { $0.chop != nil } ? 1 : 0)
+        }
+        return (groove != nil && !grooveChain.isEmpty ? 1 : 0) + (chop != nil ? 1 : 0)
+    }
+
+    /// The form's length in seconds, when the plan is arranged: what one pass takes and, with the
+    /// loop on, how often it comes round.
+    public var formSeconds: Double? {
+        guard isArranged, let bars = lengthInBars, tempo > 0 else { return nil }
+        return Double(bars * timeSignature.beatsPerBar) * 60 / tempo
+    }
 
     /// What the transport bar says it is playing: "Groove · 4 stems", "Record", "Groove · sp1200".
     public var summary: String {
         var pieces: [String] = []
+        if isArranged {
+            pieces.append("\(segments.count) section\(segments.count == 1 ? "" : "s")")
+            if segments.contains(where: { $0.groove != nil }) { pieces.append("Groove") }
+            if segments.contains(where: { $0.bassline != nil }) { pieces.append("Bass") }
+            if let chop = segments.first(where: { $0.chop != nil })?.chop { pieces.append(chop.name) }
+            return pieces.joined(separator: " · ")
+        }
         if groove != nil {
             pieces.append(grooveChain.isEmpty ? "Groove" : "Groove · \(Dust.describe(grooveChain))")
         }
@@ -193,6 +269,21 @@ public struct SongPlayback: Equatable, Sendable {
         plan.machine = machineID(in: song)
         plan.lengthInBars = song.lengthInBars > 0 ? song.lengthInBars : nil
 
+        // Arranged: the sections say what plays, and in what order. Sections that name nothing
+        // fall through to the newest-of-everything plan below, with the form's length still
+        // bounding it, which is what the sections meant before anything could be stitched.
+        var missingMedia = false
+        if song.sections.contains(where: { !$0.stitch.isEmpty }) {
+            plan.segments = segments(of: song, mediaURL: mediaURL, missingMedia: &missingMedia)
+            if !plan.isPlayable {
+                plan.silence = missingMedia
+                    ? silence(for: song, audioVersions: [], missingMedia: true)
+                    : Silence(headline: "\(song.title)'s sections play nothing yet",
+                              detail: "Open Structure and stitch a groove, a bass line or a dusty chop into a section.")
+            }
+            return plan
+        }
+
         if let version = Guidance.grooves(in: song).last, case .groove(let groove) = version.kind,
            groove.patterns.contains(where: { $0.steps.contains { $0 != .rest } }) {
             plan.groove = groove
@@ -213,15 +304,11 @@ public struct SongPlayback: Equatable, Sendable {
         // this app's first idiom is built around. It stands in for the audio it was cut from — the
         // drums stem and a loop of one of its bars together would be the drums twice, for the same
         // reason the stems stand in for the take.
-        var missingMedia = false
         var shadowed: MediaRef?
         if let version = Guidance.samples(in: song).last, case .sample(let sample) = version.kind,
            !sample.degradation.isEmpty {
-            if let url = mediaURL(sample.media) {
-                let region = ChopLaneBinding.region(of: sample, bars: Guidance.analysis(in: song)?.bars ?? [],
-                                                    tempo: sample.detectedTempo ?? song.tempo)
-                plan.chop = ChopTrack(version: version.id, name: PartLabel.title(of: version), url: url,
-                                      region: region, passes: sample.degradation)
+            if let chop = chopTrack(version, sample, in: song, mediaURL: mediaURL) {
+                plan.chop = chop
                 shadowed = sample.media
             } else {
                 missingMedia = true
@@ -246,6 +333,53 @@ public struct SongPlayback: Equatable, Sendable {
             plan.silence = silence(for: song, audioVersions: audioVersions, missingMedia: missingMedia)
         }
         return plan
+    }
+
+    /// A dirtied chop on the transport, or nil when its media is not in the package.
+    private static func chopTrack(_ version: PartVersion, _ sample: Sample, in song: Song,
+                                  mediaURL: (MediaRef) -> URL?) -> ChopTrack? {
+        guard let url = mediaURL(sample.media) else { return nil }
+        let region = ChopLaneBinding.region(of: sample, bars: Guidance.analysis(in: song)?.bars ?? [],
+                                            tempo: sample.detectedTempo ?? song.tempo)
+        return ChopTrack(version: version.id, name: PartLabel.title(of: version), url: url,
+                         region: region, passes: sample.degradation)
+    }
+
+    /// The sections as segments. Each section's stitch is read for the newest groove, the newest
+    /// bass line and the newest dirtied chop it names; anything else in it — a progression, an
+    /// analysis, a sound — is not a thing the transport sounds, and is left to the surfaces that
+    /// draw it. A stem in a stitch is not played either: the record does not run to the form.
+    static func segments(of song: Song, mediaURL: (MediaRef) -> URL?, missingMedia: inout Bool) -> [Segment] {
+        var out: [Segment] = []
+        var bar = 0
+        for section in song.sections {
+            var segment = Segment(section: section.id, name: section.name, startBar: bar,
+                                  lengthInBars: section.lengthInBars)
+            for id in section.stitch {
+                guard let version = song.version(id) else { continue }
+                switch version.kind {
+                case .groove(let groove) where groove.patterns.contains(where: { $0.steps.contains { $0 != .rest } }):
+                    segment.groove = groove
+                    segment.grooveVersion = version.id
+                    segment.grooveChain = groove.degradation
+                case .bassline(let line) where !line.notes.isEmpty:
+                    segment.bassline = line
+                    segment.basslineVersion = version.id
+                    segment.bassSound = line.sound
+                case .sample(let sample) where !sample.degradation.isEmpty:
+                    if let chop = chopTrack(version, sample, in: song, mediaURL: mediaURL) {
+                        segment.chop = chop
+                    } else {
+                        missingMedia = true
+                    }
+                default:
+                    break
+                }
+            }
+            out.append(segment)
+            bar = segment.endBar
+        }
+        return out
     }
 
     /// The song's own drum machine, from its newest `.sound` part. A song that has never opened the
