@@ -212,6 +212,22 @@ public final class PianoRollModel {
         if let first = notes.first { audition(first) }
     }
 
+    /// The levers the Director hung on the surface, as the sliders' starting positions.
+    ///
+    /// On a line written under a groove they re-run the writer, which is what a lever means there.
+    /// On a bound line they only move the sliders: the line was written with them already, and a
+    /// lever on an existing version is a description of it, not an instruction to replace it.
+    public func adoptLevers(lag: Double?, density: Double?) {
+        if base != nil {
+            if let lag { lagMS = min(Bassist.lagCeilingMS, max(-25, lag)) }
+            if let density { self.density = min(1, max(0, density)) }
+            return
+        }
+        if let lag { lagMS = min(Bassist.lagCeilingMS, max(-25, lag)) }
+        if let density { self.density = min(1, max(0, density)) }
+        if lag != nil || density != nil { write() }
+    }
+
     // MARK: Editing notes
 
     public func addNote(pitch: Int, at beat: Double, duration: Double = 0.5) {

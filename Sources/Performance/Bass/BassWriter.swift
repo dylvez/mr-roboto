@@ -161,6 +161,14 @@ public enum BassWriter {
                                      bars: bars)
         }
 
+        // A slide starts where the note before it stops: nothing rings through an approach.
+        let approachStarts = drafts.filter { !$0.displaced && $0.velocity > 60 }.map(\.start)
+        for i in drafts.indices where drafts[i].displaced {
+            for start in approachStarts where start > drafts[i].start && start < drafts[i].end {
+                drafts[i].end = start
+            }
+        }
+
         // Placement. R1's lag, in beats at this tempo, on every displaced onset; or the alternating
         // early pattern, which is the only early one the bible sanctions.
         let lagBeats = request.lagMS / 1000 * request.tempo / 60

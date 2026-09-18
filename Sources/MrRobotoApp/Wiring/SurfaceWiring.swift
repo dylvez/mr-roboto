@@ -208,6 +208,9 @@ final class SurfaceWiring {
                                    chords: chords, key: key, tempo: tempo, timeSignature: signature,
                                    kickDecaySeconds: Self.kickDecay(in: song), bassline: basslineVersion,
                                    surfaceID: item.id)
+        let levers = app.levers(for: item.id)
+        model.adoptLevers(lag: levers.first { $0.quantity == .lag }?.value,
+                          density: levers.first { $0.quantity == .density }?.value)
         bassAdapters[item.id] = adapter
         rolls[item.id] = model
         return model

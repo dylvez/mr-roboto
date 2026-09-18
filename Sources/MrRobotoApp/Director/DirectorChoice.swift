@@ -117,7 +117,7 @@ public struct SurfaceLever: Sendable, Equatable, Hashable {
             case .tempo: return [.chopLane, .grid, .compare]
             case .swing: return [.chopLane, .grid, .compare]
             case .velocity: return [.chopLane, .grid, .compare]
-            case .density: return [.grid, .compare]
+            case .density: return [.grid, .pianoRoll, .compare]
             case .dust: return [.chopLane, .sound, .compare]
             case .pitch: return [.chopLane, .sound]
             case .gain: return [.chopLane, .grid, .sound, .compare]

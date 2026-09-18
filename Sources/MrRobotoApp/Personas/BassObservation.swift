@@ -122,18 +122,17 @@ public struct BassObservation: Hashable, Sendable {
         }
         let placed = onsets.filter { !isGhost($0) }
 
-        // Kick offsets, in ms: each placed onset against the nearest kick when one is within a
-        // sixteenth and a lag of it, otherwise against the nearest eighth-note line — a pickup on
-        // the and of four is a grid note, not a note that drifted half a beat from the next kick.
-        let ownership = 0.25 + Self.lagCeilingBeats(tempo: tempo)
+        // Kick offsets, in ms: each placed onset against whichever is nearer, the nearest kick or
+        // the nearest eighth-note line, the kick winning a tie. A note 40 ms behind a kick is 40
+        // behind it (the grid line is further); a pickup on the and of four is on its line even
+        // when a swung kick sits a fifth of a beat before it.
         var offsets: [Double] = []
         for onset in placed {
-            let nearestKick = kicks.min { abs($0 - onset) < abs($1 - onset) }
-            let reference: Double
-            if let nearestKick, abs(nearestKick - onset) <= ownership {
+            let gridLine = (onset * 2).rounded() / 2
+            var reference = gridLine
+            if let nearestKick = kicks.min(by: { abs($0 - onset) < abs($1 - onset) }),
+               abs(nearestKick - onset) <= abs(gridLine - onset) + 1e-9 {
                 reference = nearestKick
-            } else {
-                reference = (onset * 2).rounded() / 2
             }
             offsets.append((onset - reference) * msPerBeat)
         }
@@ -226,9 +225,6 @@ public struct BassObservation: Hashable, Sendable {
         hasVoicings = !sets.isEmpty
         distinctVoicings = sets.filter { $0.count >= 3 }.count
     }
-
-    /// 90 ms — the bible's lag ceiling — in beats at this tempo.
-    static func lagCeilingBeats(tempo: Double) -> Double { 0.09 * tempo / 60 }
 
     static func median(_ values: [Double]) -> Double {
         guard !values.isEmpty else { return 0 }

@@ -228,3 +228,25 @@ struct BassistVerdictTests {
         }
     }
 }
+
+@Suite("Bassist: the pickup and the swung kick") @MainActor
+struct BassistPickupTests {
+    /// The live run's finding: under the Boom-Bap Pocket at 113 bpm, the slide into the next chord on
+    /// the and of four sat a fifth of a beat after a swung kick and read as 117 ms out. It is a grid
+    /// note, and nothing rings through it.
+    @Test("a pickup on the and of four is measured against its line, not a swung kick before it")
+    func pickup() throws {
+        let feel = try #require(FeelLibrary.standard.feel(named: "Boom-Bap Pocket"))
+        for seed in 1...12 {
+            let line = BassWriter.write(BassRequest(key: Key(tonic: NoteName(.d)), groove: feel.groove, tempo: 113,
+                                                    lineage: .palladino, lagMS: 40, density: 0.4, seed: UInt64(seed)))
+            let o = BassObservation(label: "", bassline: line, groove: feel.groove, chords: [], tempo: 113)
+            #expect(abs(o.maxKickOffsetMS) <= 45, "seed \(seed): \(o.kickOffsetsMS.map { Int($0) })")
+            // No displaced note rings through an approach.
+            let approaches = line.notes.filter { $0.velocity == 92 }
+            for note in line.notes where note.velocity > 92 {
+                for a in approaches where a.start > note.start { #expect(note.end <= a.start + 1e-9) }
+            }
+        }
+    }
+}
