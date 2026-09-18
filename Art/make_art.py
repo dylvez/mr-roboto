@@ -20,6 +20,9 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 ART = Path(__file__).resolve().parent
 OUT = ART.parent / "Sources" / "MrRobotoApp" / "Resources" / "Art"
+# Pieces that become icon files for the packaged .app rather than images the app draws: cut out and
+# fitted like the rest, but written beside this script for scripts/make-app.sh to turn into .icns.
+ICONS = {"doc-icon": "doc-icon-1024.png"}
 NOT_BUNDLED = {"app-icon-concepts", "doc-icon", "band-record", "band-chop", "band-grid", "band-sound"}
 TOLERANCE = 26          # how far from the ground colour still counts as ground (sum of RGB differences / 3)
 MARGIN = 0.06           # breathing room left around the trimmed subject, as a fraction of the canvas
@@ -82,6 +85,11 @@ def main():
     picks = json.loads((ART / "picks.json").read_text())["picks"]
     only = set(sys.argv[1:])
     OUT.mkdir(parents=True, exist_ok=True)
+    for name, file in ICONS.items():
+        if name in picks and (not only or name in only):
+            icon, _ = fit(trim(cutout(Image.open(ART / "picked" / f"{name}.png")), keep_ground=False), (1024, 1024), True)
+            icon.save(ART / file, optimize=True)
+            print(f"{name:22} 1024x1024  -> Art/{file}")
     for name in sorted(picks):
         if name in NOT_BUNDLED or (only and name not in only):
             continue

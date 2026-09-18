@@ -33,6 +33,23 @@ final class ActivationDelegate: NSObject, NSApplicationDelegate {
         NSApplication.shared.windows.first?.makeKeyAndOrderFront(nil)
     }
 
+    /// Song packages handed to the app by Finder. They can arrive before the window — and the
+    /// `AppState` that opens them — exist, so they wait here until `opener` is set.
+    private var waiting: [URL] = []
+    var opener: ((URL) -> Void)? {
+        didSet {
+            guard let opener else { return }
+            let urls = waiting
+            waiting = []
+            urls.forEach(opener)
+        }
+    }
+
+    func application(_ application: NSApplication, open urls: [URL]) {
+        let packages = urls.filter { $0.pathExtension == "roboto" }
+        if let opener { packages.forEach(opener) } else { waiting += packages }
+    }
+
     /// One window, one app: closing it should quit rather than leaving a menu bar with nothing
     /// under it.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }

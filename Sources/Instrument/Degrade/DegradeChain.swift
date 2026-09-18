@@ -93,9 +93,11 @@ public final class DegradeChain: @unchecked Sendable {
             return stored
         }
         set {
+            // Publishing under the same lock as the mirror: the C ring assumes one publisher at a
+            // time, and two threads setting at once would otherwise both claim the same slot.
             lock.lock()
+            defer { lock.unlock() }
             stored = newValue
-            lock.unlock()
             var params = newValue.cParams
             dg_set_params(chain, &params)
         }

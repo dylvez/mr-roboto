@@ -586,7 +586,7 @@ struct DustTests {
         let flagged = try #require(second.chainFindings.first { $0.measurement.feature == .bitDepth })
         #expect(flagged.critic == .degradeStack)
         #expect(flagged.severity == .warn)
-        #expect(flagged.headline.contains("mpc60 over sp1200"))
+        #expect(flagged.headline.contains("MPC60 over SP-1200"))
         #expect(flagged.fixes.count == 2)
 
         // …it is allowed, not refused — stacking is a real thing people do — and it is a real version…

@@ -436,6 +436,69 @@ public final class AppState {
         }
     }
 
+    /// Opens a `.roboto` package from anywhere — a double-click in Finder, a drop on the Dock icon.
+    ///
+    /// A song's media is resolved through the library, so a package living somewhere else would open
+    /// with its audio missing. One already in the library (matched by the id inside it, not by its
+    /// file name) simply opens; any other is copied into the library first, and the rail says so,
+    /// because putting a file somewhere is something you should hear about.
+    @discardableResult
+    public func openPackage(at url: URL) -> Bool {
+        let song: Song
+        do {
+            song = try SongStore(packageURL: url).load()
+        } catch {
+            note(.session, "Could not read \(url.lastPathComponent)", detail: error.localizedDescription)
+            return false
+        }
+        if library.song(song.id) != nil {
+            openSong(song.id)
+            return true
+        }
+        guard let store else {
+            note(.session, "No library to copy \(url.lastPathComponent) into")
+            return false
+        }
+        // The library finds packages through its `library.json`; a library that has never been saved
+        // has none, and would not see the package it was just handed.
+        if !store.exists {
+            do {
+                try FileManager.default.createDirectory(at: store.directoryURL, withIntermediateDirectories: true)
+                try store.save(library)
+            } catch {
+                note(.session, "Could not start a library to copy \(url.lastPathComponent) into",
+                     detail: error.localizedDescription)
+                return false
+            }
+            reloadLibrary()
+            if library.song(song.id) != nil {
+                openSong(song.id)
+                return true
+            }
+        }
+        var destination = store.directoryURL.appendingPathComponent(url.lastPathComponent)
+        var suffix = 2
+        while FileManager.default.fileExists(atPath: destination.path) {
+            destination = store.directoryURL.appendingPathComponent(
+                "\(url.deletingPathExtension().lastPathComponent) \(suffix).\(SongStore.packageExtension)")
+            suffix += 1
+        }
+        do {
+            try FileManager.default.copyItem(at: url, to: destination)
+        } catch {
+            note(.session, "Could not copy \(url.lastPathComponent) into the library", detail: error.localizedDescription)
+            return false
+        }
+        reloadLibrary()
+        note(.session, "Copied \(song.title) into the library", detail: destination.path)
+        guard library.song(song.id) != nil else {
+            note(.session, "\(song.title) was copied but the library did not pick it up", detail: destination.path)
+            return false
+        }
+        openSong(song.id)
+        return true
+    }
+
     /// Opens a song from the library by id. No-op if the library does not hold it.
     public func openSong(_ id: SongID) {
         guard let found = library.song(id) else {

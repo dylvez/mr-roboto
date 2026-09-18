@@ -22,6 +22,7 @@ struct MrRobotoApp: App {
     var body: some Scene {
         WindowGroup {
             FrameView(app: app)
+                .onAppear { activation.opener = { [app] url in app.openPackage(at: url) } }
                 // The floor: every region folded away, one surface at the size it needs. `FrameView`
                 // raises it to whatever the regions you have open actually require, so asking for a
                 // region back asks the window for its width rather than crushing the instrument.

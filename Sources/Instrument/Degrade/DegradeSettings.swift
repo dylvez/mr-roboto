@@ -168,6 +168,17 @@ public struct DegradeSettings: Codable, Sendable, Equatable {
         Preset.allCases.first { DegradeSettings(preset: $0) == self }
     }
 
+    /// The preset these settings are, whatever the mix. "SP-1200 at 60%" is still the SP-1200 —
+    /// the dust lever and the Director's `degrade_part` move only the mix — and a critic naming it
+    /// "the chain" because the mix moved would be describing the knob instead of the machine.
+    public var presetIgnoringMix: Preset? {
+        Preset.allCases.first { preset in
+            var candidate = DegradeSettings(preset: preset)
+            candidate.mix = mix
+            return candidate == self
+        }
+    }
+
     // MARK: - C bridging
 
     init(_ p: dg_params_t) {

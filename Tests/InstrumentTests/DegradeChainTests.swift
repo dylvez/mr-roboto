@@ -454,8 +454,10 @@ struct DegradeChainTests {
 
         for c in 0..<2 {
             let s = buffer.samples(c)
-            #expect(s.allSatisfy { $0.isFinite })
-            #expect((s.map { abs($0) }.max() ?? 0) < 4)
+            let nonFinite = s.firstIndex { !$0.isFinite }
+            #expect(nonFinite == nil, "channel \(c): first non-finite sample at frame \(nonFinite ?? -1)")
+            let peak = s.map { abs($0) }.max() ?? 0
+            #expect(peak < 4, "channel \(c): peak \(peak) at frame \(s.firstIndex { abs($0) == peak } ?? -1)")
         }
     }
 

@@ -331,7 +331,7 @@ public struct DegradeStackCritic: ChopCritic {
         guard let degrade = input.degrade, !degrade.isBypass else { return [] }
         var findings: [Finding] = []
         let observation = input.observation
-        let presetName = degrade.matchingPreset?.rawValue ?? "the chain"
+        let presetName = degrade.presetIgnoringMix.map { Dust.machineName($0.rawValue) } ?? "the chain"
         let locus = Locus(start: 0, end: observation.duration)
 
         if let bandwidth = observation.bandwidthHz, degrade.highCut > 0, bandwidth <= degrade.highCut {
@@ -360,7 +360,7 @@ public struct DegradeStackCritic: ChopCritic {
         }
 
         if !observation.priorDegrades.isEmpty, degrade.bitDepth < bitDepthOff {
-            let prior = observation.priorDegrades.joined(separator: ", ")
+            let prior = observation.priorDegrades.map(Dust.machineName).joined(separator: ", ")
             findings.append(Finding(
                 critic: id, criticName: name, persona: persona,
                 subject: .source,

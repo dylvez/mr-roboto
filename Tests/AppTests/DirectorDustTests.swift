@@ -211,7 +211,7 @@ struct DirectorDustCriticTests {
         #expect(built.app.song?.versions.count == before, "a refused stack wrote a version")
 
         // The reason, not the name: the finding's own sentence, then what it measured…
-        #expect(stacked.content.hasPrefix("Chain check: The source is already on a 12-bit lattice from sp1200"))
+        #expect(stacked.content.hasPrefix("Chain check: The source is already on a 12-bit lattice from SP-1200"))
         #expect(stacked.content.contains("Second quantiser"))
         #expect(stacked.content.contains("Nothing was written."))
         // …and the critic's two fixes, said as this tool's arguments.
@@ -373,5 +373,18 @@ struct DirectorDustToolboxTests {
         let year = Calendar(identifier: .gregorian).component(.year, from: Date())
         #expect(!prompt.contains("\(year)"))
         #expect(DirectorPrompt.systemBlocks.map(\.text) == [prompt])
+    }
+}
+
+@Suite("Dust: the critic names the machine") @MainActor
+struct DustCriticNamingTests {
+    @Test("a machine at a partial mix is still called by its name")
+    func namedAtAnyMix() {
+        let settings = Dust.settings(.sp1200, mix: 0.6)
+        #expect(settings.matchingPreset == nil, "the exact match fails once the mix moves — which was the bug")
+        #expect(settings.presetIgnoringMix == .sp1200)
+        let review = Dust.review(label: "Bar 9", passes: [Dust.pass(.mpc60, mix: 1), Dust.pass(.sp1200, mix: 0.6)])
+        let headlines = DegradeStackCritic().review(review).map(\.headline)
+        #expect(headlines.contains { $0.hasPrefix("Second quantiser: SP-1200 over") }, "\(headlines)")
     }
 }

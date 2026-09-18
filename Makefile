@@ -10,7 +10,7 @@ DD = .build/xcode
 XC = xcodebuild -destination 'generic/platform=macOS' -derivedDataPath $(DD) -skipPackagePluginValidation -skipMacroValidation
 XCT = xcodebuild -destination 'platform=macOS' -derivedDataPath $(DD) -skipPackagePluginValidation -skipMacroValidation
 
-.PHONY: check build test test-mlx cli doctor clean
+.PHONY: check build test test-mlx cli doctor clean app
 
 check: build test test-mlx cli doctor
 	@echo "check: ok"
@@ -36,6 +36,10 @@ cli:
 doctor:
 	.build/out/Products/Debug/m0 doctor
 	$(DD)/Build/Products/Debug/m0 doctor
+
+# The packaged Mac app, signed and installed to ~/Applications. See scripts/make-app.sh.
+app:
+	scripts/make-app.sh
 
 clean:
 	rm -rf .build

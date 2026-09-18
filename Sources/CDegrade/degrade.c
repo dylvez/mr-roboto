@@ -591,6 +591,9 @@ void dg_destroy(dg_t *chain) {
     free(chain);
 }
 
+/// Defined with the parameter handoff below; reset adopts through it too.
+static int64_t dg_read_published(struct dg_state *st, dg_params_t *out);
+
 void dg_reset(dg_t *chain) {
     struct dg_state *st = chain;
     if (!st) return;
@@ -611,9 +614,12 @@ void dg_reset(dg_t *chain) {
     st->aaCutoff = -1.0f;
     st->aaWasActive = 0;
     // Adopt whatever was published last, without a ramp: reset is a cut by definition.
-    const int64_t epoch = atomic_load_explicit(&st->paramEpoch, memory_order_acquire);
-    st->active = st->slots[(size_t)(epoch % DG_PARAM_SLOTS)];
-    st->paramEpochSeen = epoch;
+    dg_params_t published;
+    const int64_t epoch = dg_read_published(st, &published);
+    if (epoch >= 0) {
+        st->active = published;
+        st->paramEpochSeen = epoch;
+    }
     dg_derive(st, &st->active, st->tgt);
     memcpy(st->cur, st->tgt, sizeof(st->cur));
     st->rampLeft = 0;
@@ -637,6 +643,31 @@ int32_t dg_channel_count(const dg_t *chain) { return chain ? chain->channels : 0
 
 // MARK: - Parameters
 
+/// Copies the newest published parameter set into `out` and returns its epoch.
+///
+/// The ring alone was not enough. A writer publishing in a tight loop can come all the way round
+/// the ring while the reader is copying a slot — which needs no more than the audio thread being
+/// descheduled mid-copy on a loaded machine — and the reader then holds a set torn between two
+/// publishes. So this is a seqlock read: copy the slot, re-read the epoch, and if the writer has
+/// advanced far enough that it could have been writing *this* slot during the copy, copy again
+/// from the newer epoch. The writer publishes slot `e` only after writing it, so slot `e % N` is
+/// rewritten no earlier than epoch `e + N - 1` begins; a reread within `N - 2` of the start is safe.
+///
+/// Bounded, for the audio thread: after `DG_ADOPT_ATTEMPTS` laps it returns -1 and the caller
+/// keeps the parameters it already had, which is a slightly late knob rather than a torn one.
+#define DG_ADOPT_ATTEMPTS 4
+static int64_t dg_read_published(struct dg_state *st, dg_params_t *out) {
+    int64_t epoch = atomic_load_explicit(&st->paramEpoch, memory_order_acquire);
+    for (int attempt = 0; attempt < DG_ADOPT_ATTEMPTS; attempt++) {
+        *out = st->slots[(size_t)(epoch % DG_PARAM_SLOTS)];
+        atomic_thread_fence(memory_order_acquire);
+        const int64_t after = atomic_load_explicit(&st->paramEpoch, memory_order_relaxed);
+        if (after - epoch <= DG_PARAM_SLOTS - 2) return epoch;
+        epoch = after;
+    }
+    return -1;
+}
+
 void dg_set_params(dg_t *chain, const dg_params_t *params) {
     struct dg_state *st = chain;
     if (!st || !params) return;
@@ -657,11 +688,14 @@ void dg_set_params(dg_t *chain, const dg_params_t *params) {
 /// struct copy, `dg_derive` (about thirty operations and two transcendentals), and at most 64
 /// PRNG reseeds.
 static void dg_adopt_params(struct dg_state *st) {
-    const int64_t epoch = atomic_load_explicit(&st->paramEpoch, memory_order_acquire);
-    if (epoch == st->paramEpochSeen) return;
+    if (atomic_load_explicit(&st->paramEpoch, memory_order_acquire) == st->paramEpochSeen) return;
+
+    dg_params_t published;
+    const int64_t epoch = dg_read_published(st, &published);
+    if (epoch < 0) return;   // lapped every attempt: keep the current set, try again next block
 
     const uint64_t oldSeed = st->active.seed;
-    st->active = st->slots[(size_t)(epoch % DG_PARAM_SLOTS)];
+    st->active = published;
     st->paramEpochSeen = epoch;
 
     dg_derive(st, &st->active, st->tgt);
