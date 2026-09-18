@@ -734,7 +734,7 @@ public struct Beatmaker: Persona {
                 counter: "Drop the ghost level instead: 7 to 12 dB under a normal hit is a touch rather than a "
                        + "hit, and you keep the motion between the backbeats.")
 
-        case .chopDensity, .moveCutLate, .applyDegrade, .stackDegrade, .leaveAlone:
+        case .chopDensity, .moveCutLate, .applyDegrade, .stackDegrade, .leaveAlone, .transposeSample, .mergeSources:
             return .defer_(to: .sampler,
                            because: "Nothing here measures a source's character or where it should be cut.")
 

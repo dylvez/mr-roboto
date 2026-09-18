@@ -158,6 +158,56 @@ struct PersonaSamplerTests {
         #expect(rule?.evidence.references.isEmpty == false)
     }
 
+    /// sampler.golden.too-far-transposed
+    @Test("Nine semitones is refused with the sample's own key as the counter; five is flagged; two is agreed")
+    func tooFarTransposed() {
+        let nine = sampler.consider(.transposeSample(label: "Horns", semitones: 9))
+        #expect(nine.isRefusal)
+        #expect(nine.refusedByRule == "sampler.past-four-semitones")
+        if case .refuse(_, let because, let counter) = nine {
+            #expect(because.contains("fifth") || because.contains("formants"))
+            #expect(counter.contains("own key"))
+            #expect(counter.contains("arithmetic"))
+        }
+        let five = sampler.consider(.transposeSample(label: "Horns", semitones: -5))
+        if case .agreeWithCaveat(let line, let caveat) = five {
+            #expect(line.contains("down 5"))
+            #expect(caveat.contains("timbre"))
+        } else {
+            Issue.record("five semitones should be a caveat, not \(five)")
+        }
+        if case .agree(let line) = sampler.consider(.transposeSample(label: "Horns", semitones: 2)) {
+            #expect(line.contains("up 2 semitones"))
+        } else {
+            Issue.record("two semitones should be agreed")
+        }
+        let rule = Sampler.bible.rule("sampler.past-four-semitones")
+        #expect(rule?.threshold != nil)
+    }
+
+    /// sampler.golden.two-drum-sources
+    @Test("Two drum sources in one section are refused; one with an uncleared source is agreed with the clearance said")
+    func twoDrumSources() {
+        let two = sampler.consider(.mergeSources(drumSources: 2, uncleared: []))
+        #expect(two.isRefusal)
+        #expect(two.refusedByRule == "sampler.one-drum-source")
+        if case .refuse(_, _, let counter) = two { #expect(counter.contains("one record's drums")) }
+        let one = sampler.consider(.mergeSources(drumSources: 1, uncleared: ["Vessel – Arrival"]))
+        if case .agreeWithCaveat(_, let caveat) = one {
+            #expect(caveat.contains("Uncleared: Vessel – Arrival"))
+        } else {
+            Issue.record("an uncleared source is a caveat, not \(one)")
+        }
+        if case .agree = sampler.consider(.mergeSources(drumSources: 0, uncleared: [])) {} else {
+            Issue.record("no drums and nothing uncleared is agreed")
+        }
+        // The other personas defer both to the Sampler.
+        for proposal: PersonaProposal in [.transposeSample(label: "Horns", semitones: 3), .mergeSources(drumSources: 2, uncleared: [])] {
+            if case .defer_(let to, _) = Beatmaker().consider(proposal) { #expect(to == .sampler) } else { Issue.record("the Beatmaker answered \(proposal)") }
+            if case .defer_(let to, _) = Bassist().consider(proposal) { #expect(to == .sampler) } else { Issue.record("the Bassist answered \(proposal)") }
+        }
+    }
+
     /// sampler.golden.defers
     @Test("It defers a groove question rather than answering it")
     func defersTheBeatmakersWork() {
@@ -234,6 +284,8 @@ struct PersonaSamplerTests {
             "sampler.golden.leave-it-alone",
             "sampler.golden.pushes-back",
             "sampler.golden.defers",
+            "sampler.golden.too-far-transposed",
+            "sampler.golden.two-drum-sources",
         ]
         let declared = Set(Sampler.bible.goldens.map(\.id))
         let missing = declared.subtracting(implemented)

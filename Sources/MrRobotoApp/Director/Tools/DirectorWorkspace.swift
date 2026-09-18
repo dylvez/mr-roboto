@@ -1,4 +1,5 @@
 import Foundation
+import Performance
 import SongGraph
 
 // The seam between the Director and the app's own state.
@@ -35,6 +36,16 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     @discardableResult
     func arrange(_ sections: [Section]) -> Bool
 
+    /// Brings a library item into the open song as a version. Nil, with a line in the rail, when
+    /// it cannot be.
+    @discardableResult
+    func adopt(_ payload: LibraryDragPayload) -> VersionID?
+
+    /// Carries a merge move out on a version: audio rendered into the song's package, a written
+    /// part moved by arithmetic, recorded as a version derived from the original. An untouched move
+    /// returns the version itself.
+    func merge(_ version: PartVersion, move: MergeMove) async throws -> PartVersion
+
     /// A line in the conversation rail.
     func note(_ text: String, detail: String?)
 }
@@ -62,6 +73,13 @@ public final class AppStateWorkspace: DirectorWorkspace {
 
     @discardableResult
     public func arrange(_ sections: [Section]) -> Bool { app.arrange(sections) }
+
+    @discardableResult
+    public func adopt(_ payload: LibraryDragPayload) -> VersionID? { app.adopt(payload) }
+
+    public func merge(_ version: PartVersion, move: MergeMove) async throws -> PartVersion {
+        try await MergeAdapter(app: app, service: SurfaceWiring.shared.service(for: app)).render(version, move: move)
+    }
 
     public func note(_ text: String, detail: String?) { app.note(.session, text, detail: detail) }
 }
@@ -143,6 +161,31 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
         guard song != nil else { return false }
         song?.sections = sections
         return true
+    }
+
+    /// Nothing behind it: an idea can be adopted from the library it was given, a sample or a
+    /// record cannot (there is no package to copy media into).
+    @discardableResult
+    public func adopt(_ payload: LibraryDragPayload) -> VersionID? {
+        guard song != nil, payload.kind == .idea,
+              let idea = library.ideas.first(where: { $0.id.rawValue == payload.id }) else { return nil }
+        let version = PartVersion(partID: PartID(), kind: idea.kind, author: idea.author,
+                                  operation: Operation.adopted, note: "from idea: \(idea.note ?? "")")
+        return record(version) ? version.id : nil
+    }
+
+    /// Written parts move by arithmetic here; audio needs a package, which this workspace has not.
+    public func merge(_ version: PartVersion, move: MergeMove) async throws -> PartVersion {
+        guard move.movesPitch || move.movesTime else { return version }
+        let moved: PartKind
+        switch version.kind {
+        case .bassline(let line): moved = .bassline(MergeRender.bassline(line, move: move))
+        case .progression(let p): moved = .progression(MergeRender.progression(p, move: move))
+        case .groove: return version
+        default: throw DirectorToolFailure(tool: "merge", reason: "This workspace has nowhere to render audio into.")
+        }
+        let derived = version.deriving(moved, by: .user, operation: Operation.merge, note: move.sentence)
+        return record(derived) ? derived : version
     }
 
     public func note(_ text: String, detail: String?) {

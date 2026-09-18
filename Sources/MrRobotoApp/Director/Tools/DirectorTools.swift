@@ -51,6 +51,10 @@ public enum DirectorTools {
             // M2's Gate C, appended after the seventeen: the form.
             StitchSectionTool(workspace: workspace).erased(),
             ArrangeTool(workspace: workspace).erased(),
+            // M3, appended after the nineteen: the library, and two things becoming one.
+            ReadLibraryTool(workspace: workspace).erased(),
+            AdoptTool(workspace: workspace).erased(),
+            MergeTool(workspace: workspace).erased(),
         ]
         if let stage {
             let pad = pad ?? DirectorStagePad()
@@ -85,6 +89,10 @@ public enum DirectorTools {
         // M2's Gate C, appended: one section with what it plays, and the whole form in a line.
         "stitch_section",
         "arrange",
+        // M3, appended: the library read, an item adopted, and two fragments merged.
+        "read_library",
+        "adopt",
+        "merge",
     ]
 
     /// The two the frame adds. Appended after `names`, never among them: a session with no frame

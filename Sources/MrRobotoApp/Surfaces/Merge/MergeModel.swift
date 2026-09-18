@@ -204,7 +204,7 @@ public final class MergeModel {
     // MARK: Fragments
 
     /// Whether this kind of version can be merged at all.
-    public static func canMerge(_ version: PartVersion) -> Bool {
+    nonisolated public static func canMerge(_ version: PartVersion) -> Bool {
         [PartType.sample, .bassline, .progression, .groove].contains(version.type)
     }
 
@@ -223,7 +223,7 @@ public final class MergeModel {
     /// A chop's key is the one stamped on it when it was cut, else its record's key at the bar,
     /// else the song's. A bass line's key is the one it was written in, else the song's. A
     /// progression's key is its own. A groove has none.
-    public static func fragment(of version: PartVersion, in song: Song?, library: Library) -> MergeFragment {
+    nonisolated public static func fragment(of version: PartVersion, in song: Song?, library: Library) -> MergeFragment {
         let label = PartLabel.title(of: version)
         switch version.kind {
         case .sample(let sample):
@@ -250,7 +250,7 @@ public final class MergeModel {
     }
 
     /// How long the section is by default: the longer fragment in bars, or four.
-    static func defaultBars(_ a: PartVersion?, _ b: PartVersion?, in song: Song?) -> Int {
+    nonisolated static func defaultBars(_ a: PartVersion?, _ b: PartVersion?, in song: Song?) -> Int {
         let beatsPerBar = Double(song?.timeSignature.beatsPerBar ?? 4)
         var bars = 0
         for version in [a, b].compactMap({ $0 }) {

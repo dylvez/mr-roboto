@@ -636,7 +636,7 @@ public struct Bassist: Persona {
         case .setSwing, .displaceVoice, .quantiseHard, .setHumanizeTiming, .removeGhosts:
             return .defer_(to: .beatmaker, because: "That is the drums' placement, not the bass's.")
 
-        case .chopDensity, .moveCutLate, .applyDegrade, .stackDegrade, .leaveAlone:
+        case .chopDensity, .moveCutLate, .applyDegrade, .stackDegrade, .leaveAlone, .transposeSample, .mergeSources:
             return .defer_(to: .sampler, because: "That is the source and the chop.")
 
         case .outOfScope(let what):

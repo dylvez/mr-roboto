@@ -101,6 +101,16 @@ public enum DirectorPrompt {
         versions you name when a section plays something other than the newest. Sections are the \
         song's, not versions: arranging replaces the form and touches no part. Then open_surface on \
         Structure with nothing bound, and the transport plays the sections in order.
+
+        The library is read with read_library — ideas, records, samples and albums, each with its key \
+        and tempo — and an item comes into the open song with adopt, as a version of its own. A request \
+        to combine two things is a merge: merge takes two version ids and brings them to one key and \
+        one tempo by the Sampler's rules, and answers in the plan's sentences — "Horns down 2 semitones \
+        to D, stretched ×0.94 from 98 to 92." Say those sentences, with the numbers. With a section name \
+        it renders both and stitches them as a section; without one it only plans, and you open the \
+        Merge surface bound to the two originals so the user hears each and both. A sample moved past \
+        four semitones is flagged and you say so; past seven the Sampler refuses, and you offer the \
+        sample's own key as the target instead. Name both sources, and say which is uncleared.
         """
 
     /// The system prompt as blocks, with the one breakpoint on the last of them.

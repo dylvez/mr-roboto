@@ -38,6 +38,11 @@ public struct ReadSongTool: DirectorTool {
             public var operation: String
             public var author: String
             public var note: String?
+            /// The key the part stands in, when it says: a chop's from where it was cut, a bass
+            /// line's from where it was written, a progression's own. What a merge reads.
+            public var key: String?
+            /// A chop's tempo, when it was detected.
+            public var tempo: Double?
             /// Where this version's audio actually is, when it has any and the library holds it.
             ///
             /// Without this the Director cannot reach a single sample of the open song. Every audio
@@ -53,7 +58,7 @@ public struct ReadSongTool: DirectorTool {
             public var mediaPath: String?
 
             enum CodingKeys: String, CodingKey {
-                case id, part, type, operation, author, note
+                case id, part, type, operation, author, note, key, tempo
                 case mediaPath = "media_path"
             }
         }
@@ -118,10 +123,29 @@ public struct ReadSongTool: DirectorTool {
                                          operation: version.operation,
                                          author: version.author.description,
                                          note: version.note,
+                                         key: ReadSongTool.key(of: version).map { "\($0)" },
+                                         tempo: ReadSongTool.tempo(of: version),
                                          mediaPath: ReadSongTool.path(of: version, song: song.id,
                                                                      store: store))
                       },
                       note: nil)
+    }
+}
+
+extension ReadSongTool {
+    /// The key a version stands in, when it carries one.
+    static func key(of version: PartVersion) -> Key? {
+        switch version.kind {
+        case .sample(let sample): return sample.key
+        case .bassline(let line): return line.key
+        case .progression(let progression): return progression.key
+        default: return nil
+        }
+    }
+
+    static func tempo(of version: PartVersion) -> Double? {
+        if case .sample(let sample) = version.kind { return sample.detectedTempo }
+        return nil
     }
 }
 

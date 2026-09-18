@@ -383,6 +383,9 @@ public actor Director {
         case "write_bassline": return many ? "had the Bassist write \(times) lines" : "had the Bassist write a line"
         case "stitch_section": return many ? "stitched \(times) sections" : "stitched a section"
         case "arrange": return "arranged the form"
+        case "read_library": return "read the library"
+        case "adopt": return many ? "adopted \(times) library items" : "adopted a library item"
+        case "merge": return many ? "merged \(times) pairs" : "merged two fragments"
         case "open_surface": return many ? "opened \(times) surfaces" : "opened a surface"
         case "propose": return many ? "offered \(times) suggestions" : "offered a suggestion"
         default: return many ? "\(tool) ×\(times)" : tool

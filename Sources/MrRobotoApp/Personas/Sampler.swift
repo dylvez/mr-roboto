@@ -167,6 +167,21 @@ public struct Sampler: Persona {
                               engineField: "Performance.Chop.count against Chop.duration and detectedTempo",
                               noticeable: 2,
                               evidence: .cited([attackSlices, sp303])),
+            FeatureDefinition(.transposeSemitones, unit: "semitones, absolute",
+                              meaning: "how far a sample is moved from the key it was cut in to sit with "
+                                     + "something else — past four the formants give the shift away",
+                              engineField: "Performance.MergeMove.semitones, absolute",
+                              noticeable: 1,
+                              evidence: .inferred("the engine's own render: at ±3 formants are held, at ±5 a horn's "
+                                                + "body sits a fourth from its mouthpiece; four is where it stops "
+                                                + "passing as the same recording")),
+            FeatureDefinition(.drumSources, unit: "sources",
+                              meaning: "how many of the fragments stitched into one section carry drums — two "
+                                     + "records' drums in one bar is two rooms, two kits and two pockets",
+                              engineField: "Performance.MergeFragment.isDrums, counted over a section's stitch",
+                              noticeable: 1,
+                              evidence: .inferred("Shadow's and Pete Rock's practice — one break at a time, varied "
+                                                + "— read against what two breaks at once sound like")),
             FeatureDefinition(.gridDeviationMS, unit: "ms",
                               meaning: "how far the average cut had to move to reach a grid line — a measure of "
                                      + "how far off the grid the source was played",
@@ -265,6 +280,40 @@ public struct Sampler: Persona {
         // MARK: Rules
 
         rules: [
+            PersonaRule("sampler.past-four-semitones",
+                        when: "a merge moves a sample more than four semitones",
+                        then: "say so — the timbre will tell — and past seven refuse it: take the sample's own key as "
+                            + "the target and move the written part instead, which costs nothing",
+                        threshold: .atMost(.transposeSemitones, transposeFlagSemitones, unit: "semitones"),
+                        engineAction: "Performance.Merge.flagSemitones flags the move; the refusal offers "
+                                    + "MergeTarget(key: the sample's) so the written part moves by arithmetic",
+                        evidence: .inferred("the engine's own render, measured on a 98 Hz tone")),
+
+            PersonaRule("sampler.one-drum-source",
+                        when: "a section would stitch drums from two records",
+                        then: "keep one record's drums and take the harmony from the other — two breaks in one bar "
+                            + "is two rooms and two pockets, and nobody hears either",
+                        threshold: .atMost(.drumSources, 1, unit: "sources"),
+                        engineAction: "Performance.MergeFragment.isDrums over the section's stitch; the "
+                                    + "refusal names which to drop",
+                        evidence: .inferred("DJ Shadow's stated method — one break, varied across twenty "
+                                          + "sequences — and Pete Rock's, read against what two at once sound like")),
+
+            PersonaRule("sampler.drums-from-the-faster",
+                        when: "two records are merged and the song has no tempo of its own",
+                        then: "take the tempo from the record the drums came from, and the harmony from the slower",
+                        engineAction: "Performance.Merge.chooseTempo — the drums' source sets the target tempo",
+                        evidence: .inferred("a stretched break loses its transients before a stretched chord loses "
+                                          + "anything, so the drums set the clock")),
+
+            PersonaRule("sampler.name-both-sources",
+                        when: "a merged version is recorded",
+                        then: "name both records in its note and say which one is uncleared — a mashup that hides a "
+                            + "source is a clearance problem waiting",
+                        engineAction: "SongGraph.Sample.sourceRecord on each fragment, and the note carries "
+                                    + "the plan's sentences; SongGraph.SampleClearance.status is said aloud",
+                        evidence: .cited([madvillainy])),
+
             PersonaRule("sampler.cut-before-not-after",
                         when: "a cut sits more than 2 ms after the transient it was taken from",
                         then: "move it earlier; a cut is allowed to be early and is never allowed to be late",
@@ -386,6 +435,12 @@ public struct Sampler: Persona {
         // MARK: Refusals
 
         refusals: [
+            Refusal("no-transposing-past-seven",
+                    refuses: "moving a sample more than seven semitones and calling it the same recording",
+                    because: "past a fifth the formants sit a fourth or more from the body that made them, and what "
+                           + "comes out is a synthesizer playing the record",
+                    instead: "take the sample's own key as the target and move the written part, which costs nothing; "
+                           + "or pick the other record's bar in a nearer key"),
             Refusal("not-my-groove",
                     refuses: "setting a swing figure or displacing a voice",
                     because: "nothing here measures where a hit sits against a grid",
@@ -529,6 +584,17 @@ public struct Sampler: Persona {
                        premise: "\"Swing the hats to 62%.\"",
                        passes: "Deferred to the Beatmaker rather than answered.",
                        exercises: []),
+            GoldenTest("sampler.golden.too-far-transposed",
+                       premise: "A horn chop cut in G is asked nine semitones up to sit under a line in E.",
+                       passes: "Refused by sampler.past-four-semitones, with the counter that takes G as the target "
+                             + "and moves the bass line by arithmetic; five semitones is agreed with the timbre "
+                             + "caveat, and two is agreed outright.",
+                       exercises: ["sampler.past-four-semitones"]),
+            GoldenTest("sampler.golden.two-drum-sources",
+                       premise: "A verse is proposed with the Motown break and the Arrival drums chop both in it.",
+                       passes: "Refused by sampler.one-drum-source, naming the two, with one break kept as the "
+                             + "counter; one break with an uncleared source is agreed with the clearance said aloud.",
+                       exercises: ["sampler.one-drum-source", "sampler.name-both-sources"]),
         ],
 
         // MARK: Open questions
@@ -708,11 +774,52 @@ public struct Sampler: Persona {
         case .writeBassline, .pushBassAhead, .sustainUnder808:
             return .defer_(to: .bassist, because: "Where the bass sits and what it plays is the Bassist's call.")
 
+        case .transposeSample(let label, let semitones):
+            let distance = abs(semitones)
+            if distance > Sampler.transposeCeilingSemitones {
+                return .refuse(
+                    rule: "sampler.past-four-semitones",
+                    because: "\(distance) semitones is past a fifth. The formants end up a fourth or more from the "
+                           + "body that made them, and \(label) stops being that recording and starts being a "
+                           + "synthesizer playing it.",
+                    counter: "Take \(label)'s own key as the target and move the written part instead — that is "
+                           + "arithmetic and costs nothing. Or find a bar of the other record nearer the key.")
+            }
+            if Double(distance) > Sampler.transposeFlagSemitones {
+                return .agreeWithCaveat(
+                    "\(label) \(semitones > 0 ? "up" : "down") \(distance) semitones.",
+                    caveat: "Past four the timbre will tell: formants are held, but the body of the sound sits "
+                          + "\(distance) semitones from where it was recorded. Listen before you keep it.")
+            }
+            return .agree(distance == 0 ? "\(label) stays where it is."
+                                        : "\(label) \(semitones > 0 ? "up" : "down") \(distance) semitone\(distance == 1 ? "" : "s"). Inside the range a shift passes.")
+
+        case .mergeSources(let drumSources, let uncleared):
+            if drumSources > 1 {
+                return .refuse(
+                    rule: "sampler.one-drum-source",
+                    because: "\(drumSources) fragments with drums in one section is \(drumSources) rooms, "
+                           + "\(drumSources) kits and \(drumSources) pockets, and nobody hears either.",
+                    counter: "Keep one record's drums and take the harmony or the bass from the other. If both "
+                           + "breaks matter, they are two sections, not one.")
+            }
+            if !uncleared.isEmpty {
+                return .agreeWithCaveat(
+                    "One source of drums.",
+                    caveat: "Uncleared: \(uncleared.joined(separator: ", ")). Said now so it is not found later.")
+            }
+            return .agree("One source of drums, and every source is cleared or needs no clearance.")
+
         case .outOfScope(let what):
             return .defer_(to: .beatmaker,
                            because: "\(what) is outside chop, source and degradation.")
         }
     }
+
+    /// Past this many semitones a sample is flagged (Merge.flagSemitones, said in the bible's terms).
+    public static let transposeFlagSemitones = 4.0
+    /// Past this many it is refused.
+    public static let transposeCeilingSemitones = 7
 
     private func considerDegrade(preset: String, bandwidth: Double, floorDB: Double) -> PersonaVerdict {
         guard let named = DegradeSettings.Preset(rawValue: preset) else {

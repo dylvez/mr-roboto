@@ -504,8 +504,8 @@ struct CriticBoardTests {
     @Test("The shipped board holds every critic, each owned by a persona and each saying what it checks")
     func theBoardIsComplete() {
         let board = CriticBoard.standard
-        #expect(board.all.count == 5)
-        #expect(Set(board.all.map(\.id)).count == 5)
+        #expect(board.all.count == 7)
+        #expect(Set(board.all.map(\.id)).count == 7)
         #expect(board.critic(.transientCut) != nil)
         #expect(board.critic(.swingClash) != nil)
         for critic in board.all {
@@ -585,5 +585,53 @@ struct CriticBoardTests {
                                          unit: "dB"),
                 first: Fix("a", title: "a", detail: "a", change: .accept),
                 second: Fix("b", title: "b", detail: "b", change: .accept))
+    }
+}
+
+// MARK: - The merge critics
+
+@Suite("Critics: the merge")
+struct MergeCriticTests {
+
+    private func review(_ semitones: Int, drums: [Bool] = [true, false], uncleared: [Bool] = [false, false]) -> MergeReview {
+        MergeReview(label: "Horns + Bass line", fragments: [
+            MergeReview.Fragment(label: "Horns", semitones: semitones, isSample: true, isDrums: drums[0], source: "Vessel – Arrival", uncleared: uncleared[0]),
+            MergeReview.Fragment(label: "Bass line", semitones: -5, isSample: false, isDrums: drums[1], source: nil, uncleared: uncleared[1]),
+        ], seconds: 10.4)
+    }
+
+    @Test("It fires on a sample moved past four semitones, offers the sample's own key first, and not on a written part")
+    func tooFar() {
+        let findings = TooFarTransposedCritic().review(review(-5))
+        #expect(findings.count == 1)
+        let finding = try! #require(findings.first)
+        #expect(finding.critic == .tooFarTransposed)
+        #expect(finding.persona == .sampler)
+        #expect(finding.headline == "Horns moves 5 semitones down")
+        #expect(finding.severity == .note, "five is flagged, not warned")
+        #expect(finding.measurement.trips)
+        #expect(finding.fixes[0].title.contains("own key"))
+        if case .setTranspose(let label, let semitones) = finding.fixes[0].change { #expect(label == "Horns" && semitones == 0) } else { Issue.record("wrong fix") }
+        #expect(finding.fixes[1].change == .accept)
+        #expect(finding.locus.end == 10.4)
+        #expect(TooFarTransposedCritic().review(review(9)).first?.severity == .warn, "past seven it warns")
+        #expect(TooFarTransposedCritic().review(review(4)).isEmpty)
+        #expect(TooFarTransposedCritic().review(review(-3)).isEmpty)
+    }
+
+    @Test("It fires on two fragments with drums and names both; one is fine")
+    func twoDrums() {
+        let findings = TwoDrumSourcesCritic().review(review(0, drums: [true, true]))
+        #expect(findings.count == 1)
+        #expect(findings[0].critic == .twoDrumSources)
+        #expect(findings[0].headline == "Horns and Bass line both carry drums")
+        #expect(findings[0].measurement.measured == 2)
+        if case .dropFragment(let label) = findings[0].fixes[0].change { #expect(label == "Bass line") } else { Issue.record("wrong fix") }
+        #expect(TwoDrumSourcesCritic().review(review(0)).isEmpty)
+        let board = CriticBoard.standard.review(review(6, drums: [true, true]))
+        #expect(board.count == 2)
+        #expect(board.map(\.critic).contains(.tooFarTransposed) && board.map(\.critic).contains(.twoDrumSources))
+        #expect(CriticBoard.standard.all.count == 7)
+        #expect(review(0, uncleared: [true, false]).uncleared == ["Vessel – Arrival"])
     }
 }

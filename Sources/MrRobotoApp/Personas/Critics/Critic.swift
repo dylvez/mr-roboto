@@ -39,6 +39,8 @@ public struct CriticID: RawRepresentable, Hashable, Sendable, Codable, CustomStr
     public static let degradeStack = CriticID("chop.degrade-stack")
     public static let swingClash = CriticID("groove.swing-clash")
     public static let sliceClash = CriticID("groove.slice-clash")
+    public static let tooFarTransposed = CriticID("merge.too-far")
+    public static let twoDrumSources = CriticID("merge.two-drums")
 }
 
 // MARK: - Where a finding is
@@ -156,6 +158,10 @@ public enum EngineChange: Hashable, Sendable {
     /// Re-chop with a different snap tolerance, in seconds.
     case setSnapTolerance(Double)
     /// Deliberately nothing: the fix is to accept it, and the detail says why that is defensible.
+    /// Merge: move a fragment this many semitones instead.
+    case setTranspose(label: String, semitones: Int)
+    /// Merge: take this fragment out of the section.
+    case dropFragment(String)
     case accept
 }
 
@@ -393,9 +399,13 @@ public struct CriticBoard: Sendable {
     public var chopCritics: [any ChopCritic]
     public var grooveCritics: [any GrooveCritic]
 
-    public init(chopCritics: [any ChopCritic] = [], grooveCritics: [any GrooveCritic] = []) {
+    public var mergeCritics: [any MergeCritic]
+
+    public init(chopCritics: [any ChopCritic] = [], grooveCritics: [any GrooveCritic] = [],
+                mergeCritics: [any MergeCritic] = []) {
         self.chopCritics = chopCritics
         self.grooveCritics = grooveCritics
+        self.mergeCritics = mergeCritics
     }
 
     /// Everything the app ships. Order is the order findings come back in when two critics fire on
@@ -403,9 +413,17 @@ public struct CriticBoard: Sendable {
     /// consequence — a shaved attack before the level it produced.
     public static let standard = CriticBoard(
         chopCritics: [TransientCutCritic(), SliceLevelCritic(), DegradeStackCritic()],
-        grooveCritics: [SwingClashCritic(), SliceClashCritic()])
+        grooveCritics: [SwingClashCritic(), SliceClashCritic()],
+        mergeCritics: [TooFarTransposedCritic(), TwoDrumSourcesCritic()])
 
-    public var all: [any Critic] { (chopCritics as [any Critic]) + (grooveCritics as [any Critic]) }
+    public var all: [any Critic] {
+        (chopCritics as [any Critic]) + (grooveCritics as [any Critic]) + (mergeCritics as [any Critic])
+    }
+
+    /// Findings over a merge.
+    public func review(_ input: MergeReview) -> [Finding] {
+        CriticBoard.ordered(mergeCritics.flatMap { $0.review(input) })
+    }
 
     /// Findings over a chop, worst first, then by position so the order is stable.
     public func review(_ input: ChopReview) -> [Finding] {

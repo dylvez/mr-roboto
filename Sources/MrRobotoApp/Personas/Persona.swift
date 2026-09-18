@@ -120,6 +120,10 @@ public struct Feature: RawRepresentable, Hashable, Sendable, Codable, CustomStri
     public static let attackShaveMS = Feature("chop.shave.ms")
     /// How far a slice start is from the grid line nearest it, in milliseconds.
     public static let gridDeviationMS = Feature("chop.deviation.ms")
+    /// How far a sample is moved in a merge, in semitones (absolute).
+    public static let transposeSemitones = Feature("merge.transpose.semitones")
+    /// How many of a section's fragments carry drums.
+    public static let drumSources = Feature("merge.drum.sources")
     /// Quantiser width in bits. 12 is both the SP-1200 and the MPC60; 24 and up is off.
     public static let bitDepth = Feature("degrade.bits")
     /// The rate the decimator holds to, in Hz.
@@ -750,6 +754,11 @@ public enum PersonaProposal: Hashable, Sendable {
     case pushBassAhead(milliseconds: Double, alternating: Bool)
     /// Sustain a played bass under a kick that decays this long.
     case sustainUnder808(sound: String, kickDecaySeconds: Double)
+    /// Move a sample this many semitones (signed) in a merge, so it sits in another key.
+    case transposeSample(label: String, semitones: Int)
+    /// Stitch fragments from these sources into one section: how many carry drums, and which of
+    /// the records they were cut from are uncleared.
+    case mergeSources(drumSources: Int, uncleared: [String])
     /// Something outside the persona's competence, named so the refusal can be specific.
     case outOfScope(what: String)
 }
