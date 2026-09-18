@@ -143,7 +143,11 @@ struct LibrarySidebar: View {
     @ViewBuilder
     private func group(_ title: String, _ rows: [Row]) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack {
+            HStack(spacing: 6) {
+                if let glyph = Self.glyphs[title] {
+                    Glyph(name: glyph, symbol: "circle", size: 12)
+                        .foregroundStyle(Design.Palette.inkTertiary)
+                }
                 SmallLabel(title)
                 Spacer()
                 Text("\(rows.count)")
@@ -159,6 +163,10 @@ struct LibrarySidebar: View {
             }
         }
     }
+
+    /// Each shelf's glyph, so the library speaks the same visual vocabulary as the path.
+    static let glyphs: [String: String] = ["Ideas": "idea", "Songs": "song", "Albums": "album",
+                                           "Records": "record", "Samples": "chop"]
 
     /// One draggable line in the sidebar. Data only — the view is `RowView` — so the row can be
     /// built inside `body` without dragging main-actor isolation into an `Identifiable` conformance.

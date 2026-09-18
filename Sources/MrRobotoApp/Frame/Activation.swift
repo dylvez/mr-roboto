@@ -22,6 +22,8 @@ final class ActivationDelegate: NSObject, NSApplicationDelegate {
         // have done so already, or the window opens with light AppKit furniture over a dark ground
         // and then corrects itself in view of the user.
         Design.applyPinnedAppearance()
+        // A bare executable has no bundle icon; draw ours. See `AppIconArt`.
+        if let icon = AppIconArt.image() { NSApplication.shared.applicationIconImage = icon }
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {

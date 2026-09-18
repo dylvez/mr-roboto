@@ -13,6 +13,10 @@ enum FieldGuide {
         var id: String { word }
     }
 
+    static let glyphs: [String: String] = ["Library": "album", "Song": "song", "Version": "version",
+                                           "Form": "record", "Section": "section", "Slice · Pad": "chop",
+                                           "Feel": "feel", "Sample": "idea", "Critic": "check"]
+
     /// The words that are not steps or surfaces, in the order you tend to meet them.
     static let words: [Entry] = [
         Entry(word: "Library", meaning: "Everything saved: songs, albums, imported records, your samples, and ideas that belong to no song yet."),
@@ -37,6 +41,7 @@ struct FieldGuideView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 VStack(alignment: .leading, spacing: 6) {
+                    Wordmark(size: 15)
                     Text("Field Guide")
                         .font(Design.Typography.ui(24, weight: .semibold))
                     Text("Everything in a song descends from something else. Each step below makes the thing the next one works on, and the strip at the top of the window shows where you are.")
@@ -53,7 +58,7 @@ struct FieldGuideView: View {
                             .foregroundStyle(Design.Palette.inkSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                         ForEach(path.steps, id: \.self) { step in
-                            entry(glyph: step.glyph, word: step.title, meaning: step.meaning)
+                            entry(glyph: (step.glyph, step.symbol), word: step.title, meaning: step.meaning)
                         }
                     }
                 }
@@ -62,14 +67,14 @@ struct FieldGuideView: View {
                     SmallLabel("Surfaces", color: Design.Palette.accent)
                     ForEach(SurfaceKind.allCases, id: \.self) { kind in
                         let primer = Primer.text(for: kind)
-                        entry(glyph: nil, word: primer.title, meaning: primer.body)
+                        entry(glyph: kind.glyph, word: primer.title, meaning: primer.body)
                     }
                 }
 
                 VStack(alignment: .leading, spacing: 10) {
                     SmallLabel("Words", color: Design.Palette.accent)
                     ForEach(FieldGuide.words) { word in
-                        entry(glyph: nil, word: word.word, meaning: word.meaning)
+                        entry(glyph: FieldGuide.glyphs[word.word].map { ($0, "circle") }, word: word.word, meaning: word.meaning)
                     }
                 }
             }
@@ -81,14 +86,14 @@ struct FieldGuideView: View {
         .foregroundStyle(Design.Palette.ink)
     }
 
-    private func entry(glyph: String?, word: String, meaning: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
+    private func entry(glyph: (name: String, symbol: String)?, word: String, meaning: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
             Group {
-                if let glyph { Image(systemName: glyph) } else { Text("") }
+                if let glyph { Glyph(name: glyph.name, symbol: glyph.symbol, size: 16) } else { Color.clear }
             }
-            .font(.system(size: 12, weight: .medium))
             .foregroundStyle(Design.Palette.inkSecondary)
-            .frame(width: 18, alignment: .leading)
+            .frame(width: 18, height: 18, alignment: .leading)
+            .padding(.top, 1)
             VStack(alignment: .leading, spacing: 2) {
                 Text(word).font(Design.Typography.ui(14, weight: .semibold))
                 Text(meaning)

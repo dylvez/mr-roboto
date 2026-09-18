@@ -59,8 +59,7 @@ struct PartsLedger: View {
     /// are visibly the same chain.
     private func groupHeader(_ group: LedgerGroups.Group) -> some View {
         HStack(spacing: 6) {
-            Image(systemName: group.glyph)
-                .font(.system(size: 10, weight: .medium))
+            Glyph(name: group.glyph, symbol: group.symbol, size: 12)
                 .foregroundStyle(Design.Palette.inkTertiary)
             SmallLabel(group.title, color: Design.Palette.inkTertiary)
             Spacer()
@@ -178,18 +177,19 @@ public enum LedgerGroups {
     public struct Group: Identifiable, Sendable {
         public let title: String
         public let glyph: String
+        public let symbol: String
         public let parts: [Part]
         public var id: String { title }
     }
 
     /// Stage order, as the path runs. Kinds with no surface yet come last, under one heading.
-    static let order: [(title: String, glyph: String)] = [
-        ("Record", PathStep.Kind.record.glyph),
-        ("Stems", PathStep.Kind.stems.glyph),
-        ("Chops", PathStep.Kind.chop.glyph),
-        ("Grooves", PathStep.Kind.groove.glyph),
-        ("Kit", PathStep.Kind.kit.glyph),
-        ("Written", "text.alignleft"),
+    static let order: [(title: String, glyph: String, symbol: String)] = [
+        ("Record", PathStep.Kind.record.glyph, PathStep.Kind.record.symbol),
+        ("Stems", PathStep.Kind.stems.glyph, PathStep.Kind.stems.symbol),
+        ("Chops", PathStep.Kind.chop.glyph, PathStep.Kind.chop.symbol),
+        ("Grooves", PathStep.Kind.groove.glyph, PathStep.Kind.groove.symbol),
+        ("Kit", PathStep.Kind.kit.glyph, PathStep.Kind.kit.symbol),
+        ("Written", "idea", "text.alignleft"),
     ]
 
     static func stage(of version: PartVersion) -> String {
@@ -213,7 +213,7 @@ public enum LedgerGroups {
         let parts = partOrder.map { Part(id: $0, versions: byPart[$0]!) }
         return order.compactMap { stage in
             let members = parts.filter { self.stage(of: $0.versions[0]) == stage.title }
-            return members.isEmpty ? nil : Group(title: stage.title, glyph: stage.glyph, parts: members)
+            return members.isEmpty ? nil : Group(title: stage.title, glyph: stage.glyph, symbol: stage.symbol, parts: members)
         }
     }
 

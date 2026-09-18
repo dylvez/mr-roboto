@@ -75,9 +75,21 @@ public struct PathStep: Identifiable, Sendable, Equatable {
             }
         }
 
-        /// The SF Symbol standing in until the generated glyphs arrive (see the field guide's shot
-        /// list: `glyph-<kind>.svg`).
+        /// The drawn glyph, `Resources/Glyphs/glyph-<name>.svg`.
         public var glyph: String {
+            switch self {
+            case .record: return "record"
+            case .stems: return "stems"
+            case .chop: return "chop"
+            case .groove: return "groove"
+            case .kit: return "sound"
+            case .dust: return "dust"
+            case .arrange: return "section"
+            }
+        }
+
+        /// The SF Symbol drawn when the glyph file is missing.
+        public var symbol: String {
             switch self {
             case .record: return "record.circle"
             case .stems: return "square.3.layers.3d"
@@ -308,8 +320,7 @@ private struct StepChip: View {
     var body: some View {
         Button(action: press) {
             HStack(spacing: 5) {
-                Image(systemName: step.kind.glyph)
-                    .font(.system(size: 10.5, weight: .medium))
+                Glyph(name: step.kind.glyph, symbol: step.kind.symbol, size: 13)
                 if !compact || step.isHere || step.isNext {
                     Text(step.kind.title)
                         .font(Design.Typography.ui(12, weight: step.isHere || step.isNext ? .semibold : .medium))

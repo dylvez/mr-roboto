@@ -26,6 +26,15 @@ public struct GridSurfaceView: View {
                 levers
                 StepGrid(model: model, layout: layout)
                 pickers
+                if model.groove.patterns.allSatisfy({ $0.steps.allSatisfy { $0 == .rest } }) {
+                    HStack(spacing: 16) {
+                        ArtImage("empty-grid", width: 150, height: 100)
+                        Text("Nothing painted yet. Click a step to start, or pick a feel above and it lays a pocket down to edit.")
+                            .font(Design.Typography.ui(12.5, weight: .regular))
+                            .foregroundStyle(Design.Palette.inkSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
                 if let line = model.provenanceLine { ProvenanceLine(text: line) }
                 if let error = model.lastError { GridFailureNote(text: error) }
                 Spacer(minLength: 0)

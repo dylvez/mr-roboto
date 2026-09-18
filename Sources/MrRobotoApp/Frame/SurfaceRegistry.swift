@@ -138,6 +138,9 @@ struct SurfaceHost: View {
 
     private var header: some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Glyph(name: item.kind.glyph.name, symbol: item.kind.glyph.symbol, size: 14)
+                .foregroundStyle(Design.Palette.inkSecondary)
+                .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 2 }
             Text(item.kind.rawValue.uppercased())
                 .font(Design.Typography.label)
                 .tracking(1.1)
@@ -151,7 +154,13 @@ struct SurfaceHost: View {
             if crumbs.count > 1 {
                 LineageCrumbs(crumbs: crumbs, app: app)
             }
-            Spacer(minLength: 8)
+            // The band takes the free space between the words and the buttons, and only that, so
+            // it never sits under anything you read or press.
+            SurfaceBand(kind: item.kind)
+                .frame(minWidth: 8, maxWidth: .infinity)
+                .frame(height: 28)
+                .layoutPriority(-1)
+                .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 5 }
             ChipButton(systemImage: "questionmark",
                        help: app.primers.isShowing(item.kind)
                            ? "Hide what \(item.kind.rawValue) is for"

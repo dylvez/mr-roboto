@@ -56,6 +56,26 @@ struct FrameRenderTests {
         try write(FieldGuideView(), size: CGSize(width: 620, height: 900), name: "field-guide")
     }
 
+    @Test("the app icon, at 1024 and at Dock sizes")
+    func icon() throws {
+        try write(AppIconArt(), size: CGSize(width: 512, height: 512), name: "app-icon-1024")
+        try write(HStack(spacing: 24) {
+            ForEach([16.0, 32, 64, 128], id: \.self) { AppIconArt().frame(width: $0, height: $0) }
+        }.padding(20).background(Color(white: 0.93)), size: CGSize(width: 340, height: 170), name: "app-icon-sizes")
+    }
+
+    @Test("a real Grid and Sound on the bench, with glyphs and bands")
+    func realSurfaces() throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        let built = GuidanceFixture.grooved()
+        let app = app(built.song)
+        app.perform(SurfaceAction(surface: .grid, title: "New groove"))
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-grid")
+        app.perform(SurfaceAction(surface: .sound, title: "Motown, 120", bound: [built.groove!.id]))
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-sound")
+    }
+
     @Test("first launch: nothing open")
     func firstLaunch() throws {
         FontRegistration.registerBundledFonts()

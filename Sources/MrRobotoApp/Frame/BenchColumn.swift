@@ -44,8 +44,11 @@ struct BenchColumn: View {
     private var empty: some View {
         VStack(alignment: .leading, spacing: 18) {
             if app.song == nil {
-                ArtImage("empty-first-launch", width: 420, height: 280)
-                    .frame(maxWidth: .infinity)
+                VStack(spacing: 6) {
+                    Wordmark(size: 30)
+                    ArtImage("empty-first-launch", width: 420, height: 280)
+                }
+                .frame(maxWidth: .infinity)
             }
             emptyNote
         }
@@ -113,6 +116,7 @@ private struct DockChip: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 6) {
+                Glyph(name: kind.glyph.name, symbol: kind.glyph.symbol, size: 13)
                 Text(kind.rawValue)
                     .font(Design.Typography.ui(12.5, weight: isActive ? .semibold : .medium))
                 Text(shortcut)

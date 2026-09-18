@@ -53,6 +53,18 @@ enum Art {
         return nil
     }
 
+    /// An idiom glyph from `Resources/Glyphs`, as a template image so the theme colours it.
+    static func glyph(_ name: String) -> NSImage? {
+        let key = "glyph-\(name)"
+        if let hit = cache.object(forKey: key as NSString) { return hit }
+        guard let url = FontRegistration.resourceBundle?.url(forResource: key, withExtension: "svg",
+                                                              subdirectory: "Resources/Glyphs"),
+              let image = NSImage(contentsOf: url) else { return nil }
+        image.isTemplate = true
+        cache.setObject(image, forKey: key as NSString)
+        return image
+    }
+
     /// The machine card for a chain preset, by its raw name.
     static func machine(_ preset: String) -> String { "machine-\(preset.lowercased())" }
 }
@@ -77,6 +89,43 @@ struct ArtImage: View {
                 .aspectRatio(contentMode: .fit)
                 .frame(width: width, height: height)
                 .accessibilityHidden(true)
+        }
+    }
+}
+
+/// An idiom glyph at a point size, in the current foreground style. Falls back to the SF Symbol
+/// that stood in for it before the set was drawn, so a missing file never leaves a hole.
+struct Glyph: View {
+    let name: String
+    var symbol: String
+    var size: CGFloat = 12
+
+    var body: some View {
+        if let image = Art.glyph(name) {
+            Image(nsImage: image)
+                .renderingMode(.template)
+                .resizable()
+                .interpolation(.high)
+                .frame(width: size, height: size)
+                .accessibilityHidden(true)
+        } else {
+            Image(systemName: symbol)
+                .font(.system(size: size * 0.85, weight: .medium))
+                .accessibilityHidden(true)
+        }
+    }
+}
+
+extension SurfaceKind {
+    /// Each surface's glyph: the idiom it works on.
+    var glyph: (name: String, symbol: String) {
+        switch self {
+        case .importRecord: return ("record", "record.circle")
+        case .chopLane: return ("chop", "scissors")
+        case .grid: return ("groove", "square.grid.4x3.fill")
+        case .sound: return ("sound", "dial.medium")
+        case .compare: return ("compare", "chart.bar")
+        case .check: return ("check", "checkmark.magnifyingglass")
         }
     }
 }

@@ -21,6 +21,20 @@ struct ArtTests {
         }
     }
 
+    @Test("every idiom glyph the frame names is drawn")
+    func glyphs() {
+        let names = PathStep.Kind.allCases.map(\.glyph) + SurfaceKind.allCases.map(\.glyph.name)
+            + Array(LibrarySidebar.glyphs.values) + Array(FieldGuide.glyphs.values) + ["idea"]
+        for name in Set(names) {
+            let image = Art.glyph(name)
+            #expect(image != nil, "glyph-\(name).svg is missing from Resources/Glyphs")
+            #expect(image?.isTemplate == true, "\(name) must be a template so the theme colours it")
+        }
+    }
+
+    @Test("the app icon draws")
+    func icon() { #expect(AppIconArt.image(size: 64) != nil) }
+
     @Test("a missing file is nil, not a crash")
     func missing() { #expect(Art.image("no-such-art") == nil) }
 
