@@ -40,13 +40,26 @@ import SongGraph
 /// opposite. Charnas's origin story is a Slum Village beat where the snare arrives **early** against
 /// hi-hats that are completely straight, and every account that traces back to him says the same.
 /// This app's own feel library encodes the folklore direction — `Feels.lofiHipHop` gives the snare
-/// `timingOffset: 0.10` and `Feels.neoSoulPocket` gives it `0.12`, both positive and therefore late
+/// `timingOffset: 0.115` and `Feels.neoSoulPocket` gives it `0.12`, both positive and therefore late
 /// — and its own doc comment already flags the direction as contested. This bible encodes the
 /// documented direction, and `beatmaker.snare-direction` in `openQuestions` names the feels that
 /// would change if the other reading won. One sign flip each; nothing else moves.
 public struct Beatmaker: Persona {
 
     public init() {}
+
+    /// What this house has decided where the record is contested.
+    public static let houseCalls: [HouseCall] = [
+        HouseCall(question: "beatmaker.oq.snare-direction", choice: .alternative,
+                  how: "Chosen by ear: the same eight bars of the lo-fi feel on the LinnDrum at 82 bpm, "
+                     + "snare 21 ms late against 21 ms early and on the grid (Demos/dilla). Late won.",
+                  decidedOn: "2026-09-18"),
+    ]
+
+    /// Whether the house plays the displaced snare late. The documented direction is early.
+    public static var houseSnareIsLate: Bool {
+        houseCalls.contains { $0.question == "beatmaker.oq.snare-direction" && $0.choice == .alternative }
+    }
 
     public var bible: PersonaBible { Beatmaker.bible }
 
@@ -571,10 +584,11 @@ public struct Beatmaker: Persona {
                                 + "rather than a figure of speech.",
                          alternative: "Late. This is what the popular account says, what the common tutorial "
                                     + "recipe implies, and — importantly — what this app's own feel library "
-                                    + "already encodes: Feels.lofiHipHop gives .snare a timingOffset of +0.10 "
+                                    + "already encodes: Feels.lofiHipHop gives .snare a timingOffset of +0.115 "
                                     + "and Feels.neoSoulPocket +0.12, both positive and therefore late. The "
                                     + "feel library's own doc comment already flags the direction as contested. "
-                                    + "Flipping to the other reading is one sign change per feel.",
+                                    + "Flipping to the other reading is one sign change per feel. "
+                                    + "This house chose late by ear on 2026-09-18; see Beatmaker.houseCalls.",
                          affects: ["beatmaker.snare-direction", "beatmaker.hats-straight"],
                          evidence: .cited([charnasRinger, charnasOkayplayer, lrb])),
 
@@ -880,11 +894,25 @@ public struct Beatmaker: Persona {
                     says: String(format: "Both the snare and the hats have moved (%.0f and %.0f ms). There is "
                                        + "nothing for the snare to be early against.", snare, hat)))
             }
-            if snare > 0 {
+            // The direction is a house call now (see `houseCalls`): the reading says which way the
+            // house plays it, and keeps the record in the same breath rather than pretending the
+            // research went away.
+            let late = snare > 0
+            if late == Beatmaker.houseSnareIsLate {
+                notes.append(PersonaReading(
+                    rule: "beatmaker.snare-direction", feature: .snareLagMS, value: snare,
+                    holds: true,
+                    says: String(format: "Snare %.0f ms %@ — the way this house plays it%@.", abs(snare),
+                                 late ? "late" : "early",
+                                 late ? " (your call by ear; the documented accounts have it early)" : "")))
+            } else {
                 notes.append(PersonaReading(
                     rule: "beatmaker.snare-direction", feature: .snareLagMS, value: snare,
                     holds: false,
-                    says: "The snare is late. Every documented account of this technique has it early."))
+                    says: late
+                        ? "The snare is late. Every documented account of this technique has it early."
+                        : String(format: "Snare %.0f ms early — the documented direction, but this house "
+                                       + "plays it late (your call by ear).", abs(snare))))
             }
         }
 

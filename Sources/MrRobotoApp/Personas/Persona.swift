@@ -521,6 +521,35 @@ public struct OpenQuestion: Claiming, Hashable, Sendable, Identifiable {
     public var statement: String { question }
 }
 
+// MARK: - House calls
+
+/// A decision the user made on one of a bible's open questions — by ear, not by citation.
+///
+/// Kept apart from `Evidence` on purpose. Evidence says why a claim is *true*; a house call says
+/// what this house *plays*, which is a different kind of statement and must never be passed off as
+/// the first. So the research a bible encodes stays exactly as written, and a persona reading a
+/// part consults the house call to decide what it approves of — saying both: what the record
+/// says, and what the house chose.
+public struct HouseCall: Hashable, Sendable, Identifiable {
+    /// The open question this settles, e.g. `beatmaker.oq.snare-direction`.
+    public var question: String
+    /// Which reading won: the one the bible encoded, or its stated alternative.
+    public enum Choice: String, Hashable, Sendable { case encoded, alternative }
+    public var choice: Choice
+    /// How it was decided, in a sentence a person would say.
+    public var how: String
+    public var decidedOn: String
+
+    public var id: String { question }
+
+    public init(question: String, choice: Choice, how: String, decidedOn: String) {
+        self.question = question
+        self.choice = choice
+        self.how = how
+        self.decidedOn = decidedOn
+    }
+}
+
 // MARK: - The bible
 
 /// Everything a persona knows, as data.

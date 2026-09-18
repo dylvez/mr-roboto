@@ -36,7 +36,8 @@ import SongGraph
 /// with the upbeat hats nudged back
 /// (<https://gearspace.com/board/rap-hip-hop-engineering-and-production/864711-j-dilla-quot-swing-quot-his-beats.html>).
 /// `Feels.lofiHipHop` encodes the first reading, which is the one the M1 spec asks for, and the
-/// second is one sign flip away in `voices`.
+/// second is one sign flip away in `voices`. Settled for this house by ear on 2026-09-18: late,
+/// at the 21 ms the A/B used (`DILLA_DEMO=1 swift test --filter dillaDemo`).
 ///
 /// **Trap** runs 130–160 BPM with a half-time kick and snare — snare on beat 3 only — under hats at
 /// full tempo, punctuated by three or four thirty-second notes rolling into the snare
@@ -87,7 +88,8 @@ extension Feels {
             // The whole point: the hats keep the grid while the snare leans back against them.
             .closedHat: VoiceFeel(swing: .straight, humanizeScale: 0.5),
             .openHat: VoiceFeel(swing: .straight, humanizeScale: 0.5),
-            .snare: VoiceFeel(timingOffset: 0.10),
+            // 21 ms at the suggested 82 bpm: the exact displacement that won the A/B.
+            .snare: VoiceFeel(timingOffset: 0.115),
             .kick: VoiceFeel(timingOffset: 0.03),
         ],
         provenance: researched(

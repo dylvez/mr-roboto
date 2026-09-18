@@ -225,8 +225,9 @@ struct PersonaBeatmakerTests {
         let lofi = try #require(library.feel(named: "Lo-Fi Hip-Hop"))
         let lofiRead = beatmaker.read(GrooveObservation(lofi))
         let direction = try #require(lofiRead.first { $0.rule == "beatmaker.snare-direction" })
-        #expect(direction.holds == false)
+        #expect(direction.holds, "late is the house call, so the shipped feel is what the house plays")
         #expect(direction.value > 0, "the shipped lo-fi feel should have a late snare")
+        #expect(direction.says.contains("documented accounts have it early"), "the record is still said")
         // But the hats *are* straight, which is the half the library got right.
         let hats = try #require(lofiRead.first { $0.rule == "beatmaker.hats-straight" })
         #expect(hats.holds)
@@ -287,5 +288,28 @@ struct PersonaBeatmakerTests {
         #expect(declared == implemented,
                 "declared but not implemented: \(missing); implemented but not declared: \(extra)")
         #expect(declared.count >= 5)
+    }
+}
+
+@Suite("Beatmaker: house calls") @MainActor
+struct BeatmakerHouseCallTests {
+    @Test("the snare direction is settled late by ear, and the research is left as written")
+    func snareCall() throws {
+        #expect(Beatmaker.houseSnareIsLate)
+        let call = try #require(Beatmaker.houseCalls.first)
+        #expect(Beatmaker.bible.openQuestions.contains { $0.id == call.question },
+                "a house call must settle a question the bible actually asks")
+        let rule = try #require(Beatmaker.bible.rules.first { $0.id == "beatmaker.snare-direction" })
+        #expect(rule.then.contains("EARLY"), "the documented rule is not rewritten to agree with the house")
+    }
+
+    @Test("an early snare is now the one flagged, with the house's reason")
+    func earlyIsFlagged() throws {
+        var feel = Feels.lofiHipHop
+        feel.voices[.snare] = VoiceFeel(timingOffset: -0.115)
+        let reading = Beatmaker().read(GrooveObservation(feel))
+        let direction = try #require(reading.first { $0.rule == "beatmaker.snare-direction" })
+        #expect(!direction.holds)
+        #expect(direction.says.contains("plays it late"))
     }
 }
