@@ -13,12 +13,12 @@ import Foundation
 public enum DirectorTools {
     /// - Parameters:
     ///   - stage: the frame, when there is one. Given, the two surface tools are **appended** to
-    ///     the list — never inserted — so the fourteen schemas before them keep their bytes and a
+    ///     the list — never inserted — so the fifteen schemas before them keep their bytes and a
     ///     session that started without a frame and one that started with it share a cached prefix
-    ///     up to the fourteenth tool. Nil is the tool layer on its own, which is how every tool
+    ///     up to the fifteenth tool. Nil is the tool layer on its own, which is how every tool
     ///     test runs.
     ///   - persona: who signs a version the model names nobody for. Nil is the Director itself.
-    ///     It reaches `create_part_version` only, and only its `run`: no schema reads it, so a
+    ///     It reaches `create_part_version` and `degrade_part` only, and only their `run`: no schema reads it, so a
     ///     persona-scoped session and the Director's own share every byte of the frozen prefix.
     public static func toolbox(workbench: DirectorWorkbench,
                                workspace: any DirectorWorkspace,
@@ -42,6 +42,9 @@ public enum DirectorTools {
             AuditionTool(workbench: workbench, audition: audition).erased(),
             CreatePartVersionTool(workbench: workbench, workspace: workspace,
                                   acting: persona ?? CreatePartVersionTool.director).erased(),
+            // Appended after the fourteen, never among them: every schema above keeps its bytes.
+            DegradePartTool(workbench: workbench, workspace: workspace,
+                            acting: persona ?? CreatePartVersionTool.director).erased(),
         ]
         if let stage {
             let pad = pad ?? DirectorStagePad()
@@ -68,6 +71,8 @@ public enum DirectorTools {
         "set_velocity",
         "audition",
         "create_part_version",
+        // The fifteenth, appended: dust written onto the chop or groove it dirties.
+        "degrade_part",
     ]
 
     /// The two the frame adds. Appended after `names`, never among them: a session with no frame

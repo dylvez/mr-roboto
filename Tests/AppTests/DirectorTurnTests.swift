@@ -1,5 +1,6 @@
 import Analysis
 import Foundation
+import Instrument
 import MusicTheory
 import Performance
 import SongGraph
@@ -10,11 +11,12 @@ import Testing
 // The first proof, end to end, against a recorded conversation.
 //
 // "Chop the drums from bar 9 and give me something slower and dustier" should open the Chop lane on
-// bar 9 and a Compare with three candidates. There is no API key in this shell and no network in
-// CI, so the model's half of the conversation is a script — but nothing under it is stubbed: the
-// chopper cuts real audio, the classifier really classifies it, the feel library is the real one,
-// the re-groove engine really runs, the versions really land in the song graph, and the surfaces
-// really open on the bench.
+// bar 9, a Compare with three slower candidates, and the Sound surface on a dusty version of the
+// chop — the dusty half done by the band rather than handed back to the user. There is no API key
+// in this shell and no network in CI, so the model's half of the conversation is a script — but
+// nothing under it is stubbed: the chopper cuts real audio, the classifier really classifies it,
+// the feel library is the real one, the re-groove engine really runs, the versions really land in
+// the song graph, and the surfaces really open on the bench.
 //
 // The one thing a script cannot do is know a UUID that does not exist yet. `create_part_version`
 // mints version ids at run time and the round after it has to *use* them, so the last replies are
@@ -201,22 +203,38 @@ struct DirectorFirstProofTests {
             ("t14", "create_part_version", #"{"from":"groove-3","note":"Slower and dustier, on \#(feels[2])","persona":null,"parent":null}"#),
             ("t15", "create_part_version", #"{"from":"groove-4","note":"Slowest, on \#(feels[3])","persona":null,"parent":null}"#),
         ])))
-        // The two surfaces, written out of the ids the versions actually got.
+        // The dusty half, carried out rather than handed back: the chop itself through an SP-1200 at
+        // 60%, as a new version of the chop with the dry cut one parent back.
         replies.append({
             let samples = await DirectorTurnFixture.versions(workspace.value, ofType: .sample)
             return DirectorTurnFixture.call(
-                "t16", "open_surface",
+                "t16", "degrade_part", #"{"version":"\#(samples[0])","preset":"sp1200","mix":0.6}"#)
+        })
+        // The three surfaces, written out of the ids the versions actually got.
+        replies.append({
+            let samples = await DirectorTurnFixture.versions(workspace.value, ofType: .sample)
+            return DirectorTurnFixture.call(
+                "t17", "open_surface",
                 #"{"surface":"Chop lane","title":"Bar 9 of Arrival","bound":["\#(samples[0])"],"reference":null,"finding":null,"because":"The bar you asked for, cut on its own transients.","levers":null}"#)
         })
         replies.append({
             let grooves = await DirectorTurnFixture.versions(workspace.value, ofType: .groove)
             return DirectorTurnFixture.call(
-                "t17", "open_surface",
+                "t18", "open_surface",
                 #"{"surface":"Compare","title":"Three slower reads","bound":["\#(grooves[1])","\#(grooves[2])","\#(grooves[3])"],"reference":"\#(grooves[0])","finding":null,"because":"Each one is bar 9 on a different feel, judged against the straight read at 90.","levers":[{"quantity":"tempo","label":"Slower","value":78},{"quantity":"dust","label":"Dustier","value":0.6}]}"#)
+        })
+        // Dirt is answered on the Sound surface, bound to the dusty version: the chain is on it
+        // already, so no dust lever — the bypass is the dry cut.
+        replies.append({
+            let samples = await DirectorTurnFixture.versions(workspace.value, ofType: .sample)
+            return DirectorTurnFixture.call(
+                "t19", "open_surface",
+                #"{"surface":"Sound","title":"Bar 9 through an SP-1200","bound":["\#(samples[1])"],"reference":null,"finding":null,"because":"Bar 9 at 60% SP-1200, against the dry cut one parent back.","levers":null}"#)
         })
         replies.append(DirectorLateTransport.fixed(DirectorSSE.reply(
             "Cut bar 9 into slices and played it three ways, against the straight read at 90. "
-            + "The Compare is open; press one to hear it.")))
+            + "The Compare is open; press one to hear it. The dust is on the chop itself: SP-1200 "
+            + "at 60%, open in Sound against the dry cut.")))
 
         let rig = try await MainActor.run { try DirectorTurnFixture.rig(replies) }
         defer { rig.clean() }
@@ -232,22 +250,42 @@ struct DirectorFirstProofTests {
                                                 "list_bars", "chop_bar", "classify_slices"])
         #expect(turn.calls.filter { $0 == "regroove_chop" }.count == 4)
         #expect(turn.calls.filter { $0 == "create_part_version" }.count == 5)
-        #expect(Array(turn.calls.suffix(2)) == ["open_surface", "open_surface"])
+        #expect(turn.calls.filter { $0 == "degrade_part" }.count == 1, "the dusty half was done, not handed back")
+        #expect(Array(turn.calls.suffix(3)) == ["open_surface", "open_surface", "open_surface"])
 
-        // Five versions landed in the song graph: the chop, and four grooves off it.
+        // Six versions landed in the song graph: the chop, four grooves off it, and the dusty chop.
         let samples = await DirectorTurnFixture.versions(rig.workspace, ofType: .sample)
         let grooves = await DirectorTurnFixture.versions(rig.workspace, ofType: .groove)
-        #expect(samples.count == 1)
+        #expect(samples.count == 2, "the dry chop and the dusty one")
         #expect(grooves.count == 4)
 
-        // Two surfaces, the right kinds, the right bindings.
-        #expect(turn.opened.count == 2)
+        // The dusty chop is dust carried on the part it dirties: the same part, the dry cut as its
+        // parent, `degrade` as the operation, SP-1200 at 60% with the preset's own seed.
+        let (dry, dusty) = try await MainActor.run { () throws -> (PartVersion, PartVersion) in
+            let versions = try #require(rig.app.song?.versions.filter { $0.type == .sample })
+            return (versions[0], versions[1])
+        }
+        #expect(dry.kind.degradation.isEmpty)
+        #expect(dusty.partID == dry.partID)
+        #expect(dusty.parents == [dry.id])
+        #expect(dusty.operation == Operation.degrade)
+        #expect(dusty.author == .persona("Director"))
+        #expect(dusty.kind.degradation == [Dust.pass(.sp1200, mix: 0.6)])
+        #expect(dusty.kind.degradation.first?.seed == DegradeSettings(preset: .sp1200).seed)
+
+        // Three surfaces, the right kinds, the right bindings.
+        #expect(turn.opened.count == 3)
         let lane = try #require(turn.opened.first)
         #expect(lane.surface == .chopLane)
         #expect(lane.title == "Bar 9 of Arrival")
-        #expect(lane.fill.bound.map(\.description) == samples)
+        #expect(lane.fill.bound.map(\.description) == [samples[0]], "the lane is on the dry cut")
 
-        let compare = try #require(turn.opened.last)
+        let sound = try #require(turn.opened.last)
+        #expect(sound.surface == .sound)
+        #expect(sound.fill.bound == [dusty.id], "Sound is opened on the dusty version itself")
+        #expect(sound.levers.isEmpty, "its chain is on it; a lever would put a second draft over it")
+
+        let compare = try #require(turn.opened.dropLast().last)
         #expect(compare.surface == .compare)
         // Rule 4: what they are judged against is first, and is not one of them.
         #expect(compare.fill.reference?.description == grooves[0])
@@ -264,6 +302,8 @@ struct DirectorFirstProofTests {
         try await MainActor.run {
             // The bench holds them, bound as asked, with the levers hung on the Compare.
             #expect(rig.app.bench.items.contains { $0.kind == .chopLane })
+            let benchSound = try #require(rig.app.bench.items.first { $0.kind == .sound })
+            #expect(rig.app.bound(for: benchSound.id) == [dusty.id])
             let benchCompare = try #require(rig.app.bench.items.first { $0.kind == .compare })
             #expect(rig.app.bound(for: benchCompare.id).count == 4)
             #expect(rig.app.levers(for: benchCompare.id).count == 2)
@@ -272,8 +312,16 @@ struct DirectorFirstProofTests {
         }
 
         #expect(turn.say.contains("bar 9"))
+        #expect(turn.say.contains("SP-1200"))
         #expect(turn.detail?.contains("turn") == true, "the cost line rides on the answer")
-        #expect(turn.spend.turnCount == 11, "one ledger entry per request")
+        #expect(turn.spend.turnCount == 13, "one ledger entry per request")
+
+        // The model read what degrade_part wrote — a degrade version with the dry cut as its
+        // parent — in the request after the call, which is where it got the id Sound opened on.
+        let afterDust = try await rig.transport.request(9).bodyJSON().jsonText
+        #expect(afterDust.contains("sp1200 at 60%"))
+        #expect(afterDust.contains(dusty.id.description))
+        #expect(afterDust.contains(dry.id.description))
     }
 
     @Test("A proposal the Director offers is performable, and replaces the derived ones")

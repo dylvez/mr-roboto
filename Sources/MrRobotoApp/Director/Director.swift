@@ -377,6 +377,8 @@ public actor Director {
         case "audition": return many ? "listened back \(times) times" : "listened back"
         case "create_part_version":
             return many ? "recorded \(times) versions into the song" : "recorded one version into the song"
+        case "degrade_part":
+            return many ? "put \(times) parts through a machine" : "put it through a machine"
         case "open_surface": return many ? "opened \(times) surfaces" : "opened a surface"
         case "propose": return many ? "offered \(times) suggestions" : "offered a suggestion"
         default: return many ? "\(tool) ×\(times)" : tool

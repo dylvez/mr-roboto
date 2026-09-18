@@ -460,14 +460,9 @@ public final class SoundSurface {
     /// touched, so the dry chop is one parent away and still plays clean. The seed goes in as the
     /// `UInt64` the draft holds; nothing here passes it through a `Double`.
     private func commitPart(note: String?) -> PartVersion? {
-        guard let bound = boundVersion else { return nil }
-        let passes = chainPasses
-        guard let kind = bound.kind.withDegradation(passes) else { return nil }
-        // The note keeps the part's own name ahead of the em dash, which is where `PartLabel` stops
-        // reading: the ledger row still says "Bar 2 of Arrival", and its second line says the chain.
-        let chain = passes.isEmpty ? "chain off" : Dust.describe(passes)
-        let version = bound.deriving(kind, by: .user, operation: Operation.degrade,
-                                     note: note ?? "\(PartLabel.title(of: bound)) — \(chain)")
+        guard let bound = boundVersion,
+              let version = Dust.version(dirtying: bound, through: chainPasses, by: .user, note: note)
+        else { return nil }
         guard host?.record(version) == true else { return nil }
         boundVersion = version
         stacksPass = false

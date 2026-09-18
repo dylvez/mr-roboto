@@ -69,6 +69,17 @@ public enum DirectorPrompt {
         versions, each recorded with create_part_version and a note saying what it is, and then \
         one open_surface naming all three. A Compare of things you have not made is an empty panel \
         with three labels in it.
+
+        Dust is a sound job, and it is yours: never hand it back to the user. It is carried on the \
+        chop or groove it dirties. "Dustier", "dirtier", "older", "through an SP-1200" is answered \
+        with degrade_part on that part: a new version of it playing through a machine — sp1200, \
+        mpc60, cassette, vinyl or radio — at a mix, with the dry version one parent back and still \
+        playing clean. Say it as the machine and the amount, "SP-1200 at 60%", never as a bit \
+        depth. Then open the Sound surface on the dusty version, which plays it against the dry one; \
+        its chain is already on it, so it needs no dust lever. A dust lever on a Compare lets \
+        someone move an amount, but it is not a version anyone can keep, so on its own it does not \
+        answer the question. To change a dusty version's chain, name its dry parent again. If the \
+        chain check refuses a second machine, tell the user its reason, not only that it refused.
         """
 
     /// The system prompt as blocks, with the one breakpoint on the last of them.

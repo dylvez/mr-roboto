@@ -29,14 +29,47 @@ enum Dust {
 
     /// The dust lever at `amount` (0…1) as chain settings: the lever preset at that mix.
     static func lever(_ amount: Double) -> DegradeSettings {
-        var settings = DegradeSettings(preset: leverPreset)
-        settings.mix = min(1, max(0, amount))
-        return settings
+        settings(leverPreset, mix: amount)
     }
 
     /// The dust lever at `amount` as a stored pass.
     static func pass(_ amount: Double) -> Degradation {
-        lever(amount).degradation(from: leverPreset)
+        pass(leverPreset, mix: amount)
+    }
+
+    /// A named machine at a mix (0…1), as chain settings: the preset exactly — its seed included —
+    /// with only the mix moved. The lever is this with the lever preset; the Director's
+    /// `degrade_part` is this with whichever machine it names.
+    static func settings(_ preset: DegradeSettings.Preset, mix: Double) -> DegradeSettings {
+        var settings = DegradeSettings(preset: preset)
+        settings.mix = min(1, max(0, mix))
+        return settings
+    }
+
+    /// A named machine at a mix, as a stored pass that remembers which machine it was.
+    static func pass(_ preset: DegradeSettings.Preset, mix: Double) -> Degradation {
+        settings(preset, mix: mix).degradation(from: preset)
+    }
+
+    // MARK: Writing a dusty version
+
+    /// A dirtied part: a new version of the **same** part — `bound` as its parent,
+    /// `Operation.degrade` as the operation — playing through `passes`. `bound` is not touched, so
+    /// whatever it was still plays as it did. Nil for a kind that cannot carry a chain.
+    ///
+    /// The one construction of a dusty version. The Sound surface's commit and the Director's
+    /// `degrade_part` both come through here, so a chop dirtied by hand and one dirtied by the band
+    /// are the same shape in the ledger — same parent edge, same operation, same note — and differ
+    /// only in who signed them.
+    ///
+    /// The note keeps the part's own name ahead of the em dash, which is where `PartLabel` stops
+    /// reading: the ledger row still says "Bar 2 of Arrival", and its second line says the chain.
+    static func version(dirtying bound: PartVersion, through passes: [Degradation],
+                        by author: Author, note: String? = nil) -> PartVersion? {
+        guard let kind = bound.kind.withDegradation(passes) else { return nil }
+        let chain = passes.isEmpty ? "chain off" : describe(passes)
+        return bound.deriving(kind, by: author, operation: Operation.degrade,
+                              note: note ?? "\(PartLabel.title(of: bound)) — \(chain)")
     }
 
     /// The passes a part plays through. Empty for a dry part and for kinds that carry no chain.
