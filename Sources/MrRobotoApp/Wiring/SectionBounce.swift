@@ -31,8 +31,9 @@ enum SectionBounce {
 
     enum Part { case mix, drums, bass }
 
-    /// Renders one section of an arranged plan, or the whole of a flat one when `section` is nil.
-    /// The tail is half a second past the section's last bar, so a ringing kick is counted.
+    /// Renders one section of an arranged plan, or the whole song (every section in order, or the
+    /// flat plan) when `section` is nil. The tail is half a second past the last bar, so a ringing
+    /// kick is counted.
     @AudioActor
     static func render(_ plan: SongPlayback, section: SectionID? = nil, kitsDirectory: URL,
                        sampleRate: Double = 48_000, tailSeconds: Double = 0.5) async throws -> Stems {
@@ -59,13 +60,19 @@ enum SectionBounce {
 
     // MARK: - The plan, cut down
 
-    /// The plan reduced to one section starting at bar 0, the loop off. A flat plan is left whole,
-    /// bounded by its own length or one bar.
+    /// The plan reduced to one section starting at bar 0, the loop off; with no section named, an
+    /// arranged plan is left whole — every section in order — and a flat plan is bounded by its
+    /// own length or one bar.
     static func isolate(_ plan: SongPlayback, section: SectionID?) throws -> (SongPlayback, String, Int) {
         var copy = plan.looping(false)
         if plan.isArranged {
-            guard let segment = section.flatMap({ id in plan.segments.first { $0.section == id } }) ?? plan.segments.first else {
-                throw Failure.nothingToBounce("the song has no sections")
+            guard let section else {
+                let bars = plan.lengthInBars ?? plan.segments.map { $0.startBar + $0.lengthInBars }.max() ?? 1
+                copy.lengthInBars = bars
+                return (copy, "Song", max(1, bars))
+            }
+            guard let segment = plan.segments.first(where: { $0.section == section }) else {
+                throw Failure.nothingToBounce("the song has no such section")
             }
             var moved = segment
             moved.startBar = 0

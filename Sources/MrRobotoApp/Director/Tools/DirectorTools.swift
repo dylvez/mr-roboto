@@ -65,6 +65,7 @@ public enum DirectorTools {
             ReadMixTool(workspace: workspace).erased(),
             SetMixTool(workspace: workspace).erased(),
             MasterTool(workspace: workspace).erased(),
+            ExportTool(workspace: workspace).erased(),
         ]
         if let stage {
             let pad = pad ?? DirectorStagePad()
@@ -112,6 +113,7 @@ public enum DirectorTools {
         "read_mix",
         "set_mix",
         "master",
+        "export",
     ]
 
     /// The two the frame adds. Appended after `names`, never among them: a session with no frame

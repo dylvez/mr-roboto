@@ -63,6 +63,19 @@ struct FrameCommands: Commands {
                 if let id = app.createAlbum(title: "New album") { app.openAlbum(id) }
             }
             .disabled(app.store == nil)
+            Button("Import MIDI…") {
+                let panel = NSOpenPanel()
+                panel.allowedContentTypes = [.midi]
+                panel.message = "A Standard MIDI File: drum tracks become grooves, bass and melody tracks lines, chords a progression."
+                if panel.runModal() == .OK, let url = panel.url { app.importMIDI(from: url) }
+            }
+            .disabled(app.song == nil)
+            Menu("Export") {
+                Button("Master…") { MrRobotoApp.export(app) { try await Export.master(app, to: $0).wav } }
+                Button("Stems…") { MrRobotoApp.export(app) { try await Export.stems(app, to: $0).first } }
+                Button("MIDI…") { MrRobotoApp.export(app) { try Export.midi(app, to: $0) } }
+            }
+            .disabled(app.song == nil)
             Button("Import Voice…") {
                 let panel = NSOpenPanel()
                 panel.allowedContentTypes = [.plainText, .text]
@@ -168,6 +181,30 @@ extension MrRobotoApp {
     /// "Untitled, Sept 17" — the same shape the mockups use.
     static func untitledName(_ date: Date = Date()) -> String {
         "Untitled, \(date.formatted(.dateTime.month(.abbreviated).day()))"
+    }
+
+    /// Asks where, then exports there; the rail says what happened.
+    @MainActor
+    static func export(_ app: AppState, _ run: @escaping @MainActor (URL) async throws -> URL?) {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = true
+        panel.prompt = "Export here"
+        panel.message = "The folder the files go in."
+        if let song = app.song {
+            let suggested = Export.defaultDirectory(for: song)
+            try? FileManager.default.createDirectory(at: suggested, withIntermediateDirectories: true)
+            panel.directoryURL = suggested
+        }
+        guard panel.runModal() == .OK, let directory = panel.url else { return }
+        Task { @MainActor in
+            do {
+                if let url = try await run(directory) { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+            } catch {
+                app.note(.session, "The export failed", detail: "\(error)")
+            }
+        }
     }
 }
 

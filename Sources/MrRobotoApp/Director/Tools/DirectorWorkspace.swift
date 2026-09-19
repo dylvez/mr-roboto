@@ -84,6 +84,8 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     func mixObservation(section: SectionID?) async throws -> MixObservation?
     /// A mix version. Nil, with the reason in the rail, when it cannot be.
     func recordMix(_ mix: Mix, note: String) -> PartVersion?
+    /// M6: "master", "stems" or "midi" written to the song's export folder; the files.
+    func export(_ what: String) async throws -> [URL]
 }
 
 /// `AppState` seen through the six things the Director needs.
@@ -157,6 +159,22 @@ public final class AppStateWorkspace: DirectorWorkspace {
 
     public func recordMix(_ mix: Mix, note: String) -> PartVersion? {
         MixAdapter(app: app).commit(mix, base: Guidance.mixes(in: app.song ?? Song(title: "")).last, note: note)
+    }
+
+    public func export(_ what: String) async throws -> [URL] {
+        guard let song = app.song else { throw DirectorToolFailure(tool: "export", reason: "No song is open.") }
+        let directory = app.exportDirectory ?? Export.defaultDirectory(for: song)
+        switch what {
+        case "master":
+            let result = try await Export.master(app, to: directory)
+            return [result.wav, result.report]
+        case "stems":
+            return try await Export.stems(app, to: directory)
+        case "midi":
+            return [try Export.midi(app, to: directory)]
+        default:
+            throw DirectorToolFailure(tool: "export", reason: "\"\(what)\" is not master, stems or midi.")
+        }
     }
 }
 
@@ -310,6 +328,17 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
     public var mixObservation: MixObservation?
 
     public func mixObservation(section: SectionID?) async throws -> MixObservation? { mixObservation }
+
+    public func export(_ what: String) async throws -> [URL] {
+        guard let current = song, what == "midi" else {
+            throw DirectorToolFailure(tool: "export", reason: "This workspace has nowhere to render audio into; it writes MIDI only.")
+        }
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("roboto-export-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let url = directory.appendingPathComponent("\(current.title).mid")
+        try MIDIExport.file(for: current).write(to: url)
+        return [url]
+    }
 
     public func recordMix(_ mix: Mix, note: String) -> PartVersion? {
         guard let current = song else { return nil }

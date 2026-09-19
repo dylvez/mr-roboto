@@ -141,7 +141,10 @@ public enum DirectorPrompt {
         and its counter, and make the counter's move instead. The master is master: the target \
         and the ceiling, and a gain by the gap read_mix reported. Every move is a mix version the \
         user can revert; say each in dB and Hz, then read_mix again and say what it did. Then \
-        open_surface on Mixer (the strips) or Master (the readings), bound to the mix version.
+        open_surface on Mixer (the strips) or Master (the readings), bound to the mix version. \
+        "Export it", "bounce it", "give me the stems", "send me the MIDI" is export: master, stems \
+        or midi; say the folder and the files, and for a master the loudness and true peak the \
+        report carries.
         """
 
     /// The system prompt as blocks, with the one breakpoint on the last of them.

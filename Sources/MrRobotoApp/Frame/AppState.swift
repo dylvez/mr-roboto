@@ -320,6 +320,8 @@ public final class AppState {
     /// to the session rather than to a surface.
     @ObservationIgnored private(set) var conductor: BandDirector?
     @ObservationIgnored public private(set) var inbox: InboxWatcher?
+    /// M6: where exports go instead of ~/Music/Mr. Roboto/Exports/<song>; a test sets it.
+    @ObservationIgnored public var exportDirectory: URL?
 
     func attach(conductor: BandDirector) { self.conductor = conductor }
 

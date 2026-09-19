@@ -268,6 +268,7 @@ public final class DirectorSession {
         case "read_mix": return "The Engineer is reading the mix…"
         case "set_mix": return "The Engineer is moving a strip…"
         case "master": return "The Engineer is setting the master…"
+        case "export": return "Writing the files…"
         case "open_surface": return "Opening a surface…"
         case "propose": return "Writing a suggestion…"
         default: return "\(tool)…"
