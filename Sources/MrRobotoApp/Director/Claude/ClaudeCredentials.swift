@@ -29,6 +29,13 @@ public struct ClaudeAPIKey: Sendable, Equatable, CustomStringConvertible, Custom
 public protocol ClaudeKeySource: Sendable {
     /// The key, or nil when there is none. Never throws: "no key" is an answer, not a failure.
     func apiKey() -> ClaudeAPIKey?
+    /// Whether a key is there, without reading it. The launch check asks this: reading a keychain
+    /// item's secret is what makes macOS ask for a password, and looking at whether it exists is not.
+    func hasKey() -> Bool
+}
+
+public extension ClaudeKeySource {
+    func hasKey() -> Bool { apiKey().map { !$0.isEmpty } ?? false }
 }
 
 /// A fixed key. Tests and previews.
@@ -74,16 +81,25 @@ public struct ClaudeCredentials: ClaudeKeySource {
         case environment, keychain, absent
     }
 
+    /// Where a key would come from, by looking and not reading: no keychain prompt.
     public var origin: Origin {
         if let value = environment[Self.environmentVariable], !value.isEmpty { return .environment }
-        if keychain.password(service: Self.keychainService, account: Self.keychainAccount) != nil { return .keychain }
+        if keychain.exists(service: Self.keychainService, account: Self.keychainAccount) { return .keychain }
         return .absent
     }
+
+    public func hasKey() -> Bool { origin != .absent }
 }
 
 /// The keychain, behind a door, so a test never touches the login keychain.
 public protocol ClaudeKeychain: Sendable {
     func password(service: String, account: String) -> String?
+    /// Whether the item is there. Must not read the secret.
+    func exists(service: String, account: String) -> Bool
+}
+
+public extension ClaudeKeychain {
+    func exists(service: String, account: String) -> Bool { password(service: service, account: account) != nil }
 }
 
 /// The real one.
@@ -102,6 +118,20 @@ public struct SystemKeychain: ClaudeKeychain {
         guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess,
               let data = item as? Data else { return nil }
         return String(data: data, encoding: .utf8)
+    }
+
+    /// Attributes only. The access list guards the secret, not the item's existence, so this
+    /// never puts the password dialog up.
+    public func exists(service: String, account: String) -> Bool {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecReturnAttributes as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+        ]
+        var item: CFTypeRef?
+        return SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess
     }
 }
 

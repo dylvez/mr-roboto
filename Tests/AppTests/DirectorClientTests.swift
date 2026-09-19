@@ -166,6 +166,27 @@ struct DirectorClientTests {
         #expect(neither.origin == .absent)
     }
 
+    @Test("Launch looks for the key and never reads it; the secret is read once, on the first request")
+    func keychainIsNotReadAtLaunch() async throws {
+        let keychain = CountingKeychain(secret: "sk-ant-from-keychain")
+        let credentials = ClaudeCredentials(environment: [:], keychain: keychain)
+        let body = DirectorSSE.reply("ok")
+        let (client, _) = DirectorTestClient.make([.events(body), .events(body)], keySource: credentials)
+
+        // What the app does on launch: is there a key, and where from?
+        let status = await client.keyStatus()
+        #expect(status.hasKey && credentials.origin == .keychain && credentials.hasKey())
+        #expect(keychain.reads == 0, "reading the secret is what raises the keychain's password dialog")
+        #expect(keychain.looks >= 1)
+
+        _ = try await client.send(DirectorTestClient.request(), role: .judgment)
+        _ = try await client.send(DirectorTestClient.request(), role: .judgment)
+        #expect(keychain.reads == 1, "one read for the life of the client")
+
+        let empty = ClaudeCredentials(environment: [:], keychain: CountingKeychain(secret: nil))
+        #expect(!empty.hasKey() && empty.origin == .absent)
+    }
+
     @Test("An empty environment variable is not a key")
     func emptyEnvironmentKey() {
         let credentials = ClaudeCredentials(environment: ["ANTHROPIC_API_KEY": "   "],
@@ -368,4 +389,16 @@ struct DirectorClientTests {
         #expect(ClaudeModel.sonnet5.id == "claude-sonnet-5")
         #expect(ClaudeModel.fable51.id == "claude-fable-5-1")
     }
+}
+
+/// A keychain that counts how often its secret is read, as opposed to looked for.
+final class CountingKeychain: ClaudeKeychain, @unchecked Sendable {
+    private let secret: String?
+    private let lock = NSLock()
+    private var readCount = 0, lookCount = 0
+    init(secret: String?) { self.secret = secret }
+    var reads: Int { lock.withLock { readCount } }
+    var looks: Int { lock.withLock { lookCount } }
+    func password(service: String, account: String) -> String? { lock.withLock { readCount += 1 }; return secret }
+    func exists(service: String, account: String) -> Bool { lock.withLock { lookCount += 1 }; return secret != nil }
 }

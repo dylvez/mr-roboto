@@ -96,10 +96,22 @@ public actor ClaudeClient {
 
     /// Whether there is a key, without ever handing one out. Asked at launch so the app can say
     /// "the band needs a key" in the rail rather than failing at the first request.
+    ///
+    /// It looks and does not read: the secret is only read when the first request is sent, and then
+    /// once for the life of the client, so launching the app never raises the keychain's dialog.
     public func keyStatus() -> ClaudeKeyStatus {
-        guard let key = keySource.apiKey(), !key.isEmpty else { return .missing }
+        guard keySource.hasKey() else { return .missing }
         if let credentials = keySource as? ClaudeCredentials { return .present(credentials.origin) }
         return .present(.absent)
+    }
+
+    /// The key, read once and kept for this client's life.
+    private var heldKey: ClaudeAPIKey?
+    private func key() -> ClaudeAPIKey? {
+        if let heldKey { return heldKey }
+        guard let read = keySource.apiKey(), !read.isEmpty else { return nil }
+        heldKey = read
+        return read
     }
 
     // MARK: Sending
@@ -118,7 +130,7 @@ public actor ClaudeClient {
                      role: DirectorRole,
                      onEvent: (@Sendable (ClaudeStreamEvent) -> Void)? = nil) async throws -> ClaudeResponse {
         try validate(request)
-        guard let key = keySource.apiKey(), !key.isEmpty else {
+        guard let key = key() else {
             record(.zero, model: request.model, role: role, outcome: .failed)
             throw ClaudeError.missingAPIKey
         }
