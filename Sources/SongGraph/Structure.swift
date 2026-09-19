@@ -211,7 +211,8 @@ public struct SampleClearance: Hashable, Codable, Sendable {
     }
 }
 
-/// An album: ordered songs, delivery targets, and sample clearances per source.
+/// An album: ordered songs, delivery targets, and sample clearances per source. Since M7: the
+/// gap before each track, liner notes, a cover, and what each track was released as.
 public struct Album: Identifiable, Hashable, Codable, Sendable {
     public let id: AlbumID
     public var title: String
@@ -220,9 +221,20 @@ public struct Album: Identifiable, Hashable, Codable, Sendable {
     public var targets: MasteringTargets
     public var clearances: [SampleClearance]
     public let createdAt: Date
+    /// Seconds of silence before a track; a track not listed gets `Album.defaultGap`.
+    public var gaps: [SongID: Double]
+    /// Liner notes: what the record is about, in the house's words.
+    public var notes: String
+    /// The cover: an image in the library, or a design the app draws.
+    public var cover: Cover
+    /// What each track was cut as, the last time the album was released.
+    public var releases: [SongID: TrackRelease]
+
+    public static let defaultGap = 2.0
 
     public init(id: AlbumID = AlbumID(), title: String, artist: String = "", songs: [SongID] = [],
-                targets: MasteringTargets = .streaming, clearances: [SampleClearance] = [], createdAt: Date = Date()) {
+                targets: MasteringTargets = .streaming, clearances: [SampleClearance] = [], createdAt: Date = Date(),
+                gaps: [SongID: Double] = [:], notes: String = "", cover: Cover = .drawn(CoverDesign()), releases: [SongID: TrackRelease] = [:]) {
         self.id = id
         self.title = title
         self.artist = artist
@@ -230,6 +242,73 @@ public struct Album: Identifiable, Hashable, Codable, Sendable {
         self.targets = targets
         self.clearances = clearances
         self.createdAt = createdAt.graphPrecision
+        self.gaps = gaps
+        self.notes = notes
+        self.cover = cover
+        self.releases = releases
+    }
+
+    public func gap(before song: SongID) -> Double { gaps[song] ?? Album.defaultGap }
+
+    private enum CodingKeys: String, CodingKey { case id, title, artist, songs, targets, clearances, createdAt, gaps, notes, cover, releases }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(AlbumID.self, forKey: .id)
+        title = try c.decode(String.self, forKey: .title)
+        artist = try c.decode(String.self, forKey: .artist)
+        songs = try c.decode([SongID].self, forKey: .songs)
+        targets = try c.decode(MasteringTargets.self, forKey: .targets)
+        clearances = try c.decode([SampleClearance].self, forKey: .clearances)
+        createdAt = try c.decode(Date.self, forKey: .createdAt)
+        gaps = try c.decodeIfPresent([SongID: Double].self, forKey: .gaps) ?? [:]
+        notes = try c.decodeIfPresent(String.self, forKey: .notes) ?? ""
+        cover = try c.decodeIfPresent(Cover.self, forKey: .cover) ?? .drawn(CoverDesign())
+        releases = try c.decodeIfPresent([SongID: TrackRelease].self, forKey: .releases) ?? [:]
+    }
+}
+
+/// The cover: an image in the library, or a design the app draws from the title and the artist.
+public enum Cover: Hashable, Codable, Sendable {
+    case image(MediaRef)
+    case drawn(CoverDesign)
+
+    public var design: CoverDesign? { if case .drawn(let d) = self { return d }; return nil }
+    public var image: MediaRef? { if case .image(let m) = self { return m }; return nil }
+}
+
+/// A typographic cover: the title and the artist on a two-colour field, in one of four layouts.
+public struct CoverDesign: Hashable, Codable, Sendable {
+    public enum Layout: String, Codable, Sendable, CaseIterable { case band, corner, stack, monogram }
+    public var layout: Layout
+    /// Hex colours, "#rrggbb".
+    public var paper: String
+    public var ink: String
+
+    public init(layout: Layout = .band, paper: String = "#eef0f3", ink: String = "#14171a") {
+        self.layout = layout
+        self.paper = paper
+        self.ink = ink
+    }
+}
+
+/// What a track was cut as when the album was released.
+public struct TrackRelease: Hashable, Codable, Sendable {
+    public var mixVersion: VersionID?
+    public var integratedLUFS: Double
+    public var truePeakDBTP: Double
+    public var durationSeconds: Double
+    /// The gain applied to match the album's target, dB.
+    public var trimDB: Double
+    public var releasedAt: Date
+
+    public init(mixVersion: VersionID?, integratedLUFS: Double, truePeakDBTP: Double, durationSeconds: Double, trimDB: Double, releasedAt: Date = Date()) {
+        self.mixVersion = mixVersion
+        self.integratedLUFS = integratedLUFS
+        self.truePeakDBTP = truePeakDBTP
+        self.durationSeconds = durationSeconds
+        self.trimDB = trimDB
+        self.releasedAt = releasedAt.graphPrecision
     }
 }
 

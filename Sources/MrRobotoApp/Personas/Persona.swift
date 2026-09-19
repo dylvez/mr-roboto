@@ -201,6 +201,18 @@ public struct Feature: RawRepresentable, Hashable, Sendable, Codable, CustomStri
     public static let masterCeilingDBTP = Feature("mix.master.ceiling.dbtp")
     /// The master's loudness target, LUFS.
     public static let masterTargetLUFS = Feature("mix.master.target.lufs")
+
+    // The record (M7). The Producer's under song., the Peer's under form.
+    /// The album's running time, gaps included, minutes.
+    public static let albumMinutes = Feature("song.album.minutes")
+    /// Max minus min of the tracks' released loudness, LU.
+    public static let albumLoudnessSpreadLU = Feature("song.album.loudness.spread.lu")
+    /// Neighbouring tracks in one key signature, pairs.
+    public static let albumSameKeyPairs = Feature("song.album.same-key.pairs")
+    /// The opener's hook arrival, seconds.
+    public static let albumOpenerHookSeconds = Feature("form.album.opener.hook.seconds")
+    /// Neighbouring tracks whose tempo ratio leaves 0.8–1.25, jumps.
+    public static let albumTempoJumps = Feature("form.album.tempo.jumps")
     /// Quantiser width in bits. 12 is both the SP-1200 and the MPC60; 24 and up is off.
     public static let bitDepth = Feature("degrade.bits")
     /// The rate the decimator holds to, in Hz.
@@ -997,6 +1009,9 @@ public enum PersonaProposal: Hashable, Sendable {
     case moveStrip(part: String, gainDB: Double, bandHz: Double, bandDB: Double)
     /// M6: the master's target and ceiling.
     case setMaster(targetLUFS: Double, ceilingDBTP: Double)
+    /// M7: an album's order, as its numbers: running minutes, loudness spread, same-key
+    /// neighbours, tempo jumps, and where the opener's hook lands.
+    case sequence(minutes: Double, loudnessSpreadLU: Double, sameKeyPairs: Int, tempoJumps: Int, openerHookSeconds: Double)
     /// Something outside the persona's competence, named so the refusal can be specific.
     case outOfScope(what: String)
 }
@@ -1073,6 +1088,7 @@ extension PersonaProposal: Codable {
         case syllables, patternMatch, perfectRate, songs
         case integratedLUFS, peakDBFS, separationDB, crestDB
         case part, gainDB, bandHz, bandDB, targetLUFS, ceilingDBTP
+        case loudnessSpreadLU, sameKeyPairs, tempoJumps, openerHookSeconds
     }
 
     public init(from decoder: any Decoder) throws {
@@ -1106,6 +1122,9 @@ extension PersonaProposal: Codable {
         case "setLoudness": self = .setLoudness(integratedLUFS: try d(.integratedLUFS), peakDBFS: try d(.peakDBFS))
         case "moveStrip": self = .moveStrip(part: try c.decode(String.self, forKey: .part), gainDB: try d(.gainDB), bandHz: try d(.bandHz), bandDB: try d(.bandDB))
         case "setMaster": self = .setMaster(targetLUFS: try d(.targetLUFS), ceilingDBTP: try d(.ceilingDBTP))
+        case "sequence": self = .sequence(minutes: try d(.minutes), loudnessSpreadLU: try d(.loudnessSpreadLU),
+                                          sameKeyPairs: try c.decode(Int.self, forKey: .sameKeyPairs), tempoJumps: try c.decode(Int.self, forKey: .tempoJumps),
+                                          openerHookSeconds: try d(.openerHookSeconds))
         case "balanceLowEnd": self = .balanceLowEnd(separationDB: try d(.separationDB))
         case "squashDrums": self = .squashDrums(crestDB: try d(.crestDB))
         case "outOfScope": self = .outOfScope(what: try d(.what))
@@ -1173,6 +1192,9 @@ extension PersonaProposal: Codable {
             try c.encode(bandHz, forKey: .bandHz); try c.encode(bandDB, forKey: .bandDB)
         case .setMaster(let target, let ceiling):
             try c.encode("setMaster", forKey: .proposal); try c.encode(target, forKey: .targetLUFS); try c.encode(ceiling, forKey: .ceilingDBTP)
+        case .sequence(let minutes, let spread, let sameKey, let jumps, let opener):
+            try c.encode("sequence", forKey: .proposal); try c.encode(minutes, forKey: .minutes); try c.encode(spread, forKey: .loudnessSpreadLU)
+            try c.encode(sameKey, forKey: .sameKeyPairs); try c.encode(jumps, forKey: .tempoJumps); try c.encode(opener, forKey: .openerHookSeconds)
         case .outOfScope(let what):
             try c.encode("outOfScope", forKey: .proposal); try c.encode(what, forKey: .what)
         }

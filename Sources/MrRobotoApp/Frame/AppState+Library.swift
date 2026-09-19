@@ -248,6 +248,62 @@ extension AppState {
         updateAlbum(id) { $0.title = title.isEmpty ? $0.title : title }
     }
 
+    // M7: the record.
+
+    @discardableResult
+    public func setGap(_ seconds: Double, before songID: SongID, in id: AlbumID) -> Bool {
+        updateAlbum(id) { $0.gaps[songID] = max(0, min(30, seconds)) }
+    }
+
+    @discardableResult
+    public func setNotes(_ notes: String, for id: AlbumID) -> Bool {
+        updateAlbum(id) { $0.notes = notes }
+    }
+
+    @discardableResult
+    public func setCover(_ design: CoverDesign, for id: AlbumID) -> Bool {
+        updateAlbum(id) { $0.cover = .drawn(design) }
+    }
+
+    /// An image file becomes the cover, copied into the library's ideas media.
+    @discardableResult
+    public func setCover(imageAt url: URL, for id: AlbumID) -> Bool {
+        guard let store else { return false }
+        do {
+            let media = try store.addMedia(copying: url, kind: .idea)
+            return updateAlbum(id) { $0.cover = .image(media) }
+        } catch {
+            note(.session, "Could not copy the cover into the library", detail: "\(error)")
+            return false
+        }
+    }
+
+    /// The order and the gaps in one move, with a note in the rail.
+    @discardableResult
+    public func sequence(_ order: [SongID], gaps: [SongID: Double]? = nil, in id: AlbumID, because: String? = nil) -> Bool {
+        guard let album = library.album(id), Set(order) == Set(album.songs), order.count == album.songs.count else {
+            note(.session, "That order does not name every song on the album once")
+            return false
+        }
+        let done = updateAlbum(id) { album in
+            album.songs = order
+            if let gaps { for (song, gap) in gaps { album.gaps[song] = max(0, min(30, gap)) } }
+        }
+        if done { note(.you, "Sequenced \(album.title)", detail: because ?? order.compactMap { library.song($0)?.title }.joined(separator: " → ")) }
+        return done
+    }
+
+    func recordReleases(_ releases: [SongID: TrackRelease], for id: AlbumID) {
+        updateAlbum(id) { album in for (song, release) in releases { album.releases[song] = release } }
+    }
+
+    /// The album, read: its tracks from the library (the open song as it is now).
+    public func observe(album: Album) -> AlbumObservation {
+        var songs = library.songs
+        if let song, let index = songs.firstIndex(where: { $0.id == song.id }) { songs[index] = song } else if let song { songs.append(song) }
+        return AlbumObservation.of(album, songs: songs)
+    }
+
     /// Adds a song to an album's sequence, once.
     @discardableResult
     public func addSong(_ songID: SongID, to albumID: AlbumID) -> Bool {

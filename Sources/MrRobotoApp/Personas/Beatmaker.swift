@@ -785,7 +785,7 @@ public struct Beatmaker: Persona {
         case .writeBassline, .pushBassAhead, .sustainUnder808:
             return .defer_(to: .bassist, because: "Where the bass sits and what it plays is the Bassist's call.")
 
-        case .addPart, .setReference:
+        case .addPart, .setReference, .sequence:
             return .defer_(to: .producer, because: "What the song holds and what it is held to is the Producer's.")
         case .placeHook, .shapeForm:
             return .defer_(to: .peer, because: "Where the hook lands and how the form turns is the Peer's ear.")

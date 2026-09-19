@@ -685,7 +685,7 @@ public struct Bassist: Persona {
         case .chopDensity, .moveCutLate, .applyDegrade, .stackDegrade, .leaveAlone, .transposeSample, .mergeSources:
             return .defer_(to: .sampler, because: "That is the source and the chop.")
 
-        case .addPart, .setReference:
+        case .addPart, .setReference, .sequence:
             return .defer_(to: .producer, because: "What the song holds and what it is held to is the Producer's.")
         case .placeHook, .shapeForm:
             return .defer_(to: .peer, because: "Where the hook lands and how the form turns is the Peer's ear.")

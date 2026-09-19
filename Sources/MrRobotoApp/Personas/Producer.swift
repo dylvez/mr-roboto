@@ -50,6 +50,13 @@ public struct Producer: Persona {
     public static let churnCeiling = 4.0
     /// A reference has to name at least this many bars to be a reference.
     public static let referenceMinimumBars = 4.0
+    /// A record runs at least this, else it is an EP; at most this, else it is two.
+    public static let albumMinutesFloor = 18.0
+    public static let albumMinutesCeiling = 60.0
+    /// The released tracks sit within this of each other.
+    public static let albumSpreadCeilingLU = 2.0
+    /// Neighbouring pairs in one key signature a record can carry.
+    public static let albumSameKeyCeiling = 1.0
 
     // MARK: - The bible
 
@@ -117,6 +124,18 @@ public struct Producer: Persona {
                               engineField: "SongGraph.SeedKind.brief, word count",
                               noticeable: 5,
                               evidence: .cited([creativeAct])),
+            FeatureDefinition(.albumMinutes, unit: "minutes",
+                              meaning: "the record's running time, gaps included",
+                              engineField: "AlbumObservation.runningMinutes",
+                              noticeable: 2, evidence: .cited([creativeAct])),
+            FeatureDefinition(.albumLoudnessSpreadLU, unit: "LU",
+                              meaning: "max minus min of the tracks' released integrated loudness",
+                              engineField: "AlbumObservation.loudnessSpreadLU over Album.releases",
+                              noticeable: 1, evidence: .inferred("EBU R128 album mode")),
+            FeatureDefinition(.albumSameKeyPairs, unit: "pairs",
+                              meaning: "neighbouring tracks whose key signatures sit at the same place on the circle of fifths",
+                              engineField: "AlbumObservation.sameKeyPairs",
+                              noticeable: 1, evidence: .inferred("sequencing practice")),
         ],
 
         ranges: [
@@ -198,6 +217,24 @@ public struct Producer: Persona {
                         then: "replace the genre with a record and the record with bars",
                         engineAction: "refuse until SongGraph.Seed.brief names bars",
                         evidence: .inferred("this app's ReferenceTrack method: bars, not that track")),
+            PersonaRule("producer.album-length",
+                        when: "a record runs under 18 or over 60 minutes",
+                        then: "cut or add: under eighteen is an EP and says so, over sixty is two records",
+                        threshold: .between(.albumMinutes, albumMinutesFloor, albumMinutesCeiling, unit: "minutes"),
+                        engineAction: "AlbumObservation.runningMinutes, the gaps included",
+                        evidence: .cited([creativeAct])),
+            PersonaRule("producer.loudness-spread",
+                        when: "the tracks' released loudness spans more than 2 LU",
+                        then: "match them to the album's target; a listener sets the volume once",
+                        threshold: .atMost(.albumLoudnessSpreadLU, albumSpreadCeilingLU, unit: "LU"),
+                        engineAction: "Performance.MixMeter.integratedLoudness of each track's release; AlbumObservation.loudnessSpreadLU",
+                        evidence: .inferred("EBU R128's album mode: one gain for the record, so the tracks have to sit together first")),
+            PersonaRule("producer.same-key-neighbours",
+                        when: "more than one pair of neighbouring tracks share a key signature",
+                        then: "move one; two songs in one key back to back read as one long song",
+                        threshold: .atMost(.albumSameKeyPairs, albumSameKeyCeiling, unit: "pairs"),
+                        engineAction: "AlbumObservation.sameKeyPairs on the circle of fifths",
+                        evidence: .inferred("sequencing practice: a key change between tracks is the cheapest lift a record has")),
         ],
 
         voice: PersonaVoice(
@@ -319,6 +356,16 @@ public struct Producer: Persona {
                        passes: "Agreed: eight bars is a place two people can put the needle.",
                        exercises: ["producer.reference-has-bars"],
                        proposal: .setReference(bars: 8), expects: .agree),
+            GoldenTest("producer.golden.a-record",
+                       premise: "A record of 38 minutes, the tracks within a LU, no neighbours in one key.",
+                       passes: "Agreed: a record's length, one loudness, no two neighbours in one key.",
+                       exercises: ["producer.album-length", "producer.loudness-spread", "producer.same-key-neighbours"],
+                       proposal: .sequence(minutes: 38, loudnessSpreadLU: 1, sameKeyPairs: 0, tempoJumps: 0, openerHookSeconds: 20), expects: .agree),
+            GoldenTest("producer.golden.loud-and-quiet",
+                       premise: "The tracks' released loudness spans 5 LU.",
+                       passes: "Refused by producer.loudness-spread: match them.",
+                       exercises: ["producer.loudness-spread"],
+                       proposal: .sequence(minutes: 38, loudnessSpreadLU: 5, sameKeyPairs: 0, tempoJumps: 0, openerHookSeconds: 20), expects: .refuse(rule: "producer.loudness-spread")),
             GoldenTest("producer.golden.defers",
                        premise: "\"Swing the hats to 62%.\"",
                        passes: "Deferred to the Beatmaker rather than answered.",
@@ -365,6 +412,29 @@ public struct Producer: Persona {
     /// The bible, run: every rule here is arithmetic over the song, and the engine says it.
     public func consider(_ proposal: PersonaProposal) -> PersonaVerdict {
         RuleEngine.consider(Producer.bible, proposal)
+    }
+
+    // MARK: - Reading a record
+
+    public func read(_ album: AlbumObservation) -> [PersonaReading] {
+        var notes: [PersonaReading] = []
+        let minutes = album.runningMinutes
+        notes.append(PersonaReading(rule: "producer.album-length", feature: .albumMinutes, value: minutes,
+                                    holds: minutes >= Producer.albumMinutesFloor && minutes <= Producer.albumMinutesCeiling,
+                                    says: String(format: "%d tracks, %.0f minutes with the gaps%@", album.tracks.count, minutes,
+                                                 minutes < Producer.albumMinutesFloor ? " — an EP, and it should say so." : (minutes > Producer.albumMinutesCeiling ? " — that is two records." : "."))))
+        let spread = album.loudnessSpreadLU
+        if album.tracks.compactMap(\.releasedLUFS).count >= 2 {
+            notes.append(PersonaReading(rule: "producer.loudness-spread", feature: .albumLoudnessSpreadLU, value: spread,
+                                        holds: spread <= Producer.albumSpreadCeilingLU,
+                                        says: String(format: "The released tracks span %.1f LU%@", spread, spread <= Producer.albumSpreadCeilingLU ? "; they sit together." : "; match them to the target.")))
+        }
+        let pairs = album.neighbours.filter(\.sameKey)
+        notes.append(PersonaReading(rule: "producer.same-key-neighbours", feature: .albumSameKeyPairs, value: Double(pairs.count),
+                                    holds: Double(pairs.count) <= Producer.albumSameKeyCeiling,
+                                    says: pairs.isEmpty ? "No two neighbours share a key."
+                                        : "\(pairs.count) pair\(pairs.count == 1 ? "" : "s") of neighbours in one key: " + pairs.map { "\($0.from) → \($0.to)" }.joined(separator: ", ") + (Double(pairs.count) > Producer.albumSameKeyCeiling ? ". Move one." : ".")))
+        return notes
     }
 
     // MARK: - Reading a song

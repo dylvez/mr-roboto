@@ -109,9 +109,14 @@ public enum MixMeter {
     /// True peak, dBTP: the sample peak of the signal oversampled 4× through a 48-tap
     /// windowed-sinc interpolator, the way BS.1770's Annex 2 measures it.
     public static func truePeakDB(_ planar: [[Float]], sampleRate: Double) -> Double {
+        20 * log10(Double(truePeakEnvelope(planar).max() ?? 0) + 1e-12)
+    }
+
+    /// The true peak frame by frame: the largest of the four oversampled values that land
+    /// between a frame and the next, over every channel. What a limiter rides.
+    public static func truePeakEnvelope(_ planar: [[Float]]) -> [Float] {
         let taps = 48
         let factor = 4
-        // Windowed sinc low-pass at the original Nyquist, for the 4× rate.
         var kernel = [Float](repeating: 0, count: taps)
         let centre = Double(taps - 1) / 2
         for i in 0..<taps {
@@ -120,8 +125,6 @@ public enum MixMeter {
             let window = 0.5 - 0.5 * cos(2 * .pi * Double(i) / Double(taps - 1))
             kernel[i] = Float(sinc * window)
         }
-        // Each polyphase branch is an interpolator and must pass DC at unity: normalise the taps
-        // of every phase to sum to one.
         for phase in 0..<factor {
             var sum: Float = 0
             var j = phase
@@ -129,12 +132,11 @@ public enum MixMeter {
             j = phase
             while j < taps { kernel[j] /= sum; j += factor }
         }
-        var peak: Float = 0
+        guard let frames = planar.first?.count, frames > 0 else { return [] }
+        var envelope = [Float](repeating: 0, count: frames)
         for lane in planar {
-            guard !lane.isEmpty else { continue }
-            // Polyphase: the k-th oversampled sample, k = 4n + phase, is Σ over the phase's taps
-            // of kernel · x[n − i].
-            for n in 0..<lane.count {
+            for n in 0..<min(frames, lane.count) {
+                var peak: Float = 0
                 for phase in 0..<factor {
                     var acc: Float = 0
                     var j = phase
@@ -146,9 +148,13 @@ public enum MixMeter {
                     }
                     peak = max(peak, abs(acc))
                 }
+                // The interpolator's group delay is (taps − 1) / 2 input frames: place the peak
+                // where it belongs, so the limiter's lookahead lines up with the audio.
+                let at = max(0, n - (taps - 1) / (2 * factor))
+                envelope[at] = max(envelope[at], peak)
             }
         }
-        return 20 * log10(Double(peak) + 1e-12)
+        return envelope
     }
 
     public static func samplePeakDB(_ planar: [[Float]]) -> Double {

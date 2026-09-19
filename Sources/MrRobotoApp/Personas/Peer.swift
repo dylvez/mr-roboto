@@ -45,6 +45,8 @@ public struct Peer: Persona {
     public static let hookDeadlineSeconds = 30.0
     /// Past this much repetition the form has stopped turning.
     public static let repetitionCeiling = 0.6
+    /// Tempo jumps a record can carry between neighbours.
+    public static let tempoJumpsCeiling = 1.0
     /// A form needs at least this many distinct sections to have a turn.
     public static let minimumTurns = 2.0
     /// Sections per minute past which the form churns.
@@ -119,6 +121,14 @@ public struct Peer: Persona {
                               engineField: "SongGraph.Song.lengthInBars at Song.tempo and Song.timeSignature",
                               noticeable: 0.25,
                               evidence: .inferred("arithmetic on the sections")),
+            FeatureDefinition(.albumOpenerHookSeconds, unit: "seconds",
+                              meaning: "where the first track's hook arrives",
+                              engineField: "AlbumObservation.openerHookSeconds",
+                              noticeable: 5, evidence: .cited([songMachine])),
+            FeatureDefinition(.albumTempoJumps, unit: "jumps",
+                              meaning: "neighbouring tracks whose tempo ratio leaves 0.8–1.25",
+                              engineField: "AlbumObservation.tempoJumps",
+                              noticeable: 1, evidence: .inferred("sequencing practice")),
         ],
 
         ranges: [
@@ -196,6 +206,18 @@ public struct Peer: Persona {
                         threshold: .atLeast(.sectionCount, 2, unit: "sections"),
                         engineAction: "SongGraph.Song.sections.count before any reading is given",
                         evidence: .cited([tweedyBook])),
+            PersonaRule("peer.opener-hooks-early",
+                        when: "the first track's hook arrives after 30 seconds",
+                        then: "open with the song whose hook comes soonest; a listener decides on the record in the first minute",
+                        threshold: .atMost(.albumOpenerHookSeconds, hookDeadlineSeconds, unit: "seconds"),
+                        engineAction: "AlbumObservation.openerHookSeconds from the first track's FormObservation",
+                        evidence: .cited([songMachine])),
+            PersonaRule("peer.tempo-arc",
+                        when: "more than one pair of neighbours jumps tempo past a ratio of 0.8–1.25",
+                        then: "let the tempos walk; one jump is a turn, two is a shuffle",
+                        threshold: .atMost(.albumTempoJumps, tempoJumpsCeiling, unit: "jumps"),
+                        engineAction: "SongGraph.Song.tempo of neighbouring tracks; AlbumObservation.tempoJumps",
+                        evidence: .inferred("sequencing practice: the record as one arc")),
         ],
 
         voice: PersonaVoice(
@@ -320,6 +342,16 @@ public struct Peer: Persona {
                        passes: "Refused by peer.not-too-many-sections: the ear cannot land.",
                        exercises: ["peer.not-too-many-sections"],
                        proposal: .shapeForm(sections: 5, turns: 3, minutes: 0.8), expects: .refuse(rule: "peer.not-too-many-sections")),
+            GoldenTest("peer.golden.late-opener",
+                       premise: "The record opens with a song whose hook comes at 45 seconds.",
+                       passes: "Refused by peer.opener-hooks-early: open with the soonest hook.",
+                       exercises: ["peer.opener-hooks-early"],
+                       proposal: .sequence(minutes: 38, loudnessSpreadLU: 1, sameKeyPairs: 0, tempoJumps: 0, openerHookSeconds: 45), expects: .refuse(rule: "peer.opener-hooks-early")),
+            GoldenTest("peer.golden.an-arc",
+                       premise: "A record whose tempos walk, one jump, the opener's hook at 18 seconds.",
+                       passes: "Agreed: the opener hooks inside thirty and the tempos walk with one turn.",
+                       exercises: ["peer.opener-hooks-early", "peer.tempo-arc"],
+                       proposal: .sequence(minutes: 38, loudnessSpreadLU: 1, sameKeyPairs: 0, tempoJumps: 1, openerHookSeconds: 18), expects: .agree),
             GoldenTest("peer.golden.defers",
                        premise: "\"Put the SP-1200 on it.\"",
                        passes: "Deferred to the Sampler rather than answered.",
@@ -366,6 +398,32 @@ public struct Peer: Persona {
 
     public func consider(_ proposal: PersonaProposal) -> PersonaVerdict {
         RuleEngine.consider(Peer.bible, proposal)
+    }
+
+    // MARK: - Reading a record
+
+    public func read(_ album: AlbumObservation) -> [PersonaReading] {
+        var notes: [PersonaReading] = []
+        if let opener = album.tracks.first {
+            if let hook = opener.hookSeconds {
+                notes.append(PersonaReading(rule: "peer.opener-hooks-early", feature: .albumOpenerHookSeconds, value: hook,
+                                            holds: hook <= Peer.hookDeadlineSeconds,
+                                            says: hook <= Peer.hookDeadlineSeconds
+                                                ? String(format: "%@ opens and its hook comes at %.0f seconds; I am in.", opener.title, hook)
+                                                : String(format: "%@ opens and its hook comes at %.0f seconds; I was gone at 30%@", opener.title, hook,
+                                                         album.tracks.dropFirst().compactMap { t in t.hookSeconds.map { (t.title, $0) } }.min { $0.1 < $1.1 }
+                                                             .map { String(format: " — %@ would come at %.0f.", $0.0, $0.1) } ?? ".")))
+            } else {
+                notes.append(PersonaReading(rule: "peer.opener-hooks-early", feature: .albumOpenerHookSeconds, value: 0, holds: false,
+                                            says: "\(opener.title) opens with no hook the form names."))
+            }
+        }
+        let jumps = album.neighbours.filter(\.isTempoJump)
+        notes.append(PersonaReading(rule: "peer.tempo-arc", feature: .albumTempoJumps, value: Double(jumps.count),
+                                    holds: Double(jumps.count) <= Peer.tempoJumpsCeiling,
+                                    says: jumps.isEmpty ? "The tempos walk from track to track."
+                                        : "\(jumps.count) tempo jump\(jumps.count == 1 ? "" : "s"): " + jumps.map { String(format: "%@ → %@ (×%.2f)", $0.from, $0.to, $0.tempoRatio) }.joined(separator: ", ") + (Double(jumps.count) > Peer.tempoJumpsCeiling ? ". Two is a shuffle." : ". One is a turn.")))
+        return notes
     }
 
     // MARK: - Reading a form

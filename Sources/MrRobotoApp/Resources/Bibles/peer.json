@@ -193,6 +193,46 @@
     },
     {
       "exercises" : [
+        "peer.opener-hooks-early"
+      ],
+      "expects" : {
+        "rule" : "peer.opener-hooks-early",
+        "shape" : "refuse"
+      },
+      "id" : "peer.golden.late-opener",
+      "passes" : "Refused by peer.opener-hooks-early: open with the soonest hook.",
+      "premise" : "The record opens with a song whose hook comes at 45 seconds.",
+      "proposal" : {
+        "loudnessSpreadLU" : 1,
+        "minutes" : 38,
+        "openerHookSeconds" : 45,
+        "proposal" : "sequence",
+        "sameKeyPairs" : 0,
+        "tempoJumps" : 0
+      }
+    },
+    {
+      "exercises" : [
+        "peer.opener-hooks-early",
+        "peer.tempo-arc"
+      ],
+      "expects" : {
+        "shape" : "agree"
+      },
+      "id" : "peer.golden.an-arc",
+      "passes" : "Agreed: the opener hooks inside thirty and the tempos walk with one turn.",
+      "premise" : "A record whose tempos walk, one jump, the opener's hook at 18 seconds.",
+      "proposal" : {
+        "loudnessSpreadLU" : 1,
+        "minutes" : 38,
+        "openerHookSeconds" : 18,
+        "proposal" : "sequence",
+        "sameKeyPairs" : 0,
+        "tempoJumps" : 1
+      }
+    },
+    {
+      "exercises" : [
 
       ],
       "expects" : {
@@ -671,6 +711,38 @@
         "value" : 2
       },
       "when" : "asked about an unfinished form"
+    },
+    {
+      "engineAction" : "AlbumObservation.openerHookSeconds from the first track's FormObservation",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/The_Song_Machine"
+        ]
+      },
+      "id" : "peer.opener-hooks-early",
+      "then" : "open with the song whose hook comes soonest; a listener decides on the record in the first minute",
+      "threshold" : {
+        "comparison" : "atMost",
+        "feature" : "form.album.opener.hook.seconds",
+        "unit" : "seconds",
+        "value" : 30
+      },
+      "when" : "the first track's hook arrives after 30 seconds"
+    },
+    {
+      "engineAction" : "SongGraph.Song.tempo of neighbouring tracks; AlbumObservation.tempoJumps",
+      "evidence" : {
+        "inferred" : "sequencing practice: the record as one arc"
+      },
+      "id" : "peer.tempo-arc",
+      "then" : "let the tempos walk; one jump is a turn, two is a shuffle",
+      "threshold" : {
+        "comparison" : "atMost",
+        "feature" : "form.album.tempo.jumps",
+        "unit" : "jumps",
+        "value" : 1
+      },
+      "when" : "more than one pair of neighbours jumps tempo past a ratio of 0.8–1.25"
     }
   ],
   "vocabulary" : [
@@ -737,6 +809,28 @@
       "meaning" : "the length of the form at the song's tempo",
       "noticeable" : 0.25,
       "unit" : "minutes"
+    },
+    {
+      "engineField" : "AlbumObservation.openerHookSeconds",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/The_Song_Machine"
+        ]
+      },
+      "feature" : "form.album.opener.hook.seconds",
+      "meaning" : "where the first track's hook arrives",
+      "noticeable" : 5,
+      "unit" : "seconds"
+    },
+    {
+      "engineField" : "AlbumObservation.tempoJumps",
+      "evidence" : {
+        "inferred" : "sequencing practice"
+      },
+      "feature" : "form.album.tempo.jumps",
+      "meaning" : "neighbouring tracks whose tempo ratio leaves 0.8–1.25",
+      "noticeable" : 1,
+      "unit" : "jumps"
     }
   ],
   "voice" : {

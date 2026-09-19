@@ -8,8 +8,8 @@ public enum Limiter {
     public static let lookahead = 0.002
     /// Release, seconds.
     public static let release = 0.08
-    /// Head room under the ceiling for the inter-sample peaks the sample-domain detector misses.
-    public static let headroomDB = 0.3
+    /// Head room under the ceiling, over a true-peak detector: a tenth of a dB for the rounding.
+    public static let headroomDB = 0.1
 
     /// The audio with no sample over `ceilingDBTP − headroom`, gain ridden down ahead of every
     /// peak and released over `release`. Untouched where it was already under.
@@ -18,10 +18,12 @@ public enum Limiter {
         let ceiling = Float(pow(10, (ceilingDBTP - headroomDB) / 20))
         let look = max(1, Int(lookahead * sampleRate))
         let releaseCoefficient = Float(exp(-1 / (release * sampleRate)))
-        // The gain needed at every frame: ceiling over the loudest channel's peak, ≤ 1.
+        // The gain needed at every frame: ceiling over the true peak between this frame and the
+        // next (4× oversampled), ≤ 1. Sample peaks alone let inter-sample peaks over the line.
+        let truePeaks = MixMeter.truePeakEnvelope(planar)
         var needed = [Float](repeating: 1, count: frames)
         for i in 0..<frames {
-            var peak: Float = 0
+            var peak = truePeaks[i]
             for lane in planar { peak = max(peak, abs(lane[i])) }
             if peak > ceiling { needed[i] = ceiling / peak }
         }

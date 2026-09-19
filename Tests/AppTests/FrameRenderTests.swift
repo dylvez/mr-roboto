@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import MusicTheory
 import SongGraph
 import SwiftUI
 import Testing
@@ -267,5 +268,36 @@ extension FrameRenderTests {
         await master.read()
         #expect(master.reading != nil, "\(master.lastError ?? "")")
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-master")
+    }
+}
+
+extension FrameRenderTests {
+    @Test("the Album surface with three tracks, the readings, the palette and a drawn cover")
+    func albumGrown() throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        let directory = LibraryFixture.directory("render-album")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let defaults = UserDefaults(suiteName: "mrroboto.render.\(UUID().uuidString)")!
+        let store = LibraryStore(directoryURL: directory)
+        let app = AppState(library: Library(), song: nil, store: store, status: .empty(directory), transportHost: StubTransportHost(),
+                           regions: RegionVisibility(defaults: defaults), primers: PrimerStore(defaults: defaults))
+        var ids: [SongID] = []
+        for (title, key, tempo) in [("Arrival", Key(tonic: NoteName(.d)), 92.0), ("Exit Interview", Key(tonic: NoteName(.b), mode: .aeolian), 96.0), ("Fluorescent", Key(tonic: NoteName(.g)), 140.0)] {
+            var song = FormFixture.build(tempo: tempo).song
+            song.title = title
+            song.key = key
+            let stitch = [Guidance.grooves(in: song).last!.id, Guidance.basslines(in: song).last!.id]
+            song.sections = [Section(name: "Verse", stitch: stitch, lengthInBars: 16), Section(name: "Hook", stitch: stitch, lengthInBars: 8)]
+            app.open(song)
+            app.save()
+            ids.append(song.id)
+        }
+        let album = try #require(app.createAlbum(title: "Soft Machine", artist: "Vessel"))
+        for id in ids { app.addSong(id, to: album) }
+        app.setCover(CoverDesign(layout: .band, paper: "#eef0f3", ink: "#0043ce"), for: album)
+        app.recordReleases([ids[0]: TrackRelease(mixVersion: nil, integratedLUFS: -14.1, truePeakDBTP: -1.2, durationSeconds: 62, trimDB: 2)], for: album)
+        _ = app.openAlbum(album)
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-album")
     }
 }

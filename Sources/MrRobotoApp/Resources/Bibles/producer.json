@@ -163,6 +163,47 @@
     },
     {
       "exercises" : [
+        "producer.album-length",
+        "producer.loudness-spread",
+        "producer.same-key-neighbours"
+      ],
+      "expects" : {
+        "shape" : "agree"
+      },
+      "id" : "producer.golden.a-record",
+      "passes" : "Agreed: a record's length, one loudness, no two neighbours in one key.",
+      "premise" : "A record of 38 minutes, the tracks within a LU, no neighbours in one key.",
+      "proposal" : {
+        "loudnessSpreadLU" : 1,
+        "minutes" : 38,
+        "openerHookSeconds" : 20,
+        "proposal" : "sequence",
+        "sameKeyPairs" : 0,
+        "tempoJumps" : 0
+      }
+    },
+    {
+      "exercises" : [
+        "producer.loudness-spread"
+      ],
+      "expects" : {
+        "rule" : "producer.loudness-spread",
+        "shape" : "refuse"
+      },
+      "id" : "producer.golden.loud-and-quiet",
+      "passes" : "Refused by producer.loudness-spread: match them.",
+      "premise" : "The tracks' released loudness spans 5 LU.",
+      "proposal" : {
+        "loudnessSpreadLU" : 5,
+        "minutes" : 38,
+        "openerHookSeconds" : 20,
+        "proposal" : "sequence",
+        "sameKeyPairs" : 0,
+        "tempoJumps" : 0
+      }
+    },
+    {
+      "exercises" : [
 
       ],
       "expects" : {
@@ -644,6 +685,54 @@
       "id" : "producer.reference-is-a-record",
       "then" : "replace the genre with a record and the record with bars",
       "when" : "the reference names a genre"
+    },
+    {
+      "engineAction" : "AlbumObservation.runningMinutes, the gaps included",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/The_Creative_Act:_A_Way_of_Being"
+        ]
+      },
+      "id" : "producer.album-length",
+      "then" : "cut or add: under eighteen is an EP and says so, over sixty is two records",
+      "threshold" : {
+        "comparison" : "between",
+        "feature" : "song.album.minutes",
+        "unit" : "minutes",
+        "upper" : 60,
+        "value" : 18
+      },
+      "when" : "a record runs under 18 or over 60 minutes"
+    },
+    {
+      "engineAction" : "Performance.MixMeter.integratedLoudness of each track's release; AlbumObservation.loudnessSpreadLU",
+      "evidence" : {
+        "inferred" : "EBU R128's album mode: one gain for the record, so the tracks have to sit together first"
+      },
+      "id" : "producer.loudness-spread",
+      "then" : "match them to the album's target; a listener sets the volume once",
+      "threshold" : {
+        "comparison" : "atMost",
+        "feature" : "song.album.loudness.spread.lu",
+        "unit" : "LU",
+        "value" : 2
+      },
+      "when" : "the tracks' released loudness spans more than 2 LU"
+    },
+    {
+      "engineAction" : "AlbumObservation.sameKeyPairs on the circle of fifths",
+      "evidence" : {
+        "inferred" : "sequencing practice: a key change between tracks is the cheapest lift a record has"
+      },
+      "id" : "producer.same-key-neighbours",
+      "then" : "move one; two songs in one key back to back read as one long song",
+      "threshold" : {
+        "comparison" : "atMost",
+        "feature" : "song.album.same-key.pairs",
+        "unit" : "pairs",
+        "value" : 1
+      },
+      "when" : "more than one pair of neighbouring tracks share a key signature"
     }
   ],
   "vocabulary" : [
@@ -698,6 +787,38 @@
       "meaning" : "the length of the brief; zero is no brief, which is the most common fault",
       "noticeable" : 5,
       "unit" : "words"
+    },
+    {
+      "engineField" : "AlbumObservation.runningMinutes",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/The_Creative_Act:_A_Way_of_Being"
+        ]
+      },
+      "feature" : "song.album.minutes",
+      "meaning" : "the record's running time, gaps included",
+      "noticeable" : 2,
+      "unit" : "minutes"
+    },
+    {
+      "engineField" : "AlbumObservation.loudnessSpreadLU over Album.releases",
+      "evidence" : {
+        "inferred" : "EBU R128 album mode"
+      },
+      "feature" : "song.album.loudness.spread.lu",
+      "meaning" : "max minus min of the tracks' released integrated loudness",
+      "noticeable" : 1,
+      "unit" : "LU"
+    },
+    {
+      "engineField" : "AlbumObservation.sameKeyPairs",
+      "evidence" : {
+        "inferred" : "sequencing practice"
+      },
+      "feature" : "song.album.same-key.pairs",
+      "meaning" : "neighbouring tracks whose key signatures sit at the same place on the circle of fifths",
+      "noticeable" : 1,
+      "unit" : "pairs"
     }
   ],
   "voice" : {

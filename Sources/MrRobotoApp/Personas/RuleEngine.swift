@@ -89,6 +89,9 @@ public struct ProposalMeasures: Hashable, Sendable {
                                              .moveCount: Double((gainDB != 0 ? 1 : 0) + (bandDB != 0 ? 1 : 0))])
         case .setMaster(let target, let ceiling):
             return ProposalMeasures(values: [.masterTargetLUFS: target, .masterCeilingDBTP: ceiling])
+        case .sequence(let minutes, let spread, let sameKey, let jumps, let opener):
+            return ProposalMeasures(values: [.albumMinutes: minutes, .albumLoudnessSpreadLU: spread, .albumSameKeyPairs: Double(sameKey),
+                                             .albumTempoJumps: Double(jumps), .albumOpenerHookSeconds: opener])
         case .outOfScope:
             return ProposalMeasures()
         }

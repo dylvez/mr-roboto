@@ -856,7 +856,7 @@ public struct Sampler: Persona {
             }
             return .agree("One source of drums, and every source is cleared or needs no clearance.")
 
-        case .addPart, .setReference:
+        case .addPart, .setReference, .sequence:
             return .defer_(to: .producer, because: "What the song holds and what it is held to is the Producer's.")
         case .placeHook, .shapeForm:
             return .defer_(to: .peer, because: "Where the hook lands and how the form turns is the Peer's ear.")

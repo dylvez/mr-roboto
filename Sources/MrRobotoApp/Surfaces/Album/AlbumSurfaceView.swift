@@ -28,8 +28,15 @@ private struct AlbumBody: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Design.Metric.gutter) {
             header
-            tracklist
-            clearances
+            HStack(alignment: .top, spacing: Design.Metric.gutter) {
+                VStack(alignment: .leading, spacing: Design.Metric.gutter) {
+                    tracklist
+                    readings
+                    palette
+                    clearances
+                }
+                cover
+            }
             Spacer(minLength: 0)
         }
         .padding(Design.Metric.inset)
@@ -55,11 +62,13 @@ private struct AlbumBody: View {
         }
     }
 
+    private var observation: AlbumObservation { app.observe(album: album) }
+
     private var summary: String {
         let count = album.songs.count
-        let bars = album.songs.compactMap { song(for: $0)?.lengthInBars }.reduce(0, +)
         var pieces = ["\(count) song\(count == 1 ? "" : "s")"]
-        if bars > 0 { pieces.append("\(bars) bars arranged") }
+        let seconds = observation.runningSeconds
+        if seconds > 0 { pieces.append(String(format: "%d:%02d with the gaps", Int(seconds) / 60, Int(seconds) % 60)) }
         return pieces.joined(separator: " · ")
     }
 
@@ -84,7 +93,7 @@ private struct AlbumBody: View {
                             Text(song.title).font(Design.Typography.ui(13.5, weight: .medium)).foregroundStyle(Design.Palette.ink)
                         }
                         .buttonStyle(.plain)
-                        Text(Self.detail(of: song))
+                        Text(Self.detail(of: song) + trackReading(id))
                             .font(Design.Typography.numeric(11))
                             .foregroundStyle(Design.Palette.inkSecondary)
                     } else {
@@ -92,6 +101,11 @@ private struct AlbumBody: View {
                             .font(Design.Typography.ui(12)).foregroundStyle(Design.Palette.warn)
                     }
                     Spacer()
+                    if index > 0 {
+                        AlbumChip(String(format: "gap %.1f s", album.gap(before: id))) {
+                            app.setGap(album.gap(before: id) >= 4 ? 0 : album.gap(before: id) + 1, before: id, in: album.id)
+                        }
+                    }
                     AlbumChip("◀") { app.moveSong(id, in: album.id, to: index - 1) }
                     AlbumChip("▶") { app.moveSong(id, in: album.id, to: index + 1) }
                     AlbumChip("Remove") { app.removeSong(id, from: album.id) }
@@ -99,6 +113,85 @@ private struct AlbumBody: View {
                 .padding(.vertical, 4)
             }
         }
+    }
+
+    /// " · hook at 0:41 · −14.2 LUFS" for a track the album has read or released.
+    private func trackReading(_ id: SongID) -> String {
+        guard let track = observation.tracks.first(where: { $0.id == id }) else { return "" }
+        var pieces: [String] = []
+        if let hook = track.hookSeconds { pieces.append("hook at \(StructureModel.clock(hook))") }
+        if let lufs = track.releasedLUFS { pieces.append(String(format: "%.1f LUFS", lufs)) }
+        return pieces.isEmpty ? "" : " · " + pieces.joined(separator: " · ")
+    }
+
+    private var readings: some View {
+        let observation = self.observation
+        let lines = Producer().read(observation) + Peer().read(observation)
+        return VStack(alignment: .leading, spacing: 6) {
+            AlbumLabel("The record, read")
+            if observation.tracks.count < 2 {
+                Text("Two songs and the Producer and the Peer read the order.")
+                    .font(Design.Typography.ui(12, weight: .regular)).foregroundStyle(Design.Palette.inkSecondary)
+            }
+            ForEach(lines) { reading in
+                HStack(alignment: .top, spacing: 6) {
+                    Circle().fill(reading.holds ? Design.Palette.accent : Design.Palette.warn).frame(width: 6, height: 6).padding(.top, 5)
+                    Text(reading.says).font(Design.Typography.ui(12)).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            ForEach(observation.neighbours, id: \.from) { pair in
+                Text(String(format: "%@ → %@: %@ · tempo ×%.2f", pair.from, pair.to,
+                            pair.keyDistance.map { $0 == 0 ? "same key" : "\($0) on the circle" } ?? "key unknown", pair.tempoRatio))
+                    .font(Design.Typography.numeric(10.5)).foregroundStyle(Design.Palette.inkTertiary)
+            }
+        }
+    }
+
+    private var palette: some View {
+        let entries = observation.palette
+        return VStack(alignment: .leading, spacing: 6) {
+            AlbumLabel("Palette")
+            if entries.isEmpty {
+                Text("Nothing shared yet: sounds, dust and bass voices across the songs land here.")
+                    .font(Design.Typography.ui(12, weight: .regular)).foregroundStyle(Design.Palette.inkSecondary)
+            }
+            ForEach(entries, id: \.entry) { entry in
+                HStack(spacing: 8) {
+                    Text(entry.entry).font(Design.Typography.ui(12.5, weight: entry.tracks.count > 1 ? .medium : .regular))
+                    Text(entry.tracks.joined(separator: ", ")).font(Design.Typography.numeric(10.5)).foregroundStyle(Design.Palette.inkTertiary)
+                }
+            }
+        }
+    }
+
+    private var cover: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            AlbumLabel("Cover")
+            switch album.cover {
+            case .drawn(let design):
+                CoverView(design: design, title: album.title, artist: album.artist, side: 220)
+                    .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+                    .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.line, lineWidth: Design.Metric.hairline))
+                HStack(spacing: 6) {
+                    ForEach(CoverDesign.Layout.allCases, id: \.self) { layout in
+                        AlbumChip(layout.rawValue, isOn: design.layout == layout) {
+                            var next = design
+                            next.layout = layout
+                            app.setCover(next, for: album.id)
+                        }
+                    }
+                }
+            case .image(let media):
+                if let store = app.store, let url = try? store.mediaURL(for: media), let image = NSImage(contentsOf: url) {
+                    Image(nsImage: image).resizable().aspectRatio(contentMode: .fill).frame(width: 220, height: 220)
+                        .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+                } else {
+                    Text("The cover image is missing from the library.").font(Design.Typography.ui(12)).foregroundStyle(Design.Palette.warn)
+                }
+            }
+            Text("Drop an image here for a cover of your own.").font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.inkTertiary)
+        }
+        .frame(width: 220, alignment: .topLeading)
     }
 
     static func detail(of song: Song) -> String {

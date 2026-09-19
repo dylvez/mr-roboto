@@ -22,7 +22,7 @@ public enum BibleMethod {
     /// The engine names a rule's action may name. Every one is a real module or type in this
     /// package; a rule that acts on nothing here is advice the app cannot take.
     public static let engineNames = ["Performance.", "Instrument.", "SongGraph.", "Analysis.", "MusicTheory.",
-                                     "SourceMeasurement", "refuse", "clamp", "the "]
+                                     "SourceMeasurement", "AlbumObservation.", "refuse", "clamp", "the "]
 
     /// Every violation, in the order the method states its rules. Empty means the bible holds.
     ///
