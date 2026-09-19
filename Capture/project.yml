@@ -1,0 +1,30 @@
+# Roboto Capture — the phone half of M5. `make capture` generates the project with xcodegen and
+# builds it for the simulator; the device build and its signing are yours.
+name: RobotoCapture
+options:
+  bundleIdPrefix: com.mrroboto
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+targets:
+  RobotoCapture:
+    type: application
+    platform: iOS
+    sources: [RobotoCapture]
+    info:
+      path: RobotoCapture/Info.plist
+      properties:
+        CFBundleDisplayName: Roboto Capture
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        NSMicrophoneUsageDescription: Roboto Capture records takes and ideas for Mr. Roboto on your Mac.
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
+        UIBackgroundModes: [audio]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mrroboto.capture
+        SWIFT_VERSION: "6.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: ""

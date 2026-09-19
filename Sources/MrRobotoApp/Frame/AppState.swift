@@ -319,6 +319,7 @@ public final class AppState {
     /// their hosts weakly — nothing else would keep it alive — and because a persona's line belongs
     /// to the session rather than to a surface.
     @ObservationIgnored private(set) var conductor: BandDirector?
+    @ObservationIgnored public private(set) var inbox: InboxWatcher?
 
     func attach(conductor: BandDirector) { self.conductor = conductor }
 
@@ -395,8 +396,22 @@ public final class AppState {
         // a measurement.
         state.attach(conductor: BandDirector(app: state))
         Task { await band.refreshKeyStatus() }
+        // The inbox: captures from the phone, and anything dropped in the folder.
+        let inbox = InboxWatcher(folders: InboxWatcher.defaultFolders) { [weak state] url in
+            guard let state else { return false }
+            if case .failed(let why) = state.importFromInbox(url) {
+                state.note(.session, "The inbox could not take \(url.lastPathComponent)", detail: why)
+                return false
+            }
+            return true
+        }
+        state.attach(inbox: inbox)
+        inbox.start()
         return state
     }
+
+    /// The inbox watcher, kept for the life of the session.
+    public func attach(inbox: InboxWatcher) { self.inbox = inbox }
 
     /// Installs what actually plays the song. The app does this in `live()`; a test injects a
     /// double so `AppState`'s transitions can be asserted with no audio device anywhere.

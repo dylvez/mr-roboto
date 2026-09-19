@@ -10,7 +10,7 @@ DD = .build/xcode
 XC = xcodebuild -destination 'generic/platform=macOS' -derivedDataPath $(DD) -skipPackagePluginValidation -skipMacroValidation
 XCT = xcodebuild -destination 'platform=macOS' -derivedDataPath $(DD) -skipPackagePluginValidation -skipMacroValidation
 
-.PHONY: check build test test-mlx cli doctor clean app evals
+.PHONY: check build test test-mlx cli doctor clean app evals capture
 
 check: build test test-mlx cli doctor
 	@echo "check: ok"
@@ -43,6 +43,15 @@ doctor:
 evals:
 	swift build --build-tests
 	MRROBOTO_EVALS=1 swift test --skip-build --filter PersonaEvalTests
+
+# Roboto Capture, the phone half of M5: generated with xcodegen and built for the simulator.
+# Not part of `check`: it needs the iOS SDK and takes a minute. The device build is yours.
+capture:
+	cd Capture && xcodegen generate
+	xcodebuild -project Capture/RobotoCapture.xcodeproj -scheme RobotoCapture -configuration Debug \
+	  -destination 'generic/platform=iOS Simulator' -derivedDataPath .build/capture \
+	  CODE_SIGNING_ALLOWED=NO build 2>&1 | tee .build/capture-build.log | grep -E "\*\* BUILD|error:" || true
+	@grep -q "\*\* BUILD SUCCEEDED" .build/capture-build.log || (echo "capture build failed; see .build/capture-build.log" && exit 1)
 
 # The packaged Mac app, signed and installed to ~/Applications. See scripts/make-app.sh.
 app:
