@@ -219,6 +219,98 @@
     },
     {
       "exercises" : [
+        "engineer.one-move-at-a-time",
+        "engineer.small-moves",
+        "engineer.no-silent-move"
+      ],
+      "expects" : {
+        "shape" : "agree"
+      },
+      "id" : "engineer.golden.a-move",
+      "passes" : "Agreed: one move, inside 6 dB, and it becomes a version.",
+      "premise" : "\"Bass down 3 dB.\"",
+      "proposal" : {
+        "bandDB" : 0,
+        "bandHz" : 0,
+        "gainDB" : -3,
+        "part" : "bass",
+        "proposal" : "moveStrip"
+      }
+    },
+    {
+      "exercises" : [
+        "engineer.cut-before-boost"
+      ],
+      "expects" : {
+        "rule" : "engineer.cut-before-boost",
+        "shape" : "refuse"
+      },
+      "id" : "engineer.golden.a-boost",
+      "passes" : "Refused by engineer.cut-before-boost: cut what is in the way instead.",
+      "premise" : "\"Boost the kick 4 dB at 3 kHz so it cuts through.\"",
+      "proposal" : {
+        "bandDB" : 4,
+        "bandHz" : 3000,
+        "gainDB" : 0,
+        "part" : "kick",
+        "proposal" : "moveStrip"
+      }
+    },
+    {
+      "exercises" : [
+        "engineer.one-move-at-a-time"
+      ],
+      "expects" : {
+        "rule" : "engineer.one-move-at-a-time",
+        "shape" : "refuse"
+      },
+      "id" : "engineer.golden.two-moves",
+      "passes" : "Refused by engineer.one-move-at-a-time: split it.",
+      "premise" : "\"Bass down 3 and cut it 6 at 80, in one go.\"",
+      "proposal" : {
+        "bandDB" : -6,
+        "bandHz" : 80,
+        "gainDB" : -3,
+        "part" : "bass",
+        "proposal" : "moveStrip"
+      }
+    },
+    {
+      "exercises" : [
+        "engineer.master-ceiling",
+        "engineer.master-target"
+      ],
+      "expects" : {
+        "shape" : "agree"
+      },
+      "id" : "engineer.golden.master-set",
+      "passes" : "Agreed: inside the window, under the ceiling's ceiling.",
+      "premise" : "\"Master to −14 with the ceiling at −1.\"",
+      "proposal" : {
+        "ceilingDBTP" : -1,
+        "proposal" : "setMaster",
+        "targetLUFS" : -14
+      }
+    },
+    {
+      "exercises" : [
+        "engineer.master-ceiling"
+      ],
+      "expects" : {
+        "rule" : "engineer.master-ceiling",
+        "shape" : "refuse"
+      },
+      "id" : "engineer.golden.ceiling-at-zero",
+      "passes" : "Refused by engineer.master-ceiling: the encoders need the head room.",
+      "premise" : "\"Ceiling at 0, we want it loud.\"",
+      "proposal" : {
+        "ceilingDBTP" : 0,
+        "proposal" : "setMaster",
+        "targetLUFS" : -14
+      }
+    },
+    {
+      "exercises" : [
 
       ],
       "expects" : {
@@ -364,6 +456,18 @@
     },
     {
       "affects" : [
+        "engineer.small-moves"
+      ],
+      "alternative" : "No cap, and the rule is only that the move is versioned; a 12 dB move on a part that was forgotten at −20 is one honest move, not two.",
+      "encoded" : "Six: past that the reading before is no longer the reference for the reading after.",
+      "evidence" : {
+        "inferred" : "this bible's own one-move discipline"
+      },
+      "id" : "engineer.oq.move-size",
+      "question" : "Is 6 dB the right most a single move can take a fader?"
+    },
+    {
+      "affects" : [
         "engineer.who-owns-eighty"
       ],
       "alternative" : "Once takes and stems from records are in the mix, the separation has to be read from the mix itself with a masking model, and the exact reading becomes an estimate marked so.",
@@ -375,7 +479,7 @@
       "question" : "Can masking be read from stems the transport bounces separately, when a real mix has bleed?"
     }
   ],
-  "owns" : "Loudness, balance and masking, read off a bounce in the numbers a delivery spec uses — and nothing touched.",
+  "owns" : "Loudness, balance and masking, read off a bounce in the numbers a delivery spec uses — and moved one strip at a time, every move a version.",
   "ranges" : [
     {
       "evidence" : {
@@ -529,10 +633,10 @@
   ],
   "refusals" : [
     {
-      "because" : "mixing arrives with M6; until then the Engineer reads and says what to move, and touching it would be a change nobody versioned",
-      "id" : "no-hands",
-      "instead" : "name the move in dB and Hz, and the owner of the part makes it",
-      "refuses" : "changing a level, an EQ or a chain"
+      "because" : "a move nobody measured cannot be laid to what it did, and a move nobody versioned cannot be reverted",
+      "id" : "no-silent-move",
+      "instead" : "read the bounce, make the one move, and let the version's note carry both numbers",
+      "refuses" : "moving a strip or the master without a reading before it and a version after it"
     },
     {
       "because" : "each of those is a number somewhere, and the number can be checked",
@@ -665,13 +769,101 @@
       "when" : "a reading is given"
     },
     {
-      "engineAction" : "refuse; the reading names the move in dB",
+      "engineAction" : "SongGraph.Operation.mix; the Mixer and the tools write the note",
       "evidence" : {
-        "inferred" : "this app's own milestone plan: the ear before the hands"
+        "cited" : [
+          "https://www.digido.com/"
+        ]
       },
-      "id" : "engineer.touch-nothing",
-      "then" : "say what to move and by how much, and touch nothing; the hands arrive with M6",
-      "when" : "asked to fix the mix"
+      "id" : "engineer.no-silent-move",
+      "then" : "the move is a mix version, and its note carries the move and the reading — nothing is turned without a number beside it",
+      "when" : "a strip or the master is moved"
+    },
+    {
+      "engineAction" : "count the fields that differ from the parent mix version",
+      "evidence" : {
+        "inferred" : "one change per version, so the next reading is attributable"
+      },
+      "id" : "engineer.one-move-at-a-time",
+      "then" : "split it: a fader and an EQ in one move cannot be laid to the reading after",
+      "threshold" : {
+        "comparison" : "atMost",
+        "feature" : "mix.move.count",
+        "unit" : "moves",
+        "value" : 1
+      },
+      "when" : "one version would change more than one thing"
+    },
+    {
+      "engineAction" : "SongGraph.EQBand.gainDB ≤ 0 on the move; the counter names the other part's cut",
+      "evidence" : {
+        "cited" : [
+          "https://www.digido.com/",
+          "https://en.wikipedia.org/wiki/Bob_Power"
+        ]
+      },
+      "id" : "engineer.cut-before-boost",
+      "then" : "cut the part that is in the way instead; a boost buys level and a cut buys room, and room is what was missing",
+      "threshold" : {
+        "comparison" : "atMost",
+        "feature" : "mix.move.eq.db",
+        "unit" : "dB",
+        "value" : 0
+      },
+      "when" : "a band is boosted"
+    },
+    {
+      "engineAction" : "SongGraph.Strip.gainDB, the difference from the parent version",
+      "evidence" : {
+        "inferred" : "the K-system's practice of metered, stepwise gain"
+      },
+      "id" : "engineer.small-moves",
+      "then" : "move it 6 and read again; past that the mix is a different mix and the reading before is no longer the reference",
+      "threshold" : {
+        "comparison" : "atMost",
+        "feature" : "mix.move.gain.db",
+        "unit" : "dB",
+        "value" : 6
+      },
+      "when" : "one move takes a fader further than 6 dB"
+    },
+    {
+      "engineAction" : "SongGraph.Master.ceilingDBTP, applied by Performance.Limiter",
+      "evidence" : {
+        "cited" : [
+          "https://tech.ebu.ch/publications/r128",
+          "https://support.spotify.com/us/artists/article/loudness-normalization/"
+        ]
+      },
+      "id" : "engineer.master-ceiling",
+      "then" : "leave the encoders their head room; a ceiling at 0 clips on the way out",
+      "threshold" : {
+        "comparison" : "atMost",
+        "feature" : "mix.master.ceiling.dbtp",
+        "unit" : "dBTP",
+        "value" : -0.5
+      },
+      "when" : "the ceiling is set above −0.5 dBTP"
+    },
+    {
+      "engineAction" : "SongGraph.Master.targetLUFS",
+      "evidence" : {
+        "cited" : [
+          "https://tech.ebu.ch/publications/r128",
+          "https://support.spotify.com/us/artists/article/loudness-normalization/",
+          "https://en.wikipedia.org/wiki/Loudness_war"
+        ]
+      },
+      "id" : "engineer.master-target",
+      "then" : "say which platform wants that; none does, and a target past the window is a loudness war",
+      "threshold" : {
+        "comparison" : "between",
+        "feature" : "mix.master.target.lufs",
+        "unit" : "LUFS",
+        "upper" : -8,
+        "value" : -20
+      },
+      "when" : "the target is set outside −20 to −8 LUFS"
     },
     {
       "engineAction" : "Performance.MixMeter.tiltDB",
@@ -779,6 +971,68 @@
       "meaning" : "where 99% of the energy stops: the top end, and the corner a chain put there",
       "noticeable" : 1000,
       "unit" : "Hz"
+    },
+    {
+      "engineField" : "SongGraph.Strip.gainDB, the difference between two mix versions",
+      "evidence" : {
+        "cited" : [
+          "https://www.digido.com/"
+        ]
+      },
+      "feature" : "mix.move.gain.db",
+      "meaning" : "how far one move takes a strip's fader, unsigned",
+      "noticeable" : 1,
+      "unit" : "dB"
+    },
+    {
+      "engineField" : "SongGraph.EQBand.gainDB, the difference between two mix versions",
+      "evidence" : {
+        "cited" : [
+          "https://www.digido.com/",
+          "https://en.wikipedia.org/wiki/Bob_Power"
+        ]
+      },
+      "feature" : "mix.move.eq.db",
+      "meaning" : "one move's EQ change at its band, signed: a boost is positive",
+      "noticeable" : 1,
+      "unit" : "dB"
+    },
+    {
+      "engineField" : "the fields that differ between a mix version and its parent",
+      "evidence" : {
+        "inferred" : "one change per version, so the reading after can be laid to it"
+      },
+      "feature" : "mix.move.count",
+      "meaning" : "how many things one mix version changes",
+      "noticeable" : 1,
+      "unit" : "moves"
+    },
+    {
+      "engineField" : "SongGraph.Master.ceilingDBTP, applied by Performance.Limiter over the bounce",
+      "evidence" : {
+        "cited" : [
+          "https://tech.ebu.ch/publications/r128",
+          "https://support.spotify.com/us/artists/article/loudness-normalization/"
+        ]
+      },
+      "feature" : "mix.master.ceiling.dbtp",
+      "meaning" : "the limiter's ceiling on the master",
+      "noticeable" : 0.5,
+      "unit" : "dBTP"
+    },
+    {
+      "engineField" : "SongGraph.Master.targetLUFS, read against Performance.MixMeter.integratedLoudness",
+      "evidence" : {
+        "cited" : [
+          "https://tech.ebu.ch/publications/r128",
+          "https://support.spotify.com/us/artists/article/loudness-normalization/",
+          "https://www.digido.com/"
+        ]
+      },
+      "feature" : "mix.master.target.lufs",
+      "meaning" : "the integrated loudness the song is delivered at",
+      "noticeable" : 1,
+      "unit" : "LUFS"
     }
   ],
   "voice" : {

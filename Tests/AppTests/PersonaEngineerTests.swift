@@ -56,6 +56,15 @@ struct PersonaEngineerTests {
         #expect(engineer.consider(.balanceLowEnd(separationDB: 20)).refusedByRule == "engineer.bass-has-a-body")
         #expect(engineer.consider(.balanceLowEnd(separationDB: 9)).isAgreement)
         if case .defer_(let to, _) = engineer.consider(.moveCutLate(milliseconds: 9)) { #expect(to == .sampler) } else { Issue.record("a cut is the Sampler's") }
+        // M6: the hands.
+        #expect(engineer.consider(.moveStrip(part: "bass", gainDB: -3, bandHz: 0, bandDB: 0)).isAgreement)
+        #expect(engineer.consider(.moveStrip(part: "kick", gainDB: 0, bandHz: 3_000, bandDB: 4)).refusedByRule == "engineer.cut-before-boost")
+        #expect(engineer.consider(.moveStrip(part: "bass", gainDB: -3, bandHz: 80, bandDB: -6)).refusedByRule == "engineer.one-move-at-a-time")
+        #expect(engineer.consider(.moveStrip(part: "bass", gainDB: -9, bandHz: 0, bandDB: 0)).refusedByRule == "engineer.small-moves")
+        #expect(engineer.consider(.setMaster(targetLUFS: -14, ceilingDBTP: -1)).isAgreement)
+        #expect(engineer.consider(.setMaster(targetLUFS: -14, ceilingDBTP: 0)).refusedByRule == "engineer.master-ceiling")
+        #expect(engineer.consider(.setMaster(targetLUFS: -4, ceilingDBTP: -1)).refusedByRule == "engineer.master-target")
+        if case .defer_(let to, _) = Beatmaker().consider(.moveStrip(part: "kick", gainDB: -3, bandHz: 0, bandDB: 0)) { #expect(to == .engineer) } else { Issue.record("a strip move is the Engineer's") }
         #expect(BibleMethod.lint(Engineer.bible).isEmpty, "\(BibleMethod.lint(Engineer.bible))")
     }
 }

@@ -43,6 +43,9 @@ public struct CriticID: RawRepresentable, Hashable, Sendable, Codable, CustomStr
     public static let twoDrumSources = CriticID("merge.two-drums")
     public static let pitchDrift = CriticID("take.pitch-drift")
     public static let timing = CriticID("take.timing")
+    public static let masking = CriticID("mix.masking")
+    public static let overCeiling = CriticID("mix.over-ceiling")
+    public static let hotMaster = CriticID("mix.hot-master")
 }
 
 // MARK: - Where a finding is
@@ -57,6 +60,8 @@ public enum FindingSubject: Hashable, Sendable {
     case bar(Int)
     /// The source as a whole — a chain over it, a level across it.
     case source
+    /// M6: the mix, at a band or on the master. The string is what the finding is about.
+    case mix(String)
 
     /// The phrase a headline uses: "slice 7", "bar 3, step 12 (snare)".
     public var named: String {
@@ -65,6 +70,7 @@ public enum FindingSubject: Hashable, Sendable {
         case .step(let bar, let step, let voice): return "bar \(bar + 1), step \(step + 1) (\(voice))"
         case .bar(let bar): return "bar \(bar + 1)"
         case .source: return "the source"
+        case .mix(let what): return what
         }
     }
 
@@ -170,6 +176,10 @@ public enum EngineChange: Hashable, Sendable {
     case nudgeNote(index: Int, milliseconds: Double)
     /// M5: sing the bar again. The honest fix, and always one of the two.
     case retake(bar: Int)
+    /// M6: one strip move — gain by `gainDB`, and/or the peak band to `bandHz` by `bandDB`.
+    case mixStrip(part: PartID, gainDB: Double?, bandHz: Double?, bandDB: Double?)
+    /// M6: the master's gain and/or ceiling.
+    case mixMaster(gainDB: Double?, ceilingDBTP: Double?)
     case accept
 }
 
@@ -409,13 +419,15 @@ public struct CriticBoard: Sendable {
 
     public var mergeCritics: [any MergeCritic]
     public var takeCritics: [any TakeCritic]
+    public var mixCritics: [any MixCritic]
 
     public init(chopCritics: [any ChopCritic] = [], grooveCritics: [any GrooveCritic] = [],
-                mergeCritics: [any MergeCritic] = [], takeCritics: [any TakeCritic] = []) {
+                mergeCritics: [any MergeCritic] = [], takeCritics: [any TakeCritic] = [], mixCritics: [any MixCritic] = []) {
         self.chopCritics = chopCritics
         self.grooveCritics = grooveCritics
         self.mergeCritics = mergeCritics
         self.takeCritics = takeCritics
+        self.mixCritics = mixCritics
     }
 
     /// Everything the app ships. Order is the order findings come back in when two critics fire on
@@ -425,10 +437,17 @@ public struct CriticBoard: Sendable {
         chopCritics: [TransientCutCritic(), SliceLevelCritic(), DegradeStackCritic()],
         grooveCritics: [SwingClashCritic(), SliceClashCritic()],
         mergeCritics: [TooFarTransposedCritic(), TwoDrumSourcesCritic()],
-        takeCritics: [PitchDriftCritic(), TimingCritic()])
+        takeCritics: [PitchDriftCritic(), TimingCritic()],
+        mixCritics: [MaskingCritic(), OverCeilingCritic(), HotMasterCritic()])
 
     public var all: [any Critic] {
         (chopCritics as [any Critic]) + (grooveCritics as [any Critic]) + (mergeCritics as [any Critic]) + (takeCritics as [any Critic])
+            + (mixCritics as [any Critic])
+    }
+
+    /// Every mix critic over one reading, worst first within each critic.
+    public func review(_ input: MixReview) -> [Finding] {
+        mixCritics.flatMap { $0.review(input) }
     }
 
     /// Every take critic over one take, worst first within each critic.

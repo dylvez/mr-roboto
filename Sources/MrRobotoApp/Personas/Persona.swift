@@ -189,6 +189,18 @@ public struct Feature: RawRepresentable, Hashable, Sendable, Codable, CustomStri
     public static let takeTimingMS = Feature("take.timing.ms")
     /// The take's sample peak, dBFS.
     public static let takePeakDBFS = Feature("take.peak.dbfs")
+
+    // The Engineer's hands (M6).
+    /// How far one move takes a strip's gain, dB, unsigned.
+    public static let moveGainDB = Feature("mix.move.gain.db")
+    /// One move's EQ change, dB, signed: a boost is positive.
+    public static let moveEQDB = Feature("mix.move.eq.db")
+    /// How many things one move changes.
+    public static let moveCount = Feature("mix.move.count")
+    /// The master's ceiling, dBTP.
+    public static let masterCeilingDBTP = Feature("mix.master.ceiling.dbtp")
+    /// The master's loudness target, LUFS.
+    public static let masterTargetLUFS = Feature("mix.master.target.lufs")
     /// Quantiser width in bits. 12 is both the SP-1200 and the MPC60; 24 and up is off.
     public static let bitDepth = Feature("degrade.bits")
     /// The rate the decimator holds to, in Hz.
@@ -981,6 +993,10 @@ public enum PersonaProposal: Hashable, Sendable {
     case balanceLowEnd(separationDB: Double)
     /// Squash the drums to this crest.
     case squashDrums(crestDB: Double)
+    /// M6: one strip move — the part's gain by `gainDB`, and/or its EQ at `bandHz` by `bandDB`.
+    case moveStrip(part: String, gainDB: Double, bandHz: Double, bandDB: Double)
+    /// M6: the master's target and ceiling.
+    case setMaster(targetLUFS: Double, ceilingDBTP: Double)
     /// Something outside the persona's competence, named so the refusal can be specific.
     case outOfScope(what: String)
 }
@@ -1056,6 +1072,7 @@ extension PersonaProposal: Codable {
         case partsInSong, orphaned, bars, atSeconds, sections, turns, minutes
         case syllables, patternMatch, perfectRate, songs
         case integratedLUFS, peakDBFS, separationDB, crestDB
+        case part, gainDB, bandHz, bandDB, targetLUFS, ceilingDBTP
     }
 
     public init(from decoder: any Decoder) throws {
@@ -1087,6 +1104,8 @@ extension PersonaProposal: Codable {
         case "rhymeLine": self = .rhymeLine(perfectRate: try d(.perfectRate))
         case "reuseImage": self = .reuseImage(songs: try d(.songs))
         case "setLoudness": self = .setLoudness(integratedLUFS: try d(.integratedLUFS), peakDBFS: try d(.peakDBFS))
+        case "moveStrip": self = .moveStrip(part: try c.decode(String.self, forKey: .part), gainDB: try d(.gainDB), bandHz: try d(.bandHz), bandDB: try d(.bandDB))
+        case "setMaster": self = .setMaster(targetLUFS: try d(.targetLUFS), ceilingDBTP: try d(.ceilingDBTP))
         case "balanceLowEnd": self = .balanceLowEnd(separationDB: try d(.separationDB))
         case "squashDrums": self = .squashDrums(crestDB: try d(.crestDB))
         case "outOfScope": self = .outOfScope(what: try d(.what))
@@ -1149,6 +1168,11 @@ extension PersonaProposal: Codable {
             try c.encode("balanceLowEnd", forKey: .proposal); try c.encode(separation, forKey: .separationDB)
         case .squashDrums(let crest):
             try c.encode("squashDrums", forKey: .proposal); try c.encode(crest, forKey: .crestDB)
+        case .moveStrip(let part, let gainDB, let bandHz, let bandDB):
+            try c.encode("moveStrip", forKey: .proposal); try c.encode(part, forKey: .part); try c.encode(gainDB, forKey: .gainDB)
+            try c.encode(bandHz, forKey: .bandHz); try c.encode(bandDB, forKey: .bandDB)
+        case .setMaster(let target, let ceiling):
+            try c.encode("setMaster", forKey: .proposal); try c.encode(target, forKey: .targetLUFS); try c.encode(ceiling, forKey: .ceilingDBTP)
         case .outOfScope(let what):
             try c.encode("outOfScope", forKey: .proposal); try c.encode(what, forKey: .what)
         }

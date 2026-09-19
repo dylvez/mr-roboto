@@ -474,6 +474,75 @@ struct BandLiveTests {
         report("saved", "no — the run is in memory only")
     }
 
+    // MARK: M6 X9 — the Engineer's hands, live
+
+    static let mixLines = ["The bass is fighting the kick", "Master it"]
+
+    /// Arrival as it is, arranged if it is not, two turns: the Engineer reads the mix, makes one
+    /// move, then sets the master. Two mix versions in the song; cost reported. In memory only.
+    @Test("M6 X9: the bass is fighting the kick; master it — two turns, the Engineer in dB and Hz, cost reported")
+    func mixLive() async throws {
+        let state = AppState.live()
+        let registry = SurfaceRegistry()
+        SurfaceRegistry.registerSurfaces(in: registry)
+        let arrival = try #require(state.library.songs.first { $0.title == "Arrival" })
+        state.openSong(arrival.id)
+        if state.song.map({ Guidance.grooves(in: $0).isEmpty }) ?? true {
+            let feel = try #require(FeelLibrary.standard.feel(named: "Boom-Bap Pocket"))
+            #expect(state.record(PartVersion(partID: PartID(), kind: .groove(feel.groove), author: .user,
+                                             operation: Operation.written, note: "Boom-Bap Pocket")))
+        }
+        if let song = state.song, Guidance.basslines(in: song).isEmpty,
+           let grooveVersion = Guidance.grooves(in: song).last, case .groove(let groove) = grooveVersion.kind {
+            let key = Guidance.analysis(in: song)?.dominantKey ?? song.key ?? Key(tonic: NoteName(.d))
+            let request = BassRequest(key: key, chords: [], groove: groove, tempo: song.tempo,
+                                      timeSignature: song.timeSignature, lineage: .palladino, lagMS: 40,
+                                      density: 0.4, sound: "finger", seed: 1)
+            #expect(state.record(PartVersion(partID: PartID(), kind: .bassline(BassWriter.write(request)),
+                                             author: .persona("Bassist"), parents: [grooveVersion.id],
+                                             operation: Operation.written, note: "Palladino line, +40 ms")))
+        }
+        if let song = state.song, song.sections.isEmpty {
+            let stitch = [Guidance.grooves(in: song).last?.id, Guidance.basslines(in: song).last?.id].compactMap { $0 }
+            #expect(state.arrange([Section(name: "Verse", stitch: stitch, lengthInBars: 8), Section(name: "Hook", stitch: stitch, lengthInBars: 8)]))
+        }
+        let band = try #require(state.band)
+        try #require(await band.director.keyStatus().hasKey, "no API key")
+        let before = Guidance.mixes(in: state.song!).count
+        report("song", "\(state.song?.title ?? "") · \(state.song?.tempo ?? 0) bpm · \(before) mix versions before")
+
+        for line in Self.mixLines {
+            let log = LiveTurnLog()
+            let started = Date()
+            let turn = await band.director.direct(line) { event in
+                switch event {
+                case .toolStarted(let name): log.started(name)
+                case .toolFinished(let name, let isError, let message): log.finished(name, isError: isError, message: message)
+                case .opened(let kind, let title): log.opened(kind, title)
+                case .say, .finished: break
+                }
+            }
+            report("line", line)
+            report("  ending", "\(turn.ending)")
+            report("  elapsed", String(format: "%.1f s", Date().timeIntervalSince(started)))
+            report("  calls", log.calls.joined(separator: " → "))
+            for failure in log.errors { report("  failed", failure) }
+            report("  opened", log.opens.joined(separator: " · "))
+            report("  said", turn.say)
+            describeSpend(turn.spend, label: "  turn")
+            #expect(turn.ending == .answered)
+        }
+        let song = try #require(state.song)
+        for version in Guidance.mixes(in: song).dropFirst(before) {
+            report("mix version", version.note ?? "")
+        }
+        #expect(Guidance.mixes(in: song).count >= before + 1, "no mix version was made")
+        for entry in state.log.suffix(14) {
+            report("  rail [\(entry.source.label)]", entry.text + (entry.detail.map { " — \($0)" } ?? ""))
+        }
+        report("saved", "no — the run is in memory only")
+    }
+
     // MARK: Reporting
 
     private func describe(_ id: VersionID, in state: AppState) -> String {

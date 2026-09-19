@@ -61,6 +61,10 @@ public enum DirectorTools {
             ConveneTool(workspace: workspace, cast: cast).erased(),
             // M5, appended after the twenty-four: a take read in cents and milliseconds.
             ReadTakeTool(workspace: workspace).erased(),
+            // M6, appended after the twenty-five: the mix read, one strip moved, the master set.
+            ReadMixTool(workspace: workspace).erased(),
+            SetMixTool(workspace: workspace).erased(),
+            MasterTool(workspace: workspace).erased(),
         ]
         if let stage {
             let pad = pad ?? DirectorStagePad()
@@ -104,6 +108,10 @@ public enum DirectorTools {
         "convene",
         // M5, appended: a take, read.
         "read_take",
+        // M6, appended: the Engineer's hands.
+        "read_mix",
+        "set_mix",
+        "master",
     ]
 
     /// The two the frame adds. Appended after `names`, never among them: a session with no frame

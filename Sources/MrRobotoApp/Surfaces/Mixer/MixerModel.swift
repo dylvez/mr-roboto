@@ -67,7 +67,7 @@ public final class MixerModel {
     }
 
     /// Every part the plan plays, in transport order, plus any the mix already names.
-    static func rows(of plan: SongPlayback, song: Song?, mix: Mix) -> [Row] {
+    nonisolated static func rows(of plan: SongPlayback, song: Song?, mix: Mix) -> [Row] {
         var seen: [PartID] = []
         var out: [Row] = []
         func add(_ part: PartID?, _ label: String) {
@@ -149,7 +149,7 @@ public final class MixerModel {
     }
 
     /// "Bass −3 dB; Kick EQ 80 Hz −6 dB; master ceiling −1 dBTP" — every field that moved.
-    static func describe(from a: Mix, to b: Mix, labels: [PartID: String]) -> String {
+    nonisolated static func describe(from a: Mix, to b: Mix, labels: [PartID: String]) -> String {
         var moves: [String] = []
         for strip in b.strips {
             let before = a.strip(for: strip.part) ?? Strip(part: strip.part, label: strip.label)

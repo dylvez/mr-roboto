@@ -81,6 +81,9 @@ final class CheckAdapter: CheckHosting {
         if case .audio(let audio) = version.kind, audio.role == .take {
             return applyToTake(fix, of: finding, version: version, audio: audio)
         }
+        if case .mix(let mix) = version.kind {
+            return await applyToMix(fix, of: finding, version: version, mix: mix)
+        }
         guard let changed = CheckAdapter.applying(fix.change, to: version.kind) else {
             // Everything else moves a level, a lag or the chain, none of which a part version
             // carries: they are render settings, and they belong on the surface that renders them.
@@ -103,6 +106,51 @@ final class CheckAdapter: CheckHosting {
             return .resolved
         }
         return remeasured.trips ? .stillFires(remeasured) : .resolved
+    }
+
+    /// M6: a mix finding's fix is one move, as a new mix version with this one as its parent; the
+    /// bounce is read again so the card says whether the gap is there now.
+    private func applyToMix(_ fix: Fix, of finding: Finding, version: PartVersion, mix: Mix) async -> CheckOutcome {
+        var moved = mix
+        let labels = Dictionary(MixReader.strips(of: app.playback, song: app.song).map { ($0.part, $0.label) }, uniquingKeysWith: { a, _ in a })
+        switch fix.change {
+        case .mixStrip(let part, let gainDB, let bandHz, let bandDB):
+            var strip = moved.strip(for: part, label: labels[part] ?? "Part")
+            if let gainDB { strip.gainDB = max(-60, min(12, strip.gainDB + gainDB)) }
+            if let bandHz, let bandDB, strip.eq.indices.contains(1) {
+                strip.eq[1].frequency = bandHz
+                strip.eq[1].gainDB = max(-18, min(18, strip.eq[1].gainDB + bandDB))
+            }
+            moved.set(strip)
+        case .mixMaster(let gainDB, let ceilingDBTP):
+            if let gainDB { moved.master.gainDB = max(-24, min(24, moved.master.gainDB + gainDB)) }
+            if let ceilingDBTP { moved.master.ceilingDBTP = max(-12, min(0, ceilingDBTP)) }
+        case .accept:
+            return .resolved
+        default:
+            return .refused("\(fix.title) is not a mix move. Nothing was changed.")
+        }
+        let note = "\(finding.criticName): \(fix.title.lowercased()) — " + MixerModel.describe(from: mix, to: moved, labels: labels)
+        let applied = version.deriving(.mix(moved), by: .user, operation: Operation.mix, note: note)
+        guard app.record(applied) else { return .refused("The song would not take that version.") }
+        // Read again: the number after is measured, not assumed.
+        guard let observation = try? await MixReader.observe(plan: app.playback, mix: moved, section: app.activeSection, song: app.song,
+                                                              kitsDirectory: AuditionService.defaultKitsDirectory) else { return .resolved }
+        var measurement = finding.measurement
+        switch finding.critic {
+        case .masking:
+            guard case .mixStrip(let part, _, _, _) = fix.change,
+                  let pair = observation.masking.first(where: { $0.a == part || $0.b == part }) ?? MixObservation.masking(observation.strips, noticeable: 1_000).first(where: { $0.a == part || $0.b == part }) else { return .resolved }
+            measurement.measured = pair.gapDB
+        case .overCeiling:
+            measurement.measured = observation.truePeakDBTP ?? measurement.measured
+            measurement.threshold = .atMost(.peakDBFS, moved.master.ceilingDBTP, unit: "dBTP")
+        case .hotMaster:
+            measurement.measured = observation.integratedLUFS
+        default:
+            return .resolved
+        }
+        return measurement.trips ? .stillFires(measurement) : .resolved
     }
 
     /// M5: a take's fix is rendered audio — a note shifted, an onset nudged — recorded as a
@@ -272,6 +320,7 @@ final class CheckAdapter: CheckHosting {
         switch finding.subject {
         case .slice, .source: return SurfaceKind.chopLane.rawValue.lowercased()
         case .step, .bar: return SurfaceKind.grid.rawValue.lowercased()
+        case .mix: return SurfaceKind.mixer.rawValue.lowercased()
         }
     }
 

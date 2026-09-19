@@ -419,6 +419,7 @@ final class BandDirector: PersonaDirecting {
         switch finding.subject {
         case .slice, .source: return Guidance.samples(in: song).last?.id
         case .step, .bar: return Guidance.grooves(in: song).last?.id
+        case .mix: return Guidance.mixes(in: song).last?.id
         }
     }
 

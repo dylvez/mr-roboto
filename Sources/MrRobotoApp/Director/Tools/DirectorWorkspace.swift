@@ -74,6 +74,16 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     func takeAudio(of version: PartVersion) -> Comp.TakeAudio?
     /// The transport clock the song plays at.
     var clock: TransportClock { get }
+
+    // M6: the mix.
+
+    /// The song's plan, as the transport would play it.
+    var playback: SongPlayback { get }
+    /// The song (or a section) bounced through the newest mix and read, every strip apart. Nil
+    /// when this workspace cannot render.
+    func mixObservation(section: SectionID?) async throws -> MixObservation?
+    /// A mix version. Nil, with the reason in the rail, when it cannot be.
+    func recordMix(_ mix: Mix, note: String) -> PartVersion?
 }
 
 /// `AppState` seen through the six things the Director needs.
@@ -136,6 +146,18 @@ public final class AppStateWorkspace: DirectorWorkspace {
     }
 
     public var clock: TransportClock { app.clock }
+
+    public var playback: SongPlayback { app.playback }
+
+    public func mixObservation(section: SectionID?) async throws -> MixObservation? {
+        guard app.playback.isPlayable else { return nil }
+        return try await MixReader.observe(plan: app.playback, mix: nil, section: section, song: app.song,
+                                           kitsDirectory: AuditionService.defaultKitsDirectory)
+    }
+
+    public func recordMix(_ mix: Mix, note: String) -> PartVersion? {
+        MixAdapter(app: app).commit(mix, base: Guidance.mixes(in: app.song ?? Song(title: "")).last, note: note)
+    }
 }
 
 /// Something that can make a noise. Kept separate from the workspace because on this machine —
@@ -280,5 +302,20 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
 
     public var clock: TransportClock {
         TransportClock(tempo: song?.tempo ?? 120, timeSignature: song?.timeSignature ?? .fourFour, sampleRate: 48_000)
+    }
+
+    public var playback: SongPlayback { SongPlayback.plan(for: song) { _ in nil } }
+
+    /// A reading a test hands in.
+    public var mixObservation: MixObservation?
+
+    public func mixObservation(section: SectionID?) async throws -> MixObservation? { mixObservation }
+
+    public func recordMix(_ mix: Mix, note: String) -> PartVersion? {
+        guard let current = song else { return nil }
+        let base = Guidance.mixes(in: current).last
+        let version = PartVersion(partID: base?.partID ?? PartID(), kind: .mix(mix), author: .user, parents: base.map { [$0.id] } ?? [],
+                                  operation: Operation.mix, note: note)
+        return record(version) ? version : nil
     }
 }

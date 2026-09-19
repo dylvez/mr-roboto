@@ -791,7 +791,7 @@ public struct Beatmaker: Persona {
             return .defer_(to: .peer, because: "Where the hook lands and how the form turns is the Peer's ear.")
         case .writeLine, .rhymeLine, .reuseImage:
             return .defer_(to: .lyricist, because: "The words are the Lyricist's.")
-        case .setLoudness, .balanceLowEnd, .squashDrums:
+        case .setLoudness, .balanceLowEnd, .squashDrums, .moveStrip, .setMaster:
             return .defer_(to: .engineer, because: "Level, balance and the low end's owner are the Engineer's to read.")
 
         case .outOfScope(let what):

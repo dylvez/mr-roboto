@@ -2,7 +2,8 @@ import Foundation
 import Performance
 import SongGraph
 
-/// **Engineer** — loudness, balance and masking. The ear, not the hands: mixing arrives in M6.
+/// **Engineer** — loudness, balance and masking; and since M6, the hands: one move at a time,
+/// said in dB and Hz, every move a mix version with the reading in its note.
 ///
 /// Reads a bounce of a section — the transport's own plan rendered offline — in the numbers a
 /// delivery spec and a mix engineer share: integrated loudness as BS.1770 states it, the peak, the
@@ -56,13 +57,19 @@ public struct Engineer: Persona {
     public static let lowEndSeparationFloorDB = 6.0
     /// A mix whose top end stops below this has a corner the chain put there — say so.
     public static let bandwidthFloorHz = 8_000.0
+    /// One move takes a fader no further than this.
+    public static let moveCeilingDB = 6.0
+    /// The master's ceiling never sits above this: the encoders need the head room.
+    public static let ceilingCeilingDBTP = -0.5
+    /// A delivery target lives inside this window.
+    public static let targetWindowLUFS = -20.0 ... -8.0
 
     // MARK: - The bible
 
     public static let bible = PersonaBible(
         id: .engineer,
         name: "Engineer",
-        owns: "Loudness, balance and masking, read off a bounce in the numbers a delivery spec uses — and nothing touched.",
+        owns: "Loudness, balance and masking, read off a bounce in the numbers a delivery spec uses — and moved one strip at a time, every move a version.",
 
         lineages: [
             Lineage("Bob Katz", instrument: "the meter", period: "1990–",
@@ -118,6 +125,26 @@ public struct Engineer: Persona {
                               meaning: "where 99% of the energy stops: the top end, and the corner a chain put there",
                               engineField: "Performance.MixMeter.bandwidthHz",
                               noticeable: 1_000, evidence: .inferred("the meter, read against the Sampler's chain corners")),
+            FeatureDefinition(.moveGainDB, unit: "dB",
+                              meaning: "how far one move takes a strip's fader, unsigned",
+                              engineField: "SongGraph.Strip.gainDB, the difference between two mix versions",
+                              noticeable: 1, evidence: .cited([digido])),
+            FeatureDefinition(.moveEQDB, unit: "dB",
+                              meaning: "one move's EQ change at its band, signed: a boost is positive",
+                              engineField: "SongGraph.EQBand.gainDB, the difference between two mix versions",
+                              noticeable: 1, evidence: .cited([digido, power])),
+            FeatureDefinition(.moveCount, unit: "moves",
+                              meaning: "how many things one mix version changes",
+                              engineField: "the fields that differ between a mix version and its parent",
+                              noticeable: 1, evidence: .inferred("one change per version, so the reading after can be laid to it")),
+            FeatureDefinition(.masterCeilingDBTP, unit: "dBTP",
+                              meaning: "the limiter's ceiling on the master",
+                              engineField: "SongGraph.Master.ceilingDBTP, applied by Performance.Limiter over the bounce",
+                              noticeable: 0.5, evidence: .cited([r128, spotifyLoudness])),
+            FeatureDefinition(.masterTargetLUFS, unit: "LUFS",
+                              meaning: "the integrated loudness the song is delivered at",
+                              engineField: "SongGraph.Master.targetLUFS, read against Performance.MixMeter.integratedLoudness",
+                              noticeable: 1, evidence: .cited([r128, spotifyLoudness, digido])),
         ],
 
         ranges: [
@@ -170,11 +197,41 @@ public struct Engineer: Persona {
                         then: "say it in LUFS, dBFS, dB and Hz; \"muddy\" is 80 Hz and a number",
                         engineAction: "refuse the adjective; the counter is the meter's line",
                         evidence: .cited([digido, katz])),
-            PersonaRule("engineer.touch-nothing",
-                        when: "asked to fix the mix",
-                        then: "say what to move and by how much, and touch nothing; the hands arrive with M6",
-                        engineAction: "refuse; the reading names the move in dB",
-                        evidence: .inferred("this app's own milestone plan: the ear before the hands")),
+            PersonaRule("engineer.no-silent-move",
+                        when: "a strip or the master is moved",
+                        then: "the move is a mix version, and its note carries the move and the reading — nothing is turned without a number beside it",
+                        engineAction: "SongGraph.Operation.mix; the Mixer and the tools write the note",
+                        evidence: .cited([digido])),
+            PersonaRule("engineer.one-move-at-a-time",
+                        when: "one version would change more than one thing",
+                        then: "split it: a fader and an EQ in one move cannot be laid to the reading after",
+                        threshold: .atMost(.moveCount, 1, unit: "moves"),
+                        engineAction: "count the fields that differ from the parent mix version",
+                        evidence: .inferred("one change per version, so the next reading is attributable")),
+            PersonaRule("engineer.cut-before-boost",
+                        when: "a band is boosted",
+                        then: "cut the part that is in the way instead; a boost buys level and a cut buys room, and room is what was missing",
+                        threshold: .atMost(.moveEQDB, 0, unit: "dB"),
+                        engineAction: "SongGraph.EQBand.gainDB ≤ 0 on the move; the counter names the other part's cut",
+                        evidence: .cited([digido, power])),
+            PersonaRule("engineer.small-moves",
+                        when: "one move takes a fader further than 6 dB",
+                        then: "move it 6 and read again; past that the mix is a different mix and the reading before is no longer the reference",
+                        threshold: .atMost(.moveGainDB, moveCeilingDB, unit: "dB"),
+                        engineAction: "SongGraph.Strip.gainDB, the difference from the parent version",
+                        evidence: .inferred("the K-system's practice of metered, stepwise gain")),
+            PersonaRule("engineer.master-ceiling",
+                        when: "the ceiling is set above −0.5 dBTP",
+                        then: "leave the encoders their head room; a ceiling at 0 clips on the way out",
+                        threshold: .atMost(.masterCeilingDBTP, ceilingCeilingDBTP, unit: "dBTP"),
+                        engineAction: "SongGraph.Master.ceilingDBTP, applied by Performance.Limiter",
+                        evidence: .cited([r128, spotifyLoudness])),
+            PersonaRule("engineer.master-target",
+                        when: "the target is set outside −20 to −8 LUFS",
+                        then: "say which platform wants that; none does, and a target past the window is a loudness war",
+                        threshold: .between(.masterTargetLUFS, targetWindowLUFS.lowerBound, targetWindowLUFS.upperBound, unit: "LUFS"),
+                        engineAction: "SongGraph.Master.targetLUFS",
+                        evidence: .cited([r128, spotifyLoudness, loudnessWar])),
             PersonaRule("engineer.dark-is-not-dull",
                         when: "the tilt is under −30 dB",
                         then: "there is no top end at all; a lo-fi corner keeps something above 2 kHz",
@@ -201,10 +258,10 @@ public struct Engineer: Persona {
             ]),
 
         refusals: [
-            Refusal("no-hands",
-                    refuses: "changing a level, an EQ or a chain",
-                    because: "mixing arrives with M6; until then the Engineer reads and says what to move, and touching it would be a change nobody versioned",
-                    instead: "name the move in dB and Hz, and the owner of the part makes it"),
+            Refusal("no-silent-move",
+                    refuses: "moving a strip or the master without a reading before it and a version after it",
+                    because: "a move nobody measured cannot be laid to what it did, and a move nobody versioned cannot be reverted",
+                    instead: "read the bounce, make the one move, and let the version's note carry both numbers"),
             Refusal("no-adjectives",
                     refuses: "saying a mix is warm, muddy or punchy",
                     because: "each of those is a number somewhere, and the number can be checked",
@@ -315,6 +372,31 @@ public struct Engineer: Persona {
                        passes: "Refused by engineer.who-owns-eighty: say who owns it and move the other.",
                        exercises: ["engineer.who-owns-eighty"],
                        proposal: .balanceLowEnd(separationDB: 2), expects: .refuse(rule: "engineer.who-owns-eighty")),
+            GoldenTest("engineer.golden.a-move",
+                       premise: "\"Bass down 3 dB.\"",
+                       passes: "Agreed: one move, inside 6 dB, and it becomes a version.",
+                       exercises: ["engineer.one-move-at-a-time", "engineer.small-moves", "engineer.no-silent-move"],
+                       proposal: .moveStrip(part: "bass", gainDB: -3, bandHz: 0, bandDB: 0), expects: .agree),
+            GoldenTest("engineer.golden.a-boost",
+                       premise: "\"Boost the kick 4 dB at 3 kHz so it cuts through.\"",
+                       passes: "Refused by engineer.cut-before-boost: cut what is in the way instead.",
+                       exercises: ["engineer.cut-before-boost"],
+                       proposal: .moveStrip(part: "kick", gainDB: 0, bandHz: 3_000, bandDB: 4), expects: .refuse(rule: "engineer.cut-before-boost")),
+            GoldenTest("engineer.golden.two-moves",
+                       premise: "\"Bass down 3 and cut it 6 at 80, in one go.\"",
+                       passes: "Refused by engineer.one-move-at-a-time: split it.",
+                       exercises: ["engineer.one-move-at-a-time"],
+                       proposal: .moveStrip(part: "bass", gainDB: -3, bandHz: 80, bandDB: -6), expects: .refuse(rule: "engineer.one-move-at-a-time")),
+            GoldenTest("engineer.golden.master-set",
+                       premise: "\"Master to −14 with the ceiling at −1.\"",
+                       passes: "Agreed: inside the window, under the ceiling's ceiling.",
+                       exercises: ["engineer.master-ceiling", "engineer.master-target"],
+                       proposal: .setMaster(targetLUFS: -14, ceilingDBTP: -1), expects: .agree),
+            GoldenTest("engineer.golden.ceiling-at-zero",
+                       premise: "\"Ceiling at 0, we want it loud.\"",
+                       passes: "Refused by engineer.master-ceiling: the encoders need the head room.",
+                       exercises: ["engineer.master-ceiling"],
+                       proposal: .setMaster(targetLUFS: -14, ceilingDBTP: 0), expects: .refuse(rule: "engineer.master-ceiling")),
             GoldenTest("engineer.golden.defers",
                        premise: "\"Put the bass 40 ms behind the kick.\"",
                        passes: "Deferred to the Bassist rather than answered.",
@@ -345,6 +427,13 @@ public struct Engineer: Persona {
                                     + "lower one — and the rule should read two narrower bands and let each be owned separately.",
                          affects: ["engineer.who-owns-eighty", "engineer.bass-has-a-body"],
                          evidence: .cited([voodoo])),
+            OpenQuestion("engineer.oq.move-size",
+                         question: "Is 6 dB the right most a single move can take a fader?",
+                         encoded: "Six: past that the reading before is no longer the reference for the reading after.",
+                         alternative: "No cap, and the rule is only that the move is versioned; a 12 dB move on a part that was "
+                                    + "forgotten at −20 is one honest move, not two.",
+                         affects: ["engineer.small-moves"],
+                         evidence: .inferred("this bible's own one-move discipline")),
             OpenQuestion("engineer.oq.stems",
                          question: "Can masking be read from stems the transport bounces separately, when a real mix has bleed?",
                          encoded: "Yes, for now: the transport's drums and bass are separate sources, so their bounces are exact.",
@@ -429,6 +518,63 @@ public struct MixObservation: Hashable, Sendable {
     public var lowEndOwner: String?
     /// The corner of the chain on the groove, when there is one.
     public var chainCornerHz: Double?
+    /// M6: the true peak of the mix, dBTP, when measured.
+    public var truePeakDBTP: Double?
+    /// M6: every strip's energy in the five bands, when the strips were bounced apart.
+    public var strips: [StripReading] = []
+    /// M6: pairs of strips within the noticeable gap in some band, worst first.
+    public var masking: [MaskingPair] = []
+
+    /// The five bands a mix is read in: Hz.
+    public static let bands: [(name: String, low: Double, high: Double)] = [
+        ("60–120", 60, 120), ("120–250", 120, 250), ("250–2k", 250, 2_000), ("2k–6k", 2_000, 6_000), ("6k+", 6_000, 20_000),
+    ]
+
+    public struct StripReading: Hashable, Sendable {
+        public var part: PartID
+        public var label: String
+        /// dB per band, in `MixObservation.bands` order.
+        public var bandsDB: [Double]
+        public init(part: PartID, label: String, bandsDB: [Double]) { self.part = part; self.label = label; self.bandsDB = bandsDB }
+    }
+
+    public struct MaskingPair: Hashable, Sendable {
+        public var a: PartID
+        public var aLabel: String
+        public var b: PartID
+        public var bLabel: String
+        /// Index into `MixObservation.bands`.
+        public var band: Int
+        public var gapDB: Double
+        /// The strip with more energy in the band.
+        public var louder: PartID
+        public var bandName: String { MixObservation.bands[band].name }
+        public var centreHz: Double { sqrt(MixObservation.bands[band].low * MixObservation.bands[band].high) }
+        public var quieter: PartID { louder == a ? b : a }
+        public var quieterLabel: String { louder == a ? bLabel : aLabel }
+        public var louderLabel: String { louder == a ? aLabel : bLabel }
+    }
+
+    /// The pairs sharing a band within `noticeable` dB, the closest band per pair, worst first.
+    /// A band under −60 dB on either side is not shared; it is empty.
+    public static func masking(_ strips: [StripReading], noticeable: Double = 6) -> [MaskingPair] {
+        var pairs: [MaskingPair] = []
+        for (i, a) in strips.enumerated() {
+            for b in strips[(i + 1)...] {
+                var best: MaskingPair?
+                for band in 0..<min(a.bandsDB.count, b.bandsDB.count) {
+                    let x = a.bandsDB[band], y = b.bandsDB[band]
+                    guard x > -60, y > -60 else { continue }
+                    let gap = abs(x - y)
+                    if gap < noticeable, gap < (best?.gapDB ?? .infinity) {
+                        best = MaskingPair(a: a.part, aLabel: a.label, b: b.part, bLabel: b.label, band: band, gapDB: gap, louder: x >= y ? a.part : b.part)
+                    }
+                }
+                if let best { pairs.append(best) }
+            }
+        }
+        return pairs.sorted { $0.gapDB < $1.gapDB }
+    }
 
     public init(label: String, integratedLUFS: Double, peakDBFS: Double, crestDB: Double, tiltDB: Double, bandwidthHz: Double,
                 drumsCrestDB: Double? = nil, lowEndSeparationDB: Double? = nil, lowEndOwner: String? = nil, chainCornerHz: Double? = nil) {
@@ -465,6 +611,20 @@ public struct MixObservation: Hashable, Sendable {
                 observation.lowEndOwner = d >= b ? "kick" : "bass"
             }
         }
+        return observation
+    }
+
+    /// M6: the mix and every strip bounced apart, read with the true peak and the masking pairs.
+    public static func measure(label: String, mix: [[Float]], sampleRate: Double,
+                               strips: [(part: PartID, label: String, planar: [[Float]])], noticeable: Double = 6) -> MixObservation {
+        var observation = measure(label: label, mix: mix, sampleRate: sampleRate)
+        observation.truePeakDBTP = MixMeter.truePeakDB(mix, sampleRate: sampleRate)
+        observation.strips = strips.map { strip in
+            StripReading(part: strip.part, label: strip.label, bandsDB: bands.map { band in
+                MixMeter.bandEnergyDB(strip.planar, sampleRate: sampleRate, lowHz: band.low, highHz: band.high)
+            })
+        }
+        observation.masking = masking(observation.strips, noticeable: noticeable)
         return observation
     }
 }

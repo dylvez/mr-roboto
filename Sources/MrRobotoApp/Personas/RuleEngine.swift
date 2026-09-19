@@ -84,6 +84,11 @@ public struct ProposalMeasures: Hashable, Sendable {
             return ProposalMeasures(values: [.lowEndSeparationDB: separation])
         case .squashDrums(let crest):
             return ProposalMeasures(values: [.crestDB: crest])
+        case .moveStrip(_, let gainDB, _, let bandDB):
+            return ProposalMeasures(values: [.moveGainDB: abs(gainDB), .moveEQDB: bandDB,
+                                             .moveCount: Double((gainDB != 0 ? 1 : 0) + (bandDB != 0 ? 1 : 0))])
+        case .setMaster(let target, let ceiling):
+            return ProposalMeasures(values: [.masterTargetLUFS: target, .masterCeilingDBTP: ceiling])
         case .outOfScope:
             return ProposalMeasures()
         }

@@ -389,6 +389,9 @@ public actor Director {
         case "cast": return "read the room"
         case "convene": return many ? "convened the room \(times) times" : "convened the room"
         case "read_take": return many ? "read \(times) takes" : "read the take"
+        case "read_mix": return many ? "read the mix \(times) times" : "read the mix"
+        case "set_mix": return many ? "made \(times) mix moves" : "made a mix move"
+        case "master": return "set the master"
         case "open_surface": return many ? "opened \(times) surfaces" : "opened a surface"
         case "propose": return many ? "offered \(times) suggestions" : "offered a suggestion"
         default: return many ? "\(tool) ×\(times)" : tool
