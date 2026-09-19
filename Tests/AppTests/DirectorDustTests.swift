@@ -317,13 +317,13 @@ struct DirectorDustToolboxTests {
     func existingSchemasAreByteIdentical() throws {
         let full = toolbox(stage: true)
         #expect(full.names == DirectorTools.names + DirectorTools.stageNames)
-        #expect(DirectorTools.names.count == 34)
+        #expect(DirectorTools.names.count == 36)
         #expect(DirectorTools.names[14] == "degrade_part")
         #expect(Array(DirectorTools.names.prefix(14)) == Self.before.prefix(14).map(\.0),
                 "the fourteen are in their old order, with nothing inserted among them")
 
         let appended: Set<String> = ["degrade_part", "set_progression", "write_bassline", "stitch_section", "arrange",
-                                     "read_library", "adopt", "merge", "cast", "convene", "read_take", "read_mix", "set_mix", "master", "export", "read_album", "sequence", "release", "plan_mashup", "mashup"]
+                                     "read_library", "adopt", "merge", "cast", "convene", "read_take", "read_mix", "set_mix", "master", "export", "read_album", "sequence", "release", "plan_mashup", "mashup", "start_song", "write_groove"]
         let now = try full.tools.filter { !appended.contains($0.name) }.map { ($0.name, try Self.digest($0.definition)) }
         #expect(now.map(\.0) == Self.before.map(\.0))
         for ((name, hash), (_, old)) in zip(now, Self.before) {
@@ -332,7 +332,7 @@ struct DirectorDustToolboxTests {
         // And the frame-free list is the framed one's prefix, degrade_part included.
         let bare = toolbox(stage: false)
         #expect(Array(full.names.prefix(bare.names.count)) == bare.names)
-        #expect(bare.names.last == "mashup")
+        #expect(bare.names.last == "write_groove")
     }
 
     @Test("Its schema stays inside every limit the API enforced, and spends none of the optional budget")
@@ -382,7 +382,7 @@ struct DirectorDustToolboxTests {
         #expect(prompt.contains("not only that it refused."))
         #expect(prompt.contains("the line is written to the key and you say so."))
         #expect(prompt.contains("and the transport plays the sections in order."))
-        #expect(prompt.hasSuffix("everyone in the room is asked, as before."), "M3's library paragraph is now the last thing in the prefix")
+        #expect(prompt.hasSuffix("the ledger and the rail if they want them."), "M3's library paragraph is now the last thing in the prefix")
         let year = Calendar(identifier: .gregorian).component(.year, from: Date())
         #expect(!prompt.contains("\(year)"))
         #expect(DirectorPrompt.systemBlocks.map(\.text) == [prompt])

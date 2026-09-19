@@ -297,6 +297,8 @@ public final class AppState {
 
     /// The conversation rail, oldest first.
     public private(set) var log: [SessionEntry] = []
+    /// Where the rail and the Director's tool calls are kept on disk. Nil with no library.
+    @ObservationIgnored public private(set) var sessions: SessionRecorder?
 
     /// Proposals from the band, when there is one.
     ///
@@ -368,6 +370,7 @@ public final class AppState {
                 primers: PrimerStore? = nil) {
         self.library = library
         self.store = store
+        self.sessions = store.map { SessionRecorder(libraryDirectory: $0.directoryURL) }
         self.transportHost = transportHost
         self.bench = Bench()
         self.regions = regions ?? RegionVisibility()
@@ -550,6 +553,7 @@ public final class AppState {
         // Director's answer that vanishes without a word is worse than one that is cleared.
         director.removeAll()
         openSongWithoutLogging(song)
+        restoreRail(for: song)
         note(.you, "Opened \(song.title)", detail: provenanceSummary(of: song))
         if let opening = Guidance.opening(song) { perform(opening) }
     }
@@ -794,7 +798,18 @@ public final class AppState {
     /// Adds a line attributed to the app rather than to you.
     public func note(_ source: SessionEntry.Source, _ text: String, detail: String? = nil) {
         log.append(SessionEntry(source: source, text: text, detail: detail))
+        let who: String
+        switch source {
+        case .you: who = "you"
+        case .session: who = "session"
+        case .director: who = "director"
+        case .persona(let name): who = name.isEmpty ? "band" : name
+        }
+        sessions?.append(SessionRecord(at: Date(), who: who, text: text, detail: detail, song: song?.title, songID: song?.id.description))
     }
+
+    /// Entries put back from an earlier session, above whatever is there. Not recorded again.
+    func prependToLog(_ entries: [SessionEntry]) { log.insert(contentsOf: entries, at: 0) }
 
     // MARK: Transport
 

@@ -18,6 +18,11 @@ import SwiftUI
 struct ConversationRail: View {
     let app: AppState
     @FocusState private var isComposing: Bool
+    /// The suggestions above the conversation fold away and take only the height you give them:
+    /// the conversation is the point of this column, and nothing above it may crowd it out.
+    @AppStorage("rail.next.collapsed") private var nextIsCollapsed = false
+    @AppStorage("rail.next.height") private var nextHeight = 170.0
+    @State private var dragStartHeight: Double?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -34,7 +39,7 @@ struct ConversationRail: View {
 
             Hairline()
             nextBlock
-            Hairline()
+            if !nextIsCollapsed, !app.proposals.isEmpty { nextResizer } else { Hairline() }
             history
             Hairline()
             composer
@@ -47,27 +52,73 @@ struct ConversationRail: View {
     private var nextBlock: some View {
         let proposals = app.proposals
         return VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 7) {
-                if let emblem = proposals.first.flatMap({ Art.emblem(for: $0.source) }) { ArtImage(emblem, width: 22) }
-                SmallLabel(proposals.first?.source.label ?? Proposal.Source.session.label)
+            Button {
+                nextIsCollapsed.toggle()
+            } label: {
+                HStack(spacing: 7) {
+                    Image(systemName: nextIsCollapsed ? "chevron.right" : "chevron.down")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(Design.Palette.inkTertiary)
+                        .frame(width: 10)
+                    if let emblem = proposals.first.flatMap({ Art.emblem(for: $0.source) }) { ArtImage(emblem, width: 22) }
+                    SmallLabel(proposals.first?.source.label ?? Proposal.Source.session.label)
+                    Spacer()
+                    if !proposals.isEmpty {
+                        Text("\(proposals.count)").font(Design.Typography.numeric(10.5)).foregroundStyle(Design.Palette.inkTertiary)
+                    }
+                }
+                .contentShape(Rectangle())
             }
-            if proposals.isEmpty {
+            .buttonStyle(.plain)
+            .help(nextIsCollapsed ? "Show the suggestions" : "Fold the suggestions away, so the conversation has the column")
+
+            if nextIsCollapsed {
+                // One line, so folding it away does not hide that there is something to do.
+                if let first = proposals.first {
+                    Text(first.title).font(Design.Typography.ui(12)).foregroundStyle(Design.Palette.inkSecondary).lineLimit(1)
+                }
+            } else if proposals.isEmpty {
                 Text(emptyLine)
                     .font(Design.Typography.ui(12, weight: .regular))
                     .foregroundStyle(Design.Palette.inkSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
-                ForEach(Array(proposals.enumerated()), id: \.element.id) { index, proposal in
-                    ProposalButton(proposal: proposal, isLeading: index == 0) {
-                        app.perform(proposal.action)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 10) {
+                        ForEach(Array(proposals.enumerated()), id: \.element.id) { index, proposal in
+                            ProposalButton(proposal: proposal, isLeading: index == 0) {
+                                app.perform(proposal.action)
+                            }
+                        }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .frame(height: CGFloat(min(max(nextHeight, 64), 480)))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 28)
-        .padding(.vertical, 18)
+        .padding(.vertical, nextIsCollapsed ? 10 : 14)
         .background(Design.Palette.panelAlt)
+    }
+
+    /// The edge between the suggestions and the conversation: drag it to give either more room.
+    private var nextResizer: some View {
+        ZStack {
+            Design.Palette.panelAlt
+            Capsule().fill(Design.Palette.lineStrong).frame(width: 36, height: 3)
+        }
+        .frame(height: 9)
+        .overlay(alignment: .bottom) { Hairline() }
+        .contentShape(Rectangle())
+        .gesture(DragGesture(minimumDistance: 1)
+            .onChanged { value in
+                let start = dragStartHeight ?? nextHeight
+                dragStartHeight = start
+                nextHeight = min(max(start + Double(value.translation.height), 64), 480)
+            }
+            .onEnded { _ in dragStartHeight = nil })
+        .help("Drag to resize the suggestions")
     }
 
     /// The honest version of an empty list. A song with nothing in it gets no invented work.
@@ -184,10 +235,11 @@ struct LogLine: View {
 struct LiveComposer: View {
     @Bindable var band: DirectorSession
     @FocusState.Binding var isComposing: Bool
+    @State fileprivate var showsAddressing = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            addressing
+            addressingRow
             HStack(spacing: 10) {
                 TextField(band.addressed.isEmpty ? "Ask the band…" : "Ask \(askedNames)…", text: $band.composing, axis: .vertical)
                     .textFieldStyle(.plain)
@@ -240,12 +292,26 @@ struct LiveComposer: View {
 }
 
 extension LiveComposer {
+    /// Who this message is for, folded to one chip until it is wanted.
+    @ViewBuilder
+    fileprivate var addressingRow: some View {
+        if showsAddressing || !band.addressed.isEmpty {
+            addressing
+        } else {
+            HStack(spacing: 5) {
+                BoothChip("To: everyone in the room") { showsAddressing = true }
+                Spacer()
+            }
+            .help("Ask only some of the band for this message. You can also type a name with @.")
+        }
+    }
+
     /// Who this message is for. All lit is everyone; press names to ask only them. Guards stay on:
     /// a member left out still speaks when one of their rules refuses a move.
     fileprivate var addressing: some View {
         let room = band.room
         return FlowRow(spacing: 5) {
-            BoothChip("Everyone", isOn: band.addressed.isEmpty) { band.addressed = [] }
+            BoothChip("Everyone", isOn: band.addressed.isEmpty) { band.addressed = []; showsAddressing = false }
             ForEach(room, id: \.id) { member in
                 BoothChip(member.name, isOn: band.addressed.contains(member.id)) { band.toggleAddressed(member.id) }
             }

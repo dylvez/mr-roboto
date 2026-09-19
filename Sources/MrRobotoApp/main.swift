@@ -22,7 +22,10 @@ struct MrRobotoApp: App {
     var body: some Scene {
         WindowGroup {
             FrameView(app: app)
-                .onAppear { activation.opener = { [app] url in app.openPackage(at: url) } }
+                .onAppear {
+                    activation.opener = { [app] url in app.openPackage(at: url) }
+                    activation.onQuit = { [app] in app.saveIfNeeded(); app.sessions?.flush() }
+                }
                 // The floor: every region folded away, one surface at the size it needs. `FrameView`
                 // raises it to whatever the regions you have open actually require, so asking for a
                 // region back asks the window for its width rather than crushing the instrument.
@@ -52,6 +55,8 @@ struct FrameCommands: Commands {
             Button("Mr. Roboto Field Guide") { openWindow(id: FieldGuideWindow.id) }
                 .keyboardShortcut("/", modifiers: [.command, .shift])
             Button("Show Every Primer Again") { app.primers.resetAll() }
+            Button("Show Session Logs in Finder") { app.revealSessions() }
+                .disabled(app.sessions == nil)
         }
 
         CommandGroup(replacing: .newItem) {

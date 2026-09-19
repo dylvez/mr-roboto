@@ -191,7 +191,7 @@ extension FeelLibrary {
     /// The Chorus's accompaniment styles, and the feels the first idiom (electronic, lo-fi,
     /// sample-based) needs that neither source had.
     public static let standard = FeelLibrary(
-        Feels.grooveTheory + Feels.accompaniment + Feels.idiom
+        Feels.grooveTheory + Feels.accompaniment + Feels.idiom + Feels.latin
     )
 }
 

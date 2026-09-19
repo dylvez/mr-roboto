@@ -398,6 +398,8 @@ public actor Director {
         case "release": return "released the record"
         case "plan_mashup": return "read how the two songs meet"
         case "mashup": return "made the mashup"
+        case "start_song": return "started a song"
+        case "write_groove": return "wrote a beat"
         case "open_surface": return many ? "opened \(times) surfaces" : "opened a surface"
         case "propose": return many ? "offered \(times) suggestions" : "offered a suggestion"
         default: return many ? "\(tool) ×\(times)" : tool

@@ -215,6 +215,7 @@ public final class DirectorSession {
         case .toolStarted(let name):
             activity = DirectorSession.activity(for: name)
         case .toolFinished(let name, let isError, let message):
+            app?.recordTool(name, failed: isError, message: message)
             if isError { stumbles.append(Stumble(tool: name, reason: message)) }
             activity = nil
         case .opened(let kind, let title):
@@ -235,6 +236,8 @@ public final class DirectorSession {
         spendLine = result.spend.turnCount == 0 ? nil : result.spend.line
 
         app?.note(result.ending.voice, result.say, detail: result.detail)
+        // What the band made is kept as soon as the turn lands, not when you remember to save.
+        app?.saveIfNeeded()
 
         if !stumbles.isEmpty, result.ending.spoke {
             app?.note(.session,
@@ -311,6 +314,8 @@ public final class DirectorSession {
         case "release": return "Releasing the record…"
         case "plan_mashup": return "Reading how the two songs would meet…"
         case "mashup": return "Making the mashup…"
+        case "start_song": return "Starting a song from the idea…"
+        case "write_groove": return "Writing the beat…"
         case "open_surface": return "Opening a surface…"
         case "propose": return "Writing a suggestion…"
         default: return "\(tool)…"

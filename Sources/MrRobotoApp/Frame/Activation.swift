@@ -50,6 +50,12 @@ final class ActivationDelegate: NSObject, NSApplicationDelegate {
         if let opener { packages.forEach(opener) } else { waiting += packages }
     }
 
+    /// What to do on the way out: keep the open song's unsaved work and let the session file finish.
+    /// Set by the app once its state exists. Work the band made must not vanish because you quit.
+    var onQuit: (() -> Void)?
+
+    func applicationWillTerminate(_ notification: Notification) { onQuit?() }
+
     /// One window, one app: closing it should quit rather than leaving a menu bar with nothing
     /// under it.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }

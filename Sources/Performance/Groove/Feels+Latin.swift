@@ -1,0 +1,126 @@
+import MusicTheory
+import SongGraph
+
+// Latin feels, written for this app. The library had one — Bossa Nova — so "something Latin" had
+// one answer. These are the patterns every drummer's method book agrees on, kept to what a drum
+// machine's voices can say: the clave on the rim, the conga's open tones on the perc voice, the
+// surdo on the kick. Each is two bars of sixteenths, because the clave is a two-bar cycle and a
+// feel that stops after one bar of it has said half a sentence.
+//
+// They are marked `original`, not `researched`: no source is cited for the step numbers, and the
+// provenance says what each line is standing in for so a persona — or a player who knows better —
+// can argue with it.
+extension Feels {
+
+    static let latin: [Feel] = [sonClave32, sonClave23, rumbaClave, salsaTumbao, chaCha, samba, baiao, dembow]
+
+    private static func twoBars(_ patterns: [GroovePattern], swing: Double = 0) -> Groove {
+        Groove(stepsPerBar: 16, bars: 2, swing: swing, patterns: patterns)
+    }
+
+    private static func written(_ summary: String, lineage: [String]) -> Provenance {
+        Provenance(origin: .original, summary: summary, lineage: lineage)
+    }
+
+    /// The same steps in both bars.
+    private static func both(_ steps: [Int]) -> [Int] { steps + steps.map { $0 + 16 } }
+
+    static let sonClave32 = Feel(
+        name: "Son Clave 3-2",
+        idioms: [.latin],
+        tempoRange: 85...125, suggestedTempo: 100,
+        groove: twoBars([
+            line(.closedHat, steps: 32, beat: 4, on: eighths(upTo: 32)),
+            line(.rim, steps: 32, beat: 4, on: [0, 6, 12, 20, 24], accents: [0, 6, 12, 20, 24]),
+            line(.kick, steps: 32, beat: 4, on: both([6, 12])),
+        ]),
+        provenance: written("Son clave, three side first: three strokes in bar one, two in bar two, on the rim; the kick on the and of 2 and on 4, where the bass tumbao lands.",
+                            lineage: ["Cuban son", "salsa"]))
+
+    static let sonClave23 = Feel(
+        name: "Son Clave 2-3",
+        idioms: [.latin],
+        tempoRange: 85...125, suggestedTempo: 100,
+        groove: twoBars([
+            line(.closedHat, steps: 32, beat: 4, on: eighths(upTo: 32)),
+            line(.rim, steps: 32, beat: 4, on: [4, 8, 16, 22, 28], accents: [4, 8, 16, 22, 28]),
+            line(.kick, steps: 32, beat: 4, on: both([6, 12])),
+        ]),
+        provenance: written("Son clave, two side first: the same five strokes as 3-2 with the bars swapped, which is how most salsa tunes are phrased.",
+                            lineage: ["Cuban son", "salsa"]))
+
+    static let rumbaClave = Feel(
+        name: "Rumba Clave",
+        idioms: [.latin],
+        tempoRange: 90...130, suggestedTempo: 108,
+        groove: twoBars([
+            line(.closedHat, steps: 32, beat: 4, on: eighths(upTo: 32)),
+            line(.rim, steps: 32, beat: 4, on: [0, 6, 14, 20, 24], accents: [0, 6, 14, 20, 24]),
+            line(.kick, steps: 32, beat: 4, on: both([6, 12])),
+            line(.perc, steps: 32, beat: 4, on: both([12, 14])),
+        ]),
+        provenance: written("Rumba clave: son clave with its third stroke pushed a sixteenth late, the and of 4, which is what makes it lean. Conga open tones on 4 and the and of 4.",
+                            lineage: ["Cuban rumba", "guaguancó"]))
+
+    static let salsaTumbao = Feel(
+        name: "Salsa Tumbao",
+        idioms: [.latin],
+        tempoRange: 85...115, suggestedTempo: 96,
+        groove: twoBars([
+            line(.ride, steps: 32, beat: 4, on: eighths(upTo: 32), accents: both([0, 8])),
+            line(.rim, steps: 32, beat: 4, on: [4, 8, 16, 22, 28], accents: [4, 8, 16, 22, 28]),
+            line(.perc, steps: 32, beat: 4, on: both([12, 14]), ghosts: both([4])),
+            line(.kick, steps: 32, beat: 4, on: both([6, 12])),
+        ]),
+        provenance: written("The conga tumbao under a 2-3 clave: a slap on 2, open tones on 4 and the and of 4, a bell in eighths, and the kick where the bass anticipates.",
+                            lineage: ["salsa", "Fania-era New York"]))
+
+    static let chaCha = Feel(
+        name: "Cha-Cha-Chá",
+        idioms: [.latin],
+        tempoRange: 105...130, suggestedTempo: 118,
+        groove: twoBars([
+            line(.perc, steps: 32, beat: 4, on: both([0, 4, 8, 12]), accents: both([0, 4, 8, 12])),
+            line(.closedHat, steps: 32, beat: 4, on: eighths(upTo: 32)),
+            line(.rim, steps: 32, beat: 4, on: both([12, 14]), ghosts: both([6])),
+            line(.kick, steps: 32, beat: 4, on: both([0, 12])),
+        ]),
+        provenance: written("A cowbell on every beat over a güiro in eighths, and the 'cha-cha-chá' itself — 4, and, 1 — across the bar line on the rim and kick.",
+                            lineage: ["Enrique Jorrín", "Cuban charanga"]))
+
+    static let samba = Feel(
+        name: "Samba",
+        idioms: [.latin],
+        tempoRange: 90...120, suggestedTempo: 104,
+        groove: twoBars([
+            line(.closedHat, steps: 32, beat: 4, on: all(upTo: 32), accents: both([0, 3, 4, 7, 8, 11, 12, 15])),
+            line(.rim, steps: 32, beat: 4, on: [0, 3, 6, 10, 13, 16, 19, 22, 26, 29]),
+            line(.kick, steps: 32, beat: 4, on: both([0, 3, 4, 7, 8, 11, 12, 15]), accents: both([4, 12])),
+        ]),
+        provenance: written("The surdo's heartbeat on the kick — a light stroke, then the heavy one on 2 and 4 — under sixteenth shakers, with a simplified tamborim line on the rim.",
+                            lineage: ["Rio samba", "batucada"]))
+
+    static let baiao = Feel(
+        name: "Baião",
+        idioms: [.latin, .folk],
+        tempoRange: 90...125, suggestedTempo: 106,
+        groove: twoBars([
+            line(.closedHat, steps: 32, beat: 4, on: eighths(upTo: 32)),
+            line(.rim, steps: 32, beat: 4, on: both([6, 14])),
+            line(.kick, steps: 32, beat: 4, on: both([0, 3, 8, 11]), accents: both([0, 8])),
+        ]),
+        provenance: written("The zabumba's dotted figure — a long stroke and a short one — on the kick, its high skin answering on the rim, a triangle in eighths.",
+                            lineage: ["Luiz Gonzaga", "north-eastern Brazil"]))
+
+    static let dembow = Feel(
+        name: "Dembow",
+        idioms: [.latin, .hipHop],
+        tempoRange: 85...105, suggestedTempo: 94,
+        groove: twoBars([
+            line(.closedHat, steps: 32, beat: 4, on: eighths(upTo: 32)),
+            line(.snare, steps: 32, beat: 4, on: both([3, 6, 11, 14]), accents: both([6, 14])),
+            line(.kick, steps: 32, beat: 4, on: both([0, 4, 8, 12])),
+        ]),
+        provenance: written("Four on the floor with the snare on the a of 1 and the and of 2, twice a bar: the riddim under reggaeton.",
+                            lineage: ["Shabba Ranks' Dem Bow", "reggaeton"]))
+}

@@ -73,6 +73,9 @@ public enum DirectorTools {
             // Mashup, appended after the thirty-two: two songs on one grid, planned and made.
             PlanMashupTool(workspace: workspace).erased(),
             MashupTool(workspace: workspace).erased(),
+            // From an idea, appended after the thirty-four: a song with nothing imported, a beat written.
+            StartSongTool(workspace: workspace).erased(),
+            WriteGrooveTool(workbench: workbench, workspace: workspace).erased(),
         ]
         if let stage {
             let pad = pad ?? DirectorStagePad()
@@ -128,6 +131,9 @@ public enum DirectorTools {
         // Mashup, appended.
         "plan_mashup",
         "mashup",
+        // From an idea, appended.
+        "start_song",
+        "write_groove",
     ]
 
     /// The two the frame adds. Appended after `names`, never among them: a session with no frame

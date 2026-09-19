@@ -1,3 +1,4 @@
+import MusicTheory
 import Foundation
 import SongGraph
 
@@ -522,5 +523,41 @@ extension AppState {
             note(.session, "Could not copy the audio into \(song.title)", detail: "\(error)")
             return false
         }
+    }
+}
+
+// MARK: - From an idea
+
+extension AppState {
+    /// A song from nothing but an idea. An open song that holds nothing yet is set up in place;
+    /// otherwise the open one is saved and a new one opened. The drum machine is a sound part, so
+    /// the transport, the Grid and a controller all play the beat on it.
+    @discardableResult
+    public func startSong(title: String, tempo: Double, key: Key?, machine: String) -> Song? {
+        let name = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        // A song that holds only a drum machine is still a blank sketch: changing your mind about
+        // the tempo should not leave a trail of empty songs behind.
+        if let open = song, open.versions.allSatisfy({ $0.type == .sound }) {
+            updateSong { song in
+                if !name.isEmpty { song.title = name }
+                song.tempo = tempo
+                song.key = key
+            }
+        } else {
+            if hasUnsavedChanges { save() }
+            open(Song(title: name.isEmpty ? "Untitled" : name, key: key, tempo: tempo))
+        }
+        record(PartVersion(partID: PartID(), kind: .sound(Sound(instrument: machine)), author: .persona("Director"),
+                           operation: Operation.written, note: "The drum machine for this song"))
+        return song
+    }
+}
+
+extension AppState {
+    /// Saves the open song when it has unsaved work and there is a library to keep it in. Quiet
+    /// when there is nothing to do, so it can be called on every landed turn and on the way out.
+    public func saveIfNeeded() {
+        guard hasUnsavedChanges, store != nil, song != nil else { return }
+        save()
     }
 }

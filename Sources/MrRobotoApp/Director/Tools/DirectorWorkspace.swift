@@ -1,3 +1,4 @@
+import MusicTheory
 import AudioEngine
 import Foundation
 import Performance
@@ -100,6 +101,10 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     func release(album: AlbumID) async throws -> (URL, Export.AlbumReport)
     /// Two library songs on one grid, rendered and saved as a new song, which is opened.
     func makeMashup(_ request: MashupRequest) async throws -> Song
+    /// A song from an idea: an empty open song set up in place, or a new one opened. Nil when there is nowhere to.
+    func startSong(title: String, tempo: Double, key: Key?, machine: String) -> Song?
+    /// Plays a version for the user, now. False when this workspace has nothing to play through.
+    func hear(_ version: PartVersion) async -> Bool
 }
 
 /// `AppState` seen through the six things the Director needs.
@@ -185,6 +190,16 @@ public final class AppStateWorkspace: DirectorWorkspace {
     }
 
     public func makeMashup(_ request: MashupRequest) async throws -> Song { try await app.makeMashup(request) }
+
+    public func startSong(title: String, tempo: Double, key: Key?, machine: String) -> Song? {
+        app.startSong(title: title, tempo: tempo, key: key, machine: machine)
+    }
+
+    public func hear(_ version: PartVersion) async -> Bool {
+        let player = SurfaceWiring.shared.player(for: app)
+        await player.play(version)
+        return player.isPlaying(version)
+    }
 
     public func release(album id: AlbumID) async throws -> (URL, Export.AlbumReport) {
         guard let album = app.library.album(id) else { throw Export.ReleaseFailure.noAlbum }
@@ -389,6 +404,19 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
     public func makeMashup(_ request: MashupRequest) async throws -> Song {
         throw DirectorToolFailure(tool: "mashup", reason: "This workspace has nowhere to render audio into.")
     }
+
+    public func startSong(title: String, tempo: Double, key: Key?, machine: String) -> Song? {
+        var fresh = song.flatMap { $0.versions.allSatisfy { $0.type == .sound } ? $0 : nil } ?? Song(title: title.isEmpty ? "Untitled" : title)
+        if !title.isEmpty { fresh.title = title }
+        fresh.tempo = tempo
+        fresh.key = key
+        try? fresh.append(PartVersion(partID: PartID(), kind: .sound(Sound(instrument: machine)), author: .persona("Director"), operation: Operation.written, note: "The drum machine"))
+        song = fresh
+        return fresh
+    }
+
+    public private(set) var heard: [VersionID] = []
+    public func hear(_ version: PartVersion) async -> Bool { heard.append(version.id); return false }
 
     public func export(_ what: String) async throws -> [URL] {
         guard let current = song, what == "midi" else {
