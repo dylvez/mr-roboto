@@ -5,6 +5,8 @@ import SwiftUI
 /// overlay under them says where two parts share energy.
 struct MixerSurfaceView: View {
     @Bindable var model: MixerModel
+    /// The controller, for Learn on a fader. Nil in a render with no rig.
+    var midi: MIDIControl?
 
     var body: some View {
         VStack(alignment: .leading, spacing: Design.Metric.gutter) {
@@ -43,13 +45,26 @@ struct MixerSurfaceView: View {
                 MixLabel("Comp").frame(width: 60, alignment: .leading)
                 MixLabel("Meter").fixedSize().frame(maxWidth: .infinity, alignment: .leading)
             }
-            ForEach(model.rows) { row in
-                stripRow(row)
+            ForEach(Array(model.rows.enumerated()), id: \.element.id) { index, row in
+                stripRow(row, index: index)
             }
         }
     }
 
-    private func stripRow(_ row: MixerModel.Row) -> some View {
+    /// Inputs I7: a chip that binds the next control change moved to this fader, and says which
+    /// control has it now.
+    @ViewBuilder
+    private func learnChip(_ target: ControlTarget) -> some View {
+        if let midi {
+            let bound = midi.map.controller(for: target)
+            BoothChip(midi.learning == target ? "move a knob…" : (bound.map { "cc \($0)" } ?? "learn"), isOn: midi.learning == target) {
+                midi.learn(midi.learning == target ? nil : target)
+            }
+            .help(bound.map { "Control change \($0) moves this fader. Click, then move a knob, to change it." } ?? "Click, then move a knob on the controller.")
+        }
+    }
+
+    private func stripRow(_ row: MixerModel.Row, index: Int) -> some View {
         let strip = model.strip(row.part)
         return HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
@@ -57,6 +72,7 @@ struct MixerSurfaceView: View {
                 HStack(spacing: 4) {
                     MixToggle("M", isOn: strip.isMuted, tint: Design.Palette.warn) { model.toggleMute(row.part) }
                     MixToggle("S", isOn: strip.isSoloed, tint: Design.Palette.accent) { model.toggleSolo(row.part) }
+                    learnChip(.strip(index))
                 }
             }
             .frame(width: 120, alignment: .leading)
@@ -96,7 +112,11 @@ struct MixerSurfaceView: View {
 
     private var masterRow: some View {
         HStack(spacing: 12) {
-            Text("Master").font(Design.Typography.ui(13, weight: .medium)).frame(width: 120, alignment: .leading)
+            HStack(spacing: 6) {
+                Text("Master").font(Design.Typography.ui(13, weight: .medium))
+                learnChip(.master)
+            }
+            .frame(width: 120, alignment: .leading)
             fader(value: model.mix.master.gainDB, range: -24...24, format: "%+.1f dB", width: 200) { model.setMaster(gainDB: $0) }
             fader(value: model.mix.master.ceilingDBTP, range: -12...0, format: "ceiling %.1f dBTP", width: 140) { model.setMaster(ceilingDBTP: $0) }
             fader(value: model.mix.master.targetLUFS, range: -30 ... -6, format: "target %.0f LUFS", width: 140) { model.setMaster(targetLUFS: $0) }

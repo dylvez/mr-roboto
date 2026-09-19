@@ -17,6 +17,7 @@ struct TransportBar: View {
             controls
             keyAndTempo
             position
+            midi
             sectionStrip
         }
         .padding(.horizontal, 40)
@@ -93,6 +94,31 @@ struct TransportBar: View {
                     .help("\(silence.headline). \(silence.detail)")
             }
         }
+    }
+
+    /// Inputs I5: the controller on the kit, the bass, or nothing, and which controller it is.
+    private var midi: some View {
+        let control = SurfaceWiring.shared.midi(for: app)
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 4) {
+                ForEach(MIDIControl.Mode.allCases, id: \.self) { mode in
+                    BoothChip(mode.title, isOn: control.mode == mode) { control.mode = mode }
+                }
+            }
+            Text(midiLine(control))
+                .font(Design.Typography.ui(11, weight: .regular))
+                .foregroundStyle(control.mode == .off ? Design.Palette.inkTertiary : Design.Palette.inkSecondary)
+                .lineLimit(1)
+        }
+        .frame(width: 150, alignment: .leading)
+        .help("A MIDI controller plays the song's kit or its bass now; while the Booth records, what you play lands as a groove or a bass line.")
+    }
+
+    private func midiLine(_ control: MIDIControl) -> String {
+        if let error = control.lastError { return error }
+        if control.isCapturing { return "Capturing on \(control.lastSource ?? control.sources.first ?? "MIDI")" }
+        if let source = control.lastSource ?? control.sources.first { return control.mode == .off ? source : "\(source) → \(control.mode.title)" }
+        return "No controller"
     }
 
     private var keyAndTempo: some View {

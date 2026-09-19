@@ -117,7 +117,7 @@ public final class SurfaceRegistry {
             TakesSurfaceView(model: SurfaceWiring.shared.takesModel(for: item, app: app))
         }
         registry.register(.mixer) { item, app in
-            MixerSurfaceView(model: SurfaceWiring.shared.mixerModel(for: item, app: app))
+            MixerSurfaceView(model: SurfaceWiring.shared.mixerModel(for: item, app: app), midi: SurfaceWiring.shared.midi(for: app))
         }
         registry.register(.master) { item, app in
             MasterSurfaceView(model: SurfaceWiring.shared.masterModel(for: item, app: app))

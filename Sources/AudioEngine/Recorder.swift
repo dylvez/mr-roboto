@@ -27,31 +27,86 @@ public protocol RecordingSource: AnyObject {
     func end()
 }
 
-/// The engine's input node, tapped.
+/// The engine's input node, tapped — the whole device, or one of its channels as mono.
 public final class InputNodeSource: RecordingSource {
     private let engine: AVAudioEngine
+    private let tapFormat: AVAudioFormat
     public let format: AVAudioFormat
     public let name: String
     public let latencySeconds: Double
+    /// The channel kept, 0-based, or nil for every channel.
+    public let channel: Int?
 
-    public init(engine: AVAudioEngine) {
+    /// - Parameters:
+    ///   - engine: whose input node.
+    ///   - channel: one channel, 0-based, delivered as mono; nil keeps the device's format.
+    ///   - deviceName: what the take's record says, e.g. "Scarlett 2i2".
+    public init(engine: AVAudioEngine, channel: Int? = nil, deviceName: String = "Input") {
         self.engine = engine
         let input = engine.inputNode
-        format = input.outputFormat(forBus: 0)
-        name = "Input"
+        let tap = input.outputFormat(forBus: 0)
+        tapFormat = tap
+        var picked: Int?
+        if let channel, tap.channelCount > 1, channel < Int(tap.channelCount) { picked = channel }
+        self.channel = picked
+        format = picked == nil ? tap : (AVAudioFormat(standardFormatWithSampleRate: tap.sampleRate, channels: 1) ?? tap)
+        name = picked.map { "\(deviceName), input \($0 + 1)" } ?? deviceName
         latencySeconds = input.presentationLatency + engine.outputNode.presentationLatency
     }
 
     public func begin(_ sink: @escaping @Sendable (AVAudioPCMBuffer, AVAudioTime) -> Void) throws {
-        guard format.sampleRate > 0, format.channelCount > 0 else { throw RecorderError.noInput }
-        engine.inputNode.installTap(onBus: 0, bufferSize: 1_024, format: format) { buffer, time in
-            sink(buffer, time)
+        guard tapFormat.sampleRate > 0, tapFormat.channelCount > 0 else { throw RecorderError.noInput }
+        let channel = self.channel
+        let mono = format
+        engine.inputNode.installTap(onBus: 0, bufferSize: 1_024, format: tapFormat) { buffer, time in
+            if let channel, let picked = ChannelPick.mono(buffer, channel: channel, format: mono) {
+                sink(picked, time)
+            } else {
+                sink(buffer, time)
+            }
         }
     }
 
     public func end() {
         engine.inputNode.removeTap(onBus: 0)
     }
+}
+
+/// One channel of a buffer as a mono buffer.
+public enum ChannelPick {
+    public static func mono(_ buffer: AVAudioPCMBuffer, channel: Int, format: AVAudioFormat) -> AVAudioPCMBuffer? {
+        guard let data = buffer.floatChannelData, channel < Int(buffer.format.channelCount),
+              let out = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: buffer.frameLength) else { return nil }
+        out.frameLength = buffer.frameLength
+        guard let target = out.floatChannelData else { return nil }
+        target[0].update(from: data[channel], count: Int(buffer.frameLength))
+        return out
+    }
+}
+
+/// A source narrowed to one channel of another, for a test or a file.
+public final class ChannelSource: RecordingSource {
+    private let inner: any RecordingSource
+    public let channel: Int
+    public let format: AVAudioFormat
+    public var latencySeconds: Double { inner.latencySeconds }
+    public let name: String
+
+    public init(_ inner: any RecordingSource, channel: Int) {
+        self.inner = inner
+        self.channel = channel
+        format = AVAudioFormat(standardFormatWithSampleRate: inner.format.sampleRate, channels: 1) ?? inner.format
+        name = "\(inner.name), input \(channel + 1)"
+    }
+
+    public func begin(_ sink: @escaping @Sendable (AVAudioPCMBuffer, AVAudioTime) -> Void) throws {
+        let channel = self.channel, mono = format
+        try inner.begin { buffer, time in
+            if let picked = ChannelPick.mono(buffer, channel: channel, format: mono) { sink(picked, time) }
+        }
+    }
+
+    public func end() { inner.end() }
 }
 
 /// Buffers handed in by a test, each with its capture time, delivered on `begin`.

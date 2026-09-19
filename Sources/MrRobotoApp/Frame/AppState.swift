@@ -142,6 +142,9 @@ public final class LiveTransportHost: TransportHost {
     public func engine() async throws -> Engine {
         if let built { return built }
         let engine = try await Engine()
+        // The remembered input device, before the engine runs: the input node's device is best set while it is stopped.
+        let uid = InputSettings().choice.deviceUID
+        if uid != nil { try? await engine.setInputDevice(uid: uid) }
         built = engine
         return engine
     }

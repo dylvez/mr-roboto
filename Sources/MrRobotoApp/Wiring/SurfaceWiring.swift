@@ -72,6 +72,31 @@ final class SurfaceWiring {
     /// test that needs the rig on its own kit cache and engine; the app never calls this.
     func use(_ service: AuditionService) { self.service = service }
 
+    private var midiControl: MIDIControl?
+
+    /// The controller, on the shared rig. One per process, like the service it plays through.
+    func midi(for app: AppState) -> MIDIControl {
+        if let midiControl { return midiControl }
+        let built = MIDIControl(app: app, service: service(for: app))
+        built.mixer = { [unowned self] in self.mixer(for: app) }
+        midiControl = built
+        return built
+    }
+
+    private var headlessMixer: MixerModel?
+
+    /// The Mixer a controller moves: an open Mixer surface's model, else one kept here on the
+    /// song's newest mix, rebuilt when that mix moved on without it.
+    func mixer(for app: AppState) -> MixerModel {
+        prune(app)
+        if let open = mixers.values.first { return open }
+        let newest = app.song.flatMap { Guidance.mixes(in: $0).last }
+        if let headlessMixer, headlessMixer.base?.id == newest?.id { return headlessMixer }
+        let built = MixerModel(host: MixAdapter(app: app), base: newest)
+        headlessMixer = built
+        return built
+    }
+
     // MARK: Models
 
     /// The Import surface, in one of its two lives.

@@ -28,8 +28,15 @@ private final class StubBoothHost: BoothHosting, TakesHosting {
     func play() async { isPlaying = true; playhead = 0 }
     func stop() async { isPlaying = false }
     func recorder() async throws -> Recorder {
-        Recorder(source: try BufferSource(buffers, latencySeconds: 0.01, name: "Stub mic"), transport: transport)
+        let source: any RecordingSource = try BufferSource(buffers, latencySeconds: 0.01, name: "Stub mic")
+        if let channel = input.channel { return Recorder(source: ChannelSource(source, channel: channel), transport: transport) }
+        return Recorder(source: source, transport: transport)
     }
+    var inputs: [AudioInputDevice] = [
+        AudioInputDevice(id: 1, name: "MacBook Pro Microphone", uid: "builtin", inputChannels: 1, isDefault: true),
+        AudioInputDevice(id: 2, name: "Scarlett 2i2", uid: "scarlett", inputChannels: 2, isDefault: false),
+    ]
+    var input = InputChoice()
     func scratchURL() -> URL { FileManager.default.temporaryDirectory.appendingPathComponent("booth-\(UUID().uuidString).wav") }
     func keep(_ recording: Recorder.Recording, take: Take) -> PartVersion? {
         let audio = Audio(media: MediaRef(hash: ContentHash(hex: String(repeating: "a", count: 64))!, fileExtension: "wav"), role: .take,
@@ -108,6 +115,51 @@ struct BoothTests {
         await model.record()
         let second = await model.stopRecording(stopSong: true)
         #expect(second?.partID == version?.partID && Guidance.audio(of: second!)?.take?.pass == 2)
+    }
+
+    @Test("a channel chosen on a two-input interface records mono, and the take names the input")
+    func channelChoice() async throws {
+        let host = StubBoothHost(song: song())
+        host.transport = Transport(clock: host.clock, mode: .offline(sampleRate: 48_000, maximumFrames: 4_096), originSampleTime: 0)
+        let format = AVAudioFormat(standardFormatWithSampleRate: 48_000, channels: 2)!
+        host.buffers = (0..<3).map { i in
+            let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 2_048)!
+            buffer.frameLength = 2_048
+            for f in 0..<2_048 { buffer.floatChannelData![0][f] = Float(0.4 * sin(2 * .pi * 220 * Double(f) / 48_000)); buffer.floatChannelData![1][f] = 0 }
+            return (buffer, AVAudioTime(sampleTime: host.clock.frame(forBar: 1) + AVAudioFramePosition(i * 2_048), atRate: 48_000))
+        }
+        let model = BoothModel(host: host)
+        #expect(model.inputLine == "MacBook Pro Microphone — the system's default input.")
+        model.input = InputChoice(deviceUID: "scarlett", channel: 0)
+        #expect(host.input == model.input, "the choice reaches the host")
+        #expect(model.inputDevice?.name == "Scarlett 2i2")
+        #expect(model.inputLine == "Scarlett 2i2, input 1")
+        await model.record()
+        let version = try #require(await model.stopRecording(stopSong: true))
+        let audio = try #require(Guidance.audio(of: version))
+        #expect(audio.channelCount == 1)
+        #expect(audio.take?.input == "Stub mic, input 1")
+    }
+
+    @Test("the input choice: a missing device falls back to the default and says so; the choice is remembered")
+    func inputChoice() throws {
+        let devices = StubBoothHost(song: song()).inputs
+        let gone = InputChoice(deviceUID: "old-interface", channel: 1)
+        #expect(gone.isFallingBack(in: devices) && gone.device(in: devices)?.uid == "builtin")
+        #expect(gone.channel(on: gone.device(in: devices)) == nil, "a mono default has no channel to pick")
+        #expect(gone.describe(in: devices).hasSuffix("the remembered device is not here, so this is the system's default."))
+        #expect(InputChoice(deviceUID: "scarlett", channel: 5).describe(in: devices) == "Scarlett 2i2", "a channel past the device is every channel")
+        #expect(InputChoice().describe(in: []) == "No input device is here.")
+
+        let suite = "inputs-test-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = InputSettings(defaults: defaults)
+        #expect(settings.choice == InputChoice())
+        settings.choice = InputChoice(deviceUID: "scarlett", channel: 1)
+        #expect(InputSettings(defaults: defaults).choice == InputChoice(deviceUID: "scarlett", channel: 1))
+        settings.choice = InputChoice()
+        #expect(InputSettings(defaults: defaults).choice == InputChoice())
     }
 
     @Test("with no input the Booth says so and stays idle")

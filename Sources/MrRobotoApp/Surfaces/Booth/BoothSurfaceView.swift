@@ -53,6 +53,7 @@ struct BoothSurfaceView: View {
                 BoothChip("Whole song", isOn: model.section == nil) { model.section = nil }
             }
             BoothLabel("Input")
+            inputPicker
             LevelBar(level: model.level)
                 .frame(width: 260, height: 10)
             HStack(spacing: 8) {
@@ -79,6 +80,36 @@ struct BoothSurfaceView: View {
                 .foregroundStyle(Design.Palette.inkSecondary)
         }
         .frame(width: 320, alignment: .topLeading)
+    }
+
+    /// The device by name, the channel on a device with more than one, and what the take will say.
+    private var inputPicker: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Picker("Device", selection: Binding(
+                get: { model.input.deviceUID ?? "" },
+                set: { uid in model.input = InputChoice(deviceUID: uid.isEmpty ? nil : uid, channel: model.input.channel) })) {
+                Text("System default").tag("")
+                ForEach(model.inputs) { device in
+                    Text("\(device.name) · \(device.inputChannels) in").tag(device.uid)
+                }
+            }
+            .labelsHidden()
+            .font(Design.Typography.ui(12))
+            .frame(width: 260, alignment: .leading)
+            if let device = model.inputDevice, device.inputChannels > 1 {
+                FlowRow(spacing: 6) {
+                    ForEach(0..<min(device.inputChannels, 16), id: \.self) { channel in
+                        BoothChip("Input \(channel + 1)", isOn: model.input.channel == channel) { model.input.channel = channel }
+                    }
+                    BoothChip("All \(device.inputChannels)", isOn: model.input.channel == nil) { model.input.channel = nil }
+                }
+            }
+            Text(model.inputLine)
+                .font(Design.Typography.ui(11))
+                .foregroundStyle(Design.Palette.inkSecondary)
+                .lineLimit(2)
+                .frame(width: 300, alignment: .leading)
+        }
     }
 
     private var takesList: some View {

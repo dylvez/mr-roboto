@@ -29,13 +29,25 @@ final class BoothAdapter: BoothHosting, TakesHosting {
 
     func recorder() async throws -> Recorder {
         let engine = try await app.engine()
-        return try await Self.recorder(on: engine)
+        let choice = input
+        let device = choice.device(in: inputs)
+        return try await Self.recorder(on: engine, uid: device?.uid, channel: choice.channel(on: device), deviceName: device?.name ?? "Input")
+    }
+
+    var inputs: [AudioInputDevice] { AudioDevices.inputs() }
+
+    var input: InputChoice {
+        get { InputSettings().choice }
+        set { InputSettings().choice = newValue }
     }
 
     @AudioActor
-    private static func recorder(on engine: Engine) throws -> Recorder {
+    private static func recorder(on engine: Engine, uid: String?, channel: Int?, deviceName: String) throws -> Recorder {
         guard let transport = engine.transport else { throw RecorderError.notRecording }
-        return Recorder(source: InputNodeSource(engine: engine.avEngine), transport: transport)
+        // The chosen device on the input node; a device that cannot be set leaves the default, and the take says which.
+        var name = deviceName
+        do { try engine.setInputDevice(uid: uid) } catch { name = "Input" }
+        return Recorder(source: InputNodeSource(engine: engine.avEngine, channel: channel, deviceName: name), transport: transport)
     }
 
     func scratchURL() -> URL {
@@ -60,6 +72,19 @@ final class BoothAdapter: BoothHosting, TakesHosting {
     }
 
     func note(_ text: String, detail: String?) { app.note(.session, text, detail: detail) }
+
+    func recordingStarted(section: SectionID?, startedAt: Double) {
+        let midi = SurfaceWiring.shared.midi(for: app)
+        guard midi.mode != .off else { return }
+        Task {
+            guard let engine = try? await app.engine(), let clock = await engine.transport?.clock else { return }
+            midi.beginCapture(section: section, clock: clock, startedAt: startedAt)
+        }
+    }
+
+    func recordingEnded(endedAt: Double) {
+        SurfaceWiring.shared.midi(for: app).endCapture(endedAt: endedAt)
+    }
 
     /// Media into the song's package, saving the song first when it has no package yet.
     private func store(_ url: URL, in song: Song) -> MediaRef? {

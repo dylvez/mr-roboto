@@ -327,21 +327,31 @@ public final class AuditionService {
     }
 
     /// Play bass hits now, on whichever bass voice is loaded. `Hit.time` is seconds from this instant.
-    public func playBass(_ hits: [VoiceSampler.Hit]) async {
-        guard !hits.isEmpty else { return }
+    /// The handles stop a held note (`stopBass`) — a key on a controller, let go.
+    @discardableResult
+    public func playBass(_ hits: [VoiceSampler.Hit]) async -> [VoiceSampler.VoiceHandle] {
+        guard !hits.isEmpty else { return [] }
         guard let bassSampler, bassSampler.kit != nil else {
             lastFailure = "no bass is prepared to play"
-            return
+            return []
         }
         do {
             let engine = try await running()
             let now = renderPosition(on: engine, node: bassSampler.node)
             bassSampler.transportDidStart(originSampleTime: now, sampleRate: engine.format.sampleRate)
-            _ = try bassSampler.play(hits)
+            let handles = try bassSampler.play(hits)
             lastFailure = nil
+            return handles
         } catch {
             lastFailure = "\(error)"
+            return []
         }
+    }
+
+    /// Lets go of held bass notes, now.
+    public func stopBass(_ handles: [VoiceSampler.VoiceHandle]) {
+        guard let bassSampler else { return }
+        for handle in handles { bassSampler.stop(handle) }
     }
 
     // MARK: Stopping

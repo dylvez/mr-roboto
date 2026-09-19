@@ -11,13 +11,26 @@ public protocol BoothHosting: AnyObject {
     var playhead: Double { get }
     func play() async
     func stop() async
-    /// A recorder against the running transport. Throws when there is no input.
+    /// A recorder against the running transport, on the chosen input. Throws when there is no input.
     func recorder() async throws -> Recorder
+    /// The input devices here now, the system's default first.
+    var inputs: [AudioInputDevice] { get }
+    /// Which device and channel a take comes from; remembered across launches.
+    var input: InputChoice { get set }
     /// Where a take is written while it records.
     func scratchURL() -> URL
     /// Keeps a recording as a take version. Nil, with the reason in the rail, when it cannot be.
     func keep(_ recording: Recorder.Recording, take: Take) -> PartVersion?
     func note(_ text: String, detail: String?)
+    /// The take started: a controller in Kit or Bass mode is captured alongside it.
+    func recordingStarted(section: SectionID?, startedAt: Double)
+    /// The take stopped, whatever it held.
+    func recordingEnded(endedAt: Double)
+}
+
+public extension BoothHosting {
+    func recordingStarted(section: SectionID?, startedAt: Double) {}
+    func recordingEnded(endedAt: Double) {}
 }
 
 /// The Booth: pick a section, arm, record while the song plays, stop — that is a take.
@@ -46,6 +59,10 @@ public final class BoothModel {
     public private(set) var lastError: String?
     /// Transport seconds the recorder started at, for the display.
     public private(set) var startedAt: Double?
+    /// The device and channel the next take comes from.
+    public var input: InputChoice {
+        didSet { host.input = input }
+    }
 
     private let host: any BoothHosting
     private var recorder: Recorder?
@@ -56,7 +73,17 @@ public final class BoothModel {
         self.surfaceID = surfaceID
         self.section = host.song?.sections.first?.id
         self.takes = host.song.map(Guidance.takes(in:)) ?? []
+        self.input = host.input
     }
+
+    /// The input devices here now.
+    public var inputs: [AudioInputDevice] { host.inputs }
+
+    /// The chosen device, when it is here.
+    public var inputDevice: AudioInputDevice? { input.device(in: inputs) }
+
+    /// What the next take will say it came from — or why it falls back.
+    public var inputLine: String { input.describe(in: inputs) }
 
     public var song: Song? { host.song }
     public var clock: TransportClock { host.clock }
@@ -107,6 +134,7 @@ public final class BoothModel {
             self.recorder = recorder
             startedAt = host.playhead
             state = .recording
+            host.recordingStarted(section: section, startedAt: host.playhead)
             watch()
         } catch {
             lastError = "\(error)"
@@ -123,6 +151,7 @@ public final class BoothModel {
         self.recorder = nil
         state = .idle
         level = 0
+        host.recordingEnded(endedAt: host.playhead)
         let recording: Recorder.Recording
         do {
             recording = try recorder.stop()
