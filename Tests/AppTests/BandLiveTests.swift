@@ -395,6 +395,85 @@ struct BandLiveTests {
         report("saved", "no — the run is in memory only")
     }
 
+    // MARK: M4 Gate C, P13 — the room convened, live
+
+    static let roomLine = "Is this verse working?"
+
+    /// Arrival as it is, arranged if it is not, with the Producer, the Engineer and the Peer in the
+    /// room. One turn: the Director convenes, three personas are heard in their own units, and the
+    /// disagreement (if one shows) is a Compare. In memory only; cost reported.
+    @Test("M4 P13: \"Is this verse working?\" — one turn, three personas in their own units, cost reported")
+    func roomLive() async throws {
+        let state = AppState.live()
+        let registry = SurfaceRegistry()
+        SurfaceRegistry.registerSurfaces(in: registry)
+        let arrival = try #require(state.library.songs.first { $0.title == "Arrival" })
+        state.openSong(arrival.id)
+        if state.song.map({ Guidance.grooves(in: $0).isEmpty }) ?? true {
+            let feel = try #require(FeelLibrary.standard.feel(named: "Boom-Bap Pocket"))
+            #expect(state.record(PartVersion(partID: PartID(), kind: .groove(feel.groove), author: .user,
+                                             operation: Operation.written, note: "Boom-Bap Pocket")))
+        }
+        if let song = state.song, Guidance.basslines(in: song).isEmpty,
+           let grooveVersion = Guidance.grooves(in: song).last, case .groove(let groove) = grooveVersion.kind {
+            let key = Guidance.analysis(in: song)?.dominantKey ?? song.key ?? Key(tonic: NoteName(.d))
+            let request = BassRequest(key: key, chords: [], groove: groove, tempo: song.tempo,
+                                      timeSignature: song.timeSignature, lineage: .palladino, lagMS: 40,
+                                      density: 0.4, sound: "finger", seed: 1)
+            #expect(state.record(PartVersion(partID: PartID(), kind: .bassline(BassWriter.write(request)),
+                                             author: .persona("Bassist"), parents: [grooveVersion.id],
+                                             operation: Operation.written, note: "Palladino line, +40 ms")))
+        }
+        if let song = state.song, song.sections.isEmpty {
+            let stitch = [Guidance.grooves(in: song).last?.id, Guidance.basslines(in: song).last?.id].compactMap { $0 }
+            #expect(state.arrange([Section(name: "Verse", stitch: stitch, lengthInBars: 16),
+                                   Section(name: "Hook", stitch: stitch, lengthInBars: 8)]))
+        }
+        #expect(state.setCast([.producer, .engineer, .peer]))
+        let band = try #require(state.band)
+        try #require(await band.director.keyStatus().hasKey, "no API key")
+        report("song", "\(state.song?.title ?? "") · \(state.song?.tempo ?? 0) bpm · "
+            + "\(state.song?.sections.map { "\($0.name) \($0.lengthInBars)" }.joined(separator: " | ") ?? "") · cast \(state.song?.cast ?? [])")
+
+        let log = LiveTurnLog()
+        let started = Date()
+        let turn = await band.director.direct(Self.roomLine) { event in
+            switch event {
+            case .toolStarted(let name): log.started(name)
+            case .toolFinished(let name, let isError, let message): log.finished(name, isError: isError, message: message)
+            case .opened(let kind, let title): log.opened(kind, title)
+            case .say, .finished: break
+            }
+        }
+        report("room ending", "\(turn.ending)")
+        report("room elapsed", String(format: "%.1f s", Date().timeIntervalSince(started)))
+        report("room calls", log.calls.joined(separator: " → "))
+        for failure in log.errors { report("  failed", failure) }
+        report("room opened", log.opens.joined(separator: " · "))
+        report("room said", turn.say)
+        describeSpend(turn.spend, label: "room turn")
+
+        let personas = state.log.compactMap { entry -> (String, String)? in
+            if case .persona(let name) = entry.source { return (name, entry.text) }
+            return nil
+        }
+        for (name, text) in personas { report("  \(name)", text) }
+        let compares = state.bench.items.filter { $0.kind == .compare }
+        for item in compares {
+            report("compare", item.title)
+            if case .compare(let brief)? = state.answer(for: item.id) {
+                report("  against", "\(brief.reference.title) — \(brief.reference.kind)")
+                for candidate in brief.candidates { report("  row", "\(candidate.title): \(candidate.rationale)") }
+            }
+        }
+        #expect(turn.ending == .answered)
+        #expect(log.calls.contains("convene"), "the Director did not convene the room")
+        let heard = Set(personas.map(\.0))
+        #expect(heard.isSuperset(of: ["Peer", "Producer", "Engineer"]), "heard: \(heard)")
+        #expect(!turn.say.isEmpty)
+        report("saved", "no — the run is in memory only")
+    }
+
     // MARK: Reporting
 
     private func describe(_ id: VersionID, in state: AppState) -> String {
