@@ -1,3 +1,4 @@
+import SongGraph
 import SwiftUI
 
 /// The bench: the dock of surfaces, then the surface you are working in, filling everything below it.
@@ -55,13 +56,21 @@ struct BenchColumn: View {
                 .frame(maxWidth: .infinity)
             }
             emptyNote
+            if app.song == nil {
+                HStack(spacing: 8) {
+                    Button("Import a Record…") { MrRobotoApp.importRecord(app) }
+                        .buttonStyle(.borderedProminent)
+                    Button("New Song") { app.open(Song(title: MrRobotoApp.untitledName())) }
+                }
+                .font(Design.Typography.ui(12.5))
+            }
         }
     }
 
     private var emptyNote: some View {
         EmptyNote(title: app.song == nil ? "Nothing open." : "The bench is empty.",
                   detail: app.song == nil
-                      ? "Open a song from the library and its record lands here. Or press Record above and drop an audio file on it."
+                      ? "Open a song from the library and its record lands here. Or import a record: choose an audio file here or with File ▸ Import Record (⌘I), or drop one on the Record surface."
                       : "Press a surface above and it fills the bench. Pin one to keep it on screen while you work in another.")
             .padding(Design.Metric.inset)
             .frame(maxWidth: .infinity, alignment: .leading)

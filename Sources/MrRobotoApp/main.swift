@@ -57,7 +57,9 @@ struct FrameCommands: Commands {
         CommandGroup(replacing: .newItem) {
             Button("New Song") { app.open(Song(title: MrRobotoApp.untitledName())) }
                 .keyboardShortcut("n", modifiers: .command)
-            Button("Import Record…") { app.openSurface(.importRecord, title: "Record") }
+            // The dialog first: cancelling it opens nothing, and choosing a file opens the Record
+            // surface already importing it. The surface's own well still takes a drop.
+            Button("Import Record…") { MrRobotoApp.importRecord(app) }
                 .keyboardShortcut("i", modifiers: .command)
             Button("New Album") {
                 if let id = app.createAlbum(title: "New album") { app.openAlbum(id) }
@@ -179,6 +181,17 @@ private func themeShortcutNumber(_ theme: Design.Theme) -> Int {
 
 extension MrRobotoApp {
     /// "Untitled, Sept 17" — the same shape the mockups use.
+    /// File ▸ Import Record and the empty bench's button: the open dialog, then the Record surface
+    /// already importing what was chosen. Cancelling opens nothing.
+    @MainActor
+    static func importRecord(_ app: AppState) {
+        guard let url = FilePanels.chooseAudio() else { return }
+        let id = app.openSurface(.importRecord, title: "Record")
+        if let item = app.bench.items.first(where: { $0.id == id }) {
+            SurfaceWiring.shared.importModel(for: item, app: app).drop(url)
+        }
+    }
+
     static func untitledName(_ date: Date = Date()) -> String {
         "Untitled, \(date.formatted(.dateTime.month(.abbreviated).day()))"
     }

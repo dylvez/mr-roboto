@@ -190,7 +190,11 @@ private struct AlbumBody: View {
                     Text("The cover image is missing from the library.").font(Design.Typography.ui(12)).foregroundStyle(Design.Palette.warn)
                 }
             }
-            Text("Drop an image here for a cover of your own.").font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.inkTertiary)
+            Button("Choose an Image…") {
+                if let url = FilePanels.chooseImage() { app.setCover(imageAt: url, for: album.id) }
+            }
+            .font(Design.Typography.ui(12))
+            Text("Or drop an image here for a cover of your own.").font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.inkTertiary)
         }
         .frame(width: 220, alignment: .topLeading)
     }

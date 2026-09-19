@@ -83,13 +83,18 @@ private struct DropWell: View {
     var body: some View {
         VStack(spacing: 10) {
             ArtImage("empty-drop-record", width: 240, height: 160)
-            Text("Drop a record here")
+            Text("Drop a record here, or choose one")
                 .font(Design.Typography.prose(17))
                 .foregroundStyle(Design.Palette.ink)
             Text("An audio file becomes a song package: key, tempo, bars, sections and a take.")
                 .font(Design.Typography.ui(12.5, weight: .regular))
                 .foregroundStyle(Design.Palette.inkSecondary)
                 .multilineTextAlignment(.center)
+            Button("Choose a File…") {
+                if let url = FilePanels.chooseAudio() { model.drop(url) }
+            }
+            .font(Design.Typography.ui(12.5))
+            .keyboardShortcut("o", modifiers: .command)
             if case .cancelled = model.state {
                 Text("Cancelled. Nothing was written.")
                     .font(Design.Typography.ui(12))
