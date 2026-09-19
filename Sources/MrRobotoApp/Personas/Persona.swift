@@ -555,16 +555,34 @@ public struct PersonaDisagreement: Hashable, Sendable, Identifiable, Codable {
     public var theirs: String
     /// What decides it: a measurement, or a stated rule about who wins.
     public var settledBy: String
+    /// This persona's rule on the front line of the disagreement: the one whose reading, failing
+    /// while the other side's holds, is the disagreement showing in a song.
+    public var rule: String?
+    /// One proposal on which the two verdicts differ. The eval puts it to both.
+    public var proposal: PersonaProposal?
+    /// The shapes the bible says the two verdicts take on that proposal.
+    public var expects: DisagreementExpectation?
 
     public var id: String { with.rawValue }
 
-    public init(with: PersonaID, about: String, position: String, theirs: String, settledBy: String) {
+    public init(with: PersonaID, about: String, position: String, theirs: String, settledBy: String,
+                rule: String? = nil, proposal: PersonaProposal? = nil, expects: DisagreementExpectation? = nil) {
+        self.rule = rule
+        self.proposal = proposal
+        self.expects = expects
         self.with = with
         self.about = about
         self.position = position
         self.theirs = theirs
         self.settledBy = settledBy
     }
+}
+
+/// How the two sides answer the disagreement's proposal: this persona's verdict and the other's.
+public struct DisagreementExpectation: Hashable, Sendable, Codable {
+    public var mine: VerdictShape
+    public var theirs: VerdictShape
+    public init(mine: VerdictShape, theirs: VerdictShape) { self.mine = mine; self.theirs = theirs }
 }
 
 // MARK: - References and tests

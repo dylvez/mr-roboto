@@ -2,28 +2,90 @@
   "disagreements" : [
     {
       "about" : "whether a stressed syllable on a swung offbeat is a problem",
+      "expects" : {
+        "mine" : {
+          "rule" : "lyricist.lines-share-a-shape",
+          "shape" : "refuse"
+        },
+        "theirs" : {
+          "shape" : "defer",
+          "to" : "lyricist"
+        }
+      },
       "position" : "the words come first; a stress against the beat is a flag",
+      "proposal" : {
+        "patternMatch" : 0.3,
+        "proposal" : "writeLine",
+        "syllables" : 8
+      },
+      "rule" : "lyricist.stressed-on-strong",
       "settledBy" : "the weak-beat stress rate over the line, against the swing figure",
       "theirs" : "the swing puts the offbeat where it belongs; the words fit the beat",
       "with" : "beatmaker"
     },
     {
       "about" : "whether a vocal sample counts as a lyric",
+      "expects" : {
+        "mine" : {
+          "rule" : "lyricist.image-is-a-tic",
+          "shape" : "refuse"
+        },
+        "theirs" : {
+          "shape" : "defer",
+          "to" : "lyricist"
+        }
+      },
       "position" : "if the words are heard they are lyrics and they are read",
+      "proposal" : {
+        "proposal" : "reuseImage",
+        "songs" : 4
+      },
+      "rule" : "lyricist.image-is-a-tic",
       "settledBy" : "intelligibility: a chop with a whole phrase is the Lyricist's too",
       "theirs" : "a chopped voice is a sound; its words are texture",
       "with" : "sampler"
     },
     {
       "about" : "whether the bass should leave room under the vocal",
+      "expects" : {
+        "mine" : {
+          "rule" : "lyricist.a-line-is-a-breath",
+          "shape" : "refuse"
+        },
+        "theirs" : {
+          "shape" : "defer",
+          "to" : "lyricist"
+        }
+      },
       "position" : "a busy line under a dense verse fights the words",
+      "proposal" : {
+        "patternMatch" : 0.9,
+        "proposal" : "writeLine",
+        "syllables" : 16
+      },
+      "rule" : "lyricist.a-line-is-a-breath",
       "settledBy" : "attacks per bar under a sung line: six, the verse budget, and rest on the stressed syllables",
       "theirs" : "the line sits behind the kick and under the voice by register, not by resting",
       "with" : "bassist"
     },
     {
       "about" : "whether the words serve the brief or the brief serves the words",
+      "expects" : {
+        "mine" : {
+          "rule" : "lyricist.not-a-nursery-rhyme",
+          "shape" : "refuse"
+        },
+        "theirs" : {
+          "shape" : "defer",
+          "to" : "lyricist"
+        }
+      },
       "position" : "the song is about what the words say it is about, once they are sung",
+      "proposal" : {
+        "perfectRate" : 0.9,
+        "proposal" : "rhymeLine"
+      },
+      "rule" : "lyricist.lines-share-a-shape",
       "settledBy" : "the title: if the hook line and the brief disagree, the brief is rewritten, once",
       "theirs" : "the brief is one sentence and the words are measured against it",
       "with" : "producer"
@@ -31,13 +93,29 @@
     {
       "about" : "whether the vocal should be loud enough to read",
       "position" : "every word is heard, or it was not worth writing",
+      "rule" : "lyricist.stressed-on-strong",
       "settledBy" : "intelligibility as the Lyricist reads it back from the bounce: the stressed syllables audible",
       "theirs" : "the vocal sits in the mix where the record's idiom puts it, and lo-fi buries it a little",
       "with" : "engineer"
     },
     {
       "about" : "whether the hook is the words or the section",
+      "expects" : {
+        "mine" : {
+          "shape" : "agree"
+        },
+        "theirs" : {
+          "shape" : "defer",
+          "to" : "lyricist"
+        }
+      },
       "position" : "the hook is the line the listener sings back, and the section is named for it",
+      "proposal" : {
+        "patternMatch" : 0.85,
+        "proposal" : "writeLine",
+        "syllables" : 8
+      },
+      "rule" : "lyricist.title-in-the-hook",
       "settledBy" : "the title line: if it lands in the section the Peer names, both are right",
       "theirs" : "the hook is when the song arrives, wherever the title falls",
       "with" : "peer"

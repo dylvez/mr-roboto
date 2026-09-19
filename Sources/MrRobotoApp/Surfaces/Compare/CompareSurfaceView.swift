@@ -195,14 +195,24 @@ private struct CandidateRows: View {
     let layout: CompareLayout
 
     var body: some View {
-        ScrollView(layout.rowsScroll ? .vertical : []) {
-            VStack(spacing: CompareLayout.rowSpacing) {
-                ForEach(model.candidates) { candidate in
-                    CandidateRow(model: model, candidate: candidate, layout: layout)
-                }
+        // Only a list that overflows scrolls: a ScrollView around rows that fit is a blank in an
+        // offscreen render and a needless layer on screen.
+        Group {
+            if layout.rowsScroll {
+                ScrollView(.vertical) { rows }
+            } else {
+                rows
             }
         }
         .frame(height: layout.rowsAreaHeight)
+    }
+
+    private var rows: some View {
+        VStack(spacing: CompareLayout.rowSpacing) {
+            ForEach(model.candidates) { candidate in
+                CandidateRow(model: model, candidate: candidate, layout: layout)
+            }
+        }
     }
 }
 
@@ -280,6 +290,10 @@ private struct DifferenceCell: View {
                 Text(difference.text)
                     .font(Design.Typography.numeric(10.5))
                     .foregroundStyle(Design.Palette.accent)
+            } else if difference == nil {
+                // Nothing on the other side to differ from: uncompared, not the same.
+                Text(" ")
+                    .font(Design.Typography.numeric(10.5))
             } else {
                 Text("same")
                     .font(Design.Typography.ui(10))

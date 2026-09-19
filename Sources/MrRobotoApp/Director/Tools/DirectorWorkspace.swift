@@ -48,6 +48,24 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
 
     /// A line in the conversation rail.
     func note(_ text: String, detail: String?)
+
+    // M4: the room.
+
+    /// Who the song has in the room. Empty means everyone.
+    var castIDs: [PersonaID] { get }
+    /// Sets the song's cast. False when there is no song.
+    @discardableResult
+    func setCast(_ ids: [PersonaID]) -> Bool
+    /// The house voice the Lyricist reads against.
+    var voice: LyricCorpus { get }
+    /// A line in the rail in a persona's own name.
+    func speak(_ persona: String, _ text: String, detail: String?)
+    /// A section of the song bounced offline and metered, for the Engineer. Nil when this
+    /// workspace has nothing to render with.
+    func bounce(section: SectionID?) async throws -> MixObservation?
+    /// Opens a Compare of two personas' readings that disagree. Returns the surface's title, or
+    /// nil when this workspace has no bench.
+    func openDisagreement(_ card: DisagreementCard) -> String?
 }
 
 /// `AppState` seen through the six things the Director needs.
@@ -82,6 +100,28 @@ public final class AppStateWorkspace: DirectorWorkspace {
     }
 
     public func note(_ text: String, detail: String?) { app.note(.session, text, detail: detail) }
+
+    public var castIDs: [PersonaID] { (app.song?.cast ?? []).map { PersonaID($0) } }
+
+    @discardableResult
+    public func setCast(_ ids: [PersonaID]) -> Bool { app.setCast(ids) }
+
+    public var voice: LyricCorpus { app.voice }
+
+    public func speak(_ persona: String, _ text: String, detail: String?) { app.note(.persona(persona), text, detail: detail) }
+
+    public func bounce(section: SectionID?) async throws -> MixObservation? {
+        let plan = app.playback
+        guard plan.isPlayable else { return nil }
+        let stems = try await SectionBounce.render(plan, section: section, kitsDirectory: AuditionService.defaultKitsDirectory)
+        return stems.observation
+    }
+
+    public func openDisagreement(_ card: DisagreementCard) -> String? {
+        let id = app.openSurface(.compare, title: card.title, bound: card.reference.map { [$0] } ?? [])
+        app.file(.compare(card.brief), for: id)
+        return card.title
+    }
 }
 
 /// Something that can make a noise. Kept separate from the workspace because on this machine —
@@ -190,5 +230,32 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
 
     public func note(_ text: String, detail: String?) {
         notes.append((text, detail))
+    }
+
+    public var castIDs: [PersonaID] { (song?.cast ?? []).map { PersonaID($0) } }
+
+    @discardableResult
+    public func setCast(_ ids: [PersonaID]) -> Bool {
+        guard song != nil else { return false }
+        song?.cast = ids.isEmpty ? nil : ids.map(\.rawValue)
+        return true
+    }
+
+    public var voice: LyricCorpus { LyricCorpus(library.voice ?? []) }
+
+    /// Every line a persona spoke, in order.
+    public private(set) var spoken: [(persona: String, text: String, detail: String?)] = []
+
+    public func speak(_ persona: String, _ text: String, detail: String?) { spoken.append((persona, text, detail)) }
+
+    /// Nothing to render with.
+    public func bounce(section: SectionID?) async throws -> MixObservation? { nil }
+
+    /// Every card a convening opened.
+    public private(set) var disagreements: [DisagreementCard] = []
+
+    public func openDisagreement(_ card: DisagreementCard) -> String? {
+        disagreements.append(card)
+        return card.title
     }
 }

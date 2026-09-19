@@ -2,42 +2,133 @@
   "disagreements" : [
     {
       "about" : "whether the drums should be squashed to sit in the mix",
+      "expects" : {
+        "mine" : {
+          "rule" : "engineer.drums-keep-their-crest",
+          "shape" : "refuse"
+        },
+        "theirs" : {
+          "shape" : "defer",
+          "to" : "engineer"
+        }
+      },
       "position" : "level and translation are the Engineer's, and a pocket nobody can hear is not a pocket",
+      "proposal" : {
+        "crestDB" : 5,
+        "proposal" : "squashDrums"
+      },
+      "rule" : "engineer.drums-keep-their-crest",
       "settledBy" : "the ghost depth in dB after the chain: if it survives, the Engineer wins",
       "theirs" : "a crest under 8 dB flattens the ghost-to-accent depth the feel is built on",
       "with" : "beatmaker"
     },
     {
       "about" : "whether the chain's bandwidth is a fault",
+      "expects" : {
+        "mine" : {
+          "shape" : "defer",
+          "to" : "sampler"
+        },
+        "theirs" : {
+          "shape" : "agree"
+        }
+      },
       "position" : "a corner is a corner, and it has to be stated and translated",
+      "proposal" : {
+        "preset" : "sp1200",
+        "proposal" : "applyDegrade",
+        "sourceBandwidthHz" : 20000,
+        "sourceNoiseFloorDB" : -80
+      },
+      "rule" : "engineer.a-corner-is-a-choice",
       "settledBy" : "the corner in Hz, said by both: chosen is fine, accidental is not",
       "theirs" : "a corner at 13 kHz is the machine; the dust is the decision",
       "with" : "sampler"
     },
     {
       "about" : "who owns 80 Hz",
+      "expects" : {
+        "mine" : {
+          "rule" : "engineer.who-owns-eighty",
+          "shape" : "refuse"
+        },
+        "theirs" : {
+          "shape" : "defer",
+          "to" : "engineer"
+        }
+      },
       "position" : "whoever measures louder there owns it, and the other one moves",
+      "proposal" : {
+        "proposal" : "balanceLowEnd",
+        "separationDB" : 2
+      },
+      "rule" : "engineer.who-owns-eighty",
       "settledBy" : "the kick–bass separation in dB at 60–120 Hz, read by the Engineer, resolved by R9",
       "theirs" : "the sub is the bass's when the bass is the sub, and the kick's when it is not — R9",
       "with" : "bassist"
     },
     {
       "about" : "whether loudness is a decision or a delivery spec",
+      "expects" : {
+        "mine" : {
+          "rule" : "engineer.delivery-loudness",
+          "shape" : "refuse"
+        },
+        "theirs" : {
+          "shape" : "defer",
+          "to" : "engineer"
+        }
+      },
       "position" : "the level is heard from the first bounce and shapes every choice after it",
+      "proposal" : {
+        "integratedLUFS" : -9,
+        "peakDBFS" : -0.1,
+        "proposal" : "setLoudness"
+      },
+      "rule" : "engineer.delivery-loudness",
       "settledBy" : "the Engineer reads every bounce; the Producer decides at the last one",
       "theirs" : "the level is a delivery spec and the last thing decided",
       "with" : "producer"
     },
     {
       "about" : "whether a lift is a layer or a level",
+      "expects" : {
+        "mine" : {
+          "shape" : "agree"
+        },
+        "theirs" : {
+          "shape" : "defer",
+          "to" : "engineer"
+        }
+      },
       "position" : "a lift is three decibels and a wider top, and no layer is needed",
+      "proposal" : {
+        "integratedLUFS" : -14,
+        "peakDBFS" : -3,
+        "proposal" : "setLoudness"
+      },
+      "rule" : "engineer.delivery-loudness",
       "settledBy" : "both: the Peer counts layers, the Engineer reads the bounce, and the hook needs one of them",
       "theirs" : "a listener hears a lift as more happening",
       "with" : "peer"
     },
     {
       "about" : "whether the vocal should be loud enough to read",
+      "expects" : {
+        "mine" : {
+          "shape" : "agree"
+        },
+        "theirs" : {
+          "shape" : "defer",
+          "to" : "engineer"
+        }
+      },
       "position" : "the vocal sits in the mix where the record's idiom puts it, and lo-fi buries it a little",
+      "proposal" : {
+        "crestDB" : 14,
+        "proposal" : "squashDrums"
+      },
+      "rule" : "engineer.a-corner-is-a-choice",
       "settledBy" : "intelligibility as the Lyricist reads it back from the bounce: the stressed syllables audible",
       "theirs" : "every word is heard, or it was not worth writing",
       "with" : "lyricist"

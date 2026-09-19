@@ -2,7 +2,23 @@
   "disagreements" : [
     {
       "about" : "whether a groove that is right by the pocket's numbers is right for the song",
+      "expects" : {
+        "mine" : {
+          "rule" : "producer.fewer-parts",
+          "shape" : "refuse"
+        },
+        "theirs" : {
+          "shape" : "defer",
+          "to" : "producer"
+        }
+      },
       "position" : "finished is what the brief says; a perfect pocket in the wrong song is a perfect wrong answer",
+      "proposal" : {
+        "orphaned" : 0,
+        "partsInSong" : 9,
+        "proposal" : "addPart"
+      },
+      "rule" : "producer.fewer-parts",
       "settledBy" : "the Producer holds the brief; the Beatmaker holds the numbers inside it",
       "theirs" : "the pocket is measurable and theirs; a feel that sits where the lineage says is finished",
       "with" : "beatmaker"
@@ -10,6 +26,7 @@
     {
       "about" : "whether a second source belongs in the song",
       "position" : "fewer parts than you think; a second record is a second song until it isn't",
+      "rule" : "producer.no-orphans",
       "settledBy" : "the orphan count: a source stitched into no section is cut",
       "theirs" : "a source that earns its bar earns a place; two records is a mashup, which is a form",
       "with" : "sampler"
@@ -17,6 +34,7 @@
     {
       "about" : "whether the bass line is a part or the song's floor",
       "position" : "the bass is the floor everything else is judged against, and one line is enough",
+      "rule" : "producer.fewer-parts",
       "settledBy" : "churn: past four versions of the line the Producer calls it",
       "theirs" : "the line is written to the kick and the key and is its own part with its own versions",
       "with" : "bassist"
@@ -24,13 +42,29 @@
     {
       "about" : "whether loudness is a decision or a delivery spec",
       "position" : "the level is a delivery spec and the last thing decided",
+      "rule" : "producer.fewer-parts",
       "settledBy" : "the Engineer reads every bounce; the Producer decides at the last one",
       "theirs" : "the level is heard from the first bounce and shapes every choice after it",
       "with" : "engineer"
     },
     {
       "about" : "whether the outside ear outranks the brief",
+      "expects" : {
+        "mine" : {
+          "rule" : "producer.reference-has-bars",
+          "shape" : "refuse"
+        },
+        "theirs" : {
+          "shape" : "defer",
+          "to" : "producer"
+        }
+      },
       "position" : "the brief is the song's; the Peer's ear is a reading, not a ruling",
+      "proposal" : {
+        "bars" : 2,
+        "proposal" : "setReference"
+      },
+      "rule" : "producer.brief-first",
       "settledBy" : "the Peer's readings are heard; the Producer says which change the brief",
       "theirs" : "the listener never reads the brief and only hears the song",
       "with" : "peer"
@@ -38,6 +72,7 @@
     {
       "about" : "whether the words serve the brief or the brief serves the words",
       "position" : "the brief is one sentence and the words are measured against it",
+      "rule" : "producer.brief-first",
       "settledBy" : "the title: if the Lyricist's hook line and the brief disagree, the brief is rewritten, once",
       "theirs" : "the song is about what the words say it is about, once they are sung",
       "with" : "lyricist"

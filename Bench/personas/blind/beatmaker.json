@@ -1,0 +1,22 @@
+{
+  "persona": "beatmaker",
+  "items": [
+    { "id": "feel-1", "label": "Neo-Soul Pocket", "material": { "kind": "feel", "name": "Neo-Soul Pocket" },
+      "expects": { "beatmaker.swing-default": true, "beatmaker.hats-straight": true, "beatmaker.snare-direction": true,
+                   "beatmaker.pocket-is-a-span": false, "beatmaker.ghost-depth": true } },
+    { "id": "feel-2", "label": "Boom-Bap Pocket", "material": { "kind": "feel", "name": "Boom-Bap Pocket" },
+      "expects": { "beatmaker.swing-default": true, "beatmaker.ghost-depth": true, "beatmaker.quantise-off-is-not-the-technique": true } },
+    { "id": "feel-3", "label": "Trap Rolling Hats", "material": { "kind": "feel", "name": "Trap Rolling Hats" },
+      "expects": { "beatmaker.swing-domain": true, "beatmaker.swing-default": false, "beatmaker.ghost-depth": false } },
+    { "id": "feel-4", "label": "Four on the Floor", "material": { "kind": "feel", "name": "Four on the Floor" },
+      "expects": { "beatmaker.swing-default": false, "beatmaker.ghost-depth": false } },
+    { "id": "feel-5", "label": "Lo-Fi Hip-Hop", "material": { "kind": "feel", "name": "Lo-Fi Hip-Hop" },
+      "expects": { "beatmaker.swing-default": false, "beatmaker.hats-straight": true, "beatmaker.ghost-depth": true } },
+    { "id": "feel-6", "label": "Trip-Hop", "material": { "kind": "feel", "name": "Trip-Hop" },
+      "expects": { "beatmaker.swing-default": true, "beatmaker.hats-straight": true, "beatmaker.ghost-depth": true } },
+    { "id": "feel-7", "label": "Lo-Fi House", "material": { "kind": "feel", "name": "Lo-Fi House" },
+      "expects": { "beatmaker.swing-default": true, "beatmaker.ghost-depth": false } },
+    { "id": "feel-8", "label": "Breakbeat (Amen)", "material": { "kind": "feel", "name": "Breakbeat (Amen)" },
+      "expects": { "beatmaker.swing-default": false, "beatmaker.ghost-depth": true } }
+  ]
+}

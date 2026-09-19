@@ -2,7 +2,25 @@
   "disagreements" : [
     {
       "about" : "whether a second source belongs in the song",
+      "expects" : {
+        "mine" : {
+          "rule" : "sampler.one-drum-source",
+          "shape" : "refuse"
+        },
+        "theirs" : {
+          "shape" : "defer",
+          "to" : "sampler"
+        }
+      },
       "position" : "a source that earns its bar earns a place; two records is a mashup, which is a form",
+      "proposal" : {
+        "drumSources" : 2,
+        "proposal" : "mergeSources",
+        "uncleared" : [
+
+        ]
+      },
+      "rule" : "sampler.one-drum-source",
       "settledBy" : "the Producer's orphan count: a source stitched into no section is cut",
       "theirs" : "fewer parts than you think; a second record is a second song until it isn't",
       "with" : "producer"
@@ -10,6 +28,7 @@
     {
       "about" : "whether the chain's bandwidth is a fault",
       "position" : "a corner at 13 kHz is the machine; the dust is the decision",
+      "rule" : "sampler.corner-above-the-source",
       "settledBy" : "the corner in Hz, said by both: chosen is fine, accidental is not",
       "theirs" : "a corner is a corner, and it has to be stated and translated",
       "with" : "engineer"
@@ -17,6 +36,7 @@
     {
       "about" : "whether the break should vary across the form",
       "position" : "one bar, rearranged, is the whole craft; a second break is a second source",
+      "rule" : "sampler.do-not-repeat",
       "settledBy" : "slice order and chain can change at a turn; the source may not",
       "theirs" : "the ear wants a turn at the hook",
       "with" : "peer"
@@ -24,6 +44,7 @@
     {
       "about" : "whether a vocal sample counts as a lyric",
       "position" : "a chopped voice is a sound; its words are texture",
+      "rule" : "sampler.name-both-sources",
       "settledBy" : "intelligibility: a chop with a whole phrase is the Lyricist's too",
       "theirs" : "if the words are heard they are lyrics and they are read",
       "with" : "lyricist"
@@ -31,6 +52,7 @@
     {
       "about" : "whether the swing lives in the grid or in the audio",
       "position" : "Cut on the transients and let each slice carry the time it was actually played at. The source is a performance; the grid is a convenience.",
+      "rule" : "sampler.cut-before-not-after",
       "settledBy" : "SourceSwing.estimate against the groove's own swing at this tempo. More than 10 ms apart and the audio already has a feel the grid is arguing with; inside 10 ms it is below the detection threshold and the Beatmaker's lever costs nothing.",
       "theirs" : "Set the groove's swing and let the slices follow it, so the lever stays a control a user can move.",
       "with" : "beatmaker"
@@ -38,6 +60,7 @@
     {
       "about" : "pitching a source down",
       "position" : "Pitching the break down is the technique, not a compromise — sampling at 45 and replaying slower is where the lineage's low end came from, and four semitones down is what Dilla did to the Hancock source on \"Get Dis Money\".",
+      "rule" : "sampler.pitch-down-not-filter",
       "settledBy" : "The source's key and its 95% rolloff after the pitch move, against the part's own register. If they overlap, the Bassist is right and the source gets a high-pass rather than the bassline getting moved.",
       "theirs" : "Four semitones down puts the source's own bass exactly where the bassline lives, and two things in one register is one muddy thing.",
       "with" : "bassist"

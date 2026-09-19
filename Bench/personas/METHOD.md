@@ -79,3 +79,23 @@ codified craft (Pattison, Webb, Davis); players are harder, which is where trans
 - From the tests: `swift test --filter BibleDocumentTests` lints every shipped bible;
   `MRROBOTO_BIBLE=/path/to/bible.json swift test --filter BibleLint` lints one file.
 - `make evals` runs every golden, blind and disagreement eval and writes the report.
+
+## The three evals
+
+`make evals` runs three kinds over every bible and writes `evals.md` beside this file:
+
+- **golden** — every `GoldenTest` that carries a `proposal` and an `expects` shape is put to its
+  persona through the rule engine, and the verdict has to take that shape. Prose-only goldens are
+  listed as such, and at least half of a bible's goldens must execute.
+- **disagreement** — every `PersonaDisagreement` carries (on at least one side of the pair) a
+  `proposal`, a `rule` on its front line, and `expects: {mine, theirs}`. The proposal is put to
+  both personas; the two shapes must differ, must not both be deferrals, and must be the shapes
+  the bible declared. A declared disagreement nobody can provoke is a sentence, not a rule, and
+  it fails. The Director uses the same `rule` pairs to see a disagreement showing in a song: this
+  persona's front-line reading failing while the other's holds opens a Compare of the two.
+- **blind** — `blind/<persona>.json` names material the persona reads with its label hidden (a feel
+  from the library; a line the writer writes under a feel) and, per rule, whether the reading
+  should hold. The sheet is authored from what is knowable about the material — a trap feel's
+  ghosts sit 4 dB under a hit; a sub 30 ms off the kick is two low notes fighting — not copied
+  from what the persona happened to say. Pilots: the Bassist on the writer's own lines, the
+  Beatmaker on the feel library. Corpus records join the sheets as they arrive.

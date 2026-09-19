@@ -1,0 +1,21 @@
+{
+  "persona": "bassist",
+  "items": [
+    { "id": "line-1", "label": "Palladino, 40 ms, neo-soul at 92", "material": { "kind": "bassline", "hands": "palladino", "lagMS": 40, "tempo": 92, "feel": "Neo-Soul Pocket" },
+      "expects": { "bassist.straight-reference": true, "bassist.lag-budget": true, "bassist.lag-ceiling": true, "bassist.downbeat": true, "bassist.note-off": false } },
+    { "id": "line-2", "label": "Palladino, 65 ms, the edge of the window", "material": { "kind": "bassline", "hands": "palladino", "lagMS": 65, "tempo": 92, "feel": "Neo-Soul Pocket" },
+      "expects": { "bassist.lag-budget": true, "bassist.lag-ceiling": true } },
+    { "id": "line-3", "label": "Palladino, 10 ms, under the window", "material": { "kind": "bassline", "hands": "palladino", "lagMS": 10, "tempo": 92, "feel": "Boom-Bap" },
+      "expects": { "bassist.lag-budget": false, "bassist.lag-ceiling": true } },
+    { "id": "line-4", "label": "Thundercat, on the kick at 130", "material": { "kind": "bassline", "hands": "thundercat", "lagMS": 10, "tempo": 130, "feel": "Four on the Floor" },
+      "expects": { "bassist.house-tempo": true, "bassist.lag-budget": true, "bassist.downbeat": true } },
+    { "id": "line-5", "label": "Thundercat, 40 ms, boom-bap at 96", "material": { "kind": "bassline", "hands": "thundercat", "lagMS": 40, "tempo": 96, "feel": "Boom-Bap" },
+      "expects": { "bassist.lag-budget": true, "bassist.density": true } },
+    { "id": "line-6", "label": "Programmed 808 on the kick, trap at 140", "material": { "kind": "bassline", "hands": "programmed", "lagMS": 0, "tempo": 140, "feel": "Trap Rolling Hats" },
+      "expects": { "bassist.808-is-the-bass": true, "bassist.note-off": true, "bassist.house-tempo": true } },
+    { "id": "line-7", "label": "Programmed sub 30 ms off the kick", "material": { "kind": "bassline", "hands": "programmed", "lagMS": 30, "tempo": 90, "feel": "Lo-Fi Hip-Hop" },
+      "expects": { "bassist.808-is-the-bass": false, "bassist.note-off": true } },
+    { "id": "line-8", "label": "Palladino ahead of the kick", "material": { "kind": "bassline", "hands": "palladino", "lagMS": -15, "tempo": 92, "feel": "Neo-Soul Pocket" },
+      "expects": { "bassist.direction": false, "bassist.lag-ceiling": true } }
+  ]
+}

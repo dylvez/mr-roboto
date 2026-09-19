@@ -474,22 +474,28 @@ public struct Sampler: Persona {
                                 about: "whether a second source belongs in the song",
                                 position: "a source that earns its bar earns a place; two records is a mashup, which is a form",
                                 theirs: "fewer parts than you think; a second record is a second song until it isn't",
-                                settledBy: "the Producer's orphan count: a source stitched into no section is cut"),
+                                settledBy: "the Producer's orphan count: a source stitched into no section is cut",
+                                rule: "sampler.one-drum-source",
+                                proposal: .mergeSources(drumSources: 2, uncleared: []),
+                                expects: DisagreementExpectation(mine: .refuse(rule: "sampler.one-drum-source"), theirs: .defer_(to: .sampler))),
             PersonaDisagreement(with: .engineer,
                                 about: "whether the chain's bandwidth is a fault",
                                 position: "a corner at 13 kHz is the machine; the dust is the decision",
                                 theirs: "a corner is a corner, and it has to be stated and translated",
-                                settledBy: "the corner in Hz, said by both: chosen is fine, accidental is not"),
+                                settledBy: "the corner in Hz, said by both: chosen is fine, accidental is not",
+                                rule: "sampler.corner-above-the-source"),
             PersonaDisagreement(with: .peer,
                                 about: "whether the break should vary across the form",
                                 position: "one bar, rearranged, is the whole craft; a second break is a second source",
                                 theirs: "the ear wants a turn at the hook",
-                                settledBy: "slice order and chain can change at a turn; the source may not"),
+                                settledBy: "slice order and chain can change at a turn; the source may not",
+                                rule: "sampler.do-not-repeat"),
             PersonaDisagreement(with: .lyricist,
                                 about: "whether a vocal sample counts as a lyric",
                                 position: "a chopped voice is a sound; its words are texture",
                                 theirs: "if the words are heard they are lyrics and they are read",
-                                settledBy: "intelligibility: a chop with a whole phrase is the Lyricist's too"),
+                                settledBy: "intelligibility: a chop with a whole phrase is the Lyricist's too",
+                                rule: "sampler.name-both-sources"),
             PersonaDisagreement(
                 with: .beatmaker,
                 about: "whether the swing lives in the grid or in the audio",
@@ -499,7 +505,8 @@ public struct Sampler: Persona {
                       + "user can move.",
                 settledBy: "SourceSwing.estimate against the groove's own swing at this tempo. More than 10 ms "
                          + "apart and the audio already has a feel the grid is arguing with; inside 10 ms it "
-                         + "is below the detection threshold and the Beatmaker's lever costs nothing."),
+                         + "is below the detection threshold and the Beatmaker's lever costs nothing.",
+                                rule: "sampler.cut-before-not-after"),
             PersonaDisagreement(
                 with: .bassist,
                 about: "pitching a source down",
@@ -510,7 +517,8 @@ public struct Sampler: Persona {
                       + "two things in one register is one muddy thing.",
                 settledBy: "The source's key and its 95% rolloff after the pitch move, against the part's own "
                          + "register. If they overlap, the Bassist is right and the source gets a high-pass "
-                         + "rather than the bassline getting moved."),
+                         + "rather than the bassline getting moved.",
+                                rule: "sampler.pitch-down-not-filter"),
         ],
 
         // MARK: References

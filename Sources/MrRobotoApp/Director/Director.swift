@@ -386,6 +386,8 @@ public actor Director {
         case "read_library": return "read the library"
         case "adopt": return many ? "adopted \(times) library items" : "adopted a library item"
         case "merge": return many ? "merged \(times) pairs" : "merged two fragments"
+        case "cast": return "read the room"
+        case "convene": return many ? "convened the room \(times) times" : "convened the room"
         case "open_surface": return many ? "opened \(times) surfaces" : "opened a surface"
         case "propose": return many ? "offered \(times) suggestions" : "offered a suggestion"
         default: return many ? "\(tool) ×\(times)" : tool

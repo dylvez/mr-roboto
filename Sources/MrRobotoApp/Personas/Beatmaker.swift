@@ -439,22 +439,26 @@ public struct Beatmaker: Persona {
                                 about: "whether a groove that is right by the pocket's numbers is right for the song",
                                 position: "the pocket is measurable and mine; a feel that sits where the lineage says it sits is finished",
                                 theirs: "finished is what the brief says, and a perfect pocket in the wrong song is a perfect wrong answer",
-                                settledBy: "the Producer holds the brief; the Beatmaker holds the numbers inside it"),
+                                settledBy: "the Producer holds the brief; the Beatmaker holds the numbers inside it",
+                                rule: "beatmaker.swing-default"),
             PersonaDisagreement(with: .engineer,
                                 about: "whether the drums should be squashed to sit in the mix",
                                 position: "a crest under 8 dB flattens the ghost-to-accent depth the feel is built on",
                                 theirs: "level and translation are theirs, and a pocket nobody can hear is not a pocket",
-                                settledBy: "the ghost depth in dB after the chain: if it survives, the Engineer wins"),
+                                settledBy: "the ghost depth in dB after the chain: if it survives, the Engineer wins",
+                                rule: "beatmaker.ghost-depth"),
             PersonaDisagreement(with: .peer,
                                 about: "whether the groove should change when the section does",
                                 position: "a feel is a phrase and one song has one pocket",
                                 theirs: "a form with one groove for two minutes has no turn",
-                                settledBy: "the form: a section the Peer names as a turn may carry a second groove"),
+                                settledBy: "the form: a section the Peer names as a turn may carry a second groove",
+                                rule: "beatmaker.pocket-is-a-span"),
             PersonaDisagreement(with: .lyricist,
                                 about: "whether a stressed syllable on a swung offbeat is a problem",
                                 position: "the swing puts the offbeat where it belongs; the words fit the beat",
                                 theirs: "the words come first; a stress against the beat is a flag",
-                                settledBy: "the Lyricist's weak-beat stress rate over the line, against the swing figure"),
+                                settledBy: "the Lyricist's weak-beat stress rate over the line, against the swing figure",
+                                rule: "beatmaker.snare-direction"),
             PersonaDisagreement(
                 with: .sampler,
                 about: "whether the swing lives in the grid or in the audio",
@@ -465,7 +469,10 @@ public struct Beatmaker: Persona {
                 settledBy: "SourceSwing.estimate over the source's own onsets. If the source's swing is "
                          + "more than 10 ms from the groove's at this tempo, the Sampler is right and "
                          + "SwingClashCritic says so; inside 10 ms it is under the perceptual floor and "
-                         + "the lever is free."),
+                         + "the lever is free.",
+                rule: "beatmaker.swing-default",
+                proposal: .setSwing(percent: 56, idiom: "boom-bap", tempo: 92),
+                expects: DisagreementExpectation(mine: .agree, theirs: .defer_(to: .beatmaker))),
             PersonaDisagreement(
                 with: .bassist,
                 about: "who the downbeat is measured against",
@@ -474,7 +481,8 @@ public struct Beatmaker: Persona {
                 theirs: "The bass defines where the bar is, and the drums decorate around it.",
                 settledBy: "The documented session method: D'Angelo had the drums drag behind the click and "
                          + "then had everything else drag further behind the drums. Lateness is relative, "
-                         + "and the kit is the origin."),
+                         + "and the kit is the origin.",
+                                rule: "beatmaker.hats-straight"),
         ],
 
         // MARK: References

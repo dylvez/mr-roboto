@@ -3,6 +3,7 @@
     {
       "about" : "whether a groove that is right by the pocket's numbers is right for the song",
       "position" : "the pocket is measurable and mine; a feel that sits where the lineage says it sits is finished",
+      "rule" : "beatmaker.swing-default",
       "settledBy" : "the Producer holds the brief; the Beatmaker holds the numbers inside it",
       "theirs" : "finished is what the brief says, and a perfect pocket in the wrong song is a perfect wrong answer",
       "with" : "producer"
@@ -10,6 +11,7 @@
     {
       "about" : "whether the drums should be squashed to sit in the mix",
       "position" : "a crest under 8 dB flattens the ghost-to-accent depth the feel is built on",
+      "rule" : "beatmaker.ghost-depth",
       "settledBy" : "the ghost depth in dB after the chain: if it survives, the Engineer wins",
       "theirs" : "level and translation are theirs, and a pocket nobody can hear is not a pocket",
       "with" : "engineer"
@@ -17,6 +19,7 @@
     {
       "about" : "whether the groove should change when the section does",
       "position" : "a feel is a phrase and one song has one pocket",
+      "rule" : "beatmaker.pocket-is-a-span",
       "settledBy" : "the form: a section the Peer names as a turn may carry a second groove",
       "theirs" : "a form with one groove for two minutes has no turn",
       "with" : "peer"
@@ -24,13 +27,30 @@
     {
       "about" : "whether a stressed syllable on a swung offbeat is a problem",
       "position" : "the swing puts the offbeat where it belongs; the words fit the beat",
+      "rule" : "beatmaker.snare-direction",
       "settledBy" : "the Lyricist's weak-beat stress rate over the line, against the swing figure",
       "theirs" : "the words come first; a stress against the beat is a flag",
       "with" : "lyricist"
     },
     {
       "about" : "whether the swing lives in the grid or in the audio",
+      "expects" : {
+        "mine" : {
+          "shape" : "agree"
+        },
+        "theirs" : {
+          "shape" : "defer",
+          "to" : "beatmaker"
+        }
+      },
       "position" : "Set the groove's swing and let the slices follow it; the lever is the control surface and a user should be able to move it.",
+      "proposal" : {
+        "idiom" : "boom-bap",
+        "percent" : 56,
+        "proposal" : "setSwing",
+        "tempo" : 92
+      },
+      "rule" : "beatmaker.swing-default",
       "settledBy" : "SourceSwing.estimate over the source's own onsets. If the source's swing is more than 10 ms from the groove's at this tempo, the Sampler is right and SwingClashCritic says so; inside 10 ms it is under the perceptual floor and the lever is free.",
       "theirs" : "Cut on the transients and let each slice carry the time it was played at; the grid then has no business adding any.",
       "with" : "sampler"
@@ -38,6 +58,7 @@
     {
       "about" : "who the downbeat is measured against",
       "position" : "The drums are the reference. Everything else's lateness is measured against the kit, not against the click.",
+      "rule" : "beatmaker.hats-straight",
       "settledBy" : "The documented session method: D'Angelo had the drums drag behind the click and then had everything else drag further behind the drums. Lateness is relative, and the kit is the origin.",
       "theirs" : "The bass defines where the bar is, and the drums decorate around it.",
       "with" : "bassist"

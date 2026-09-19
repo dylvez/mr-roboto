@@ -2,7 +2,21 @@
   "disagreements" : [
     {
       "about" : "whether the bass line is a part or the song's floor",
+      "expects" : {
+        "mine" : {
+          "shape" : "defer",
+          "to" : "producer"
+        },
+        "theirs" : {
+          "shape" : "agree"
+        }
+      },
       "position" : "the line is written to the kick and the key and is its own part with its own versions",
+      "proposal" : {
+        "bars" : 8,
+        "proposal" : "setReference"
+      },
+      "rule" : "bassist.downbeat",
       "settledBy" : "churn: past three versions of the line the Producer calls it",
       "theirs" : "the bass is the floor everything else is judged against, and one line is enough",
       "with" : "producer"
@@ -10,6 +24,7 @@
     {
       "about" : "who owns 80 Hz",
       "position" : "the sub is the bass's when the bass is the sub, and the kick's when it is not — R9",
+      "rule" : "bassist.sub-ownership",
       "settledBy" : "the kick–bass overlap in dB at 60–120 Hz, read by the Engineer, resolved by R9",
       "theirs" : "whoever measures louder there owns it, and the other one moves",
       "with" : "engineer"
@@ -17,6 +32,7 @@
     {
       "about" : "whether the bass should change at the hook",
       "position" : "the line holds the harmony; the hook changes the drums, not the roots",
+      "rule" : "bassist.phrase-length",
       "settledBy" : "register: the hook may take the line an octave up, not a different line",
       "theirs" : "a hook without a lift in the low end is not a hook",
       "with" : "peer"
@@ -24,27 +40,75 @@
     {
       "about" : "whether the bass should leave room under the vocal",
       "position" : "the line sits behind the kick and under the voice by register, not by resting",
+      "rule" : "bassist.density",
       "settledBy" : "attacks per bar under a sung line: six, the verse budget, and rest on the stressed syllables",
       "theirs" : "a busy line under a dense verse fights the words",
       "with" : "lyricist"
     },
     {
       "about" : "who moves",
+      "expects" : {
+        "mine" : {
+          "shape" : "defer",
+          "to" : "beatmaker"
+        },
+        "theirs" : {
+          "shape" : "agree"
+        }
+      },
       "position" : "One element stays straight. The hats on \"Don't Say a Word\" were on time; only the snare moved. I lag against the straight one.",
+      "proposal" : {
+        "milliseconds" : 20,
+        "proposal" : "displaceVoice",
+        "tempo" : 92,
+        "voice" : "kick"
+      },
+      "rule" : "bassist.straight-reference",
       "settledBy" : "the reference lag: if the hats have moved more than 10 ms, nothing is straight and I refuse until something is",
       "theirs" : "The feel is the spread between the voices, and the whole kit can lean.",
       "with" : "beatmaker"
     },
     {
       "about" : "a busier kick",
+      "expects" : {
+        "mine" : {
+          "shape" : "defer",
+          "to" : "beatmaker"
+        },
+        "theirs" : {
+          "rule" : "beatmaker.hard-quantise-kills-it",
+          "shape" : "refuse"
+        }
+      },
       "position" : "Move the shared downbeat to the and of one instead of adding kicks. Displacement over density.",
+      "proposal" : {
+        "idiom" : "boom-bap",
+        "proposal" : "quantiseHard"
+      },
+      "rule" : "bassist.density",
       "settledBy" : "attacks per bar against the verse budget; over six, the kick loses and the downbeat moves",
       "theirs" : "More kicks make the bar drive.",
       "with" : "beatmaker"
     },
     {
       "about" : "retuning a sampled bass",
+      "expects" : {
+        "mine" : {
+          "shape" : "defer",
+          "to" : "sampler"
+        },
+        "theirs" : {
+          "rule" : "sampler.past-four-semitones",
+          "shape" : "refuse"
+        }
+      },
       "position" : "Check whether the whole bed is sharp first. \"Get Dis Money\" is 50 cents sharp and nobody retuned it.",
+      "proposal" : {
+        "label" : "the bass",
+        "proposal" : "transposeSample",
+        "semitones" : 8
+      },
+      "rule" : "bassist.detune-tolerance",
       "settledBy" : "the bed's tuning: if it is off by the same amount, nothing is retuned",
       "theirs" : "A sample off pitch is a sample to fix.",
       "with" : "sampler"

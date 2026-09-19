@@ -262,6 +262,8 @@ public final class DirectorSession {
         case "read_library": return "Reading the library…"
         case "adopt": return "Bringing it into the song…"
         case "merge": return "The Sampler is bringing them together…"
+        case "cast": return "Reading the room…"
+        case "convene": return "Convening the room…"
         case "open_surface": return "Opening a surface…"
         case "propose": return "Writing a suggestion…"
         default: return "\(tool)…"

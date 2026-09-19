@@ -10,7 +10,7 @@ DD = .build/xcode
 XC = xcodebuild -destination 'generic/platform=macOS' -derivedDataPath $(DD) -skipPackagePluginValidation -skipMacroValidation
 XCT = xcodebuild -destination 'platform=macOS' -derivedDataPath $(DD) -skipPackagePluginValidation -skipMacroValidation
 
-.PHONY: check build test test-mlx cli doctor clean app
+.PHONY: check build test test-mlx cli doctor clean app evals
 
 check: build test test-mlx cli doctor
 	@echo "check: ok"
@@ -36,6 +36,13 @@ cli:
 doctor:
 	.build/out/Products/Debug/m0 doctor
 	$(DD)/Build/Products/Debug/m0 doctor
+
+# The persona evals: every golden, disagreement and blind sheet, reported to Bench/personas/evals.md.
+# `make check` already runs the goldens and the disagreements as tests; this adds the blind sheets
+# and writes the report.
+evals:
+	swift build --build-tests
+	MRROBOTO_EVALS=1 swift test --skip-build --filter PersonaEvalTests
 
 # The packaged Mac app, signed and installed to ~/Applications. See scripts/make-app.sh.
 app:

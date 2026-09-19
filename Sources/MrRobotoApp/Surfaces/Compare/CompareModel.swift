@@ -217,8 +217,11 @@ public final class CompareModel {
     /// Candidates that are indistinguishable from the reference on every compared feature. A
     /// Director that produced one of these has offered a choice that is not a choice, and the
     /// surface says so rather than drawing it as if it were.
+    ///
+    /// A candidate that shares no measured feature with the reference — two personas' readings
+    /// against a section, say — is not "the same"; it is uncompared, and it is left out here.
     public var indistinguishable: [CompareCandidate] {
-        candidates.filter { !differs($0.id) }
+        candidates.filter { !differences(for: $0.id).isEmpty && !differs($0.id) }
     }
 
     /// Warnings across every candidate, so the header can say "two of these have findings".

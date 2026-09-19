@@ -2,21 +2,67 @@
   "disagreements" : [
     {
       "about" : "whether the groove should change when the section does",
+      "expects" : {
+        "mine" : {
+          "rule" : "peer.hook-inside-thirty",
+          "shape" : "refuse"
+        },
+        "theirs" : {
+          "shape" : "defer",
+          "to" : "peer"
+        }
+      },
       "position" : "a form with one groove for two minutes has no turn",
+      "proposal" : {
+        "atSeconds" : 45,
+        "proposal" : "placeHook"
+      },
+      "rule" : "peer.hook-inside-thirty",
       "settledBy" : "the form: a section the Peer names as a turn may carry a second groove",
       "theirs" : "a feel is a phrase and one song has one pocket",
       "with" : "beatmaker"
     },
     {
       "about" : "whether the break should vary across the form",
+      "expects" : {
+        "mine" : {
+          "rule" : "peer.form-turns",
+          "shape" : "refuse"
+        },
+        "theirs" : {
+          "shape" : "defer",
+          "to" : "peer"
+        }
+      },
       "position" : "the ear wants a turn at the hook",
+      "proposal" : {
+        "minutes" : 3,
+        "proposal" : "shapeForm",
+        "sections" : 2,
+        "turns" : 0
+      },
+      "rule" : "peer.form-turns",
       "settledBy" : "slice order and chain can change at a turn; the source may not",
       "theirs" : "one bar, rearranged, is the whole craft; a second break is a second source",
       "with" : "sampler"
     },
     {
       "about" : "whether the bass should change at the hook",
+      "expects" : {
+        "mine" : {
+          "shape" : "agree"
+        },
+        "theirs" : {
+          "shape" : "defer",
+          "to" : "peer"
+        }
+      },
       "position" : "a hook without a lift in the low end is not a hook",
+      "proposal" : {
+        "atSeconds" : 12,
+        "proposal" : "placeHook"
+      },
+      "rule" : "peer.something-lifts",
       "settledBy" : "register: the hook may take the line an octave up, not a different line",
       "theirs" : "the line holds the harmony; the hook changes the drums, not the roots",
       "with" : "bassist"
@@ -24,6 +70,7 @@
     {
       "about" : "whether the outside ear outranks the brief",
       "position" : "the listener never reads the brief and only hears the song",
+      "rule" : "peer.hook-inside-thirty",
       "settledBy" : "the Peer's readings are heard; the Producer says which change the brief",
       "theirs" : "the brief is the song's; the Peer's ear is a reading, not a ruling",
       "with" : "producer"
@@ -31,13 +78,28 @@
     {
       "about" : "whether a lift is a layer or a level",
       "position" : "a listener hears a lift as more happening",
+      "rule" : "peer.something-lifts",
       "settledBy" : "both: the Peer counts layers, the Engineer reads the bounce, and the hook needs one of them",
       "theirs" : "a lift is three decibels and a wider top, and no layer is needed",
       "with" : "engineer"
     },
     {
       "about" : "whether the hook is the words or the section",
+      "expects" : {
+        "mine" : {
+          "shape" : "caveat"
+        },
+        "theirs" : {
+          "shape" : "defer",
+          "to" : "peer"
+        }
+      },
       "position" : "the hook is when the song arrives, wherever the title falls",
+      "proposal" : {
+        "atSeconds" : 28,
+        "proposal" : "placeHook"
+      },
+      "rule" : "peer.hook-inside-thirty",
       "settledBy" : "the title line: if it lands in the section the Peer names, both are right",
       "theirs" : "the hook is the line the listener sings back, and the section is named for it",
       "with" : "lyricist"

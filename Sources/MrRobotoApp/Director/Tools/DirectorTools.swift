@@ -25,7 +25,8 @@ public enum DirectorTools {
                                audition: (any DirectorAudition)? = nil,
                                stage: (any DirectorStage)? = nil,
                                pad: DirectorStagePad? = nil,
-                               persona: String? = nil) -> DirectorToolbox {
+                               persona: String? = nil,
+                               cast: Cast = .standard) -> DirectorToolbox {
         var tools: [AnyDirectorTool] = [
             ReadSongTool(workspace: workspace).erased(),
             ImportRecordTool(workbench: workbench, workspace: workspace).erased(),
@@ -55,6 +56,9 @@ public enum DirectorTools {
             ReadLibraryTool(workspace: workspace).erased(),
             AdoptTool(workspace: workspace).erased(),
             MergeTool(workspace: workspace).erased(),
+            // M4, appended after the twenty-two: the room, read and convened.
+            CastTool(workspace: workspace, cast: cast).erased(),
+            ConveneTool(workspace: workspace, cast: cast).erased(),
         ]
         if let stage {
             let pad = pad ?? DirectorStagePad()
@@ -93,6 +97,9 @@ public enum DirectorTools {
         "read_library",
         "adopt",
         "merge",
+        // M4, appended: who is in the room, and the room convened on a question.
+        "cast",
+        "convene",
     ]
 
     /// The two the frame adds. Appended after `names`, never among them: a session with no frame

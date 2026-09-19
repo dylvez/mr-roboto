@@ -184,3 +184,26 @@ struct FrameRenderTests {
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-import")
     }
 }
+
+extension FrameRenderTests {
+    @Test("a disagreement between two personas, as a Compare with what settles it at the top")
+    func disagreementCompare() throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        let built = FormFixture.build()
+        let app = app(built.song)
+        let engineer = PersonaReading(rule: "engineer.delivery-loudness", feature: .integratedLUFS, value: -22.3, holds: false,
+                                      says: "-22.3 LUFS, peak -5.7 dBFS. 8 LU under −14; the platforms turn it up, at the cost of the noise floor.")
+        let producer = PersonaReading(rule: "producer.fewer-parts", feature: .partsPerSong, value: 2, holds: true,
+                                      says: "2 parts. Room to add, and nothing to subtract yet.")
+        let card = DisagreementCard(about: "whether loudness is a decision or a delivery spec",
+                                    settledBy: "the Engineer reads every bounce; the Producer decides at the last one",
+                                    subject: "Verse, as it is",
+                                    a: .init(persona: .engineer, name: "Engineer", says: engineer.says, readings: [CompareReading(.integratedLUFS, -22.3, unit: "LUFS")]),
+                                    b: .init(persona: .producer, name: "Producer", says: producer.says, readings: [CompareReading(.partsPerSong, 2, unit: "parts")]),
+                                    reference: built.groove, vocabulary: Engineer.bible)
+        let workspace = AppStateWorkspace(app)
+        #expect(workspace.openDisagreement(card) == card.title)
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-compare-disagreement")
+    }
+}
