@@ -73,6 +73,9 @@ public enum SurfaceKind: String, CaseIterable, Sendable {
     /// M6. Loudness, true peak, crest and the spectrum against the target; the Engineer's
     /// readings of the last bounce. Bound like the Mixer.
     case master = "Master"
+    /// Two songs from the library on one grid: whose tempo and key stand, which stems each gives,
+    /// where they meet. Bound to nothing; it draws the library, and what it makes is a new song.
+    case mashup = "Mashup"
 
     // The two answer surfaces. They are in the catalog because the Director has to be able to
     // *name* one — a question with alternatives gets a Compare, a question with one finding gets a
@@ -90,7 +93,7 @@ public enum SurfaceKind: String, CaseIterable, Sendable {
 
     /// The surfaces that draw the song or the library rather than a version of a part, and so
     /// open on nothing.
-    public var isUnbound: Bool { self == .structure || self == .album || self == .cast || self == .booth }
+    public var isUnbound: Bool { self == .structure || self == .album || self == .cast || self == .booth || self == .mashup }
 
     /// The two the Director opens to answer with. You do not pick these off a shelf — a Compare
     /// with nothing to compare is not a surface, it is an empty promise — so they are deliberately

@@ -197,7 +197,7 @@ extension WorkPath {
         case .chords: return .chords
         case .pianoRoll: return .bass
         case .structure: return .arrange
-        case .album, .merge, .cast, .lyrics: return nil
+        case .album, .merge, .cast, .lyrics, .mashup: return nil
         case .booth, .takes: return .sing
         case .mixer, .master: return .mix
         case .sound:

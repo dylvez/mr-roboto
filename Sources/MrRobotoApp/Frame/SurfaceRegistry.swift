@@ -110,6 +110,9 @@ public final class SurfaceRegistry {
         registry.register(.lyrics) { item, app in
             LyricsSurfaceView(model: SurfaceWiring.shared.lyricsModel(for: item, app: app))
         }
+        registry.register(.mashup) { item, app in
+            MashupSurfaceView(model: SurfaceWiring.shared.mashupModel(for: item, app: app))
+        }
         registry.register(.booth) { item, app in
             BoothSurfaceView(model: SurfaceWiring.shared.boothModel(for: item, app: app))
         }

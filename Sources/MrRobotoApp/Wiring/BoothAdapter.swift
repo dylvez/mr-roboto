@@ -121,7 +121,7 @@ final class BoothAdapter: BoothHosting, TakesHosting {
         return Comp.TakeAudio(planar: planar.planar, sampleRate: planar.sampleRate, alignmentSeconds: aligned)
     }
 
-    static func planar(_ url: URL) throws -> (planar: [[Float]], sampleRate: Double) {
+    nonisolated static func planar(_ url: URL) throws -> (planar: [[Float]], sampleRate: Double) {
         let file = try AVAudioFile(forReading: url)
         let format = AVAudioFormat(standardFormatWithSampleRate: file.processingFormat.sampleRate, channels: file.processingFormat.channelCount)!
         let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(file.length))!
@@ -166,7 +166,7 @@ final class BoothAdapter: BoothHosting, TakesHosting {
         return version
     }
 
-    static func write(_ planar: [[Float]], sampleRate: Double, to url: URL) throws {
+    nonisolated static func write(_ planar: [[Float]], sampleRate: Double, to url: URL) throws {
         let channels = AVAudioChannelCount(max(1, planar.count))
         let format = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: channels)!
         let frames = planar.first?.count ?? 0

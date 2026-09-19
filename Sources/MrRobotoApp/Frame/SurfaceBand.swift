@@ -30,6 +30,7 @@ struct SurfaceBand: View {
             case .takes: takes(context, size, ink)
             case .mixer: mixer(context, size, ink)
             case .master: master(context, size, ink)
+            case .mashup: mashup(context, size, ink)
             case .compare: compare(context, size, ink)
             case .check: check(context, size, ink)
             }
@@ -192,6 +193,21 @@ struct SurfaceBand: View {
             context.fill(Path(rect), with: .color(index % 12 == 6 ? Design.Palette.accent.opacity(0.7) : ink))
             x += 5
             index += 1
+        }
+    }
+
+    /// Two rows of bars at two spacings that meet on shared lines.
+    private func mashup(_ context: GraphicsContext, _ size: CGSize, _ ink: Color) {
+        for (row, spacing) in [(0, CGFloat(12)), (1, CGFloat(8))] {
+            var x: CGFloat = 2
+            var index = 0
+            let y = row == 0 ? 2 : size.height / 2 + 1
+            while x < size.width {
+                let shared = Int(x - 2) % 24 == 0
+                context.fill(Path(CGRect(x: x, y: y, width: 2, height: size.height / 2 - 3)), with: .color(shared ? Design.Palette.accent.opacity(0.7) : ink))
+                x += spacing
+                index += 1
+            }
         }
     }
 

@@ -272,6 +272,8 @@ public final class DirectorSession {
         case "read_album": return "Reading the record…"
         case "sequence": return "The Producer and the Peer are reading the order…"
         case "release": return "Releasing the record…"
+        case "plan_mashup": return "Reading how the two songs would meet…"
+        case "mashup": return "Making the mashup…"
         case "open_surface": return "Opening a surface…"
         case "propose": return "Writing a suggestion…"
         default: return "\(tool)…"

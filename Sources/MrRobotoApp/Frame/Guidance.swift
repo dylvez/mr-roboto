@@ -333,6 +333,8 @@ public enum Guidance {
         case .booth:
             // Bound to nothing: it records against the song as it plays, on the active section.
             return SurfaceAction(surface: kind, title: song.title)
+        case .mashup:
+            return SurfaceAction(surface: kind, title: "Mashup")
         case .mixer, .master:
             // Bound to the newest mix version when there is one; a song at unity opens on nothing
             // and the first move makes the mix.

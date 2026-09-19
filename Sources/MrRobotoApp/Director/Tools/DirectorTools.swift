@@ -70,6 +70,9 @@ public enum DirectorTools {
             ReadAlbumTool(workspace: workspace).erased(),
             SequenceTool(workspace: workspace).erased(),
             ReleaseTool(workspace: workspace).erased(),
+            // Mashup, appended after the thirty-two: two songs on one grid, planned and made.
+            PlanMashupTool(workspace: workspace).erased(),
+            MashupTool(workspace: workspace).erased(),
         ]
         if let stage {
             let pad = pad ?? DirectorStagePad()
@@ -122,6 +125,9 @@ public enum DirectorTools {
         "read_album",
         "sequence",
         "release",
+        // Mashup, appended.
+        "plan_mashup",
+        "mashup",
     ]
 
     /// The two the frame adds. Appended after `names`, never among them: a session with no frame

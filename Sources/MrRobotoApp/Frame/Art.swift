@@ -139,6 +139,7 @@ extension SurfaceKind {
         case .takes: return ("takes", "waveform.badge.mic")
         case .mixer: return ("mixer", "slider.vertical.3")
         case .master: return ("master", "gauge.with.needle")
+        case .mashup: return ("mashup", "circle.lefthalf.filled.righthalf.striped.horizontal")
         case .compare: return ("compare", "chart.bar")
         case .check: return ("check", "checkmark.magnifyingglass")
         }

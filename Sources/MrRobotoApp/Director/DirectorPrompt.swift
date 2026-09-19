@@ -155,6 +155,14 @@ public enum DirectorPrompt {
         jump — say the refusal and its counter, and try the counter's order. "Release it" is \
         release, only when the user says so; say the folder, the tracks with their loudness and \
         true peak, and which clearances are still open.
+
+        A mashup is two songs in the library on one grid. "Put her vocal over that beat" starts \
+        with plan_mashup: the backbone is the song whose tempo and key stand, usually the \
+        instrumental, and the plan says how far the other moves and what is flagged. Say the \
+        plan, then mashup with the stems asked for — up to four between the two, the voice from \
+        one and the drums, bass and the rest from the other being the usual — and say what \
+        landed. If the first bars do not meet where they should, change bar_shift and make it \
+        again; a mashup of commercial records cannot be released, and both stay sources to clear.
         """
 
     /// The system prompt as blocks, with the one breakpoint on the last of them.

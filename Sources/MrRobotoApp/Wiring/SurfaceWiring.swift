@@ -44,6 +44,7 @@ final class SurfaceWiring {
     private var booths: [SurfaceID: BoothModel] = [:]
     private var takeSheets: [SurfaceID: TakesModel] = [:]
     private var mixers: [SurfaceID: MixerModel] = [:]
+    private var mashups: [SurfaceID: MashupModel] = [:]
     private var masters: [SurfaceID: MasterModel] = [:]
     // The two answer surfaces. What they draw is filed on `AppState` by whoever asked the question
     // (see `SurfaceAnswer`); what is kept here is the built model and the host it plays through,
@@ -307,6 +308,15 @@ final class SurfaceWiring {
         return model
     }
 
+    /// The Mashup surface: two library songs on one grid, previewed through the shared rig.
+    func mashupModel(for item: BenchItem, app: AppState) -> MashupModel {
+        prune(app)
+        if let existing = mashups[item.id] { return existing }
+        let model = MashupModel(app: app, service: service(for: app), surfaceID: item.id)
+        mashups[item.id] = model
+        return model
+    }
+
     /// The Mixer on the bound mix version, or on unity.
     func mixerModel(for item: BenchItem, app: AppState) -> MixerModel {
         prune(app)
@@ -373,6 +383,7 @@ final class SurfaceWiring {
         booths = booths.filter { open.contains($0.key) }
         takeSheets = takeSheets.filter { open.contains($0.key) }
         mixers = mixers.filter { open.contains($0.key) }
+        mashups = mashups.filter { open.contains($0.key) }
         masters = masters.filter { open.contains($0.key) }
         compares = compares.filter { open.contains($0.key) }
         compareAdapters = compareAdapters.filter { open.contains($0.key) }

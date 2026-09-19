@@ -76,6 +76,11 @@ public enum Primer {
                     "Pick a section, press Record: the song plays under you and the take lands on the bar you sang it on, "
                         + "latency taken out. Stop is a take; every take stays. Nothing is tuned or moved here — the band "
                         + "reads it in Takes and offers, never fixes.")
+        case .mashup:
+            return ("Mashup",
+                    "Two songs from the library on one grid. One keeps its tempo and key — usually the instrumental — and the "
+                        + "other is shifted and stretched to meet it, first downbeat on a bar line. Choose up to four stems between "
+                        + "them, preview eight bars, then make the song: it lands in the library with its stems in place.")
         case .mixer:
             return ("Mixer",
                     "A strip per part: fader, pan, send, mute and solo, three bands of EQ and a compressor, with meters while "

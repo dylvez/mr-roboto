@@ -390,9 +390,12 @@ public struct Audio: Hashable, Codable, Sendable {
     public var take: Take?
     /// The plan a comp was rendered from, when this audio is a comp of takes (M5).
     public var comp: CompPlan?
+    /// The record this audio was taken from when it came out of another song — a mashup's stems —
+    /// so the album's clearances can name it. Nil for audio made here.
+    public var sourceRecord: RecordID?
 
     public init(media: MediaRef, role: AudioRole, stem: String? = nil, sampleRate: Double, channelCount: Int, duration: Double,
-                alignmentOffset: Double? = nil, take: Take? = nil, comp: CompPlan? = nil) {
+                alignmentOffset: Double? = nil, take: Take? = nil, comp: CompPlan? = nil, sourceRecord: RecordID? = nil) {
         self.media = media
         self.role = role
         self.stem = stem
@@ -402,6 +405,7 @@ public struct Audio: Hashable, Codable, Sendable {
         self.alignmentOffset = alignmentOffset
         self.take = take
         self.comp = comp
+        self.sourceRecord = sourceRecord
     }
 }
 

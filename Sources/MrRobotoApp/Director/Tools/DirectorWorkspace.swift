@@ -98,6 +98,8 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     func sequence(_ order: [SongID], gaps: [SongID: Double]?, in album: AlbumID, because: String) -> Bool
     /// The release folder and its report.
     func release(album: AlbumID) async throws -> (URL, Export.AlbumReport)
+    /// Two library songs on one grid, rendered and saved as a new song, which is opened.
+    func makeMashup(_ request: MashupRequest) async throws -> Song
 }
 
 /// `AppState` seen through the six things the Director needs.
@@ -181,6 +183,8 @@ public final class AppStateWorkspace: DirectorWorkspace {
     public func sequence(_ order: [SongID], gaps: [SongID: Double]?, in album: AlbumID, because: String) -> Bool {
         app.sequence(order, gaps: gaps, in: album, because: because)
     }
+
+    public func makeMashup(_ request: MashupRequest) async throws -> Song { try await app.makeMashup(request) }
 
     public func release(album id: AlbumID) async throws -> (URL, Export.AlbumReport) {
         guard let album = app.library.album(id) else { throw Export.ReleaseFailure.noAlbum }
@@ -380,6 +384,10 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
 
     public func release(album: AlbumID) async throws -> (URL, Export.AlbumReport) {
         throw DirectorToolFailure(tool: "release", reason: "This workspace has nowhere to render audio into.")
+    }
+
+    public func makeMashup(_ request: MashupRequest) async throws -> Song {
+        throw DirectorToolFailure(tool: "mashup", reason: "This workspace has nowhere to render audio into.")
     }
 
     public func export(_ what: String) async throws -> [URL] {

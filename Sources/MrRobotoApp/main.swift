@@ -61,6 +61,9 @@ struct FrameCommands: Commands {
             // surface already importing it. The surface's own well still takes a drop.
             Button("Import Record…") { MrRobotoApp.importRecord(app) }
                 .keyboardShortcut("i", modifiers: .command)
+            Button("New Mashup…") { app.openSurface(.mashup, title: "Mashup") }
+                .keyboardShortcut("n", modifiers: [.command, .shift])
+                .disabled(app.store == nil)
             Button("New Album") {
                 if let id = app.createAlbum(title: "New album") { app.openAlbum(id) }
             }

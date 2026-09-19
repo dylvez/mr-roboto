@@ -301,3 +301,20 @@ extension FrameRenderTests {
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-album")
     }
 }
+
+extension FrameRenderTests {
+    @Test("the Mashup surface on two analysed songs, the plan written out")
+    func mashup() throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        let directory = WiringFixture.temporaryDirectory("render-mashup")
+        defer { WiringFixture.remove(directory) }
+        let (app, a, b) = try MashupFixture.app(in: directory)
+        app.open(a)
+        let id = app.openSurface(.mashup, title: "Mashup")
+        let model = SurfaceWiring.shared.mashupModel(for: app.bench.items.first { $0.id == id }!, app: app)
+        model.b = b.id
+        model.barShift = 4
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-mashup")
+    }
+}

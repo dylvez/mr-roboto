@@ -372,6 +372,15 @@ extension AppState {
         for songID in album.songs {
             guard let song = (self.song?.id == songID ? self.song : nil) ?? library.song(songID) else { continue }
             for version in song.versions {
+                // A mashup's stems name the record they came out of.
+                if case .audio(let audio) = version.kind, let id = audio.sourceRecord {
+                    if let record = library.record(id) {
+                        add(record.artist.isEmpty ? record.title : "\(record.artist) – \(record.title)", record: record.id)
+                    } else {
+                        add("\(PartLabel.title(of: version)) in \(song.title)", record: nil)
+                    }
+                    continue
+                }
                 guard case .sample(let sample) = version.kind else { continue }
                 let record = sample.sourceRecord.flatMap { library.record($0) } ?? library.record(forMedia: sample.media)
                 if let record {

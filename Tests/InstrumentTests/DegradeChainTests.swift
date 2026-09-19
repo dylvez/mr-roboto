@@ -446,11 +446,27 @@ struct DegradeChainTests {
         writer.start()
         defer { stop.set() }
 
+        // Twenty passes, each over a fresh sine. The buffer used to be filled once and processed in
+        // place twenty times, so every pass ate the last one's output: with the drive as high as 5
+        // and the mix letting the dry signal through, the level crept pass over pass, and how far
+        // depended on which settings the writer happened to land — 4.76 under a loaded machine,
+        // under 4 on a quiet one. That was the test feeding back, not the chain misbehaving, and
+        // nothing in the app processes audio that way. Checked after every pass, so a blow-up is
+        // still caught on the pass it happens.
         let buffer = PlanarBuffer(channelCount: 2, frameCount: 64 * 512)
-        buffer.fill { channel, frame in
-            Float(0.4 * sin(2 * .pi * 330 * Double(frame) / Self.sr) * (channel == 0 ? 1 : 0.7))
+        for pass in 0..<20 {
+            buffer.fill { channel, frame in
+                Float(0.4 * sin(2 * .pi * 330 * Double(frame) / Self.sr) * (channel == 0 ? 1 : 0.7))
+            }
+            buffer.process(with: chain, blockSize: 512)
+            for c in 0..<2 {
+                let s = buffer.samples(c)
+                let finite = s.allSatisfy { $0.isFinite }
+                let peak = s.map { abs($0) }.max() ?? 0
+                #expect(finite, "pass \(pass), channel \(c): a non-finite sample")
+                #expect(peak < 4, "pass \(pass), channel \(c): peak \(peak)")
+            }
         }
-        for _ in 0..<20 { buffer.process(with: chain, blockSize: 512) }
 
         for c in 0..<2 {
             let s = buffer.samples(c)

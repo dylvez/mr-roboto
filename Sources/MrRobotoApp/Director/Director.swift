@@ -396,6 +396,8 @@ public actor Director {
         case "read_album": return "read the record"
         case "sequence": return many ? "sequenced the record \(times) times" : "sequenced the record"
         case "release": return "released the record"
+        case "plan_mashup": return "read how the two songs meet"
+        case "mashup": return "made the mashup"
         case "open_surface": return many ? "opened \(times) surfaces" : "opened a surface"
         case "propose": return many ? "offered \(times) suggestions" : "offered a suggestion"
         default: return many ? "\(tool) ×\(times)" : tool
