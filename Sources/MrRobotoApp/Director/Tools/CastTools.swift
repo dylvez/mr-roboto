@@ -101,6 +101,8 @@ public struct ConveneTool: DirectorTool {
         public var question: String
         /// A section by name, for the Engineer's bounce. Empty for the first section, or the song.
         public var section: String
+        /// Who to ask, by id. Empty asks everyone in the room.
+        public var personas: [String]
     }
 
     public struct Output: Encodable, Sendable {
@@ -117,6 +119,9 @@ public struct ConveneTool: DirectorTool {
             public var persona: String
             public var verdict: String
             public var says: String
+            /// True when this member was not asked and speaks only because a rule of theirs refuses.
+            public var isGuard: Bool
+            enum CodingKeys: String, CodingKey { case persona, verdict, says; case isGuard = "is_guard" }
         }
         public struct Disagreement: Encodable, Sendable {
             public var between: [String]
@@ -126,10 +131,14 @@ public struct ConveneTool: DirectorTool {
             enum CodingKeys: String, CodingKey { case between, about, compare; case settledBy = "settled_by" }
         }
         public var room: [String]
+        /// Who was asked, and who in the room was not. Not asked is not the same as nothing to say.
+        public var asked: [String]
+        public var notAsked: [String]
         public var readings: [Reading]
         public var verdicts: [Verdict]
         public var disagreement: Disagreement?
         public var detail: String
+        enum CodingKeys: String, CodingKey { case room, asked, readings, verdicts, disagreement, detail; case notAsked = "not_asked" }
     }
 
     let workspace: any DirectorWorkspace
@@ -142,15 +151,18 @@ public struct ConveneTool: DirectorTool {
 
     public let name = "convene"
     public var purpose: String {
-        "Put a question to everyone in the room. Each persona reads the open song in its own units — parts and brief, "
-        + "hook arrival in seconds, the bounce in LUFS and dB, the lines' stresses — and says what holds and what does not; "
-        + "the lines reach the rail in their names. When two disagree, a Compare of the two readings opens, with what settles it."
+        "Put a question to the room, or to the members named. Each persona asked reads the open song in its own units — parts and "
+        + "brief, hook arrival in seconds, the bounce in LUFS and dB, the lines' stresses — and says what holds and what does not; "
+        + "the lines reach the rail in their names. A member not asked stays silent unless one of their rules refuses the question "
+        + "as a proposal: that comes back marked as a guard. When two of those asked disagree, a Compare of the two readings opens."
     }
     public var schema: DirectorJSON {
         Schema.object([
             ("question", Schema.string("What the user asked, in their words.")),
             ("section", Schema.string("A section by name, for the Engineer to bounce. Empty for the first section.")),
-        ], required: ["question", "section"])
+            ("personas", Schema.array("Who to ask, by id; empty asks everyone in the room. Use the user's 'Asked of' line when there is one.",
+                                      of: Schema.string("A persona id.", enum: ["beatmaker", "sampler", "bassist", "producer", "engineer", "peer", "lyricist"]))),
+        ], required: ["question", "section", "personas"])
     }
 
     public func run(_ input: Input) async throws -> Output {
@@ -162,12 +174,29 @@ public struct ConveneTool: DirectorTool {
         var readings: [(PersonaID, PersonaReading)] = []
         var notes: [String] = []
 
+        // Who is asked: everyone in the room, or the members named who are in it.
+        let named = input.personas.map { PersonaID($0.lowercased()) }
+        let absent = named.filter { !room.ids.contains($0) }
+        let asked = named.isEmpty ? room : Cast(room.personas.filter { named.contains($0.bible.id) })
+        if !absent.isEmpty {
+            notes.append("\(absent.map { cast.persona($0)?.bible.name ?? $0.rawValue }.joined(separator: ", ")) \(absent.count == 1 ? "is" : "are") not in the room for this song.")
+        }
+        guard !asked.personas.isEmpty else {
+            throw DirectorToolFailure(tool: name, reason: "None of those asked are in the room for this song. " + notes.joined(separator: " "),
+                                      suggestion: "Add them with cast, or ask someone who is in the room: \(room.ids.map(\.rawValue).joined(separator: ", ")).")
+        }
+        let notAsked = room.ids.filter { !asked.ids.contains($0) }
+        if !notAsked.isEmpty {
+            let names = asked.personas.map(\.bible.name).joined(separator: ", ")
+            await workspace.speak("Band", "Asked: \(names).", detail: "\(notAsked.count) in the room not consulted")
+        }
+
         let section = input.section.isEmpty ? nil : song.sections.first { $0.name.caseInsensitiveCompare(input.section) == .orderedSame }
         if !input.section.isEmpty, section == nil {
             notes.append("No section called \(input.section); the Engineer read the first.")
         }
 
-        for persona in room.personas {
+        for persona in asked.personas {
             let id = persona.bible.id
             switch id {
             case .producer:
@@ -210,7 +239,7 @@ public struct ConveneTool: DirectorTool {
         }
 
         // The rail: what did not hold, in each persona's name; a persona with nothing to flag says so once.
-        for persona in room.personas {
+        for persona in asked.personas {
             let id = persona.bible.id
             let mine = readings.filter { $0.0 == id }.map(\.1)
             guard !mine.isEmpty else { continue }
@@ -228,18 +257,24 @@ public struct ConveneTool: DirectorTool {
         var verdicts: [Output.Verdict] = []
         var answered: [(PersonaID, PersonaVerdict)] = []
         if case .outOfScope = proposal {} else {
+            // The whole room hears the proposal, because guards stay on: a member who was not asked
+            // speaks only when a rule of theirs refuses, and is marked as a guard, not an opinion.
             for (id, verdict) in room.ask(proposal) {
                 if case .defer_ = verdict { continue }
-                answered.append((id, verdict))
-                verdicts.append(Output.Verdict(persona: id.rawValue, verdict: VerdictShape(verdict).description, says: verdict.spoken))
-                await workspace.speak(cast.persona(id)?.bible.name ?? id.rawValue, verdict.spoken, detail: verdict.refusedByRule.map { "refused by \($0)" })
+                let wasAsked = asked.ids.contains(id)
+                guard wasAsked || verdict.refusedByRule != nil else { continue }
+                if wasAsked { answered.append((id, verdict)) }
+                verdicts.append(Output.Verdict(persona: id.rawValue, verdict: VerdictShape(verdict).description, says: verdict.spoken, isGuard: !wasAsked))
+                let rule = verdict.refusedByRule.map { "refused by \($0)" }
+                await workspace.speak(cast.persona(id)?.bible.name ?? id.rawValue, verdict.spoken,
+                                      detail: wasAsked ? rule : "guard — not asked, but \(rule ?? "a rule refuses")")
             }
         }
 
         // A disagreement: two verdicts of different shapes on the proposal, or a declared pair
         // where this side's front-line reading fails while the other's holds.
         var disagreement: Output.Disagreement?
-        if let card = Self.disagreement(among: answered, proposal: proposal, readings: readings, room: room, song: song, section: section) {
+        if let card = Self.disagreement(among: answered, proposal: proposal, readings: readings, room: asked, song: song, section: section) {
             let title = await workspace.openDisagreement(card)
             disagreement = Output.Disagreement(between: card.between.map(\.rawValue), about: card.about, settledBy: card.settledBy, compare: title)
         }
@@ -249,10 +284,14 @@ public struct ConveneTool: DirectorTool {
             return Output.Reading(persona: id.rawValue, rule: r.rule, feature: r.feature.rawValue, value: r.value, unit: unit, holds: r.holds, says: r.says)
         }
         let flagged = out.filter { !$0.holds }.count
-        var detail = "\(room.personas.count) in the room; \(out.count) readings, \(flagged) not holding."
+        var detail = notAsked.isEmpty
+            ? "\(room.personas.count) in the room; \(out.count) readings, \(flagged) not holding."
+            : "Asked \(asked.ids.map(\.rawValue).joined(separator: ", ")) of \(room.personas.count) in the room; \(out.count) readings, \(flagged) not holding."
+        let guards = verdicts.filter(\.isGuard)
+        if !guards.isEmpty { detail += " Guard: \(guards.map { "\($0.persona) (not asked) refuses" }.joined(separator: "; "))." }
         if let disagreement { detail += " \(disagreement.between.joined(separator: " and ")) disagree about \(disagreement.about); a Compare is open." }
         if !notes.isEmpty { detail += " " + notes.joined(separator: " ") }
-        return Output(room: room.ids.map(\.rawValue), readings: out, verdicts: verdicts, disagreement: disagreement, detail: detail)
+        return Output(room: room.ids.map(\.rawValue), asked: asked.ids.map(\.rawValue), notAsked: notAsked.map(\.rawValue), readings: out, verdicts: verdicts, disagreement: disagreement, detail: detail)
     }
 
     /// The first disagreement that shows.

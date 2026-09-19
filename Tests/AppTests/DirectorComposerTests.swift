@@ -78,6 +78,37 @@ struct DirectorEndingTests {
         #expect(!(last?.text.contains("sk-ant") ?? false))
     }
 
+    @Test("A message for two of the band carries who it is for, the rail says so, and the next message is for everyone again")
+    func addressedMessage() async throws {
+        let transport = DirectorScriptedTransport([.events(DirectorSSE.reply("The low end holds.")), .events(DirectorSSE.reply("Fine."))])
+        let rig = Self.rig([], transport: transport)
+        defer { rig.clean() }
+        #expect(rig.session.room.count == 7 && rig.session.addressed.isEmpty)
+        rig.session.toggleAddressed(.engineer)
+        rig.session.toggleAddressed(.bassist)
+        await Self.send(rig, "how is the low end?")
+
+        let firstRequest = await transport.requests.first
+        let body = String(decoding: try #require(firstRequest?.body), as: UTF8.self)
+        #expect(body.contains("how is the low end?\\n\\nAsked of: bassist, engineer"), "in the room's order, on a line of its own")
+        let mine = try #require(rig.app.log.first { $0.source == .you && $0.text == "how is the low end?" })
+        #expect(mine.detail == "to Bassist, Engineer only", "the rail shows your words, and who they were for beside them")
+        #expect(rig.session.addressed.isEmpty, "back to everyone")
+
+        // Kept: the same members for the next message too. An at sign adds one for that message.
+        rig.session.toggleAddressed(.engineer)
+        rig.session.keepsAddressing = true
+        await Self.send(rig, "and now? @peer")
+        let lastRequest = await transport.requests.last
+        let second = String(decoding: try #require(lastRequest?.body), as: UTF8.self)
+        #expect(second.contains("Asked of: engineer, peer"))
+        #expect(rig.session.addressed == [.engineer])
+
+        // Everyone chosen is nobody chosen.
+        for member in rig.session.room where member.id != .engineer { rig.session.toggleAddressed(member.id) }
+        #expect(rig.session.addressed.isEmpty)
+    }
+
     @Test("A Director with a key but no frame behind the turn still answers rather than throwing")
     func noKeyThroughTheActor() async {
         let rig = Self.rig([], keySource: ClaudeFixedKey.none)

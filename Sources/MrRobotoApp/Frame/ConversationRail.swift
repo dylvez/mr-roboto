@@ -187,8 +187,9 @@ struct LiveComposer: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
+            addressing
             HStack(spacing: 10) {
-                TextField("Ask the band…", text: $band.composing, axis: .vertical)
+                TextField(band.addressed.isEmpty ? "Ask the band…" : "Ask \(askedNames)…", text: $band.composing, axis: .vertical)
                     .textFieldStyle(.plain)
                     .lineLimit(1...4)
                     .font(Design.Typography.prose(15))
@@ -235,6 +236,29 @@ struct LiveComposer: View {
         .padding(.bottom, 24)
         .onExitCommand { band.cancel() }
         .task { await band.refreshKeyStatus() }
+    }
+}
+
+extension LiveComposer {
+    /// Who this message is for. All lit is everyone; press names to ask only them. Guards stay on:
+    /// a member left out still speaks when one of their rules refuses a move.
+    fileprivate var addressing: some View {
+        let room = band.room
+        return FlowRow(spacing: 5) {
+            BoothChip("Everyone", isOn: band.addressed.isEmpty) { band.addressed = [] }
+            ForEach(room, id: \.id) { member in
+                BoothChip(member.name, isOn: band.addressed.contains(member.id)) { band.toggleAddressed(member.id) }
+            }
+            if !band.addressed.isEmpty {
+                BoothChip(band.keepsAddressing ? "Kept" : "Keep", isOn: band.keepsAddressing) { band.keepsAddressing.toggle() }
+            }
+        }
+        .help("Ask only some of the band for this message, or type a name with @. It goes back to everyone after you send, unless kept. Guards stay on: a member you left out still speaks if one of their rules refuses a move.")
+    }
+
+    fileprivate var askedNames: String {
+        let names = band.room.filter { band.addressed.contains($0.id) }.map(\.name)
+        return names.count <= 2 ? names.joined(separator: " and ") : "\(names.count) of the band"
     }
 }
 

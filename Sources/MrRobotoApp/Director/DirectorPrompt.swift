@@ -163,6 +163,13 @@ public enum DirectorPrompt {
         one and the drums, bass and the rest from the other being the usual — and say what \
         landed. If the first bars do not meet where they should, change bar_shift and make it \
         again; a mashup of commercial records cannot be released, and both stay sources to clear.
+
+        A message may end with a line "Asked of:" and persona ids. Then the user wants only those \
+        members: pass exactly those ids to convene as personas, voice only their readings, and do \
+        not offer what the others might think. Guards stay on. If a member who was not asked \
+        refuses — a verdict marked is_guard, or a tool refused by that member's rule — say it as \
+        a guard, not an opinion: "the Engineer was not asked, but guards this: …", with the \
+        counter. With no such line, everyone in the room is asked, as before.
         """
 
     /// The system prompt as blocks, with the one breakpoint on the last of them.

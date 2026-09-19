@@ -41,6 +41,39 @@ public final class DirectorSession {
     /// What you are typing. Bound to the composer.
     public var composing: String = ""
 
+    /// Who the next message is for. Empty is everyone in the room. Cleared after each send unless kept.
+    public var addressed: Set<PersonaID> = []
+    /// Keep the same members for the messages that follow.
+    public var keepsAddressing = false
+
+    /// The members in the room for the open song, in the order they answer.
+    public var room: [(id: PersonaID, name: String)] {
+        Cast.standard.inRoom(for: app?.song).personas.map { ($0.bible.id, $0.bible.name) }
+    }
+
+    public func toggleAddressed(_ id: PersonaID) {
+        if addressed.contains(id) { addressed.remove(id) } else { addressed.insert(id) }
+        // Everyone chosen is everyone: the same as nobody chosen.
+        if addressed.count == room.count { addressed = [] }
+    }
+
+    /// Who a message is for: the chips, plus anyone named with an at sign ("@engineer", "@Eng").
+    /// Only members in the room count. Empty means everyone.
+    nonisolated static func addressees(in text: String, chips: Set<PersonaID>, room: [(id: PersonaID, name: String)]) -> [PersonaID] {
+        var chosen = chips
+        for word in text.split(whereSeparator: { $0.isWhitespace }) where word.hasPrefix("@") && word.count > 2 {
+            let handle = word.dropFirst().lowercased().trimmingCharacters(in: .punctuationCharacters)
+            if let match = room.first(where: { $0.id.rawValue.hasPrefix(handle) || $0.name.lowercased().hasPrefix(handle) }) { chosen.insert(match.id) }
+        }
+        let ordered = room.map(\.id).filter { chosen.contains($0) }
+        return ordered.count == room.count ? [] : ordered
+    }
+
+    /// What the Director is sent: the user's words, and on a line of its own who they are for.
+    nonisolated static func addressedText(_ text: String, to ids: [PersonaID]) -> String {
+        ids.isEmpty ? text : text + "\n\nAsked of: " + ids.map(\.rawValue).joined(separator: ", ")
+    }
+
     /// True from pressing return to the turn ending, whichever way it ends.
     public private(set) var isWorking = false
 
@@ -126,8 +159,12 @@ public final class DirectorSession {
         }
 
         composing = ""
-        app?.note(.you, text)
-        start(text)
+        let room = self.room
+        let ids = Self.addressees(in: text, chips: addressed, room: room)
+        let names = ids.compactMap { id in room.first { $0.id == id }?.name }
+        app?.note(.you, text, detail: ids.isEmpty ? nil : "to \(names.joined(separator: ", ")) only")
+        if !keepsAddressing { addressed = [] }
+        start(Self.addressedText(text, to: ids))
     }
 
     /// The same, for a sentence that did not come from the field: a proposal you accepted in words,

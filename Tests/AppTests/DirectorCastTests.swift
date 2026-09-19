@@ -66,7 +66,7 @@ struct DirectorCastToolTests {
     func conveneTool() async throws {
         let workspace = DirectorScratchWorkspace(song: RoomFixture.song())
         let box = toolbox(workspace)
-        let result = await box.run(ClaudeToolUse(id: "v1", name: "convene", input: .object([.init("question", .string("is this verse working?")), .init("section", .string("Verse"))])))
+        let result = await box.run(ClaudeToolUse(id: "v1", name: "convene", input: .object([.init("question", .string("is this verse working?")), .init("section", .string("Verse")), .init("personas", .array([]))])))
         #expect(!result.isError, "\(result.content)")
         let json = json(result)
         let readings = try #require(json["readings"] as? [[String: Any]])
@@ -88,13 +88,65 @@ struct DirectorCastToolTests {
     func conveneRespectsTheRoom() async throws {
         let workspace = DirectorScratchWorkspace(song: RoomFixture.song())
         workspace.setCast([.peer])
-        let result = await box(workspace).run(ClaudeToolUse(id: "v2", name: "convene", input: .object([.init("question", .string("does the hook land?")), .init("section", .string(""))])))
+        let result = await box(workspace).run(ClaudeToolUse(id: "v2", name: "convene", input: .object([.init("question", .string("does the hook land?")), .init("section", .string("")), .init("personas", .array([]))])))
         let json = json(result)
         #expect((json["room"] as? [String]) == ["peer"])
         #expect((json["readings"] as? [[String: Any]])?.allSatisfy { $0["persona"] as? String == "peer" } == true)
     }
 
+    @Test("asked of two: only they read and speak, the rail says who was asked, and a member left out still guards")
+    func conveneAsksOnlyThoseNamed() async throws {
+        let workspace = DirectorScratchWorkspace(song: RoomFixture.song())
+        let result = await box(workspace).run(ClaudeToolUse(id: "v3", name: "convene", input: .object([
+            .init("question", .string("quantise it hard")), .init("section", .string("")),
+            .init("personas", .array([.string("peer"), .string("Producer")]))])))
+        #expect(!result.isError, "\(result.content)")
+        let json = json(result)
+        #expect((json["asked"] as? [String]) == ["producer", "peer"], "in the room's order, whatever the case")
+        #expect((json["not_asked"] as? [String])?.contains("beatmaker") == true && (json["room"] as? [String])?.count == 7)
+        let readers = Set((json["readings"] as? [[String: Any]] ?? []).compactMap { $0["persona"] as? String })
+        #expect(readers.isSubset(of: ["producer", "peer"]) && !readers.isEmpty, "\(readers)")
+        // The rail: who was asked, and nobody else's opinion.
+        #expect(workspace.spoken.contains { $0.persona == "Band" && $0.text == "Asked: Producer, Peer." && $0.detail == "5 in the room not consulted" })
+        // Guards stay on: the Beatmaker was not asked, and still refuses a hard quantise, marked as a guard.
+        let verdicts = try #require(json["verdicts"] as? [[String: Any]])
+        let beatmaker = try #require(verdicts.first { $0["persona"] as? String == "beatmaker" }, "\(verdicts)")
+        #expect(beatmaker["is_guard"] as? Bool == true && (beatmaker["verdict"] as? String)?.lowercased().contains("refus") == true, "\(beatmaker)")
+        #expect(workspace.spoken.contains { $0.persona == "Beatmaker" && $0.detail?.hasPrefix("guard — not asked") == true })
+        #expect(verdicts.allSatisfy { ($0["is_guard"] as? Bool == true) || ["producer", "peer"].contains($0["persona"] as? String ?? "") })
+        #expect((json["detail"] as? String)?.contains("Asked producer, peer of 7") == true)
+
+        // Someone named who is not in the room is said, and nobody asked at all is refused with who is.
+        workspace.setCast([.peer, .producer])
+        let absent = await box(workspace).run(ClaudeToolUse(id: "v4", name: "convene", input: .object([
+            .init("question", .string("does the hook land?")), .init("section", .string("")), .init("personas", .array([.string("peer"), .string("engineer")]))])))
+        let absentDetail = DirectorCastToolTests.detail(of: absent)
+        #expect(absentDetail.contains("Engineer is not in the room"), "\(absentDetail)")
+        let nobody = await box(workspace).run(ClaudeToolUse(id: "v5", name: "convene", input: .object([
+            .init("question", .string("how loud?")), .init("section", .string("")), .init("personas", .array([.string("engineer")]))])))
+        #expect(nobody.isError && nobody.content.contains("in the room"))
+    }
+
+    @Test("who a message is for: chips, names typed with an at sign, only members in the room, and everyone is nobody")
+    func addressees() {
+        let room: [(id: PersonaID, name: String)] = [(.beatmaker, "Beatmaker"), (.bassist, "Bassist"), (.engineer, "Engineer")]
+        #expect(DirectorSession.addressees(in: "how is the low end?", chips: [], room: room).isEmpty)
+        #expect(DirectorSession.addressees(in: "how is the low end?", chips: [.engineer], room: room) == [.engineer])
+        #expect(DirectorSession.addressees(in: "@eng and @Bassist, how is the low end?", chips: [], room: room) == [.bassist, .engineer])
+        #expect(DirectorSession.addressees(in: "@producer what do you think", chips: [], room: room).isEmpty, "not in the room")
+        #expect(DirectorSession.addressees(in: "mail me @ 5", chips: [], room: room).isEmpty)
+        #expect(DirectorSession.addressees(in: "all of you", chips: [.beatmaker, .bassist, .engineer], room: room).isEmpty, "everyone is the same as nobody chosen")
+        #expect(DirectorSession.addressedText("how loud?", to: [.engineer, .bassist]) == "how loud?\n\nAsked of: engineer, bassist")
+        #expect(DirectorSession.addressedText("how loud?", to: []) == "how loud?")
+    }
+
     private func box(_ workspace: DirectorScratchWorkspace) -> DirectorToolbox { toolbox(workspace) }
+
+    /// The detail line, read without the local `json` a test may have shadowed the helper with.
+    static func detail(of result: ClaudeToolResult) -> String {
+        let object = (try? JSONSerialization.jsonObject(with: Data(result.content.utf8))) as? [String: Any]
+        return object?["detail"] as? String ?? ""
+    }
 
     @Test("a disagreement on a proposal opens as a Compare of the two verdicts")
     func disagreementOnAProposal() {
@@ -131,7 +183,7 @@ struct DirectorConveneProofTests {
     @Test("Is this verse working?")
     func theRoomProof() async throws {
         var replies: [@Sendable () async -> String] = []
-        replies.append(DirectorLateTransport.fixed(DirectorTurnFixture.call("t1", "convene", #"{"question":"is this verse working?","section":"Verse"}"#)))
+        replies.append(DirectorLateTransport.fixed(DirectorTurnFixture.call("t1", "convene", #"{"question":"is this verse working?","section":"Verse","personas":[]}"#)))
         replies.append(DirectorLateTransport.fixed(DirectorSSE.reply(
             "Three of them read it. The Peer: the hook arrives at 41 seconds, past the 30 a listener waits. The Producer: two parts, "
             + "nothing orphaned, the song is holding. The Engineer: the verse bounces well under −14 LUFS, peak under the ceiling. "

@@ -382,7 +382,7 @@ struct DirectorDustToolboxTests {
         #expect(prompt.contains("not only that it refused."))
         #expect(prompt.contains("the line is written to the key and you say so."))
         #expect(prompt.contains("and the transport plays the sections in order."))
-        #expect(prompt.hasSuffix("both stay sources to clear."), "M3's library paragraph is now the last thing in the prefix")
+        #expect(prompt.hasSuffix("everyone in the room is asked, as before."), "M3's library paragraph is now the last thing in the prefix")
         let year = Calendar(identifier: .gregorian).component(.year, from: Date())
         #expect(!prompt.contains("\(year)"))
         #expect(DirectorPrompt.systemBlocks.map(\.text) == [prompt])
