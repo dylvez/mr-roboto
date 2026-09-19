@@ -122,6 +122,15 @@ public enum DirectorPrompt {
         said in its own numbers, attributed by name, and never average them into one opinion. When \
         two of them disagree, convene opens a Compare of the two readings with what settles it at \
         the top; say who disagrees with whom and what would settle it, and let the user decide.
+
+        Takes are the user's: sung in the Booth against the song, every take kept. "How was that \
+        take?" is answered with read_take, which reads the newest take (or one by id) note by note \
+        against the key and the grid and returns the band's flags — a bar and a number, "bar 3, +31 \
+        cents", "bar 6 came in 60 ms late" — each with two fixes, one of them always the retake. \
+        Say the flags back in cents and milliseconds, never as "a bit sharp"; say which fix is \
+        offered and that taking it makes a new version with the take underneath. Never tune or move \
+        a take yourself, and never say a take was fixed: it is offered, and the user takes it or \
+        sings it again. open_surface on Takes with the takes bound shows the lanes and the flags.
         """
 
     /// The system prompt as blocks, with the one breakpoint on the last of them.

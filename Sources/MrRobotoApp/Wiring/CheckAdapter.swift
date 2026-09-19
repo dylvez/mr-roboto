@@ -78,6 +78,9 @@ final class CheckAdapter: CheckHosting {
         guard let subject, let version = app.version(subject) else {
             return .refused("This song no longer holds the part that finding is about.")
         }
+        if case .audio(let audio) = version.kind, audio.role == .take {
+            return applyToTake(fix, of: finding, version: version, audio: audio)
+        }
         guard let changed = CheckAdapter.applying(fix.change, to: version.kind) else {
             // Everything else moves a level, a lag or the chain, none of which a part version
             // carries: they are render settings, and they belong on the surface that renders them.
@@ -100,6 +103,73 @@ final class CheckAdapter: CheckHosting {
             return .resolved
         }
         return remeasured.trips ? .stillFires(remeasured) : .resolved
+    }
+
+    /// M5: a take's fix is rendered audio — a note shifted, an onset nudged — recorded as a
+    /// corrected version with the take as its parent. The take's bytes never change. A retake is
+    /// not something a card can do: it says where to.
+    private func applyToTake(_ fix: Fix, of finding: Finding, version: PartVersion, audio: Audio) -> CheckOutcome {
+        switch fix.change {
+        case .retake(let bar):
+            return .refused("Retake bar \(bar + 1) in the Booth (⌘0): punch in on the section and sing it again. "
+                + "The new take sits beside this one in Takes; nothing here was changed.")
+        case .shiftNote, .nudgeNote:
+            break
+        default:
+            return .refused("\(fix.title) is not something a take carries. Nothing was changed.")
+        }
+        guard let store = app.store, let song = app.song,
+              let url = try? store.mediaURL(for: audio.media, song: song.id),
+              let source = try? BoothAdapter.planar(url) else {
+            return .refused("The take's audio could not be read, so nothing was changed.")
+        }
+        let alignment = audio.alignmentOffset ?? audio.take.map { app.clock.seconds(forBar: $0.startBar) + $0.startBeat * app.clock.secondsPerBeat } ?? 0
+        let before = TakeAnalysis.of(source.planar, sampleRate: source.sampleRate, alignmentSeconds: alignment, key: song.key, clock: app.clock)
+        let rendered: [[Float]]
+        let index: Int
+        do {
+            switch fix.change {
+            case .shiftNote(let i, let cents):
+                guard before.notes.indices.contains(i) else { return .refused("The take no longer reads that note.") }
+                let note = before.notes[i]
+                rendered = try TakeCorrection.shifting(source.planar, sampleRate: source.sampleRate,
+                                                       start: note.start - alignment, end: note.end - alignment, cents: cents)
+                index = i
+            case .nudgeNote(let i, let ms):
+                guard before.notes.indices.contains(i) else { return .refused("The take no longer reads that note.") }
+                let note = before.notes[i]
+                rendered = TakeCorrection.nudging(source.planar, sampleRate: source.sampleRate,
+                                                  start: note.start - alignment, end: note.end - alignment, milliseconds: ms)
+                index = i
+            default:
+                return .refused("Nothing was changed.")
+            }
+        } catch {
+            return .refused("The correction could not be rendered: \(error). Nothing was changed.")
+        }
+        let scratch = FileManager.default.temporaryDirectory.appendingPathComponent("corrected-\(UUID().uuidString).wav")
+        defer { try? FileManager.default.removeItem(at: scratch) }
+        do {
+            try BoothAdapter.write(rendered, sampleRate: source.sampleRate, to: scratch)
+            let package = try store.songStore(for: song.id)
+            let media = try package.addMedia(copying: scratch)
+            var corrected = audio
+            corrected.media = media
+            corrected.take = nil
+            let applied = version.deriving(.audio(corrected), by: .user, operation: Operation.corrected,
+                                           note: "\(finding.criticName) at \(finding.subject.named): \(fix.title.lowercased()) — corrected from \(PartLabel.title(of: version))")
+            guard app.record(applied) else { return .refused("The song would not take that version.") }
+        } catch {
+            return .refused("The corrected take could not be kept: \(error). Nothing was changed.")
+        }
+        // Re-read the corrected audio: the number after is measured, not assumed.
+        let after = TakeAnalysis.of(rendered, sampleRate: source.sampleRate, alignmentSeconds: alignment, key: song.key, clock: app.clock)
+        var measurement = finding.measurement
+        if after.notes.indices.contains(index) {
+            measurement.measured = measurement.feature == .takePitchCents ? after.notes[index].centsFromKey : after.notes[index].timingMS
+            return measurement.trips ? .stillFires(measurement) : .resolved
+        }
+        return .resolved
     }
 
     /// The change, as a new part payload — or nil when this part does not carry the thing it moves.

@@ -1,5 +1,6 @@
 import AudioEngine
 import Foundation
+import MusicTheory
 import Performance
 import SongGraph
 
@@ -7,8 +8,12 @@ import SongGraph
 @MainActor
 public protocol TakesHosting: AnyObject {
     var clock: TransportClock { get }
+    /// The song's key, for the critics.
+    var key: Key? { get }
     /// A take's audio, placed in the song. Nil when the file is missing.
     func audio(of version: PartVersion) -> Comp.TakeAudio?
+    /// Opens a Check on one finding about one take.
+    func openCheck(_ finding: Finding, on take: PartVersion)
     func audition(_ version: PartVersion) async
     func stopAudition()
     /// Keeps a rendered comp as a version whose parents are the takes. Nil, with the reason in
@@ -33,13 +38,18 @@ public final class TakesModel {
     public private(set) var comp: PartVersion?
     public private(set) var playing: VersionID?
     public private(set) var lastError: String?
-    /// The band's findings on the takes, by version (M5 Gate B fills these).
-    public var flags: [VersionID: [Finding]] = [:]
+    /// The band's findings on the takes, by version: cents and milliseconds at the bar.
+    public private(set) var flags: [VersionID: [Finding]] = [:]
+    /// Each take read: its notes against the key and the grid.
+    public private(set) var analyses: [VersionID: TakeAnalysis] = [:]
 
     private let host: any TakesHosting
+    private let board: CriticBoard
 
-    public init(host: any TakesHosting, takes: [PartVersion], song: Song?, surfaceID: SurfaceID = SurfaceID()) {
+    public init(host: any TakesHosting, takes: [PartVersion], song: Song?, surfaceID: SurfaceID = SurfaceID(),
+                board: CriticBoard = .standard) {
         self.host = host
+        self.board = board
         self.surfaceID = surfaceID
         self.takes = takes
         let taken = takes.compactMap { Guidance.audio(of: $0) }
@@ -55,9 +65,25 @@ public final class TakesModel {
             let last = taken.map { ($0.take?.startBar ?? 0) + Int(($0.duration / clock.secondsPerBar).rounded(.up)) }.max() ?? first + 1
             bars = first..<max(first + 1, last)
         }
+        read()
     }
 
     public var clock: TransportClock { host.clock }
+
+    /// Reads every take and asks the critics. Called once on open; again after a new take.
+    public func read() {
+        for take in takes {
+            guard let audio = host.audio(of: take) else { continue }
+            let analysis = TakeAnalysis.of(audio.planar, sampleRate: audio.sampleRate, alignmentSeconds: audio.alignmentSeconds,
+                                           key: host.key, clock: host.clock, label: PartLabel.title(of: take))
+            analyses[take.id] = analysis
+            flags[take.id] = board.review(TakeReview(analysis: analysis))
+        }
+    }
+
+    public func openCheck(_ finding: Finding, on take: PartVersion) {
+        host.openCheck(finding, on: take)
+    }
 
     /// The take a bar comes from.
     public func take(forBar bar: Int) -> VersionID? {

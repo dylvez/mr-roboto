@@ -504,8 +504,8 @@ struct CriticBoardTests {
     @Test("The shipped board holds every critic, each owned by a persona and each saying what it checks")
     func theBoardIsComplete() {
         let board = CriticBoard.standard
-        #expect(board.all.count == 7)
-        #expect(Set(board.all.map(\.id)).count == 7)
+        #expect(board.all.count == 9)
+        #expect(Set(board.all.map(\.id)).count == 9)
         #expect(board.critic(.transientCut) != nil)
         #expect(board.critic(.swingClash) != nil)
         for critic in board.all {
@@ -631,7 +631,7 @@ struct MergeCriticTests {
         let board = CriticBoard.standard.review(review(6, drums: [true, true]))
         #expect(board.count == 2)
         #expect(board.map(\.critic).contains(.tooFarTransposed) && board.map(\.critic).contains(.twoDrumSources))
-        #expect(CriticBoard.standard.all.count == 7)
+        #expect(CriticBoard.standard.all.count == 9)
         #expect(review(0, uncleared: [true, false]).uncleared == ["Vessel – Arrival"])
     }
 }

@@ -300,7 +300,7 @@ struct PersonaCastTests {
 
     @Test("Every finding a shipped critic can make belongs to a persona in the cast")
     func criticsBelongToPersonas() {
-        let known: Set<PersonaID> = [Beatmaker.bible.id, Sampler.bible.id]
+        let known = Set(Cast.standard.ids)
         for critic in CriticBoard.standard.all {
             #expect(known.contains(critic.persona),
                     "\(critic.id) is owned by \(critic.persona), who is not in the cast")

@@ -46,7 +46,8 @@ struct TakesSurfaceView: View {
     }
 
     private func laneRow(title: String, subtitle: String, isComp: Bool, version: PartVersion?) -> some View {
-        HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     if let version {
@@ -68,6 +69,26 @@ struct TakesSurfaceView: View {
                 ForEach(Array(model.bars), id: \.self) { bar in
                     barCell(bar: bar, isComp: isComp, version: version)
                 }
+            }
+            }
+            if let version, let flags = model.flags[version.id], !flags.isEmpty {
+                // The band's flags, each a chip that opens its Check: the bar and the number.
+                HStack(spacing: 6) {
+                    ForEach(flags) { finding in
+                        Button { model.openCheck(finding, on: version) } label: {
+                            Text(finding.headline)
+                                .font(Design.Typography.numeric(10.5))
+                                .foregroundStyle(finding.severity == .warn ? Design.Palette.warn : Design.Palette.inkSecondary)
+                                .padding(.horizontal, 6)
+                                .frame(height: 18)
+                                .background(finding.severity == .warn ? Design.Palette.warnSoft : Design.Palette.panelAlt,
+                                            in: RoundedRectangle(cornerRadius: Design.Metric.corner))
+                        }
+                        .buttonStyle(.plain)
+                        .help(finding.why)
+                    }
+                }
+                .padding(.leading, 158)
             }
         }
         .padding(.vertical, 4)

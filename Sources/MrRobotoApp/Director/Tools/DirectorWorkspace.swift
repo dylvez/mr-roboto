@@ -1,3 +1,4 @@
+import AudioEngine
 import Foundation
 import Performance
 import SongGraph
@@ -66,6 +67,13 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     /// Opens a Compare of two personas' readings that disagree. Returns the surface's title, or
     /// nil when this workspace has no bench.
     func openDisagreement(_ card: DisagreementCard) -> String?
+
+    // M5: takes.
+
+    /// A take's audio, placed in the song. Nil when this workspace cannot read it.
+    func takeAudio(of version: PartVersion) -> Comp.TakeAudio?
+    /// The transport clock the song plays at.
+    var clock: TransportClock { get }
 }
 
 /// `AppState` seen through the six things the Director needs.
@@ -122,6 +130,12 @@ public final class AppStateWorkspace: DirectorWorkspace {
         app.file(.compare(card.brief), for: id)
         return card.title
     }
+
+    public func takeAudio(of version: PartVersion) -> Comp.TakeAudio? {
+        BoothAdapter(app: app, service: SurfaceWiring.shared.service(for: app)).audio(of: version)
+    }
+
+    public var clock: TransportClock { app.clock }
 }
 
 /// Something that can make a noise. Kept separate from the workspace because on this machine —
@@ -257,5 +271,14 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
     public func openDisagreement(_ card: DisagreementCard) -> String? {
         disagreements.append(card)
         return card.title
+    }
+
+    /// Audio a test hands in, by version.
+    public var takeAudio: [VersionID: Comp.TakeAudio] = [:]
+
+    public func takeAudio(of version: PartVersion) -> Comp.TakeAudio? { takeAudio[version.id] }
+
+    public var clock: TransportClock {
+        TransportClock(tempo: song?.tempo ?? 120, timeSignature: song?.timeSignature ?? .fourFour, sampleRate: 48_000)
     }
 }

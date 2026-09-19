@@ -264,6 +264,7 @@ public final class DirectorSession {
         case "merge": return "The Sampler is bringing them together…"
         case "cast": return "Reading the room…"
         case "convene": return "Convening the room…"
+        case "read_take": return "Reading the take…"
         case "open_surface": return "Opening a surface…"
         case "propose": return "Writing a suggestion…"
         default: return "\(tool)…"

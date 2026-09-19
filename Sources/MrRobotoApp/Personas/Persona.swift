@@ -181,6 +181,14 @@ public struct Feature: RawRepresentable, Hashable, Sendable, Codable, CustomStri
     public static let lowEndSeparationDB = Feature("mix.lowend.separation.db")
     /// Where the top end stops, Hz.
     public static let mixBandwidthHz = Feature("mix.bandwidth.hz")
+
+    // A take's (M5).
+    /// A sung note's distance from the nearest note in the key, cents; + is sharp.
+    public static let takePitchCents = Feature("take.pitch.cents")
+    /// A sung onset's distance from the nearest sixteenth of the grid, milliseconds; + is late.
+    public static let takeTimingMS = Feature("take.timing.ms")
+    /// The take's sample peak, dBFS.
+    public static let takePeakDBFS = Feature("take.peak.dbfs")
     /// Quantiser width in bits. 12 is both the SP-1200 and the MPC60; 24 and up is off.
     public static let bitDepth = Feature("degrade.bits")
     /// The rate the decimator holds to, in Hz.

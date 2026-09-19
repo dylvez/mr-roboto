@@ -59,6 +59,8 @@ public enum DirectorTools {
             // M4, appended after the twenty-two: the room, read and convened.
             CastTool(workspace: workspace, cast: cast).erased(),
             ConveneTool(workspace: workspace, cast: cast).erased(),
+            // M5, appended after the twenty-four: a take read in cents and milliseconds.
+            ReadTakeTool(workspace: workspace).erased(),
         ]
         if let stage {
             let pad = pad ?? DirectorStagePad()
@@ -100,6 +102,8 @@ public enum DirectorTools {
         // M4, appended: who is in the room, and the room convened on a question.
         "cast",
         "convene",
+        // M5, appended: a take, read.
+        "read_take",
     ]
 
     /// The two the frame adds. Appended after `names`, never among them: a session with no frame

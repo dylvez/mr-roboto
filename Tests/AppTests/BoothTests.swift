@@ -1,6 +1,7 @@
 import AVFAudio
 import AudioEngine
 import Foundation
+import MusicTheory
 import Performance
 import SongGraph
 import Testing
@@ -41,6 +42,9 @@ private final class StubBoothHost: BoothHosting, TakesHosting {
         return version
     }
     func note(_ text: String, detail: String?) { notes.append(text) }
+    var key: Key? { song?.key }
+    var checks: [(Finding, PartVersion)] = []
+    func openCheck(_ finding: Finding, on take: PartVersion) { checks.append((finding, take)) }
     func audio(of version: PartVersion) -> Comp.TakeAudio? { audioByVersion[version.id] }
     func audition(_ version: PartVersion) async {}
     func stopAudition() {}

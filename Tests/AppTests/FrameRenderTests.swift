@@ -224,6 +224,16 @@ extension FrameRenderTests {
             try song.append(PartVersion(partID: part, kind: .audio(audio), author: .user, operation: Operation.recorded, note: "Take \(pass), Verse"))
         }
         let app = app(song)
+        // A third take with real audio in the package, so the Takes surface carries the band's flags.
+        app.save()
+        if let store = app.store, let package = try? store.songStore(for: song.id) {
+            let scratch = FileManager.default.temporaryDirectory.appendingPathComponent("sung-\(UUID().uuidString).wav")
+            try BoothAdapter.write(SungTake.planar(), sampleRate: SungTake.rate, to: scratch)
+            let media = try package.addMedia(copying: scratch)
+            let audio = Audio(media: media, role: .take, sampleRate: SungTake.rate, channelCount: 1, duration: 2.2, alignmentOffset: SungTake.alignment,
+                              take: Take(section: song.sections[0].id, startBar: 1, input: "MacBook Pro Microphone", latencyCompensation: 0.012, pass: 3))
+            #expect(app.record(PartVersion(partID: part, kind: .audio(audio), author: .user, operation: Operation.recorded, note: "Take 3, Verse")))
+        }
         app.perform(Guidance.dockAction(for: .booth, in: app.song))
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-booth")
         let id = try #require(app.perform(Guidance.dockAction(for: .takes, in: app.song)))

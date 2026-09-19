@@ -1,6 +1,7 @@
 import AVFAudio
 import AudioEngine
 import Foundation
+import MusicTheory
 import Performance
 import SongGraph
 
@@ -77,6 +78,15 @@ final class BoothAdapter: BoothHosting, TakesHosting {
     }
 
     // MARK: TakesHosting
+
+    var key: Key? { app.song?.key }
+
+    func openCheck(_ finding: Finding, on take: PartVersion) {
+        let id = app.openSurface(.check, title: "\(finding.criticName): \(PartLabel.title(of: take)), \(finding.subject.named)", bound: [take.id])
+        app.file(.check(finding), for: id)
+        app.note(.persona(Cast.standard.persona(finding.persona)?.bible.name ?? finding.persona.rawValue), finding.headline,
+                 detail: "\(finding.why) \(finding.measurement.description)")
+    }
 
     func audio(of version: PartVersion) -> Comp.TakeAudio? {
         guard let audio = Guidance.audio(of: version), let store = app.store,
