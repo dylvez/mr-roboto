@@ -76,6 +76,9 @@ public enum Operation {
     /// A fix the band offered and you took — a note shifted by its measured cents, an onset nudged
     /// by its milliseconds — as a new version whose parent is the take. The take is never changed.
     public static let corrected = "corrected"
+    /// A mix move: a strip's level, pan, EQ, compressor or send, or the master, as a new mix
+    /// version whose parent is the mix it moved and whose note says what and by how much.
+    public static let mix = "mix"
     /// Filled in by the schema 1 → 2 migration for versions that predate provenance operations.
     public static let unknown = "unknown"
 }

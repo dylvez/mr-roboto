@@ -28,6 +28,8 @@ struct SurfaceBand: View {
             case .lyrics: lyrics(context, size, ink)
             case .booth: booth(context, size, ink)
             case .takes: takes(context, size, ink)
+            case .mixer: mixer(context, size, ink)
+            case .master: master(context, size, ink)
             case .compare: compare(context, size, ink)
             case .check: check(context, size, ink)
             }
@@ -191,6 +193,39 @@ struct SurfaceBand: View {
             x += 5
             index += 1
         }
+    }
+
+    /// Faders at their heights, one in the accent.
+    private func mixer(_ context: GraphicsContext, _ size: CGSize, _ ink: Color) {
+        var x: CGFloat = 4
+        var index = 0
+        let heights: [CGFloat] = [0.55, 0.7, 0.4, 0.8, 0.6, 0.5, 0.75, 0.45]
+        while x < size.width {
+            let h = size.height * heights[index % heights.count]
+            context.stroke(Path { $0.move(to: CGPoint(x: x + 1.5, y: 2)); $0.addLine(to: CGPoint(x: x + 1.5, y: size.height - 2)) },
+                           with: .color(ink.opacity(0.5)), lineWidth: 1)
+            let cap = CGRect(x: x - 1, y: size.height - h - 2, width: 5, height: 3)
+            context.fill(Path(roundedRect: cap, cornerRadius: 1), with: .color(index % 8 == 3 ? Design.Palette.accent.opacity(0.8) : ink))
+            x += 10
+            index += 1
+        }
+    }
+
+    /// A loudness meter: a rising bar with the target line across it.
+    private func master(_ context: GraphicsContext, _ size: CGSize, _ ink: Color) {
+        var x: CGFloat = 2
+        var index = 0
+        while x < size.width {
+            let phase = Double(index % 24) / 24
+            let h = size.height * CGFloat(0.3 + 0.6 * (0.5 + 0.5 * sin(phase * 2 * .pi)))
+            let rect = CGRect(x: x, y: size.height - h - 2, width: 2, height: h)
+            context.fill(Path(rect), with: .color(h > size.height * 0.8 ? Design.Palette.accent.opacity(0.7) : ink.opacity(0.6)))
+            x += 4
+            index += 1
+        }
+        let target = size.height * 0.2
+        context.stroke(Path { $0.move(to: CGPoint(x: 0, y: target)); $0.addLine(to: CGPoint(x: size.width, y: target)) },
+                       with: .color(Design.Palette.accent.opacity(0.6)), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
     }
 
     /// Three lanes of takes, a span of each chosen in the accent.

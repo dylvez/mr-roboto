@@ -153,8 +153,9 @@ struct BoothTests {
     @Test("Sing is the last step on both paths, opens the Booth, then the takes")
     func singOnThePath() {
         var song = self.song()
-        #expect(WorkPath.of(song).steps.last == .sing)
-        #expect(WorkPath.beat.steps.last == .sing)
+        // Sing sits before Mix, the last step since M6.
+        #expect(WorkPath.of(song).steps.dropLast().last == .sing)
+        #expect(WorkPath.beat.steps.dropLast().last == .sing)
         let before = WorkPath.steps(for: song, active: nil, canPerform: { _ in true }).steps
         let sing = before.first { $0.kind == .sing }!
         #expect(sing.count == 0 && sing.action?.surface == .booth)

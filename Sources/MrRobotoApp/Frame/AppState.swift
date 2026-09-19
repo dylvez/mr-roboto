@@ -643,6 +643,11 @@ public final class AppState {
             // A stem that just landed, or a groove that just committed, is playable now: the bar
             // should not need a reopen to notice.
             refreshPlayback()
+            if version.type == .mix, transport.isPlaying, let host = playbackHost {
+                // M6: a mix move lands on the strips while the song plays.
+                let mix = playback.mix, section = activeSection
+                Task { await host.mixChanged(mix, section: section) }
+            }
             note(.you, "\(version.operation.capitalized) → \(version.type.rawValue)\(versionNumber(of: version.id).map { " v\($0)" } ?? "")",
                  detail: provenanceLine(for: version))
             return true
@@ -857,6 +862,14 @@ public final class AppState {
         }
     }
 
+    /// M6: a mix on the strips right now, without a version — a fader while it is held. The
+    /// version is written when it is let go.
+    public func previewMix(_ mix: Mix) {
+        guard transport.isPlaying, let host = playbackHost else { return }
+        let section = activeSection
+        Task { await host.mixChanged(mix, section: section) }
+    }
+
     public func stopTransport() async {
         guard transport != .stopped else { return }
         following?.cancel()
@@ -918,6 +931,11 @@ public final class AppState {
     private func followSection(atSeconds seconds: Double) {
         guard let id = section(atSeconds: seconds), activeSection != id else { return }
         activeSection = id
+        if let host = playbackHost, playback.mix?.sectionGains.isEmpty == false {
+            // M6: the section's gain overrides follow the playhead.
+            let mix = playback.mix
+            Task { await host.mixChanged(mix, section: id) }
+        }
     }
 
     /// Bar and beat, 1-based, the way a transport reads: `"12.3"`.

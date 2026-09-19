@@ -79,6 +79,12 @@ struct FrameCommands: Commands {
             Button("Takes…") { app.perform(Guidance.dockAction(for: .takes, in: app.song)) }
                 .keyboardShortcut("t", modifiers: [.command, .shift])
                 .disabled(app.song == nil)
+            Button("Mixer…") { app.perform(Guidance.dockAction(for: .mixer, in: app.song)) }
+                .keyboardShortcut("m", modifiers: [.command, .shift])
+                .disabled(app.song == nil)
+            Button("Master…") { app.perform(Guidance.dockAction(for: .master, in: app.song)) }
+                .keyboardShortcut("m", modifiers: [.command, .option])
+                .disabled(app.song == nil)
         }
 
         CommandGroup(replacing: .saveItem) {

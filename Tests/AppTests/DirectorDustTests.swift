@@ -302,9 +302,9 @@ struct DirectorDustToolboxTests {
         // (And again the same day, for the `lag` lever on a Compare of bass lines; and once more
         // for Gate C's Structure surface; once each for M3's Album and Merge surfaces; and once
         // for M4's Cast surface and again for its Lyrics surface.)
-        // M5: the Booth and Takes joined `SurfaceKind`, so the two schemas that enumerate it changed bytes again.
-        ("open_surface", "2ac7fd487c6006b338d1554e20b3894c042a7d1a6cc24b42f3d9e2dccc092a63"),
-        ("propose", "ea206d95e131ff47232d67dcd3a8ae1d60e4a852c202610a5d68b99d785c7a9f"),
+        // M5 (Booth, Takes) and M6 (Mixer, Master) joined `SurfaceKind`, so the two schemas that enumerate it changed bytes again.
+        ("open_surface", "94251efbbd30deb545650a91bb397e0c042a0b11615d7ee8f46caae3c28f6a69"),
+        ("propose", "6be4c5f1b5d4d17deacd2746f0ca5de739ba760967a864c2f8315284effe0948"),
     ]
 
     static func digest(_ definition: ClaudeToolDefinition) throws -> String {

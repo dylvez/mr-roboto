@@ -106,6 +106,51 @@ public enum MixMeter {
     }
 
     /// Sample peak in dBFS, over every channel.
+    /// True peak, dBTP: the sample peak of the signal oversampled 4× through a 48-tap
+    /// windowed-sinc interpolator, the way BS.1770's Annex 2 measures it.
+    public static func truePeakDB(_ planar: [[Float]], sampleRate: Double) -> Double {
+        let taps = 48
+        let factor = 4
+        // Windowed sinc low-pass at the original Nyquist, for the 4× rate.
+        var kernel = [Float](repeating: 0, count: taps)
+        let centre = Double(taps - 1) / 2
+        for i in 0..<taps {
+            let x = Double(i) - centre
+            let sinc = x == 0 ? 1.0 : sin(.pi * x / Double(factor)) / (.pi * x / Double(factor))
+            let window = 0.5 - 0.5 * cos(2 * .pi * Double(i) / Double(taps - 1))
+            kernel[i] = Float(sinc * window)
+        }
+        // Each polyphase branch is an interpolator and must pass DC at unity: normalise the taps
+        // of every phase to sum to one.
+        for phase in 0..<factor {
+            var sum: Float = 0
+            var j = phase
+            while j < taps { sum += kernel[j]; j += factor }
+            j = phase
+            while j < taps { kernel[j] /= sum; j += factor }
+        }
+        var peak: Float = 0
+        for lane in planar {
+            guard !lane.isEmpty else { continue }
+            // Polyphase: the k-th oversampled sample, k = 4n + phase, is Σ over the phase's taps
+            // of kernel · x[n − i].
+            for n in 0..<lane.count {
+                for phase in 0..<factor {
+                    var acc: Float = 0
+                    var j = phase
+                    var m = n
+                    while j < taps, m >= 0 {
+                        acc += kernel[j] * lane[m]
+                        j += factor
+                        m -= 1
+                    }
+                    peak = max(peak, abs(acc))
+                }
+            }
+        }
+        return 20 * log10(Double(peak) + 1e-12)
+    }
+
     public static func samplePeakDB(_ planar: [[Float]]) -> Double {
         let peak = planar.flatMap { $0 }.reduce(Float(0)) { max($0, abs($1)) }
         return peak > 0 ? 20 * log10(Double(peak)) : -.infinity
@@ -161,7 +206,7 @@ public enum MixMeter {
     }
 
     /// Mean power per bin over the whole buffer, mono-summed.
-    static func powerSpectrum(_ planar: [[Float]], sampleRate: Double) -> [Double] {
+    public static func powerSpectrum(_ planar: [[Float]], sampleRate: Double) -> [Double] {
         guard let frames = planar.first?.count, frames > 0 else { return [] }
         var mono = [Float](repeating: 0, count: frames)
         for channel in planar { for i in 0..<min(frames, channel.count) { mono[i] += channel[i] / Float(planar.count) } }

@@ -43,16 +43,19 @@ public struct SongPlayback: Equatable, Sendable {
         /// the record carries one, 0 when it does not.
         public var startsAt: Double
         public var duration: Double
+        /// The part the version belongs to: which strip it plays through (M6).
+        public var part: PartID?
 
         public var id: VersionID { version }
 
         public init(version: VersionID, name: String, url: URL,
-                    startsAt: Double = 0, duration: Double = 0) {
+                    startsAt: Double = 0, duration: Double = 0, part: PartID? = nil) {
             self.version = version
             self.name = name
             self.url = url
             self.startsAt = max(0, startsAt)
             self.duration = duration
+            self.part = part
         }
     }
 
@@ -68,16 +71,19 @@ public struct SongPlayback: Equatable, Sendable {
         /// The chain it plays through, first pass nearest the media. Never empty: a dry chop is
         /// the lane's raw material and is not put on the transport.
         public var passes: [Degradation]
+        /// The part the chop belongs to: which strip it plays through (M6).
+        public var part: PartID?
 
         public var id: VersionID { version }
 
         public init(version: VersionID, name: String, url: URL, region: SongGraph.TimeRange,
-                    passes: [Degradation]) {
+                    passes: [Degradation], part: PartID? = nil) {
             self.version = version
             self.name = name
             self.url = url
             self.region = region
             self.passes = passes
+            self.part = part
         }
     }
 
@@ -100,6 +106,9 @@ public struct SongPlayback: Equatable, Sendable {
         public var basslineVersion: VersionID?
         public var bassSound: String?
         public var chop: ChopTrack?
+        /// Which strips the section's groove and bass line play through (M6).
+        public var groovePart: PartID?
+        public var basslinePart: PartID?
 
         public var id: SectionID { section }
 
@@ -156,6 +165,12 @@ public struct SongPlayback: Equatable, Sendable {
     public var basslineVersion: VersionID?
     public var bassSound: String?
     public var tracks: [Track]
+    /// M6: the strips the flat plan's groove and bass line play through, and the mix itself.
+    public var groovePart: PartID?
+    public var basslinePart: PartID?
+    /// The newest mix version, or nil for unity.
+    public var mix: Mix?
+    public var mixVersion: VersionID?
     /// The song's sections in order, when it has any with something stitched into them. Non-empty
     /// means the transport plays the *form*: the flat fields above are left empty and nothing
     /// loops on its own.
@@ -268,6 +283,10 @@ public struct SongPlayback: Equatable, Sendable {
         var plan = SongPlayback(tempo: song.tempo, timeSignature: song.timeSignature)
         plan.machine = machineID(in: song)
         plan.lengthInBars = song.lengthInBars > 0 ? song.lengthInBars : nil
+        if let version = Guidance.mixes(in: song).last, case .mix(let mix) = version.kind {
+            plan.mix = mix
+            plan.mixVersion = version.id
+        }
 
         // Arranged: the sections say what plays, and in what order. Sections that name nothing
         // fall through to the newest-of-everything plan below, with the form's length still
@@ -289,6 +308,7 @@ public struct SongPlayback: Equatable, Sendable {
             plan.groove = groove
             plan.grooveVersion = version.id
             plan.grooveChain = groove.degradation
+            plan.groovePart = version.partID
         }
 
         // The newest bass line, on its own sampler, alongside the groove.
@@ -297,6 +317,7 @@ public struct SongPlayback: Equatable, Sendable {
             plan.bassline = bassline
             plan.basslineVersion = version.id
             plan.bassSound = bassline.sound
+            plan.basslinePart = version.partID
         }
 
         // A dusty chop. Only the newest chop, and only when it has been dirtied: a clean chop is the
@@ -326,7 +347,8 @@ public struct SongPlayback: Equatable, Sendable {
                                      name: PartLabel.title(of: version),
                                      url: url,
                                      startsAt: audio.alignmentOffset ?? 0,
-                                     duration: audio.duration))
+                                     duration: audio.duration,
+                                     part: version.partID))
         }
 
         if !plan.isPlayable {
@@ -342,7 +364,7 @@ public struct SongPlayback: Equatable, Sendable {
         let region = ChopLaneBinding.region(of: sample, bars: Guidance.analysis(in: song)?.bars ?? [],
                                             tempo: sample.detectedTempo ?? song.tempo)
         return ChopTrack(version: version.id, name: PartLabel.title(of: version), url: url,
-                         region: region, passes: sample.degradation)
+                         region: region, passes: sample.degradation, part: version.partID)
     }
 
     /// The sections as segments. Each section's stitch is read for the newest groove, the newest
@@ -362,10 +384,12 @@ public struct SongPlayback: Equatable, Sendable {
                     segment.groove = groove
                     segment.grooveVersion = version.id
                     segment.grooveChain = groove.degradation
+                    segment.groovePart = version.partID
                 case .bassline(let line) where !line.notes.isEmpty:
                     segment.bassline = line
                     segment.basslineVersion = version.id
                     segment.bassSound = line.sound
+                    segment.basslinePart = version.partID
                 case .sample(let sample) where !sample.degradation.isEmpty:
                     if let chop = chopTrack(version, sample, in: song, mediaURL: mediaURL) {
                         segment.chop = chop
@@ -459,4 +483,11 @@ public protocol SongPlaybackHost: AnyObject, Sendable {
     func end() async
     /// Where playback is now.
     func reading() async -> PlaybackReading
+    /// M6: the mix changed, or the playhead moved into another section. A host with no strips
+    /// ignores it.
+    func mixChanged(_ mix: Mix?, section: SectionID?) async
+}
+
+extension SongPlaybackHost {
+    public func mixChanged(_ mix: Mix?, section: SectionID?) async {}
 }

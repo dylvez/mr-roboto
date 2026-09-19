@@ -73,15 +73,21 @@ final class LiveSongPlayer: SongPlaybackHost {
         await end()
         let engine = try await service.playbackEngine()
         self.engine = engine
+        // M6: the strips. Every source below is routed through its part's strip, and the mix the
+        // plan carries is applied before a frame renders.
+        let graph = try engine.mixGraph()
+        graph.apply(plan.mix ?? .unity, section: plan.segments.first?.section)
+        lastMix = plan.mix
 
         if plan.isArranged {
-            try await beginArranged(plan, clock: clock, engine: engine)
+            try await beginArranged(plan, clock: clock, engine: engine, graph: graph)
             return
         }
 
         if let groove = plan.groove, plan.grooveChain.isEmpty {
             let machine = SynthMachine.preset(id: plan.machine) ?? .tr808
             let sampler = try await service.playbackSampler(machine: machine)
+            try Self.route(sampler.node, part: plan.groovePart, on: graph)
             let timeline = GrooveTimeline.tempo(clock.tempo, timeSignature: clock.timeSignature)
             let player = GroovePlayer(sampler: sampler, groove: groove, timeline: timeline)
             // With the loop off, a groove plays the song's own length and stops; with it on it plays
@@ -95,6 +101,7 @@ final class LiveSongPlayer: SongPlaybackHost {
         if let bassline = plan.bassline {
             let voice = BassVoiceSpec.all.first { $0.id == plan.bassSound } ?? .finger
             let sampler = try await service.playbackBassSampler(voice: voice)
+            try Self.route(sampler.node, part: plan.basslinePart, on: graph)
             let timeline = GrooveTimeline.tempo(clock.tempo, timeSignature: clock.timeSignature)
             let player = BasslinePlayer(sampler: sampler, bassline: bassline, timeline: timeline)
             player.bars = plan.loops ? nil : plan.lengthInBars
@@ -110,7 +117,9 @@ final class LiveSongPlayer: SongPlaybackHost {
             } catch {
                 throw Failure.unreadable(track.name, "\(error)")
             }
-            let source = AudioTrackSource(player: try engine.player(index),
+            let node = try engine.player(index)
+            try Self.route(node, part: track.part, on: graph)
+            let source = AudioTrackSource(player: node,
                                           buffer: buffer,
                                           startsAt: track.startsAt,
                                           loops: plan.loops)
@@ -125,7 +134,9 @@ final class LiveSongPlayer: SongPlaybackHost {
             guard next < engine.players.count else { throw Failure.unreadable("The dusty groove", "no player node is free") }
             let bounce = try await Self.dustyGroove(groove, plan: plan, clock: clock, service: service,
                                                     format: engine.format)
-            let source = AudioTrackSource(player: try engine.player(next), buffer: bounce.buffer,
+            let node = try engine.player(next)
+            try Self.route(node, part: plan.groovePart, on: graph)
+            let source = AudioTrackSource(player: node, buffer: bounce.buffer,
                                           startsAt: 0, loops: plan.loops)
             engine.add(source)
             tracks.append(source)
@@ -140,7 +151,9 @@ final class LiveSongPlayer: SongPlaybackHost {
             } catch {
                 throw Failure.unreadable(chop.name, "\(error)")
             }
-            let source = AudioTrackSource(player: try engine.player(next), buffer: buffer,
+            let node = try engine.player(next)
+            try Self.route(node, part: chop.part, on: graph)
+            let source = AudioTrackSource(player: node, buffer: buffer,
                                           startsAt: 0, loops: plan.loops)
             engine.add(source)
             tracks.append(source)
@@ -160,7 +173,7 @@ final class LiveSongPlayer: SongPlaybackHost {
     /// samplers, placed at the section's bar and clipped to its length; each section's dusty
     /// groove bounced and each chop rendered, and laid end to end on one player node per kind.
     /// With the loop on everything cycles with the form's own length.
-    private func beginArranged(_ plan: SongPlayback, clock: TransportClock, engine: Engine) async throws {
+    private func beginArranged(_ plan: SongPlayback, clock: TransportClock, engine: Engine, graph: MixGraph) async throws {
         let beatsPerBar = clock.timeSignature.beatsPerBar
         let cycleBeats: Double? = plan.loops ? plan.lengthInBars.map { Double($0 * beatsPerBar) } : nil
         let cycleSeconds: Double? = plan.loops ? plan.formSeconds : nil
@@ -183,6 +196,8 @@ final class LiveSongPlayer: SongPlaybackHost {
                 if drumSampler == nil {
                     let machine = SynthMachine.preset(id: plan.machine) ?? .tr808
                     drumSampler = try await service.playbackSampler(machine: machine)
+                    // One sampler for every section's groove: it plays through the first's strip.
+                    try Self.route(drumSampler?.node, part: segment.groovePart, on: graph)
                 }
                 let player = GroovePlayer(sampler: drumSampler!, groove: groove, timeline: timeline)
                 player.bars = segment.lengthInBars
@@ -201,7 +216,10 @@ final class LiveSongPlayer: SongPlaybackHost {
             }
             if let bassline = segment.bassline {
                 let voice = BassVoiceSpec.all.first { $0.id == segment.bassSound } ?? .finger
-                if bassSampler == nil { bassSampler = try await service.playbackBassSampler(voice: voice) }
+                if bassSampler == nil {
+                    bassSampler = try await service.playbackBassSampler(voice: voice)
+                    try Self.route(bassSampler?.node, part: segment.basslinePart, on: graph)
+                }
                 let player = BasslinePlayer(sampler: bassSampler!, bassline: bassline, timeline: timeline)
                 player.bars = segment.lengthInBars
                 player.clipsToBars = true
@@ -222,9 +240,13 @@ final class LiveSongPlayer: SongPlaybackHost {
         }
 
         var next = 0
-        for events in [bounces, chops] where !events.isEmpty {
+        let bouncePart = plan.segments.first { $0.groove != nil && !$0.grooveChain.isEmpty }?.groovePart
+        let chopPart = plan.segments.first { $0.chop != nil }?.chop?.part
+        for (events, part) in [(bounces, bouncePart), (chops, chopPart)] where !events.isEmpty {
             guard next < engine.players.count else { throw Failure.unreadable("The dusty sections", "no player node is free") }
-            let source = SequenceTrackSource(player: try engine.player(next), events: events, cycle: cycleSeconds)
+            let node = try engine.player(next)
+            try Self.route(node, part: part, on: graph)
+            let source = SequenceTrackSource(player: node, events: events, cycle: cycleSeconds)
             engine.add(source)
             sequences.append(source)
             next += 1
@@ -238,6 +260,7 @@ final class LiveSongPlayer: SongPlaybackHost {
 
     func end() async {
         if let engine {
+            (try? engine.mixGraph())?.releaseSlots()
             if let groovePlayer { engine.remove(groovePlayer) }
             if let bassPlayer { engine.remove(bassPlayer) }
             for track in tracks { engine.remove(track) }
@@ -260,6 +283,25 @@ final class LiveSongPlayer: SongPlaybackHost {
         bouncedHits = 0
         endsAt = nil
         engine = nil
+    }
+
+    /// The mix as last applied, so a section change is a move and not a re-apply.
+    private var lastMix: Mix?
+
+    func mixChanged(_ mix: Mix?, section: SectionID?) async {
+        guard let engine, let graph = try? engine.mixGraph() else { return }
+        if mix == lastMix {
+            graph.move(to: section)
+        } else {
+            graph.apply(mix ?? .unity, section: section)
+            lastMix = mix
+        }
+    }
+
+    /// A node through its part's strip, or straight to the main mixer when it has no part.
+    private static func route(_ node: AVAudioNode?, part: PartID?, on graph: MixGraph) throws {
+        guard let node else { return }
+        if let part { try graph.route(node, to: part) } else { try graph.unroute(node) }
     }
 
     func reading() async -> PlaybackReading {

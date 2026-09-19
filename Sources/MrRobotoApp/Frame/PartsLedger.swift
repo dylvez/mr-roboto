@@ -217,6 +217,7 @@ public enum LedgerGroups {
         ("Bass", "stem-bass", "waveform.path"),
         ("Written", "idea", "text.alignleft"),
         ("Takes", "booth", "mic"),
+        ("Mix", "mixer", "slider.horizontal.3"),
     ]
 
     static func stage(of version: PartVersion) -> String {
@@ -231,6 +232,7 @@ public enum LedgerGroups {
         case .progression: return "Chords"
         case .bassline: return "Bass"
         case .melody, .lyric: return "Written"
+        case .mix: return "Mix"
         }
     }
 

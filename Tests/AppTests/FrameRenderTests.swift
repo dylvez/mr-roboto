@@ -242,3 +242,30 @@ extension FrameRenderTests {
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-takes")
     }
 }
+
+extension FrameRenderTests {
+    @Test("the Mixer with strips and the overlay read, and the Master with a bounce read")
+    func mixerAndMaster() async throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        var song = FormFixture.build(tempo: 92).song
+        let ids = [Guidance.grooves(in: song).last!.id, Guidance.basslines(in: song).last!.id]
+        song.sections = [Section(name: "Verse", stitch: ids, lengthInBars: 2)]
+        let app = app(song)
+        let mixerID = try #require(app.perform(Guidance.dockAction(for: .mixer, in: app.song)))
+        let mixer = SurfaceWiring.shared.mixerModel(for: app.bench.items.first { $0.id == mixerID }!, app: app)
+        if let bass = mixer.rows.first(where: { $0.label.contains("line") }) {
+            mixer.setGain(-3, for: bass.part)
+            mixer.setEQ(band: 1, gainDB: -6, for: bass.part)
+            mixer.setEQ(band: 1, frequency: 80, for: bass.part)
+            mixer.endGesture()
+        }
+        await mixer.readOverlay()
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-mixer")
+        let masterID = try #require(app.perform(Guidance.dockAction(for: .master, in: app.song)))
+        let master = SurfaceWiring.shared.masterModel(for: app.bench.items.first { $0.id == masterID }!, app: app)
+        await master.read()
+        #expect(master.reading != nil, "\(master.lastError ?? "")")
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-master")
+    }
+}

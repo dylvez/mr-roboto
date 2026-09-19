@@ -140,6 +140,8 @@ enum PartLabel {
             return note(of: version) ?? progression.chords.prefix(4).map { $0.symbol() }.joined(separator: " ")
         case .melody, .lyric:
             return version.type.rawValue.capitalized
+        case .mix:
+            return note(of: version) ?? "Mix"
         }
     }
 
@@ -331,6 +333,13 @@ public enum Guidance {
         case .booth:
             // Bound to nothing: it records against the song as it plays, on the active section.
             return SurfaceAction(surface: kind, title: song.title)
+        case .mixer, .master:
+            // Bound to the newest mix version when there is one; a song at unity opens on nothing
+            // and the first move makes the mix.
+            if let mix = Guidance.mixes(in: song).last {
+                return SurfaceAction(surface: kind, title: song.title, bound: [mix.id])
+            }
+            return SurfaceAction(surface: kind, title: song.title)
         case .takes:
             let takes = Guidance.takes(in: song)
             guard let newest = takes.last else { return SurfaceAction(surface: kind, title: "Takes") }
@@ -439,6 +448,17 @@ public enum Guidance {
 
     public static func sounds(in song: Song) -> [PartVersion] {
         song.versions.filter { $0.type == .sound }
+    }
+
+    /// Mix versions, in graph order. The newest is the one the transport plays.
+    public static func mixes(in song: Song) -> [PartVersion] {
+        song.versions.filter { $0.type == .mix }
+    }
+
+    /// The newest mix, or nil for unity.
+    public static func mix(in song: Song) -> Mix? {
+        guard let version = mixes(in: song).last, case .mix(let mix) = version.kind else { return nil }
+        return mix
     }
 
     public static func basslines(in song: Song) -> [PartVersion] {
@@ -642,6 +662,11 @@ public enum PartActions {
             // No surface edits a melody yet. Saying nothing is the honest answer; its surface
             // arrives with the rest of the catalog.
             return nil
+
+        case .mix:
+            return Proposal(title: "Open in the Mixer",
+                            rationale: "The strips as this version set them; the Master reads the bounce.",
+                            action: SurfaceAction(surface: .mixer, title: song.title, bound: [version.id]))
         }
     }
 }

@@ -50,7 +50,7 @@ struct WorkPathTests {
     func afterImport() throws {
         let built = GuidanceFixture.imported()
         let steps = WorkPath.steps(for: built.song, active: nil, canPerform: PathFixture.always).steps
-        #expect(steps.map(\.kind) == [.record, .stems, .chop, .groove, .chords, .bass, .dust, .arrange, .sing])
+        #expect(steps.map(\.kind) == [.record, .stems, .chop, .groove, .chords, .bass, .dust, .arrange, .sing, .mix])
         #expect(PathFixture.step(.record, steps)?.isDone == true)
         let stems = try #require(PathFixture.step(.stems, steps))
         #expect(stems.isNext)
@@ -136,7 +136,7 @@ struct WorkPathTests {
         let beat = try PathFixture.beat()
         #expect(lit(.sound, [], in: beat) == [.kit])
         #expect(WorkPath.steps(for: beat, active: nil, canPerform: PathFixture.always).steps.map(\.kind)
-                == [.groove, .chords, .bass, .kit, .dust, .arrange, .sing])
+                == [.groove, .chords, .bass, .kit, .dust, .arrange, .sing, .mix])
     }
 
     @Test("a step the frame could not carry out offers nothing and is not next")
@@ -210,7 +210,7 @@ struct LedgerGroupTests {
     @Test("parts sit under the path's stage names, in path order")
     func stages() {
         let groups = LedgerGroups.groups(for: GuidanceFixture.everyKind().song)
-        #expect(groups.map(\.title) == ["Record", "Stems", "Chops", "Grooves", "Kit", "Chords", "Bass", "Written"])
+        #expect(groups.map(\.title) == ["Record", "Stems", "Chops", "Grooves", "Kit", "Chords", "Bass", "Written", "Mix"])
         #expect(groups.first { $0.title == "Record" }?.parts.count == 2, "the take and its analysis")
         #expect(groups.first { $0.title == "Stems" }?.parts.count == 4)
         #expect(groups.first { $0.title == "Chords" }?.parts.count == 1)

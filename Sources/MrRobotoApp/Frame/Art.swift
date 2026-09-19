@@ -137,6 +137,8 @@ extension SurfaceKind {
         case .lyrics: return ("lyrics", "text.quote")
         case .booth: return ("booth", "mic")
         case .takes: return ("takes", "waveform.badge.mic")
+        case .mixer: return ("mixer", "slider.vertical.3")
+        case .master: return ("master", "gauge.with.needle")
         case .compare: return ("compare", "chart.bar")
         case .check: return ("check", "checkmark.magnifyingglass")
         }

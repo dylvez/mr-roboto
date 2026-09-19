@@ -43,6 +43,8 @@ final class SurfaceWiring {
     private var lyricSheets: [SurfaceID: LyricsModel] = [:]
     private var booths: [SurfaceID: BoothModel] = [:]
     private var takeSheets: [SurfaceID: TakesModel] = [:]
+    private var mixers: [SurfaceID: MixerModel] = [:]
+    private var masters: [SurfaceID: MasterModel] = [:]
     // The two answer surfaces. What they draw is filed on `AppState` by whoever asked the question
     // (see `SurfaceAnswer`); what is kept here is the built model and the host it plays through,
     // for exactly as long as the bench holds the item — the same rule as the four above.
@@ -280,6 +282,26 @@ final class SurfaceWiring {
         return model
     }
 
+    /// The Mixer on the bound mix version, or on unity.
+    func mixerModel(for item: BenchItem, app: AppState) -> MixerModel {
+        prune(app)
+        if let existing = mixers[item.id] { return existing }
+        let bound = app.bound(for: item.id).compactMap { app.version($0) }.first { $0.type == .mix }
+        let model = MixerModel(host: MixAdapter(app: app), base: bound, surfaceID: item.id)
+        mixers[item.id] = model
+        return model
+    }
+
+    /// The Master on the bound mix version, or on unity.
+    func masterModel(for item: BenchItem, app: AppState) -> MasterModel {
+        prune(app)
+        if let existing = masters[item.id] { return existing }
+        let bound = app.bound(for: item.id).compactMap { app.version($0) }.first { $0.type == .mix }
+        let model = MasterModel(host: MixAdapter(app: app), base: bound, surfaceID: item.id)
+        masters[item.id] = model
+        return model
+    }
+
     /// The words: on a bound lyric, editing it; otherwise a blank page, read against the house voice.
     func lyricsModel(for item: BenchItem, app: AppState) -> LyricsModel {
         prune(app)
@@ -325,6 +347,8 @@ final class SurfaceWiring {
         lyricSheets = lyricSheets.filter { open.contains($0.key) }
         booths = booths.filter { open.contains($0.key) }
         takeSheets = takeSheets.filter { open.contains($0.key) }
+        mixers = mixers.filter { open.contains($0.key) }
+        masters = masters.filter { open.contains($0.key) }
         compares = compares.filter { open.contains($0.key) }
         compareAdapters = compareAdapters.filter { open.contains($0.key) }
         checks = checks.filter { open.contains($0.key) }

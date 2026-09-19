@@ -44,6 +44,10 @@ enum SectionBounce {
         var stems = Stems(label: label, sampleRate: sampleRate, mix: [], drums: [], bass: [],
                           chainCornerHz: corner(of: base))
         stems.mix = try await renderOne(base, part: .mix, clock: clock, frames: frames, kitsDirectory: kitsDirectory, sampleRate: sampleRate)
+        if let master = base.mix?.master {
+            // The ceiling is not on the live chain (a lookahead limiter has latency): it is here.
+            stems.mix = Limiter.apply(stems.mix, sampleRate: sampleRate, ceilingDBTP: master.ceilingDBTP)
+        }
         if has(base, .drums) {
             stems.drums = try await renderOne(base, part: .drums, clock: clock, frames: frames, kitsDirectory: kitsDirectory, sampleRate: sampleRate)
         }

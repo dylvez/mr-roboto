@@ -627,6 +627,8 @@ public struct MusicAnalysis: Hashable, Codable, Sendable {
 /// The kind of a part, as a plain name. Also the JSON discriminator for `PartKind`.
 public enum PartType: String, Codable, Sendable, Hashable, CaseIterable {
     case progression, melody, lyric, groove, bassline, sample, audio, sound, analysis
+    /// M6: the mix — strips, master, section gains.
+    case mix
 }
 
 /// The payload of a part version, one case per kind.
@@ -642,6 +644,7 @@ public enum PartKind: Hashable, Sendable {
     case audio(Audio)
     case sound(Sound)
     case analysis(MusicAnalysis)
+    case mix(Mix)
 
     public var type: PartType {
         switch self {
@@ -654,6 +657,7 @@ public enum PartKind: Hashable, Sendable {
         case .audio: return .audio
         case .sound: return .sound
         case .analysis: return .analysis
+        case .mix: return .mix
         }
     }
 
@@ -682,6 +686,7 @@ extension PartKind: Codable {
         case .audio: self = .audio(try Audio(from: decoder))
         case .sound: self = .sound(try Sound(from: decoder))
         case .analysis: self = .analysis(try MusicAnalysis(from: decoder))
+        case .mix: self = .mix(try Mix(from: decoder))
         }
     }
 
@@ -698,6 +703,7 @@ extension PartKind: Codable {
         case .audio(let payload): try payload.encode(to: encoder)
         case .sound(let payload): try payload.encode(to: encoder)
         case .analysis(let payload): try payload.encode(to: encoder)
+        case .mix(let payload): try payload.encode(to: encoder)
         }
     }
 }

@@ -76,6 +76,16 @@ public enum Primer {
                     "Pick a section, press Record: the song plays under you and the take lands on the bar you sang it on, "
                         + "latency taken out. Stop is a take; every take stays. Nothing is tuned or moved here — the band "
                         + "reads it in Takes and offers, never fixes.")
+        case .mixer:
+            return ("Mixer",
+                    "A strip per part: fader, pan, send, mute and solo, three bands of EQ and a compressor, with meters while "
+                        + "the song plays. Every move you let go of is a mix version — revert it from the ledger. Pick two strips "
+                        + "and the overlay says where they share energy, band by band, in dB.")
+        case .master:
+            return ("Master",
+                    "The last bounce read against the target: integrated loudness, true peak, crest and the spectrum. The "
+                        + "target and the ceiling are the album's, or −14 / −1. The Engineer's readings say what to change first; "
+                        + "nothing here is applied to a part.")
         case .takes:
             return ("Takes",
                     "Every take of one part, lane by lane against the bars, with the band's flags on the bar they belong "

@@ -67,6 +67,12 @@ public enum SurfaceKind: String, CaseIterable, Sendable {
     case booth = "Booth"
     /// M5. The takes of one part as lanes against the bars, the band's flags on them, and a comp.
     case takes = "Takes"
+    /// M6. A strip per part: level, pan, EQ, compressor, send, meters; a masking overlay. Bound
+    /// to the mix version it edits, or to nothing for a song mixed at unity.
+    case mixer = "Mixer"
+    /// M6. Loudness, true peak, crest and the spectrum against the target; the Engineer's
+    /// readings of the last bounce. Bound like the Mixer.
+    case master = "Master"
 
     // The two answer surfaces. They are in the catalog because the Director has to be able to
     // *name* one — a question with alternatives gets a Compare, a question with one finding gets a

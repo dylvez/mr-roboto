@@ -134,6 +134,8 @@ public final class Engine {
 
     private var sources: [ObjectIdentifier: any ScheduledSource] = [:]
     private var sourceOrder: [ObjectIdentifier] = []
+    /// M6: the strips and the master chain, once something asks for them.
+    var mixGraphStorage: MixGraph?
     private var scheduledThrough: Double = -.infinity
     private var lookAheadTask: Task<Void, Never>?
 
@@ -202,8 +204,13 @@ public final class Engine {
     }
 
     /// Start the engine in whichever mode it is prepared for.
+    ///
+    /// M6: the master chain (limiter, trim, bus) has to be wired before the engine runs —
+    /// AVAudioEngine will not move the main mixer off the output node once it is — so the mix
+    /// graph is built here, once, on the way up.
     public func start() throws {
         guard !avEngine.isRunning else { return }
+        if mixGraphStorage == nil { mixGraphStorage = try MixGraph(engine: self) }
         avEngine.prepare()
         try avEngine.start()
     }

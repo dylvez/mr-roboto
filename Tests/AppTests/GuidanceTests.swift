@@ -146,6 +146,7 @@ enum GuidanceFixture {
             .progression(Progression(key: key, bars: [ProgressionBar(Chord(key.tonic.pitchClass, .major))])),
             .melody(Melody(notes: [])),
             .lyric(Lyric(lines: [])),
+            .mix(Mix()),
             .bassline(Bassline(notes: [])),
         ]
         for kind in others {
@@ -384,6 +385,7 @@ struct GuidanceLedgerTests {
         .melody: nil,
         .lyric: .lyrics,
         .bassline: .pianoRoll,
+        .mix: .mixer,
     ]
 
     @Test("every PartKind has an answer, and it is the right surface")
