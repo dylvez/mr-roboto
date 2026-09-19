@@ -73,6 +73,12 @@ struct FrameCommands: Commands {
             Button("Lyrics…") { app.perform(Guidance.dockAction(for: .lyrics, in: app.song)) }
                 .keyboardShortcut("9", modifiers: .command)
                 .disabled(app.song == nil)
+            Button("Booth…") { app.perform(Guidance.dockAction(for: .booth, in: app.song)) }
+                .keyboardShortcut("0", modifiers: .command)
+                .disabled(app.song == nil)
+            Button("Takes…") { app.perform(Guidance.dockAction(for: .takes, in: app.song)) }
+                .keyboardShortcut("t", modifiers: [.command, .shift])
+                .disabled(app.song == nil)
         }
 
         CommandGroup(replacing: .saveItem) {

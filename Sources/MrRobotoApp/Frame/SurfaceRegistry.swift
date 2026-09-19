@@ -110,6 +110,12 @@ public final class SurfaceRegistry {
         registry.register(.lyrics) { item, app in
             LyricsSurfaceView(model: SurfaceWiring.shared.lyricsModel(for: item, app: app))
         }
+        registry.register(.booth) { item, app in
+            BoothSurfaceView(model: SurfaceWiring.shared.boothModel(for: item, app: app))
+        }
+        registry.register(.takes) { item, app in
+            TakesSurfaceView(model: SurfaceWiring.shared.takesModel(for: item, app: app))
+        }
     }
 
     /// Everything a running app draws. One call at launch, from `MrRobotoApp.init()`.

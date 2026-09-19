@@ -207,3 +207,28 @@ extension FrameRenderTests {
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-compare-disagreement")
     }
 }
+
+extension FrameRenderTests {
+    @Test("the Booth on a verse, and the Takes surface with two takes and a comp chosen")
+    func boothAndTakes() throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        var song = FormFixture.build(tempo: 120).song
+        let ids = [Guidance.grooves(in: song).last!.id, Guidance.basslines(in: song).last!.id]
+        song.sections = [Section(name: "Verse", stitch: ids, lengthInBars: 4), Section(name: "Hook", stitch: ids, lengthInBars: 2)]
+        let part = PartID()
+        for pass in 1...2 {
+            let audio = Audio(media: MediaRef(hash: ContentHash(hex: String(repeating: pass == 1 ? "d" : "e", count: 64))!, fileExtension: "wav"),
+                              role: .take, sampleRate: 48_000, channelCount: 1, duration: 8, alignmentOffset: 0,
+                              take: Take(section: song.sections[0].id, startBar: 0, input: "MacBook Pro Microphone", latencyCompensation: 0.012, pass: pass))
+            try song.append(PartVersion(partID: part, kind: .audio(audio), author: .user, operation: Operation.recorded, note: "Take \(pass), Verse"))
+        }
+        let app = app(song)
+        app.perform(Guidance.dockAction(for: .booth, in: app.song))
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-booth")
+        let id = try #require(app.perform(Guidance.dockAction(for: .takes, in: app.song)))
+        let model = SurfaceWiring.shared.takesModel(for: app.bench.items.first { $0.id == id }!, app: app)
+        model.choose(model.takes[0].id, forBars: 0..<2)
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-takes")
+    }
+}

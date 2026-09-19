@@ -385,8 +385,14 @@ public struct Audio: Hashable, Codable, Sendable {
     public var duration: Double
     /// Seconds to shift the audio so it lines up with the song grid; nil when unaligned.
     public var alignmentOffset: Double?
+    /// How a take was recorded, when `role` is `.take` and it was recorded here (M5). Nil for a
+    /// take imported from elsewhere, and for every version written before M5.
+    public var take: Take?
+    /// The plan a comp was rendered from, when this audio is a comp of takes (M5).
+    public var comp: CompPlan?
 
-    public init(media: MediaRef, role: AudioRole, stem: String? = nil, sampleRate: Double, channelCount: Int, duration: Double, alignmentOffset: Double? = nil) {
+    public init(media: MediaRef, role: AudioRole, stem: String? = nil, sampleRate: Double, channelCount: Int, duration: Double,
+                alignmentOffset: Double? = nil, take: Take? = nil, comp: CompPlan? = nil) {
         self.media = media
         self.role = role
         self.stem = stem
@@ -394,6 +400,64 @@ public struct Audio: Hashable, Codable, Sendable {
         self.channelCount = channelCount
         self.duration = duration
         self.alignmentOffset = alignmentOffset
+        self.take = take
+        self.comp = comp
+    }
+}
+
+/// Where and how a take was recorded: the section it was sung to, the bar and beat the transport
+/// was at when the first frame landed, the input it came from, and the latency the recorder
+/// folded into the alignment.
+public struct Take: Hashable, Codable, Sendable {
+    public var section: SectionID?
+    /// The song bar (0-based) and beat within it where the take's first frame sits, after latency.
+    public var startBar: Int
+    public var startBeat: Double
+    /// The input device's name, when known.
+    public var input: String?
+    /// Input plus output latency the recorder compensated for, seconds.
+    public var latencyCompensation: Double
+    /// Which pass of the section this was: 1 for the first take, 2 for the second…
+    public var pass: Int
+
+    public init(section: SectionID? = nil, startBar: Int, startBeat: Double = 0, input: String? = nil,
+                latencyCompensation: Double = 0, pass: Int = 1) {
+        self.section = section
+        self.startBar = startBar
+        self.startBeat = startBeat
+        self.input = input
+        self.latencyCompensation = latencyCompensation
+        self.pass = pass
+    }
+}
+
+/// A comp: which take each span of bars comes from, in order. Rendered into one audio version
+/// whose parents are every take named here.
+public struct CompPlan: Hashable, Codable, Sendable {
+    public struct Span: Hashable, Codable, Sendable {
+        /// Song bars, 0-based, `endBar` exclusive.
+        public var startBar: Int
+        public var endBar: Int
+        public var take: VersionID
+        public init(startBar: Int, endBar: Int, take: VersionID) {
+            self.startBar = startBar
+            self.endBar = max(startBar + 1, endBar)
+            self.take = take
+        }
+    }
+    public var spans: [Span]
+    /// Seconds of equal-power crossfade at every seam.
+    public var crossfade: Double
+
+    public init(spans: [Span], crossfade: Double = 0.01) {
+        self.spans = spans.sorted { $0.startBar < $1.startBar }
+        self.crossfade = crossfade
+    }
+
+    public var takes: [VersionID] {
+        var seen: [VersionID] = []
+        for span in spans where !seen.contains(span.take) { seen.append(span.take) }
+        return seen
     }
 }
 

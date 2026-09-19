@@ -50,7 +50,7 @@ struct WorkPathTests {
     func afterImport() throws {
         let built = GuidanceFixture.imported()
         let steps = WorkPath.steps(for: built.song, active: nil, canPerform: PathFixture.always).steps
-        #expect(steps.map(\.kind) == [.record, .stems, .chop, .groove, .chords, .bass, .dust, .arrange])
+        #expect(steps.map(\.kind) == [.record, .stems, .chop, .groove, .chords, .bass, .dust, .arrange, .sing])
         #expect(PathFixture.step(.record, steps)?.isDone == true)
         let stems = try #require(PathFixture.step(.stems, steps))
         #expect(stems.isNext)
@@ -136,7 +136,7 @@ struct WorkPathTests {
         let beat = try PathFixture.beat()
         #expect(lit(.sound, [], in: beat) == [.kit])
         #expect(WorkPath.steps(for: beat, active: nil, canPerform: PathFixture.always).steps.map(\.kind)
-                == [.groove, .chords, .bass, .kit, .dust, .arrange])
+                == [.groove, .chords, .bass, .kit, .dust, .arrange, .sing])
     }
 
     @Test("a step the frame could not carry out offers nothing and is not next")

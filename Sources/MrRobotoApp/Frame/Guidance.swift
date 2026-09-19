@@ -122,7 +122,10 @@ enum PartLabel {
             return "Analysis"
         case .audio(let audio):
             switch audio.role {
-            case .take: return "Record"
+            case .take:
+                if audio.comp != nil { return "Comp" }
+                if let take = audio.take { return "Take \(take.pass)" }
+                return "Record"
             case .stem: return "\((audio.stem ?? "unnamed").capitalized) stem"
             }
         case .sample:
@@ -325,6 +328,14 @@ public enum Guidance {
                 return SurfaceAction(surface: kind, title: PartLabel.title(of: lyric), bound: [lyric.id])
             }
             return SurfaceAction(surface: kind, title: "Lyrics")
+        case .booth:
+            // Bound to nothing: it records against the song as it plays, on the active section.
+            return SurfaceAction(surface: kind, title: song.title)
+        case .takes:
+            let takes = Guidance.takes(in: song)
+            guard let newest = takes.last else { return SurfaceAction(surface: kind, title: "Takes") }
+            let part = takes.filter { $0.partID == newest.partID }
+            return SurfaceAction(surface: kind, title: Guidance.takesTitle(of: part, in: song), bound: part.map(\.id))
         case .album, .merge, .cast:
             // Opened from a library row, a ledger row or the menu, never from the dock: an album
             // is not something the open song has, a merge needs two named versions, and the cast
@@ -390,7 +401,27 @@ public enum Guidance {
 
     /// The record as imported: the one `.audio` version whose role is `.take`.
     public static func take(in song: Song) -> PartVersion? {
-        song.versions.last { audio(of: $0)?.role == .take }
+        song.versions.last { audio(of: $0)?.role == .take && audio(of: $0)?.take == nil && audio(of: $0)?.comp == nil }
+    }
+
+    /// Takes recorded here (M5): audio versions that carry a `Take`, in graph order. Comps are not
+    /// takes; they are what takes become.
+    public static func takes(in song: Song) -> [PartVersion] {
+        song.versions.filter { audio(of: $0)?.take != nil }
+    }
+
+    /// Comps (M5), in graph order.
+    public static func comps(in song: Song) -> [PartVersion] {
+        song.versions.filter { audio(of: $0)?.comp != nil }
+    }
+
+    /// "Verse takes", or "Takes" when the part was sung to no section.
+    public static func takesTitle(of takes: [PartVersion], in song: Song) -> String {
+        if let section = takes.compactMap({ audio(of: $0)?.take?.section }).first,
+           let name = song.sections.first(where: { $0.id == section })?.name {
+            return "\(name) takes"
+        }
+        return "Takes"
     }
 
     /// Separated stems, in the order the graph holds them.

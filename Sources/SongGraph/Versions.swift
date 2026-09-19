@@ -70,6 +70,12 @@ public enum Operation {
     /// A fragment moved to sit with another: pitch-shifted and stretched audio, or a written part
     /// transposed by arithmetic. Its note is the plan's sentence; its parent is what it moved.
     public static let merge = "merge"
+    /// Takes of one part chosen bar by bar and rendered into one audio version. Its parents are
+    /// every take it drew from; its `Audio.comp` is the plan.
+    public static let comped = "comped"
+    /// A fix the band offered and you took — a note shifted by its measured cents, an onset nudged
+    /// by its milliseconds — as a new version whose parent is the take. The take is never changed.
+    public static let corrected = "corrected"
     /// Filled in by the schema 1 → 2 migration for versions that predate provenance operations.
     public static let unknown = "unknown"
 }

@@ -26,6 +26,8 @@ struct SurfaceBand: View {
             case .merge: merge(context, size, ink)
             case .cast: cast(context, size, ink)
             case .lyrics: lyrics(context, size, ink)
+            case .booth: booth(context, size, ink)
+            case .takes: takes(context, size, ink)
             case .compare: compare(context, size, ink)
             case .check: check(context, size, ink)
             }
@@ -174,6 +176,38 @@ struct SurfaceBand: View {
             context.fill(Path(rect), with: .color(index % 8 == 1 ? Design.Palette.accent.opacity(0.7) : ink))
             x += index % 8 == 7 ? 14 : 7
             index += 1
+        }
+    }
+
+    /// A level meter climbing and falling, one segment lit in the accent.
+    private func booth(_ context: GraphicsContext, _ size: CGSize, _ ink: Color) {
+        var x: CGFloat = 2
+        var index = 0
+        while x < size.width {
+            let phase = Double(index % 12) / 12
+            let h = size.height * CGFloat(0.25 + 0.7 * abs(sin(phase * .pi)))
+            let rect = CGRect(x: x, y: size.height - h - 2, width: 3, height: h)
+            context.fill(Path(rect), with: .color(index % 12 == 6 ? Design.Palette.accent.opacity(0.7) : ink))
+            x += 5
+            index += 1
+        }
+    }
+
+    /// Three lanes of takes, a span of each chosen in the accent.
+    private func takes(_ context: GraphicsContext, _ size: CGSize, _ ink: Color) {
+        let laneHeight = max(2, (size.height - 6) / 3)
+        for lane in 0..<3 {
+            let y = 2 + CGFloat(lane) * (laneHeight + 1)
+            let chosenStart = size.width * CGFloat([0.0, 0.38, 0.72][lane])
+            let chosenEnd = size.width * CGFloat([0.36, 0.7, 1.0][lane])
+            var x: CGFloat = 2
+            while x < size.width {
+                let chosen = x >= chosenStart && x < chosenEnd
+                let h = laneHeight * CGFloat(0.3 + 0.6 * abs(sin(Double(x) / 5 + Double(lane))))
+                let rect = CGRect(x: x, y: y + (laneHeight - h) / 2, width: 2, height: h)
+                context.fill(Path(rect), with: .color(chosen ? Design.Palette.accent.opacity(0.7) : ink.opacity(0.6)))
+                x += 4
+            }
         }
     }
 

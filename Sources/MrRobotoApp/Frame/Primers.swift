@@ -71,6 +71,16 @@ public enum Primer {
             return ("Check",
                     "One finding from a critic about one part. Critics flag and never fix: the fix is "
                         + "offered, and taking it is yours.")
+        case .booth:
+            return ("Booth",
+                    "Pick a section, press Record: the song plays under you and the take lands on the bar you sang it on, "
+                        + "latency taken out. Stop is a take; every take stays. Nothing is tuned or moved here — the band "
+                        + "reads it in Takes and offers, never fixes.")
+        case .takes:
+            return ("Takes",
+                    "Every take of one part, lane by lane against the bars, with the band's flags on the bar they belong "
+                        + "to — cents and milliseconds, never adjectives. Choose which take each bar comes from and keep the "
+                        + "comp: one version, seams crossfaded, the takes under it in the history.")
         }
     }
 }

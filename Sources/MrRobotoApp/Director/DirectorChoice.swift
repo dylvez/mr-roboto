@@ -43,8 +43,9 @@ extension SurfaceKind {
         case .sound: return [.sound, .sample, .groove]
         case .chords: return [.progression]
         case .pianoRoll: return [.bassline, .groove]
-        case .structure, .album, .cast: return []
+        case .structure, .album, .cast, .booth: return []
         case .lyrics: return [.lyric]
+        case .takes: return [.audio]
         case .merge: return [.sample, .bassline, .progression, .groove]
         case .compare, .check: return Set(PartType.allCases)
         }
@@ -212,7 +213,7 @@ public enum DirectorFill: Sendable, Equatable, Hashable {
         switch self {
         // The dock's surfaces, and the two the library adds: an album opens on nothing, a merge on
         // two versions; both are "parts" fills as far as a shape goes.
-        case .parts: return Set(SurfaceKind.gateA).union([.album, .merge])
+        case .parts: return Set(SurfaceKind.gateA).union([.album, .merge, .booth, .takes])
         case .compare: return [.compare]
         case .check: return [.check]
         }
@@ -436,6 +437,8 @@ public struct DirectorSurfaceChoice: Sendable, Equatable, Hashable, Identifiable
         case .merge: return "exactly two versions, each a chop, a bass line, a progression or a groove"
         case .cast: return "nothing bound: it draws the song's cast"
         case .lyrics: return "a lyric version, or nothing for a blank page"
+        case .booth: return "nothing bound: it records against the song as it plays"
+        case .takes: return "the takes of one part, as audio versions"
         }
     }
 

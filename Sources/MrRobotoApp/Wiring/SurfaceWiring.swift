@@ -41,6 +41,8 @@ final class SurfaceWiring {
     private var structures: [SurfaceID: StructureModel] = [:]
     private var merges: [SurfaceID: MergeModel] = [:]
     private var lyricSheets: [SurfaceID: LyricsModel] = [:]
+    private var booths: [SurfaceID: BoothModel] = [:]
+    private var takeSheets: [SurfaceID: TakesModel] = [:]
     // The two answer surfaces. What they draw is filed on `AppState` by whoever asked the question
     // (see `SurfaceAnswer`); what is kept here is the built model and the host it plays through,
     // for exactly as long as the bench holds the item — the same rule as the four above.
@@ -258,6 +260,26 @@ final class SurfaceWiring {
         return model
     }
 
+    /// The Booth: recording against the song as it plays, on the active section.
+    func boothModel(for item: BenchItem, app: AppState) -> BoothModel {
+        prune(app)
+        if let existing = booths[item.id] { return existing }
+        let model = BoothModel(host: BoothAdapter(app: app, service: service(for: app)), surfaceID: item.id)
+        booths[item.id] = model
+        return model
+    }
+
+    /// The takes bound to the item, as lanes; the comp is kept through the same adapter.
+    func takesModel(for item: BenchItem, app: AppState) -> TakesModel {
+        prune(app)
+        if let existing = takeSheets[item.id] { return existing }
+        let bound = app.bound(for: item.id).compactMap { app.version($0) }
+        let model = TakesModel(host: BoothAdapter(app: app, service: service(for: app)), takes: bound,
+                               song: app.song, surfaceID: item.id)
+        takeSheets[item.id] = model
+        return model
+    }
+
     /// The words: on a bound lyric, editing it; otherwise a blank page, read against the house voice.
     func lyricsModel(for item: BenchItem, app: AppState) -> LyricsModel {
         prune(app)
@@ -301,6 +323,8 @@ final class SurfaceWiring {
         structures = structures.filter { open.contains($0.key) }
         merges = merges.filter { open.contains($0.key) }
         lyricSheets = lyricSheets.filter { open.contains($0.key) }
+        booths = booths.filter { open.contains($0.key) }
+        takeSheets = takeSheets.filter { open.contains($0.key) }
         compares = compares.filter { open.contains($0.key) }
         compareAdapters = compareAdapters.filter { open.contains($0.key) }
         checks = checks.filter { open.contains($0.key) }

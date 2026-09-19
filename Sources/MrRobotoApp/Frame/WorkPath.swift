@@ -41,8 +41,8 @@ public enum WorkPath: String, Sendable, Equatable {
 
     public var steps: [PathStep.Kind] {
         switch self {
-        case .flip: return [.record, .stems, .chop, .groove, .chords, .bass, .dust, .arrange]
-        case .beat: return [.groove, .chords, .bass, .kit, .dust, .arrange]
+        case .flip: return [.record, .stems, .chop, .groove, .chords, .bass, .dust, .arrange, .sing]
+        case .beat: return [.groove, .chords, .bass, .kit, .dust, .arrange, .sing]
         }
     }
 
@@ -60,7 +60,7 @@ public enum WorkPath: String, Sendable, Equatable {
 public struct PathStep: Identifiable, Sendable, Equatable {
 
     public enum Kind: String, Sendable, Equatable, CaseIterable {
-        case record, stems, chop, groove, chords, bass, kit, dust, arrange
+        case record, stems, chop, groove, chords, bass, kit, dust, arrange, sing
 
         /// A step the path passes through without insisting on: it is never "next". The chords are
         /// this — the bass writes to the key when none are stated — so the path does not stall on
@@ -79,6 +79,7 @@ public struct PathStep: Identifiable, Sendable, Equatable {
             case .kit: return "Kit"
             case .dust: return "Dust"
             case .arrange: return "Arrange"
+            case .sing: return "Sing"
             }
         }
 
@@ -94,6 +95,7 @@ public struct PathStep: Identifiable, Sendable, Equatable {
             case .kit: return "sound"
             case .dust: return "dust"
             case .arrange: return "section"
+            case .sing: return "booth"
             }
         }
 
@@ -109,6 +111,7 @@ public struct PathStep: Identifiable, Sendable, Equatable {
             case .kit: return "dial.medium"
             case .dust: return "waveform.path.badge.minus"
             case .arrange: return "rectangle.split.3x1"
+            case .sing: return "mic"
             }
         }
 
@@ -124,6 +127,7 @@ public struct PathStep: Identifiable, Sendable, Equatable {
             case .kit: return "The drum sounds a groove plays: synthesized 808, 909 and Linn voices."
             case .dust: return "A chop or groove played through a machine (SP-1200, MPC60, tape, vinyl, radio)."
             case .arrange: return "Parts stitched into sections, and sections into a song."
+            case .sing: return "A take sung against the song as it plays, on the bar you sang it; takes comped into one."
             }
         }
     }
@@ -190,6 +194,7 @@ extension WorkPath {
         case .pianoRoll: return .bass
         case .structure: return .arrange
         case .album, .merge, .cast, .lyrics: return nil
+        case .booth, .takes: return .sing
         case .sound:
             let carries = bound.compactMap { song.version($0) }.contains { $0.kind.canCarryDegradation }
             if carries { return .dust }
@@ -212,12 +217,17 @@ extension WorkPath {
         case .bass: return parts(Guidance.basslines(in: song))
         case .dust: return parts(song.versions.filter { !$0.kind.degradation.isEmpty })
         case .arrange: return song.sections.count
+        case .sing: return Guidance.takes(in: song).count
         }
     }
 
     /// What pressing a step opens: its newest part if it has one, otherwise the way to make one.
     static func action(_ kind: PathStep.Kind, in song: Song) -> SurfaceAction? {
         switch kind {
+        case .sing:
+            // The takes, when there are any; otherwise the Booth, which opens on nothing.
+            if !Guidance.takes(in: song).isEmpty { return Guidance.dockAction(for: .takes, in: song) }
+            return SurfaceAction(surface: .booth, title: song.title)
         case .record:
             if Guidance.canShowRecord(in: song) {
                 return SurfaceAction(surface: .importRecord, title: song.title, bound: Guidance.boundRecord(in: song))

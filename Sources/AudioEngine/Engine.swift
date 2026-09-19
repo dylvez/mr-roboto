@@ -45,6 +45,12 @@ public struct Transport: Sendable {
     /// Engine render-timeline sample time at transport zero.
     public let originSampleTime: AVAudioFramePosition
 
+    public init(clock: TransportClock, mode: EngineMode, originSampleTime: AVAudioFramePosition) {
+        self.clock = clock
+        self.mode = mode
+        self.originSampleTime = originSampleTime
+    }
+
     public var sampleRate: Double { clock.sampleRate }
 
     /// Player-node relative frame for a transport time.

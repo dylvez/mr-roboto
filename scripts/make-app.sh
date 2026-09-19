@@ -57,6 +57,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleName</key>                 <string>$NAME</string>
     <key>CFBundleDisplayName</key>          <string>$NAME</string>
     <key>CFBundleExecutable</key>           <string>MrRoboto</string>
+    <key>NSMicrophoneUsageDescription</key> <string>The Booth records your takes against the song as it plays. Nothing is tuned or moved; every take stays.</string>
     <key>CFBundlePackageType</key>          <string>APPL</string>
     <key>CFBundleShortVersionString</key>   <string>0.1</string>
     <key>CFBundleVersion</key>              <string>$VERSION</string>

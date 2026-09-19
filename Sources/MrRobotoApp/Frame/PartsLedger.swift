@@ -216,12 +216,15 @@ public enum LedgerGroups {
         ("Chords", "section", "music.note.list"),
         ("Bass", "stem-bass", "waveform.path"),
         ("Written", "idea", "text.alignleft"),
+        ("Takes", "booth", "mic"),
     ]
 
     static func stage(of version: PartVersion) -> String {
         switch version.kind {
         case .analysis: return "Record"
-        case .audio(let audio): return audio.role == .take ? "Record" : "Stems"
+        case .audio(let audio):
+            if audio.take != nil || audio.comp != nil { return "Takes" }
+            return audio.role == .take ? "Record" : "Stems"
         case .sample: return "Chops"
         case .groove: return "Grooves"
         case .sound: return "Kit"

@@ -246,7 +246,7 @@ private struct SectionDetail: View {
 }
 
 /// Chips that wrap onto the next line rather than running off the panel.
-private struct FlowRow: Layout {
+struct FlowRow: Layout {
     var spacing: CGFloat = 4
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {

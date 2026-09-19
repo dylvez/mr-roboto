@@ -135,6 +135,8 @@ extension SurfaceKind {
         case .merge: return ("merge", "arrow.triangle.merge")
         case .cast: return ("cast", "person.3")
         case .lyrics: return ("lyrics", "text.quote")
+        case .booth: return ("booth", "mic")
+        case .takes: return ("takes", "waveform.badge.mic")
         case .compare: return ("compare", "chart.bar")
         case .check: return ("check", "checkmark.magnifyingglass")
         }
