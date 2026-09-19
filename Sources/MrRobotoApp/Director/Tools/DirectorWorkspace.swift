@@ -86,6 +86,18 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     func recordMix(_ mix: Mix, note: String) -> PartVersion?
     /// M6: "master", "stems" or "midi" written to the song's export folder; the files.
     func export(_ what: String) async throws -> [URL]
+
+    // M7: the record.
+
+    /// An album read from the library's songs (the open one as it is now).
+    func observe(album: Album) -> AlbumObservation
+    /// The clearances of every sampled source across the album's songs.
+    func clearances(of album: Album) -> [SampleClearance]
+    /// A new order and gaps, with a note in the rail.
+    @discardableResult
+    func sequence(_ order: [SongID], gaps: [SongID: Double]?, in album: AlbumID, because: String) -> Bool
+    /// The release folder and its report.
+    func release(album: AlbumID) async throws -> (URL, Export.AlbumReport)
 }
 
 /// `AppState` seen through the six things the Director needs.
@@ -159,6 +171,23 @@ public final class AppStateWorkspace: DirectorWorkspace {
 
     public func recordMix(_ mix: Mix, note: String) -> PartVersion? {
         MixAdapter(app: app).commit(mix, base: Guidance.mixes(in: app.song ?? Song(title: "")).last, note: note)
+    }
+
+    public func observe(album: Album) -> AlbumObservation { app.observe(album: album) }
+
+    public func clearances(of album: Album) -> [SampleClearance] { app.sources(of: album) }
+
+    @discardableResult
+    public func sequence(_ order: [SongID], gaps: [SongID: Double]?, in album: AlbumID, because: String) -> Bool {
+        app.sequence(order, gaps: gaps, in: album, because: because)
+    }
+
+    public func release(album id: AlbumID) async throws -> (URL, Export.AlbumReport) {
+        guard let album = app.library.album(id) else { throw Export.ReleaseFailure.noAlbum }
+        let base = app.exportDirectory ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Music/Mr. Roboto/Exports", isDirectory: true)
+        let folder = base.appendingPathComponent(Export.safe(album.title), isDirectory: true)
+        let result = try await Export.release(app, album: id, to: folder)
+        return (result.folder, result.report)
     }
 
     public func export(_ what: String) async throws -> [URL] {
@@ -328,6 +357,30 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
     public var mixObservation: MixObservation?
 
     public func mixObservation(section: SectionID?) async throws -> MixObservation? { mixObservation }
+
+    public func observe(album: Album) -> AlbumObservation {
+        var songs = library.songs
+        if let song, !songs.contains(where: { $0.id == song.id }) { songs.append(song) }
+        return AlbumObservation.of(album, songs: songs)
+    }
+
+    public func clearances(of album: Album) -> [SampleClearance] { album.clearances }
+
+    /// Every order the tools set, in order.
+    public private(set) var sequenced: [(order: [SongID], because: String)] = []
+
+    @discardableResult
+    public func sequence(_ order: [SongID], gaps: [SongID: Double]?, in id: AlbumID, because: String) -> Bool {
+        guard let index = library.albums.firstIndex(where: { $0.id == id }) else { return false }
+        library.albums[index].songs = order
+        if let gaps { for (song, gap) in gaps { library.albums[index].gaps[song] = gap } }
+        sequenced.append((order, because))
+        return true
+    }
+
+    public func release(album: AlbumID) async throws -> (URL, Export.AlbumReport) {
+        throw DirectorToolFailure(tool: "release", reason: "This workspace has nowhere to render audio into.")
+    }
 
     public func export(_ what: String) async throws -> [URL] {
         guard let current = song, what == "midi" else {

@@ -43,6 +43,7 @@ private struct AlbumBody: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Design.Palette.panel)
         .modifier(SongDropTarget(album: album, app: app))
+        .modifier(CoverDropTarget(album: album, app: app))
     }
 
     private var header: some View {
@@ -271,6 +272,23 @@ private struct AlbumLabel: View {
     init(_ text: String) { self.text = text }
     var body: some View {
         Text(text.uppercased()).font(Design.Typography.label).tracking(1.1).foregroundStyle(Design.Palette.inkTertiary)
+    }
+}
+
+/// An image file dropped on the album is its cover. Off in offscreen renders, like every drop target.
+private struct CoverDropTarget: ViewModifier {
+    let album: Album
+    let app: AppState
+
+    func body(content: Content) -> some View {
+        if Design.isOffscreenRender {
+            content
+        } else {
+            content.dropDestination(for: URL.self) { urls, _ in
+                guard let url = urls.first(where: { ["png", "jpg", "jpeg", "heic", "tiff"].contains($0.pathExtension.lowercased()) }) else { return false }
+                return app.setCover(imageAt: url, for: album.id)
+            }
+        }
     }
 }
 

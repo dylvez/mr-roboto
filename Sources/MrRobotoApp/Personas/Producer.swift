@@ -359,7 +359,7 @@ public struct Producer: Persona {
             GoldenTest("producer.golden.a-record",
                        premise: "A record of 38 minutes, the tracks within a LU, no neighbours in one key.",
                        passes: "Agreed: a record's length, one loudness, no two neighbours in one key.",
-                       exercises: ["producer.album-length", "producer.loudness-spread", "producer.same-key-neighbours"],
+                       exercises: ["producer.loudness-spread", "producer.same-key-neighbours"],
                        proposal: .sequence(minutes: 38, loudnessSpreadLU: 1, sameKeyPairs: 0, tempoJumps: 0, openerHookSeconds: 20), expects: .agree),
             GoldenTest("producer.golden.loud-and-quiet",
                        premise: "The tracks' released loudness spans 5 LU.",

@@ -145,6 +145,16 @@ public enum DirectorPrompt {
         "Export it", "bounce it", "give me the stems", "send me the MIDI" is export: master, stems \
         or midi; say the folder and the files, and for a master the loudness and true peak the \
         report carries.
+
+        The record is an album in the library. "Put the record in order", "what should open?", \
+        "is this a record yet?" start with read_album: the tracks with their keys, tempos, lengths, \
+        hooks and released loudness, the neighbours' distances, the palette, the clearances, and \
+        the Producer's and the Peer's lines. A new order is sequence — every track once, the gaps \
+        if they change, and the readings as the reason; the Producer refuses two neighbours in \
+        one key or a loudness spread, the Peer an opener whose hook comes late or a second tempo \
+        jump — say the refusal and its counter, and try the counter's order. "Release it" is \
+        release, only when the user says so; say the folder, the tracks with their loudness and \
+        true peak, and which clearances are still open.
         """
 
     /// The system prompt as blocks, with the one breakpoint on the last of them.

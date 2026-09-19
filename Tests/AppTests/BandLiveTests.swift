@@ -543,6 +543,52 @@ struct BandLiveTests {
         report("saved", "no — the run is in memory only")
     }
 
+    // MARK: M7 L6 — the record, live
+
+    static let albumLines = ["Put the record in order", "Release it"]
+
+    /// The first album in the library that holds two or more songs: two turns, the Producer and
+    /// the Peer heard on the record, a folder on disk. The order change is in memory only; the
+    /// release writes to ~/Music/Mr. Roboto/Exports/<album>.
+    @Test("M7 L6: put the record in order; release it — two turns, a folder on disk, cost reported")
+    func albumLive() async throws {
+        let state = AppState.live()
+        let registry = SurfaceRegistry()
+        SurfaceRegistry.registerSurfaces(in: registry)
+        let album = try #require(state.library.albums.first { $0.songs.count >= 2 }, "no album with two songs in the library")
+        state.openSong(album.songs[0])
+        let band = try #require(state.band)
+        try #require(await band.director.keyStatus().hasKey, "no API key")
+        report("album", "\(album.title) · \(album.songs.count) tracks · \(album.songs.compactMap { state.library.song($0)?.title }.joined(separator: " → "))")
+        for line in Self.albumLines {
+            let log = LiveTurnLog()
+            let started = Date()
+            let turn = await band.director.direct(line) { event in
+                switch event {
+                case .toolStarted(let name): log.started(name)
+                case .toolFinished(let name, let isError, let message): log.finished(name, isError: isError, message: message)
+                case .opened(let kind, let title): log.opened(kind, title)
+                case .say, .finished: break
+                }
+            }
+            report("line", line)
+            report("  ending", "\(turn.ending)")
+            report("  elapsed", String(format: "%.1f s", Date().timeIntervalSince(started)))
+            report("  calls", log.calls.joined(separator: " → "))
+            for failure in log.errors { report("  failed", failure) }
+            report("  said", turn.say)
+            describeSpend(turn.spend, label: "  turn")
+            #expect(turn.ending == .answered)
+        }
+        if let after = state.library.album(album.id) {
+            report("order after", after.songs.compactMap { state.library.song($0)?.title }.joined(separator: " → "))
+            for (id, release) in after.releases { report("  released", "\(state.library.song(id)?.title ?? "?") · \(String(format: "%.1f LUFS · %.1f dBTP", release.integratedLUFS, release.truePeakDBTP))") }
+        }
+        for entry in state.log.suffix(12) {
+            report("  rail [\(entry.source.label)]", entry.text + (entry.detail.map { " — \($0)" } ?? ""))
+        }
+    }
+
     // MARK: Reporting
 
     private func describe(_ id: VersionID, in state: AppState) -> String {

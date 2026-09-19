@@ -163,7 +163,6 @@
     },
     {
       "exercises" : [
-        "producer.album-length",
         "producer.loudness-spread",
         "producer.same-key-neighbours"
       ],

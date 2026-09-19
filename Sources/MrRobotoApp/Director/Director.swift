@@ -393,6 +393,9 @@ public actor Director {
         case "set_mix": return many ? "made \(times) mix moves" : "made a mix move"
         case "master": return "set the master"
         case "export": return many ? "exported \(times) times" : "exported"
+        case "read_album": return "read the record"
+        case "sequence": return many ? "sequenced the record \(times) times" : "sequenced the record"
+        case "release": return "released the record"
         case "open_surface": return many ? "opened \(times) surfaces" : "opened a surface"
         case "propose": return many ? "offered \(times) suggestions" : "offered a suggestion"
         default: return many ? "\(tool) ×\(times)" : tool

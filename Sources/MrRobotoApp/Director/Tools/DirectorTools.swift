@@ -66,6 +66,10 @@ public enum DirectorTools {
             SetMixTool(workspace: workspace).erased(),
             MasterTool(workspace: workspace).erased(),
             ExportTool(workspace: workspace).erased(),
+            // M7, appended after the twenty-nine: the record read, put in order, released.
+            ReadAlbumTool(workspace: workspace).erased(),
+            SequenceTool(workspace: workspace).erased(),
+            ReleaseTool(workspace: workspace).erased(),
         ]
         if let stage {
             let pad = pad ?? DirectorStagePad()
@@ -114,6 +118,10 @@ public enum DirectorTools {
         "set_mix",
         "master",
         "export",
+        // M7, appended: the record.
+        "read_album",
+        "sequence",
+        "release",
     ]
 
     /// The two the frame adds. Appended after `names`, never among them: a session with no frame

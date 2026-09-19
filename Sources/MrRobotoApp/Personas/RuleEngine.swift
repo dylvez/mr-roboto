@@ -89,8 +89,10 @@ public struct ProposalMeasures: Hashable, Sendable {
                                              .moveCount: Double((gainDB != 0 ? 1 : 0) + (bandDB != 0 ? 1 : 0))])
         case .setMaster(let target, let ceiling):
             return ProposalMeasures(values: [.masterTargetLUFS: target, .masterCeilingDBTP: ceiling])
-        case .sequence(let minutes, let spread, let sameKey, let jumps, let opener):
-            return ProposalMeasures(values: [.albumMinutes: minutes, .albumLoudnessSpreadLU: spread, .albumSameKeyPairs: Double(sameKey),
+        case .sequence(_, let spread, let sameKey, let jumps, let opener):
+            // The running time is not the order's doing: album-length is a reading, not a gate on
+            // a sequence, so the minutes stay out of the proposal's measures.
+            return ProposalMeasures(values: [.albumLoudnessSpreadLU: spread, .albumSameKeyPairs: Double(sameKey),
                                              .albumTempoJumps: Double(jumps), .albumOpenerHookSeconds: opener])
         case .outOfScope:
             return ProposalMeasures()
