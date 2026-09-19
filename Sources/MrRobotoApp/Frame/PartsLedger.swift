@@ -93,6 +93,7 @@ struct PartsLedger: View {
                         .font(Design.Typography.ui(14.5, weight: .medium))
                         .foregroundStyle(isSelected ? Design.Palette.accent : Design.Palette.ink)
                         .lineLimit(1)
+                        .padding(.trailing, PartPlayer.canPlay(version) ? 26 : 0)
                     Text(app.provenanceLine(for: version))
                         .font(Design.Typography.ui(12, weight: .regular))
                         .foregroundStyle(Design.Palette.inkSecondary)
@@ -107,6 +108,8 @@ struct PartsLedger: View {
             }
             .buttonStyle(.plain)
             .help(action.map { "\($0.title) — \($0.rationale)" } ?? "Gate A has no surface for this kind of part yet")
+            // Beside the row's own button, not inside it: a button in a button's label gets no clicks.
+            .overlay(alignment: .topTrailing) { PartPlayButton(version: version, app: app) }
             .contextMenu {
                 Button("Keep as idea") { app.keepAsIdea(version.id) }
                     .disabled(app.store == nil)
@@ -175,6 +178,7 @@ private struct VersionChips: View {
                 }
                 .buttonStyle(.plain)
                 .help(action.map { "Open this version in \($0.surface.rawValue)" } ?? app.provenanceLine(for: version))
+                .overlay(alignment: .trailing) { PartPlayButton(version: version, app: app, size: 7).padding(.trailing, 3) }
             }
         }
     }

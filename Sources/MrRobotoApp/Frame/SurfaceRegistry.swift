@@ -203,6 +203,7 @@ struct SurfaceHost: View {
                 .frame(height: 28)
                 .layoutPriority(-1)
                 .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 5 }
+            SurfacePlayControl(item: item, app: app)
             ChipButton(systemImage: "questionmark",
                        help: app.primers.isShowing(item.kind)
                            ? "Hide what \(item.kind.rawValue) is for"

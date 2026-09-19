@@ -28,16 +28,8 @@ struct StructureSurfaceView: View {
             Text(model.lengthText)
                 .font(Design.Typography.numeric(12))
                 .foregroundStyle(Design.Palette.inkSecondary)
+            // The form plays from the surface's header, where every surface's play control is.
             Spacer()
-            Button("Play form") { Task { await model.play() } }
-                .buttonStyle(.plain)
-                .font(Design.Typography.ui(12, weight: .medium))
-                .foregroundStyle(Design.Palette.accent)
-                .disabled(model.isEmpty)
-            Button("Stop") { Task { await model.stop() } }
-                .buttonStyle(.plain)
-                .font(Design.Typography.ui(12))
-                .foregroundStyle(Design.Palette.inkSecondary)
         }
     }
 

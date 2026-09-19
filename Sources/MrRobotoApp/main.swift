@@ -116,12 +116,25 @@ struct FrameCommands: Commands {
 
         CommandMenu("Transport") {
             Button(app.transport.isPlaying ? "Stop" : "Play") {
-                Task { await app.toggleTransport() }
+                Task { await SurfaceWiring.shared.player(for: app).spaceBar() }
             }
             .keyboardShortcut(.space, modifiers: [])
 
-            Button("Stop") { Task { await app.stopTransport() } }
-                .keyboardShortcut(".", modifiers: .command)
+            Button("Play the Surface in Front") {
+                guard let item = app.bench.active ?? app.bench.items.last,
+                      let audition = SurfaceWiring.shared.audition(for: item, app: app) else { return }
+                let player = SurfaceWiring.shared.player(for: app)
+                if player.isPlaying(audition.id) { player.stop() } else { Task { await audition.play(player) } }
+            }
+            .keyboardShortcut(.space, modifiers: .option)
+            .disabled(app.bench.items.isEmpty)
+            Button("Stop") {
+                Task {
+                    await SurfaceWiring.shared.player(for: app).stopSounding()
+                    await app.stopTransport()
+                }
+            }
+            .keyboardShortcut(".", modifiers: .command)
                 .disabled(app.transport == .stopped)
 
             Toggle("Loop", isOn: Binding(get: { app.isLooping }, set: { _ in app.toggleLoop() }))

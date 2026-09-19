@@ -36,15 +36,8 @@ struct PianoRollSurfaceView: View {
                     .font(Design.Typography.ui(11.5, weight: .regular))
                     .foregroundStyle(Design.Palette.inkSecondary)
             }
+            // The line plays from the surface's header, where every surface's play control is.
             Spacer()
-            Button("Play line") { model.playLine() }
-                .buttonStyle(.plain)
-                .font(Design.Typography.ui(12, weight: .medium))
-                .foregroundStyle(Design.Palette.accent)
-            Button("Stop") { model.stop() }
-                .buttonStyle(.plain)
-                .font(Design.Typography.ui(12))
-                .foregroundStyle(Design.Palette.inkSecondary)
         }
     }
 

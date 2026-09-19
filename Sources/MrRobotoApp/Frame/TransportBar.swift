@@ -17,6 +17,7 @@ struct TransportBar: View {
             controls
             keyAndTempo
             position
+            NowPlayingReadout(app: app)
             midi
             sectionStrip
         }
@@ -50,7 +51,7 @@ struct TransportBar: View {
     private var controls: some View {
         HStack(spacing: 18) {
             Button {
-                Task { await app.toggleTransport() }
+                Task { await SurfaceWiring.shared.player(for: app).spaceBar() }
             } label: {
                 Image(systemName: app.transport.isPlaying ? "pause.fill" : "play.fill")
                     .font(.system(size: 17, weight: .regular))
@@ -60,7 +61,11 @@ struct TransportBar: View {
             .help("Play or stop (Space)")
 
             Button {
-                Task { await app.stopTransport() }
+                // One Stop: the song, and anything a surface or the ledger started.
+                Task {
+                    await SurfaceWiring.shared.player(for: app).stopSounding()
+                    await app.stopTransport()
+                }
             } label: {
                 Image(systemName: "stop")
                     .font(.system(size: 17, weight: .regular))

@@ -74,6 +74,7 @@ final class SurfaceWiring {
     func use(_ service: AuditionService) { self.service = service }
 
     private var midiControl: MIDIControl?
+    var partPlayer: PartPlayer?
 
     /// The controller, on the shared rig. One per process, like the service it plays through.
     func midi(for app: AppState) -> MIDIControl {
