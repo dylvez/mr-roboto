@@ -170,3 +170,46 @@ struct InstrumentPresetTests {
         #expect(spec.level > 0 && spec.level <= 1)
     }
 }
+
+// The crash this caught: switching instrument while one was playing.
+
+@Suite("Voice sampler: swapping a kit keeps the node")
+struct SamplerKitSwapTests {
+    /// Two kits, built into their own folders.
+    private func kits() throws -> (URL, LoadedKit, LoadedKit) {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("swap-\(UUID().uuidString)")
+        let a = try SynthesizedInstrument.build(.marimba, in: root.appendingPathComponent("a"), sampleRate: 48_000)
+        let b = try SynthesizedInstrument.build(.organ, in: root.appendingPathComponent("b"), sampleRate: 48_000)
+        return (root, a, b)
+    }
+
+    @Test("a second prepare swaps the zones and keeps the same node, so an attached node stays attached")
+    func swapKeepsTheNode() throws {
+        let (root, first, second) = try kits()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let sampler = VoiceSampler(cache: SampleCache())
+        defer { sampler.unprepare() }
+
+        try sampler.prepare(first, sampleRate: 48_000, channels: 2)
+        let node = try #require(sampler.node)
+        #expect(sampler.kit?.manifest.name == first.manifest.name)
+
+        try sampler.prepare(second, sampleRate: 48_000, channels: 2)
+        // Identity, not equality: the service attaches this node to the engine exactly once, so a
+        // new object here is a node nobody attached, and the first note asks it for a render time
+        // it cannot give. That is a crash, not a wrong sound.
+        #expect(sampler.node === node, "the kit swap replaced the node")
+        #expect(sampler.kit?.manifest.name == second.manifest.name, "the zones did not swap")
+    }
+
+    @Test("unprepare does destroy the node, which is why the service must not call it on a live sampler")
+    func unprepareDropsTheNode() throws {
+        let (root, first, _) = try kits()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let sampler = VoiceSampler(cache: SampleCache())
+        try sampler.prepare(first, sampleRate: 48_000, channels: 2)
+        #expect(sampler.node != nil)
+        sampler.unprepare()
+        #expect(sampler.node == nil && sampler.kit == nil)
+    }
+}

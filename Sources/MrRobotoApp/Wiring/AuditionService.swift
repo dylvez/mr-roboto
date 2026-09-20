@@ -314,7 +314,7 @@ public final class AuditionService {
         let format = engine.format
         let sampler = bassSampler ?? VoiceSampler(cache: cache)
         bassSampler = sampler
-        if sampler.kit != nil { sampler.unprepare() }
+        // As above: never unprepare a sampler whose node is attached and rendering.
         try sampler.prepare(loaded, sampleRate: format.sampleRate, channels: Int(format.channelCount))
         if !bassSamplerNodeAttached, let node = sampler.node {
             engine.avEngine.attach(node)
@@ -340,7 +340,11 @@ public final class AuditionService {
         let format = engine.format
         let sampler = instrumentSampler ?? VoiceSampler(cache: cache)
         instrumentSampler = sampler
-        if sampler.kit != nil { sampler.unprepare() }
+        // Swap the kit in place. `unprepare()` here would destroy the node, `prepare` would build a
+        // new one, and the attach-once flag below would leave that new node unattached — then the
+        // first note asks an engine-less node for its render time and AVFAudio raises. That is the
+        // Rhodes-to-Wurlitzer crash. `prepare` is safe to call again while rendering: it retires
+        // the old zones by epoch and keeps the node.
         try sampler.prepare(loaded, sampleRate: format.sampleRate, channels: Int(format.channelCount))
         if !instrumentSamplerNodeAttached, let node = sampler.node {
             engine.avEngine.attach(node)
