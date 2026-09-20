@@ -63,7 +63,8 @@ extension SurfaceWiring {
             guard let progression = chordsModel(for: item, app: app).progression, !progression.chords.isEmpty else { return nil }
             return SurfaceAudition(id: id, label: "these chords") { player in
                 let seconds = clock.seconds(forBeat: progression.bars.reduce(0) { $0 + $1.beats }) + 0.5
-                await player.play(id: id, label: item.title, seconds: seconds) { await player.play(progression, clock: clock) }
+                let song = app.song
+                await player.play(id: id, label: item.title, seconds: seconds) { await player.play(progression, in: song, clock: clock) }
             }
         case .chopLane:
             guard case .ready(let surface) = chopBinding(for: item, app: app).state else { return version(bound.first, "this chop") }

@@ -33,6 +33,35 @@ final class BassAdapter: PianoRollHosting {
 
     func stop() async { await service.stop() }
 
+    func auditionMelody(note: Int, velocity: Int, duration: Double, instrument: String) async {
+        guard await prepareInstrument(instrument) else { return }
+        await service.playInstrument([VoiceSampler.Hit(note: note, velocity: velocity, at: 0, duration: duration)])
+    }
+
+    func playMelody(_ notes: [NoteEvent], tempo: Double, timeSignature: TimeSignature, instrument: String) async {
+        guard !notes.isEmpty, await prepareInstrument(instrument) else { return }
+        let secondsPerBeat = 60 / max(1, tempo)
+        await service.playInstrument(notes.map { note in
+            VoiceSampler.Hit(note: note.pitch.midi, velocity: note.velocity,
+                             at: note.start * secondsPerBeat, duration: note.duration * secondsPerBeat)
+        })
+    }
+
+    func setInstrument(_ id: String) { app.setInstrument(id) }
+
+    /// Loads an instrument preset, saying so in the rail when it cannot.
+    private func prepareInstrument(_ id: String) async -> Bool {
+        let spec = InstrumentVoiceSpec.preset(id: id) ?? .rhodes
+        guard await service.currentInstrumentID != spec.id else { return true }
+        do {
+            try await service.prepare(instrument: spec)
+            return true
+        } catch {
+            app.note(.session, "Could not load the \(spec.name)", detail: "\(error)")
+            return false
+        }
+    }
+
     func commit(_ version: PartVersion) async -> Bool {
         guard app.record(version) else { return false }
         // What the Bassist says about what was kept, in the rail, in its name.
@@ -75,14 +104,21 @@ final class ChordsAdapter: ChordsHosting {
         self.service = service
     }
 
+    var instrument: String { app.song.map { SongPlayback.instrumentID(in: $0) } ?? InstrumentVoiceSpec.rhodes.id }
+
+    func setInstrument(_ id: String) { app.setInstrument(id) }
+
     func audition(pitches: [Int], duration: Double) async {
-        if await service.currentBassID != BassVoiceSpec.finger.id {
-            do { try await service.prepare(bass: .finger) } catch {
-                app.note(.session, "Could not load the Finger bass", detail: "\(error)")
+        // Chords play on the song's pitched instrument. They used to go through the bass sampler,
+        // which put a four-note voicing through a monophonic sub an octave below where it was written.
+        let spec = app.song.map { InstrumentVoiceSpec.preset(id: SongPlayback.instrumentID(in: $0)) ?? .rhodes } ?? .rhodes
+        if await service.currentInstrumentID != spec.id {
+            do { try await service.prepare(instrument: spec) } catch {
+                app.note(.session, "Could not load the \(spec.name)", detail: "\(error)")
                 return
             }
         }
-        await service.playBass(pitches.map { VoiceSampler.Hit(note: $0, velocity: 92, at: 0, duration: duration) })
+        await service.playInstrument(pitches.map { VoiceSampler.Hit(note: $0, velocity: 92, at: 0, duration: duration) })
     }
 
     func commit(_ version: PartVersion) async -> Bool { app.record(version) }

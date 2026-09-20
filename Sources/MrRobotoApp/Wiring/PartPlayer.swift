@@ -165,9 +165,9 @@ public final class PartPlayer {
         case .bassline(let line):
             return await play(line.notes, sound: line.sound, clock: clock)
         case .melody(let melody):
-            return await play(melody.notes, sound: nil, clock: clock)
+            return await playOnInstrument(melody.notes, in: song, clock: clock)
         case .progression(let progression):
-            return await play(progression, clock: clock)
+            return await play(progression, in: song, clock: clock)
         case .audio(let audio):
             let url = try mediaURL(audio.media, song: song)
             let (planar, rate) = try await Task.detached { try BoothAdapter.planar(url) }.value
@@ -204,10 +204,31 @@ public final class PartPlayer {
         return clock.seconds(forBeat: notes.map { $0.start + $0.duration }.max() ?? 0) + 0.5
     }
 
+    /// The song's pitched instrument, loaded.
     @discardableResult
-    public func play(_ progression: Progression, clock: TransportClock) async -> Double {
-        if await service.currentBassID != BassVoiceSpec.finger.id { try? await service.prepare(bass: .finger) }
-        await service.playBass(Self.hits(for: progression, clock: clock))
+    func prepareInstrument(in song: Song?) async -> InstrumentVoiceSpec {
+        let spec = song.map { InstrumentVoiceSpec.preset(id: SongPlayback.instrumentID(in: $0)) ?? .rhodes } ?? .rhodes
+        if await service.currentInstrumentID != spec.id { try? await service.prepare(instrument: spec) }
+        return spec
+    }
+
+    /// A melody on the song's instrument, at its written beats.
+    @discardableResult
+    public func playOnInstrument(_ notes: [NoteEvent], in song: Song?, clock: TransportClock) async -> Double {
+        _ = await prepareInstrument(in: song)
+        let hits = notes.map { note in
+            VoiceSampler.Hit(note: note.pitch.midi, velocity: note.velocity,
+                             at: clock.seconds(forBeat: note.start),
+                             duration: clock.seconds(forBeat: note.duration))
+        }
+        await service.playInstrument(hits)
+        return clock.seconds(forBeat: notes.map { $0.start + $0.duration }.max() ?? 0) + 0.5
+    }
+
+    @discardableResult
+    public func play(_ progression: Progression, in song: Song?, clock: TransportClock) async -> Double {
+        _ = await prepareInstrument(in: song)
+        await service.playInstrument(Self.hits(for: progression, clock: clock))
         return clock.seconds(forBeat: progression.bars.reduce(0) { $0 + $1.beats }) + 0.5
     }
 

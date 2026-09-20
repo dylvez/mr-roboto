@@ -1,3 +1,4 @@
+import Instrument
 import MusicTheory
 import Foundation
 import SongGraph
@@ -559,5 +560,18 @@ extension AppState {
     public func saveIfNeeded() {
         guard hasUnsavedChanges, store != nil, song != nil else { return }
         save()
+    }
+}
+
+extension AppState {
+    /// The song's pitched instrument: what chords and melodies play through. Recorded as a `.sound`
+    /// part, the same way the drum machine is, so the choice travels with the song and shows in the
+    /// ledger. A preset the app does not know is ignored rather than recorded.
+    @discardableResult
+    public func setInstrument(_ id: String) -> Bool {
+        guard let spec = InstrumentVoiceSpec.preset(id: id) else { return false }
+        guard song != nil, SongPlayback.instrumentID(in: song!) != spec.id else { return false }
+        return record(PartVersion(partID: PartID(), kind: .sound(Sound(instrument: spec.id)), author: .user,
+                                  operation: Operation.written, note: "\(spec.name) for the chords and the tune"))
     }
 }

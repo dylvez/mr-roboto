@@ -416,6 +416,16 @@ public struct SongPlayback: Equatable, Sendable {
         return SynthMachine.tr808.id
     }
 
+    /// The song's pitched instrument, from its newest `.sound` part that names one. A song that
+    /// has never chosen gets the Rhodes, which is the one that suits this app's first idiom.
+    static func instrumentID(in song: Song) -> String {
+        for version in song.versions.reversed() {
+            guard case .sound(let sound) = version.kind else { continue }
+            if InstrumentVoiceSpec.preset(id: sound.instrument) != nil { return sound.instrument }
+        }
+        return InstrumentVoiceSpec.rhodes.id
+    }
+
     /// Why this song cannot be played, in its own terms. Never a shrug: it names what is there and
     /// what would make it sound.
     private static func silence(for song: Song, audioVersions: [PartVersion],

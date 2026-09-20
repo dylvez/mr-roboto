@@ -27,7 +27,17 @@ struct PianoRollSurfaceView: View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             Text(model.title)
                 .font(Design.Typography.prose(16, weight: .medium))
-            if model.groove == nil {
+            // What this roll is writing. The same grid either way.
+            HStack(spacing: 4) {
+                ForEach(PianoRollModel.Mode.allCases, id: \.self) { mode in
+                    RollChip(mode.title, isOn: model.mode == mode) { model.setMode(mode) }
+                }
+            }
+            if model.mode == .melody {
+                Text("Drawn by hand: nothing in the band writes a tune yet.")
+                    .font(Design.Typography.ui(11.5, weight: .regular))
+                    .foregroundStyle(Design.Palette.inkTertiary)
+            } else if model.groove == nil {
                 Text("No groove to sit under: this line is on the grid.")
                     .font(Design.Typography.ui(11.5, weight: .regular))
                     .foregroundStyle(Design.Palette.warn)
@@ -41,7 +51,16 @@ struct PianoRollSurfaceView: View {
         }
     }
 
+    @ViewBuilder
     private var levers: some View {
+        if model.mode == .melody {
+            InstrumentPicker(selected: model.instrument) { model.setInstrument($0) }
+        } else {
+            bassLevers
+        }
+    }
+
+    private var bassLevers: some View {
         HStack(alignment: .top, spacing: 18) {
             VStack(alignment: .leading, spacing: 3) {
                 RollLabel("Hands")

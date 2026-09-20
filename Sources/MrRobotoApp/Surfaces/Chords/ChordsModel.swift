@@ -46,6 +46,13 @@ public final class ChordsModel {
     public private(set) var base: PartVersion?
     public private(set) var versions: [PartVersion] = []
     public private(set) var lastError: String?
+    /// The instrument these chords are voiced on, by preset id.
+    public var instrument: String { host.instrument }
+
+    public func setInstrument(_ id: String) {
+        host.setInstrument(id)
+        if let progression, let first = progression.chords.first { audition(first) }
+    }
     public let beatsPerBar: Int
 
     private let host: any ChordsHosting

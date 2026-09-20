@@ -27,6 +27,10 @@ struct ChordsSurfaceView: View {
                     .font(Design.Typography.ui(11.5, weight: .regular))
                     .foregroundStyle(model.problem == nil ? Design.Palette.inkSecondary : Design.Palette.warn)
                     .fixedSize(horizontal: false, vertical: true)
+                // What voices them. Chords used to play on the bass sampler, an octave below where
+                // they were written; now they go through whatever this names.
+                InstrumentPicker(selected: model.instrument, choose: { model.setInstrument($0) }, label: "Voiced on")
+                    .padding(.top, 4)
             }
             if let progression = model.progression {
                 ScrollView(.horizontal, showsIndicators: false) {

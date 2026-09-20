@@ -13,6 +13,12 @@ public protocol PianoRollHosting: AnyObject {
     func audition(note: Int, velocity: Int, duration: Double, sound: String) async
     /// The whole line once, on its own, from its first beat.
     func play(_ bassline: Bassline, tempo: Double, timeSignature: TimeSignature) async
+    /// One note of a melody, on the pitched instrument rather than the bass.
+    func auditionMelody(note: Int, velocity: Int, duration: Double, instrument: String) async
+    /// A whole melody, at its written beats.
+    func playMelody(_ notes: [NoteEvent], tempo: Double, timeSignature: TimeSignature, instrument: String) async
+    /// The song's pitched instrument becomes this one, for everything that plays through it.
+    func setInstrument(_ id: String)
     func stop() async
     /// A new part version left the surface. `false` when the host refused it.
     @discardableResult
@@ -23,6 +29,9 @@ public protocol PianoRollHosting: AnyObject {
 @MainActor
 public protocol ChordsHosting: AnyObject {
     func audition(pitches: [Int], duration: Double) async
+    /// The song's pitched instrument: what these chords are voiced on.
+    var instrument: String { get }
+    func setInstrument(_ id: String)
     @discardableResult
     func commit(_ version: PartVersion) async -> Bool
 }

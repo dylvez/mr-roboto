@@ -62,6 +62,16 @@ public final class PianoRollModel {
 
     // MARK: The line
 
+    /// What this roll is writing. The surface is the same grid either way; what changes is which
+    /// part it commits, which instrument sounds it, and whether the Bassist has anything to say.
+    public enum Mode: String, CaseIterable, Sendable {
+        case bass, melody
+        public var title: String { self == .bass ? "Bass" : "Melody" }
+    }
+
+    public private(set) var mode: Mode = .bass
+    /// The pitched instrument a melody plays through, by preset id.
+    public private(set) var instrument: String = InstrumentVoiceSpec.rhodes.id
     public private(set) var notes: [NoteEvent]
     public private(set) var sound: String
 
@@ -85,6 +95,27 @@ public final class PianoRollModel {
     public private(set) var readings: [PersonaReading] = []
 
     /// The pitch range the roll draws: the lineage's register, widened to hold the notes.
+    /// Whether the writer's levers apply. A tune is drawn by hand: nothing in the app writes one,
+    /// and a lever that silently did would be the Bassist writing melodies.
+    public var writesFromLevers: Bool { mode == .bass }
+
+    public var melody: Melody { Melody(notes: notes) }
+
+    public func setMode(_ value: Mode) {
+        guard value != mode else { return }
+        mode = value
+        // A bass line dragged into melody mode keeps its notes; they just sound an octave up on a
+        // different instrument, which is usually what you wanted when you switched.
+        refreshReadings()
+    }
+
+    public func setInstrument(_ id: String) {
+        guard InstrumentVoiceSpec.preset(id: id) != nil else { return }
+        instrument = id
+        host.setInstrument(id)
+        if let first = notes.first { audition(first) }
+    }
+
     public var register: ClosedRange<Int> {
         var low = lineage.register.lowerBound, high = lineage.register.upperBound
         for note in notes { low = min(low, note.pitch.midi); high = max(high, note.pitch.midi) }
@@ -276,13 +307,26 @@ public final class PianoRollModel {
 
     public func audition(_ note: NoteEvent) {
         let seconds = note.duration * 60 / max(1, tempo)
-        let sound = self.sound
-        Task { [host] in await host.audition(note: note.pitch.midi, velocity: note.velocity, duration: seconds, sound: sound) }
+        let sound = self.sound, instrument = self.instrument, mode = self.mode
+        Task { [host] in
+            if mode == .melody {
+                await host.auditionMelody(note: note.pitch.midi, velocity: note.velocity, duration: seconds, instrument: instrument)
+            } else {
+                await host.audition(note: note.pitch.midi, velocity: note.velocity, duration: seconds, sound: sound)
+            }
+        }
     }
 
     public func playLine() {
         let line = bassline, tempo = self.tempo, signature = timeSignature
-        Task { [host] in await host.play(line, tempo: tempo, timeSignature: signature) }
+        let notes = self.notes, instrument = self.instrument, mode = self.mode
+        Task { [host] in
+            if mode == .melody {
+                await host.playMelody(notes, tempo: tempo, timeSignature: signature, instrument: instrument)
+            } else {
+                await host.play(line, tempo: tempo, timeSignature: signature)
+            }
+        }
     }
 
     public func stop() {
@@ -292,7 +336,9 @@ public final class PianoRollModel {
     // MARK: Readings
 
     private func refreshReadings() {
-        guard let observation else { readings = []; return }
+        // The Bassist reads bass lines. Nobody in the band reads a melody yet, so a tune gets no
+        // readings rather than the Bassist's readings about the wrong thing.
+        guard mode == .bass, let observation else { readings = []; return }
         readings = bassist.read(observation)
     }
 
@@ -306,7 +352,7 @@ public final class PianoRollModel {
     /// whether it was written or edited.
     @discardableResult
     public func commit(note: String? = nil) -> PartVersion {
-        let payload = PartKind.bassline(bassline)
+        let payload: PartKind = mode == .melody ? .melody(melody) : .bassline(bassline)
         let text = note ?? defaultNote
         let version: PartVersion
         if let previous = versions.last ?? base {
@@ -327,6 +373,10 @@ public final class PianoRollModel {
     }
 
     private var defaultNote: String {
+        if mode == .melody {
+            let name = InstrumentVoiceSpec.preset(id: instrument)?.name ?? instrument
+            return "Melody, \(notes.count) note\(notes.count == 1 ? "" : "s") on the \(name)"
+        }
         var parts = [isHandEdited ? "Bass line, edited" : "\(lineage.name) line"]
         if lagMS != 0 { parts.append(String(format: "%+.0f ms behind the kick", lagMS)) }
         parts.append(String(format: "%.0f bpm", tempo))

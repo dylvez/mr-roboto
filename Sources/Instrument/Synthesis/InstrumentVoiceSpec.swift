@@ -82,6 +82,16 @@ public struct InstrumentVoiceSpec: Codable, Sendable, Hashable, Identifiable {
 
     /// How the four operators are wired. The classic shapes, not all thirty-two of the DX7's.
     public enum Algorithm: String, Codable, Sendable, Hashable, CaseIterable {
+        /// How it reads on a surface, rather than how it is spelled in code.
+        public var title: String {
+            switch self {
+            case .stack: return "a chain of four"
+            case .twoIntoOne: return "two modulators into one"
+            case .twinPairs: return "two pairs"
+            case .onePairTwoSines: return "a pair and two sines"
+            }
+        }
+
         /// 4→3→2→1: one chain into one carrier. The brightest and the most extreme.
         case stack
         /// 4→3→1 and 2→1: two modulators into one carrier.
@@ -218,14 +228,19 @@ public extension InstrumentVoiceSpec {
         drive: 0.3, level: 0.9, durationSeconds: 4, velocityLayers: [45, 110])
 
     /// A struck bell: inharmonic ratios, long decay, no sustain.
+    ///
+    /// The modulation index is deliberately lower than a physical bell's. Drive it harder and the
+    /// carrier's energy spreads into the 2.51 sideband until *that* is the loudest partial, which
+    /// is exactly what a real bell does and why a bell's strike tone is not the note you struck.
+    /// Here the note has to read, because melodies get written on this.
     static let bell = InstrumentVoiceSpec(
         id: "bell", name: "Bell", family: "bell", engine: .fm,
         algorithm: .twinPairs,
         operators: [
             Operator(ratio: 1, level: 1, attack: 0.001, decay: 4, sustain: 0),
-            Operator(ratio: 3.51, level: 0.7, attack: 0.001, decay: 2.2, sustain: 0),
-            Operator(ratio: 2.01, level: 0.42, attack: 0.001, decay: 3, sustain: 0),
-            Operator(ratio: 8.2, level: 0.34, attack: 0.001, decay: 0.7, sustain: 0),
+            Operator(ratio: 3.51, level: 0.34, attack: 0.001, decay: 2.2, sustain: 0),
+            Operator(ratio: 2.01, level: 0.26, attack: 0.001, decay: 3, sustain: 0),
+            Operator(ratio: 8.2, level: 0.26, attack: 0.001, decay: 0.7, sustain: 0),
         ],
         amplitude: Envelope(attack: 0.001, decay: 4.5, sustain: 0, release: 0.6),
         level: 0.8, durationSeconds: 5)

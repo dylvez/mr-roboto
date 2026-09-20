@@ -23,6 +23,16 @@ final class RollStub: PianoRollHosting {
         auditioned.append((note, duration, sound))
     }
     func play(_ bassline: Bassline, tempo: Double, timeSignature: TimeSignature) async { played.append(bassline) }
+    var melodyAuditioned: [(note: Int, instrument: String)] = []
+    var melodiesPlayed: [(notes: [NoteEvent], instrument: String)] = []
+    var instrument = InstrumentVoiceSpec.rhodes.id
+    func auditionMelody(note: Int, velocity: Int, duration: Double, instrument: String) async {
+        melodyAuditioned.append((note, instrument))
+    }
+    func playMelody(_ notes: [NoteEvent], tempo: Double, timeSignature: TimeSignature, instrument: String) async {
+        melodiesPlayed.append((notes, instrument))
+    }
+    func setInstrument(_ id: String) { instrument = id }
     func stop() async {}
     func commit(_ version: PartVersion) async -> Bool {
         if refuses { return false }
@@ -35,7 +45,9 @@ final class RollStub: PianoRollHosting {
 final class ChordsStub: ChordsHosting {
     var auditioned: [[Int]] = []
     var committed: [PartVersion] = []
+    var instrument = InstrumentVoiceSpec.rhodes.id
     func audition(pitches: [Int], duration: Double) async { auditioned.append(pitches) }
+    func setInstrument(_ id: String) { instrument = id }
     func commit(_ version: PartVersion) async -> Bool { committed.append(version); return true }
 }
 
@@ -253,5 +265,70 @@ struct ChordsTests {
         let second = try #require(editor.commit())
         #expect(second.parents == [version.id])
         #expect(second.operation == Operation.edit)
+    }
+}
+
+// The melody mode: the same grid writing a different part, on the pitched instrument.
+
+@Suite("Piano roll: melody mode") @MainActor
+struct PianoRollMelodyTests {
+
+    private func roll() -> (PianoRollModel, RollStub) {
+        let stub = RollStub()
+        let model = PianoRollModel(host: stub, groove: nil, key: PianoRollTests.key, tempo: 92)
+        return (model, stub)
+    }
+
+    @Test("switching to melody changes what it commits, what sounds it, and who reads it")
+    func theMode() async {
+        let (model, stub) = roll()
+        #expect(model.mode == .bass && model.writesFromLevers)
+        model.addNote(pitch: 72, at: 0)
+        model.addNote(pitch: 76, at: 1)
+        // The audition is fired into a task; let it run before reading what it did.
+        await Task.yield()
+        #expect(!stub.auditioned.isEmpty && stub.melodyAuditioned.isEmpty, "a bass note goes to the bass")
+
+        model.setMode(.melody)
+        #expect(!model.writesFromLevers, "nothing in the app writes a tune")
+        #expect(model.readings.isEmpty, "the Bassist does not read a melody")
+        model.addNote(pitch: 79, at: 2)
+        await Task.yield()
+        #expect(stub.melodyAuditioned.last?.note == 79, "a melody note goes to the instrument")
+        #expect(stub.melodyAuditioned.last?.instrument == InstrumentVoiceSpec.rhodes.id)
+
+        model.playLine()
+        await Task.yield()
+        #expect(stub.melodiesPlayed.count == 1 && stub.melodiesPlayed[0].notes.count == 3)
+
+        let version = model.commit()
+        guard case .melody(let melody) = version.kind else {
+            Issue.record("committed \(version.type) rather than a melody")
+            return
+        }
+        #expect(melody.notes.count == 3 && version.note?.contains("Melody, 3 notes on the Rhodes") == true)
+    }
+
+    @Test("the instrument is the song's: choosing one tells the host, and an unknown preset is ignored")
+    func theInstrument() async {
+        let (model, stub) = roll()
+        model.setMode(.melody)
+        model.setInstrument(InstrumentVoiceSpec.warmPad.id)
+        #expect(model.instrument == "pad" && stub.instrument == "pad")
+        model.setInstrument("no-such-instrument")
+        #expect(model.instrument == "pad", "an unknown preset changes nothing")
+        let version = model.commit()
+        #expect(version.note?.contains("Warm Pad") == true, "\(version.note ?? "")")
+    }
+
+    @Test("back to bass: it commits a bass line again and the Bassist reads it")
+    func backToBass() {
+        let (model, _) = roll()
+        model.addNote(pitch: 40, at: 0)
+        model.setMode(.melody)
+        model.setMode(.bass)
+        #expect(model.writesFromLevers)
+        let version = model.commit()
+        #expect(version.type == .bassline)
     }
 }

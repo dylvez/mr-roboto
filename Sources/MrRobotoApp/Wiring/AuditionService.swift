@@ -55,6 +55,11 @@ public final class AuditionService {
     private var bassSampler: VoiceSampler?
     private var bassSamplerNodeAttached = false
     public private(set) var currentBassID: String?
+    /// The pitched instrument — keys, pads, plucks — on a sampler of its own, because it plays
+    /// chords underneath a bass line that is sounding at the same time.
+    private var instrumentSampler: VoiceSampler?
+    private var instrumentSamplerNodeAttached = false
+    public private(set) var currentInstrumentID: String?
     private var player: AVAudioPlayerNode?
 
     /// Which kit the one sampler is currently holding. Surfaces share the sampler, so a Grid step
@@ -319,6 +324,67 @@ public final class AuditionService {
         currentBassID = voice.id
     }
 
+    /// The instrument sampler, holding `spec`'s kit. Built into the kits directory the first time —
+    /// a pitched kit is 19 roots × its velocity layers, so the first build of a preset takes a
+    /// moment — and loaded from there ever after.
+    public func prepare(instrument spec: InstrumentVoiceSpec) async throws {
+        let engine = try await liveEngine()
+        guard currentInstrumentID != spec.id else { return }
+        let folder = kitsDirectory.appendingPathComponent(SynthesizedInstrument.folderName(for: spec), isDirectory: true)
+        let loaded: LoadedKit
+        if let existing = try? KitStore.load(from: folder) {
+            loaded = existing
+        } else {
+            loaded = try SynthesizedInstrument.build(spec, in: folder, sampleRate: engine.format.sampleRate)
+        }
+        let format = engine.format
+        let sampler = instrumentSampler ?? VoiceSampler(cache: cache)
+        instrumentSampler = sampler
+        if sampler.kit != nil { sampler.unprepare() }
+        try sampler.prepare(loaded, sampleRate: format.sampleRate, channels: Int(format.channelCount))
+        if !instrumentSamplerNodeAttached, let node = sampler.node {
+            engine.avEngine.attach(node)
+            try engine.avEngine.connectNode(node, to: engine.mainMixer, format: format)
+            instrumentSamplerNodeAttached = true
+        }
+        currentInstrumentID = spec.id
+    }
+
+    /// The instrument sampler for the transport, holding `spec`'s kit.
+    public func playbackInstrumentSampler(_ spec: InstrumentVoiceSpec) async throws -> VoiceSampler {
+        try await prepare(instrument: spec)
+        guard let instrumentSampler else { throw AuditionUnavailable(what: "the instrument was not prepared") }
+        return instrumentSampler
+    }
+
+    /// Play notes on the loaded instrument now. `Hit.time` is seconds from this instant, so a
+    /// chord is three hits at 0 and a phrase is hits at their beats.
+    @discardableResult
+    public func playInstrument(_ hits: [VoiceSampler.Hit]) async -> [VoiceSampler.VoiceHandle] {
+        guard !hits.isEmpty else { return [] }
+        guard let instrumentSampler, instrumentSampler.kit != nil else {
+            lastFailure = "no instrument is prepared to play"
+            return []
+        }
+        do {
+            let engine = try await running()
+            let now = renderPosition(on: engine, node: instrumentSampler.node)
+            instrumentSampler.transportDidStart(originSampleTime: now, sampleRate: engine.format.sampleRate)
+            let handles = try instrumentSampler.play(hits)
+            lastFailure = nil
+            return handles
+        } catch {
+            lastFailure = "\(error)"
+            return []
+        }
+    }
+
+    /// Lets go of held instrument notes, now.
+    public func stopInstrument(_ handles: [VoiceSampler.VoiceHandle]) {
+        guard let instrumentSampler else { return }
+        for handle in handles { instrumentSampler.stop(handle) }
+    }
+
     /// The bass sampler for the transport, holding `voice`'s kit.
     public func playbackBassSampler(voice: BassVoiceSpec) async throws -> VoiceSampler {
         try await prepare(bass: voice)
@@ -360,6 +426,7 @@ public final class AuditionService {
     public func stop() async {
         sampler?.allNotesOff()
         bassSampler?.allNotesOff()
+        instrumentSampler?.allNotesOff()
         player?.stop()
     }
 
@@ -371,15 +438,20 @@ public final class AuditionService {
         if let engine {
             if samplerNodeAttached, let node = sampler?.node { engine.avEngine.detach(node) }
             if bassSamplerNodeAttached, let node = bassSampler?.node { engine.avEngine.detach(node) }
+            if instrumentSamplerNodeAttached, let node = instrumentSampler?.node { engine.avEngine.detach(node) }
             if let player { engine.avEngine.detach(player) }
         }
         samplerNodeAttached = false
         bassSamplerNodeAttached = false
+        instrumentSamplerNodeAttached = false
         player = nil
         sampler?.unprepare()
         sampler = nil
         bassSampler?.unprepare()
         bassSampler = nil
+        instrumentSampler?.unprepare()
+        instrumentSampler = nil
+        currentInstrumentID = nil
         currentKitID = nil
         currentBassID = nil
         engine = nil
