@@ -107,6 +107,9 @@ public final class PianoRollModel {
 
     public var melody: Melody { Melody(notes: notes) }
 
+    /// Who reads what this roll is writing.
+    public var readingPersona: String { mode == .bass ? "Bassist" : "Melodist" }
+
     public func setMode(_ value: Mode) {
         guard value != mode else { return }
         mode = value
@@ -342,9 +345,15 @@ public final class PianoRollModel {
     // MARK: Readings
 
     private func refreshReadings() {
-        // The Bassist reads bass lines. Nobody in the band reads a melody yet, so a tune gets no
-        // readings rather than the Bassist's readings about the wrong thing.
-        guard mode == .bass, let observation else { readings = []; return }
+        guard mode == .bass else {
+            let melodyObservation = MelodyObservation(label: title, key: key, beatsPerBar: beatsPerBar,
+                                                      notes: notes, chords: chords.enumerated().map { index, span in
+                                                          (span.chord, chords.prefix(index).reduce(0) { $0 + $1.beats })
+                                                      })
+            readings = notes.count >= 2 ? Melodist().read(melodyObservation) : []
+            return
+        }
+        guard let observation else { readings = []; return }
         readings = bassist.read(observation)
     }
 

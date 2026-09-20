@@ -119,6 +119,13 @@
       "settledBy" : "the change itself: a passing tone between changes is mine, a note sounding at the change is the Harmonist's",
       "theirs" : "at a change, the bass is a note of the chord or the chord is something else",
       "with" : "harmonist"
+    },
+    {
+      "about" : "whether the tune and the bass may move together",
+      "position" : "the root is where the line goes, and a tune that follows it is the tune's problem to solve",
+      "settledBy" : "the register and the rhythm: doubling in the same rhythm is theirs to change, a shared root on a downbeat is fine",
+      "theirs" : "a tune doubling the bass an octave up has no shape of its own",
+      "with" : "melodist"
     }
   ],
   "goldens" : [

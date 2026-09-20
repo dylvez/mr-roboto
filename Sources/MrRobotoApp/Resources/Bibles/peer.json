@@ -110,6 +110,13 @@
       "settledBy" : "the form: inside a section a loop may hang, at the end of the form something lands",
       "theirs" : "a phrase that never cadences leaves the ear waiting with nothing promised",
       "with" : "harmonist"
+    },
+    {
+      "about" : "whether a tune that repeats has stopped developing",
+      "position" : "a form that never turns is a loop, and the tune repeating is part of why",
+      "settledBy" : "the section: the figure repeats inside one and changes when the form turns",
+      "theirs" : "a figure heard three times is how a listener learns it, and the third time is not laziness",
+      "with" : "melodist"
     }
   ],
   "goldens" : [

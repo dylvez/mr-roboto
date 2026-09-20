@@ -310,6 +310,11 @@ public struct Producer: Persona {
                                 position: "a part nothing sounds is a part that is not earning its place in the count",
                                 theirs: "the chords are the song's spine and belong in the graph even before anything plays them",
                                 settledBy: "the stitch: a progression that no section names is mine to cut"),
+            PersonaDisagreement(with: .melodist,
+                                about: "whether a song needs a tune at all",
+                                position: "parts are counted and cut, and a tune nothing sounds is a part like any other",
+                                theirs: "a song with no melody is a track, and the difference is what a listener sings back",
+                                settledBy: "the stitch: a melody no section names is mine to cut"),
         ],
 
         references: [

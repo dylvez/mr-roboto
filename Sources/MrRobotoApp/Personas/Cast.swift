@@ -24,7 +24,7 @@ public struct Cast: Sendable {
     }
 
     /// Everything the app ships. Order is the order answers come back in.
-    public static let standard = Cast([Beatmaker(), Sampler(), Bassist(), Producer(), Engineer(), Peer(), Lyricist(), Harmonist()])
+    public static let standard = Cast([Beatmaker(), Sampler(), Bassist(), Producer(), Engineer(), Peer(), Lyricist(), Harmonist(), Melodist()])
 
     public func persona(_ id: PersonaID) -> (any Persona)? {
         personas.first { $0.bible.id == id }

@@ -83,7 +83,7 @@ struct DirectorEndingTests {
         let transport = DirectorScriptedTransport([.events(DirectorSSE.reply("The low end holds.")), .events(DirectorSSE.reply("Fine."))])
         let rig = Self.rig([], transport: transport)
         defer { rig.clean() }
-        #expect(rig.session.room.count == 8 && rig.session.addressed.isEmpty)
+        #expect(rig.session.room.count == 9 && rig.session.addressed.isEmpty)
         rig.session.toggleAddressed(.engineer)
         rig.session.toggleAddressed(.bassist)
         await Self.send(rig, "how is the low end?")

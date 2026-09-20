@@ -182,6 +182,13 @@
       "settledBy" : "the section's last bar: both end there, and inside it the line may cross a change",
       "theirs" : "the line ends where the breath does, and the chords can wait a bar",
       "with" : "lyricist"
+    },
+    {
+      "about" : "whether a note outside the chord is a wrong note or the point",
+      "position" : "at a change the note is a chord tone or the chord is something else",
+      "settledBy" : "the length: a passing note is the Melodist's, a long note on the change is mine",
+      "theirs" : "a tension held over a chord is the most expressive note in the phrase",
+      "with" : "melodist"
     }
   ],
   "goldens" : [

@@ -326,6 +326,11 @@ public struct Engineer: Persona {
                                 position: "anything that reads as mud at 200 Hz is mine to move, whatever the numerals say it is",
                                 theirs: "two notes a semitone apart are a harmonic choice, and no fader fixes one that was not meant",
                                 settledBy: "the register: the same two notes an octave apart are the Harmonist's, in the same octave they are mine"),
+            PersonaDisagreement(with: .melodist,
+                                about: "whether a tune that disappears is a mix problem",
+                                position: "anything that cannot be heard is a fader, and the notes need not move for it",
+                                theirs: "a tune buried under the chords is written in the wrong register, not mixed wrong",
+                                settledBy: "the register: if the tune shares an octave with the chords it is theirs, otherwise it is mine"),
         ],
 
         references: [

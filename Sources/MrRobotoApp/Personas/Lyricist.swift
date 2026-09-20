@@ -277,6 +277,11 @@ public struct Lyricist: Persona {
                                 position: "the line ends where the breath does, and the chords can wait a bar for it",
                                 theirs: "the cadence is where the phrase ends, and a line that runs past it is running past the harmony",
                                 settledBy: "the section's last bar: both end there, and inside it the line may cross a change"),
+            PersonaDisagreement(with: .melodist,
+                                about: "whether the tune or the line decides where a phrase breathes",
+                                position: "the breath is where the sentence ends, and the tune can hold a note for it",
+                                theirs: "the rest is in the tune, and a line written past it will not be sung as written",
+                                settledBy: "the long notes: both agree the phrase ends there, and the rest belongs to whichever is longer"),
         ],
 
         references: [

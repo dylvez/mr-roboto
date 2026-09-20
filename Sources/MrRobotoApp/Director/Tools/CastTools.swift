@@ -48,7 +48,7 @@ public struct CastTool: DirectorTool {
     public var schema: DirectorJSON {
         Schema.object([
             ("action", Schema.string("What to do.", enum: ["read", "add", "remove"])),
-            ("persona", Schema.string("The persona's id for add or remove: beatmaker, sampler, bassist, producer, engineer, peer, lyricist or harmonist. Empty for read.")),
+            ("persona", Schema.string("The persona's id for add or remove: beatmaker, sampler, bassist, producer, engineer, peer, lyricist, harmonist or melodist. Empty for read.")),
         ], required: ["action", "persona"])
     }
 
@@ -161,7 +161,7 @@ public struct ConveneTool: DirectorTool {
             ("question", Schema.string("What the user asked, in their words.")),
             ("section", Schema.string("A section by name, for the Engineer to bounce. Empty for the first section.")),
             ("personas", Schema.array("Who to ask, by id; empty asks everyone in the room. Use the user's 'Asked of' line when there is one.",
-                                      of: Schema.string("A persona id.", enum: ["beatmaker", "sampler", "bassist", "producer", "engineer", "peer", "lyricist", "harmonist"]))),
+                                      of: Schema.string("A persona id.", enum: ["beatmaker", "sampler", "bassist", "producer", "engineer", "peer", "lyricist", "harmonist", "melodist"]))),
         ], required: ["question", "section", "personas"])
     }
 
@@ -219,6 +219,20 @@ public struct ConveneTool: DirectorTool {
                     }
                 } catch {
                     notes.append("The Engineer's bounce failed: \(error).")
+                }
+            case .melodist:
+                if let version = song.versions.last(where: { $0.type == .melody }), case .melody(let melody) = version.kind {
+                    let progression = Guidance.progressions(in: song).last.flatMap { version -> Progression? in
+                        if case .progression(let p) = version.kind { return p }
+                        return nil
+                    }
+                    let observation = MelodyObservation.of(melody, label: PartLabel.title(of: version),
+                                                           key: song.key ?? Key(tonic: NoteName(.c)),
+                                                           progression: progression,
+                                                           beatsPerBar: song.timeSignature.beatsPerBar)
+                    readings += Melodist().read(observation).map { (id, $0) }
+                } else {
+                    notes.append("No tune yet for the Melodist to read.")
                 }
             case .harmonist:
                 if let version = Guidance.progressions(in: song).last, case .progression(let progression) = version.kind {

@@ -25,6 +25,12 @@ extension SurfaceWiring {
         return built
     }
 
+    /// Which version of a surface's primer to show, when a surface has modes.
+    func primerVariant(for item: BenchItem, app: AppState) -> String? {
+        guard item.kind == .pianoRoll else { return nil }
+        return pianoRollModel(for: item, app: app).mode == .melody ? "melody" : nil
+    }
+
     /// What this surface plays from its header. Nil when it has nothing of its own to sound and
     /// the song is not what it is about (an album, the cast, an answer surface with its own buttons).
     func audition(for item: BenchItem, app: AppState) -> SurfaceAudition? {

@@ -14,7 +14,7 @@
       ],
       "cutout": true,
       "where": "Band rail (the Director's messages), proposals",
-      "brief": "An emblem: a single mixing-desk channel strip seen head-on — one long fader, a pan knob above it, and one lit solo key in step-key orange. Compact, fits inside a circle."
+      "brief": "An emblem: a single mixing-desk channel strip seen head-on \u2014 one long fader, a pan knob above it, and one lit solo key in step-key orange. Compact, fits inside a circle."
     },
     {
       "name": "cast-beatmaker",
@@ -92,7 +92,7 @@
       ],
       "cutout": false,
       "where": "Exploration only; the final icon is redrawn in Icon Composer",
-      "brief": "A macOS app icon concept for a music app called Mr. Roboto: the front panel of a drum machine whose sixteen step keys are arranged to read as a friendly robot face — two lit orange keys for eyes, a row for a mouth. Rounded-square icon shape, graphite body."
+      "brief": "A macOS app icon concept for a music app called Mr. Roboto: the front panel of a drum machine whose sixteen step keys are arranged to read as a friendly robot face \u2014 two lit orange keys for eyes, a row for a mouth. Rounded-square icon shape, graphite body."
     },
     {
       "name": "doc-icon",
@@ -222,7 +222,7 @@
       ],
       "cutout": true,
       "where": "Grid, unbound",
-      "brief": "A row of sixteen unlit drum-machine step keys in four colour groups — red-orange, orange, yellow, cream — one key pressed halfway down."
+      "brief": "A row of sixteen unlit drum-machine step keys in four colour groups \u2014 red-orange, orange, yellow, cream \u2014 one key pressed halfway down."
     },
     {
       "name": "wait-band",
@@ -235,7 +235,7 @@
       ],
       "cutout": true,
       "where": "Band rail, during a turn",
-      "brief": "A mixing-desk channel strip with two small instrument emblems — a pad grid and a fader bank — patched into it by curving cables."
+      "brief": "A mixing-desk channel strip with two small instrument emblems \u2014 a pad grid and a fader bank \u2014 patched into it by curving cables."
     },
     {
       "name": "empty-library",
@@ -350,7 +350,7 @@
       ],
       "cutout": true,
       "where": "M4: the Cast surface, the rail",
-      "brief": "An emblem: a single channel strip of a mixing console seen from above — a long fader at the bottom, four small knobs above it, one peak light. Compact, fits inside a circle."
+      "brief": "An emblem: a single channel strip of a mixing console seen from above \u2014 a long fader at the bottom, four small knobs above it, one peak light. Compact, fits inside a circle."
     },
     {
       "name": "cast-peer",
@@ -377,6 +377,32 @@
       "cutout": true,
       "where": "M4: the Cast surface, the rail",
       "brief": "An emblem: a fountain pen laid across a small open notebook with three short ruled lines and one word crossed out, drawn with a few precise lines. Compact, fits inside a circle."
+    },
+    {
+      "name": "cast-harmonist",
+      "group": "cast",
+      "source": "generate",
+      "priority": 3,
+      "size": [
+        512,
+        512
+      ],
+      "cutout": true,
+      "where": "the Harmonist",
+      "brief": "An emblem: a short fragment of a piano keyboard seen in three-quarter view, six white keys and the black keys between them, with three keys pressed down together as a chord. The pressed keys sit visibly lower than the rest. Compact, fits inside a circle."
+    },
+    {
+      "name": "cast-melodist",
+      "group": "cast",
+      "source": "generate",
+      "priority": 3,
+      "size": [
+        512,
+        512
+      ],
+      "cutout": true,
+      "where": "the Melodist",
+      "brief": "An emblem: a music-box cylinder seen side-on, a short metal drum on two end bearings with small pins standing out of it, the pins arranged in a line that rises and then falls. Compact, fits inside a circle."
     }
   ]
 }

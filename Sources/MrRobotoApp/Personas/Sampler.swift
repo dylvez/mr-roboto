@@ -524,6 +524,11 @@ public struct Sampler: Persona {
                                 position: "the loop is the source and the song is built around it; chords written over it are the ones that have to move",
                                 theirs: "a loop states a key whether it meant to or not, and the song's chords have to agree with it",
                                 settledBy: "the transposition: move the sample and the key it lands in is the one both of us read"),
+            PersonaDisagreement(with: .melodist,
+                                about: "whether a sampled phrase counts as the tune",
+                                position: "the loop is the source and the song is built around it, tune included",
+                                theirs: "a lifted phrase is somebody else's tune, and the song still needs one of its own",
+                                settledBy: "the clearance: a lifted tune is a source to clear, a written one is the song's"),
         ],
 
         // MARK: References
@@ -872,6 +877,8 @@ public struct Sampler: Persona {
 
         case .setProgression:
             return .defer_(to: .harmonist, because: "The chords, and what agrees with them, are the Harmonist's.")
+        case .writeMelody:
+            return .defer_(to: .melodist, because: "The tune's shape and whether anyone can sing it is the Melodist's.")
         case .outOfScope(let what):
             return .defer_(to: .beatmaker,
                            because: "\(what) is outside chop, source and degradation.")

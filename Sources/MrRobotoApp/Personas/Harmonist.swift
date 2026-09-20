@@ -326,6 +326,11 @@ public struct Harmonist: Persona {
                                 proposal: .setProgression(distinctChords: 5, changesPerBar: 1, diatonicRatio: 1,
                                                           voiceLeadingSemitones: 1.0, rootMotionFifths: 0.4, cadenceRatio: 0),
                                 expects: DisagreementExpectation(mine: .refuse(rule: "harmonist.phrases-land"), theirs: .defer_(to: .harmonist))),
+            PersonaDisagreement(with: .melodist,
+                                about: "whether a note outside the chord is a wrong note or the point",
+                                position: "at a change the note is a chord tone or the chord is something else",
+                                theirs: "a tension held over a chord is the most expressive note in the phrase",
+                                settledBy: "the length: a passing note is the Melodist's, a long note on the change is mine"),
         ],
 
         references: [

@@ -14,7 +14,9 @@ import SwiftUI
 /// one's input.
 public enum Primer {
 
-    public static func text(for kind: SurfaceKind) -> (title: String, body: String) {
+    /// - Parameter variant: a surface with modes names which one it is in, so the primer explains
+    ///   what is actually on screen rather than what the surface usually does.
+    public static func text(for kind: SurfaceKind, variant: String? = nil) -> (title: String, body: String) {
         switch kind {
         case .importRecord:
             return ("Record",
@@ -36,6 +38,11 @@ public enum Primer {
             return ("Chords",
                     "A progression, typed the way a lead sheet says it: Dm7 G7 | Cmaj7. Bars are separated by |. "
                         + "Click a bar to hear it; keep it and the bass writer reads it. With none, the bass is written to the key.")
+        case .pianoRoll where variant == "melody":
+            return ("Piano roll · melody",
+                    "A tune over the bar, drawn by hand: click to place a note, drag it to move it. Nothing in the band "
+                        + "writes a melody, so this one is yours. Pick the instrument it plays on above; it is the song's, "
+                        + "so the chords use it too.")
         case .pianoRoll:
             return ("Piano roll",
                     "A bass line over the bar, with the groove's kicks drawn under it so the lag is visible. The levers "
@@ -145,8 +152,10 @@ struct PrimerBanner: View {
     let kind: SurfaceKind
     let store: PrimerStore
 
+    var variant: String?
+
     var body: some View {
-        let primer = Primer.text(for: kind)
+        let primer = Primer.text(for: kind, variant: variant)
         HStack(alignment: .firstTextBaseline, spacing: 12) {
             (Text(primer.title + ". ").font(Design.Typography.ui(12.5, weight: .semibold))
                 + Text(primer.body).font(Design.Typography.ui(12.5, weight: .regular)))

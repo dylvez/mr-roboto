@@ -10,6 +10,7 @@ import Testing
 struct ArtTests {
 
     static let used = ["cast-director", "cast-beatmaker", "cast-sampler", "cast-critic", "cast-you",
+                       "cast-harmonist", "cast-melodist",
                        "empty-first-launch", "empty-library", "empty-drop-record", "wait-separating", "wait-band"]
 
     @Test("every illustration the frame names is bundled")
@@ -46,6 +47,11 @@ struct ArtTests {
         #expect(Art.emblem(for: SessionEntry.Source.persona("Beatmaker")) == "cast-beatmaker")
         #expect(Art.emblem(for: SessionEntry.Source.persona("Sampler")) == "cast-sampler")
         #expect(Art.emblem(for: SessionEntry.Source.persona("Cass")) == nil)
+        // Every member of the room has a face: the Cast surface, the rail and the Piano roll's
+        // readings panel all draw one, and a missing file draws nothing at all.
+        for bible in Cast.standard.bibles {
+            #expect(Art.emblem(forPersona: bible.name) != nil, "no emblem for the \(bible.name)")
+        }
         #expect(Art.emblem(for: Proposal.Source.session) == nil)
     }
 }

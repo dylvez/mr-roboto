@@ -160,7 +160,7 @@ struct SurfaceHost: View {
         VStack(alignment: .leading, spacing: 0) {
             header
             if app.primers.isShowing(item.kind) {
-                PrimerBanner(kind: item.kind, store: app.primers)
+                PrimerBanner(kind: item.kind, store: app.primers, variant: SurfaceWiring.shared.primerVariant(for: item, app: app))
             }
             Divider().overlay(Design.Palette.line)
             content

@@ -71,6 +71,13 @@
       "settledBy" : "the transposition: move the sample and the key it lands in is the one both of us read",
       "theirs" : "a loop states a key whether it meant to or not, and the song's chords have to agree with it",
       "with" : "harmonist"
+    },
+    {
+      "about" : "whether a sampled phrase counts as the tune",
+      "position" : "the loop is the source and the song is built around it, tune included",
+      "settledBy" : "the clearance: a lifted tune is a source to clear, a written one is the song's",
+      "theirs" : "a lifted phrase is somebody else's tune, and the song still needs one of its own",
+      "with" : "melodist"
     }
   ],
   "goldens" : [

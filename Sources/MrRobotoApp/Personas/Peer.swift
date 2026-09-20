@@ -296,6 +296,11 @@ public struct Peer: Persona {
                                 position: "a loop that never resolves is the point of this idiom, and the hook does the landing rather than the cadence",
                                 theirs: "a phrase that never cadences leaves the ear waiting with nothing promised",
                                 settledBy: "the form: inside a section a loop may hang, at the end of the form something lands"),
+            PersonaDisagreement(with: .melodist,
+                                about: "whether a tune that repeats has stopped developing",
+                                position: "a form that never turns is a loop, and the tune repeating is part of why",
+                                theirs: "a figure heard three times is how a listener learns it, and the third time is not laziness",
+                                settledBy: "the section: the figure repeats inside one and changes when the form turns"),
         ],
 
         references: [

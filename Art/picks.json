@@ -31,7 +31,9 @@
     "cast-producer": "candidates/cast-producer/nano-banana-2-ref-1.png",
     "cast-engineer": "candidates/cast-engineer/nano-banana-2-ref-1.png",
     "cast-peer": "candidates/cast-peer/nano-banana-2-ref-1.png",
-    "cast-lyricist": "candidates/cast-lyricist/nano-banana-2-ref-1.png"
+    "cast-lyricist": "candidates/cast-lyricist/nano-banana-2-ref-1.png",
+    "cast-harmonist": "candidates/cast-harmonist/nano-banana-2-ref-2.png",
+    "cast-melodist": "candidates/cast-melodist/nano-banana-2-ref-1.png"
   },
   "why": {
     "machine-sp1200": "GPT's version: faders and a small display read as an SP-1200 and stay distinct from the MPC60's big screen and pads.",

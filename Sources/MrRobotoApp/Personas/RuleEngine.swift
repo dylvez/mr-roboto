@@ -94,6 +94,10 @@ public struct ProposalMeasures: Hashable, Sendable {
             // a sequence, so the minutes stay out of the proposal's measures.
             return ProposalMeasures(values: [.albumLoudnessSpreadLU: spread, .albumSameKeyPairs: Double(sameKey),
                                              .albumTempoJumps: Double(jumps), .albumOpenerHookSeconds: opener])
+        case .writeMelody(let range, let leap, let stepwise, let chordTone, let perBar, let rest, let motif):
+            return ProposalMeasures(values: [.melodyRangeSemitones: range, .largestLeapSemitones: leap,
+                                             .stepwiseRatio: stepwise, .chordToneRatio: chordTone,
+                                             .notesPerBar: perBar, .restRatio: rest, .motifRatio: motif])
         case .setProgression(let distinct, let perBar, let diatonic, let voiceLeading, let fifths, let cadence):
             return ProposalMeasures(values: [.distinctChords: Double(distinct), .changesPerBar: perBar,
                                              .diatonicRatio: diatonic, .voiceLeadingSemitones: voiceLeading,
@@ -203,6 +207,7 @@ extension PersonaID {
         for prefix in ["mix."] where name.hasPrefix(prefix) { return .engineer }
         for prefix in ["lyric."] where name.hasPrefix(prefix) { return .lyricist }
         for prefix in ["harmony."] where name.hasPrefix(prefix) { return .harmonist }
+        for prefix in ["melody."] where name.hasPrefix(prefix) { return .melodist }
         return nil
     }
 

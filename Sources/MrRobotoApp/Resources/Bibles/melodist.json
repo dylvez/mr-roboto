@@ -1,0 +1,1044 @@
+{
+  "disagreements" : [
+    {
+      "about" : "whether a note outside the chord is a wrong note or the point",
+      "expects" : {
+        "mine" : {
+          "rule" : "melodist.lands-on-the-chord",
+          "shape" : "refuse"
+        },
+        "theirs" : {
+          "shape" : "defer",
+          "to" : "melodist"
+        }
+      },
+      "position" : "a tension held over a chord is the most expressive note in the phrase",
+      "proposal" : {
+        "chordToneRatio" : 0.3,
+        "largestLeapSemitones" : 7,
+        "motifRatio" : 0.4,
+        "notesPerBar" : 4,
+        "proposal" : "writeMelody",
+        "rangeSemitones" : 12,
+        "restRatio" : 0.2,
+        "stepwiseRatio" : 0.8
+      },
+      "rule" : "melodist.lands-on-the-chord",
+      "settledBy" : "the length: a passing note is mine, a long note on the change is theirs",
+      "theirs" : "at a change the note is a chord tone or the chord is something else",
+      "with" : "harmonist"
+    },
+    {
+      "about" : "whether the tune or the line decides where a phrase breathes",
+      "expects" : {
+        "mine" : {
+          "rule" : "melodist.it-breathes",
+          "shape" : "refuse"
+        },
+        "theirs" : {
+          "shape" : "defer",
+          "to" : "melodist"
+        }
+      },
+      "position" : "the rest is in the tune, and a line written past it will not be sung as written",
+      "proposal" : {
+        "chordToneRatio" : 0.8,
+        "largestLeapSemitones" : 7,
+        "motifRatio" : 0.4,
+        "notesPerBar" : 4,
+        "proposal" : "writeMelody",
+        "rangeSemitones" : 12,
+        "restRatio" : 0,
+        "stepwiseRatio" : 0.8
+      },
+      "rule" : "melodist.it-breathes",
+      "settledBy" : "the long notes: both agree the phrase ends there, and the rest belongs to whichever is longer",
+      "theirs" : "the breath is where the sentence ends, and the tune can hold a note for it",
+      "with" : "lyricist"
+    },
+    {
+      "about" : "whether a tune that repeats has stopped developing",
+      "expects" : {
+        "mine" : {
+          "rule" : "melodist.a-figure-comes-back",
+          "shape" : "refuse"
+        },
+        "theirs" : {
+          "shape" : "defer",
+          "to" : "melodist"
+        }
+      },
+      "position" : "a figure heard three times is how a listener learns it, and the third time is not laziness",
+      "proposal" : {
+        "chordToneRatio" : 0.8,
+        "largestLeapSemitones" : 7,
+        "motifRatio" : 0.1,
+        "notesPerBar" : 4,
+        "proposal" : "writeMelody",
+        "rangeSemitones" : 12,
+        "restRatio" : 0.2,
+        "stepwiseRatio" : 0.8
+      },
+      "rule" : "melodist.a-figure-comes-back",
+      "settledBy" : "the section: the figure repeats inside one and changes when the form turns",
+      "theirs" : "a form that never turns is a loop, and the tune repeating is part of why",
+      "with" : "peer"
+    },
+    {
+      "about" : "whether the tune and the bass may move together",
+      "expects" : {
+        "mine" : {
+          "rule" : "melodist.mostly-steps",
+          "shape" : "refuse"
+        },
+        "theirs" : {
+          "shape" : "defer",
+          "to" : "melodist"
+        }
+      },
+      "position" : "a tune doubling the bass an octave up has no shape of its own",
+      "proposal" : {
+        "chordToneRatio" : 0.8,
+        "largestLeapSemitones" : 7,
+        "motifRatio" : 0.4,
+        "notesPerBar" : 4,
+        "proposal" : "writeMelody",
+        "rangeSemitones" : 12,
+        "restRatio" : 0.2,
+        "stepwiseRatio" : 0.2
+      },
+      "rule" : "melodist.mostly-steps",
+      "settledBy" : "the register and the rhythm: doubling in the same rhythm is mine to change, a shared root on a downbeat is fine",
+      "theirs" : "the root is where the line goes, and the tune following it is the tune's problem",
+      "with" : "bassist"
+    },
+    {
+      "about" : "whether a tune may sit off the grid",
+      "expects" : {
+        "mine" : {
+          "rule" : "melodist.it-breathes",
+          "shape" : "refuse"
+        },
+        "theirs" : {
+          "shape" : "defer",
+          "to" : "melodist"
+        }
+      },
+      "position" : "a phrase breathes where the singer breathes, which is not always a step",
+      "proposal" : {
+        "chordToneRatio" : 0.8,
+        "largestLeapSemitones" : 7,
+        "motifRatio" : 0.4,
+        "notesPerBar" : 4,
+        "proposal" : "writeMelody",
+        "rangeSemitones" : 12,
+        "restRatio" : 0,
+        "stepwiseRatio" : 0.8
+      },
+      "rule" : "melodist.it-breathes",
+      "settledBy" : "the grid: the tune lands on steps, and which steps is mine",
+      "theirs" : "a note off the step grid is a note nobody can play in time",
+      "with" : "beatmaker"
+    },
+    {
+      "about" : "whether a sampled phrase counts as the tune",
+      "expects" : {
+        "mine" : {
+          "rule" : "melodist.a-figure-comes-back",
+          "shape" : "refuse"
+        },
+        "theirs" : {
+          "shape" : "defer",
+          "to" : "melodist"
+        }
+      },
+      "position" : "a lifted phrase is somebody else's tune, and the song still needs one of its own",
+      "proposal" : {
+        "chordToneRatio" : 0.8,
+        "largestLeapSemitones" : 7,
+        "motifRatio" : 0.05,
+        "notesPerBar" : 4,
+        "proposal" : "writeMelody",
+        "rangeSemitones" : 12,
+        "restRatio" : 0.2,
+        "stepwiseRatio" : 0.8
+      },
+      "rule" : "melodist.a-figure-comes-back",
+      "settledBy" : "the clearance: a lifted tune is a source to clear, a written one is the song's",
+      "theirs" : "the loop is the source and the song is built around it, tune included",
+      "with" : "sampler"
+    },
+    {
+      "about" : "whether a song needs a tune at all",
+      "expects" : {
+        "mine" : {
+          "rule" : "melodist.not-too-busy",
+          "shape" : "refuse"
+        },
+        "theirs" : {
+          "shape" : "defer",
+          "to" : "melodist"
+        }
+      },
+      "position" : "a song with no melody is a track, and the difference is what a listener sings back",
+      "proposal" : {
+        "chordToneRatio" : 0.8,
+        "largestLeapSemitones" : 7,
+        "motifRatio" : 0.4,
+        "notesPerBar" : 12,
+        "proposal" : "writeMelody",
+        "rangeSemitones" : 12,
+        "restRatio" : 0.2,
+        "stepwiseRatio" : 0.8
+      },
+      "rule" : "melodist.the-tune-is-yours",
+      "settledBy" : "the stitch: a melody no section names is the Producer's to cut",
+      "theirs" : "parts are counted and cut, and a tune nothing sounds is a part like any other",
+      "with" : "producer"
+    },
+    {
+      "about" : "whether a tune that disappears is a mix problem",
+      "expects" : {
+        "mine" : {
+          "rule" : "melodist.singable-range",
+          "shape" : "refuse"
+        },
+        "theirs" : {
+          "shape" : "defer",
+          "to" : "melodist"
+        }
+      },
+      "position" : "a tune buried under the chords is written in the wrong register, not mixed wrong",
+      "proposal" : {
+        "chordToneRatio" : 0.8,
+        "largestLeapSemitones" : 7,
+        "motifRatio" : 0.4,
+        "notesPerBar" : 4,
+        "proposal" : "writeMelody",
+        "rangeSemitones" : 29,
+        "restRatio" : 0.2,
+        "stepwiseRatio" : 0.8
+      },
+      "rule" : "melodist.range-before-register",
+      "settledBy" : "the register: if the tune shares an octave with the chords it is mine, otherwise it is theirs",
+      "theirs" : "anything that cannot be heard is a fader, and the notes need not move",
+      "with" : "engineer"
+    }
+  ],
+  "goldens" : [
+    {
+      "exercises" : [
+        "melodist.singable-range",
+        "melodist.mostly-steps",
+        "melodist.lands-on-the-chord"
+      ],
+      "expects" : {
+        "shape" : "agree"
+      },
+      "id" : "melodist.golden.singable",
+      "passes" : "Agreed: it sits in one voice's range, it walks, it lands, and something repeats.",
+      "premise" : "An octave of range, a fifth as the widest leap, four fifths of it steps, landing on chord tones, with a figure that comes back.",
+      "proposal" : {
+        "chordToneRatio" : 0.8,
+        "largestLeapSemitones" : 7,
+        "motifRatio" : 0.4,
+        "notesPerBar" : 4,
+        "proposal" : "writeMelody",
+        "rangeSemitones" : 12,
+        "restRatio" : 0.2,
+        "stepwiseRatio" : 0.8
+      }
+    },
+    {
+      "exercises" : [
+        "melodist.singable-range"
+      ],
+      "expects" : {
+        "rule" : "melodist.singable-range",
+        "shape" : "refuse"
+      },
+      "id" : "melodist.golden.pushes-back",
+      "passes" : "Refused by melodist.singable-range: move a phrase an octave or split it in two.",
+      "premise" : "A tune spanning two octaves and a fourth.",
+      "proposal" : {
+        "chordToneRatio" : 0.8,
+        "largestLeapSemitones" : 7,
+        "motifRatio" : 0.4,
+        "notesPerBar" : 4,
+        "proposal" : "writeMelody",
+        "rangeSemitones" : 29,
+        "restRatio" : 0.2,
+        "stepwiseRatio" : 0.8
+      }
+    },
+    {
+      "exercises" : [
+        "melodist.leap-and-step"
+      ],
+      "expects" : {
+        "rule" : "melodist.leap-and-step",
+        "shape" : "refuse"
+      },
+      "id" : "melodist.golden.a-leap-too-far",
+      "passes" : "Refused by melodist.leap-and-step: come back the other way by step.",
+      "premise" : "A leap of a fifteenth in the middle of the phrase.",
+      "proposal" : {
+        "chordToneRatio" : 0.8,
+        "largestLeapSemitones" : 25,
+        "motifRatio" : 0.4,
+        "notesPerBar" : 4,
+        "proposal" : "writeMelody",
+        "rangeSemitones" : 18,
+        "restRatio" : 0.2,
+        "stepwiseRatio" : 0.7
+      }
+    },
+    {
+      "exercises" : [
+        "melodist.leap-and-step",
+        "melodist.mostly-steps"
+      ],
+      "expects" : {
+        "shape" : "caveat"
+      },
+      "id" : "melodist.golden.wonder-leaps",
+      "passes" : "Agreed with a caveat: nothing is refused, and the step count is named as close to the floor. This is the tension between the lineages made visible — a tune typical of one of them sits at the edge of a threshold set by another, and the caveat is how the bible says so.",
+      "premise" : "A tenth as the widest leap, a bare half of the moves steps, everything landing on chord tones — a Wonder-shaped tune put to the general rules.",
+      "proposal" : {
+        "chordToneRatio" : 0.85,
+        "largestLeapSemitones" : 10,
+        "motifRatio" : 0.35,
+        "notesPerBar" : 5,
+        "proposal" : "writeMelody",
+        "rangeSemitones" : 16,
+        "restRatio" : 0.15,
+        "stepwiseRatio" : 0.55
+      }
+    },
+    {
+      "exercises" : [
+        "melodist.mostly-steps"
+      ],
+      "expects" : {
+        "rule" : "melodist.mostly-steps",
+        "shape" : "refuse"
+      },
+      "id" : "melodist.golden.an-arpeggio",
+      "passes" : "Refused by melodist.mostly-steps: it is an arpeggio, and nobody sings one back.",
+      "premise" : "A line where only a fifth of the moves are steps.",
+      "proposal" : {
+        "chordToneRatio" : 0.9,
+        "largestLeapSemitones" : 7,
+        "motifRatio" : 0.4,
+        "notesPerBar" : 4,
+        "proposal" : "writeMelody",
+        "rangeSemitones" : 14,
+        "restRatio" : 0.2,
+        "stepwiseRatio" : 0.2
+      }
+    },
+    {
+      "exercises" : [
+        "melodist.it-breathes"
+      ],
+      "expects" : {
+        "rule" : "melodist.it-breathes",
+        "shape" : "refuse"
+      },
+      "id" : "melodist.golden.never-breathes",
+      "passes" : "Refused by melodist.it-breathes: leave a gap or nobody can sing it.",
+      "premise" : "Four bars with something sounding on every beat of them.",
+      "proposal" : {
+        "chordToneRatio" : 0.8,
+        "largestLeapSemitones" : 7,
+        "motifRatio" : 0.4,
+        "notesPerBar" : 4,
+        "proposal" : "writeMelody",
+        "rangeSemitones" : 12,
+        "restRatio" : 0,
+        "stepwiseRatio" : 0.8
+      }
+    },
+    {
+      "exercises" : [
+        "melodist.a-figure-comes-back"
+      ],
+      "expects" : {
+        "rule" : "melodist.a-figure-comes-back",
+        "shape" : "refuse"
+      },
+      "id" : "melodist.golden.a-walk",
+      "passes" : "Refused by melodist.a-figure-comes-back: state a cell and bring it back.",
+      "premise" : "A line where no figure is ever heard twice.",
+      "proposal" : {
+        "chordToneRatio" : 0.8,
+        "largestLeapSemitones" : 7,
+        "motifRatio" : 0.05,
+        "notesPerBar" : 4,
+        "proposal" : "writeMelody",
+        "rangeSemitones" : 12,
+        "restRatio" : 0.2,
+        "stepwiseRatio" : 0.8
+      }
+    },
+    {
+      "exercises" : [
+
+      ],
+      "expects" : {
+        "shape" : "defer",
+        "to" : "beatmaker"
+      },
+      "id" : "melodist.golden.defers",
+      "passes" : "Deferred to the Beatmaker rather than answered: the pocket is not the tune.",
+      "premise" : "\"Put the swing at 62.\"",
+      "proposal" : {
+        "idiom" : "boom-bap",
+        "percent" : 62,
+        "proposal" : "setSwing",
+        "tempo" : 90
+      }
+    }
+  ],
+  "id" : "melodist",
+  "lineages" : [
+    {
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Paul_McCartney",
+          "https://en.wikipedia.org/wiki/Yesterday_(Beatles_song)",
+          "https://en.wikipedia.org/wiki/Blackbird_(Beatles_song)"
+        ]
+      },
+      "instrument" : "a tune sung before it is played",
+      "name" : "Paul McCartney",
+      "period" : "1962–",
+      "why" : "The most examined melodies in popular music, and the method reads as arithmetic: move by step almost everywhere, leap once where the phrase turns, and stay inside a range a person can actually sing. The songs are transcribed to death, so every number this bible takes from them can be checked against the page rather than against a memory of the record."
+    },
+    {
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Stevie_Wonder",
+          "https://en.wikipedia.org/wiki/Superstition_(song)",
+          "https://en.wikipedia.org/wiki/Innervisions"
+        ]
+      },
+      "instrument" : "a tune played and sung at once",
+      "name" : "Stevie Wonder",
+      "period" : "1963–",
+      "why" : "The documented counter-case: wide intervals and heavy syncopation that still sing, because the leaps land on chord tones and the rhythm repeats even when the pitches do not. Without this lineage the bible would simply punish leaping, which would rule out half of the music this app is for."
+    },
+    {
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Ennio_Morricone",
+          "https://en.wikipedia.org/wiki/The_Good,_the_Bad_and_the_Ugly_(soundtrack)",
+          "https://en.wikipedia.org/wiki/Once_Upon_a_Time_in_the_West"
+        ]
+      },
+      "instrument" : "a cell, stated and moved",
+      "name" : "Ennio Morricone",
+      "period" : "1961–2020",
+      "why" : "The motif as the unit of composition: a short figure stated plainly, repeated, and moved to a new degree rather than developed away. It is the closest documented practice to how loop-based music actually builds a tune, which makes it the lineage that sets the repetition floor here while the other two set the range and the leaps."
+    }
+  ],
+  "listensFor" : [
+    {
+      "features" : [
+        "melody.range.semitones",
+        "melody.leap.max.semitones"
+      ],
+      "priority" : 1,
+      "what" : "Whether anyone can sing it: the range, and the widest leap in it."
+    },
+    {
+      "features" : [
+        "melody.chord.tone.ratio"
+      ],
+      "priority" : 2,
+      "what" : "Whether it lands on the chord underneath."
+    },
+    {
+      "features" : [
+        "melody.motif.ratio",
+        "melody.peak.count"
+      ],
+      "priority" : 3,
+      "what" : "Whether you have heard any of it before: the figure that comes back."
+    },
+    {
+      "features" : [
+        "melody.rest.ratio",
+        "melody.notes.per.bar",
+        "melody.stepwise.ratio"
+      ],
+      "priority" : 4,
+      "what" : "Whether it breathes, and how busy it is."
+    }
+  ],
+  "name" : "Melodist",
+  "openQuestions" : [
+    {
+      "affects" : [
+        "melodist.a-figure-comes-back"
+      ],
+      "alternative" : "A motif is a rhythm as much as a shape — Superstition's figure repeats its rhythm while its pitches move — so the measure should be over pitch-and-duration pairs, which would count far fewer things as repeats and would need a tolerance rather than equality.",
+      "encoded" : "The longest run of intervals that occurs twice, ignoring how long the notes are.",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Superstition_(song)",
+          "https://en.wikipedia.org/wiki/Motif_(music)"
+        ]
+      },
+      "id" : "melodist.oq.motif-by-interval",
+      "question" : "Is a repeated interval figure the right measure of a motif, or does it miss the rhythm?"
+    },
+    {
+      "affects" : [
+        "melodist.singable-range",
+        "melodist.range-before-register"
+      ],
+      "alternative" : "Range is a property of a voice, not of a tune: a trained singer carries two octaves and an instrument carries whatever it has. The ceiling should come from the take's measured register when the song has one, and only fall back to a number when it does not.",
+      "encoded" : "Nineteen, an octave and a fifth, from the McCartney range topping out near seventeen.",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Vocal_range"
+        ]
+      },
+      "id" : "melodist.oq.range-is-a-voice",
+      "question" : "Is nineteen semitones the ceiling, or does it depend on who is singing?"
+    },
+    {
+      "affects" : [
+        "melodist.it-breathes",
+        "melodist.singable-range"
+      ],
+      "alternative" : "A synth lead has no breath and no range, and holding a bassline-style riff to a singer's limits would rule out most of the music this app is for — the rules should read the part's instrument and relax when nothing has to breathe.",
+      "encoded" : "Yes: the same thresholds whatever plays it, on the argument that singable is memorable.",
+      "evidence" : {
+        "inferred" : "the tension between the cited lineages and this app's first idiom"
+      },
+      "id" : "melodist.oq.instrumental-tunes",
+      "question" : "Should an instrumental line be held to singable limits at all?"
+    },
+    {
+      "affects" : [
+        "melodist.lands-on-the-chord"
+      ],
+      "alternative" : "A long note held across a change is a suspension over the second chord, which is the most expressive thing a tune does — judging it only by where it started calls that correct when it may be the one note to fix, or the reverse.",
+      "encoded" : "The chord under its start.",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Melodic_motion"
+        ]
+      },
+      "id" : "melodist.oq.chord-tone-window",
+      "question" : "Should a note be judged against the chord it starts on, or the one it is sounding over?"
+    }
+  ],
+  "owns" : "The tune: how far it travels, how it moves between notes, how much of it repeats, whether it lands on the chord, and whether it breathes.",
+  "ranges" : [
+    {
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Yesterday_(Beatles_song)",
+          "https://en.wikipedia.org/wiki/Blackbird_(Beatles_song)"
+        ]
+      },
+      "feature" : "melody.range.semitones",
+      "high" : 17,
+      "lineage" : "Paul McCartney",
+      "low" : 7,
+      "typical" : 12
+    },
+    {
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Yesterday_(Beatles_song)"
+        ]
+      },
+      "feature" : "melody.stepwise.ratio",
+      "high" : 0.95,
+      "lineage" : "Paul McCartney",
+      "low" : 0.6,
+      "typical" : 0.8
+    },
+    {
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Yesterday_(Beatles_song)",
+          "https://en.wikipedia.org/wiki/Blackbird_(Beatles_song)"
+        ]
+      },
+      "feature" : "melody.leap.max.semitones",
+      "high" : 9,
+      "lineage" : "Paul McCartney",
+      "low" : 3,
+      "typical" : 7
+    },
+    {
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Superstition_(song)",
+          "https://en.wikipedia.org/wiki/Innervisions"
+        ]
+      },
+      "feature" : "melody.leap.max.semitones",
+      "high" : 14,
+      "lineage" : "Stevie Wonder",
+      "low" : 7,
+      "typical" : 10
+    },
+    {
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Superstition_(song)"
+        ]
+      },
+      "feature" : "melody.stepwise.ratio",
+      "high" : 0.75,
+      "lineage" : "Stevie Wonder",
+      "low" : 0.4,
+      "typical" : 0.55
+    },
+    {
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/The_Good,_the_Bad_and_the_Ugly_(soundtrack)",
+          "https://en.wikipedia.org/wiki/Once_Upon_a_Time_in_the_West"
+        ]
+      },
+      "feature" : "melody.motif.ratio",
+      "high" : 0.7,
+      "lineage" : "Ennio Morricone",
+      "low" : 0.3,
+      "typical" : 0.45
+    },
+    {
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Once_Upon_a_Time_in_the_West"
+        ]
+      },
+      "feature" : "melody.range.semitones",
+      "high" : 14,
+      "lineage" : "Ennio Morricone",
+      "low" : 5,
+      "typical" : 9
+    }
+  ],
+  "references" : [
+    {
+      "artist" : "The Beatles",
+      "bars" : "the first verse, 0:00–0:25",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Yesterday_(Beatles_song)",
+          "https://en.wikipedia.org/wiki/Paul_McCartney"
+        ]
+      },
+      "features" : [
+        "melody.stepwise.ratio",
+        "melody.range.semitones"
+      ],
+      "listenFor" : "a tune that moves almost entirely by step and leaps once, inside a range one person sings comfortably — the case the range and stepwise thresholds are set from",
+      "release" : "Help!",
+      "title" : "Yesterday",
+      "year" : 1965
+    },
+    {
+      "artist" : "Stevie Wonder",
+      "bars" : "the first vocal phrase, 0:26–0:45",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Superstition_(song)",
+          "https://en.wikipedia.org/wiki/Stevie_Wonder"
+        ]
+      },
+      "features" : [
+        "melody.leap.max.semitones",
+        "melody.chord.tone.ratio"
+      ],
+      "listenFor" : "wide intervals that still sing because they land on chord tones and the rhythm of the figure repeats even where the pitches do not — the counter-case to punishing leaps",
+      "release" : "Talking Book",
+      "title" : "Superstition",
+      "year" : 1972
+    },
+    {
+      "artist" : "Ennio Morricone",
+      "bars" : "0:00–1:00",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/The_Good,_the_Bad_and_the_Ugly_(soundtrack)",
+          "https://en.wikipedia.org/wiki/Ennio_Morricone"
+        ]
+      },
+      "features" : [
+        "melody.motif.ratio"
+      ],
+      "listenFor" : "one short cell stated, repeated and moved to a new degree rather than developed away — the motif as the unit, which is what the repetition floor is measuring",
+      "release" : "The Good, the Bad and the Ugly",
+      "title" : "The Ecstasy of Gold",
+      "year" : 1966
+    },
+    {
+      "artist" : "The Beatles",
+      "bars" : "the first verse",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Blackbird_(Beatles_song)",
+          "https://en.wikipedia.org/wiki/Paul_McCartney"
+        ]
+      },
+      "features" : [
+        "melody.peak.count",
+        "melody.rest.ratio"
+      ],
+      "listenFor" : "the tune reaching its top note once and coming straight back down by step — one peak, and the phrase breathing after it",
+      "release" : "The Beatles",
+      "title" : "Blackbird",
+      "year" : 1968
+    },
+    {
+      "artist" : "Ennio Morricone",
+      "bars" : "the main theme, 0:00–1:30",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Once_Upon_a_Time_in_the_West",
+          "https://en.wikipedia.org/wiki/Ennio_Morricone"
+        ]
+      },
+      "features" : [
+        "melody.rest.ratio",
+        "melody.range.semitones"
+      ],
+      "listenFor" : "a tune with enormous space in it: long notes, long rests, and a narrow range that still carries a film — the case against measuring a tune by how busy it is",
+      "release" : "Once Upon a Time in the West",
+      "title" : "Once Upon a Time in the West",
+      "year" : 1968
+    }
+  ],
+  "refusals" : [
+    {
+      "because" : "a melody is the one part of a song where an invention nobody asked for is worse than nothing, and this app's whole bargain is that the band reads and offers rather than decides",
+      "id" : "no-writing",
+      "instead" : "say what would make it singable — the range, the leap, the figure — and let the user draw it in the Piano roll",
+      "refuses" : "writing the tune"
+    },
+    {
+      "because" : "the stresses and the rhymes are the Lyricist's, and a melody read as syllables is a reading of the words instead",
+      "id" : "no-lyrics",
+      "instead" : "say where the long notes and the rests are, and let the Lyricist fit the line to them",
+      "refuses" : "saying which words go on which note"
+    },
+    {
+      "because" : "the progression has an owner who measures voice leading and cadence, and a melody that reharmonises silently would overrule it",
+      "id" : "no-harmony",
+      "instead" : "say which notes are not chord tones and let the Harmonist say whether the chord or the note should move",
+      "refuses" : "choosing the chords under the tune"
+    },
+    {
+      "because" : "a tune is a shape on the grid and a take is a performance of it; drift and timing have their own readers",
+      "id" : "no-performance",
+      "instead" : "read the written melody, and let the take's critics read the singing",
+      "refuses" : "reading a sung take"
+    }
+  ],
+  "rules" : [
+    {
+      "engineAction" : "SongGraph.Melody.notes, a phrase transposed by MusicTheory.Pitch",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Vocal_range",
+          "https://en.wikipedia.org/wiki/Yesterday_(Beatles_song)"
+        ]
+      },
+      "id" : "melodist.singable-range",
+      "then" : "move a phrase an octave, or split it: past nineteen semitones one person cannot sing both ends of it",
+      "threshold" : {
+        "comparison" : "atMost",
+        "feature" : "melody.range.semitones",
+        "unit" : "semitones",
+        "value" : 19
+      },
+      "when" : "a tune spans more than an octave and a half"
+    },
+    {
+      "engineAction" : "SongGraph.Melody.notes, the interval after the leap reversed",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Melodic_motion",
+          "https://en.wikipedia.org/wiki/Superstition_(song)"
+        ]
+      },
+      "id" : "melodist.leap-and-step",
+      "then" : "come back the other way by step; a leap out and a leap on is two phrases with a hole between them",
+      "threshold" : {
+        "comparison" : "atMost",
+        "feature" : "melody.leap.max.semitones",
+        "unit" : "semitones",
+        "value" : 12
+      },
+      "when" : "a leap is wider than an octave"
+    },
+    {
+      "engineAction" : "SongGraph.Melody.notes, passing notes added between leaps",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Melodic_motion",
+          "https://en.wikipedia.org/wiki/Yesterday_(Beatles_song)"
+        ]
+      },
+      "id" : "melodist.mostly-steps",
+      "then" : "walk between the leaps; a tune of only jumps is an arpeggio and nobody sings it back",
+      "threshold" : {
+        "comparison" : "atLeast",
+        "feature" : "melody.stepwise.ratio",
+        "unit" : "fraction",
+        "value" : 0.5
+      },
+      "when" : "fewer than half the moves are a tone or less"
+    },
+    {
+      "engineAction" : "SongGraph.Melody.notes against MusicTheory.Chord.pitchClasses of SongGraph.Progression",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Superstition_(song)"
+        ]
+      },
+      "id" : "melodist.lands-on-the-chord",
+      "then" : "land the long notes on chord tones and pass through the rest; the Harmonist says which they are",
+      "threshold" : {
+        "comparison" : "atLeast",
+        "feature" : "melody.chord.tone.ratio",
+        "unit" : "fraction",
+        "value" : 0.6
+      },
+      "when" : "fewer than three in five notes belong to the chord under them"
+    },
+    {
+      "engineAction" : "SongGraph.Melody.notes, an interval figure repeated at a new degree",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Motif_(music)",
+          "https://en.wikipedia.org/wiki/The_Good,_the_Bad_and_the_Ugly_(soundtrack)"
+        ]
+      },
+      "id" : "melodist.a-figure-comes-back",
+      "then" : "state a cell and bring it back, moved if you like; a line that never repeats is a walk",
+      "threshold" : {
+        "comparison" : "atLeast",
+        "feature" : "melody.motif.ratio",
+        "unit" : "fraction",
+        "value" : 0.25
+      },
+      "when" : "no figure in the tune is heard twice"
+    },
+    {
+      "engineAction" : "SongGraph.Melody.notes at the maximum MusicTheory.Pitch.midi, lowered but one",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Melodic_motion",
+          "https://en.wikipedia.org/wiki/Once_Upon_a_Time_in_the_West"
+        ]
+      },
+      "id" : "melodist.one-peak",
+      "then" : "keep the top note for once, twice at most; a ceiling touched over and over is a range, not a climax",
+      "threshold" : {
+        "comparison" : "atMost",
+        "feature" : "melody.peak.count",
+        "unit" : "notes",
+        "value" : 3
+      },
+      "when" : "the highest note is struck more than three times"
+    },
+    {
+      "engineAction" : "SongGraph.Melody.notes shortened or removed to open a rest",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Vocal_range",
+          "https://en.wikipedia.org/wiki/Yesterday_(Beatles_song)"
+        ]
+      },
+      "id" : "melodist.it-breathes",
+      "then" : "leave a gap: a singer has to breathe and a listener has to hear the end of the phrase",
+      "threshold" : {
+        "comparison" : "atLeast",
+        "feature" : "melody.rest.ratio",
+        "unit" : "fraction",
+        "value" : 0.1
+      },
+      "when" : "a tune sounds for its whole length"
+    },
+    {
+      "engineAction" : "SongGraph.Melody.notes reduced within SongGraph.Song.timeSignature",
+      "evidence" : {
+        "inferred" : "eight a bar is a note every eighth: past that it reads as a run"
+      },
+      "id" : "melodist.not-too-busy",
+      "then" : "thin it: past eight a bar the tune is a texture and nobody sings a texture back",
+      "threshold" : {
+        "comparison" : "atMost",
+        "feature" : "melody.notes.per.bar",
+        "unit" : "notes per bar",
+        "value" : 8
+      },
+      "when" : "a bar carries more than eight notes"
+    },
+    {
+      "engineAction" : "SongGraph.Melody left to the Piano roll's melody mode",
+      "evidence" : {
+        "inferred" : "the app's own line: the band reads and offers, the user decides"
+      },
+      "id" : "melodist.the-tune-is-yours",
+      "then" : "say what would make it singable and let the user draw it; nothing in this app writes a melody, and inventing one silently would be the worst thing here to get wrong",
+      "when" : "asked to write the tune"
+    },
+    {
+      "engineAction" : "MusicTheory.Key over SongGraph.Melody.notes",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Melodic_motion"
+        ]
+      },
+      "id" : "melodist.say-it-in-degrees",
+      "then" : "say the notes as degrees of the key and the moves in semitones, never as MIDI numbers",
+      "when" : "a reading is given"
+    },
+    {
+      "engineAction" : "SongGraph.Melody.transposed by whole octaves",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Vocal_range"
+        ]
+      },
+      "id" : "melodist.range-before-register",
+      "then" : "move the whole thing by octaves before changing a note; the shape is the tune and the register is a decision about who sings it",
+      "when" : "a tune sits too high or too low for a singer"
+    }
+  ],
+  "vocabulary" : [
+    {
+      "engineField" : "SongGraph.Melody.notes, max minus min of MusicTheory.Pitch.midi",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Vocal_range"
+        ]
+      },
+      "feature" : "melody.range.semitones",
+      "meaning" : "the lowest note to the highest — what a singer is being asked for",
+      "noticeable" : 2,
+      "unit" : "semitones"
+    },
+    {
+      "engineField" : "SongGraph.Melody.notes, largest absolute difference of consecutive MusicTheory.Pitch.midi",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Melodic_motion"
+        ]
+      },
+      "feature" : "melody.leap.max.semitones",
+      "meaning" : "the widest jump between two consecutive notes",
+      "noticeable" : 2,
+      "unit" : "semitones"
+    },
+    {
+      "engineField" : "SongGraph.Melody.notes, consecutive intervals of 2 semitones or fewer",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Melodic_motion",
+          "https://en.wikipedia.org/wiki/Yesterday_(Beatles_song)"
+        ]
+      },
+      "feature" : "melody.stepwise.ratio",
+      "meaning" : "moves of a tone or less, over all moves; 1 is a scale, 0 is all jumps",
+      "noticeable" : 0.1,
+      "unit" : "fraction"
+    },
+    {
+      "engineField" : "SongGraph.Melody.notes against MusicTheory.Chord.pitchClasses of SongGraph.Progression",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Superstition_(song)"
+        ]
+      },
+      "feature" : "melody.chord.tone.ratio",
+      "meaning" : "notes sounding a note of the chord under them, over the notes with a chord under them",
+      "noticeable" : 0.1,
+      "unit" : "fraction"
+    },
+    {
+      "engineField" : "SongGraph.Melody.notes over its length in bars at Song.timeSignature",
+      "evidence" : {
+        "inferred" : "the tune's own count against its length"
+      },
+      "feature" : "melody.notes.per.bar",
+      "meaning" : "how busy the tune is",
+      "noticeable" : 1,
+      "unit" : "notes per bar"
+    },
+    {
+      "engineField" : "SongGraph.Melody.notes, length minus the union of their durations",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Vocal_range"
+        ]
+      },
+      "feature" : "melody.rest.ratio",
+      "meaning" : "the share of the tune's length with nothing sounding — where a singer breathes",
+      "noticeable" : 0.05,
+      "unit" : "fraction"
+    },
+    {
+      "engineField" : "SongGraph.Melody.notes at the maximum MusicTheory.Pitch.midi",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Melodic_motion"
+        ]
+      },
+      "feature" : "melody.peak.count",
+      "meaning" : "how many times the highest note is struck; a climax is one note, not a ceiling",
+      "noticeable" : 1,
+      "unit" : "notes"
+    },
+    {
+      "engineField" : "SongGraph.Melody.notes, longest repeated interval run over interval count",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Motif_(music)",
+          "https://en.wikipedia.org/wiki/The_Good,_the_Bad_and_the_Ugly_(soundtrack)"
+        ]
+      },
+      "feature" : "melody.motif.ratio",
+      "meaning" : "the longest run of intervals that occurs twice, over all the tune's moves — the figure you sing back",
+      "noticeable" : 0.1,
+      "unit" : "fraction"
+    }
+  ],
+  "voice" : {
+    "avoidsWords" : [
+      "catchy",
+      "hooky",
+      "MIDI",
+      "note 64",
+      "melodic contour analysis",
+      "earworm"
+    ],
+    "examples" : [
+      "Eleven semitones top to bottom, mostly steps. Anyone can sing that.",
+      "The figure in bar 1 never comes back. State it again in bar 3 and it is a tune.",
+      "It never stops: every beat of four bars is sounding. Leave a beat and the phrase ends somewhere."
+    ],
+    "register" : "Degrees and semitones, said the way a singer would feel them. Names the one interval that is the problem, and never rewrites the tune.",
+    "sentenceShape" : "the shape, then the number — \"It walks from the 5 down to the 1, then leaps a tenth. That is the one nobody can sing.\"",
+    "usesWords" : [
+      "step",
+      "leap",
+      "figure",
+      "degree",
+      "phrase",
+      "breathe",
+      "sing it back"
+    ]
+  }
+}

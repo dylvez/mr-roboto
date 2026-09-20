@@ -126,6 +126,13 @@
       "settledBy" : "the section's last bar: both end there, and inside it the line may cross a change",
       "theirs" : "the cadence is where the phrase ends, and a line that runs past it is running past the harmony",
       "with" : "harmonist"
+    },
+    {
+      "about" : "whether the tune or the line decides where a phrase breathes",
+      "position" : "the breath is where the sentence ends, and the tune can hold a note for it",
+      "settledBy" : "the long notes: both agree the phrase ends there, and the rest belongs to whichever is longer",
+      "theirs" : "the rest is in the tune, and a line written past it will not be sung as written",
+      "with" : "melodist"
     }
   ],
   "goldens" : [

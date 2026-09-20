@@ -69,6 +69,13 @@
       "settledBy" : "the grid: changes land on steps, but not only on the ones the kick is on",
       "theirs" : "a change lands where the phrase says, which is not always a downbeat",
       "with" : "harmonist"
+    },
+    {
+      "about" : "whether a tune may sit off the grid",
+      "position" : "a note that does not land on a step is a note nobody can play in time, and the grid is where everything here agrees to meet",
+      "settledBy" : "the grid: the tune lands on steps, and which steps is the Melodist's",
+      "theirs" : "a phrase breathes where the singer breathes, which is not always a step",
+      "with" : "melodist"
     }
   ],
   "goldens" : [

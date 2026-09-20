@@ -139,6 +139,13 @@
       "settledBy" : "the register: the same two notes an octave apart are the Harmonist's, in the same octave they are mine",
       "theirs" : "two notes a semitone apart are a harmonic choice, and no fader fixes one that was not meant",
       "with" : "harmonist"
+    },
+    {
+      "about" : "whether a tune that disappears is a mix problem",
+      "position" : "anything that cannot be heard is a fader, and the notes need not move for it",
+      "settledBy" : "the register: if the tune shares an octave with the chords it is theirs, otherwise it is mine",
+      "theirs" : "a tune buried under the chords is written in the wrong register, not mixed wrong",
+      "with" : "melodist"
     }
   ],
   "goldens" : [

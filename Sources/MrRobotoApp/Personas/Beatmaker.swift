@@ -488,6 +488,11 @@ public struct Beatmaker: Persona {
                                 position: "a change that does not land on a step is a change nobody can play in time, and the grid is where everything in this app agrees to meet",
                                 theirs: "a change lands where the phrase says, which is not always a downbeat",
                                 settledBy: "the grid: changes land on steps, but not only on the ones the kick is on"),
+            PersonaDisagreement(with: .melodist,
+                                about: "whether a tune may sit off the grid",
+                                position: "a note that does not land on a step is a note nobody can play in time, and the grid is where everything here agrees to meet",
+                                theirs: "a phrase breathes where the singer breathes, which is not always a step",
+                                settledBy: "the grid: the tune lands on steps, and which steps is the Melodist's"),
         ],
 
         // MARK: References
@@ -801,6 +806,8 @@ public struct Beatmaker: Persona {
 
         case .setProgression:
             return .defer_(to: .harmonist, because: "The chords, and what agrees with them, are the Harmonist's.")
+        case .writeMelody:
+            return .defer_(to: .melodist, because: "The tune's shape and whether anyone can sing it is the Melodist's.")
         case .outOfScope(let what):
             return .defer_(to: .sampler, because: "\(what) is outside feel, swing and pocket.")
         }

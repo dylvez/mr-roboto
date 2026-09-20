@@ -109,14 +109,21 @@ struct PianoRollSurfaceView: View {
         }
     }
 
+    @ViewBuilder
     private var readings: some View {
+        // The panel belongs to whoever reads this mode. In melody mode that is nobody, and an
+        // empty Bassist panel saying "nothing to read" reads as a fault rather than as a gap.
+        personaReadings(model.readingPersona)
+    }
+
+    private func personaReadings(_ persona: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
-                if let emblem = Art.emblem(forPersona: "Bassist") { ArtImage(emblem, width: 18) }
-                RollLabel("The Bassist")
+                if let emblem = Art.emblem(forPersona: persona) { ArtImage(emblem, width: 18) }
+                RollLabel("The \(persona)")
             }
             if model.readings.isEmpty {
-                Text("Nothing to read without a groove under it.")
+                Text(model.mode == .melody ? "Two notes and I'll read the shape." : "Nothing to read without a groove under it.")
                     .font(Design.Typography.ui(11.5, weight: .regular))
                     .foregroundStyle(Design.Palette.inkTertiary)
             }

@@ -291,7 +291,8 @@ struct PianoRollMelodyTests {
 
         model.setMode(.melody)
         #expect(!model.writesFromLevers, "nothing in the app writes a tune")
-        #expect(model.readings.isEmpty, "the Bassist does not read a melody")
+        #expect(model.readingPersona == "Melodist")
+        #expect(model.readings.allSatisfy { $0.rule.hasPrefix("melodist.") }, "the Melodist reads a melody, not the Bassist")
         model.addNote(pitch: 79, at: 2)
         await Task.yield()
         #expect(stub.melodyAuditioned.last?.note == 79, "a melody note goes to the instrument")

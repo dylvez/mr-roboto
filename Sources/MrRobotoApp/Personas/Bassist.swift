@@ -513,6 +513,11 @@ public struct Bassist: Persona {
                                 position: "the line's timing and shape decide the note, and a passing tone under a change is how a line walks rather than a mistake",
                                 theirs: "at a change, the bass is a note of the chord or the chord is something else",
                                 settledBy: "the change itself: a passing tone between changes is mine, a note sounding at the change is the Harmonist's"),
+            PersonaDisagreement(with: .melodist,
+                                about: "whether the tune and the bass may move together",
+                                position: "the root is where the line goes, and a tune that follows it is the tune's problem to solve",
+                                theirs: "a tune doubling the bass an octave up has no shape of its own",
+                                settledBy: "the register and the rhythm: doubling in the same rhythm is theirs to change, a shared root on a downbeat is fine"),
         ],
 
         // MARK: References
@@ -701,6 +706,8 @@ public struct Bassist: Persona {
 
         case .setProgression:
             return .defer_(to: .harmonist, because: "The chords, and what agrees with them, are the Harmonist's.")
+        case .writeMelody:
+            return .defer_(to: .melodist, because: "The tune's shape and whether anyone can sing it is the Melodist's.")
         case .outOfScope(let what):
             return .defer_(to: .beatmaker, because: "\(what) is outside where the bass sits and what it plays.")
         }
