@@ -132,6 +132,13 @@
       "settledBy" : "intelligibility as the Lyricist reads it back from the bounce: the stressed syllables audible",
       "theirs" : "every word is heard, or it was not worth writing",
       "with" : "lyricist"
+    },
+    {
+      "about" : "whether a clash is harmonic or a mix problem",
+      "position" : "anything that reads as mud at 200 Hz is mine to move, whatever the numerals say it is",
+      "settledBy" : "the register: the same two notes an octave apart are the Harmonist's, in the same octave they are mine",
+      "theirs" : "two notes a semitone apart are a harmonic choice, and no fader fixes one that was not meant",
+      "with" : "harmonist"
     }
   ],
   "goldens" : [

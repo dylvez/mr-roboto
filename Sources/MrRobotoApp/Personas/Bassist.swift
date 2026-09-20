@@ -508,6 +508,11 @@ public struct Bassist: Persona {
                                 rule: "bassist.detune-tolerance",
                                 proposal: .transposeSample(label: "the bass", semitones: 8),
                                 expects: DisagreementExpectation(mine: .defer_(to: .sampler), theirs: .refuse(rule: "sampler.past-four-semitones"))),
+            PersonaDisagreement(with: .harmonist,
+                                about: "whether the bass may sit on a note the chord does not hold",
+                                position: "the line's timing and shape decide the note, and a passing tone under a change is how a line walks rather than a mistake",
+                                theirs: "at a change, the bass is a note of the chord or the chord is something else",
+                                settledBy: "the change itself: a passing tone between changes is mine, a note sounding at the change is the Harmonist's"),
         ],
 
         // MARK: References
@@ -694,6 +699,8 @@ public struct Bassist: Persona {
         case .setLoudness, .balanceLowEnd, .squashDrums, .moveStrip, .setMaster:
             return .defer_(to: .engineer, because: "Level, balance and the low end's owner are the Engineer's to read.")
 
+        case .setProgression:
+            return .defer_(to: .harmonist, because: "The chords, and what agrees with them, are the Harmonist's.")
         case .outOfScope(let what):
             return .defer_(to: .beatmaker, because: "\(what) is outside where the bass sits and what it plays.")
         }

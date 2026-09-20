@@ -154,5 +154,5 @@ public enum BibleMethod {
 extension PersonaID {
     /// The roles the app knows, in the order they joined. A bible has to be able to disagree with
     /// every one of them but itself.
-    public static let roster: [PersonaID] = [.beatmaker, .sampler, .bassist, .producer, .engineer, .peer, .lyricist]
+    public static let roster: [PersonaID] = [.beatmaker, .sampler, .bassist, .producer, .engineer, .peer, .lyricist, .harmonist]
 }

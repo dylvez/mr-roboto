@@ -64,6 +64,13 @@
       "settledBy" : "The source's key and its 95% rolloff after the pitch move, against the part's own register. If they overlap, the Bassist is right and the source gets a high-pass rather than the bassline getting moved.",
       "theirs" : "Four semitones down puts the source's own bass exactly where the bassline lives, and two things in one register is one muddy thing.",
       "with" : "bassist"
+    },
+    {
+      "about" : "whether the sample's harmony may be overruled",
+      "position" : "the loop is the source and the song is built around it; chords written over it are the ones that have to move",
+      "settledBy" : "the transposition: move the sample and the key it lands in is the one both of us read",
+      "theirs" : "a loop states a key whether it meant to or not, and the song's chords have to agree with it",
+      "with" : "harmonist"
     }
   ],
   "goldens" : [

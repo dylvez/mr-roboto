@@ -48,7 +48,7 @@ public struct CastTool: DirectorTool {
     public var schema: DirectorJSON {
         Schema.object([
             ("action", Schema.string("What to do.", enum: ["read", "add", "remove"])),
-            ("persona", Schema.string("The persona's id for add or remove: beatmaker, sampler, bassist, producer, engineer, peer or lyricist. Empty for read.")),
+            ("persona", Schema.string("The persona's id for add or remove: beatmaker, sampler, bassist, producer, engineer, peer, lyricist or harmonist. Empty for read.")),
         ], required: ["action", "persona"])
     }
 
@@ -161,7 +161,7 @@ public struct ConveneTool: DirectorTool {
             ("question", Schema.string("What the user asked, in their words.")),
             ("section", Schema.string("A section by name, for the Engineer to bounce. Empty for the first section.")),
             ("personas", Schema.array("Who to ask, by id; empty asks everyone in the room. Use the user's 'Asked of' line when there is one.",
-                                      of: Schema.string("A persona id.", enum: ["beatmaker", "sampler", "bassist", "producer", "engineer", "peer", "lyricist"]))),
+                                      of: Schema.string("A persona id.", enum: ["beatmaker", "sampler", "bassist", "producer", "engineer", "peer", "lyricist", "harmonist"]))),
         ], required: ["question", "section", "personas"])
     }
 
@@ -219,6 +219,18 @@ public struct ConveneTool: DirectorTool {
                     }
                 } catch {
                     notes.append("The Engineer's bounce failed: \(error).")
+                }
+            case .harmonist:
+                if let version = Guidance.progressions(in: song).last, case .progression(let progression) = version.kind {
+                    let line = Guidance.basslines(in: song).last.flatMap { version -> Bassline? in
+                        if case .bassline(let bassline) = version.kind { return bassline }
+                        return nil
+                    }
+                    let observation = HarmonyObservation.of(progression, label: PartLabel.title(of: version), bassline: line,
+                                                            beatsPerBar: song.timeSignature.beatsPerBar)
+                    readings += Harmonist().read(observation).map { (id, $0) }
+                } else {
+                    notes.append("No chords yet for the Harmonist to read.")
                 }
             case .beatmaker:
                 if let version = Guidance.grooves(in: song).last, case .groove(let groove) = version.kind {

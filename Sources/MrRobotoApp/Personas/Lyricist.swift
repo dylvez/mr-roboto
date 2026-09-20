@@ -272,6 +272,11 @@ public struct Lyricist: Persona {
                                 rule: "lyricist.title-in-the-hook",
                                 proposal: .writeLine(syllables: 8, patternMatch: 0.85),
                                 expects: DisagreementExpectation(mine: .agree, theirs: .defer_(to: .lyricist))),
+            PersonaDisagreement(with: .harmonist,
+                                about: "whether the words or the chords decide where a phrase ends",
+                                position: "the line ends where the breath does, and the chords can wait a bar for it",
+                                theirs: "the cadence is where the phrase ends, and a line that runs past it is running past the harmony",
+                                settledBy: "the section's last bar: both end there, and inside it the line may cross a change"),
         ],
 
         references: [

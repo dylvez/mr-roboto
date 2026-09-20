@@ -119,6 +119,13 @@
       "settledBy" : "the title line: if it lands in the section the Peer names, both are right",
       "theirs" : "the hook is when the song arrives, wherever the title falls",
       "with" : "peer"
+    },
+    {
+      "about" : "whether the words or the chords decide where a phrase ends",
+      "position" : "the line ends where the breath does, and the chords can wait a bar for it",
+      "settledBy" : "the section's last bar: both end there, and inside it the line may cross a change",
+      "theirs" : "the cadence is where the phrase ends, and a line that runs past it is running past the harmony",
+      "with" : "harmonist"
     }
   ],
   "goldens" : [

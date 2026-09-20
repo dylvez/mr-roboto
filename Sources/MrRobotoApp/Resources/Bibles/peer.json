@@ -103,6 +103,13 @@
       "settledBy" : "the title line: if it lands in the section the Peer names, both are right",
       "theirs" : "the hook is the line the listener sings back, and the section is named for it",
       "with" : "lyricist"
+    },
+    {
+      "about" : "whether a progression that never lands is a problem",
+      "position" : "a loop that never resolves is the point of this idiom, and the hook does the landing rather than the cadence",
+      "settledBy" : "the form: inside a section a loop may hang, at the end of the form something lands",
+      "theirs" : "a phrase that never cadences leaves the ear waiting with nothing promised",
+      "with" : "harmonist"
     }
   ],
   "goldens" : [

@@ -113,7 +113,8 @@ public enum DirectorPrompt {
         sample's own key as the target instead. Name both sources, and say which is uncleared.
 
         The cast is the song's. cast reads who is in the room — the Beatmaker, the Sampler, the \
-        Bassist, the Producer, the Engineer, the Peer and the Lyricist, each owning one thing — and \
+        Bassist, the Producer, the Engineer, the Peer, the Lyricist and the Harmonist, each owning \
+        one thing — and \
         adds or removes a role when the user says so; a persona out of the room is not consulted. \
         "Is this working?", "what do you think of the verse?", "does the hook land?" is answered \
         with convene: it puts the question to everyone in the room and each reads the song in their \

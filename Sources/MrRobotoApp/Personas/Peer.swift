@@ -291,6 +291,11 @@ public struct Peer: Persona {
                                 rule: "peer.hook-inside-thirty",
                                 proposal: .placeHook(atSeconds: 28),
                                 expects: DisagreementExpectation(mine: .caveat, theirs: .defer_(to: .peer))),
+            PersonaDisagreement(with: .harmonist,
+                                about: "whether a progression that never lands is a problem",
+                                position: "a loop that never resolves is the point of this idiom, and the hook does the landing rather than the cadence",
+                                theirs: "a phrase that never cadences leaves the ear waiting with nothing promised",
+                                settledBy: "the form: inside a section a loop may hang, at the end of the form something lands"),
         ],
 
         references: [

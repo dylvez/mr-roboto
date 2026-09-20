@@ -305,6 +305,11 @@ public struct Producer: Persona {
                                 theirs: "the song is about what the words say it is about, once they are sung",
                                 settledBy: "the title: if the Lyricist's hook line and the brief disagree, the brief is rewritten, once",
                                 rule: "producer.brief-first"),
+            PersonaDisagreement(with: .harmonist,
+                                about: "whether a progression counts as a part worth keeping",
+                                position: "a part nothing sounds is a part that is not earning its place in the count",
+                                theirs: "the chords are the song's spine and belong in the graph even before anything plays them",
+                                settledBy: "the stitch: a progression that no section names is mine to cut"),
         ],
 
         references: [

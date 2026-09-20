@@ -48,7 +48,7 @@ struct DirectorCastToolTests {
         let box = toolbox(workspace)
         let read = await box.run(ClaudeToolUse(id: "c1", name: "cast", input: .object([.init("action", .string("read")), .init("persona", .string(""))])))
         let roster = try #require(json(read)["cast"] as? [[String: Any]])
-        #expect(roster.count == 7 && roster.allSatisfy { $0["in_room"] as? Bool == true })
+        #expect(roster.count == 8 && roster.allSatisfy { $0["in_room"] as? Bool == true })
         #expect(roster.map { $0["id"] as? String } == Cast.standard.ids.map(\.rawValue))
 
         let out = await box.run(ClaudeToolUse(id: "c2", name: "cast", input: .object([.init("action", .string("remove")), .init("persona", .string("bassist"))])))
@@ -103,18 +103,18 @@ struct DirectorCastToolTests {
         #expect(!result.isError, "\(result.content)")
         let json = json(result)
         #expect((json["asked"] as? [String]) == ["producer", "peer"], "in the room's order, whatever the case")
-        #expect((json["not_asked"] as? [String])?.contains("beatmaker") == true && (json["room"] as? [String])?.count == 7)
+        #expect((json["not_asked"] as? [String])?.contains("beatmaker") == true && (json["room"] as? [String])?.count == 8)
         let readers = Set((json["readings"] as? [[String: Any]] ?? []).compactMap { $0["persona"] as? String })
         #expect(readers.isSubset(of: ["producer", "peer"]) && !readers.isEmpty, "\(readers)")
         // The rail: who was asked, and nobody else's opinion.
-        #expect(workspace.spoken.contains { $0.persona == "Band" && $0.text == "Asked: Producer, Peer." && $0.detail == "5 in the room not consulted" })
+        #expect(workspace.spoken.contains { $0.persona == "Band" && $0.text == "Asked: Producer, Peer." && $0.detail == "6 in the room not consulted" })
         // Guards stay on: the Beatmaker was not asked, and still refuses a hard quantise, marked as a guard.
         let verdicts = try #require(json["verdicts"] as? [[String: Any]])
         let beatmaker = try #require(verdicts.first { $0["persona"] as? String == "beatmaker" }, "\(verdicts)")
         #expect(beatmaker["is_guard"] as? Bool == true && (beatmaker["verdict"] as? String)?.lowercased().contains("refus") == true, "\(beatmaker)")
         #expect(workspace.spoken.contains { $0.persona == "Beatmaker" && $0.detail?.hasPrefix("guard — not asked") == true })
         #expect(verdicts.allSatisfy { ($0["is_guard"] as? Bool == true) || ["producer", "peer"].contains($0["persona"] as? String ?? "") })
-        #expect((json["detail"] as? String)?.contains("Asked producer, peer of 7") == true)
+        #expect((json["detail"] as? String)?.contains("Asked producer, peer of 8") == true)
 
         // Someone named who is not in the room is said, and nobody asked at all is refused with who is.
         workspace.setCast([.peer, .producer])

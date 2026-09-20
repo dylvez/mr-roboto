@@ -38,6 +38,8 @@ public struct PersonaID: RawRepresentable, Hashable, Sendable, Codable, CustomSt
     public static let engineer = PersonaID("engineer")
     public static let peer = PersonaID("peer")
     public static let lyricist = PersonaID("lyricist")
+    /// The chords, and whether everything else agrees with them.
+    public static let harmonist = PersonaID("harmonist")
 
     public var description: String { rawValue }
 }
@@ -167,6 +169,23 @@ public struct Feature: RawRepresentable, Hashable, Sendable, Codable, CustomStri
     public static let imageReuse = Feature("lyric.image.reuse")
     /// Sung lines in the lyric.
     public static let lyricLines = Feature("lyric.lines")
+
+    // The Harmonist's: the chords, and what agrees with them.
+    /// Chord changes per bar: the harmonic rhythm.
+    public static let changesPerBar = Feature("harmony.changes.per.bar")
+    /// Mean semitone distance the voices move between consecutive chords, each chord taken at its
+    /// nearest voicing. The number that *is* voice leading: two chords sharing notes move little.
+    public static let voiceLeadingSemitones = Feature("harmony.voice-leading.semitones")
+    /// Chords that belong to the stated key, over all chords, 0…1.
+    public static let diatonicRatio = Feature("harmony.diatonic.ratio")
+    /// How many different chords the progression uses.
+    public static let distinctChords = Feature("harmony.chords.distinct")
+    /// Phrase endings that land on the tonic or approach it by fourth or fifth, over endings, 0…1.
+    public static let cadenceRatio = Feature("harmony.cadence.ratio")
+    /// Root movements by a perfect fourth or fifth, over all movements, 0…1.
+    public static let rootMotionFifths = Feature("harmony.root.motion.fifths")
+    /// Chord changes where the bass line sounds a note of that chord, over changes, 0…1.
+    public static let bassAgreement = Feature("harmony.bass.agreement")
 
     // The Engineer's: the bounce.
     /// Integrated loudness, LUFS (BS.1770).
@@ -1012,6 +1031,9 @@ public enum PersonaProposal: Hashable, Sendable {
     /// M7: an album's order, as its numbers: running minutes, loudness spread, same-key
     /// neighbours, tempo jumps, and where the opener's hook lands.
     case sequence(minutes: Double, loudnessSpreadLU: Double, sameKeyPairs: Int, tempoJumps: Int, openerHookSeconds: Double)
+    /// A progression, as the numbers that decide whether it holds together.
+    case setProgression(distinctChords: Int, changesPerBar: Double, diatonicRatio: Double,
+                        voiceLeadingSemitones: Double, rootMotionFifths: Double, cadenceRatio: Double)
     /// Something outside the persona's competence, named so the refusal can be specific.
     case outOfScope(what: String)
 }
@@ -1089,6 +1111,7 @@ extension PersonaProposal: Codable {
         case integratedLUFS, peakDBFS, separationDB, crestDB
         case part, gainDB, bandHz, bandDB, targetLUFS, ceilingDBTP
         case loudnessSpreadLU, sameKeyPairs, tempoJumps, openerHookSeconds
+        case distinctChords, changesPerBar, diatonicRatio, voiceLeadingSemitones, rootMotionFifths, cadenceRatio
     }
 
     public init(from decoder: any Decoder) throws {
@@ -1127,6 +1150,10 @@ extension PersonaProposal: Codable {
                                           openerHookSeconds: try d(.openerHookSeconds))
         case "balanceLowEnd": self = .balanceLowEnd(separationDB: try d(.separationDB))
         case "squashDrums": self = .squashDrums(crestDB: try d(.crestDB))
+        case "setProgression": self = .setProgression(distinctChords: try c.decode(Int.self, forKey: .distinctChords),
+                                                      changesPerBar: try d(.changesPerBar), diatonicRatio: try d(.diatonicRatio),
+                                                      voiceLeadingSemitones: try d(.voiceLeadingSemitones),
+                                                      rootMotionFifths: try d(.rootMotionFifths), cadenceRatio: try d(.cadenceRatio))
         case "outOfScope": self = .outOfScope(what: try d(.what))
         default: throw DecodingError.dataCorruptedError(forKey: .proposal, in: c, debugDescription: "unknown proposal \(name)")
         }
@@ -1195,6 +1222,11 @@ extension PersonaProposal: Codable {
         case .sequence(let minutes, let spread, let sameKey, let jumps, let opener):
             try c.encode("sequence", forKey: .proposal); try c.encode(minutes, forKey: .minutes); try c.encode(spread, forKey: .loudnessSpreadLU)
             try c.encode(sameKey, forKey: .sameKeyPairs); try c.encode(jumps, forKey: .tempoJumps); try c.encode(opener, forKey: .openerHookSeconds)
+        case .setProgression(let distinct, let perBar, let diatonic, let voiceLeading, let fifths, let cadence):
+            try c.encode("setProgression", forKey: .proposal); try c.encode(distinct, forKey: .distinctChords)
+            try c.encode(perBar, forKey: .changesPerBar); try c.encode(diatonic, forKey: .diatonicRatio)
+            try c.encode(voiceLeading, forKey: .voiceLeadingSemitones); try c.encode(fifths, forKey: .rootMotionFifths)
+            try c.encode(cadence, forKey: .cadenceRatio)
         case .outOfScope(let what):
             try c.encode("outOfScope", forKey: .proposal); try c.encode(what, forKey: .what)
         }

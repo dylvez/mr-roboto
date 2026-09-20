@@ -519,6 +519,11 @@ public struct Sampler: Persona {
                          + "register. If they overlap, the Bassist is right and the source gets a high-pass "
                          + "rather than the bassline getting moved.",
                                 rule: "sampler.pitch-down-not-filter"),
+            PersonaDisagreement(with: .harmonist,
+                                about: "whether the sample's harmony may be overruled",
+                                position: "the loop is the source and the song is built around it; chords written over it are the ones that have to move",
+                                theirs: "a loop states a key whether it meant to or not, and the song's chords have to agree with it",
+                                settledBy: "the transposition: move the sample and the key it lands in is the one both of us read"),
         ],
 
         // MARK: References
@@ -865,6 +870,8 @@ public struct Sampler: Persona {
         case .setLoudness, .balanceLowEnd, .squashDrums, .moveStrip, .setMaster:
             return .defer_(to: .engineer, because: "Level, balance and the low end's owner are the Engineer's to read.")
 
+        case .setProgression:
+            return .defer_(to: .harmonist, because: "The chords, and what agrees with them, are the Harmonist's.")
         case .outOfScope(let what):
             return .defer_(to: .beatmaker,
                            because: "\(what) is outside chop, source and degradation.")

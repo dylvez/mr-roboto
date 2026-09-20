@@ -112,6 +112,13 @@
       "settledBy" : "the bed's tuning: if it is off by the same amount, nothing is retuned",
       "theirs" : "A sample off pitch is a sample to fix.",
       "with" : "sampler"
+    },
+    {
+      "about" : "whether the bass may sit on a note the chord does not hold",
+      "position" : "the line's timing and shape decide the note, and a passing tone under a change is how a line walks rather than a mistake",
+      "settledBy" : "the change itself: a passing tone between changes is mine, a note sounding at the change is the Harmonist's",
+      "theirs" : "at a change, the bass is a note of the chord or the chord is something else",
+      "with" : "harmonist"
     }
   ],
   "goldens" : [

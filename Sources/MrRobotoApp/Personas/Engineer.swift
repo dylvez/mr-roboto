@@ -321,6 +321,11 @@ public struct Engineer: Persona {
                                 rule: "engineer.a-corner-is-a-choice",
                                 proposal: .squashDrums(crestDB: 14),
                                 expects: DisagreementExpectation(mine: .agree, theirs: .defer_(to: .engineer))),
+            PersonaDisagreement(with: .harmonist,
+                                about: "whether a clash is harmonic or a mix problem",
+                                position: "anything that reads as mud at 200 Hz is mine to move, whatever the numerals say it is",
+                                theirs: "two notes a semitone apart are a harmonic choice, and no fader fixes one that was not meant",
+                                settledBy: "the register: the same two notes an octave apart are the Harmonist's, in the same octave they are mine"),
         ],
 
         references: [

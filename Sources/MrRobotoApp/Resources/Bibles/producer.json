@@ -76,6 +76,13 @@
       "settledBy" : "the title: if the Lyricist's hook line and the brief disagree, the brief is rewritten, once",
       "theirs" : "the song is about what the words say it is about, once they are sung",
       "with" : "lyricist"
+    },
+    {
+      "about" : "whether a progression counts as a part worth keeping",
+      "position" : "a part nothing sounds is a part that is not earning its place in the count",
+      "settledBy" : "the stitch: a progression that no section names is mine to cut",
+      "theirs" : "the chords are the song's spine and belong in the graph even before anything plays them",
+      "with" : "harmonist"
     }
   ],
   "goldens" : [

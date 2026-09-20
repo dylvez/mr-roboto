@@ -50,6 +50,7 @@ enum Art {
         if key.contains("sampl") { return "cast-sampler" }
         if key.contains("bass") { return "cast-bassist" }
         if key.contains("critic") || key.contains("check") { return "cast-critic" }
+        if key.contains("harmon") { return Art.image("cast-harmonist") == nil ? nil : "cast-harmonist" }
         if key.contains("produc") { return Art.image("cast-producer") == nil ? nil : "cast-producer" }
         if key.contains("engineer") { return Art.image("cast-engineer") == nil ? nil : "cast-engineer" }
         if key.contains("peer") { return Art.image("cast-peer") == nil ? nil : "cast-peer" }

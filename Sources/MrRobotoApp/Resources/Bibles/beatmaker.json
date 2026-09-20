@@ -62,6 +62,13 @@
       "settledBy" : "The documented session method: D'Angelo had the drums drag behind the click and then had everything else drag further behind the drums. Lateness is relative, and the kit is the origin.",
       "theirs" : "The bass defines where the bar is, and the drums decorate around it.",
       "with" : "bassist"
+    },
+    {
+      "about" : "whether a chord may change off the grid",
+      "position" : "a change that does not land on a step is a change nobody can play in time, and the grid is where everything in this app agrees to meet",
+      "settledBy" : "the grid: changes land on steps, but not only on the ones the kick is on",
+      "theirs" : "a change lands where the phrase says, which is not always a downbeat",
+      "with" : "harmonist"
     }
   ],
   "goldens" : [

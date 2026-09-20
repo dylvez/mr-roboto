@@ -483,6 +483,11 @@ public struct Beatmaker: Persona {
                          + "then had everything else drag further behind the drums. Lateness is relative, "
                          + "and the kit is the origin.",
                                 rule: "beatmaker.hats-straight"),
+            PersonaDisagreement(with: .harmonist,
+                                about: "whether a chord may change off the grid",
+                                position: "a change that does not land on a step is a change nobody can play in time, and the grid is where everything in this app agrees to meet",
+                                theirs: "a change lands where the phrase says, which is not always a downbeat",
+                                settledBy: "the grid: changes land on steps, but not only on the ones the kick is on"),
         ],
 
         // MARK: References
@@ -794,6 +799,8 @@ public struct Beatmaker: Persona {
         case .setLoudness, .balanceLowEnd, .squashDrums, .moveStrip, .setMaster:
             return .defer_(to: .engineer, because: "Level, balance and the low end's owner are the Engineer's to read.")
 
+        case .setProgression:
+            return .defer_(to: .harmonist, because: "The chords, and what agrees with them, are the Harmonist's.")
         case .outOfScope(let what):
             return .defer_(to: .sampler, because: "\(what) is outside feel, swing and pocket.")
         }
