@@ -44,13 +44,15 @@ public final class PianoRollModel {
     }
 
     public var title: String {
-        if let base { return PartLabel.title(of: base) }
-        // A tune is not a bass line: the lineage names whose hands wrote the bass, and in melody
-        // mode nobody's hands did.
+        // A tune is not a bass line. The lineage names whose hands wrote the bass, and the bound
+        // version names the part this roll was opened on — neither is right once the mode says
+        // melody, unless the bound part is itself a melody.
         if mode == .melody {
+            if let base, base.type == .melody { return PartLabel.title(of: base) }
             let name = InstrumentVoiceSpec.preset(id: instrument)?.name ?? instrument
             return "\(name) melody, \(String(format: "%.0f", tempo))"
         }
+        if let base { return PartLabel.title(of: base) }
         return "\(lineage.name) line, \(String(format: "%.0f", tempo))"
     }
 

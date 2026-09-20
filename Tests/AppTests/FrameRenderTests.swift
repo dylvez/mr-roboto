@@ -1,3 +1,4 @@
+import Instrument
 import AppKit
 import Foundation
 import MusicTheory
@@ -316,5 +317,27 @@ extension FrameRenderTests {
         model.b = b.id
         model.barShift = 4
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-mashup")
+    }
+}
+
+extension FrameRenderTests {
+    @Test("the Piano roll in melody mode: the instrument picker, and the Melodist reading the tune")
+    func melodyMode() throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        let song = FormFixture.build(tempo: 92).song
+        let app = app(song)
+        let id = try #require(app.perform(Guidance.dockAction(for: .pianoRoll, in: app.song)))
+        let item = try #require(app.bench.items.first { $0.id == id })
+        let model = SurfaceWiring.shared.pianoRollModel(for: item, app: app)
+        model.setMode(.melody)
+        model.setInstrument(InstrumentVoiceSpec.rhodes.id)
+        // The roll opened on the song's bass line; a tune starts from an empty grid.
+        while !model.notes.isEmpty { model.deleteNote(at: 0) }
+        // A tune worth reading: mostly steps, a figure that comes back, and it breathes.
+        for (pitch, beat) in [(72, 0.0), (74, 1), (76, 2), (74, 3), (76, 4), (77, 5), (79, 6), (76, 7)] {
+            model.addNote(pitch: pitch, at: beat, duration: 0.5)
+        }
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-melody")
     }
 }
