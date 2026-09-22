@@ -65,7 +65,7 @@ struct StructureSurfaceView: View {
 
     private var emptyHint: some View {
         Text(model.isEmpty
-             ? "No sections yet. Add one: it is stitched from the newest groove, bass line and dusty chop, and the transport plays the sections in order."
+             ? "No sections yet. Add one: it is stitched from the newest groove, bass line, chords, tune and dusty chop, and the transport plays the sections in order."
              : "Select a section to name it, set its bars and choose what plays in it.")
             .font(Design.Typography.ui(12, weight: .regular))
             .foregroundStyle(Design.Palette.inkSecondary)
@@ -103,7 +103,8 @@ private struct SectionBlock: View {
     let section: SongGraph.Section
 
     private var isSelected: Bool { model.selected == section.id }
-    private var width: CGFloat { min(240, max(84, CGFloat(section.lengthInBars) * 8)) }
+    private var width: CGFloat { min(240, max(96, CGFloat(section.lengthInBars) * 8)) }
+    private var kinds: [String] { model.kinds(of: section) }
 
     var body: some View {
         Button { model.select(section.id) } label: {
@@ -116,14 +117,14 @@ private struct SectionBlock: View {
                 Text("\(section.lengthInBars) bars")
                     .font(Design.Typography.numeric(10))
                     .foregroundStyle(Design.Palette.inkTertiary)
-                HStack(spacing: 3) {
-                    ForEach(model.layers(of: section)) { layer in
-                        Circle()
-                            .fill(layer.plays ? Design.Palette.accent : Design.Palette.inkTertiary)
-                            .frame(width: 5, height: 5)
-                    }
-                }
-                .frame(height: 5)
+                // What it plays, in words. Anonymous dots said how many parts were stitched in and
+                // never which, which is the one thing you want to know while reading a form.
+                Text(kinds.isEmpty ? "silent" : kinds.joined(separator: " · "))
+                    .font(Design.Typography.ui(9.5, weight: .regular))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .foregroundStyle(kinds.isEmpty ? Design.Palette.inkTertiary : Design.Palette.inkSecondary)
+                    .frame(height: 11, alignment: .leading)
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
@@ -143,7 +144,8 @@ private struct SectionBlock: View {
             return true
         }
         .modifier(SectionDropTarget(model: model, section: section.id))
-        .help(model.silence(of: section) ?? "\(section.name) · \(section.lengthInBars) bars")
+        .help(model.silence(of: section)
+              ?? "\(section.name) · \(section.lengthInBars) bars · plays \(kinds.joined(separator: ", "))")
     }
 }
 
@@ -173,6 +175,17 @@ private struct SectionDetail: View {
     let section: SongGraph.Section
 
     private static let lengths = [1, 2, 4, 8, 16, 32]
+
+    /// A chip's words. The version titles this app writes are sentences — "Brushes under the C
+    /// loop: kick on 1, brushed accent on 3, ghost snare sweeping between…" — and a chip is
+    /// `fixedSize`, so an untrimmed one takes the whole row and the rest wrap off the end. The
+    /// full title is on the chip's tooltip.
+    private static func chipTitle(_ layer: StructureModel.Layer) -> String {
+        var title = layer.title
+        if title.count > 30 { title = title.prefix(29).trimmingCharacters(in: .whitespaces) + "…" }
+        guard let reason = layer.silentReason else { return title }
+        return "\(title) (\(reason))"
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -206,20 +219,41 @@ private struct SectionDetail: View {
                     }
                 }
             }
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 8) {
                 FormLabel("Plays")
                 if model.layers.isEmpty {
-                    Text("Nothing in the song plays on the transport yet: paint a groove, write a bass line or dust a chop.")
+                    Text("Nothing in the song plays on the transport yet: paint a groove, write a bass line, set the chords or dust a chop.")
                         .font(Design.Typography.ui(11.5, weight: .regular))
                         .foregroundStyle(Design.Palette.inkSecondary)
                 } else {
-                    FlowRow(spacing: 4) {
-                        ForEach(model.layers) { layer in
-                            FormChip(layer.plays ? layer.title : "\(layer.title) (dry)",
-                                     isOn: section.stitch.contains(layer.id)) {
-                                model.toggle(layer.id, in: section.id)
+                    // One row per kind, because a version title is a sentence about the part and
+                    // says nothing about which part it is. A row is a choice, not a set: the
+                    // transport plays one of each kind, and `toggle` enforces it.
+                    ForEach(model.choices(for: section), id: \.type) { choice in
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Text(StructureModel.name(of: choice.type))
+                                .font(Design.Typography.ui(11, weight: .medium))
+                                .foregroundStyle(Design.Palette.inkSecondary)
+                                .frame(width: 48, alignment: .leading)
+                            FlowRow(spacing: 4) {
+                                ForEach(choice.layers) { layer in
+                                    FormChip(Self.chipTitle(layer),
+                                             isOn: section.stitch.contains(layer.id)) {
+                                        model.toggle(layer.id, in: section.id)
+                                    }
+                                    .help(layer.plays ? layer.title
+                                                      : "\(layer.title) — \(layer.silentReason ?? "silent"), so it makes no sound on the transport")
+                                }
                             }
                         }
+                    }
+                }
+                if let missing = model.missingText(from: section) {
+                    HStack(spacing: 8) {
+                        Text("This section does not play the \(missing) the song has.")
+                            .font(Design.Typography.ui(11.5, weight: .regular))
+                            .foregroundStyle(Design.Palette.inkSecondary)
+                        FormChip("Add \(missing)", isOn: false) { model.fill(section.id) }
                     }
                 }
                 if let silence = model.silence(of: section) {

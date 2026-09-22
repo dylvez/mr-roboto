@@ -19,6 +19,7 @@ private enum FormToolFixture {
         var toolbox: DirectorToolbox
         var groove: VersionID
         var bass: VersionID
+        var progression: VersionID
         var directory: URL
         func clean() { try? FileManager.default.removeItem(at: directory) }
     }
@@ -32,7 +33,8 @@ private enum FormToolFixture {
         let bass = built.bass
         let workbench = DirectorWorkbench(engines: DirectorTestEngines.make(bars: 4))
         let toolbox = DirectorTools.toolbox(workbench: workbench, workspace: AppStateWorkspace(app))
-        return Rig(app: app, toolbox: toolbox, groove: groove, bass: bass, directory: directory)
+        return Rig(app: app, toolbox: toolbox, groove: groove, bass: bass,
+                   progression: built.progression, directory: directory)
     }
 
     static func json(_ result: ClaudeToolResult) -> [String: Any] {
@@ -101,6 +103,34 @@ struct DirectorFormToolTests {
         #expect(rig.app.song?.sections[1].stitch.contains(rig.bass) == true)
     }
 
+    @Test("the Director stitches the chords too: a form it writes has harmony in it")
+    func arrangesWithChords() async throws {
+        let rig = try FormToolFixture.rig()
+        defer { rig.clean() }
+
+        // `arrange` with no versions named takes the newest of everything that plays. It used to
+        // take the newest groove, bass line and chop and stop there — so every form the Director
+        // wrote came out without the chords, whatever the song held.
+        let result = await rig.toolbox.run(ClaudeToolUse(id: "a", name: "arrange", input: .object([
+            .init("form", .string("verse 16")),
+        ])))
+        #expect(!result.isError, "\(result.content)")
+        let song = try #require(rig.app.song)
+        #expect(song.sections[0].stitch.contains(rig.progression), "the form has no chords in it")
+        #expect(rig.app.playback.segments.first?.progression != nil)
+        #expect(rig.app.playback.summary.contains("Chords"))
+
+        // And stitch_section accepts a progression by name rather than refusing it outright.
+        let stitched = await rig.toolbox.run(ClaudeToolUse(id: "b", name: "stitch_section", input: .object([
+            .init("name", .string("Hook")),
+            .init("bars", .int(8)),
+            .init("versions", .array([.string(rig.progression.description)])),
+            .init("position", .int(1)),
+        ])))
+        #expect(!stitched.isError, "a progression was refused: \(stitched.content)")
+        #expect(rig.app.song?.sections.last?.stitch == [rig.progression])
+    }
+
     @Test("with nothing that plays, arrange refuses and says what would make it possible")
     func refusesAnEmptySong() async throws {
         let directory = GuidanceFixture.temporaryDirectory("form-empty")
@@ -140,11 +170,13 @@ struct DirectorFormToolTests {
         #expect(rig.app.song?.sections.map(\.name) == ["Intro", "Verse", "Bridge"])
         #expect(rig.app.song?.sections[0].stitch.contains(rig.bass) == true)
 
-        // Past the end appends; a progression is not something a section plays; a dry chop neither.
-        let progression = try #require(rig.app.song?.versions.first { $0.type == .progression })
+        // Past the end appends; a lyric is not something a section plays; a dry chop neither.
+        // (A progression is — see `arrangesWithChords`. It was refused here until the transport
+        // learned to sound one, and the refusal outlived the reason for it.)
+        let lyric = try #require(rig.app.song?.versions.first { $0.type == .lyric })
         let refused = await rig.toolbox.run(ClaudeToolUse(id: "p", name: "stitch_section", input: .object([
             .init("name", .string("Outro")), .init("bars", .int(4)),
-            .init("versions", .array([.string(progression.id.description)])), .init("position", .int(99)),
+            .init("versions", .array([.string(lyric.id.description)])), .init("position", .int(99)),
         ])))
         #expect(refused.isError)
         #expect(refused.content.contains("not something a section plays"))

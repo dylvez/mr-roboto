@@ -233,18 +233,16 @@ public final class PartPlayer {
     }
 
     /// Every chord as held notes from the beat it starts on.
+    ///
+    /// The voicing itself is `Performance.Voicing`, not a rule of its own: this is the audition,
+    /// and the transport plays the same progression through `KeysPlayer`. Two voicings of one
+    /// chord would mean the Chords surface and the song disagreed about what you wrote.
     public nonisolated static func hits(for progression: Progression, clock: TransportClock) -> [VoiceSampler.Hit] {
-        var hits: [VoiceSampler.Hit] = []
-        var beat = 0.0
-        for span in progression.bars.flatMap(\.chords) {
-            let start = clock.seconds(forBeat: beat), length = clock.seconds(forBeat: span.beats) * 0.95
-            let root = 48 + span.chord.root.rawValue
-            for interval in span.chord.quality.intervals {
-                hits.append(VoiceSampler.Hit(note: root + interval, velocity: 88, at: start, duration: length))
-            }
-            beat += span.beats
+        Voicing.notes(for: progression).map { note in
+            VoiceSampler.Hit(note: note.pitch.midi, velocity: note.velocity,
+                             at: clock.seconds(forBeat: note.start),
+                             duration: clock.seconds(forBeat: note.duration))
         }
-        return hits
     }
 
     private func mediaURL(_ media: MediaRef, song: Song) throws -> URL {

@@ -59,14 +59,18 @@ public struct FormReport: Encodable, Sendable {
 
 /// What both tools share: the song's playable versions and the default stitch.
 enum FormTools {
-    /// The newest groove, the newest bass line and the newest dirtied chop: what a section plays
-    /// when nobody says otherwise — the same three the transport picks for an unarranged song.
+    /// The newest of every kind the transport can sound: what a section plays when nobody says
+    /// otherwise — the same choice the transport makes for an unarranged song, and the same one
+    /// `StructureModel.defaultStitch` makes for a section added by hand.
+    ///
+    /// Kept in `StructureModel.playableTypes` order, and read through that list rather than a
+    /// second hand-written one: this used to name the groove, the bass line and the chop, and go
+    /// on naming only those three after the transport learned to play the chords and the tune — so
+    /// every form the Director wrote came out without harmony in it.
     static func defaultStitch(in song: Song) -> [VersionID] {
-        var out: [VersionID] = []
-        if let groove = Guidance.grooves(in: song).last(where: StructureModel.plays) { out.append(groove.id) }
-        if let bass = Guidance.basslines(in: song).last(where: StructureModel.plays) { out.append(bass.id) }
-        if let chop = Guidance.samples(in: song).last(where: StructureModel.plays) { out.append(chop.id) }
-        return out
+        StructureModel.playableTypes.compactMap { type in
+            song.versions.last { $0.type == type && StructureModel.plays($0) }?.id
+        }
     }
 
     /// Resolves the version ids a section names, refusing anything the transport cannot sound.
@@ -76,17 +80,19 @@ enum FormTools {
                 throw DirectorToolFailure(tool: tool, reason: "This song holds no version \(raw).",
                                           suggestion: "Take version ids from read_song.")
             }
-            guard [PartType.groove, .bassline, .sample].contains(version.type) else {
+            guard StructureModel.playableTypes.contains(version.type) else {
                 throw DirectorToolFailure(
                     tool: tool, reason: "A \(version.type.rawValue) is not something a section plays.",
-                    suggestion: "Stitch grooves, bass lines and dusty chops; the chords and the record are read elsewhere.")
+                    suggestion: "Stitch grooves, bass lines, progressions, melodies and dusty chops; "
+                        + "a lyric, an analysis and a sound pick are read elsewhere.")
             }
             guard StructureModel.plays(version) else {
                 throw DirectorToolFailure(
                     tool: tool,
                     reason: version.type == .sample ? "\(PartLabel.title(of: version)) is a dry chop, and only a dusty one plays on the transport."
                                                     : "\(PartLabel.title(of: version)) has nothing in it to play.",
-                    suggestion: version.type == .sample ? "degrade_part it first, then stitch the dusty version." : "Name a version with hits or notes in it.")
+                    suggestion: version.type == .sample ? "degrade_part it first, then stitch the dusty version."
+                                                        : "Name a version with hits, notes or chords in it.")
             }
             return id
         }
@@ -216,7 +222,8 @@ public struct StitchSectionTool: DirectorTool {
         "Add one section to the song's form: its name, its bars, the versions stitched into it, and "
         + "where it goes. Use it when a section plays something other than the newest of everything — "
         + "a verse on the first groove and a hook on the second, a bridge with no bass. With versions "
-        + "empty it plays the newest groove, bass line and dusty chop. To state the whole form at once, "
+        + "empty it plays the newest groove, bass line, progression, melody and dusty chop. To state "
+        + "the whole form at once, "
         + "arrange."
     }
     public var schema: DirectorJSON {
@@ -224,7 +231,8 @@ public struct StitchSectionTool: DirectorTool {
             ("name", Schema.string("The section's name: Intro, Verse, Hook, Bridge, Outro, or your own.")),
             ("bars", Schema.integer("Its length in bars.", minimum: 1, maximum: 128)),
             ("versions", Schema.array(
-                "Version ids that play in it, from read_song: grooves, bass lines and dusty chops. Empty for "
+                "Version ids that play in it, from read_song: grooves, bass lines, progressions, melodies "
+                + "and dusty chops. Empty for "
                 + "the newest of each.", of: Schema.string("A version id."))),
             ("position", Schema.integer(
                 "Where it goes: 0 is first, 1 after the first section, and any number past the end appends.",

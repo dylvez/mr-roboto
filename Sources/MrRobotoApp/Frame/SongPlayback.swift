@@ -14,8 +14,8 @@ import SongGraph
 /// This is the missing half, and it is deliberately a *value* computed from the song graph before
 /// any audio is touched, for three reasons:
 ///
-/// * it is what makes "nothing playable" an answer rather than a silent no-op — a song with a lyric
-///   and a progression in it has nothing Gate A can sound, and the transport should say which;
+/// * it is what makes "nothing playable" an answer rather than a silent no-op — a song holding only
+///   a lyric has nothing that can be sounded, and the transport should say which;
 /// * it decides **what** to play without knowing **how**, so the decision is testable on a machine
 ///   with no audio device (`TransportPlanTests`), which is every machine this is built on;
 /// * it is the same shape whether the song has a groove, an audio take, stems, or all three.
@@ -25,10 +25,13 @@ import SongGraph
 /// 1. **A groove** — the newest `.groove` version — plays through `GroovePlayer` into the shared
 ///    `VoiceSampler`, on the machine the song's newest `.sound` part names (the 808 if it names
 ///    none). That is the same engine and the same sampler a Grid step auditions through.
-/// 2. **Audio** — the separated stems if the song has them, otherwise the imported take. Stems
+/// 2. **A bass line**, on its own sampler, through the voice the line names.
+/// 3. **The chords and the tune** — the newest `.progression` and the newest `.melody` — on the
+///    song's one pitched instrument, the `InstrumentVoiceSpec` its newest `.sound` part names.
+/// 4. **Audio** — the separated stems if the song has them, otherwise the imported take. Stems
 ///    rather than the take when both exist, because they *are* the take: playing both would play
 ///    the record twice.
-/// 3. **Both together**, at the song's tempo and meter, when it has both.
+/// 5. **All of it together**, at the song's tempo and meter.
 public struct SongPlayback: Equatable, Sendable {
 
     /// One audio file, placed on the transport's timeline.
@@ -105,10 +108,18 @@ public struct SongPlayback: Equatable, Sendable {
         public var bassline: Bassline?
         public var basslineVersion: VersionID?
         public var bassSound: String?
+        /// The chords the section holds, and the tune over them. Both play on the song's one
+        /// pitched instrument, which is why neither carries a sound of its own.
+        public var progression: Progression?
+        public var progressionVersion: VersionID?
+        public var melody: Melody?
+        public var melodyVersion: VersionID?
         public var chop: ChopTrack?
-        /// Which strips the section's groove and bass line play through (M6).
+        /// Which strips the section's groove, bass line, chords and tune play through (M6).
         public var groovePart: PartID?
         public var basslinePart: PartID?
+        public var progressionPart: PartID?
+        public var melodyPart: PartID?
 
         public var id: SectionID { section }
 
@@ -131,7 +142,9 @@ public struct SongPlayback: Equatable, Sendable {
 
         /// Whether anything in this section makes a sound. A section stitched from nothing is a
         /// rest of its own length, which is a legitimate thing for a form to hold.
-        public var isSounding: Bool { groove != nil || bassline != nil || chop != nil }
+        public var isSounding: Bool {
+            groove != nil || bassline != nil || chop != nil || progression != nil || melody != nil
+        }
         public var endBar: Int { startBar + lengthInBars }
     }
 
@@ -164,10 +177,20 @@ public struct SongPlayback: Equatable, Sendable {
     public var bassline: Bassline?
     public var basslineVersion: VersionID?
     public var bassSound: String?
+    /// The song's newest chords and newest tune, and the pitched instrument both play on: an
+    /// `InstrumentVoiceSpec.id`. One instrument, because a song names one — the Sound surface's
+    /// pick is "for the chords and the tune".
+    public var progression: Progression?
+    public var progressionVersion: VersionID?
+    public var melody: Melody?
+    public var melodyVersion: VersionID?
+    public var instrument: String
     public var tracks: [Track]
-    /// M6: the strips the flat plan's groove and bass line play through, and the mix itself.
+    /// M6: the strips the flat plan's parts play through, and the mix itself.
     public var groovePart: PartID?
     public var basslinePart: PartID?
+    public var progressionPart: PartID?
+    public var melodyPart: PartID?
     /// The newest mix version, or nil for unity.
     public var mix: Mix?
     public var mixVersion: VersionID?
@@ -186,6 +209,7 @@ public struct SongPlayback: Equatable, Sendable {
     public init(tempo: Double = 120, timeSignature: TimeSignature = .fourFour,
                 groove: Groove? = nil, grooveVersion: VersionID? = nil,
                 machine: String = SynthMachine.tr808.id,
+                instrument: String = InstrumentVoiceSpec.rhodes.id,
                 tracks: [Track] = [], silence: Silence? = nil,
                 loops: Bool = false, lengthInBars: Int? = nil,
                 chop: ChopTrack? = nil) {
@@ -196,6 +220,7 @@ public struct SongPlayback: Equatable, Sendable {
         self.grooveChain = groove?.degradation ?? []
         self.chop = chop
         self.machine = machine
+        self.instrument = instrument
         self.tracks = tracks
         self.segments = []
         self.silence = silence
@@ -211,7 +236,8 @@ public struct SongPlayback: Equatable, Sendable {
     }
 
     public var isPlayable: Bool {
-        groove != nil || !tracks.isEmpty || chop != nil || bassline != nil || segments.contains(where: \.isSounding)
+        groove != nil || !tracks.isEmpty || chop != nil || bassline != nil || progression != nil
+            || melody != nil || segments.contains(where: \.isSounding)
     }
 
     /// Whether the transport is playing sections in order rather than the newest of everything.
@@ -242,12 +268,17 @@ public struct SongPlayback: Equatable, Sendable {
             pieces.append("\(segments.count) section\(segments.count == 1 ? "" : "s")")
             if segments.contains(where: { $0.groove != nil }) { pieces.append("Groove") }
             if segments.contains(where: { $0.bassline != nil }) { pieces.append("Bass") }
+            if segments.contains(where: { $0.progression != nil }) { pieces.append("Chords") }
+            if segments.contains(where: { $0.melody != nil }) { pieces.append("Tune") }
             if let chop = segments.first(where: { $0.chop != nil })?.chop { pieces.append(chop.name) }
             return pieces.joined(separator: " · ")
         }
         if groove != nil {
             pieces.append(grooveChain.isEmpty ? "Groove" : "Groove · \(Dust.describe(grooveChain))")
         }
+        if bassline != nil { pieces.append("Bass") }
+        if progression != nil { pieces.append("Chords") }
+        if melody != nil { pieces.append("Tune") }
         if let chop { pieces.append("\(chop.name) · \(Dust.describe(chop.passes))") }
         if tracks.count == 1 { pieces.append(tracks[0].name) }
         else if tracks.count > 1 { pieces.append("\(tracks.count) stems") }
@@ -282,6 +313,7 @@ public struct SongPlayback: Equatable, Sendable {
 
         var plan = SongPlayback(tempo: song.tempo, timeSignature: song.timeSignature)
         plan.machine = machineID(in: song)
+        plan.instrument = instrumentID(in: song)
         plan.lengthInBars = song.lengthInBars > 0 ? song.lengthInBars : nil
         if let version = Guidance.mixes(in: song).last, case .mix(let mix) = version.kind {
             plan.mix = mix
@@ -318,6 +350,23 @@ public struct SongPlayback: Equatable, Sendable {
             plan.basslineVersion = version.id
             plan.bassSound = bassline.sound
             plan.basslinePart = version.partID
+        }
+
+        // The newest chords and the newest tune, both on the song's one pitched instrument. Before
+        // this they were the two kinds you could write, keep, see drawn and audition — and never
+        // hear in the song, because the transport had no way to sound a pitched part at all.
+        if let version = Guidance.progressions(in: song).last, case .progression(let progression) = version.kind,
+           !progression.chords.isEmpty {
+            plan.progression = progression
+            plan.progressionVersion = version.id
+            plan.progressionPart = version.partID
+        }
+
+        if let version = Guidance.melodies(in: song).last, case .melody(let melody) = version.kind,
+           !melody.notes.isEmpty {
+            plan.melody = melody
+            plan.melodyVersion = version.id
+            plan.melodyPart = version.partID
         }
 
         // A dusty chop. Only the newest chop, and only when it has been dirtied: a clean chop is the
@@ -367,10 +416,14 @@ public struct SongPlayback: Equatable, Sendable {
                          region: region, passes: sample.degradation, part: version.partID)
     }
 
-    /// The sections as segments. Each section's stitch is read for the newest groove, the newest
-    /// bass line and the newest dirtied chop it names; anything else in it — a progression, an
-    /// analysis, a sound — is not a thing the transport sounds, and is left to the surfaces that
-    /// draw it. A stem in a stitch is not played either: the record does not run to the form.
+    /// The sections as segments. Each section's stitch is read for the groove, the bass line, the
+    /// chords, the tune and the dirtied chop it names — the five things the transport can sound.
+    /// Anything else in it, an analysis or a sound pick, is not a thing that sounds and is left to
+    /// the surfaces that draw it. A stem in a stitch is not played either: the record does not run
+    /// to the form.
+    ///
+    /// Where a stitch names two of a kind the last wins, as it always has: a `Segment` holds one
+    /// of each, and a section playing two grooves at once is not a form, it is a mistake.
     static func segments(of song: Song, mediaURL: (MediaRef) -> URL?, missingMedia: inout Bool) -> [Segment] {
         var out: [Segment] = []
         var bar = 0
@@ -390,6 +443,14 @@ public struct SongPlayback: Equatable, Sendable {
                     segment.basslineVersion = version.id
                     segment.bassSound = line.sound
                     segment.basslinePart = version.partID
+                case .progression(let progression) where !progression.chords.isEmpty:
+                    segment.progression = progression
+                    segment.progressionVersion = version.id
+                    segment.progressionPart = version.partID
+                case .melody(let melody) where !melody.notes.isEmpty:
+                    segment.melody = melody
+                    segment.melodyVersion = version.id
+                    segment.melodyPart = version.partID
                 case .sample(let sample) where !sample.degradation.isEmpty:
                     if let chop = chopTrack(version, sample, in: song, mediaURL: mediaURL) {
                         segment.chop = chop

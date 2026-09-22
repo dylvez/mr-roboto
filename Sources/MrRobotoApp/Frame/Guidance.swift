@@ -471,6 +471,10 @@ public enum Guidance {
         song.versions.filter { $0.type == .progression }
     }
 
+    public static func melodies(in song: Song) -> [PartVersion] {
+        song.versions.filter { $0.type == .melody }
+    }
+
     /// A chop already cut from this audio version, if there is one.
     public static func chop(of audioID: VersionID, in song: Song) -> PartVersion? {
         song.versions.last { $0.type == .sample && $0.parents.contains(audioID) }

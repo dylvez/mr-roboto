@@ -42,8 +42,8 @@ public protocol StructureHosting: AnyObject {
 @Observable
 public final class StructureModel {
 
-    /// One version that a section can hold: the newest of each groove, bass line and chop part in
-    /// the song, and any older version a section already names.
+    /// One version that a section can hold: the newest of each groove, bass line, progression,
+    /// melody and chop part in the song, and any older version a section already names.
     public struct Layer: Identifiable, Hashable, Sendable {
         public var id: VersionID
         public var title: String
@@ -51,6 +51,32 @@ public final class StructureModel {
         /// A chop only plays on the transport once it has been dirtied; a clean one is the lane's
         /// raw material. Said here so the surface can say it too.
         public var plays: Bool
+
+        /// "Groove", "Bass", "Chords" — what this is, in one word, so a row of chips is readable
+        /// without opening any of them. The version titles are sentences: a groove of this app's
+        /// own writing is called "Brushes under the C loop: kick on 1, brushed accent on 3, …",
+        /// which says everything about the part and nothing about which part it is.
+        public var kind: String { StructureModel.name(of: type) }
+
+        /// Why it does not play, in a word, or nil when it does. A clean chop is "dry" — the lane's
+        /// raw material, waiting to be dirtied; anything else silent is simply "empty", and saying
+        /// "dry" about a melody, as this surface used to, is not a word about melodies at all.
+        public var silentReason: String? {
+            guard !plays else { return nil }
+            return type == .sample ? "dry" : "empty"
+        }
+    }
+
+    /// The one-word name of a part kind, as this surface says it.
+    public nonisolated static func name(of type: PartType) -> String {
+        switch type {
+        case .groove: return "Groove"
+        case .bassline: return "Bass"
+        case .progression: return "Chords"
+        case .melody: return "Tune"
+        case .sample: return "Chop"
+        default: return type.rawValue.capitalized
+        }
     }
 
     /// The shapes a section is usually added in.
@@ -88,10 +114,13 @@ public final class StructureModel {
         tempo = song?.tempo ?? 90
         timeSignature = song?.timeSignature ?? .fourFour
         let current = song?.sections ?? []
-        sections = current
+        let built = song.map(Self.layers(in:)) ?? []
+        layers = built
+        // The working copy is tidied; `committed` is the song's own, so a form that named two of a
+        // kind shows as dirty and Keep writes back the one that was sounding.
+        sections = current.map { Self.normalised($0, layer: { id in built.first { $0.id == id } }) }
         committed = current
         selected = current.first?.id
-        layers = song.map(Self.layers(in:)) ?? []
     }
 
     /// Follows the song: a part adopted or a section stitched from outside this surface — a drop, the
@@ -103,7 +132,7 @@ public final class StructureModel {
         let wasClean = !isDirty
         committed = current
         if wasClean {
-            sections = current
+            sections = normalised(current)
             if selected.map({ id in sections.contains { $0.id == id } }) != true { selected = sections.first?.id }
         }
     }
@@ -133,6 +162,44 @@ public final class StructureModel {
     /// The layers a section names, in the order the stitch holds them; a version the song no
     /// longer resolves is skipped rather than drawn as a hole.
     public func layers(of section: Section) -> [Layer] { section.stitch.compactMap(layer) }
+
+    /// The layers a section holds, grouped by kind in `playableTypes` order, with every kind the
+    /// song offers present even when the section names none of it. This is what the surface draws:
+    /// one row per kind, so "what does this section play" is answered by reading down a column
+    /// rather than by recognising version titles.
+    public func choices(for section: Section) -> [(type: PartType, layers: [Layer])] {
+        Self.playableTypes.compactMap { type in
+            let matching = layers.filter { $0.type == type }
+            return matching.isEmpty ? nil : (type, matching)
+        }
+    }
+
+    /// The kinds a section actually sounds, in order: "Groove · Bass · Chords".
+    public func kinds(of section: Section) -> [String] {
+        Self.playableTypes.compactMap { type in
+            layers(of: section).contains { $0.type == type && $0.plays } ? Self.name(of: type) : nil
+        }
+    }
+
+    /// Kinds the song has something playable of that this section does not play.
+    ///
+    /// The whole reason this surface got rebuilt: a song can hold three progressions and a chosen
+    /// pad, and a form written before any of that was stitchable plays the drums and the bass and
+    /// nothing else — silently, with no line anywhere saying the chords are sitting this one out.
+    public func missing(from section: Section) -> [PartType] {
+        let present = Set(layers(of: section).filter(\.plays).map(\.type))
+        return Self.playableTypes.filter { type in
+            !present.contains(type) && layers.contains { $0.type == type && $0.plays }
+        }
+    }
+
+    /// The same, as words: "chords and a tune".
+    public func missingText(from section: Section) -> String? {
+        let names = missing(from: section).map { Self.name(of: $0).lowercased() }
+        guard !names.isEmpty else { return nil }
+        if names.count == 1 { return names[0] }
+        return names.dropLast().joined(separator: ", ") + " and " + names[names.count - 1]
+    }
 
     /// Why a section would play nothing, or nil when it plays.
     public func silence(of section: Section) -> String? {
@@ -164,11 +231,11 @@ public final class StructureModel {
         return section
     }
 
-    /// What a new section plays: the newest groove, the newest bass line and the newest dirtied
-    /// chop in the song — the same choice the transport makes for an unarranged song.
+    /// What a new section plays: the newest groove, bass line, chords, tune and dirtied chop in the
+    /// song — the same choice the transport makes for an unarranged song, and in the same order.
     public var defaultStitch: [VersionID] {
         var out: [VersionID] = []
-        for type in [PartType.groove, .bassline, .sample] {
+        for type in Self.playableTypes {
             if let layer = layers.last(where: { $0.type == type && $0.plays }) { out.append(layer.id) }
         }
         return out
@@ -227,13 +294,63 @@ public final class StructureModel {
     }
 
     /// Puts a version into a section's stitch, or takes it out.
+    ///
+    /// One of a kind: choosing a second bass line replaces the first rather than joining it. That
+    /// is not a rule invented here — it is what the transport has always done, because `Segment`
+    /// holds one groove, one bass line, one progression, one tune and one chop, and a stitch naming
+    /// two of a kind quietly played the last of them. Two chips lit and one part sounding is
+    /// exactly the kind of lie this surface should not tell.
     public func toggle(_ version: VersionID, in id: SectionID) {
+        let type = layer(version)?.type
         update(id) { section in
             if let at = section.stitch.firstIndex(of: version) {
                 section.stitch.remove(at: at)
             } else {
+                if let type { section.stitch.removeAll { self.layer($0)?.type == type } }
                 section.stitch.append(version)
             }
+        }
+    }
+
+    /// A section holding at most one version of each kind: what it has always actually played.
+    ///
+    /// Forms written before the stitch was one-of-a-kind can name two grooves or two bass lines,
+    /// and the transport has always sounded exactly one — the last of that kind it can sound,
+    /// which is the rule `SongPlayback.segments(of:)` encodes by overwriting as it reads. Keeping
+    /// the working copy in that shape is what lets a chip mean "this plays" rather than "this is
+    /// mentioned"; the surface then shows the form as dirty, because tidying it is a change, and
+    /// Keep writes back what you have been hearing all along.
+    static func normalised(_ section: Section, layer: (VersionID) -> Layer?) -> Section {
+        var keep: [PartType: VersionID] = [:]
+        for id in section.stitch {
+            guard let found = layer(id) else { continue }
+            // The last that plays wins; with none that plays, the last of the kind stands in, so a
+            // section naming only a dry chop still shows the chop rather than emptying itself.
+            if found.plays || keep[found.type].flatMap({ layer($0)?.plays }) != true {
+                keep[found.type] = id
+            }
+        }
+        var tidied = section
+        let kept = Set(keep.values)
+        var seen = Set<VersionID>()
+        tidied.stitch = section.stitch.filter { id in
+            guard layer(id) != nil else { return true }   // a version this surface does not offer is left alone
+            return kept.contains(id) && seen.insert(id).inserted
+        }
+        return tidied
+    }
+
+    private func normalised(_ sections: [Section]) -> [Section] {
+        sections.map { Self.normalised($0, layer: layer) }
+    }
+
+    /// Stitches the newest playable version of every kind this section is missing into it: the
+    /// same choice `defaultStitch` makes for a new section, offered to one that already exists.
+    public func fill(_ id: SectionID) {
+        guard let section = sections.first(where: { $0.id == id }) else { return }
+        for type in missing(from: section) {
+            guard let layer = layers.last(where: { $0.type == type && $0.plays }) else { continue }
+            toggle(layer.id, in: id)
         }
     }
 
@@ -270,6 +387,11 @@ public final class StructureModel {
 
     // MARK: Helpers
 
+    /// The part kinds the transport can sound, in the order a section stitches them. Kept beside
+    /// `SongPlayback.segments(of:)`, which reads exactly these out of a stitch: a kind offered here
+    /// that the transport ignores is a section that looks like it plays and does not.
+    nonisolated static let playableTypes: [PartType] = [.groove, .bassline, .progression, .melody, .sample]
+
     /// The newest version of every part that can play on the transport, oldest part first, plus
     /// any older version a section already names.
     static func layers(in song: Song) -> [Layer] {
@@ -278,7 +400,7 @@ public final class StructureModel {
         let named = Set(song.sections.flatMap(\.stitch))
         for partID in song.partIDs {
             let versions = song.versions(of: partID)
-            guard let newest = versions.last, [PartType.groove, .bassline, .sample].contains(newest.type) else { continue }
+            guard let newest = versions.last, playableTypes.contains(newest.type) else { continue }
             for version in versions where version.id == newest.id || named.contains(version.id) {
                 guard seen.insert(version.id).inserted else { continue }
                 out.append(Layer(id: version.id, title: label(of: version, in: song), type: version.type,
@@ -292,6 +414,8 @@ public final class StructureModel {
         switch version.kind {
         case .groove(let groove): return groove.patterns.contains { $0.steps.contains { $0 != .rest } }
         case .bassline(let line): return !line.notes.isEmpty
+        case .progression(let progression): return !progression.chords.isEmpty
+        case .melody(let melody): return !melody.notes.isEmpty
         case .sample(let sample): return !sample.degradation.isEmpty
         default: return false
         }

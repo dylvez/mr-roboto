@@ -164,6 +164,136 @@ struct TransportPlaybackTests {
         await teardown(player, service, engine)
     }
 
+    // MARK: The chords and the tune
+
+    // The user-visible bug, end to end: a song whose form held chords played the drums and nothing
+    // else. These render the whole path — plan, `LiveSongPlayer`, the shared instrument sampler,
+    // the graph — and ask whether the harmony actually came out.
+
+    @Test("A song of nothing but chords makes a sound: the transport sounds the harmony")
+    @AudioActor
+    func chordsSound() async throws {
+        let kits = TransportFixture.temporaryDirectory("kits-chords")
+        defer { try? FileManager.default.removeItem(at: kits) }
+        let engine = try engine()
+        let service = AuditionService(engine: { engine }, kitsDirectory: kits)
+        let player = LiveSongPlayer(service: service)
+
+        var plan = SongPlayback(tempo: 120)
+        plan.progression = TransportFixture.progression()
+        plan.instrument = InstrumentVoiceSpec.rhodes.id
+        plan.lengthInBars = 4
+
+        try await player.begin(plan, clock: clock)
+        _ = try engine.startTransport(clock: clock)
+
+        let reading = await player.reading()
+        #expect(reading.isRunning)
+        #expect(reading.scheduledHits > 0, "the keys player queued nothing at transport start")
+
+        // Four bars at 120 bpm is eight seconds; bar 2 falls at 2 s, so render past it.
+        let out = try OfflineRenderer.renderBuffer(engine: engine,
+                                                   frames: AVAudioFramePosition(3 * Self.sampleRate))
+        #expect(peak(out, from: 0, to: 3) > 0.001, "nothing came out of the graph")
+        // A chord on each downbeat, not one chord ringing for the whole pass.
+        #expect(peak(out, from: 0, to: 0.1) > 0.001, "no chord on bar 1")
+        #expect(peak(out, from: 2.0, to: 2.1) > 0.001, "no chord on bar 2")
+
+        await teardown(player, service, engine)
+    }
+
+    @Test("An arranged song plays its sections' chords, and the drums do not drown the plan")
+    @AudioActor
+    func arrangedChordsSound() async throws {
+        let kits = TransportFixture.temporaryDirectory("kits-form")
+        defer { try? FileManager.default.removeItem(at: kits) }
+        let engine = try engine()
+        let service = AuditionService(engine: { engine }, kitsDirectory: kits)
+        let player = LiveSongPlayer(service: service)
+
+        // The shape of the song this was found in: a four-bar intro of chords alone, then a loop
+        // with the groove under them. The intro is the proof — if only the drums are wired up, the
+        // first four bars are silence.
+        var intro = SongPlayback.Segment(section: SectionID(), name: "Intro", startBar: 0, lengthInBars: 4)
+        intro.progression = TransportFixture.progression()
+        var loop = SongPlayback.Segment(section: SectionID(), name: "Loop", startBar: 4, lengthInBars: 4,
+                                        groove: TransportFixture.groove())
+        loop.progression = TransportFixture.progression()
+
+        var plan = SongPlayback(tempo: 120)
+        plan.segments = [intro, loop]
+        plan.instrument = InstrumentVoiceSpec.rhodes.id
+        plan.lengthInBars = 8
+
+        try await player.begin(plan, clock: clock)
+        _ = try engine.startTransport(clock: clock)
+        #expect(await player.reading().scheduledHits > 0)
+
+        // Eight bars at 120 bpm is sixteen seconds; three covers the chords-only intro.
+        let out = try OfflineRenderer.renderBuffer(engine: engine,
+                                                   frames: AVAudioFramePosition(3 * Self.sampleRate))
+        #expect(peak(out, from: 0, to: 3) > 0.001,
+                "the intro is chords alone: if it is silent, the form is playing drums and nothing else")
+
+        await teardown(player, service, engine)
+    }
+
+    @Test("The whole band at once: drums, bass and chords each add to what comes out")
+    @AudioActor
+    func everythingAtOnce() async throws {
+        let kits = TransportFixture.temporaryDirectory("kits-band")
+        defer { try? FileManager.default.removeItem(at: kits) }
+
+        /// One plan, rendered for three seconds, as total energy rather than peak: a part that is
+        /// quiet but present still moves this, and a part routed into nowhere cannot.
+        func energy(_ build: (inout SongPlayback) -> Void) async throws -> Double {
+            let engine = try engine()
+            let service = AuditionService(engine: { engine }, kitsDirectory: kits)
+            let player = LiveSongPlayer(service: service)
+            var plan = SongPlayback(tempo: 120)
+            plan.instrument = InstrumentVoiceSpec.rhodes.id
+            plan.lengthInBars = 4
+            build(&plan)
+            try await player.begin(plan, clock: clock)
+            _ = try engine.startTransport(clock: clock)
+            let out = try OfflineRenderer.renderBuffer(engine: engine,
+                                                       frames: AVAudioFramePosition(3 * Self.sampleRate))
+            var sum = 0.0
+            if let data = out.floatChannelData {
+                for frame in 0..<Int(out.frameLength) {
+                    let sample = Double(data[0][frame * out.stride])
+                    sum += sample * sample
+                }
+            }
+            await teardown(player, service, engine)
+            return sum
+        }
+
+        let drums = try await energy { $0.groove = TransportFixture.groove() }
+        let bass = try await energy {
+            $0.bassline = Bassline(notes: [NoteEvent(pitch: Pitch(midi: 40), start: 0, duration: 3.5),
+                                           NoteEvent(pitch: Pitch(midi: 45), start: 4, duration: 3.5)],
+                                   sound: "finger")
+        }
+        let chords = try await energy { $0.progression = TransportFixture.progression() }
+        let all = try await energy {
+            $0.groove = TransportFixture.groove()
+            $0.bassline = Bassline(notes: [NoteEvent(pitch: Pitch(midi: 40), start: 0, duration: 3.5),
+                                           NoteEvent(pitch: Pitch(midi: 45), start: 4, duration: 3.5)],
+                                   sound: "finger")
+            $0.progression = TransportFixture.progression()
+        }
+
+        #expect(drums > 0, "the drums alone made no sound")
+        #expect(bass > 0, "the bass alone made no sound")
+        #expect(chords > 0, "the chords alone made no sound")
+        // Each part is still there when the others are: three sources on three samplers into one
+        // mixer, not three taking turns at one bus.
+        #expect(all > drums, "adding bass and chords to the drums changed nothing: a part is being dropped")
+        #expect(all > bass, "adding drums and chords to the bass changed nothing")
+        #expect(all > chords, "adding drums and bass to the chords changed nothing")
+    }
+
     // MARK: A take
 
     @Test("A song with a take plays it, from the transport position it was placed at")

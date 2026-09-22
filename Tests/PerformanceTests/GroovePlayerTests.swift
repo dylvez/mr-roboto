@@ -7,6 +7,19 @@ import SongGraph
 import Testing
 @testable import Performance
 
+/// What the offline host can drive. `ScheduledSource` itself takes a `Transport`, which only a real
+/// `Engine` has; every player in this module also offers the two calls below, which is all a
+/// manual-rendering host needs.
+@AudioActor
+protocol OfflineDrivable: AnyObject {
+    func transportDidStart(originSampleTime: Int64, sampleRate: Double)
+    func schedule(through seconds: Double)
+}
+
+extension GroovePlayer: OfflineDrivable {}
+extension BasslinePlayer: OfflineDrivable {}
+extension KeysPlayer: OfflineDrivable {}
+
 /// A manual-rendering host for one `VoiceSampler`, the same shape `AudioEngine.Engine` gives it:
 /// transport zero anchored at the current render position, sources asked to schedule ahead of every
 /// chunk, chunked `renderOffline`. No audio device, which is what this machine's automated shells
@@ -35,7 +48,7 @@ final class OfflineGrooveHost {
 
     /// Start the transport and give `source` its first look-ahead window, exactly as
     /// `Engine.startTransport` does.
-    func startTransport(_ source: GroovePlayer) {
+    func startTransport(_ source: any OfflineDrivable) {
         originSampleTime = av.manualRenderingSampleTime
         source.transportDidStart(originSampleTime: Int64(originSampleTime), sampleRate: sampleRate)
         source.schedule(through: lookAhead)
@@ -47,7 +60,7 @@ final class OfflineGrooveHost {
 
     /// Render `seconds` of audio, asking `source` to schedule ahead before every chunk.
     @discardableResult
-    func render(seconds: Double, driving source: GroovePlayer) throws -> Float {
+    func render(seconds: Double, driving source: any OfflineDrivable) throws -> Float {
         let total = AVAudioFramePosition((seconds * sampleRate).rounded())
         let maxFrames = av.manualRenderingMaximumFrameCount
         let chunk = try #require(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: maxFrames))

@@ -95,7 +95,8 @@ public enum DirectorPrompt {
 
         A form — an intro, a verse, a hook, "make this two minutes" — is arranged with arrange: one \
         line of sections and their bars, "intro 4 | verse 16 | hook 8 | verse 16 | hook 8 | outro 4". \
-        Each section plays the song's newest groove, bass line and dusty chop, and a repeated name \
+        Each section plays the song's newest groove, bass line, progression, melody and dusty chop, \
+        and a repeated name \
         plays the same stitch. Bars come from the tempo — a bar of 4/4 at 92 bpm is 2.6 seconds, so \
         two minutes is 46 bars — and you say the arithmetic. stitch_section adds one section with the \
         versions you name when a section plays something other than the newest. Sections are the \

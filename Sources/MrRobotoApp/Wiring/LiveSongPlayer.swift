@@ -21,6 +21,10 @@ import SongGraph
 /// * a **groove** becomes a `Performance.GroovePlayer` on the shared sampler, added to the engine as
 ///   a `ScheduledSource` so the engine's own look-ahead drives it — the same path `GroovePlayerTests`
 ///   exercises, and the same one a Grid pattern loops through;
+/// * a **bass line** becomes a `Performance.BasslinePlayer` on the shared bass sampler;
+/// * the **chords** and the **tune** become `Performance.KeysPlayer`s on the shared instrument
+///   sampler — the same one the Chords surface and the Piano roll audition through, so what the
+///   form plays back is what you heard when you wrote it;
 /// * each **audio track** becomes an `AudioTrackSource` on one of the engine's player nodes, placed
 ///   at its transport time.
 ///
@@ -51,11 +55,14 @@ final class LiveSongPlayer: SongPlaybackHost {
     private var engine: Engine?
     private var groovePlayer: GroovePlayer?
     private var bassPlayer: BasslinePlayer?
+    /// The chords and the tune, in that order, on the one instrument sampler.
+    private var keysPlayers: [KeysPlayer] = []
     private var tracks: [AudioTrackSource] = []
-    /// An arranged song's players: one groove and one bass player per section that has one, all
-    /// on the two shared samplers, and one sequence per dusty kind on a player node.
+    /// An arranged song's players: one groove, one bass and up to two keys players per section that
+    /// has them, all on the three shared samplers, and one sequence per dusty kind on a player node.
     private var sectionGrooves: [GroovePlayer] = []
     private var sectionBasses: [BasslinePlayer] = []
+    private var sectionKeys: [KeysPlayer] = []
     private var sequences: [SequenceTrackSource] = []
     /// Hits a dusty groove's bounce held, reported as scheduled: the bounce is the groove, so the
     /// reading must not say nothing was scheduled because no `GroovePlayer` was involved.
@@ -109,6 +116,30 @@ final class LiveSongPlayer: SongPlaybackHost {
             bassPlayer = player
         }
 
+        // The chords and the tune, on one sampler. Two players rather than one merged phrase, so
+        // each keeps its own loop length: four bars of chords under an eight-bar melody is a normal
+        // thing to write, and flattening them together would force one length on both.
+        if plan.progression != nil || plan.melody != nil {
+            let spec = InstrumentVoiceSpec.preset(id: plan.instrument) ?? .rhodes
+            let sampler = try await service.playbackInstrumentSampler(spec)
+            try Self.route(sampler.node, part: plan.progressionPart ?? plan.melodyPart, on: graph)
+            let timeline = GrooveTimeline.tempo(clock.tempo, timeSignature: clock.timeSignature)
+            if let progression = plan.progression {
+                let player = KeysPlayer(sampler: sampler, progression: progression, timeline: timeline)
+                player.bars = plan.loops ? nil : plan.lengthInBars
+                engine.add(player)
+                keysPlayers.append(player)
+            }
+            if let melody = plan.melody {
+                let player = KeysPlayer(sampler: sampler, melody: melody, timeline: timeline)
+                player.bars = plan.loops ? nil : plan.lengthInBars
+                // One sampler, two players: only the first forwards the transport to it.
+                player.drivesSampler = keysPlayers.isEmpty
+                engine.add(player)
+                keysPlayers.append(player)
+            }
+        }
+
         for (index, track) in plan.tracks.enumerated() {
             guard index < engine.players.count else { break }
             let buffer: AVAudioPCMBuffer
@@ -160,12 +191,15 @@ final class LiveSongPlayer: SongPlaybackHost {
             next += 1
         }
 
-        guard groovePlayer != nil || bassPlayer != nil || !tracks.isEmpty else { throw Failure.nothingScheduled }
+        guard groovePlayer != nil || bassPlayer != nil || !keysPlayers.isEmpty || !tracks.isEmpty else {
+            throw Failure.nothingScheduled
+        }
 
         // When only audio is playing and nothing loops, the plan has an end; a groove loops (or runs
         // to the song's length, which `GroovePlayer.endTime` already knows) so the reading below
         // asks it rather than guessing.
         endsAt = plan.loops ? nil : Self.end(of: plan, groove: groovePlayer, bass: bassPlayer,
+                                             keys: keysPlayers,
                                              longestTrack: tracks.map { $0.startsAt + $0.duration }.max())
     }
 
@@ -186,6 +220,7 @@ final class LiveSongPlayer: SongPlaybackHost {
 
         var drumSampler: VoiceSampler?
         var bassSampler: VoiceSampler?
+        var keysSampler: VoiceSampler?
         var bounces: [(AVAudioPCMBuffer, Double)] = []
         var chops: [(AVAudioPCMBuffer, Double)] = []
 
@@ -228,6 +263,31 @@ final class LiveSongPlayer: SongPlaybackHost {
                 engine.add(player)
                 sectionBasses.append(player)
             }
+            // The chords and the tune. One sampler for every section's, as above: the song names
+            // one pitched instrument, so a verse's pad and a hook's pad are the same pad.
+            if segment.progression != nil || segment.melody != nil {
+                if keysSampler == nil {
+                    let spec = InstrumentVoiceSpec.preset(id: plan.instrument) ?? .rhodes
+                    keysSampler = try await service.playbackInstrumentSampler(spec)
+                    try Self.route(keysSampler?.node,
+                                   part: segment.progressionPart ?? segment.melodyPart, on: graph)
+                }
+                func place(_ player: KeysPlayer) {
+                    player.bars = segment.lengthInBars
+                    player.clipsToBars = true
+                    player.cycleBeats = cycleBeats
+                    // One sampler, many players: only the first forwards the transport to it.
+                    player.drivesSampler = sectionKeys.isEmpty
+                    engine.add(player)
+                    sectionKeys.append(player)
+                }
+                if let progression = segment.progression {
+                    place(KeysPlayer(sampler: keysSampler!, progression: progression, timeline: timeline))
+                }
+                if let melody = segment.melody {
+                    place(KeysPlayer(sampler: keysSampler!, melody: melody, timeline: timeline))
+                }
+            }
             if let chop = segment.chop {
                 let buffer: AVAudioPCMBuffer
                 do {
@@ -252,7 +312,8 @@ final class LiveSongPlayer: SongPlaybackHost {
             next += 1
         }
 
-        guard !sectionGrooves.isEmpty || !sectionBasses.isEmpty || !sequences.isEmpty else {
+        guard !sectionGrooves.isEmpty || !sectionBasses.isEmpty || !sectionKeys.isEmpty
+                || !sequences.isEmpty else {
             throw Failure.nothingScheduled
         }
         endsAt = plan.loops ? nil : plan.formSeconds
@@ -263,22 +324,28 @@ final class LiveSongPlayer: SongPlaybackHost {
             (try? engine.mixGraph())?.releaseSlots()
             if let groovePlayer { engine.remove(groovePlayer) }
             if let bassPlayer { engine.remove(bassPlayer) }
+            for player in keysPlayers { engine.remove(player) }
             for track in tracks { engine.remove(track) }
             for player in sectionGrooves { engine.remove(player) }
             for player in sectionBasses { engine.remove(player) }
+            for player in sectionKeys { engine.remove(player) }
             for source in sequences { engine.remove(source) }
         }
         groovePlayer?.transportWillStop()
         bassPlayer?.transportWillStop()
+        for player in keysPlayers { player.transportWillStop() }
         for track in tracks { track.transportWillStop() }
         for player in sectionGrooves { player.transportWillStop() }
         for player in sectionBasses { player.transportWillStop() }
+        for player in sectionKeys { player.transportWillStop() }
         for source in sequences { source.transportWillStop() }
         groovePlayer = nil
         bassPlayer = nil
+        keysPlayers = []
         tracks = []
         sectionGrooves = []
         sectionBasses = []
+        sectionKeys = []
         sequences = []
         bouncedHits = 0
         endsAt = nil
@@ -309,7 +376,10 @@ final class LiveSongPlayer: SongPlaybackHost {
         // Negative during the realtime lead time, when transport zero is still in the future.
         let seconds = max(0, engine.transportSeconds ?? 0)
         let hits = (groovePlayer?.scheduledHitCount ?? 0) + (bassPlayer?.scheduledHitCount ?? 0) + bouncedHits
-            + sectionGrooves.reduce(0) { $0 + $1.scheduledHitCount } + sectionBasses.reduce(0) { $0 + $1.scheduledHitCount }
+            + keysPlayers.reduce(0) { $0 + $1.scheduledHitCount }
+            + sectionGrooves.reduce(0) { $0 + $1.scheduledHitCount }
+            + sectionBasses.reduce(0) { $0 + $1.scheduledHitCount }
+            + sectionKeys.reduce(0) { $0 + $1.scheduledHitCount }
         if let endsAt, seconds >= endsAt {
             return PlaybackReading(isRunning: false, seconds: endsAt, scheduledHits: hits)
         }
@@ -319,7 +389,7 @@ final class LiveSongPlayer: SongPlaybackHost {
     // MARK: Internals
 
     private static func end(of plan: SongPlayback, groove: GroovePlayer?, bass: BasslinePlayer?,
-                            longestTrack: Double?) -> Double? {
+                            keys: [KeysPlayer], longestTrack: Double?) -> Double? {
         let audio = [plan.audioDuration, longestTrack].compactMap { $0 }.max()
         var end = audio
         if let groove {
@@ -329,6 +399,10 @@ final class LiveSongPlayer: SongPlaybackHost {
         if let bass {
             guard let bassEnd = bass.endTime else { return nil }
             end = max(bassEnd, end ?? 0)
+        }
+        for player in keys {
+            guard let keysEnd = player.endTime else { return nil }
+            end = max(keysEnd, end ?? 0)
         }
         return end
     }

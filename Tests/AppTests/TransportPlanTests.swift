@@ -44,6 +44,35 @@ enum TransportFixture {
                     operation: Operation.regroove, note: "four on the floor")
     }
 
+    /// Four bars of Cmaj7 | Am7 | Fmaj7 | G7: chords that plainly sound, so "the chords are silent"
+    /// is a different case from "there are no chords".
+    static func progression() -> Progression {
+        Progression(key: Key(tonic: NoteName(.c)), bars: [
+            ProgressionBar(Chord(.c, .majorSeventh)),
+            ProgressionBar(Chord(.a, .minorSeventh)),
+            ProgressionBar(Chord(.f, .majorSeventh)),
+            ProgressionBar(Chord(.g, .dominantSeventh)),
+        ])
+    }
+
+    static func progressionVersion(_ progression: Progression = TransportFixture.progression()) -> PartVersion {
+        PartVersion(partID: PartID(), kind: .progression(progression), author: .user,
+                    operation: Operation.written, note: "the changes")
+    }
+
+    static func melodyVersion(_ melody: Melody = Melody(notes: [
+        NoteEvent(pitch: Pitch(midi: 72), start: 0, duration: 1),
+        NoteEvent(pitch: Pitch(midi: 74), start: 2, duration: 2),
+    ])) -> PartVersion {
+        PartVersion(partID: PartID(), kind: .melody(melody), author: .user,
+                    operation: Operation.written, note: "the tune")
+    }
+
+    static func soundVersion(_ instrument: String) -> PartVersion {
+        PartVersion(partID: PartID(), kind: .sound(Sound(instrument: instrument)), author: .user,
+                    operation: Operation.written)
+    }
+
     /// A hex character, so every fixture's `ContentHash` is a valid one and distinct.
     static func hex(_ index: Int) -> Character {
         Array("abcdef0123456789")[index % 16]
@@ -264,6 +293,86 @@ struct TransportPlanTests {
                                      mediaURL: TransportFixture.resolver(media))
         #expect(plan.isPlayable == false)
         #expect(try #require(plan.silence).headline.contains("is empty"))
+    }
+
+    // MARK: The chords and the tune
+
+    // The bug: a song could hold a progression, a melody and a chosen pad, and the transport would
+    // play the drums and nothing else. Chords were writable, keepable, drawable and auditionable —
+    // and had no way onto the transport at all.
+
+    @Test("Chords are playable: the newest progression reaches the plan, and the summary says so")
+    func chordsPlay() {
+        let plan = SongPlayback.plan(for: TransportFixture.song([TransportFixture.progressionVersion()]),
+                                     mediaURL: TransportFixture.resolver(nil))
+
+        #expect(plan.isPlayable, "a song of chords is a song that makes a sound")
+        #expect(plan.silence == nil)
+        #expect(plan.progression?.chords.count == 4)
+        #expect(plan.progressionVersion != nil)
+        #expect(plan.summary.contains("Chords"))
+    }
+
+    @Test("A tune is playable on its own, and alongside the chords it shares an instrument with")
+    func theTunePlays() {
+        let chordsOnly = SongPlayback.plan(for: TransportFixture.song([TransportFixture.melodyVersion()]),
+                                           mediaURL: TransportFixture.resolver(nil))
+        #expect(chordsOnly.isPlayable)
+        #expect(chordsOnly.melody?.notes.count == 2)
+        #expect(chordsOnly.summary.contains("Tune"))
+
+        let both = SongPlayback.plan(for: TransportFixture.song([TransportFixture.grooveVersion(),
+                                                                 TransportFixture.progressionVersion(),
+                                                                 TransportFixture.melodyVersion()]),
+                                     mediaURL: TransportFixture.resolver(nil))
+        #expect(both.groove != nil)
+        #expect(both.progression != nil)
+        #expect(both.melody != nil)
+        #expect(both.summary == "Groove · Chords · Tune")
+    }
+
+    @Test("An empty progression is not a sound, the way an empty groove is not")
+    func silentChords() {
+        let empty = TransportFixture.progressionVersion(Progression(key: Key(tonic: NoteName(.c)), bars: []))
+        let plan = SongPlayback.plan(for: TransportFixture.song([empty]),
+                                     mediaURL: TransportFixture.resolver(media))
+        #expect(plan.isPlayable == false)
+        #expect(plan.progression == nil)
+    }
+
+    @Test("The song's own Sound part decides which instrument the chords and the tune play on")
+    func theSongsInstrument() {
+        let bare = SongPlayback.plan(for: TransportFixture.song([TransportFixture.progressionVersion()]),
+                                     mediaURL: TransportFixture.resolver(nil))
+        #expect(bare.instrument == InstrumentVoiceSpec.rhodes.id, "a song that never chose gets the Rhodes")
+
+        let chosen = SongPlayback.plan(for: TransportFixture.song([TransportFixture.progressionVersion(),
+                                                                   TransportFixture.soundVersion(InstrumentVoiceSpec.warmPad.id)]),
+                                       mediaURL: TransportFixture.resolver(nil))
+        #expect(chosen.instrument == InstrumentVoiceSpec.warmPad.id)
+        // A drum machine is not an instrument pick, and does not displace one.
+        #expect(chosen.machine == SynthMachine.tr808.id)
+    }
+
+    @Test("A stitched progression reaches its section, with the bars the section says")
+    func chordsInASection() throws {
+        let chords = TransportFixture.progressionVersion()
+        let groove = TransportFixture.grooveVersion()
+        let song = TransportFixture.song([groove, chords], sections: [
+            Section(name: "Intro", stitch: [chords.id], lengthInBars: 4),
+            Section(name: "Loop", stitch: [groove.id, chords.id], lengthInBars: 16),
+        ])
+        let plan = SongPlayback.plan(for: song, mediaURL: TransportFixture.resolver(nil))
+
+        #expect(plan.isArranged)
+        #expect(plan.isPlayable)
+        let intro = try #require(plan.segments.first)
+        #expect(intro.progression != nil)
+        #expect(intro.groove == nil)
+        #expect(intro.isSounding, "an intro of chords alone is four bars of chords, not four bars of rest")
+        #expect(plan.segments[1].progression != nil)
+        #expect(plan.segments[1].groove != nil)
+        #expect(plan.summary.contains("Chords"))
     }
 
     @Test("The loop flag is carried into the plan rather than being a light nothing reads")

@@ -78,11 +78,19 @@ public final class MixerModel {
         }
         add(plan.groovePart, "Groove")
         add(plan.basslinePart, "Bass")
+        // The chords and the tune have strips too. They always did — `LiveSongPlayer` routes the
+        // instrument sampler through `progressionPart ?? melodyPart`, so they have been taking a
+        // slot in the graph since the transport learned to play them — but this list never named
+        // them, so the Mixer drew no fader for the one part you could hear and not touch.
+        add(plan.progressionPart, "Chords")
+        add(plan.melodyPart, "Tune")
         add(plan.chop?.part, plan.chop?.name ?? "Chop")
         for track in plan.tracks { add(track.part, track.name) }
         for segment in plan.segments {
             add(segment.groovePart, "Groove")
             add(segment.basslinePart, "Bass")
+            add(segment.progressionPart, "Chords")
+            add(segment.melodyPart, "Tune")
             add(segment.chop?.part, segment.chop?.name ?? "Chop")
         }
         for strip in mix.strips { add(strip.part, strip.label) }

@@ -19,6 +19,7 @@ enum FormFixture {
         var song: Song
         var groove: VersionID
         var bass: VersionID
+        var progression: VersionID
         var dryChop: VersionID
     }
 
@@ -42,7 +43,9 @@ enum FormFixture {
         let bassVersion = PartVersion(partID: PartID(), kind: .bassline(bassline), author: .persona("Bassist"),
                                       parents: [grooveVersion.id], operation: Operation.written, note: "Palladino line")
         try? built.song.append(bassVersion)
-        return Built(song: built.song, groove: grooveVersion.id, bass: bassVersion.id, dryChop: built.sample!.id)
+        let progression = built.song.versions.first { $0.type == .progression }!.id
+        return Built(song: built.song, groove: grooveVersion.id, bass: bassVersion.id,
+                     progression: progression, dryChop: built.sample!.id)
     }
 
     static func app(_ built: Built, in directory: URL) -> AppState {
@@ -80,19 +83,95 @@ struct StructureModelTests {
     func layersAndDefaultStitch() throws {
         let (model, built) = model()
         let types = Set(model.layers.map(\.type))
-        #expect(types.isSubset(of: [.groove, .bassline, .sample]))
+        #expect(types.isSubset(of: Set(StructureModel.playableTypes)))
         #expect(model.layers.contains { $0.id == built.groove && $0.plays })
         #expect(model.layers.contains { $0.id == built.bass && $0.plays })
+        #expect(model.layers.contains { $0.id == built.progression && $0.plays },
+                "the chords are offered, and they play: the transport sounds them")
         #expect(model.layers.contains { $0.id == built.dryChop && !$0.plays }, "the dry chop is offered, and said not to play")
         #expect(model.isEmpty)
 
         let verse = model.add(.verse)
         #expect(verse.lengthInBars == 16)
-        #expect(verse.stitch == [built.groove, built.bass], "the newest groove and bass line; the dry chop is not stitched")
+        #expect(verse.stitch == [built.groove, built.bass, built.progression],
+                "the newest groove, bass line and chords; the dry chop is not stitched")
         #expect(model.sections.count == 1)
         #expect(model.selected == verse.id)
         #expect(model.isDirty)
         #expect(model.silence(of: verse) == nil)
+    }
+
+    // What the surface says a section plays, and whether that is true.
+    //
+    // The bug: the Plays row was a flat line of chips titled with version *sentences* — "Brushes
+    // under the C loop: kick on 1, brushed accent on 3, ghost snare sweeping between…" — so you
+    // could not tell a groove from a bass line from the chords, nothing said the song had chords
+    // this section left out, and a section naming two bass lines lit two chips and played one.
+
+    @Test("the plays rows are grouped by kind, and each kind is named in one word")
+    func groupedByKind() throws {
+        let (model, built) = model()
+        let verse = model.add(.verse)
+        let choices = model.choices(for: verse)
+
+        #expect(choices.map(\.type) == [.groove, .bassline, .progression, .melody, .sample],
+                "one row per kind the song has, in stitch order")
+        #expect(choices.map { StructureModel.name(of: $0.type) } == ["Groove", "Bass", "Chords", "Tune", "Chop"])
+        #expect(model.kinds(of: verse) == ["Groove", "Bass", "Chords"],
+                "what the block says it plays, in words rather than anonymous dots")
+        #expect(try #require(model.layer(built.dryChop)).silentReason == "dry")
+        let melody = try #require(model.layers.first { $0.type == .melody })
+        #expect(melody.silentReason == "empty", "an empty melody is not 'dry': that is a word about chops")
+    }
+
+    @Test("a section names what it leaves out, and one move puts it in")
+    func missingKinds() throws {
+        let (model, built) = model()
+        let verse = model.add(name: "Verse", bars: 16, stitch: [built.groove])
+
+        #expect(model.missing(from: verse) == [.bassline, .progression])
+        #expect(model.missingText(from: verse) == "bass and chords")
+
+        model.fill(verse.id)
+        let filled = try #require(model.sections.first { $0.id == verse.id })
+        #expect(model.missing(from: filled).isEmpty)
+        #expect(filled.stitch.contains(built.progression), "the chords are in the form now")
+        #expect(model.missingText(from: filled) == nil)
+        #expect(model.kinds(of: filled) == ["Groove", "Bass", "Chords"])
+    }
+
+    @Test("one of a kind: a second bass line replaces the first rather than joining it")
+    func oneOfAKind() throws {
+        let (model, built) = model()
+        let emptyBass = try #require(model.layers.first { $0.type == .bassline && !$0.plays }).id
+        let verse = model.add(name: "Verse", bars: 8, stitch: [built.groove, built.bass])
+
+        model.toggle(emptyBass, in: verse.id)
+        let after = try #require(model.sections.first { $0.id == verse.id })
+        #expect(after.stitch.filter { model.layer($0)?.type == .bassline } == [emptyBass],
+                "the transport plays one bass line, so the section names one")
+        #expect(after.stitch.contains(built.groove), "the other kinds are untouched")
+
+        // And taking it out leaves the kind empty rather than restoring what it replaced.
+        model.toggle(emptyBass, in: verse.id)
+        #expect(try #require(model.sections.first { $0.id == verse.id }).stitch == [built.groove])
+    }
+
+    @Test("a form that named two bass lines opens showing the one it was playing, and says it is dirty")
+    func legacyStitchIsTidied() throws {
+        let host = StubStructureHost()
+        var built = FormFixture.build()
+        let emptyBass = built.song.versions.first { $0.type == .bassline && $0.id != built.bass }!.id
+        // The shape a form could be saved in before the stitch was one of a kind.
+        built.song.sections = [Section(name: "Loop", stitch: [built.groove, built.bass, emptyBass],
+                                       lengthInBars: 16)]
+        let model = StructureModel(host: host, song: built.song)
+
+        let loop = try #require(model.sections.first)
+        let basses = loop.stitch.filter { model.layer($0)?.type == .bassline }
+        #expect(basses == [built.bass], "the empty line never sounded; the Palladino line did")
+        #expect(model.isDirty, "tidying is a change, and Keep writes back what was being heard")
+        #expect(model.kinds(of: loop) == ["Groove", "Bass"])
     }
 
     @Test("order, length, duplicate, remove, stitch")
@@ -207,14 +286,32 @@ struct StructureSongTests {
         #expect(!app.playback.isArranged)
     }
 
+    @Test("a section of nothing but chords plays them: the form sounds the harmony, not just the drums")
+    func chordsAlone() throws {
+        let directory = GuidanceFixture.temporaryDirectory("structure-chords")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let built = FormFixture.build()
+        let app = FormFixture.app(built, in: directory)
+        #expect(app.arrange([Section(name: "Verse", stitch: [built.progression], lengthInBars: 8)]))
+        let plan = app.playback
+        #expect(plan.isArranged)
+        #expect(plan.isPlayable, "chords in a section are a sound, not a drawing")
+        #expect(plan.silence == nil)
+        #expect(plan.segments.first?.progression != nil)
+        #expect(plan.segments.first?.isSounding == true)
+        #expect(plan.summary.contains("Chords"))
+    }
+
     @Test("sections whose stitches play nothing are silence with a reason, not a plan that starts")
     func silentForm() throws {
         let directory = GuidanceFixture.temporaryDirectory("structure-silent")
         defer { try? FileManager.default.removeItem(at: directory) }
         let built = FormFixture.build()
         let app = FormFixture.app(built, in: directory)
-        let progression = try #require(built.song.versions.first { $0.type == .progression }).id
-        #expect(app.arrange([Section(name: "Verse", stitch: [progression], lengthInBars: 8)]))
+        // A lyric is written, kept and drawn, and is not a sound: the one kind a section can name
+        // that the transport still has nothing to do with.
+        let lyric = try #require(built.song.versions.first { $0.type == .lyric }).id
+        #expect(app.arrange([Section(name: "Verse", stitch: [lyric], lengthInBars: 8)]))
         let plan = app.playback
         #expect(plan.isArranged)
         #expect(!plan.isPlayable)

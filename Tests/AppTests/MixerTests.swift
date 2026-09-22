@@ -44,6 +44,24 @@ struct MixerTests {
         return (song, plan)
     }
 
+    @Test("the chords and the tune get a strip: every part you can hear is a part you can touch")
+    func chordsHaveAFader() throws {
+        let (song, plan) = fixture()
+        let host = StubMixHost(song: song, playback: plan)
+        let model = MixerModel(host: host)
+
+        // The instrument sampler has been routed through the progression's part since the transport
+        // learned to play chords — so the strip existed in the graph, drew no fader, and could not
+        // be levelled, panned, muted or soloed.
+        let chords = try #require(plan.progressionPart, "the fixture's song has chords in it")
+        #expect(model.rows.contains { $0.part == chords }, "no strip for the chords: \(model.rows.map(\.label))")
+
+        // And it behaves as any other strip does.
+        model.setGain(-4, for: chords)
+        #expect(model.endGesture() != nil)
+        #expect(host.committed.last?.0.strip(for: chords)?.gainDB == -4)
+    }
+
     @Test("the rows are the parts the plan plays; a fader let go of is one version whose note says the move")
     func gestures() throws {
         let (song, plan) = fixture()
