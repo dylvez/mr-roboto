@@ -27,7 +27,8 @@ public struct ReadSongTool: DirectorTool {
             public var id: String
             public var name: String
             public var bars: Int
-            /// The version ids stitched into it, in layering order.
+            /// What the section plays right now: the version each of its lanes resolves to, in
+            /// layering order. A section names parts, so this follows them.
             public var versions: [String]
         }
 

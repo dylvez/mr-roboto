@@ -65,7 +65,7 @@ struct StructureSurfaceView: View {
 
     private var emptyHint: some View {
         Text(model.isEmpty
-             ? "No sections yet. Add one: it is stitched from the newest groove, bass line, chords, tune and dusty chop, and the transport plays the sections in order."
+             ? "No sections yet. Add one: it plays the newest groove, bass line, chords, tune and dusty chop, and follows them as you work. The transport plays the sections in order."
              : "Select a section to name it, set its bars and choose what plays in it.")
             .font(Design.Typography.ui(12, weight: .regular))
             .foregroundStyle(Design.Palette.inkSecondary)

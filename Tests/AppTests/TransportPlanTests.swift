@@ -405,6 +405,26 @@ struct TransportPlanTests {
         #expect(plan.summary.contains("Chords"))
     }
 
+    @Test("The bar counts what a section doubles, and spells the plural")
+    func summaryCountsDoubles() {
+        let groove = TransportFixture.grooveVersion()
+        let bassA = PartVersion(partID: PartID(), kind: .bassline(Bassline(notes: [
+            NoteEvent(pitch: Pitch(midi: 40), start: 0, duration: 1)], sound: "finger")),
+            author: .user, operation: Operation.written)
+        let bassB = PartVersion(partID: PartID(), kind: .bassline(Bassline(notes: [
+            NoteEvent(pitch: Pitch(midi: 45), start: 0, duration: 1)], sound: "sub")),
+            author: .user, operation: Operation.written)
+        let song = TransportFixture.song([groove, bassA, bassB], sections: [
+            Section(name: "Verse", stitch: [groove, bassA].lanes, lengthInBars: 8),
+            Section(name: "Loop", stitch: [groove, bassA, bassB].lanes, lengthInBars: 16),
+        ])
+        let plan = SongPlayback.plan(for: song, mediaURL: TransportFixture.resolver(nil))
+
+        #expect(plan.segments[1].voices.count == 3, "the loop plays both bass lines")
+        // Not "2 basss", which is what lowercasing the singular and appending an s produces.
+        #expect(plan.summary == "2 sections · Groove · 2 bass lines")
+    }
+
     @Test("The loop flag is carried into the plan rather than being a light nothing reads")
     func looping() {
         let plan = SongPlayback.plan(for: TransportFixture.song([TransportFixture.grooveVersion()]),

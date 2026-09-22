@@ -51,6 +51,39 @@ struct SectionBounceTests {
         #expect(SectionBounce.corner(of: cut) == nil)
     }
 
+    @Test("a stem keeps every voice of its kind, and none of another's")
+    @AudioActor
+    func stemsFilterByKind() async throws {
+        // The rewrite this replaced nilled eight fields on the plan and four more on every segment,
+        // twice, so a kind added to the plan and forgotten here landed in the mix and in no stem.
+        // That is exactly what happened to the chords.
+        let twoGrooves = SongPlayback.Voice.groove(TransportFixture.groove(), part: PartID())
+        let secondGroove = SongPlayback.Voice.groove(TransportFixture.groove(bars: 2), part: PartID())
+        let bass = SongPlayback.Voice.bassline(Bassline(notes: [
+            NoteEvent(pitch: Pitch(midi: 40), start: 0, duration: 1)], sound: "finger"), part: PartID())
+        let chords = SongPlayback.Voice.progression(TransportFixture.progression(), part: PartID())
+
+        var plan = SongPlayback(tempo: 120)
+        plan.segments = [SongPlayback.Segment(section: SectionID(), name: "Loop", startBar: 0,
+                                              lengthInBars: 4,
+                                              voices: [twoGrooves, secondGroove, bass, chords])]
+        plan.lengthInBars = 4
+
+        let drums = SectionBounce.only(.drums, of: plan)
+        #expect(drums.segments[0].voices.count == 2, "both grooves belong to the drums stem")
+        #expect(drums.segments[0].voices.allSatisfy { $0.groove != nil })
+
+        let bassStem = SectionBounce.only(.bass, of: plan)
+        #expect(bassStem.segments[0].voices.map(\.part) == [bass.part])
+
+        // A chop and the chords are in the mix and in neither stem, which is the rule as it was.
+        #expect(SectionBounce.has(plan, .drums) && SectionBounce.has(plan, .bass))
+        #expect(SectionBounce.has(plan, .mix))
+        #expect(!SectionBounce.has(drums, .bass) && !SectionBounce.has(bassStem, .drums))
+        let mix = SectionBounce.only(.mix, of: plan)
+        #expect(mix.segments[0].voices.count == 4, "the mix keeps everything")
+    }
+
     @Test("the hook bounces to a mix, the drums and the bass, and the Engineer reads them in numbers")
     @AudioActor
     func bouncesAndReads() async throws {

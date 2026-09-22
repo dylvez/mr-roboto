@@ -4,10 +4,11 @@ import SongGraph
 
 // The form. Two tools, appended after `write_bassline` so every schema before them keeps its
 // bytes: `arrange` states the whole form the way a lead sheet states chords — a line of sections
-// with their bars — and `stitch_section` adds one section with the versions it names.
+// with their bars — and `stitch_section` adds one section with what it names.
 //
-// Sections are the one thing in a song that is edited in place: a form is an ordering of
-// versions, not a version, and the versions it names are never touched.
+// Sections are the one thing in a song that is edited in place: a form is an ordering of *parts*,
+// not a version, and the parts it names are never touched. A section plays each part's newest
+// version, so a form does not go stale when a part is worked on.
 
 /// The section shapes a name implies when no bars are given.
 enum SectionShape {
@@ -26,7 +27,9 @@ public struct SectionReport: Encodable, Sendable {
     public var id: String
     public var name: String
     public var bars: Int
-    /// The version ids stitched into it, in layering order.
+    /// What the section plays right now — the version each of its lanes resolves to, in layering
+    /// order. Reported as versions rather than parts because that is what every other tool's
+    /// arguments and readings are in.
     public var versions: [String]
     /// Whether anything in it plays on the transport.
     public var plays: Bool
@@ -229,21 +232,22 @@ public struct StitchSectionTool: DirectorTool {
 
     public let name = "stitch_section"
     public var purpose: String {
-        "Add one section to the song's form: its name, its bars, the versions stitched into it, and "
-        + "where it goes. Use it when a section plays something other than the newest of everything — "
-        + "a verse on the first groove and a hook on the second, a bridge with no bass. With versions "
-        + "empty it plays the newest groove, bass line, progression, melody and dusty chop. To state "
-        + "the whole form at once, "
-        + "arrange."
+        "Add one section to the song's form: its name, its bars, what is stitched into it, and where "
+        + "it goes. A section names *parts*, so it plays each one's newest version and goes on playing "
+        + "it as the part is worked on — naming a version id here names its part. Use it when a section "
+        + "plays something other than the newest of everything: a verse with no bass, a hook with a "
+        + "second groove over the first. With versions empty it plays the newest groove, bass line, "
+        + "progression, melody and dusty chop. To state the whole form at once, arrange."
     }
     public var schema: DirectorJSON {
         Schema.object([
             ("name", Schema.string("The section's name: Intro, Verse, Hook, Bridge, Outro, or your own.")),
             ("bars", Schema.integer("Its length in bars.", minimum: 1, maximum: 128)),
             ("versions", Schema.array(
-                "Version ids that play in it, from read_song: grooves, bass lines, progressions, melodies "
-                + "and dusty chops. Empty for "
-                + "the newest of each.", of: Schema.string("A version id."))),
+                "Ids of what plays in it, from read_song: grooves, bass lines, progressions, melodies "
+                + "and dusty chops. A section follows the part an id belongs to, so it keeps playing that "
+                + "part as newer versions of it are made. Empty for the newest of each kind.",
+                of: Schema.string("A version id, or the id of the part it belongs to."))),
             ("position", Schema.integer(
                 "Where it goes: 0 is first, 1 after the first section, and any number past the end appends.",
                 minimum: 0)),

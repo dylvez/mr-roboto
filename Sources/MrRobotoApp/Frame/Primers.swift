@@ -49,9 +49,10 @@ public enum Primer {
                         + "re-run the writer in a named player's hands; drag a note to move it. The Bassist reads the result below.")
         case .structure:
             return ("Structure",
-                    "The song's form: sections in order, each a name, a length in bars and the versions stitched into it. "
-                        + "Drag a block to reorder, set its bars, duplicate it; keep the arrangement and the transport plays the "
-                        + "sections one after another.")
+                    "The song's form: sections in order, each a name, a length in bars and the parts stitched into it. "
+                        + "A section plays each part's newest version and follows it as you work, so keeping a new take is "
+                        + "heard where the old one was. Drag a block to reorder, set its bars, duplicate it; keep the "
+                        + "arrangement and the transport plays the sections one after another.")
         case .album:
             return ("Album",
                     "An album is songs in order, with the loudness targets they are delivered to and a clearance state for "

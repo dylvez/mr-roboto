@@ -44,6 +44,32 @@ struct MixerTests {
         return (song, plan)
     }
 
+    @Test("more parts than strips: every part still plays, and the Mixer draws a row for each")
+    func morePartsThanStrips() throws {
+        var song = FormFixture.build(tempo: 92).song
+        // One more pitched part than the graph holds strips, all in one section, so they all sound
+        // at once and every one of them wants a fader.
+        var lanes = song.sections.first?.stitch ?? []
+        for i in 0...(MixGraph.slotCount) {
+            let version = PartVersion(partID: PartID(),
+                                      kind: .progression(Progression(key: Key(tonic: NoteName(.c)),
+                                                                     bars: [ProgressionBar(Chord(.c, .major))])),
+                                      author: .user, operation: Operation.written, note: "Chords \(i)")
+            try song.append(version)
+            lanes.append(Lane(part: version.partID))
+        }
+        song.sections = [Section(name: "Verse", stitch: lanes, lengthInBars: 8)]
+
+        let plan = SongPlayback.plan(for: song) { _ in nil }
+        #expect(plan.parts.count > MixGraph.slotCount, "the point of the test")
+        #expect(plan.segments[0].voices.count == lanes.count, "every lane sounds, strip or no strip")
+
+        // The Mixer names them all, including the ones that will not get a strip: a row that says
+        // "unmixed" is better than a fader that silently does nothing, which is what used to happen.
+        let rows = MixerModel.rows(of: plan, song: song, mix: .unity)
+        #expect(Set(rows.map(\.part)) == Set(plan.parts))
+    }
+
     @Test("the chords and the tune get a strip: every part you can hear is a part you can touch")
     func chordsHaveAFader() throws {
         let (song, plan) = fixture()

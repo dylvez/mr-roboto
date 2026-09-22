@@ -404,18 +404,21 @@ public struct SongPlayback: Equatable, Sendable {
     public var summary: String {
         var pieces: [String] = []
         /// "Groove", "2 grooves" — a kind, and how many of it when a section holds more than one.
+        // Plurals are spelled out. "Bass" + "s" is "basss" and "Chords" + "s" is "chordss", which
+        // is what a lowercase-and-append rule gives you and what the bar briefly said.
         func kinds(_ all: [Voice]) -> [String] {
-            [("Groove", all.count { $0.groove != nil }),
-             ("Bass", all.count { $0.bassline != nil }),
-             ("Chords", all.count { $0.progression != nil }),
-             ("Tune", all.count { $0.melody != nil })]
-                .filter { $0.1 > 0 }
-                .map { $0.1 == 1 ? $0.0 : "\($0.1) \($0.0.lowercased())s" }
+            [("Groove", "grooves", all.count { $0.groove != nil }),
+             ("Bass", "bass lines", all.count { $0.bassline != nil }),
+             ("Chords", "sets of chords", all.count { $0.progression != nil }),
+             ("Tune", "tunes", all.count { $0.melody != nil })]
+                .filter { $0.2 > 0 }
+                .map { $0.2 == 1 ? $0.0 : "\($0.2) \($0.1)" }
         }
         if isArranged {
             pieces.append("\(segments.count) section\(segments.count == 1 ? "" : "s")")
-            // The most a single section plays, so a form whose hook doubles the groove says so.
-            let busiest = segments.max { kinds($0.voices).count < kinds($1.voices).count }?.voices ?? []
+            // The most a single section plays — by how many voices, not how many kinds, so a hook
+            // that doubles the groove beats a verse that merely has one of everything.
+            let busiest = segments.max { $0.voices.count < $1.voices.count }?.voices ?? []
             pieces += kinds(busiest)
             if let chop = segments.compactMap({ $0.chop }).first { pieces.append(chop.name) }
             return pieces.joined(separator: " · ")
