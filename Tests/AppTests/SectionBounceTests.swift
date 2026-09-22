@@ -41,7 +41,12 @@ struct SectionBounceTests {
         #expect(!SectionBounce.has(SectionBounce.only(.drums, of: cut), .bass))
         #expect(!SectionBounce.has(SectionBounce.only(.bass, of: cut), .drums))
         var dusty = cut
-        dusty.segments[0].grooveChain = [Degradation(preset: "sp1200", parameters: ["highCut": 13_000], seed: 1)]
+        dusty.segments[0].voices = dusty.segments[0].voices.map { voice in
+            guard voice.groove != nil else { return voice }
+            var dirtied = voice
+            dirtied.chain = [Degradation(preset: "sp1200", parameters: ["highCut": 13_000], seed: 1)]
+            return dirtied
+        }
         #expect(SectionBounce.corner(of: dusty) == 13_000)
         #expect(SectionBounce.corner(of: cut) == nil)
     }

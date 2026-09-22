@@ -179,8 +179,7 @@ struct TransportPlaybackTests {
         let service = AuditionService(engine: { engine }, kitsDirectory: kits)
         let player = LiveSongPlayer(service: service)
 
-        var plan = SongPlayback(tempo: 120)
-        plan.progression = TransportFixture.progression()
+        var plan = SongPlayback(tempo: 120, voices: [.progression(TransportFixture.progression())])
         plan.instrument = InstrumentVoiceSpec.rhodes.id
         plan.lengthInBars = 4
 
@@ -214,11 +213,11 @@ struct TransportPlaybackTests {
         // The shape of the song this was found in: a four-bar intro of chords alone, then a loop
         // with the groove under them. The intro is the proof — if only the drums are wired up, the
         // first four bars are silence.
-        var intro = SongPlayback.Segment(section: SectionID(), name: "Intro", startBar: 0, lengthInBars: 4)
-        intro.progression = TransportFixture.progression()
-        var loop = SongPlayback.Segment(section: SectionID(), name: "Loop", startBar: 4, lengthInBars: 4,
-                                        groove: TransportFixture.groove())
-        loop.progression = TransportFixture.progression()
+        let intro = SongPlayback.Segment(section: SectionID(), name: "Intro", startBar: 0, lengthInBars: 4,
+                                         voices: [.progression(TransportFixture.progression())])
+        let loop = SongPlayback.Segment(section: SectionID(), name: "Loop", startBar: 4, lengthInBars: 4,
+                                        voices: [.groove(TransportFixture.groove()),
+                                                 .progression(TransportFixture.progression())])
 
         var plan = SongPlayback(tempo: 120)
         plan.segments = [intro, loop]
@@ -269,19 +268,15 @@ struct TransportPlaybackTests {
             return sum
         }
 
-        let drums = try await energy { $0.groove = TransportFixture.groove() }
-        let bass = try await energy {
-            $0.bassline = Bassline(notes: [NoteEvent(pitch: Pitch(midi: 40), start: 0, duration: 3.5),
-                                           NoteEvent(pitch: Pitch(midi: 45), start: 4, duration: 3.5)],
-                                   sound: "finger")
-        }
-        let chords = try await energy { $0.progression = TransportFixture.progression() }
+        let line = Bassline(notes: [NoteEvent(pitch: Pitch(midi: 40), start: 0, duration: 3.5),
+                                    NoteEvent(pitch: Pitch(midi: 45), start: 4, duration: 3.5)],
+                            sound: "finger")
+        let drums = try await energy { $0.voices = [.groove(TransportFixture.groove())] }
+        let bass = try await energy { $0.voices = [.bassline(line)] }
+        let chords = try await energy { $0.voices = [.progression(TransportFixture.progression())] }
         let all = try await energy {
-            $0.groove = TransportFixture.groove()
-            $0.bassline = Bassline(notes: [NoteEvent(pitch: Pitch(midi: 40), start: 0, duration: 3.5),
-                                           NoteEvent(pitch: Pitch(midi: 45), start: 4, duration: 3.5)],
-                                   sound: "finger")
-            $0.progression = TransportFixture.progression()
+            $0.voices = [.groove(TransportFixture.groove()), .bassline(line),
+                         .progression(TransportFixture.progression())]
         }
 
         #expect(drums > 0, "the drums alone made no sound")
@@ -292,6 +287,102 @@ struct TransportPlaybackTests {
         #expect(all > drums, "adding bass and chords to the drums changed nothing: a part is being dropped")
         #expect(all > bass, "adding drums and chords to the bass changed nothing")
         #expect(all > chords, "adding drums and bass to the chords changed nothing")
+    }
+
+    // MARK: Several parts of a kind
+
+    @Test("two grooves in one section both hit: the form plays everything it names, not the last of it")
+    @AudioActor
+    func twoGroovesSound() async throws {
+        let kits = TransportFixture.temporaryDirectory("kits-two")
+        defer { try? FileManager.default.removeItem(at: kits) }
+        let engine = try engine()
+        let service = AuditionService(engine: { engine }, kitsDirectory: kits)
+        let player = LiveSongPlayer(service: service)
+
+        // One part kicks on the beats, another puts a hat between them. Neither alone can make a
+        // sound at 0.25 s — so if only one is scheduled, as a stitch naming two of a kind used to
+        // do, the offbeat windows are silent.
+        func pattern(_ voice: DrumVoice, every step: Int, from first: Int) -> Groove {
+            var steps = [VelocityTier](repeating: .rest, count: 16)
+            for i in stride(from: first, to: 16, by: step) { steps[i] = .accent }
+            return Groove(stepsPerBar: 16, bars: 1, patterns: [GroovePattern(voice: voice, steps: steps)])
+        }
+        let onBeats = pattern(.kick, every: 4, from: 0)
+        let offBeats = pattern(.closedHat, every: 4, from: 2)
+
+        var plan = SongPlayback(tempo: 120)
+        plan.segments = [SongPlayback.Segment(
+            section: SectionID(), name: "Loop", startBar: 0, lengthInBars: 1,
+            voices: [.groove(onBeats, part: PartID()), .groove(offBeats, part: PartID())])]
+        plan.lengthInBars = 1
+
+        try await player.begin(plan, clock: clock)
+        _ = try engine.startTransport(clock: clock)
+        let out = try OfflineRenderer.renderBuffer(engine: engine,
+                                                   frames: AVAudioFramePosition(2 * Self.sampleRate))
+
+        for beat in [0.0, 0.5, 1.0, 1.5] {
+            #expect(peak(out, from: beat, to: beat + 0.06) > 0.001, "no kick at \(beat) s")
+        }
+        for off in [0.25, 0.75, 1.25, 1.75] {
+            #expect(peak(out, from: off, to: off + 0.06) > 0.001,
+                    "nothing at \(off) s: the second groove in the section was dropped")
+        }
+        #expect(await player.reading().scheduledHits >= 8)
+
+        await teardown(player, service, engine)
+    }
+
+    @Test("the chords and the tune sound together, each on its own instrument")
+    @AudioActor
+    func twoPitchedLanes() async throws {
+        let kits = TransportFixture.temporaryDirectory("kits-pad")
+        defer { try? FileManager.default.removeItem(at: kits) }
+
+        /// Total energy of a render, so a part that is present but quiet still moves it.
+        func energy(_ voices: [SongPlayback.Voice]) async throws -> Double {
+            let engine = try engine()
+            let service = AuditionService(engine: { engine }, kitsDirectory: kits)
+            let player = LiveSongPlayer(service: service)
+            var plan = SongPlayback(tempo: 120, voices: voices)
+            plan.lengthInBars = 4
+            try await player.begin(plan, clock: clock)
+            _ = try engine.startTransport(clock: clock)
+            let out = try OfflineRenderer.renderBuffer(engine: engine,
+                                                       frames: AVAudioFramePosition(2 * Self.sampleRate))
+            var sum = 0.0
+            if let data = out.floatChannelData {
+                for frame in 0..<Int(out.frameLength) {
+                    let sample = Double(data[0][frame * out.stride])
+                    sum += sample * sample
+                }
+            }
+            await teardown(player, service, engine)
+            return sum
+        }
+
+        // The two pitched kinds, on two parts, naming two different instruments — which the plan
+        // could not say at all until a voice carried its own sound.
+        //
+        // The marimba and the organ rather than the pad and the lead this is really about: the
+        // claim is "two instruments", not "these two", and a kit is nineteen roots × its velocity
+        // layers × its length rendered before a note sounds. These are the two cheapest to build,
+        // which is about a minute of this suite's time.
+        let chords = SongPlayback.Voice.progression(TransportFixture.progression(), part: PartID(),
+                                                    sound: InstrumentVoiceSpec.marimba.id)
+        let tune = SongPlayback.Voice.melody(Melody(notes: (0..<4).map {
+            NoteEvent(pitch: Pitch(midi: 76), start: Double($0), duration: 0.75)
+        }), part: PartID(), sound: InstrumentVoiceSpec.organ.id)
+
+        let pad = try await energy([chords])
+        let lead = try await energy([tune])
+        let both = try await energy([chords, tune])
+
+        #expect(pad > 0, "the pad alone made no sound")
+        #expect(lead > 0, "the lead alone made no sound")
+        #expect(both > pad, "adding the lead to the pad changed nothing")
+        #expect(both > lead, "adding the pad to the lead changed nothing")
     }
 
     // MARK: The sampler pool
@@ -312,9 +403,10 @@ struct TransportPlaybackTests {
         // The song plays a different machine. It used to displace the surface's kit, costing a
         // re-prepare on the next touch and, in between, the wrong sound under your finger.
         let groovePart = PartID()
-        var plan = SongPlayback(tempo: 120, groove: TransportFixture.groove())
+        var plan = SongPlayback(tempo: 120,
+                                voices: [.groove(TransportFixture.groove(), part: groovePart,
+                                                 sound: SynthMachine.tr909.id)])
         plan.machine = SynthMachine.tr909.id
-        plan.groovePart = groovePart
         try await player.begin(plan, clock: clock)
         _ = try engine.startTransport(clock: clock)
 
@@ -336,9 +428,7 @@ struct TransportPlaybackTests {
 
         let first = PartID(), second = PartID()
         func plan(_ part: PartID) -> SongPlayback {
-            var plan = SongPlayback(tempo: 120, groove: TransportFixture.groove())
-            plan.groovePart = part
-            return plan
+            SongPlayback(tempo: 120, voices: [.groove(TransportFixture.groove(), part: part)])
         }
 
         try await player.begin(plan(first), clock: clock)

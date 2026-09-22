@@ -29,7 +29,19 @@ enum SectionBounce {
         }
     }
 
-    enum Part { case mix, drums, bass }
+    enum Part {
+        case mix, drums, bass
+
+        /// Which voices this stem keeps, or nil for the whole mix. A chop is audio cut from the
+        /// record and belongs to neither stem, which is why it is in neither list.
+        var keeps: ((SongPlayback.Voice) -> Bool)? {
+            switch self {
+            case .mix: return nil
+            case .drums: return { $0.groove != nil }
+            case .bass: return { $0.bassline != nil }
+            }
+        }
+    }
 
     /// Renders one section of an arranged plan, or the whole song (every section in order, or the
     /// flat plan) when `section` is nil. The tail is half a second past the last bar, so a ringing
@@ -87,29 +99,22 @@ enum SectionBounce {
     }
 
     /// The plan with only one part left in it.
+    ///
+    /// This used to nil eight fields on the plan and four more on every segment, twice, and adding
+    /// a kind to the plan meant remembering to nil it here — which is how the chords ended up in
+    /// the mix but in neither stem. A voice knows what it plays, so it is a filter.
     static func only(_ part: Part, of plan: SongPlayback) -> SongPlayback {
         var copy = plan
-        switch part {
-        case .mix:
-            break
-        case .drums:
-            copy.bassline = nil; copy.basslineVersion = nil; copy.bassSound = nil
-            copy.chop = nil; copy.tracks = []
-            copy.segments = copy.segments.map { var s = $0; s.bassline = nil; s.basslineVersion = nil; s.bassSound = nil; s.chop = nil; return s }
-        case .bass:
-            copy.groove = nil; copy.grooveVersion = nil; copy.grooveChain = []
-            copy.chop = nil; copy.tracks = []
-            copy.segments = copy.segments.map { var s = $0; s.groove = nil; s.grooveVersion = nil; s.grooveChain = []; s.chop = nil; return s }
-        }
+        guard let keep = part.keeps else { return copy }
+        copy.voices = copy.voices.filter(keep)
+        copy.segments = copy.segments.map { var s = $0; s.voices = s.voices.filter(keep); return s }
+        copy.tracks = []
         return copy
     }
 
     static func has(_ plan: SongPlayback, _ part: Part) -> Bool {
-        switch part {
-        case .mix: return plan.isPlayable
-        case .drums: return plan.groove != nil || plan.segments.contains { $0.groove != nil }
-        case .bass: return plan.bassline != nil || plan.segments.contains { $0.bassline != nil }
-        }
+        guard let keep = part.keeps else { return plan.isPlayable }
+        return plan.voices.contains(where: keep) || plan.segments.contains { $0.voices.contains(where: keep) }
     }
 
     /// The chain's high cut, when the groove is dusty and the chain sets one above zero.

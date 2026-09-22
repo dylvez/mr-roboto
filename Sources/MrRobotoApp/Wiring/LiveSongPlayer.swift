@@ -53,10 +53,8 @@ final class LiveSongPlayer: SongPlaybackHost {
     private let service: AuditionService
 
     private var engine: Engine?
-    private var groovePlayer: GroovePlayer?
-    private var bassPlayer: BasslinePlayer?
+
     /// The chords and the tune, in that order, on the one instrument sampler.
-    private var keysPlayers: [KeysPlayer] = []
     private var tracks: [AudioTrackSource] = []
     /// An arranged song's players: one groove, one bass and up to two keys players per section that
     /// has them, all on the three shared samplers, and one sequence per dusty kind on a player node.
@@ -101,59 +99,23 @@ final class LiveSongPlayer: SongPlaybackHost {
             return
         }
 
-        if let groove = plan.groove, plan.grooveChain.isEmpty {
-            let machine = SynthMachine.preset(id: plan.machine) ?? .tr808
-            let sampler = try await service.playbackSampler(machine: machine, for: plan.groovePart)
-            try Self.route(sampler.node, part: plan.groovePart, on: graph)
-            let timeline = GrooveTimeline.tempo(clock.tempo, timeSignature: clock.timeSignature)
-            let player = GroovePlayer(sampler: sampler, groove: groove, timeline: timeline)
-            // With the loop off, a groove plays the song's own length and stops; with it on it plays
-            // until you stop it. `GroovePlayer` rounds bars up to whole iterations, because a feel
-            // is a phrase and half of one is not a feel.
-            player.bars = plan.loops ? nil : plan.lengthInBars
-            engine.add(player)
-            groovePlayer = player
-        }
-
-        if let bassline = plan.bassline {
-            let voice = BassVoiceSpec.all.first { $0.id == plan.bassSound } ?? .finger
-            let sampler = try await service.playbackBassSampler(voice: voice, for: plan.basslinePart)
-            try Self.route(sampler.node, part: plan.basslinePart, on: graph)
-            let timeline = GrooveTimeline.tempo(clock.tempo, timeSignature: clock.timeSignature)
-            let player = BasslinePlayer(sampler: sampler, bassline: bassline, timeline: timeline)
-            player.bars = plan.loops ? nil : plan.lengthInBars
-            engine.add(player)
-            bassPlayer = player
-        }
-
-        // The chords and the tune, on one sampler. Two players rather than one merged phrase, so
-        // each keeps its own loop length: four bars of chords under an eight-bar melody is a normal
-        // thing to write, and flattening them together would force one length on both.
-        if plan.progression != nil || plan.melody != nil {
-            let spec = InstrumentVoiceSpec.preset(id: plan.instrument) ?? .rhodes
-            let timeline = GrooveTimeline.tempo(clock.tempo, timeSignature: clock.timeSignature)
-            // A sampler per part, so the chords and the tune are two strips rather than one. Only
-            // the first player on each sampler forwards the transport to it — asked of the sampler,
-            // not of the array, because with two of them the second's first player must drive too.
-            var driving = Set<AuditionService.SamplerKey>()
-            func place(_ player: KeysPlayer, key: AuditionService.SamplerKey) {
-                player.bars = plan.loops ? nil : plan.lengthInBars
-                player.drivesSampler = driving.insert(key).inserted
-                engine.add(player)
-                keysPlayers.append(player)
-            }
-            if let progression = plan.progression {
-                let sampler = try await service.playbackInstrumentSampler(spec, for: plan.progressionPart)
-                try Self.route(sampler.node, part: plan.progressionPart, on: graph)
-                place(KeysPlayer(sampler: sampler, progression: progression, timeline: timeline),
-                      key: AuditionService.SamplerKey(.instrument, part: plan.progressionPart))
-            }
-            if let melody = plan.melody {
-                let sampler = try await service.playbackInstrumentSampler(spec, for: plan.melodyPart)
-                try Self.route(sampler.node, part: plan.melodyPart, on: graph)
-                place(KeysPlayer(sampler: sampler, melody: melody, timeline: timeline),
-                      key: AuditionService.SamplerKey(.instrument, part: plan.melodyPart))
-            }
+        // Every voice the plan names, on its own part's sampler and strip. One loop rather than
+        // one block per kind: a plan can hold two grooves or a pad and a lead, and a block per kind
+        // can only ever place the first of each.
+        let timeline = GrooveTimeline.tempo(clock.tempo, timeSignature: clock.timeSignature)
+        var driving = Set<AuditionService.SamplerKey>()
+        for voice in plan.voices {
+            // A dusty groove is not played live: it is bounced through its chain below, onto a
+            // player node, because the chain is applied to audio and not to a sampler.
+            if voice.groove != nil, !voice.chain.isEmpty { continue }
+            guard let player = try await source(for: voice, at: nil, timeline: timeline,
+                                                driving: &driving, engine: engine, graph: graph) else { continue }
+            // With the loop off a part plays the song's own length and stops; with it on it plays
+            // until you stop it. The players round bars up to whole iterations, because a feel is a
+            // phrase and half of one is not a feel.
+            player.run(forBars: plan.loops ? nil : plan.lengthInBars)
+            engine.add(player.source)
+            keep(player)
         }
 
         for (index, track) in plan.tracks.enumerated() {
@@ -207,15 +169,15 @@ final class LiveSongPlayer: SongPlaybackHost {
             next += 1
         }
 
-        guard groovePlayer != nil || bassPlayer != nil || !keysPlayers.isEmpty || !tracks.isEmpty else {
+        guard !sectionGrooves.isEmpty || !sectionBasses.isEmpty || !sectionKeys.isEmpty
+                || !tracks.isEmpty else {
             throw Failure.nothingScheduled
         }
 
         // When only audio is playing and nothing loops, the plan has an end; a groove loops (or runs
         // to the song's length, which `GroovePlayer.endTime` already knows) so the reading below
         // asks it rather than guessing.
-        endsAt = plan.loops ? nil : Self.end(of: plan, groove: groovePlayer, bass: bassPlayer,
-                                             keys: keysPlayers,
+        endsAt = plan.loops ? nil : Self.end(of: plan, players: placedPlayers,
                                              longestTrack: tracks.map { $0.startsAt + $0.duration }.max())
     }
 
@@ -247,62 +209,25 @@ final class LiveSongPlayer: SongPlaybackHost {
         for segment in plan.segments {
             let timeline = GrooveTimeline.tempo(clock.tempo, timeSignature: clock.timeSignature,
                                                 startingAt: start(segment))
-            if let groove = segment.groove, segment.grooveChain.isEmpty {
-                let machine = SynthMachine.preset(id: plan.machine) ?? .tr808
-                let key = AuditionService.SamplerKey(.drums, part: segment.groovePart)
-                let sampler = try await service.playbackSampler(machine: machine, for: segment.groovePart)
-                try Self.route(sampler.node, part: segment.groovePart, on: graph)
-                let player = GroovePlayer(sampler: sampler, groove: groove, timeline: timeline)
-                player.bars = segment.lengthInBars
-                player.clipsToBars = true
-                player.cycleBeats = cycleBeats
-                player.drivesSampler = driving.insert(key).inserted
-                engine.add(player)
-                sectionGrooves.append(player)
-            } else if let groove = segment.groove {
-                let bounce = try await Self.dustyGroove(groove, chain: segment.grooveChain, machine: plan.machine,
-                                                        bars: segment.lengthInBars, seconds: seconds(segment),
-                                                        clock: clock, service: service, format: engine.format)
-                bounces.append((bounce.buffer, start(segment)))
-                bouncedHits += bounce.hits
-            }
-            if let bassline = segment.bassline {
-                let voice = BassVoiceSpec.all.first { $0.id == segment.bassSound } ?? .finger
-                let key = AuditionService.SamplerKey(.bass, part: segment.basslinePart)
-                let sampler = try await service.playbackBassSampler(voice: voice, for: segment.basslinePart)
-                try Self.route(sampler.node, part: segment.basslinePart, on: graph)
-                let player = BasslinePlayer(sampler: sampler, bassline: bassline, timeline: timeline)
-                player.bars = segment.lengthInBars
-                player.clipsToBars = true
-                player.cycleBeats = cycleBeats
-                player.drivesSampler = driving.insert(key).inserted
-                engine.add(player)
-                sectionBasses.append(player)
-            }
-            // The chords and the tune, each on its own part's sampler and strip. They still share
-            // one instrument id — the plan carries one — so two parts hold two copies of the same
-            // kit for now; giving each lane its own sound is the next step, and this is where it
-            // lands when it comes.
-            func place(_ player: KeysPlayer, key: AuditionService.SamplerKey) {
-                player.bars = segment.lengthInBars
-                player.clipsToBars = true
-                player.cycleBeats = cycleBeats
-                player.drivesSampler = driving.insert(key).inserted
-                engine.add(player)
-                sectionKeys.append(player)
-            }
-            let spec = InstrumentVoiceSpec.preset(id: plan.instrument) ?? .rhodes
-            if let progression = segment.progression {
-                let key = AuditionService.SamplerKey(.instrument, part: segment.progressionPart)
-                let sampler = try await service.playbackInstrumentSampler(spec, for: segment.progressionPart)
-                try Self.route(sampler.node, part: segment.progressionPart, on: graph)
-                place(KeysPlayer(sampler: sampler, progression: progression, timeline: timeline), key: key)
-            }
-            if let melody = segment.melody {
-                let key = AuditionService.SamplerKey(.instrument, part: segment.melodyPart)
-                let sampler = try await service.playbackInstrumentSampler(spec, for: segment.melodyPart)
-                try Self.route(sampler.node, part: segment.melodyPart, on: graph)
-                place(KeysPlayer(sampler: sampler, melody: melody, timeline: timeline), key: key)
+            for voice in segment.voices {
+                // A dusty groove and a chop are audio through a chain; they are bounced onto player
+                // nodes below rather than played on a sampler.
+                if voice.chop != nil { continue }
+                if voice.groove != nil, !voice.chain.isEmpty {
+                    let bounce = try await Self.dustyGroove(voice.groove!, chain: voice.chain,
+                                                            machine: voice.sound,
+                                                            bars: segment.lengthInBars, seconds: seconds(segment),
+                                                            clock: clock, service: service, format: engine.format)
+                    bounces.append((bounce.buffer, start(segment)))
+                    bouncedHits += bounce.hits
+                    continue
+                }
+                guard let player = try await source(for: voice, at: start(segment), timeline: timeline,
+                                                    driving: &driving, engine: engine, graph: graph)
+                else { continue }
+                player.clip(toBars: segment.lengthInBars, cycleBeats: cycleBeats)
+                engine.add(player.source)
+                keep(player)
             }
             if let chop = segment.chop {
                 let buffer: AVAudioPCMBuffer
@@ -338,26 +263,17 @@ final class LiveSongPlayer: SongPlaybackHost {
     func end() async {
         if let engine {
             (try? engine.mixGraph())?.releaseSlots()
-            if let groovePlayer { engine.remove(groovePlayer) }
-            if let bassPlayer { engine.remove(bassPlayer) }
-            for player in keysPlayers { engine.remove(player) }
             for track in tracks { engine.remove(track) }
             for player in sectionGrooves { engine.remove(player) }
             for player in sectionBasses { engine.remove(player) }
             for player in sectionKeys { engine.remove(player) }
             for source in sequences { engine.remove(source) }
         }
-        groovePlayer?.transportWillStop()
-        bassPlayer?.transportWillStop()
-        for player in keysPlayers { player.transportWillStop() }
         for track in tracks { track.transportWillStop() }
         for player in sectionGrooves { player.transportWillStop() }
         for player in sectionBasses { player.transportWillStop() }
         for player in sectionKeys { player.transportWillStop() }
         for source in sequences { source.transportWillStop() }
-        groovePlayer = nil
-        bassPlayer = nil
-        keysPlayers = []
         tracks = []
         sectionGrooves = []
         sectionBasses = []
@@ -389,6 +305,110 @@ final class LiveSongPlayer: SongPlaybackHost {
         }
     }
 
+    /// One voice as a scheduled source on its part's sampler and strip.
+    ///
+    /// The three players have the same shape on purpose — `bars`, `clipsToBars`, `cycleBeats`,
+    /// `drivesSampler` — so a section and a flat plan schedule through one function and a fourth
+    /// kind is a fourth case here rather than a fourth block in two places.
+    ///
+    /// `drivesSampler` is asked of the *sampler*, not of a per-kind array: exactly one player per
+    /// sampler forwards the transport to it, and with one sampler per part the second part's first
+    /// player must drive too.
+    private func source(for voice: SongPlayback.Voice, at startSeconds: Double?,
+                        timeline: GrooveTimeline, driving: inout Set<AuditionService.SamplerKey>,
+                        engine: Engine, graph: MixGraph) async throws -> Placed? {
+        func drives(_ key: AuditionService.SamplerKey) -> Bool { driving.insert(key).inserted }
+
+        switch voice.play {
+        case .groove(let groove):
+            let machine = SynthMachine.preset(id: voice.sound) ?? .tr808
+            let key = AuditionService.SamplerKey(.drums, part: voice.part)
+            let sampler = try await service.playbackSampler(machine: machine, for: voice.part)
+            try Self.route(sampler.node, part: voice.part, on: graph)
+            let player = GroovePlayer(sampler: sampler, groove: groove, timeline: timeline)
+            player.drivesSampler = drives(key)
+            return .groove(player)
+        case .bassline(let line):
+            let spec = BassVoiceSpec.all.first { $0.id == voice.sound } ?? .finger
+            let key = AuditionService.SamplerKey(.bass, part: voice.part)
+            let sampler = try await service.playbackBassSampler(voice: spec, for: voice.part)
+            try Self.route(sampler.node, part: voice.part, on: graph)
+            let player = BasslinePlayer(sampler: sampler, bassline: line, timeline: timeline)
+            player.drivesSampler = drives(key)
+            return .bass(player)
+        case .progression(let progression):
+            let player = KeysPlayer(sampler: try await keysSampler(voice, engine: engine, graph: graph),
+                                    progression: progression, timeline: timeline)
+            player.drivesSampler = drives(AuditionService.SamplerKey(.instrument, part: voice.part))
+            return .keys(player)
+        case .melody(let melody):
+            let player = KeysPlayer(sampler: try await keysSampler(voice, engine: engine, graph: graph),
+                                    melody: melody, timeline: timeline)
+            player.drivesSampler = drives(AuditionService.SamplerKey(.instrument, part: voice.part))
+            return .keys(player)
+        case .chop:
+            // A chop is audio through a chain, not a sampler: it goes on a player node, below.
+            return nil
+        }
+    }
+
+    private func keysSampler(_ voice: SongPlayback.Voice, engine: Engine, graph: MixGraph) async throws -> VoiceSampler {
+        let spec = InstrumentVoiceSpec.preset(id: voice.sound) ?? .rhodes
+        let sampler = try await service.playbackInstrumentSampler(spec, for: voice.part)
+        try Self.route(sampler.node, part: voice.part, on: graph)
+        return sampler
+    }
+
+    /// A player and which list it is kept in, so the one scheduling loop can hand it back.
+    @AudioActor
+    enum Placed {
+        case groove(GroovePlayer), bass(BasslinePlayer), keys(KeysPlayer)
+
+        var source: any ScheduledSource {
+            switch self {
+            case .groove(let p): return p
+            case .bass(let p): return p
+            case .keys(let p): return p
+            }
+        }
+
+        /// The whole plan's length, for a flat plan that is not looping.
+        func run(forBars bars: Int?) {
+            switch self {
+            case .groove(let p): p.bars = bars
+            case .bass(let p): p.bars = bars
+            case .keys(let p): p.bars = bars
+            }
+        }
+
+        /// A section's own bars, clipped at its end so the next section starts clean, cycling with
+        /// the form when the loop is on.
+        func clip(toBars bars: Int, cycleBeats: Double?) {
+            switch self {
+            case .groove(let p): p.bars = bars; p.clipsToBars = true; p.cycleBeats = cycleBeats
+            case .bass(let p): p.bars = bars; p.clipsToBars = true; p.cycleBeats = cycleBeats
+            case .keys(let p): p.bars = bars; p.clipsToBars = true; p.cycleBeats = cycleBeats
+            }
+        }
+
+        var endTime: Double? {
+            switch self {
+            case .groove(let p): return p.endTime
+            case .bass(let p): return p.endTime
+            case .keys(let p): return p.endTime
+            }
+        }
+    }
+
+    /// Keeps a placed player in the list `end()` and `reading()` walk.
+    private func keep(_ placed: Placed) {
+        switch placed {
+        case .groove(let p): sectionGrooves.append(p)
+        case .bass(let p): sectionBasses.append(p)
+        case .keys(let p): sectionKeys.append(p)
+        }
+    }
+
     /// A node through its part's strip, or straight to the main mixer when it has no part.
     private static func route(_ node: AVAudioNode?, part: PartID?, on graph: MixGraph) throws {
         guard let node else { return }
@@ -399,8 +419,7 @@ final class LiveSongPlayer: SongPlaybackHost {
         guard let engine, engine.isTransportRunning else { return .stopped }
         // Negative during the realtime lead time, when transport zero is still in the future.
         let seconds = max(0, engine.transportSeconds ?? 0)
-        let hits = (groovePlayer?.scheduledHitCount ?? 0) + (bassPlayer?.scheduledHitCount ?? 0) + bouncedHits
-            + keysPlayers.reduce(0) { $0 + $1.scheduledHitCount }
+        let hits = bouncedHits
             + sectionGrooves.reduce(0) { $0 + $1.scheduledHitCount }
             + sectionBasses.reduce(0) { $0 + $1.scheduledHitCount }
             + sectionKeys.reduce(0) { $0 + $1.scheduledHitCount }
@@ -412,23 +431,19 @@ final class LiveSongPlayer: SongPlaybackHost {
 
     // MARK: Internals
 
-    private static func end(of plan: SongPlayback, groove: GroovePlayer?, bass: BasslinePlayer?,
-                            keys: [KeysPlayer], longestTrack: Double?) -> Double? {
-        let audio = [plan.audioDuration, longestTrack].compactMap { $0 }.max()
-        var end = audio
-        if let groove {
-            guard let grooveEnd = groove.endTime else { return nil }
-            end = max(grooveEnd, end ?? 0)
-        }
-        if let bass {
-            guard let bassEnd = bass.endTime else { return nil }
-            end = max(bassEnd, end ?? 0)
-        }
-        for player in keys {
-            guard let keysEnd = player.endTime else { return nil }
-            end = max(keysEnd, end ?? 0)
+    /// Where the plan runs out, or nil when anything in it plays forever.
+    private static func end(of plan: SongPlayback, players: [Placed], longestTrack: Double?) -> Double? {
+        var end = [plan.audioDuration, longestTrack].compactMap { $0 }.max()
+        for player in players {
+            guard let playerEnd = player.endTime else { return nil }
+            end = max(playerEnd, end ?? 0)
         }
         return end
+    }
+
+    /// Every player this run placed, whatever kind it is.
+    private var placedPlayers: [Placed] {
+        sectionGrooves.map(Placed.groove) + sectionBasses.map(Placed.bass) + sectionKeys.map(Placed.keys)
     }
 
     // MARK: The dusty sources
