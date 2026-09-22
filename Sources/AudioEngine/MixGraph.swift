@@ -27,6 +27,10 @@ public final class MixStripNodes: @unchecked Sendable {
     public let send: AVAudioMixerNode
     private var peakValue: Float = 0
     private var rmsValue: Float = 0
+    /// Whether the meter tap is installed. A tap is per-node and installing a second one on the
+    /// same bus replaces the first, so this is bookkeeping rather than protection — but it keeps
+    /// `removeTap` from being called on a node that never had one.
+    fileprivate var isMetered = false
     let lock = NSLock()
 
     init() {
@@ -112,11 +116,13 @@ public final class MixGraph {
                                        AVAudioConnectionPoint(node: strip.send, bus: 0)],
                        fromBus: 0, format: engine.format)
             try av.connectNode(strip.send, to: bus, format: engine.format)
-            // `@Sendable`, so the closure is not inferred as actor-isolated: the tap fires on the
-            // render thread, and an isolated closure called there trips the executor check.
-            strip.out.installTap(onBus: 0, bufferSize: 1_024, format: engine.format) { @Sendable buffer, _ in
-                strip.meter(buffer)
-            }
+            // The meter tap is *not* installed here. `MixStripNodes.meter` is a per-sample loop over
+            // every frame of every channel, and it runs on the render thread — so a pool of strips
+            // metered at build time runs that loop for every slot, for every block, forever,
+            // including the slots no part ever claims. It is installed when a part takes the slot
+            // and removed when the slot is given back (`strip(for:)`, `releaseSlots()`). Taps may be
+            // changed while the engine runs; connections, as above, may not, which is why the
+            // strips are still a pool.
             apply(Strip(part: PartID(), label: ""), to: strip)
             slots.append(strip)
         }
@@ -132,8 +138,20 @@ public final class MixGraph {
         guard let free = slots.first(where: { $0.part == nil }) else { return nil }
         free.part = part
         strips[part] = free
+        meter(free)
         apply(mix.strip(for: part, label: ""), to: free)
         return free
+    }
+
+    /// Starts metering a strip a part has just taken.
+    private func meter(_ strip: MixStripNodes) {
+        guard !strip.isMetered, let format = try? engine.format else { return }
+        // `@Sendable`, so the closure is not inferred as actor-isolated: the tap fires on the
+        // render thread, and an isolated closure called there trips the executor check.
+        strip.out.installTap(onBus: 0, bufferSize: 1_024, format: format) { @Sendable buffer, _ in
+            strip.meter(buffer)
+        }
+        strip.isMetered = true
     }
 
     /// Routes a source node through a part's strip instead of straight into the main mixer.
@@ -160,12 +178,22 @@ public final class MixGraph {
 
     /// Gives every slot back, so a new plan's parts take them afresh.
     public func releaseSlots() {
-        for slot in slots { slot.part = nil }
+        for slot in slots {
+            slot.part = nil
+            if slot.isMetered {
+                slot.out.removeTap(onBus: 0)
+                slot.isMetered = false
+            }
+        }
         strips = [:]
     }
 
     /// The part a node is routed to, if any.
     public func part(of node: AVAudioNode) -> PartID? { routed[ObjectIdentifier(node)]?.part }
+
+    /// How many slots are metering. Every one costs a per-sample loop on the render thread, so
+    /// this is the number a test asserts on rather than a thing the app reads.
+    public var metered: Int { slots.count { $0.isMetered } }
 
     // MARK: Applying a mix
 

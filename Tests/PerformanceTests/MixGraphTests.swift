@@ -117,6 +117,36 @@ struct MixGraphTests {
         #expect(graph.strips.isEmpty && graph.strip(for: parts[8]) != nil)
     }
 
+    @Test("a slot no part has taken is not metered: the render thread counts only what is playing")
+    @AudioActor
+    func metersOnlyWhatPlays() async throws {
+        let engine = try Engine(playerCount: 1, sampleRate: Self.rate, channels: 2)
+        try engine.prepare(offlineSampleRate: Self.rate, maximumFrames: 4_096)
+        let graph = try engine.mixGraph()
+
+        // `MixStripNodes.meter` is a per-sample loop over every frame of every channel, on the
+        // render thread. It used to be installed on all eight slots at build, so seven idle strips
+        // ran it every block for nothing.
+        #expect(graph.metered == 0, "a freshly built pool meters nothing")
+
+        let part = PartID()
+        #expect(graph.strip(for: part) != nil)
+        #expect(graph.metered == 1, "the slot a part took is metered")
+        #expect(graph.strip(for: part) != nil)
+        #expect(graph.metered == 1, "asking again for the same part does not install a second tap")
+
+        let second = PartID()
+        _ = graph.strip(for: second)
+        #expect(graph.metered == 2)
+
+        graph.releaseSlots()
+        #expect(graph.metered == 0, "giving the slots back stops the metering with them")
+        // And the pool still works afterwards: a tap removed and re-installed is an ordinary thing.
+        _ = graph.strip(for: part)
+        #expect(graph.metered == 1)
+        engine.stop()
+    }
+
     @Test("the true peak of a sine between samples reads above its sample peak, and a mix round-trips as a part")
     func truePeakAndCodable() throws {
         // A 11.025 kHz sine at 48 k: samples land off the crests, so the sample peak under-reads.
