@@ -173,6 +173,33 @@ enum GuidanceFixture {
 
 // MARK: - Opening a song
 
+@Suite("Guidance: naming a part")
+struct PartLabelTests {
+
+    @Test("a progression is named in its own key's spelling, not in sharps")
+    func chordsAreSpelledInKey() {
+        func title(_ key: Key, _ chords: [Chord]) -> String {
+            let version = PartVersion(partID: PartID(),
+                                      kind: .progression(Progression(key: key, bars: chords.map { ProgressionBar($0) })),
+                                      author: .user, operation: Operation.written)
+            return PartLabel.title(of: version)
+        }
+
+        // D minor has one flat, and it is B♭. Naming that degree "A♯" spells a note the key does
+        // not contain — which is what the ledger and every Structure chip said, because this was
+        // the one place chords were drawn that never asked the key.
+        let dMinor = Key(tonic: NoteName(.d), mode: .aeolian)
+        #expect(title(dMinor, [Chord(.d, .minorSeventh), Chord(PitchClass(rawValue: 10)!, .majorSeventh),
+                               Chord(.f, .majorSeventh), Chord(.g, .minorSeventh)])
+                == "Dm7 Bbmaj7 Fmaj7 Gm7")
+
+        // A sharp key still spells in sharps: the fix is the key, not a preference for flats.
+        let eMajor = Key(tonic: NoteName(.e), mode: .ionian)
+        #expect(title(eMajor, [Chord(.e, .majorSeventh), Chord(PitchClass(rawValue: 1)!, .minorSeventh)])
+                == "Emaj7 C#m7")
+    }
+}
+
 @Suite("Guidance: opening a song") @MainActor
 struct GuidanceOpeningTests {
 

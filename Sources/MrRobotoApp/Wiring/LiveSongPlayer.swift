@@ -138,32 +138,34 @@ final class LiveSongPlayer: SongPlaybackHost {
 
         // The dusty sources, on the player nodes after the tracks. `SongPlayback.plan` left room
         // for them; a hand-built plan that did not is told so rather than silently dropping one.
+        //
+        // One loop over the voices, as above. This used to read `plan.groove`/`plan.chop` — the
+        // first of each kind — so a plan holding two dusty grooves bounced one and dropped the
+        // other, which is the same bug the arranged path had and the last place it lived.
         var next = tracks.count
-        if let groove = plan.groove, !plan.grooveChain.isEmpty {
-            guard next < engine.players.count else { throw Failure.unreadable("The dusty groove", "no player node is free") }
-            let bounce = try await Self.dustyGroove(groove, plan: plan, clock: clock, service: service,
-                                                    format: engine.format)
-            let node = try engine.player(next)
-            try Self.route(node, part: plan.groovePart, on: graph)
-            let source = AudioTrackSource(player: node, buffer: bounce.buffer,
-                                          startsAt: 0, loops: plan.loops)
-            engine.add(source)
-            tracks.append(source)
-            bouncedHits = bounce.hits
-            next += 1
-        }
-        if let chop = plan.chop {
-            guard next < engine.players.count else { throw Failure.unreadable(chop.name, "no player node is free") }
+        for voice in plan.voices where voice.chop != nil || (voice.groove != nil && !voice.chain.isEmpty) {
+            guard next < engine.players.count else {
+                throw Failure.unreadable(voice.name, "no player node is free")
+            }
             let buffer: AVAudioPCMBuffer
-            do {
-                buffer = try Self.dustyChop(chop, format: engine.format)
-            } catch {
-                throw Failure.unreadable(chop.name, "\(error)")
+            if let groove = voice.groove {
+                let bounce = try await Self.dustyGroove(groove, chain: voice.chain, machine: voice.sound,
+                                                        loops: plan.loops, lengthInBars: plan.lengthInBars,
+                                                        clock: clock, service: service, format: engine.format)
+                buffer = bounce.buffer
+                bouncedHits += bounce.hits
+            } else if let chop = voice.chop {
+                do {
+                    buffer = try Self.dustyChop(chop, format: engine.format)
+                } catch {
+                    throw Failure.unreadable(chop.name, "\(error)")
+                }
+            } else {
+                continue
             }
             let node = try engine.player(next)
-            try Self.route(node, part: chop.part, on: graph)
-            let source = AudioTrackSource(player: node, buffer: buffer,
-                                          startsAt: 0, loops: plan.loops)
+            try Self.route(node, part: voice.part, on: graph)
+            let source = AudioTrackSource(player: node, buffer: buffer, startsAt: 0, loops: plan.loops)
             engine.add(source)
             tracks.append(source)
             next += 1
@@ -455,27 +457,28 @@ final class LiveSongPlayer: SongPlaybackHost {
     /// looping, it is the song's length in whole passes — `GroovePlayer`'s own rounding — plus the
     /// last hit's tail. Either way it goes through `Dust.render`, the same call an audition makes,
     /// so the transport and the audition service play the same samples of the same version.
-    static func dustyGroove(_ groove: Groove, plan: SongPlayback, clock: TransportClock,
+    static func dustyGroove(_ groove: Groove, chain: [Degradation], machine machineID: String,
+                            loops: Bool, lengthInBars: Int?, clock: TransportClock,
                             service: AuditionService, format: AVAudioFormat) async throws
         -> (buffer: AVAudioPCMBuffer, hits: Int) {
-        let machine = SynthMachine.preset(id: plan.machine) ?? .tr808
+        let machine = SynthMachine.preset(id: machineID) ?? .tr808
         let pass = Dust.duration(of: groove, tempo: clock.tempo, timeSignature: clock.timeSignature)
         let barsPerPass = max(1, groove.bars)
-        let passes = plan.loops ? 2 : max(1, ((plan.lengthInBars ?? barsPerPass) + barsPerPass - 1) / barsPerPass)
+        let passes = loops ? 2 : max(1, ((lengthInBars ?? barsPerPass) + barsPerPass - 1) / barsPerPass)
         let hits = Dust.hits(for: groove, tempo: clock.tempo, timeSignature: clock.timeSignature, repeats: passes)
-        let seconds = plan.loops ? 2 * pass : Double(passes) * pass + Dust.tail
+        let seconds = loops ? 2 * pass : Double(passes) * pass + Dust.tail
         let bounce = try await service.bounce(hits, machine: machine, seconds: seconds,
                                               sampleRate: format.sampleRate,
                                               channels: Int(format.channelCount))
-        var wet = try Dust.render(bounce.planar, sampleRate: bounce.sampleRate, passes: plan.grooveChain)
-        if plan.loops {
+        var wet = try Dust.render(bounce.planar, sampleRate: bounce.sampleRate, passes: chain)
+        if loops {
             let frames = Int((pass * bounce.sampleRate).rounded())
             wet = wet.map { Array($0.suffix(frames)) }
         }
         guard let buffer = AuditionService.buffer(planar: wet, sampleRate: bounce.sampleRate, in: format) else {
             throw EngineError.renderFailed("the dusty groove could not be put in the graph's format")
         }
-        return (buffer, plan.loops ? hits.count / 2 : hits.count)
+        return (buffer, loops ? hits.count / 2 : hits.count)
     }
 
     /// A section's dusty groove: `bars` of it bounced through its chain and cut at the section's
