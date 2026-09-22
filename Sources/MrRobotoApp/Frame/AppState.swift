@@ -141,7 +141,12 @@ public final class LiveTransportHost: TransportHost {
 
     public func engine() async throws -> Engine {
         if let built { return built }
-        let engine = try await Engine()
+        // Eight player nodes, not the default four. A node is taken by every audio track and by
+        // every dusty source that has to be bounced — and a section may now hold several of those
+        // at once, where before the plan could name one dusty groove and one chop in the whole
+        // song. Running out is not silent but it is fatal to the part: `LiveSongPlayer` throws
+        // rather than dropping it.
+        let engine = try await Engine(playerCount: 8)
         // The remembered input device, before the engine runs: the input node's device is best set while it is stopped.
         let uid = InputSettings().choice.deviceUID
         if uid != nil { try? await engine.setInputDevice(uid: uid) }

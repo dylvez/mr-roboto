@@ -132,7 +132,9 @@ enum SectionBounce {
     @AudioActor
     private static func renderOne(_ plan: SongPlayback, part: Part, clock: TransportClock, frames: AVAudioFramePosition,
                                   kitsDirectory: URL, sampleRate: Double) async throws -> [[Float]] {
-        let engine = try Engine(playerCount: 4, sampleRate: sampleRate, channels: 2)
+        // As many nodes as the live graph: a bounce goes through the same `LiveSongPlayer`, so a
+        // form it can play is a form this can render.
+        let engine = try Engine(playerCount: 8, sampleRate: sampleRate, channels: 2)
         try engine.prepare(offlineSampleRate: sampleRate, maximumFrames: 4_096)
         try engine.start()
         let service = AuditionService(engine: { engine }, kitsDirectory: kitsDirectory)

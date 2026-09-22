@@ -444,12 +444,13 @@ public struct SongPlayback: Equatable, Sendable {
     /// - Parameters:
     ///   - song: the open song. Nil is a legitimate answer, not an error.
     ///   - maximumTracks: how many audio files can be scheduled at once. The engine has a fixed
-    ///     number of player nodes and there is no point planning a fifth.
+    ///     number of player nodes — see `Engine(playerCount:)` where the app builds it — and there
+    ///     is no point planning one more than it holds.
     ///   - mediaURL: resolves a `MediaRef` to a file that is actually on disk. A stem whose media is
     ///     missing from the package is *not* playable, and saying so is better than scheduling
     ///     silence.
     public static func plan(for song: Song?,
-                            maximumTracks: Int = 4,
+                            maximumTracks: Int = 8,
                             mediaURL: (MediaRef) -> URL?) -> SongPlayback {
         guard let song else {
             return SongPlayback(silence: Silence(headline: "No song open",
