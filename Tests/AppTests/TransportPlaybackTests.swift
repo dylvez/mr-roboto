@@ -294,6 +294,65 @@ struct TransportPlaybackTests {
         #expect(all > chords, "adding drums and bass to the chords changed nothing")
     }
 
+    // MARK: The sampler pool
+
+    @Test("a lane's sampler is its own: the transport no longer takes the one a surface is holding")
+    @AudioActor
+    func lanesAndSurfacesDoNotShare() async throws {
+        let kits = TransportFixture.temporaryDirectory("kits-pool")
+        defer { try? FileManager.default.removeItem(at: kits) }
+        let engine = try engine()
+        let service = AuditionService(engine: { engine }, kitsDirectory: kits)
+        let player = LiveSongPlayer(service: service)
+
+        // A surface has an 808 under your finger.
+        try await service.prepare(machine: .tr808)
+        #expect(await service.currentKitID == SynthMachine.tr808.id)
+
+        // The song plays a different machine. It used to displace the surface's kit, costing a
+        // re-prepare on the next touch and, in between, the wrong sound under your finger.
+        let groovePart = PartID()
+        var plan = SongPlayback(tempo: 120, groove: TransportFixture.groove())
+        plan.machine = SynthMachine.tr909.id
+        plan.groovePart = groovePart
+        try await player.begin(plan, clock: clock)
+        _ = try engine.startTransport(clock: clock)
+
+        #expect(await service.currentKitID == SynthMachine.tr808.id,
+                "the transport took the surface's sampler")
+        _ = try OfflineRenderer.renderBuffer(engine: engine,
+                                             frames: AVAudioFramePosition(Self.sampleRate / 2))
+        await teardown(player, service, engine)
+    }
+
+    @Test("a lane sampler is let go when the next plan does not name its part")
+    @AudioActor
+    func lanesAreRetired() async throws {
+        let kits = TransportFixture.temporaryDirectory("kits-retire")
+        defer { try? FileManager.default.removeItem(at: kits) }
+        let engine = try engine()
+        let service = AuditionService(engine: { engine }, kitsDirectory: kits)
+        let player = LiveSongPlayer(service: service)
+
+        let first = PartID(), second = PartID()
+        func plan(_ part: PartID) -> SongPlayback {
+            var plan = SongPlayback(tempo: 120, groove: TransportFixture.groove())
+            plan.groovePart = part
+            return plan
+        }
+
+        try await player.begin(plan(first), clock: clock)
+        #expect(await service.laneParts == [first])
+
+        // A different song, a different part: the first one's kit is not kept resident forever.
+        try await player.begin(plan(second), clock: clock)
+        #expect(await service.laneParts == [second])
+
+        await player.end()
+        await service.shutdown()
+        engine.stop()
+    }
+
     // MARK: A take
 
     @Test("A song with a take plays it, from the transport position it was placed at")

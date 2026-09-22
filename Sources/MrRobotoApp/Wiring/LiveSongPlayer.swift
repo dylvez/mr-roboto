@@ -87,6 +87,12 @@ final class LiveSongPlayer: SongPlaybackHost {
         // in the plan's own order rather than to whichever source was scheduled first, and a song
         // with more parts than the graph holds says so here instead of growing a dead fader.
         unseated = graph.reserve(plan.parts)
+        // `end()` above has taken every source off the engine, so nothing is reading a lane
+        // sampler's zones: the window to let go of the ones this plan does not name. Without it a
+        // song closed or a form rewritten leaves its kits resident for the life of the app, and a
+        // pitched kit is nineteen roots of rendered audio. The surfaces' own samplers — the ones
+        // with no part — are never retired; they belong to the app, not to a plan.
+        await service.retire(partsOtherThan: Set(plan.parts))
         graph.apply(plan.mix ?? .unity, section: plan.segments.first?.section)
         lastMix = plan.mix
 
@@ -97,7 +103,7 @@ final class LiveSongPlayer: SongPlaybackHost {
 
         if let groove = plan.groove, plan.grooveChain.isEmpty {
             let machine = SynthMachine.preset(id: plan.machine) ?? .tr808
-            let sampler = try await service.playbackSampler(machine: machine)
+            let sampler = try await service.playbackSampler(machine: machine, for: plan.groovePart)
             try Self.route(sampler.node, part: plan.groovePart, on: graph)
             let timeline = GrooveTimeline.tempo(clock.tempo, timeSignature: clock.timeSignature)
             let player = GroovePlayer(sampler: sampler, groove: groove, timeline: timeline)
@@ -111,7 +117,7 @@ final class LiveSongPlayer: SongPlaybackHost {
 
         if let bassline = plan.bassline {
             let voice = BassVoiceSpec.all.first { $0.id == plan.bassSound } ?? .finger
-            let sampler = try await service.playbackBassSampler(voice: voice)
+            let sampler = try await service.playbackBassSampler(voice: voice, for: plan.basslinePart)
             try Self.route(sampler.node, part: plan.basslinePart, on: graph)
             let timeline = GrooveTimeline.tempo(clock.tempo, timeSignature: clock.timeSignature)
             let player = BasslinePlayer(sampler: sampler, bassline: bassline, timeline: timeline)
@@ -125,22 +131,28 @@ final class LiveSongPlayer: SongPlaybackHost {
         // thing to write, and flattening them together would force one length on both.
         if plan.progression != nil || plan.melody != nil {
             let spec = InstrumentVoiceSpec.preset(id: plan.instrument) ?? .rhodes
-            let sampler = try await service.playbackInstrumentSampler(spec)
-            try Self.route(sampler.node, part: plan.progressionPart ?? plan.melodyPart, on: graph)
             let timeline = GrooveTimeline.tempo(clock.tempo, timeSignature: clock.timeSignature)
-            if let progression = plan.progression {
-                let player = KeysPlayer(sampler: sampler, progression: progression, timeline: timeline)
+            // A sampler per part, so the chords and the tune are two strips rather than one. Only
+            // the first player on each sampler forwards the transport to it — asked of the sampler,
+            // not of the array, because with two of them the second's first player must drive too.
+            var driving = Set<AuditionService.SamplerKey>()
+            func place(_ player: KeysPlayer, key: AuditionService.SamplerKey) {
                 player.bars = plan.loops ? nil : plan.lengthInBars
+                player.drivesSampler = driving.insert(key).inserted
                 engine.add(player)
                 keysPlayers.append(player)
             }
+            if let progression = plan.progression {
+                let sampler = try await service.playbackInstrumentSampler(spec, for: plan.progressionPart)
+                try Self.route(sampler.node, part: plan.progressionPart, on: graph)
+                place(KeysPlayer(sampler: sampler, progression: progression, timeline: timeline),
+                      key: AuditionService.SamplerKey(.instrument, part: plan.progressionPart))
+            }
             if let melody = plan.melody {
-                let player = KeysPlayer(sampler: sampler, melody: melody, timeline: timeline)
-                player.bars = plan.loops ? nil : plan.lengthInBars
-                // One sampler, two players: only the first forwards the transport to it.
-                player.drivesSampler = keysPlayers.isEmpty
-                engine.add(player)
-                keysPlayers.append(player)
+                let sampler = try await service.playbackInstrumentSampler(spec, for: plan.melodyPart)
+                try Self.route(sampler.node, part: plan.melodyPart, on: graph)
+                place(KeysPlayer(sampler: sampler, melody: melody, timeline: timeline),
+                      key: AuditionService.SamplerKey(.instrument, part: plan.melodyPart))
             }
         }
 
@@ -222,9 +234,13 @@ final class LiveSongPlayer: SongPlaybackHost {
             clock.seconds(forBeat: Double(segment.endBar * beatsPerBar)) - start(segment)
         }
 
-        var drumSampler: VoiceSampler?
-        var bassSampler: VoiceSampler?
-        var keysSampler: VoiceSampler?
+        // A sampler per part, not per kind. Two things follow. A verse's groove and a hook's groove
+        // that are different parts no longer share one kit — and no longer share one strip, which
+        // is what made a hook's groove metered and soloed under the verse's part. And the "only the
+        // first player forwards the transport" rule now has to be asked of the *sampler*: with one
+        // per kind, `sectionGrooves.isEmpty` answered it; with one per part it would silently say
+        // no to the first player of the second part's sampler, which never then advances.
+        var driving = Set<AuditionService.SamplerKey>()
         var bounces: [(AVAudioPCMBuffer, Double)] = []
         var chops: [(AVAudioPCMBuffer, Double)] = []
 
@@ -232,18 +248,15 @@ final class LiveSongPlayer: SongPlaybackHost {
             let timeline = GrooveTimeline.tempo(clock.tempo, timeSignature: clock.timeSignature,
                                                 startingAt: start(segment))
             if let groove = segment.groove, segment.grooveChain.isEmpty {
-                if drumSampler == nil {
-                    let machine = SynthMachine.preset(id: plan.machine) ?? .tr808
-                    drumSampler = try await service.playbackSampler(machine: machine)
-                    // One sampler for every section's groove: it plays through the first's strip.
-                    try Self.route(drumSampler?.node, part: segment.groovePart, on: graph)
-                }
-                let player = GroovePlayer(sampler: drumSampler!, groove: groove, timeline: timeline)
+                let machine = SynthMachine.preset(id: plan.machine) ?? .tr808
+                let key = AuditionService.SamplerKey(.drums, part: segment.groovePart)
+                let sampler = try await service.playbackSampler(machine: machine, for: segment.groovePart)
+                try Self.route(sampler.node, part: segment.groovePart, on: graph)
+                let player = GroovePlayer(sampler: sampler, groove: groove, timeline: timeline)
                 player.bars = segment.lengthInBars
                 player.clipsToBars = true
                 player.cycleBeats = cycleBeats
-                // One sampler, many players: only the first forwards the transport to it.
-                player.drivesSampler = sectionGrooves.isEmpty
+                player.drivesSampler = driving.insert(key).inserted
                 engine.add(player)
                 sectionGrooves.append(player)
             } else if let groove = segment.groove {
@@ -255,42 +268,41 @@ final class LiveSongPlayer: SongPlaybackHost {
             }
             if let bassline = segment.bassline {
                 let voice = BassVoiceSpec.all.first { $0.id == segment.bassSound } ?? .finger
-                if bassSampler == nil {
-                    bassSampler = try await service.playbackBassSampler(voice: voice)
-                    try Self.route(bassSampler?.node, part: segment.basslinePart, on: graph)
-                }
-                let player = BasslinePlayer(sampler: bassSampler!, bassline: bassline, timeline: timeline)
+                let key = AuditionService.SamplerKey(.bass, part: segment.basslinePart)
+                let sampler = try await service.playbackBassSampler(voice: voice, for: segment.basslinePart)
+                try Self.route(sampler.node, part: segment.basslinePart, on: graph)
+                let player = BasslinePlayer(sampler: sampler, bassline: bassline, timeline: timeline)
                 player.bars = segment.lengthInBars
                 player.clipsToBars = true
                 player.cycleBeats = cycleBeats
-                player.drivesSampler = sectionBasses.isEmpty
+                player.drivesSampler = driving.insert(key).inserted
                 engine.add(player)
                 sectionBasses.append(player)
             }
-            // The chords and the tune. One sampler for every section's, as above: the song names
-            // one pitched instrument, so a verse's pad and a hook's pad are the same pad.
-            if segment.progression != nil || segment.melody != nil {
-                if keysSampler == nil {
-                    let spec = InstrumentVoiceSpec.preset(id: plan.instrument) ?? .rhodes
-                    keysSampler = try await service.playbackInstrumentSampler(spec)
-                    try Self.route(keysSampler?.node,
-                                   part: segment.progressionPart ?? segment.melodyPart, on: graph)
-                }
-                func place(_ player: KeysPlayer) {
-                    player.bars = segment.lengthInBars
-                    player.clipsToBars = true
-                    player.cycleBeats = cycleBeats
-                    // One sampler, many players: only the first forwards the transport to it.
-                    player.drivesSampler = sectionKeys.isEmpty
-                    engine.add(player)
-                    sectionKeys.append(player)
-                }
-                if let progression = segment.progression {
-                    place(KeysPlayer(sampler: keysSampler!, progression: progression, timeline: timeline))
-                }
-                if let melody = segment.melody {
-                    place(KeysPlayer(sampler: keysSampler!, melody: melody, timeline: timeline))
-                }
+            // The chords and the tune, each on its own part's sampler and strip. They still share
+            // one instrument id — the plan carries one — so two parts hold two copies of the same
+            // kit for now; giving each lane its own sound is the next step, and this is where it
+            // lands when it comes.
+            func place(_ player: KeysPlayer, key: AuditionService.SamplerKey) {
+                player.bars = segment.lengthInBars
+                player.clipsToBars = true
+                player.cycleBeats = cycleBeats
+                player.drivesSampler = driving.insert(key).inserted
+                engine.add(player)
+                sectionKeys.append(player)
+            }
+            let spec = InstrumentVoiceSpec.preset(id: plan.instrument) ?? .rhodes
+            if let progression = segment.progression {
+                let key = AuditionService.SamplerKey(.instrument, part: segment.progressionPart)
+                let sampler = try await service.playbackInstrumentSampler(spec, for: segment.progressionPart)
+                try Self.route(sampler.node, part: segment.progressionPart, on: graph)
+                place(KeysPlayer(sampler: sampler, progression: progression, timeline: timeline), key: key)
+            }
+            if let melody = segment.melody {
+                let key = AuditionService.SamplerKey(.instrument, part: segment.melodyPart)
+                let sampler = try await service.playbackInstrumentSampler(spec, for: segment.melodyPart)
+                try Self.route(sampler.node, part: segment.melodyPart, on: graph)
+                place(KeysPlayer(sampler: sampler, melody: melody, timeline: timeline), key: key)
             }
             if let chop = segment.chop {
                 let buffer: AVAudioPCMBuffer
@@ -362,6 +374,7 @@ final class LiveSongPlayer: SongPlaybackHost {
     /// Parts the pool could not seat when the plan began. Held rather than read back off the graph,
     /// because `end()` gives the slots back and clears it.
     private var unseated: [PartID] = []
+
 
     /// The mix as last applied, so a section change is a move and not a re-apply.
     private var lastMix: Mix?

@@ -48,24 +48,51 @@ public final class AuditionService {
     private let cache = SampleCache()
 
     private var engine: Engine?
-    private var sampler: VoiceSampler?
-    private var samplerNodeAttached = false
-    /// The bass has a sampler of its own: a sampler holds one kit, and the bass line and the drums
-    /// play at once. Built on first use and kept, with its own node on the same mixer.
-    private var bassSampler: VoiceSampler?
-    private var bassSamplerNodeAttached = false
-    public private(set) var currentBassID: String?
-    /// The pitched instrument — keys, pads, plucks — on a sampler of its own, because it plays
-    /// chords underneath a bass line that is sounding at the same time.
-    private var instrumentSampler: VoiceSampler?
-    private var instrumentSamplerNodeAttached = false
-    public private(set) var currentInstrumentID: String?
     private var player: AVAudioPlayerNode?
 
-    /// Which kit the one sampler is currently holding. Surfaces share the sampler, so a Grid step
-    /// and a chop pad can take it from each other; each adapter checks this and re-prepares its own
-    /// kit when it has been displaced, which costs one prepare rather than a wrong sound.
-    public private(set) var currentKitID: String?
+    /// Which sampler a sound wants.
+    ///
+    /// A sampler holds **one** kit, which is why the bass has never shared the drums'. Three
+    /// families, because grooves, bass lines and pitched parts are three kinds of kit — and a
+    /// `part`, because two lanes of the same family can sound at once now: a pad holding the chords
+    /// under a lead playing the tune is two instrument kits, not one.
+    ///
+    /// `part == nil` is the **surface's** sampler: a Grid step, a chop pad, a key on the piano
+    /// roll. A surface has no lane; it is playing what is under your finger. It is deliberately not
+    /// the same sampler the transport uses for that part, so the song going on playing a Wurlitzer
+    /// while you audition a Juno is two kits, not a fight over one.
+    public struct SamplerKey: Hashable, Sendable {
+        public enum Family: String, Sendable { case drums, bass, instrument }
+        public var family: Family
+        public var part: PartID?
+
+        public init(_ family: Family, part: PartID? = nil) {
+            self.family = family
+            self.part = part
+        }
+    }
+
+    /// One sampler and what is true about it for its lifetime.
+    private final class Loaded {
+        let sampler: VoiceSampler
+        var attached = false
+        var kitID: String?
+        init(_ sampler: VoiceSampler) { self.sampler = sampler }
+    }
+
+    private var samplers: [SamplerKey: Loaded] = [:]
+
+    /// Which kit the surface's drum sampler is holding. Surfaces share it, so a Grid step and a
+    /// chop pad can take it from each other; each adapter checks this and re-prepares its own kit
+    /// when it has been displaced, which costs one prepare rather than a wrong sound. The
+    /// transport's samplers are keyed by part and never displace this one.
+    public var currentKitID: String? { samplers[SamplerKey(.drums)]?.kitID }
+    public var currentBassID: String? { samplers[SamplerKey(.bass)]?.kitID }
+    public var currentInstrumentID: String? { samplers[SamplerKey(.instrument)]?.kitID }
+
+    /// The parts that currently hold a sampler of their own. What a test asserts on to see that a
+    /// lane's kit was let go of rather than kept resident.
+    public var laneParts: Set<PartID> { Set(samplers.keys.compactMap(\.part)) }
 
     /// The last thing that went wrong, in the words the underlying module used. Nothing here throws
     /// at a touch: a surface that cannot make a sound stays quiet and says so, it never traps.
@@ -230,16 +257,16 @@ public final class AuditionService {
 
     /// Make a synthesized drum machine playable. Kits are built once into the cache and reused.
     public func prepare(machine: SynthMachine) async throws {
+        try await prepare(machine: machine, for: nil)
+    }
+
+    /// The same, for one lane of the song rather than for the surfaces.
+    @discardableResult
+    public func prepare(machine: SynthMachine, for part: PartID?) async throws -> VoiceSampler {
         let engine = try await liveEngine()
-        guard currentKitID != machine.id else { return }
-        let folder = kitsDirectory.appendingPathComponent(machine.id, isDirectory: true)
-        let loaded: LoadedKit
-        if let existing = try? KitStore.load(from: folder) {
-            loaded = existing
-        } else {
-            loaded = try SynthesizedKit.build(machine, in: folder, sampleRate: engine.format.sampleRate)
-        }
-        try install(loaded, id: machine.id, on: engine)
+        let key = SamplerKey(.drums, part: part)
+        if let entry = samplers[key], entry.kitID == machine.id { return entry.sampler }
+        return try install(drumKit(machine, on: engine), id: machine.id, for: key, on: engine)
     }
 
     /// Make a rendered chop playable. `id` names the kit so a surface can tell whether the sampler
@@ -248,13 +275,13 @@ public final class AuditionService {
         let engine = try await liveEngine()
         let folder = kitsDirectory.appendingPathComponent("chops/\(Self.safe(id))", isDirectory: true)
         let loaded = try chop.write(to: folder)
-        try install(loaded, id: id, on: engine)
+        try install(loaded, id: id, for: SamplerKey(.drums), on: engine)
     }
 
     /// Play hits against whatever kit is loaded, now. `Hit.time` is seconds from this instant.
     public func play(_ hits: [VoiceSampler.Hit]) async {
         guard !hits.isEmpty else { return }
-        guard let sampler, sampler.kit != nil else {
+        guard let sampler = samplers[SamplerKey(.drums)]?.sampler, sampler.kit != nil else {
             lastFailure = "nothing is prepared to play"
             return
         }
@@ -286,15 +313,13 @@ public final class AuditionService {
         try await liveEngine()
     }
 
-    /// The one sampler, holding `machine`'s kit.
+    /// The sampler a groove lane plays on, holding `machine`'s kit.
     ///
-    /// Goes through `prepare(machine:)`, so a machine already loaded costs nothing and one that is
-    /// not displaces whatever a surface had put there — which is correct: the transport is playing
-    /// the song, and the song's own machine is what it should sound like.
-    public func playbackSampler(machine: SynthMachine) async throws -> VoiceSampler {
-        try await prepare(machine: machine)
-        guard let sampler else { throw AuditionUnavailable(what: "the sampler was not prepared") }
-        return sampler
+    /// Keyed by the part, so the transport never displaces what a surface has loaded: the song can
+    /// go on playing an 808 while you audition an SP-1200 under your finger. It used to take the
+    /// one sampler from whichever surface had it, which cost a re-prepare on the next touch.
+    public func playbackSampler(machine: SynthMachine, for part: PartID? = nil) async throws -> VoiceSampler {
+        try await prepare(machine: machine, for: part)
     }
 
     // MARK: The bass
@@ -302,63 +327,36 @@ public final class AuditionService {
     /// The bass sampler, holding `voice`'s kit — built into the kits directory the first time,
     /// loaded from there after. A voice already loaded costs nothing.
     public func prepare(bass voice: BassVoiceSpec) async throws {
+        try await prepare(bass: voice, for: nil)
+    }
+
+    @discardableResult
+    public func prepare(bass voice: BassVoiceSpec, for part: PartID?) async throws -> VoiceSampler {
         let engine = try await liveEngine()
-        guard currentBassID != voice.id else { return }
-        let folder = kitsDirectory.appendingPathComponent(SynthesizedBass.folderName(for: voice), isDirectory: true)
-        let loaded: LoadedKit
-        if let existing = try? KitStore.load(from: folder) {
-            loaded = existing
-        } else {
-            loaded = try SynthesizedBass.build(voice, in: folder, sampleRate: engine.format.sampleRate)
-        }
-        let format = engine.format
-        let sampler = bassSampler ?? VoiceSampler(cache: cache)
-        bassSampler = sampler
-        // As above: never unprepare a sampler whose node is attached and rendering.
-        try sampler.prepare(loaded, sampleRate: format.sampleRate, channels: Int(format.channelCount))
-        if !bassSamplerNodeAttached, let node = sampler.node {
-            engine.avEngine.attach(node)
-            try engine.avEngine.connectNode(node, to: engine.mainMixer, format: format)
-            bassSamplerNodeAttached = true
-        }
-        currentBassID = voice.id
+        let key = SamplerKey(.bass, part: part)
+        if let entry = samplers[key], entry.kitID == voice.id { return entry.sampler }
+        return try install(bassKit(voice, on: engine), id: voice.id, for: key, on: engine)
     }
 
     /// The instrument sampler, holding `spec`'s kit. Built into the kits directory the first time —
     /// a pitched kit is 19 roots × its velocity layers, so the first build of a preset takes a
     /// moment — and loaded from there ever after.
     public func prepare(instrument spec: InstrumentVoiceSpec) async throws {
-        let engine = try await liveEngine()
-        guard currentInstrumentID != spec.id else { return }
-        let folder = kitsDirectory.appendingPathComponent(SynthesizedInstrument.folderName(for: spec), isDirectory: true)
-        let loaded: LoadedKit
-        if let existing = try? KitStore.load(from: folder) {
-            loaded = existing
-        } else {
-            loaded = try SynthesizedInstrument.build(spec, in: folder, sampleRate: engine.format.sampleRate)
-        }
-        let format = engine.format
-        let sampler = instrumentSampler ?? VoiceSampler(cache: cache)
-        instrumentSampler = sampler
-        // Swap the kit in place. `unprepare()` here would destroy the node, `prepare` would build a
-        // new one, and the attach-once flag below would leave that new node unattached — then the
-        // first note asks an engine-less node for its render time and AVFAudio raises. That is the
-        // Rhodes-to-Wurlitzer crash. `prepare` is safe to call again while rendering: it retires
-        // the old zones by epoch and keeps the node.
-        try sampler.prepare(loaded, sampleRate: format.sampleRate, channels: Int(format.channelCount))
-        if !instrumentSamplerNodeAttached, let node = sampler.node {
-            engine.avEngine.attach(node)
-            try engine.avEngine.connectNode(node, to: engine.mainMixer, format: format)
-            instrumentSamplerNodeAttached = true
-        }
-        currentInstrumentID = spec.id
+        try await prepare(instrument: spec, for: nil)
     }
 
-    /// The instrument sampler for the transport, holding `spec`'s kit.
-    public func playbackInstrumentSampler(_ spec: InstrumentVoiceSpec) async throws -> VoiceSampler {
-        try await prepare(instrument: spec)
-        guard let instrumentSampler else { throw AuditionUnavailable(what: "the instrument was not prepared") }
-        return instrumentSampler
+    @discardableResult
+    public func prepare(instrument spec: InstrumentVoiceSpec, for part: PartID?) async throws -> VoiceSampler {
+        let engine = try await liveEngine()
+        let key = SamplerKey(.instrument, part: part)
+        if let entry = samplers[key], entry.kitID == spec.id { return entry.sampler }
+        return try install(instrumentKit(spec, on: engine), id: spec.id, for: key, on: engine)
+    }
+
+    /// The sampler a pitched lane plays on, holding `spec`'s kit. One per part, which is what lets
+    /// a pad hold the chords while a lead plays the tune over them.
+    public func playbackInstrumentSampler(_ spec: InstrumentVoiceSpec, for part: PartID? = nil) async throws -> VoiceSampler {
+        try await prepare(instrument: spec, for: part)
     }
 
     /// Play notes on the loaded instrument now. `Hit.time` is seconds from this instant, so a
@@ -366,7 +364,8 @@ public final class AuditionService {
     @discardableResult
     public func playInstrument(_ hits: [VoiceSampler.Hit]) async -> [VoiceSampler.VoiceHandle] {
         guard !hits.isEmpty else { return [] }
-        guard let instrumentSampler, instrumentSampler.kit != nil else {
+        guard let instrumentSampler = samplers[SamplerKey(.instrument)]?.sampler,
+              instrumentSampler.kit != nil else {
             lastFailure = "no instrument is prepared to play"
             return []
         }
@@ -385,15 +384,13 @@ public final class AuditionService {
 
     /// Lets go of held instrument notes, now.
     public func stopInstrument(_ handles: [VoiceSampler.VoiceHandle]) {
-        guard let instrumentSampler else { return }
+        guard let instrumentSampler = samplers[SamplerKey(.instrument)]?.sampler else { return }
         for handle in handles { instrumentSampler.stop(handle) }
     }
 
-    /// The bass sampler for the transport, holding `voice`'s kit.
-    public func playbackBassSampler(voice: BassVoiceSpec) async throws -> VoiceSampler {
-        try await prepare(bass: voice)
-        guard let bassSampler else { throw AuditionUnavailable(what: "the bass sampler was not prepared") }
-        return bassSampler
+    /// The sampler a bass lane plays on, holding `voice`'s kit.
+    public func playbackBassSampler(voice: BassVoiceSpec, for part: PartID? = nil) async throws -> VoiceSampler {
+        try await prepare(bass: voice, for: part)
     }
 
     /// Play bass hits now, on whichever bass voice is loaded. `Hit.time` is seconds from this instant.
@@ -401,7 +398,7 @@ public final class AuditionService {
     @discardableResult
     public func playBass(_ hits: [VoiceSampler.Hit]) async -> [VoiceSampler.VoiceHandle] {
         guard !hits.isEmpty else { return [] }
-        guard let bassSampler, bassSampler.kit != nil else {
+        guard let bassSampler = samplers[SamplerKey(.bass)]?.sampler, bassSampler.kit != nil else {
             lastFailure = "no bass is prepared to play"
             return []
         }
@@ -420,7 +417,7 @@ public final class AuditionService {
 
     /// Lets go of held bass notes, now.
     public func stopBass(_ handles: [VoiceSampler.VoiceHandle]) {
-        guard let bassSampler else { return }
+        guard let bassSampler = samplers[SamplerKey(.bass)]?.sampler else { return }
         for handle in handles { bassSampler.stop(handle) }
     }
 
@@ -428,9 +425,7 @@ public final class AuditionService {
 
     /// Silence everything this service is playing. Never throws: stopping is always allowed.
     public func stop() async {
-        sampler?.allNotesOff()
-        bassSampler?.allNotesOff()
-        instrumentSampler?.allNotesOff()
+        for entry in samplers.values { entry.sampler.allNotesOff() }
         player?.stop()
     }
 
@@ -439,25 +434,19 @@ public final class AuditionService {
     /// reads, so an attached node would be reading freed samples.
     public func shutdown() async {
         await stop()
+        // Two loops, in this order: every attached node comes off the engine before any sampler is
+        // unprepared. One loop doing both would free the zones of the first sampler while the
+        // second was still attached and rendering.
         if let engine {
-            if samplerNodeAttached, let node = sampler?.node { engine.avEngine.detach(node) }
-            if bassSamplerNodeAttached, let node = bassSampler?.node { engine.avEngine.detach(node) }
-            if instrumentSamplerNodeAttached, let node = instrumentSampler?.node { engine.avEngine.detach(node) }
+            for entry in samplers.values where entry.attached {
+                if let node = entry.sampler.node { engine.avEngine.detach(node) }
+                entry.attached = false
+            }
             if let player { engine.avEngine.detach(player) }
         }
-        samplerNodeAttached = false
-        bassSamplerNodeAttached = false
-        instrumentSamplerNodeAttached = false
         player = nil
-        sampler?.unprepare()
-        sampler = nil
-        bassSampler?.unprepare()
-        bassSampler = nil
-        instrumentSampler?.unprepare()
-        instrumentSampler = nil
-        currentInstrumentID = nil
-        currentKitID = nil
-        currentBassID = nil
+        for entry in samplers.values { entry.sampler.unprepare() }
+        samplers = [:]
         engine = nil
     }
 
@@ -502,24 +491,71 @@ public final class AuditionService {
         return node
     }
 
-    private func install(_ kit: LoadedKit, id: String, on engine: Engine) throws {
+    /// The one door every kit goes through: the sampler for a key, holding `kit`.
+    ///
+    /// Swap the kit in place. `unprepare()` here would destroy the node, `prepare` would build a
+    /// new one, and the attach-once flag below would leave that new node unattached — then the
+    /// first note asks an engine-less node for its render time and AVFAudio raises. That is the
+    /// Rhodes-to-Wurlitzer crash. `prepare` is safe to call again while rendering: it retires the
+    /// old zones by epoch and keeps the node. There are N samplers now rather than three, which is
+    /// more chances to get this wrong, not fewer.
+    @discardableResult
+    private func install(_ kit: LoadedKit, id: String, for key: SamplerKey, on engine: Engine) throws -> VoiceSampler {
         let format = engine.format
-        let sampler = self.sampler ?? VoiceSampler(cache: cache)
-        self.sampler = sampler
+        let entry = samplers[key] ?? Loaded(VoiceSampler(cache: cache))
+        samplers[key] = entry
+        guard entry.kitID != id else { return entry.sampler }
         // The sampler's format is locked by its first `prepare`, so it is the graph's from the
         // start — a sampler rendering at another rate would put every hit on the wrong frame.
-        try sampler.prepare(kit, sampleRate: format.sampleRate, channels: Int(format.channelCount))
-        if !samplerNodeAttached, let node = sampler.node {
+        try entry.sampler.prepare(kit, sampleRate: format.sampleRate, channels: Int(format.channelCount))
+        if !entry.attached, let node = entry.sampler.node {
             engine.avEngine.attach(node)
             try engine.avEngine.connectNode(node, to: engine.mainMixer, format: format)
-            samplerNodeAttached = true
+            entry.attached = true
         }
-        currentKitID = id
+        entry.kitID = id
+        return entry.sampler
+    }
+
+    /// The kit for a drum machine, built into the cache on first use.
+    private func drumKit(_ machine: SynthMachine, on engine: Engine) throws -> LoadedKit {
+        let folder = kitsDirectory.appendingPathComponent(machine.id, isDirectory: true)
+        if let existing = try? KitStore.load(from: folder) { return existing }
+        return try SynthesizedKit.build(machine, in: folder, sampleRate: engine.format.sampleRate)
+    }
+
+    private func bassKit(_ voice: BassVoiceSpec, on engine: Engine) throws -> LoadedKit {
+        let folder = kitsDirectory.appendingPathComponent(SynthesizedBass.folderName(for: voice), isDirectory: true)
+        if let existing = try? KitStore.load(from: folder) { return existing }
+        return try SynthesizedBass.build(voice, in: folder, sampleRate: engine.format.sampleRate)
+    }
+
+    private func instrumentKit(_ spec: InstrumentVoiceSpec, on engine: Engine) throws -> LoadedKit {
+        let folder = kitsDirectory.appendingPathComponent(SynthesizedInstrument.folderName(for: spec), isDirectory: true)
+        if let existing = try? KitStore.load(from: folder) { return existing }
+        return try SynthesizedInstrument.build(spec, in: folder, sampleRate: engine.format.sampleRate)
+    }
+
+    /// Lets go of every lane sampler whose part is not in `parts`, so a song closed or a form
+    /// rewritten does not leave its kits resident forever. The surfaces' samplers — the `part: nil`
+    /// three — are never retired: they belong to the app, not to a plan.
+    ///
+    /// Called from `LiveSongPlayer.end()` *after* every source has come off the engine, which is
+    /// the one window where no render block is reading these zones. Detach before unprepare, as
+    /// everywhere else.
+    public func retire(partsOtherThan parts: Set<PartID>) async {
+        for (key, entry) in samplers {
+            guard let part = key.part, !parts.contains(part) else { continue }
+            entry.sampler.allNotesOff()
+            if entry.attached, let node = entry.sampler.node { engine?.avEngine.detach(node) }
+            entry.sampler.unprepare()
+            samplers[key] = nil
+        }
     }
 
     /// Anchor the sampler's clock at the current render position, so hit times are seconds from now.
     private func anchorNow(on engine: Engine) {
-        guard let sampler else { return }
+        guard let sampler = samplers[SamplerKey(.drums)]?.sampler else { return }
         sampler.transportDidStart(originSampleTime: renderPosition(on: engine, node: sampler.node),
                                   sampleRate: engine.format.sampleRate)
     }
