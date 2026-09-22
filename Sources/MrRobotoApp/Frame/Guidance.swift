@@ -145,7 +145,10 @@ enum PartLabel {
                 .map { $0.symbol(preferring: progression.key.spellingPreference) }
                 .joined(separator: " ")
         case .melody, .lyric:
-            return version.type.rawValue.capitalized
+            // Its own note, like every other kind. A melody called "Melody" on a chip beside a
+            // groove called "Swung brushes, kick pushing the and-of-3" is the one part in the song
+            // that will not say what it is.
+            return note(of: version) ?? version.type.rawValue.capitalized
         case .mix:
             return note(of: version) ?? "Mix"
         }
