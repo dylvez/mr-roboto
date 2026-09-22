@@ -495,24 +495,50 @@ public struct SongPlayback: Equatable, Sendable {
         return out
     }
 
-    /// The song's own drum machine, from its newest `.sound` part. A song that has never opened the
-    /// Sound surface plays its groove on the 808, which is what a new Grid opens on.
+    /// The song's own drum machine, from its newest `.sound` part that names one and is *the
+    /// song's* — not a part's own. A song that has never opened the Sound surface plays its groove
+    /// on the 808, which is what a new Grid opens on.
     static func machineID(in song: Song) -> String {
-        for version in song.versions.reversed() {
-            guard case .sound(let sound) = version.kind else { continue }
-            if SynthMachine.preset(id: sound.instrument) != nil { return sound.instrument }
-        }
-        return SynthMachine.tr808.id
+        sound(in: song, for: nil, recognisedBy: { SynthMachine.preset(id: $0) != nil })
+            ?? SynthMachine.tr808.id
+    }
+
+    /// The machine a groove part plays on: its own newest pick, then the song's, then the 808.
+    static func machineID(for part: PartID?, in song: Song) -> String {
+        sound(in: song, for: part, recognisedBy: { SynthMachine.preset(id: $0) != nil })
+            ?? machineID(in: song)
     }
 
     /// The song's pitched instrument, from its newest `.sound` part that names one. A song that
     /// has never chosen gets the Rhodes, which is the one that suits this app's first idiom.
     static func instrumentID(in song: Song) -> String {
+        sound(in: song, for: nil, recognisedBy: { InstrumentVoiceSpec.preset(id: $0) != nil })
+            ?? InstrumentVoiceSpec.rhodes.id
+    }
+
+    /// The instrument a pitched part plays on: its own newest pick, then the song's, then the
+    /// Rhodes. This is what lets a pad hold the chords while a lead plays the tune over them —
+    /// before it, a song had one pitched instrument and the two shared it.
+    static func instrumentID(for part: PartID?, in song: Song) -> String {
+        sound(in: song, for: part, recognisedBy: { InstrumentVoiceSpec.preset(id: $0) != nil })
+            ?? instrumentID(in: song)
+    }
+
+    /// The newest `.sound` belonging to `part` — or to the song itself, when `part` is nil — whose
+    /// instrument the given registry recognises.
+    ///
+    /// The two filters matter in opposite directions. `part` nil must skip a sound that names a
+    /// part, or one part's pick would quietly become every part's default; and a sound naming a
+    /// part must skip the registries that do not know its id, because the same version list holds
+    /// the drum machines and the pitched instruments and they are told apart only by which
+    /// registry answers.
+    private static func sound(in song: Song, for part: PartID?,
+                              recognisedBy known: (String) -> Bool) -> String? {
         for version in song.versions.reversed() {
-            guard case .sound(let sound) = version.kind else { continue }
-            if InstrumentVoiceSpec.preset(id: sound.instrument) != nil { return sound.instrument }
+            guard case .sound(let sound) = version.kind, sound.forPart == part else { continue }
+            if known(sound.instrument) { return sound.instrument }
         }
-        return InstrumentVoiceSpec.rhodes.id
+        return nil
     }
 
     /// Why this song cannot be played, in its own terms. Never a shrug: it names what is there and

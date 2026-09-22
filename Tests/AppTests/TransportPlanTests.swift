@@ -354,6 +354,36 @@ struct TransportPlanTests {
         #expect(chosen.machine == SynthMachine.tr808.id)
     }
 
+    @Test("A part may name its own instrument, and its pick is not the song's")
+    func aPartsOwnInstrument() {
+        let chords = TransportFixture.progressionVersion()
+        let tune = TransportFixture.melodyVersion()
+        // The song's own pick, then one for the chords' part only.
+        let songWide = TransportFixture.soundVersion(InstrumentVoiceSpec.warmPad.id)
+        let forChords = PartVersion(partID: PartID(),
+                                    kind: .sound(Sound(instrument: InstrumentVoiceSpec.squareLead.id,
+                                                       forPart: chords.partID)),
+                                    author: .user, operation: Operation.written)
+        let song = TransportFixture.song([chords, tune, songWide, forChords])
+
+        #expect(SongPlayback.instrumentID(for: chords.partID, in: song) == InstrumentVoiceSpec.squareLead.id,
+                "the chords play on their own pick")
+        #expect(SongPlayback.instrumentID(for: tune.partID, in: song) == InstrumentVoiceSpec.warmPad.id,
+                "the tune has no pick of its own, so it takes the song's")
+        // The one that would have been quietly wrong: a part's pick becoming everyone's default.
+        #expect(SongPlayback.instrumentID(in: song) == InstrumentVoiceSpec.warmPad.id,
+                "a part's own instrument is not the song's")
+
+        // With nothing chosen at all, both fall through to the Rhodes.
+        let bare = TransportFixture.song([chords])
+        #expect(SongPlayback.instrumentID(for: chords.partID, in: bare) == InstrumentVoiceSpec.rhodes.id)
+        #expect(SongPlayback.instrumentID(in: bare) == InstrumentVoiceSpec.rhodes.id)
+
+        // And the drum machine is read the same way, off the same list, without confusing the two.
+        #expect(SongPlayback.machineID(in: song) == SynthMachine.tr808.id,
+                "a pitched pick is not a drum machine")
+    }
+
     @Test("A stitched progression reaches its section, with the bars the section says")
     func chordsInASection() throws {
         let chords = TransportFixture.progressionVersion()

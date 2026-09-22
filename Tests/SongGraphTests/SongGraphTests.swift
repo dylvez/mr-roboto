@@ -88,6 +88,27 @@ import Testing
         #expect(decoded.key == Fixtures.dMajor)
     }
 
+    // A sound may name the part it is for, so a pad can hold the chords while a lead plays the
+    // tune. The field is new; every document written before it must still read and write the same
+    // bytes, which is what lets this land without a schema bump.
+    @Test func aSoundMayNameItsPart() throws {
+        let songs = Sound(instrument: "rhodes")
+        let encoded = try SongGraphCodec.encode(songs)
+        let json = String(decoding: encoded, as: UTF8.self)
+        #expect(!json.contains("forPart"), "a sound with no part must not write the key: \(json)")
+        #expect(try SongGraphCodec.decode(Sound.self, from: encoded) == songs)
+
+        let part = PartID()
+        let mine = Sound(instrument: "pad", preset: "warm", parameters: ["cutoff": 0.4], forPart: part)
+        let back = try SongGraphCodec.decode(Sound.self, from: try SongGraphCodec.encode(mine))
+        #expect(back == mine)
+        #expect(back.forPart == part)
+
+        // And a document written before the field decodes with no part, rather than refusing.
+        let old = Data(#"{"instrument":"juno","parameters":{}}"#.utf8)
+        #expect(try SongGraphCodec.decode(Sound.self, from: old).forPart == nil)
+    }
+
     @Test func libraryRoundTrips() throws {
         let graph = try Fixtures.graph()
         let analysis = PartVersion(partID: PartID(), kind: .analysis(Fixtures.analysis), author: .user, operation: Operation.analyzed)

@@ -468,16 +468,54 @@ public struct CompPlan: Hashable, Codable, Sendable {
 // MARK: - Sound
 
 /// A sound preset: an instrument or chain identifier plus parameter values.
-public struct Sound: Hashable, Codable, Sendable {
+public struct Sound: Hashable, Sendable {
     /// Instrument or chain identifier, e.g. "synth.sub", "sampler", "chain.lofi-tape".
     public var instrument: String
     public var preset: String?
     public var parameters: [String: Double]
+    /// The part this sound is for, when it is a part's own rather than the song's. Nil is the
+    /// song's default: what every part that names none plays on.
+    ///
+    /// A song used to have exactly one pitched instrument, found by scanning its versions backwards
+    /// for the newest `.sound`, so a pad playing the chords and a lead playing the tune could not
+    /// sound together — the app said as much in its own part notes, which read "for the chords and
+    /// the tune" because there was one slot for both.
+    ///
+    /// It lives here rather than on the stitch because a sound is a decision about a *part*, and
+    /// this payload is already versioned: picking an instrument goes through `AppState.record`,
+    /// shows in the ledger with its provenance, and is undone by recording a newer one. A stitch is
+    /// edited in place and versions nothing, so the same choice there would be un-undoable and
+    /// would have to be repeated in every section the part plays in.
+    public var forPart: PartID?
 
-    public init(instrument: String, preset: String? = nil, parameters: [String: Double] = [:]) {
+    public init(instrument: String, preset: String? = nil, parameters: [String: Double] = [:],
+                forPart: PartID? = nil) {
         self.instrument = instrument
         self.preset = preset
         self.parameters = parameters
+        self.forPart = forPart
+    }
+}
+
+extension Sound: Codable {
+    private enum CodingKeys: String, CodingKey { case instrument, preset, parameters, forPart }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(instrument: try c.decode(String.self, forKey: .instrument),
+                  preset: try c.decodeIfPresent(String.self, forKey: .preset),
+                  parameters: try c.decodeIfPresent([String: Double].self, forKey: .parameters) ?? [:],
+                  forPart: try c.decodeIfPresent(PartID.self, forKey: .forPart))
+    }
+
+    /// `forPart` is omitted when nil, so every sound written before parts could name one round-trips
+    /// byte for byte and the document needs no schema bump to carry this.
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(instrument, forKey: .instrument)
+        try c.encodeIfPresent(preset, forKey: .preset)
+        try c.encode(parameters, forKey: .parameters)
+        try c.encodeIfPresent(forPart, forKey: .forPart)
     }
 }
 

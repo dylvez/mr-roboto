@@ -50,9 +50,12 @@ public final class ChordsModel {
     public var instrument: String { host.instrument }
 
     public func setInstrument(_ id: String) {
-        host.setInstrument(id)
+        host.setInstrument(id, for: part)
         if let progression, let first = progression.chords.first { audition(first) }
     }
+
+    /// The part these chords belong to, once they have been kept.
+    public var part: PartID? { (versions.last ?? base)?.partID }
     public let beatsPerBar: Int
 
     private let host: any ChordsHosting

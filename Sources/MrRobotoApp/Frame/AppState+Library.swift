@@ -564,14 +564,19 @@ extension AppState {
 }
 
 extension AppState {
-    /// The song's pitched instrument: what chords and melodies play through. Recorded as a `.sound`
-    /// part, the same way the drum machine is, so the choice travels with the song and shows in the
-    /// ledger. A preset the app does not know is ignored rather than recorded.
+    /// The pitched instrument a part plays on, or the song's when no part is named: what chords and
+    /// melodies sound through. Recorded as a `.sound` part, the same way the drum machine is, so the
+    /// choice travels with the song and shows in the ledger. A preset the app does not know is
+    /// ignored rather than recorded, and picking what is already playing records nothing.
     @discardableResult
-    public func setInstrument(_ id: String) -> Bool {
-        guard let spec = InstrumentVoiceSpec.preset(id: id) else { return false }
-        guard song != nil, SongPlayback.instrumentID(in: song!) != spec.id else { return false }
-        return record(PartVersion(partID: PartID(), kind: .sound(Sound(instrument: spec.id)), author: .user,
-                                  operation: Operation.written, note: "\(spec.name) for the chords and the tune"))
+    public func setInstrument(_ id: String, for part: PartID? = nil) -> Bool {
+        guard let spec = InstrumentVoiceSpec.preset(id: id), let song else { return false }
+        guard SongPlayback.instrumentID(for: part, in: song) != spec.id else { return false }
+        let name = part.flatMap { id in song.versions.last { $0.partID == id } }.map(PartLabel.title(of:))
+        return record(PartVersion(partID: PartID(),
+                                  kind: .sound(Sound(instrument: spec.id, forPart: part)), author: .user,
+                                  operation: Operation.written,
+                                  note: name.map { "\(spec.name) for \($0)" }
+                                      ?? "\(spec.name) for the chords and the tune"))
     }
 }

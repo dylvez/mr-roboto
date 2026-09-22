@@ -32,7 +32,8 @@ final class RollStub: PianoRollHosting {
     func playMelody(_ notes: [NoteEvent], tempo: Double, timeSignature: TimeSignature, instrument: String) async {
         melodiesPlayed.append((notes, instrument))
     }
-    func setInstrument(_ id: String) { instrument = id }
+    var instrumentParts: [PartID?] = []
+    func setInstrument(_ id: String, for part: PartID?) { instrument = id; instrumentParts.append(part) }
     func stop() async {}
     func commit(_ version: PartVersion) async -> Bool {
         if refuses { return false }
@@ -47,7 +48,8 @@ final class ChordsStub: ChordsHosting {
     var committed: [PartVersion] = []
     var instrument = InstrumentVoiceSpec.rhodes.id
     func audition(pitches: [Int], duration: Double) async { auditioned.append(pitches) }
-    func setInstrument(_ id: String) { instrument = id }
+    var instrumentParts: [PartID?] = []
+    func setInstrument(_ id: String, for part: PartID?) { instrument = id; instrumentParts.append(part) }
     func commit(_ version: PartVersion) async -> Bool { committed.append(version); return true }
 }
 

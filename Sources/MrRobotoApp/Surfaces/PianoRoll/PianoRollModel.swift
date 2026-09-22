@@ -123,9 +123,14 @@ public final class PianoRollModel {
     public func setInstrument(_ id: String) {
         guard InstrumentVoiceSpec.preset(id: id) != nil else { return }
         instrument = id
-        host.setInstrument(id)
+        // For *this* part, so a tune can be a lead over chords on a pad. A roll opened on nothing
+        // has no part to name yet and sets the song's, which is what it always did.
+        host.setInstrument(id, for: part)
         if let first = notes.first { audition(first) }
     }
+
+    /// The part this roll is working on, once it has one.
+    public var part: PartID? { (versions.last ?? base)?.partID }
 
     public var register: ClosedRange<Int> {
         var low = lineage.register.lowerBound, high = lineage.register.upperBound

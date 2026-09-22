@@ -18,7 +18,9 @@ public protocol PianoRollHosting: AnyObject {
     /// A whole melody, at its written beats.
     func playMelody(_ notes: [NoteEvent], tempo: Double, timeSignature: TimeSignature, instrument: String) async
     /// The song's pitched instrument becomes this one, for everything that plays through it.
-    func setInstrument(_ id: String)
+    /// The instrument this surface's part plays on. Nil is the song's own pick, which is what a
+    /// surface working on nothing yet sets.
+    func setInstrument(_ id: String, for part: PartID?)
     func stop() async
     /// A new part version left the surface. `false` when the host refused it.
     @discardableResult
@@ -31,7 +33,9 @@ public protocol ChordsHosting: AnyObject {
     func audition(pitches: [Int], duration: Double) async
     /// The song's pitched instrument: what these chords are voiced on.
     var instrument: String { get }
-    func setInstrument(_ id: String)
+    /// The instrument this surface's part plays on. Nil is the song's own pick, which is what a
+    /// surface working on nothing yet sets.
+    func setInstrument(_ id: String, for part: PartID?)
     @discardableResult
     func commit(_ version: PartVersion) async -> Bool
 }

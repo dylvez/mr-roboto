@@ -47,7 +47,7 @@ final class BassAdapter: PianoRollHosting {
         })
     }
 
-    func setInstrument(_ id: String) { app.setInstrument(id) }
+    func setInstrument(_ id: String, for part: PartID?) { app.setInstrument(id, for: part) }
 
     /// Loads an instrument preset, saying so in the rail when it cannot.
     private func prepareInstrument(_ id: String) async -> Bool {
@@ -106,7 +106,7 @@ final class ChordsAdapter: ChordsHosting {
 
     var instrument: String { app.song.map { SongPlayback.instrumentID(in: $0) } ?? InstrumentVoiceSpec.rhodes.id }
 
-    func setInstrument(_ id: String) { app.setInstrument(id) }
+    func setInstrument(_ id: String, for part: PartID?) { app.setInstrument(id, for: part) }
 
     func audition(pitches: [Int], duration: Double) async {
         // Chords play on the song's pitched instrument. They used to go through the bass sampler,
