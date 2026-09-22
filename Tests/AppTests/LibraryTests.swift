@@ -328,6 +328,8 @@ struct LibraryDropTests {
         app.save()
         let verse = second.sections[0].id
 
+        // A drop aimed at a section is placed there and nowhere else: making a part puts it in
+        // every section, but saying where you want it is saying where you want it.
         #expect(app.receive(LibraryDragPayload(kind: .idea, id: idea.rawValue, title: "Groove"), at: .section(verse)))
         #expect(app.song?.sections[0].stitch.count == 1)
         #expect(app.receive(LibraryDragPayload(kind: .sample, id: sample.rawValue, title: "Chop"), at: .section(verse)))

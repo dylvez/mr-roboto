@@ -643,14 +643,23 @@ public final class AppState {
     /// Appends a new version to the open song, selects it and logs it. This is how a surface hands back
     /// work: derive from an existing version (`PartVersion.deriving` / `.spawning`) and record the result.
     /// An existing version is never mutated.
+    /// - Parameter joiningForm: whether a *new* playable part is put into every section. True is
+    ///   the point — a part you make is in the song — and false is for the one caller that is about
+    ///   to place it deliberately: a library row dropped on a section means *that* section, and
+    ///   adding it everywhere first would both contradict the drop and stitch the part twice.
     @discardableResult
-    public func record(_ version: PartVersion) -> Bool {
+    public func record(_ version: PartVersion, joiningForm: Bool = true) -> Bool {
         guard var current = song else {
             note(.session, "No song open; nothing to record into")
             return false
         }
         do {
             try current.append(version)
+            // A part you have just made is in the song. Before this it was not: the form named
+            // parts, a new part was in no section, and so writing chords into an arranged song
+            // produced something you could draw, keep and audition and never hear — with nothing
+            // anywhere saying why. You take it out of a section if you meant it somewhere else.
+            let joined = joiningForm ? Self.joinForm(with: version, in: &current) : 0
             song = current
             hasUnsavedChanges = true
             selectedVersion = version.id
@@ -664,6 +673,10 @@ public final class AppState {
             }
             note(.you, "\(version.operation.capitalized) → \(version.type.rawValue)\(versionNumber(of: version.id).map { " v\($0)" } ?? "")",
                  detail: provenanceLine(for: version))
+            if joined > 0 {
+                note(.session, "\(PartLabel.title(of: version)) plays in the song",
+                     detail: "Added to \(count(joined, "section")). Open Structure to take it out of one.")
+            }
             return true
         } catch {
             note(.session, "Could not record that version", detail: "\(error)")
@@ -888,6 +901,22 @@ public final class AppState {
             transport = .unavailable("\(error)")
             note(.session, "The transport could not start", detail: "\(error)")
         }
+    }
+
+    /// Puts a newly made part into the form, and says how many sections took it.
+    ///
+    /// Only a **new** part: a new version of a part already in the form is heard there anyway,
+    /// because a lane follows its part. Only a kind the transport sounds, and only one that sounds
+    /// *yet* — a dry chop joins when it is dusted, which is a new version of the same part, so the
+    /// check is on the version rather than on the kind alone. An unarranged song is untouched: it
+    /// already plays the newest of everything.
+    static func joinForm(with version: PartVersion, in song: inout Song) -> Int {
+        guard !song.sections.isEmpty, StructureModel.plays(version) else { return 0 }
+        guard !song.sections.contains(where: { $0.stitch.contains(part: version.partID) }) else { return 0 }
+        for index in song.sections.indices {
+            song.sections[index].stitch.append(Lane(part: version.partID))
+        }
+        return song.sections.count
     }
 
     /// Says so when the graph ran out of strips. Those parts are audible — they play straight into

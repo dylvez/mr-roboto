@@ -96,6 +96,8 @@ struct FrameRenderTests {
         SurfaceRegistry.registerSurfaces()
         let built = FormFixture.build()
         let app = app(built.song)
+        // The shape a real song reaches: arranged early, then parts written after it. The chords
+        // belong to no section, which is what the form-level line exists to say.
         app.arrange([Section(name: "Intro", stitch: [built.groove].lanes, lengthInBars: 4),
                      Section(name: "Verse", stitch: [built.groove, built.bass].lanes, lengthInBars: 16),
                      Section(name: "Hook", stitch: [built.groove, built.bass].lanes, lengthInBars: 8)])

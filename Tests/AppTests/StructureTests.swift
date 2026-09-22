@@ -289,6 +289,59 @@ struct StructureSongTests {
         #expect(!app.playback.isArranged)
     }
 
+    @Test("a part you make is in the song: writing chords into an arranged song is heard in it")
+    func aNewPartJoinsTheForm() throws {
+        let directory = GuidanceFixture.temporaryDirectory("structure-joins")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let built = FormFixture.build()
+        let app = FormFixture.app(built, in: directory)
+        #expect(app.arrange([Section(name: "Verse", stitch: [built.groove].lanes, lengthInBars: 8),
+                             Section(name: "Hook", stitch: [built.groove].lanes, lengthInBars: 8)]))
+        #expect(app.playback.summary.contains("Chords") == false)
+
+        // Write chords. This is the case that made three days of "I can only hear the drums": the
+        // part was made, kept, drawn and auditionable, and belonged to no section, so the song did
+        // not play it and nothing said why.
+        let chords = PartVersion(partID: PartID(),
+                                 kind: .progression(Progression(key: Key(tonic: NoteName(.c)),
+                                                                bars: [ProgressionBar(Chord(.c, .majorSeventh))])),
+                                 author: .user, operation: Operation.written)
+        #expect(app.record(chords))
+
+        #expect(app.song?.sections.allSatisfy { $0.stitch.contains(part: chords.partID) } == true)
+        #expect(app.playback.summary.contains("Chords"))
+        #expect(app.playback.segments.allSatisfy { $0.progression != nil })
+
+        // A new *version* of a part already in the form changes nothing about the form: a lane
+        // follows its part, so there is nothing to add.
+        let before = app.song?.sections.map(\.stitch)
+        #expect(app.record(chords.deriving(chords.kind, by: .user, operation: Operation.edit)))
+        #expect(app.song?.sections.map(\.stitch) == before)
+
+        // And a kind the transport cannot sound is not forced into the form.
+        let lyric = PartVersion(partID: PartID(), kind: .lyric(Lyric(lines: [])), author: .user,
+                                operation: Operation.written)
+        #expect(app.record(lyric))
+        #expect(app.song?.sections.allSatisfy { !$0.stitch.contains(part: lyric.partID) } == true)
+    }
+
+    @Test("the form says what no section plays, and adds it everywhere in one move")
+    func theFormNamesWhatSitsOut() throws {
+        let host = StubStructureHost()
+        var built = FormFixture.build()
+        // A form arranged before the chords were written: exactly the shape a song reaches by
+        // arranging early, which is what the app tells you to do.
+        built.song.sections = [Section(name: "Verse", stitch: [built.groove].lanes, lengthInBars: 8),
+                               Section(name: "Hook", stitch: [built.groove].lanes, lengthInBars: 8)]
+        let model = StructureModel(host: host, song: built.song)
+
+        #expect(model.orphanedText == "bass and chords")
+        model.fillAll()
+        #expect(model.orphanedText == nil)
+        #expect(model.sections.allSatisfy { $0.stitch.contains(part: built.progression) })
+        #expect(model.sections.allSatisfy { $0.stitch.contains(part: built.bass) })
+    }
+
     @Test("the form follows an edit: keep a new version of what a section plays and it plays that")
     func theFormFollowsAnEdit() throws {
         let directory = GuidanceFixture.temporaryDirectory("structure-follows")

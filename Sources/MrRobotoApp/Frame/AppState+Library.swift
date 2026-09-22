@@ -93,8 +93,12 @@ extension AppState {
     /// Brings a library item into the open song as a new version, its media copied into the
     /// package. Songs and albums are opened rather than adopted. Returns nil with a line in the
     /// rail saying why.
+    ///
+    /// - Parameter joiningForm: whether the adopted part joins every section, as anything newly
+    ///   made does. False only when the caller is about to place it somewhere particular — a drop
+    ///   aimed at one section means *that* section.
     @discardableResult
-    public func adopt(_ payload: LibraryDragPayload) -> VersionID? {
+    public func adopt(_ payload: LibraryDragPayload, joiningForm: Bool = true) -> VersionID? {
         guard let song else {
             note(.session, "Open a song first", detail: "There is nothing to adopt \(payload.title) into.")
             return nil
@@ -114,7 +118,7 @@ extension AppState {
             guard copyMediaIntoPackage(of: idea, song: song) else { return nil }
             let version = PartVersion(partID: PartID(), kind: idea.kind, author: idea.author,
                                       operation: Operation.adopted, note: "from idea: \(idea.note ?? PartLabel.title(of: idea))")
-            return record(version) ? version.id : nil
+            return record(version, joiningForm: joiningForm) ? version.id : nil
         case .sample:
             guard let entry = library.samples.first(where: { $0.id.rawValue == payload.id }) else {
                 note(.session, "That sample is not in the library any more")
@@ -124,7 +128,7 @@ extension AppState {
             guard copyMediaIntoPackage(of: carrier, song: song) else { return nil }
             let version = PartVersion(partID: PartID(), kind: .sample(entry.sample), author: .user,
                                       operation: Operation.adopted, note: "from sample \"\(entry.name)\"")
-            return record(version) ? version.id : nil
+            return record(version, joiningForm: joiningForm) ? version.id : nil
         case .record:
             return adoptRecord(RecordID(rawValue: payload.id), into: song)
         }
@@ -174,7 +178,11 @@ extension AppState {
         case .idea, .sample, .record:
             break
         }
-        guard let id = adopt(payload), let song, let version = song.version(id) else { return false }
+        // A drop aimed at a section places the part itself, below; anywhere else, adopting a part
+        // puts it in the song the way making one does.
+        let aimed = if case .section = drop { true } else { false }
+        guard let id = adopt(payload, joiningForm: !aimed), let song, let version = song.version(id)
+        else { return false }
         switch drop {
         case .ledger:
             return true

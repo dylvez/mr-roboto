@@ -54,6 +54,19 @@ struct StructureSurfaceView: View {
                     FormChip("+ \(preset.rawValue)", isOn: false) { model.add(preset) }
                 }
             }
+            // What the whole form leaves out, above the section detail rather than inside it: a
+            // part written after the form was arranged is in no section, and saying that once
+            // about the song reads as the fact it is, where saying it in each section's panel
+            // reads as a problem with whichever one you happened to select.
+            if let orphaned = model.orphanedText {
+                HStack(spacing: 8) {
+                    Text("No section plays the \(orphaned) this song has.")
+                        .font(Design.Typography.ui(11.5, weight: .regular))
+                        .foregroundStyle(Design.Palette.warn)
+                    FormChip("Add to every section", isOn: false) { model.fillAll() }
+                }
+                .padding(.top, 2)
+            }
         }
     }
 

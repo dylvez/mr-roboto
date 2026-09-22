@@ -335,6 +335,28 @@ public final class StructureModel {
         sections.map { Self.normalised($0) }
     }
 
+    /// Parts the song holds that play, and that **no** section plays — in words: "the chords".
+    ///
+    /// The per-section line below says what one section leaves out. This says what the *song*
+    /// leaves out, which is the case that actually bites: a part written after the form was
+    /// arranged belongs to no section at all, and every section's line says the same thing, so the
+    /// one you happen to have selected looks like a local problem rather than the whole form's.
+    public var orphanedText: String? {
+        let named = Set(sections.flatMap(\.stitch).map(\.part))
+        let kinds = Self.playableTypes.filter { type in
+            layers.contains { $0.type == type && $0.plays && !named.contains($0.id) }
+        }
+        guard !kinds.isEmpty, !sections.isEmpty else { return nil }
+        let names = kinds.map { Self.name(of: $0).lowercased() }
+        if names.count == 1 { return names[0] }
+        return names.dropLast().joined(separator: ", ") + " and " + names[names.count - 1]
+    }
+
+    /// Puts every part no section plays into every section. One move for the case above.
+    public func fillAll() {
+        for section in sections { fill(section.id) }
+    }
+
     /// Stitches the newest playable version of every kind this section is missing into it: the
     /// same choice `defaultStitch` makes for a new section, offered to one that already exists.
     public func fill(_ id: SectionID) {
