@@ -407,11 +407,9 @@ public final class StructureModel {
         }
     }
 
-    static func label(of version: PartVersion, in song: Song) -> String {
-        let number = song.versions(of: version.partID).firstIndex { $0.id == version.id }.map { $0 + 1 }
-        let title = PartLabel.title(of: version)
-        return number.map { "\(title) v\($0)" } ?? title
-    }
+    // `label(of:in:)` is gone with the reason for it. It numbered a chip "Palladino line v2",
+    // because a chip was a version and you were choosing between takes; a chip is a part, and the
+    // version it plays is whichever is newest.
 
     nonisolated static func seconds(bars: Int, tempo: Double, timeSignature: TimeSignature) -> Double {
         guard tempo > 0 else { return 0 }
