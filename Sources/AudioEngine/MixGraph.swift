@@ -69,16 +69,33 @@ public final class MixGraph {
 
     public typealias StripNodes = MixStripNodes
 
-    /// How many strips the graph wires at build time. AVAudioEngine will not make a fan-out
-    /// connection (a strip's output to the main mixer *and* its send) once it runs, so the strips
-    /// are a pool, wired while the engine is quiet, and parts take slots as they are routed.
-    public static let slotCount = 8
+    /// How many strips the graph wires at build time.
+    ///
+    /// AVAudioEngine will not make a fan-out connection (a strip's output to the main mixer *and*
+    /// its send) once it runs, so the strips are a pool, wired while the engine is quiet, and parts
+    /// take slots as they are routed. **Do not make the pool grow on demand**: growing it means
+    /// stopping the engine in the middle of a song, which is the one thing this shape exists to
+    /// avoid.
+    ///
+    /// Sixteen rather than eight because a section may now play several parts of a kind — two
+    /// grooves, a pad and a lead — and eight was already tight for a groove, a bass, a chop and
+    /// four stems. An unclaimed slot costs four silent nodes and, since the meter tap moved to
+    /// `strip(for:)`, nothing at all on the render thread.
+    public nonisolated static let slotCount = 16
 
     public let engine: Engine
     /// The pool, in slot order.
     private var slots: [MixStripNodes] = []
     /// Which slot each routed part holds.
     public private(set) var strips: [PartID: MixStripNodes] = [:]
+    /// Parts the pool could not seat.
+    ///
+    /// They still play — `route` falls through to the main mixer, as it always has — but unmixed,
+    /// unmetered and un-soloable. That used to happen in silence: a song with more parts than
+    /// slots simply had faders that did nothing, and nothing anywhere said which. Read this after
+    /// `reserve(_:)`; the frame says so on the rail and the Mixer draws those rows as what they
+    /// are. Cleared by `releaseSlots()`.
+    public private(set) var unseated: [PartID] = []
     public let trim: AVAudioMixerNode
     public let bus: AVAudioMixerNode
     public let reverb: AVAudioUnitReverb
@@ -135,7 +152,10 @@ public final class MixGraph {
     /// part plays straight into the main mixer.
     public func strip(for part: PartID) -> MixStripNodes? {
         if let existing = strips[part] { return existing }
-        guard let free = slots.first(where: { $0.part == nil }) else { return nil }
+        guard let free = slots.first(where: { $0.part == nil }) else {
+            if !unseated.contains(part) { unseated.append(part) }
+            return nil
+        }
         free.part = part
         strips[part] = free
         meter(free)
@@ -152,6 +172,19 @@ public final class MixGraph {
             strip.meter(buffer)
         }
         strip.isMetered = true
+    }
+
+    /// Claims a slot for each part, in order, before a single source is connected.
+    ///
+    /// Without this, slots went to whoever `LiveSongPlayer` happened to schedule first, so which
+    /// parts got a fader depended on the order the transport built its sources — and the parts that
+    /// missed out were whichever came last, discovered by noticing a dead fader. Reserving up
+    /// front makes the allocation the plan's own order, and makes the shortfall known before a
+    /// frame is rendered. Returns the parts it could not seat, which is also `unseated`.
+    @discardableResult
+    public func reserve(_ parts: [PartID]) -> [PartID] {
+        for part in parts { _ = strip(for: part) }
+        return unseated
     }
 
     /// Routes a source node through a part's strip instead of straight into the main mixer.
@@ -178,6 +211,7 @@ public final class MixGraph {
 
     /// Gives every slot back, so a new plan's parts take them afresh.
     public func releaseSlots() {
+        unseated = []
         for slot in slots {
             slot.part = nil
             if slot.isMetered {

@@ -103,18 +103,46 @@ struct MixGraphTests {
         #expect(Limiter.apply(quiet, sampleRate: Self.rate, ceilingDBTP: -1) == quiet)
     }
 
-    @Test("the pool: nine parts, eight slots, the ninth plays straight into the main mixer")
+    @Test("the pool: one more part than slots, and the one that missed out is named rather than silent")
     @AudioActor
     func pool() async throws {
         let engine = try Engine(playerCount: 1, sampleRate: Self.rate, channels: 2)
         try engine.prepare(offlineSampleRate: Self.rate, maximumFrames: 4_096)
         let graph = try engine.mixGraph()
-        let parts = (0..<9).map { _ in PartID() }
-        for part in parts.prefix(8) { #expect(graph.strip(for: part) != nil) }
-        #expect(graph.strip(for: parts[8]) == nil)
-        #expect(graph.strips.count == 8)
+        let slots = MixGraph.slotCount
+        let parts = (0...slots).map { _ in PartID() }
+
+        for part in parts.prefix(slots) { #expect(graph.strip(for: part) != nil) }
+        #expect(graph.strip(for: parts[slots]) == nil)
+        #expect(graph.strips.count == slots)
+        // The part that missed out used to be discovered by noticing a fader that did nothing.
+        #expect(graph.unseated == [parts[slots]])
+
         graph.releaseSlots()
-        #expect(graph.strips.isEmpty && graph.strip(for: parts[8]) != nil)
+        #expect(graph.strips.isEmpty && graph.unseated.isEmpty)
+        #expect(graph.strip(for: parts[slots]) != nil)
+    }
+
+    @Test("reserve seats the plan's parts in the plan's own order, and says which it could not")
+    @AudioActor
+    func reserving() async throws {
+        let engine = try Engine(playerCount: 1, sampleRate: Self.rate, channels: 2)
+        try engine.prepare(offlineSampleRate: Self.rate, maximumFrames: 4_096)
+        let graph = try engine.mixGraph()
+        let parts = (0..<(MixGraph.slotCount + 2)).map { _ in PartID() }
+
+        let missed = graph.reserve(parts)
+        #expect(missed == Array(parts.suffix(2)), "the last two asked are the two that miss out")
+        #expect(graph.unseated == missed)
+        #expect(graph.strips.count == MixGraph.slotCount)
+        // Every seated part kept the slot it was given, in order.
+        for part in parts.prefix(MixGraph.slotCount) { #expect(graph.strips[part] != nil) }
+
+        // A part with no strip still plays: `route` puts it on the main mixer rather than refusing.
+        let player = try engine.player(0)
+        try graph.route(player, to: parts[MixGraph.slotCount])
+        #expect(graph.part(of: player) == nil, "it was not routed through a strip")
+        engine.stop()
     }
 
     @Test("a slot no part has taken is not metered: the render thread counts only what is playing")

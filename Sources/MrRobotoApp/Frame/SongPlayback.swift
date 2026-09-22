@@ -254,6 +254,34 @@ public struct SongPlayback: Equatable, Sendable {
         return (groove != nil && !grooveChain.isEmpty ? 1 : 0) + (chop != nil ? 1 : 0)
     }
 
+    /// Every part this plan sounds, in transport order, deduplicated: one strip each.
+    ///
+    /// The Mixer draws these and `MixGraph.reserve` claims a slot for each before the transport
+    /// connects anything, so which parts get a fader is the plan's own order rather than whichever
+    /// source happened to be scheduled first.
+    public var parts: [PartID] {
+        var seen = Set<PartID>()
+        var out: [PartID] = []
+        func add(_ part: PartID?) {
+            guard let part, seen.insert(part).inserted else { return }
+            out.append(part)
+        }
+        add(groovePart)
+        add(basslinePart)
+        add(progressionPart)
+        add(melodyPart)
+        add(chop?.part)
+        for track in tracks { add(track.part) }
+        for segment in segments {
+            add(segment.groovePart)
+            add(segment.basslinePart)
+            add(segment.progressionPart)
+            add(segment.melodyPart)
+            add(segment.chop?.part)
+        }
+        return out
+    }
+
     /// The form's length in seconds, when the plan is arranged: what one pass takes and, with the
     /// loop on, how often it comes round.
     public var formSeconds: Double? {
@@ -557,8 +585,13 @@ public protocol SongPlaybackHost: AnyObject, Sendable {
     /// M6: the mix changed, or the playhead moved into another section. A host with no strips
     /// ignores it.
     func mixChanged(_ mix: Mix?, section: SectionID?) async
+    /// Parts the graph had no strip left for, known once `begin` has run. They play — straight into
+    /// the main mixer — but unmixed, unmetered and un-soloable, which is worth saying out loud
+    /// rather than leaving as a fader that does nothing. A host with no strips has none.
+    func unmixedParts() async -> [PartID]
 }
 
 extension SongPlaybackHost {
     public func mixChanged(_ mix: Mix?, section: SectionID?) async {}
+    public func unmixedParts() async -> [PartID] { [] }
 }

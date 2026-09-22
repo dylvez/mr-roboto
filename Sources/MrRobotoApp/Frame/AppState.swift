@@ -875,11 +875,30 @@ public final class AppState {
             note(.you, "Play",
                  detail: plan.summary + String(format: " · %.0f bpm · %@",
                                                clock.tempo, clock.timeSignature.description))
+            await noteUnmixedParts(in: plan)
         } catch {
             await playbackHost?.end()
             transport = .unavailable("\(error)")
             note(.session, "The transport could not start", detail: "\(error)")
         }
+    }
+
+    /// Says so when the graph ran out of strips. Those parts are audible — they play straight into
+    /// the main mixer — but nothing on the Mixer moves them, and a fader that does nothing is worse
+    /// than a sentence saying why.
+    private func noteUnmixedParts(in plan: SongPlayback) async {
+        let unmixed = await playbackHost?.unmixedParts() ?? []
+        guard !unmixed.isEmpty else { return }
+        let names = unmixed.compactMap { part in song?.versions.last { $0.partID == part } }
+            .map(PartLabel.title(of:))
+        note(.session, "\(count(unmixed.count, "part")) plays unmixed",
+             detail: (names.isEmpty ? "" : names.joined(separator: ", ") + " — ")
+                 + "the graph holds \(MixGraph.slotCount) strips and this song plays "
+                 + "\(plan.parts.count). They sound, but the Mixer cannot level, pan or solo them.")
+    }
+
+    private func count(_ number: Int, _ noun: String) -> String {
+        "\(number) \(noun)\(number == 1 ? "" : "s")"
     }
 
     /// M6: a mix on the strips right now, without a version — a fader while it is held. The

@@ -83,6 +83,10 @@ final class LiveSongPlayer: SongPlaybackHost {
         // M6: the strips. Every source below is routed through its part's strip, and the mix the
         // plan carries is applied before a frame renders.
         let graph = try engine.mixGraph()
+        // A slot for every part the plan sounds, before a single source is connected: the pool goes
+        // in the plan's own order rather than to whichever source was scheduled first, and a song
+        // with more parts than the graph holds says so here instead of growing a dead fader.
+        unseated = graph.reserve(plan.parts)
         graph.apply(plan.mix ?? .unity, section: plan.segments.first?.section)
         lastMix = plan.mix
 
@@ -348,9 +352,16 @@ final class LiveSongPlayer: SongPlaybackHost {
         sectionKeys = []
         sequences = []
         bouncedHits = 0
+        unseated = []
         endsAt = nil
         engine = nil
     }
+
+    func unmixedParts() async -> [PartID] { unseated }
+
+    /// Parts the pool could not seat when the plan began. Held rather than read back off the graph,
+    /// because `end()` gives the slots back and clears it.
+    private var unseated: [PartID] = []
 
     /// The mix as last applied, so a section change is a move and not a re-apply.
     private var lastMix: Mix?
