@@ -114,7 +114,7 @@ public struct ReadSongTool: DirectorTool {
                       lengthInBars: song.lengthInBars,
                       sections: song.sections.map {
                           Output.Section(id: $0.id.description, name: $0.name, bars: $0.lengthInBars,
-                                         versions: $0.stitch.map(\.description))
+                                         versions: song.versions(playing: $0).map(\.id.description))
                       },
                       versions: song.versions.map { version in
                           Output.Version(id: version.id.description,

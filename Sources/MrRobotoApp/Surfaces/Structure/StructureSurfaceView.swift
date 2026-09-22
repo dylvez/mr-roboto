@@ -238,7 +238,7 @@ private struct SectionDetail: View {
                             FlowRow(spacing: 4) {
                                 ForEach(choice.layers) { layer in
                                     FormChip(Self.chipTitle(layer),
-                                             isOn: section.stitch.contains(layer.id)) {
+                                             isOn: section.stitch.contains(part: layer.id)) {
                                         model.toggle(layer.id, in: section.id)
                                     }
                                     .help(layer.plays ? layer.title

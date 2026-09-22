@@ -128,7 +128,12 @@ enum Fixtures {
                                                  alsoFrom: [melody2.id])
         let progression3 = progression2.deriving(.progression(progression.transposed(by: 2)), by: .persona("Keys"),
                                                  operation: Operation.reharmonize, createdAt: t0.addingTimeInterval(5))
-        let section = Section(name: "Verse", stitch: [melody2.id, progression2.id], lengthInBars: 8, intensity: 0.4,
+        // Pinned, on purpose: the verse holds the *second* progression while a third exists, which
+        // is the one thing a stitch cannot say by naming a part. Every other form here follows.
+        let section = Section(name: "Verse",
+                              stitch: [Lane(part: melody2.partID, pin: melody2.id),
+                                       Lane(part: progression2.partID, pin: progression2.id)],
+                              lengthInBars: 8, intensity: 0.4,
                               transitionIn: Transition(kind: .fill, beats: 2), transitionOut: Transition(kind: .riser, beats: 4))
         let experiment = Experiment(name: "reharm verse", versions: [melody2.id, progression3.id], author: .persona("Keys"),
                                     createdAt: t0.addingTimeInterval(6))

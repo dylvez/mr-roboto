@@ -694,7 +694,9 @@ public final class AppState {
         let cleaned = sections.map { section -> Section in
             var section = section
             section.lengthInBars = max(1, section.lengthInBars)
-            section.stitch = section.stitch.filter { current.version($0) != nil }
+            // A lane whose part the song does not hold at all is dropped; one whose *pin* has
+            // gone is kept, because `version(playing:)` falls back to the part.
+            section.stitch = section.stitch.filter { current.latestVersion(of: $0.part) != nil }
             return section
         }
         guard cleaned != current.sections else { return true }

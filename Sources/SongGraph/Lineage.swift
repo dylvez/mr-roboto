@@ -120,9 +120,9 @@ extension Song {
         )
     }
 
-    /// The subgraph feeding a section.
+    /// The subgraph feeding a section: what each of its lanes plays right now.
     public func subgraph(feeding section: Section) throws -> LineageSubgraph {
-        try subgraph(feeding: section.stitch)
+        try subgraph(feeding: versions(playing: section).map(\.id))
     }
 
     /// The subgraph feeding a section by id.
@@ -142,15 +142,25 @@ extension Song {
         return try subgraph(feeding: experiment)
     }
 
-    /// Sections that play a version directly.
-    public func sections(using id: VersionID) -> [Section] { sections.filter { $0.stitch.contains(id) } }
+    /// Sections that play a version right now — its own part's lane, resolved.
+    ///
+    /// A section naming the part plays whatever is newest, so this answers about the version that
+    /// is *sounding*, not about a name written down once. It used to be the same question because
+    /// a stitch held version ids; it is the more useful one now.
+    public func sections(using id: VersionID) -> [Section] {
+        sections.filter { section in versions(playing: section).contains { $0.id == id } }
+    }
 
     /// Experiments that propose a version.
     public func experiments(using id: VersionID) -> [Experiment] { experiments.filter { $0.versions.contains(id) } }
 
     /// Versions no section plays and no other version was made from.
+    ///
+    /// What a lane *resolves to*, not what part it names. For a following lane those are the same
+    /// thing — the part's newest version is the leaf — but a pinned lane holds an older one, and
+    /// then the leaf above it really is loose: made, and played by nothing.
     public var looseEnds: [PartVersion] {
-        let stitched = Set(sections.flatMap(\.stitch))
-        return lineage.leaves.filter { !stitched.contains($0.id) }
+        let playing = Set(sections.flatMap { versions(playing: $0) }.map(\.id))
+        return lineage.leaves.filter { !playing.contains($0.id) }
     }
 }

@@ -35,8 +35,10 @@ public struct SectionReport: Encodable, Sendable {
         id = section.id.description
         name = section.name
         bars = section.lengthInBars
-        versions = section.stitch.map(\.description)
-        plays = section.stitch.compactMap(song.version).contains { StructureModel.plays($0) }
+        // What the lanes play right now, which is what the model should be told about.
+        let playing = song.versions(playing: section)
+        versions = playing.map(\.id.description)
+        plays = playing.contains { StructureModel.plays($0) }
     }
 }
 
@@ -67,16 +69,24 @@ enum FormTools {
     /// second hand-written one: this used to name the groove, the bass line and the chop, and go
     /// on naming only those three after the transport learned to play the chords and the tune — so
     /// every form the Director wrote came out without harmony in it.
-    static func defaultStitch(in song: Song) -> [VersionID] {
+    static func defaultStitch(in song: Song) -> [Lane] {
         StructureModel.playableTypes.compactMap { type in
-            song.versions.last { $0.type == type && StructureModel.plays($0) }?.id
+            song.versions.last { $0.type == type && StructureModel.plays($0) }.map { Lane(part: $0.partID) }
         }
     }
 
-    /// Resolves the version ids a section names, refusing anything the transport cannot sound.
-    static func stitch(_ ids: [String], in song: Song, tool: String) throws -> [VersionID] {
+    /// Resolves the ids a section names into lanes, refusing anything the transport cannot sound.
+    ///
+    /// Either a version id or a part id is accepted. A version id names its part and the section
+    /// follows that part — which is the whole change: a form does not go stale when you keep a new
+    /// version of what it plays. Pinning a section to one particular version is deliberate and
+    /// rare, and no tool offers it yet.
+    static func stitch(_ ids: [String], in song: Song, tool: String) throws -> [Lane] {
         try ids.map { raw in
-            guard let id = VersionID(uuidString: raw), let version = song.version(id) else {
+            // A part id is accepted too, and resolves to whatever that part plays now.
+            let version = VersionID(uuidString: raw).flatMap(song.version)
+                ?? PartID(uuidString: raw).flatMap(song.latestVersion(of:))
+            guard let version else {
                 throw DirectorToolFailure(tool: tool, reason: "This song holds no version \(raw).",
                                           suggestion: "Take version ids from read_song.")
             }
@@ -94,7 +104,7 @@ enum FormTools {
                     suggestion: version.type == .sample ? "degrade_part it first, then stitch the dusty version."
                                                         : "Name a version with hits, notes or chords in it.")
             }
-            return id
+            return Lane(part: version.partID)
         }
     }
 
@@ -145,7 +155,7 @@ public struct ArrangeTool: DirectorTool {
                 tool: name, reason: "Nothing in \(song.title) plays yet, so there is nothing to arrange.",
                 suggestion: "Paint a groove, write a bass line or dust a chop first; then arrange them.")
         }
-        var byName: [String: [VersionID]] = [:]
+        var byName: [String: [Lane]] = [:]
         for section in song.sections where !section.stitch.isEmpty {
             byName[section.name.lowercased()] = byName[section.name.lowercased()] ?? section.stitch
         }

@@ -5,7 +5,7 @@ import Testing
 
 @Test func moduleVersion() {
     #expect(SongGraphModule.version == "0.1.0")
-    #expect(SongGraphModule.schemaVersion == 2)
+    #expect(SongGraphModule.schemaVersion == 3)
 }
 
 @Suite struct IdentityTests {
@@ -83,7 +83,7 @@ import Testing
         let data = try SongGraphCodec.encodeSong(graph.song)
         let decoded = try SongGraphCodec.decodeSong(from: data)
         #expect(decoded == graph.song)
-        #expect(decoded.schemaVersion == 2)
+        #expect(decoded.schemaVersion == 3)
         #expect(decoded.sections.first?.transitionOut?.kind == .riser)
         #expect(decoded.key == Fixtures.dMajor)
     }

@@ -42,10 +42,19 @@ public protocol StructureHosting: AnyObject {
 @Observable
 public final class StructureModel {
 
-    /// One version that a section can hold: the newest of each groove, bass line, progression,
-    /// melody and chop part in the song, and any older version a section already names.
+    /// One **part** a section can play: its kind, and what its newest version is called.
+    ///
+    /// This used to be a version — the newest of each part, plus any older one a section still
+    /// named — and the surface drew a chip per version with a "v2" after it. A section names parts
+    /// now, and a part's newest version is what sounds, so there is nothing to choose between: one
+    /// chip per part, and keeping a new version of it changes what you hear without touching the
+    /// form. Holding a section at an older version is a `Lane.pin`, which is deliberate, rare, and
+    /// not offered here.
     public struct Layer: Identifiable, Hashable, Sendable {
-        public var id: VersionID
+        /// The part. A stitch names these.
+        public var id: PartID
+        /// Its newest version, which is the one that plays.
+        public var version: VersionID
         public var title: String
         public var type: PartType
         /// A chop only plays on the transport once it has been dirtied; a clean one is the lane's
@@ -118,7 +127,7 @@ public final class StructureModel {
         layers = built
         // The working copy is tidied; `committed` is the song's own, so a form that named two of a
         // kind shows as dirty and Keep writes back the one that was sounding.
-        sections = current.map { Self.normalised($0, layer: { id in built.first { $0.id == id } }) }
+        sections = current.map { Self.normalised($0) }
         committed = current
         selected = current.first?.id
     }
@@ -157,11 +166,11 @@ public final class StructureModel {
         return "\(totalBars) bar\(totalBars == 1 ? "" : "s") · \(Self.clock(seconds)) at \(Int(tempo.rounded())) bpm"
     }
 
-    public func layer(_ id: VersionID) -> Layer? { layers.first { $0.id == id } }
+    public func layer(_ id: PartID) -> Layer? { layers.first { $0.id == id } }
 
-    /// The layers a section names, in the order the stitch holds them; a version the song no
-    /// longer resolves is skipped rather than drawn as a hole.
-    public func layers(of section: Section) -> [Layer] { section.stitch.compactMap(layer) }
+    /// The layers a section names, in the order the stitch holds them; a part the song no longer
+    /// holds is skipped rather than drawn as a hole.
+    public func layers(of section: Section) -> [Layer] { section.stitch.compactMap { layer($0.part) } }
 
     /// The layers a section holds, grouped by kind in `playableTypes` order, with every kind the
     /// song offers present even when the section names none of it. This is what the surface draws:
@@ -223,7 +232,7 @@ public final class StructureModel {
     }
 
     @discardableResult
-    public func add(name: String, bars: Int, stitch: [VersionID]? = nil) -> Section {
+    public func add(name: String, bars: Int, stitch: [Lane]? = nil) -> Section {
         let section = Section(name: name, stitch: stitch ?? defaultStitch, lengthInBars: max(1, bars))
         let at = selected.flatMap { id in sections.firstIndex { $0.id == id } }.map { $0 + 1 } ?? sections.count
         sections.insert(section, at: at)
@@ -233,10 +242,10 @@ public final class StructureModel {
 
     /// What a new section plays: the newest groove, bass line, chords, tune and dirtied chop in the
     /// song — the same choice the transport makes for an unarranged song, and in the same order.
-    public var defaultStitch: [VersionID] {
-        var out: [VersionID] = []
+    public var defaultStitch: [Lane] {
+        var out: [Lane] = []
         for type in Self.playableTypes {
-            if let layer = layers.last(where: { $0.type == type && $0.plays }) { out.append(layer.id) }
+            if let layer = layers.last(where: { $0.type == type && $0.plays }) { out.append(Lane(part: layer.id)) }
         }
         return out
     }
@@ -293,55 +302,37 @@ public final class StructureModel {
         update(id) { $0.lengthInBars = max(1, min(128, bars)) }
     }
 
-    /// Puts a version into a section's stitch, or takes it out.
+    /// Puts a part into a section's stitch, or takes it out.
     ///
-    /// One of a kind: choosing a second bass line replaces the first rather than joining it. That
-    /// is not a rule invented here — it is what the transport has always done, because `Segment`
-    /// holds one groove, one bass line, one progression, one tune and one chop, and a stitch naming
-    /// two of a kind quietly played the last of them. Two chips lit and one part sounding is
-    /// exactly the kind of lie this surface should not tell.
-    public func toggle(_ version: VersionID, in id: SectionID) {
-        let type = layer(version)?.type
+    /// No longer one of a kind. The transport used to hold one groove, one bass line and one of
+    /// each other kind per section and sound the last of whatever a stitch named twice, so two
+    /// chips lit and one part sounding was a lie this had to prevent. A section plays everything it
+    /// names now, so two grooves is a thing you can mean — and a part is in a section once or not
+    /// at all, which is the only rule left.
+    public func toggle(_ part: PartID, in id: SectionID) {
         update(id) { section in
-            if let at = section.stitch.firstIndex(of: version) {
+            if let at = section.stitch.firstIndex(where: { $0.part == part }) {
                 section.stitch.remove(at: at)
             } else {
-                if let type { section.stitch.removeAll { self.layer($0)?.type == type } }
-                section.stitch.append(version)
+                section.stitch.append(Lane(part: part))
             }
         }
     }
 
-    /// A section holding at most one version of each kind: what it has always actually played.
+    /// A section naming each part once.
     ///
-    /// Forms written before the stitch was one-of-a-kind can name two grooves or two bass lines,
-    /// and the transport has always sounded exactly one — the last of that kind it can sound,
-    /// which is the rule `SongPlayback.segments(of:)` encodes by overwriting as it reads. Keeping
-    /// the working copy in that shape is what lets a chip mean "this plays" rather than "this is
-    /// mentioned"; the surface then shows the form as dirty, because tidying it is a change, and
-    /// Keep writes back what you have been hearing all along.
-    static func normalised(_ section: Section, layer: (VersionID) -> Layer?) -> Section {
-        var keep: [PartType: VersionID] = [:]
-        for id in section.stitch {
-            guard let found = layer(id) else { continue }
-            // The last that plays wins; with none that plays, the last of the kind stands in, so a
-            // section naming only a dry chop still shows the chop rather than emptying itself.
-            if found.plays || keep[found.type].flatMap({ layer($0)?.plays }) != true {
-                keep[found.type] = id
-            }
-        }
+    /// A form cannot play the same part twice — it is one lane, one strip, one sampler — and the
+    /// schema migration already collapses the duplicates a version-id stitch could hold. This is
+    /// the belt to that braces: a stitch assembled by hand or by a tool stays sane.
+    static func normalised(_ section: Section) -> Section {
+        var seen = Set<PartID>()
         var tidied = section
-        let kept = Set(keep.values)
-        var seen = Set<VersionID>()
-        tidied.stitch = section.stitch.filter { id in
-            guard layer(id) != nil else { return true }   // a version this surface does not offer is left alone
-            return kept.contains(id) && seen.insert(id).inserted
-        }
+        tidied.stitch = section.stitch.filter { seen.insert($0.part).inserted }
         return tidied
     }
 
     private func normalised(_ sections: [Section]) -> [Section] {
-        sections.map { Self.normalised($0, layer: layer) }
+        sections.map { Self.normalised($0) }
     }
 
     /// Stitches the newest playable version of every kind this section is missing into it: the
@@ -395,19 +386,14 @@ public final class StructureModel {
     /// The newest version of every part that can play on the transport, oldest part first, plus
     /// any older version a section already names.
     static func layers(in song: Song) -> [Layer] {
-        var out: [Layer] = []
-        var seen = Set<VersionID>()
-        let named = Set(song.sections.flatMap(\.stitch))
-        for partID in song.partIDs {
-            let versions = song.versions(of: partID)
-            guard let newest = versions.last, playableTypes.contains(newest.type) else { continue }
-            for version in versions where version.id == newest.id || named.contains(version.id) {
-                guard seen.insert(version.id).inserted else { continue }
-                out.append(Layer(id: version.id, title: label(of: version, in: song), type: version.type,
-                                 plays: plays(version)))
-            }
+        // One row per part, named by what its newest version is called. It used to be one row per
+        // *version* — the newest of each part plus any older one a section still named — because a
+        // stitch chose between versions. Nothing chooses now: a lane follows its part.
+        song.partIDs.compactMap { partID in
+            guard let newest = song.latestVersion(of: partID), playableTypes.contains(newest.type) else { return nil }
+            return Layer(id: partID, version: newest.id, title: PartLabel.title(of: newest),
+                         type: newest.type, plays: plays(newest))
         }
-        return out
     }
 
     nonisolated static func plays(_ version: PartVersion) -> Bool {

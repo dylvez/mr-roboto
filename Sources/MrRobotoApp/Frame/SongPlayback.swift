@@ -552,8 +552,10 @@ public struct SongPlayback: Equatable, Sendable {
         var bar = 0
         for section in song.sections {
             var voices: [Voice] = []
-            for id in section.stitch {
-                guard let version = song.version(id) else { continue }
+            for lane in section.stitch {
+                // What the lane plays *now*: its part's newest version, unless it is pinned. This
+                // is the point of the whole change — keep a new groove and the form plays it.
+                guard let version = song.version(playing: lane) else { continue }
                 guard let voice = voice(for: version, in: song, mediaURL: mediaURL,
                                         missingMedia: &missingMedia) else { continue }
                 voices.append(voice)

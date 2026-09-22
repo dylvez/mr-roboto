@@ -22,7 +22,7 @@ private enum AlbumFixture {
             var song = FormFixture.build(tempo: tempo).song
             song.title = title
             song.key = key
-            let stitch = [Guidance.grooves(in: song).last!.id, Guidance.basslines(in: song).last!.id]
+            let stitch = [Guidance.grooves(in: song).last!, Guidance.basslines(in: song).last!].lanes
             song.sections = [Section(name: "Verse", stitch: stitch, lengthInBars: 4), Section(name: "Hook", stitch: stitch, lengthInBars: 2)]
             var mix = Mix()
             mix.master = Master(gainDB: gain, ceilingDBTP: -1, targetLUFS: -14)

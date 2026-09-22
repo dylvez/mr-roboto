@@ -121,7 +121,7 @@ struct DirectorLibraryToolTests {
         #expect(out["stitched"] as? Bool == true && out["section_name"] as? String == "Verse" && out["bars"] as? Int == 4)
         let song = try #require(rig.app.song)
         #expect(song.sections.count == 1)
-        let moved = song.sections[0].stitch.compactMap { song.version($0) }
+        let moved = song.versions(playing: song.sections[0])
         #expect(moved.count == 2 && moved.allSatisfy { $0.operation == Operation.merge })
         #expect(rig.app.playback.isArranged && rig.app.playback.segments[0].chop != nil && rig.app.playback.segments[0].bassline != nil)
 
@@ -138,7 +138,7 @@ struct DirectorLibraryToolTests {
         // the failure. (A tritone is the furthest the rules ever move a sample, so the past-seven
         // refusal is only reachable from the surface's own stepper.)
         let form = FormFixture.build()
-        let second = try #require(form.song.version(form.groove))
+        let second = try #require(form.song.latestVersion(of: form.groove))
         let secondGroove = PartVersion(partID: PartID(), kind: second.kind, author: .user, operation: Operation.written, note: "Second break")
         #expect(rig.app.record(secondGroove))
         let firstGroove = try #require(rig.app.song?.versions.first { $0.type == .groove }).id
@@ -233,7 +233,7 @@ struct DirectorMergeProofTests {
         try await MainActor.run {
             let song = try #require(rig.app.song)
             #expect(song.sections.map(\.name) == ["Verse"])
-            let moved = song.sections[0].stitch.compactMap { song.version($0) }
+            let moved = song.versions(playing: song.sections[0])
             #expect(moved.count == 2)
             #expect(moved.allSatisfy { $0.operation == Operation.merge })
             #expect(moved.first { $0.type == .sample }?.note?.contains("down 5 semitones to D major") == true)

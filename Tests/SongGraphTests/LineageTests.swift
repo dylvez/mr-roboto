@@ -50,8 +50,12 @@ import Testing
         #expect(subgraph.versionIDs.contains(g.progression3.id))
         #expect(subgraph.seeds.map(\.id) == [g.seed.id])
         #expect(try g.song.subgraph(feedingExperiment: g.experiment.id) == subgraph)
-        let section = g.experiment.stitched(lengthInBars: 8)
-        #expect(section.stitch == g.experiment.versions)
+        // An experiment stitched as a section is pinned: it *is* these versions, not whatever
+        // their parts become later. It is the one thing in the app that pins on purpose.
+        let section = g.song.stitched(g.experiment, lengthInBars: 8)
+        #expect(section.stitch.map(\.pin) == g.experiment.versions)
+        #expect(section.stitch.map(\.part) == [g.melody2.partID, g.progression3.partID])
+        #expect(g.song.versions(playing: section).map(\.id) == g.experiment.versions)
         #expect(section.name == "reharm verse")
     }
 

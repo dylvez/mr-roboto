@@ -110,7 +110,9 @@ public final class PartPlayer {
     /// The song's transport, under a name: "the song", or a part heard in it.
     public func playSong(id: String, label: String, from version: PartVersion? = nil) async {
         await stopSounding()
-        if let version, let section = app.song?.sections.first(where: { $0.stitch.contains(version.id) }) {
+        // The section whose form names this version's *part*. It used to look for the version id,
+        // which stopped matching the moment you kept a new version of what a section plays.
+        if let version, let section = app.song?.sections.first(where: { $0.stitch.contains(part: version.partID) }) {
             app.setActiveSection(section.id)
         }
         if !app.transport.isPlaying { await app.startTransport() }

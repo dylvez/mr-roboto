@@ -76,7 +76,7 @@ struct MIDICaptureTests {
     private func fixture() -> (AppState, MIDIControl, URL, UserDefaults, String) {
         let directory = WiringFixture.temporaryDirectory("midi-capture")
         var song = FormFixture.build(tempo: 92).song
-        let ids = [Guidance.grooves(in: song).last!.id, Guidance.basslines(in: song).last!.id]
+        let ids = [Guidance.grooves(in: song).last!, Guidance.basslines(in: song).last!].lanes
         song.sections = [Section(name: "Intro", stitch: ids, lengthInBars: 2), Section(name: "Verse", stitch: ids, lengthInBars: 4)]
         let app = BandFixture.app(in: directory, song: song)
         let suite = "midi-test-\(UUID().uuidString)"

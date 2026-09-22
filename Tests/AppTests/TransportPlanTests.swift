@@ -389,8 +389,8 @@ struct TransportPlanTests {
         let chords = TransportFixture.progressionVersion()
         let groove = TransportFixture.grooveVersion()
         let song = TransportFixture.song([groove, chords], sections: [
-            Section(name: "Intro", stitch: [chords.id], lengthInBars: 4),
-            Section(name: "Loop", stitch: [groove.id, chords.id], lengthInBars: 16),
+            Section(name: "Intro", stitch: [chords].lanes, lengthInBars: 4),
+            Section(name: "Loop", stitch: [groove, chords].lanes, lengthInBars: 16),
         ])
         let plan = SongPlayback.plan(for: song, mediaURL: TransportFixture.resolver(nil))
 

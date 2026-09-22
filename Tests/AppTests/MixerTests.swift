@@ -118,7 +118,7 @@ struct MixerTests {
         let before = WorkPath.steps(for: song, active: nil, canPerform: { _ in true }).steps.first { $0.kind == .mix }!
         #expect(before.count == initial && before.action?.surface == .mixer, "no sections: the Mixer")
         try song.append(PartVersion(partID: PartID(), kind: .mix(Mix()), author: .user, operation: Operation.mix, note: "Mix"))
-        song.sections = [Section(name: "Verse", stitch: [Guidance.grooves(in: song).last!.id], lengthInBars: 4)]
+        song.sections = [Section(name: "Verse", stitch: [Guidance.grooves(in: song).last!].lanes, lengthInBars: 4)]
         let after = WorkPath.steps(for: song, active: (kind: .master, bound: []), canPerform: { _ in true }).steps.first { $0.kind == .mix }!
         #expect(after.count == initial + 1 && after.isHere && after.action?.surface == .master)
         #expect(PartLabel.title(of: Guidance.mixes(in: song)[0]) == "Mix")

@@ -17,8 +17,8 @@ private enum MixProofFixture {
     @discardableResult
     static func arrange(_ app: AppState) -> Int {
         var song = FormFixture.build(tempo: 92).song
-        let ids = [Guidance.grooves(in: song).last!.id, Guidance.basslines(in: song).last!.id]
-        song.sections = [Section(name: "Verse", stitch: ids, lengthInBars: 2)]
+        let parts = [Guidance.grooves(in: song).last!, Guidance.basslines(in: song).last!].lanes
+        song.sections = [Section(name: "Verse", stitch: parts, lengthInBars: 2)]
         app.open(song)
         return Guidance.mixes(in: song).count
     }

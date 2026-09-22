@@ -188,7 +188,7 @@ public final class MergeModel {
             let movedA = try await host.render(a, move: plan.a)
             let movedB = try await host.render(b, move: plan.b)
             let name = sectionName.trimmingCharacters(in: .whitespaces)
-            let section = Section(name: name.isEmpty ? "Verse" : name, stitch: [movedA.id, movedB.id], lengthInBars: max(1, bars))
+            let section = Section(name: name.isEmpty ? "Verse" : name, stitch: [movedA, movedB].lanes, lengthInBars: max(1, bars))
             guard await host.stitch(section) else {
                 lastError = "The song refused the section."
                 return nil

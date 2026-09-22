@@ -379,7 +379,8 @@ struct BandLiveTests {
         report("sections after", "\(song.sections.count) · \(song.lengthInBars) bars · \(String(format: "%.0f", seconds)) s")
         for section in song.sections {
             report("  section", "\(section.name) \(section.lengthInBars) bars ← "
-                + section.stitch.map { describe($0, in: state) }.joined(separator: ", "))
+                + (state.song.map { song in song.versions(playing: section).map { describe($0.id, in: state) } } ?? [])
+                    .joined(separator: ", "))
         }
         let plan = state.playback
         report("plan", "\(plan.summary) · arranged \(plan.isArranged) · playable \(plan.isPlayable) · "
@@ -425,7 +426,7 @@ struct BandLiveTests {
                                              operation: Operation.written, note: "Palladino line, +40 ms")))
         }
         if let song = state.song, song.sections.isEmpty {
-            let stitch = [Guidance.grooves(in: song).last?.id, Guidance.basslines(in: song).last?.id].compactMap { $0 }
+            let stitch = [Guidance.grooves(in: song).last, Guidance.basslines(in: song).last].compactMap { $0 }.lanes
             #expect(state.arrange([Section(name: "Verse", stitch: stitch, lengthInBars: 16),
                                    Section(name: "Hook", stitch: stitch, lengthInBars: 8)]))
         }
@@ -503,7 +504,7 @@ struct BandLiveTests {
                                              operation: Operation.written, note: "Palladino line, +40 ms")))
         }
         if let song = state.song, song.sections.isEmpty {
-            let stitch = [Guidance.grooves(in: song).last?.id, Guidance.basslines(in: song).last?.id].compactMap { $0 }
+            let stitch = [Guidance.grooves(in: song).last, Guidance.basslines(in: song).last].compactMap { $0 }.lanes
             #expect(state.arrange([Section(name: "Verse", stitch: stitch, lengthInBars: 8), Section(name: "Hook", stitch: stitch, lengthInBars: 8)]))
         }
         let band = try #require(state.band)

@@ -77,7 +77,7 @@ struct BoothTests {
 
     private func song() -> Song {
         var song = FormFixture.build(tempo: 120).song
-        let ids = [Guidance.grooves(in: song).last!.id, Guidance.basslines(in: song).last!.id]
+        let ids = [Guidance.grooves(in: song).last!, Guidance.basslines(in: song).last!].lanes
         song.sections = [Section(name: "Verse", stitch: ids, lengthInBars: 4), Section(name: "Hook", stitch: ids, lengthInBars: 2)]
         return song
     }

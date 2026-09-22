@@ -24,11 +24,11 @@ private enum RoomFixture {
         // Two parts only, so the Producer has nothing to subtract: the groove and the line.
         let built = FormFixture.build(tempo: 92)
         var song = Song(title: "Arrival", artist: "Vessel", tempo: 92)
-        let groove = built.song.version(built.groove)!
-        let bass = built.song.version(built.bass)!
+        let groove = built.song.latestVersion(of: built.groove)!
+        let bass = built.song.latestVersion(of: built.bass)!
         try! song.append(PartVersion(partID: groove.partID, kind: groove.kind, author: groove.author, operation: Operation.written, note: groove.note))
         try! song.append(PartVersion(partID: bass.partID, kind: bass.kind, author: bass.author, operation: Operation.written, note: bass.note))
-        let ids = song.versions.map(\.id)
+        let ids = song.versions.lanes
         song.sections = [Section(name: "Verse", stitch: ids, lengthInBars: 16),
                          Section(name: "Hook", stitch: ids, lengthInBars: 8)]
         return song

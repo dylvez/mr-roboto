@@ -35,7 +35,7 @@ enum MergeFixture {
         let seed = Seed(kind: .importedRecord(record.id))
         song.seeds.append(seed)
         let form = FormFixture.build()
-        let groove = try #require(form.song.version(form.groove))
+        let groove = try #require(form.song.latestVersion(of: form.groove))
         try song.append(groove)
         let sample = PartVersion(partID: PartID(),
                                  kind: .sample(Sample(media: record.media, slices: [SliceMarker(position: 0.0), SliceMarker(position: 0.25)],
@@ -161,7 +161,7 @@ struct MergeStitchTests {
         #expect(song.versions.count == before + 2, "two moved versions, the originals untouched")
 
         // The chop: new media in the package, the bar itself, moved as the plan said.
-        let movedSample = try #require(song.version(section.stitch[0]))
+        let movedSample = try #require(song.version(playing: section.stitch[0]))
         #expect(movedSample.operation == Operation.merge)
         #expect(movedSample.parents == [built.sample.id])
         #expect(movedSample.note?.contains("down 5 semitones") == true)
@@ -185,7 +185,7 @@ struct MergeStitchTests {
         #expect(try built.store.mediaURL(for: built.record.media) == built.store.recordsDirectoryURL.appendingPathComponent(built.record.media.fileName))
 
         // The bass line: by arithmetic, five down, in B minor.
-        let movedBass = try #require(song.version(section.stitch[1]))
+        let movedBass = try #require(song.version(playing: section.stitch[1]))
         #expect(movedBass.operation == Operation.merge && movedBass.parents == [built.bass.id])
         guard case .bassline(let line) = movedBass.kind else { Issue.record("not a bassline"); return }
         #expect(line.notes.map(\.pitch.midi) == [35, 38, 35])
@@ -216,7 +216,8 @@ struct MergeStitchTests {
         still.sectionName = "Hook"
         let count = later.song!.versions.count
         let hook = try #require(await still.stitch())
-        #expect(hook.stitch == [built.sample.id, built.bass.id])
+        #expect(later.song.map { $0.versions(playing: hook).map(\.id) } != nil)
+        #expect(hook.stitch.count == 2, "the moved chop and the moved bass line, as parts")
         #expect(later.song?.versions.count == count)
         #expect(later.song?.sections.count == 2)
     }

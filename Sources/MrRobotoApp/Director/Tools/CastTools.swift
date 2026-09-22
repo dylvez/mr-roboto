@@ -323,7 +323,8 @@ public struct ConveneTool: DirectorTool {
     /// The first disagreement that shows.
     static func disagreement(among answered: [(PersonaID, PersonaVerdict)], proposal: PersonaProposal,
                              readings: [(PersonaID, PersonaReading)], room: Cast, song: Song, section: Section?) -> DisagreementCard? {
-        let reference = section?.stitch.first ?? song.versions.last?.id
+        // What the section's first lane plays right now, not what it was stitched from once.
+        let reference = section.flatMap { song.versions(playing: $0).first?.id } ?? song.versions.last?.id
         // On the proposal: two non-deferring verdicts of different shapes.
         for (i, a) in answered.enumerated() {
             for b in answered[(i + 1)...] where VerdictShape(a.1) != VerdictShape(b.1) {

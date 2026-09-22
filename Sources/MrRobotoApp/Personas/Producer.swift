@@ -516,7 +516,8 @@ public struct SongObservation: Hashable, Sendable {
         let counted = song.partIDs.filter { id in
             song.latestVersion(of: id).map { ![PartType.analysis, .audio].contains($0.type) } ?? false
         }
-        let stitched = Set(song.sections.flatMap(\.stitch).compactMap { song.version($0)?.partID })
+        // A lane names the part, so this is the part set directly now rather than a lookup.
+        let stitched = Set(song.sections.flatMap(\.stitch).map(\.part))
         let orphans = song.sections.isEmpty ? [] : counted.filter { !stitched.contains($0) }
             .compactMap { song.latestVersion(of: $0) }.map { PartLabel.title(of: $0) }
         var most: (String, Int)?

@@ -195,7 +195,7 @@ extension AppState {
                      detail: version.type == .sample ? "Dust it first; a dry chop is the lane's raw material." : nil)
                 return true
             }
-            sections[index].stitch.append(id)
+            sections[index].stitch.append(Lane(part: version.partID))
             return arrange(sections)
         }
     }

@@ -337,7 +337,7 @@ public struct MergeTool: DirectorTool {
         let movedA = try await workspace.merge(a, move: plan.a)
         let movedB = try await workspace.merge(b, move: plan.b)
         let bars = input.bars > 0 ? input.bars : MergeModel.defaultBars(a, b, in: song)
-        let section = Section(name: sectionName, stitch: [movedA.id, movedB.id], lengthInBars: bars)
+        let section = Section(name: sectionName, stitch: [movedA, movedB].lanes, lengthInBars: bars)
         let current = await workspace.song?.sections ?? song.sections
         let recorded = await workspace.arrange(current + [section])
         return Output(targetKey: targetKey.map { "\($0)" }, targetTempo: targetTempo, a: move(plan.a), b: move(plan.b),

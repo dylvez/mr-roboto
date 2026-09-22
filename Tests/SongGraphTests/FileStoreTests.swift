@@ -134,19 +134,56 @@ import Testing
         }
     }
 
-    @Test func schema1PackageLoadsAndResavesAsSchema2() throws {
+    @Test func schema1PackageLoadsAndResavesAtTheCurrentSchema() throws {
         let root = try Fixtures.temporaryDirectory("migrate")
         defer { try? FileManager.default.removeItem(at: root) }
         let store = SongStore(in: root, title: "Old")
         try FileManager.default.createDirectory(at: store.packageURL, withIntermediateDirectories: true)
         try Data(schema1SongFixture.utf8).write(to: store.documentURL)
         let song = try store.load()
-        #expect(song.schemaVersion == 2)
+        #expect(song.schemaVersion == 3)
         #expect(song.versions[0].operation == "unknown")
         try store.save(song)
         let json = try SongGraphCodec.decode(JSONValue.self, from: try Data(contentsOf: store.documentURL))
-        #expect(json["schemaVersion"]?.intValue == 2)
+        #expect(json["schemaVersion"]?.intValue == 3)
         #expect(try store.load() == song)
+    }
+
+    @Test("an older document is copied aside before it is migrated, once, and survives the save")
+    func oldSchemasAreBackedUp() throws {
+        let root = try Fixtures.temporaryDirectory("backup")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = SongStore(in: root, title: "Still Water")
+        try FileManager.default.createDirectory(at: store.packageURL, withIntermediateDirectories: true)
+        try Data(schema2SongFixture.utf8).write(to: store.documentURL)
+
+        let backups = store.packageURL.appendingPathComponent(SongStore.backupsDirectoryName)
+        let backup = backups.appendingPathComponent("song-schema-2.json")
+        #expect(!FileManager.default.fileExists(atPath: backup.path))
+
+        let song = try store.load()
+        #expect(song.schemaVersion == 3)
+        #expect(FileManager.default.fileExists(atPath: backup.path), "the old document was not kept")
+
+        // It holds the *old* shape — a stitch of version-id strings — which is the point: it is
+        // what you go back to, and nothing else in the app can reproduce it once `save` has run.
+        let kept = try SongGraphCodec.decode(JSONValue.self, from: try Data(contentsOf: backup))
+        #expect(kept["schemaVersion"]?.intValue == 2)
+        #expect(kept["sections"]?[0]?["stitch"]?[0]?.stringValue != nil, "the backup should hold ids, not lanes")
+
+        // Idempotent: opening again does not write a second copy, and saving does not remove it.
+        _ = try store.load()
+        #expect(try FileManager.default.contentsOfDirectory(atPath: backups.path) == ["song-schema-2.json"])
+        try store.save(song)
+        #expect(FileManager.default.fileExists(atPath: backup.path))
+
+        // And a document already at the current schema is not copied at all.
+        let fresh = SongStore(in: root, title: "New")
+        try FileManager.default.createDirectory(at: fresh.packageURL, withIntermediateDirectories: true)
+        try fresh.save(song)
+        _ = try fresh.load()
+        #expect(!FileManager.default.fileExists(atPath:
+            fresh.packageURL.appendingPathComponent(SongStore.backupsDirectoryName).path))
     }
 }
 

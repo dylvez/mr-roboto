@@ -119,10 +119,10 @@ public struct SchemaMigrator: Sendable {
     }
 
     /// The migrator for `song.json`.
-    public static let song = SchemaMigrator(migrations: [.songOperationsV1ToV2])
+    public static let song = SchemaMigrator(migrations: [.songOperationsV1ToV2, .songStitchV2ToV3])
 
     /// The migrator for `library.json`.
-    public static let library = SchemaMigrator(migrations: [.libraryOperationsV1ToV2])
+    public static let library = SchemaMigrator(migrations: [.libraryOperationsV1ToV2, .libraryStitchV2ToV3])
 
     /// The schema version a document declares (1 when absent).
     public static func schemaVersion(of document: JSONValue) -> Int {
@@ -175,6 +175,58 @@ extension SchemaMigration {
     }
 
     /// library.json 1 → 2: `ideas` and each record's `analysis` gain `operation`.
+    /// A stitch's lanes, from the version ids schema 2 wrote.
+    ///
+    /// Every id is looked up in the document's own `versions` for its `partID` — which is why the
+    /// transform takes the whole song and not just its sections. Three decisions, each deliberate:
+    ///
+    /// * **Unpinned, always.** Pinning the id that was written would freeze every song in the field
+    ///   at whatever was newest the day it was stitched, and preserve for the next edit the exact
+    ///   bug this schema exists to end. Pinning only when the named version is *not* the part's
+    ///   newest is tempting and wrong: "older than newest" is precisely the symptom of that bug,
+    ///   and is indistinguishable from a deliberate hold.
+    /// * **An id the document no longer holds is dropped.** `AppState.arrange` has filtered
+    ///   dangling ids on the way in since the form existed; a stitch naming a version that is gone
+    ///   means nothing.
+    /// * **Two versions of one part collapse to one lane.** Two versions of *different* parts both
+    ///   stay, and both now sound — where a stitch naming two of a kind used to play the last of
+    ///   them. A migrated song can therefore get louder. That is the point of the change, and it is
+    ///   why `SongStore` copies the old document aside before this runs.
+    static func restitch(_ song: JSONValue) -> JSONValue {
+        var part: [String: String] = [:]
+        for version in song["versions"]?.arrayValue ?? [] {
+            guard let id = version["id"]?.stringValue,
+                  let owner = version["partID"]?.stringValue else { continue }
+            part[id] = owner
+        }
+        return song.mappingArray(at: "sections") { section in
+            guard let old = section["stitch"]?.arrayValue else { return section }
+            var seen = Set<String>()
+            var lanes: [JSONValue] = []
+            for entry in old {
+                guard let id = entry.stringValue, let owner = part[id],
+                      seen.insert(owner).inserted else { continue }
+                lanes.append(.object(["part": .string(owner)]))
+            }
+            var updated = section
+            updated["stitch"] = .array(lanes)
+            return updated
+        }
+    }
+
+    /// song.json 2 → 3: a section stitches parts, so an edit stays in the form.
+    public static let songStitchV2ToV3 = SchemaMigration(
+        from: 2, to: 3,
+        summary: "Sections stitch parts rather than versions, so a new version of a part is heard where the old one was."
+    ) { restitch($0) }
+
+    /// library.json 2 → 3: nothing to do. The library lists its songs by package — `SongEntry` is
+    /// an id, a title and a folder name — so no section has ever been written into it. The step
+    /// exists only so the two documents keep the same version number.
+    public static let libraryStitchV2ToV3 = SchemaMigration(
+        from: 2, to: 3, summary: "No change; the library holds no sections."
+    ) { $0 }
+
     public static let libraryOperationsV1ToV2 = SchemaMigration(
         from: 1, to: 2, summary: "Ideas and record analyses record the operation that made them; older ones get \"unknown\"."
     ) { document in

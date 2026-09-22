@@ -34,10 +34,66 @@ let schema1SongFixture = """
 }
 """
 
+/// A `song.json` as schema 2 wrote it: stitches are arrays of version ids, and this one exercises
+/// all three of the 2→3 rules at once — two versions of *one* part, an id the document no longer
+/// holds, and two versions of two *different* parts.
+let schema2SongFixture = """
+{
+  "schemaVersion": 2,
+  "id": "1B4A6C1E-2D3F-4E5A-8B9C-0D1E2F3A4B5C",
+  "title": "Still Water",
+  "artist": "Vessel",
+  "tempo": 72,
+  "timeSignature": { "beatsPerBar": 4, "beatUnit": 4 },
+  "createdAt": "2026-09-01T10:00:00.000Z",
+  "seeds": [],
+  "experiments": [],
+  "versions": [
+    { "id": "1A2B3C4D-5E6F-4A7B-8C9D-0E1F2A3B4C5D", "partID": "AAAAAAAA-BBBB-4CCC-8DDD-EEEEEEEEEEEE",
+      "createdAt": "2026-09-01T10:01:00.000Z", "author": { "role": "user" }, "parents": [], "operation": "written",
+      "kind": { "type": "melody", "notes": [ { "pitch": { "midi": 62 }, "start": 0, "duration": 1, "velocity": 96 } ] } },
+    { "id": "2A2B3C4D-5E6F-4A7B-8C9D-0E1F2A3B4C5D", "partID": "AAAAAAAA-BBBB-4CCC-8DDD-EEEEEEEEEEEE",
+      "createdAt": "2026-09-01T10:02:00.000Z", "author": { "role": "user" },
+      "parents": ["1A2B3C4D-5E6F-4A7B-8C9D-0E1F2A3B4C5D"], "operation": "edit",
+      "kind": { "type": "melody", "notes": [ { "pitch": { "midi": 64 }, "start": 0, "duration": 1, "velocity": 96 } ] } },
+    { "id": "4A2B3C4D-5E6F-4A7B-8C9D-0E1F2A3B4C5D", "partID": "CCCCCCCC-BBBB-4CCC-8DDD-EEEEEEEEEEEE",
+      "createdAt": "2026-09-01T10:03:00.000Z", "author": { "role": "user" }, "parents": [], "operation": "written",
+      "kind": { "type": "lyric", "lines": [] } }
+  ],
+  "sections": [
+    { "id": "3A2B3C4D-5E6F-4A7B-8C9D-0E1F2A3B4C5D", "name": "Verse", "lengthInBars": 8,
+      "stitch": ["1A2B3C4D-5E6F-4A7B-8C9D-0E1F2A3B4C5D",
+                 "2A2B3C4D-5E6F-4A7B-8C9D-0E1F2A3B4C5D",
+                 "9F9F9F9F-5E6F-4A7B-8C9D-0E1F2A3B4C5D",
+                 "4A2B3C4D-5E6F-4A7B-8C9D-0E1F2A3B4C5D"] }
+  ]
+}
+"""
+
 @Suite struct SchemaTests {
-    @Test func schema1SongMigratesToSchema2() throws {
+
+    @Test("schema 2 to 3: a stitch of versions becomes a stitch of parts, following them")
+    func schema2SongRestitches() throws {
+        let song = try SongGraphCodec.decodeSong(from: Data(schema2SongFixture.utf8))
+        #expect(song.schemaVersion == 3)
+        let verse = try #require(song.sections.first)
+
+        let melodyPart = try #require(song.versions.first).partID
+        let lyricPart = try #require(song.versions.last).partID
+        // Two versions of one part collapse to one lane; a dangling id is dropped; a second part
+        // stays. Order is the order the stitch named them in.
+        #expect(verse.stitch.map(\.part) == [melodyPart, lyricPart])
+        #expect(verse.stitch.allSatisfy { $0.pin == nil }, "migrating pins nothing")
+
+        // And the lane follows: it plays the *newer* of the two melodies, which is what the stitch
+        // was already sounding, and would go on following a third if one were kept.
+        #expect(song.version(playing: verse.stitch[0])?.id.description
+                == "2A2B3C4D-5E6F-4A7B-8C9D-0E1F2A3B4C5D")
+    }
+
+    @Test func schema1SongMigratesToTheCurrentSchema() throws {
         let song = try SongGraphCodec.decodeSong(from: Data(schema1SongFixture.utf8))
-        #expect(song.schemaVersion == 2)
+        #expect(song.schemaVersion == 3)
         #expect(song.title == "Arrival")
         #expect(song.key == Fixtures.dMajor)
         #expect(song.versions.count == 2)
@@ -45,10 +101,13 @@ let schema1SongFixture = """
         #expect(song.versions[1].operation == "transpose")
         #expect(song.versions[1].author == .persona("Bassist"))
         #expect(song.versions[0].origin == song.seeds[0].id)
-        #expect(song.sections[0].stitch == [song.versions[1].id])
+        // The stitch named a version; it names that version's part now, and follows it.
+        #expect(song.sections[0].stitch == [Lane(part: song.versions[1].partID)])
+        #expect(song.version(playing: song.sections[0].stitch[0])?.id == song.versions[1].id)
         // Re-encoding writes the current schema.
         let json = try SongGraphCodec.decode(JSONValue.self, from: try SongGraphCodec.encodeSong(song))
-        #expect(json["schemaVersion"]?.intValue == 2)
+        #expect(json["schemaVersion"]?.intValue == 3)
+        #expect(json["sections"]?[0]?["stitch"]?[0]?["pin"] == nil, "a following lane writes no pin")
         #expect(json["versions"]?[0]?["operation"]?.stringValue == "unknown")
     }
 
@@ -57,7 +116,7 @@ let schema1SongFixture = """
         #expect(SchemaMigrator.schemaVersion(of: document) == 1)
         #expect(!SchemaMigrator.song.isCurrent(document))
         let upgraded = try SchemaMigrator.song.upgrade(document)
-        #expect(upgraded["schemaVersion"]?.intValue == 2)
+        #expect(upgraded["schemaVersion"]?.intValue == 3)
         #expect(upgraded["versions"]?[0]?["operation"]?.stringValue == "unknown")
         #expect(upgraded["versions"]?[1]?["operation"]?.stringValue == "transpose")
         #expect(SchemaMigrator.song.isCurrent(upgraded))
@@ -78,15 +137,15 @@ let schema1SongFixture = """
         #expect(upgraded["records"]?[0]?["analysis"]?["operation"]?.stringValue == "unknown")
         #expect(upgraded["records"]?[1]?["analysis"]?.isNull == true)
         #expect(upgraded["records"]?[2]?["analysis"] == nil)
-        #expect(upgraded["schemaVersion"]?.intValue == 2)
+        #expect(upgraded["schemaVersion"]?.intValue == 3)
     }
 
     @Test func newerDocumentsAreRefused() throws {
         let document: JSONValue = .object(["schemaVersion": .integer(99)])
-        #expect(throws: SongGraphError.unsupportedSchemaVersion(found: 99, supported: 2)) {
+        #expect(throws: SongGraphError.unsupportedSchemaVersion(found: 99, supported: 3)) {
             try SchemaMigrator.song.upgrade(document)
         }
-        #expect(throws: SongGraphError.migrationFailed(from: 0, to: 2, reason: "document is not a JSON object")) {
+        #expect(throws: SongGraphError.migrationFailed(from: 0, to: 3, reason: "document is not a JSON object")) {
             try SchemaMigrator.song.upgrade(.array([]))
         }
     }

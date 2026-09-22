@@ -3,7 +3,7 @@ import MusicTheory
 
 /// The schema version of documents this build reads and writes.
 public enum SongGraphSchema {
-    public static let current = 2
+    public static let current = 3
 }
 
 // `TimeSignature` comes from MusicTheory (shared with analysis and the engine).
@@ -25,19 +25,62 @@ public struct Transition: Hashable, Codable, Sendable {
     }
 }
 
-/// A section of a song: a name, the specific part versions stitched together, and its length in bars.
+/// One layer of a section's stitch: the part it plays, and — rarely — a version to hold it at.
+///
+/// A stitch used to be `[VersionID]`, and that is the bug this type exists to end. Every surface
+/// commits through `PartVersion.deriving(…)`, which keeps the `partID` and mints a **new**
+/// `VersionID`; so the moment you painted one more hat or changed a bass voice, the section still
+/// named the version from before it, and the form quietly stopped playing the thing you were
+/// working on. Nothing anywhere said so.
+///
+/// A section names a **part**. The part's newest version is what sounds. `pin` is the deliberate
+/// exception — a verse keeping the first groove while the hook takes the second, and an experiment
+/// stitched as a section, which *is* a named combination of particular versions.
+///
+/// Order is presentation order, not precedence: two grooves in a section are two grooves, and you
+/// hear both. The old stitch's "two of a kind, the last one wins" is gone with the version ids.
+public struct Lane: Hashable, Codable, Sendable, Identifiable {
+    public var part: PartID
+    /// A version to hold this lane at. Nil — the usual case — follows the part.
+    public var pin: VersionID?
+
+    public var id: PartID { part }
+
+    public init(part: PartID, pin: VersionID? = nil) {
+        self.part = part
+        self.pin = pin
+    }
+
+    private enum CodingKeys: String, CodingKey { case part, pin }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(part: try c.decode(PartID.self, forKey: .part),
+                  pin: try c.decodeIfPresent(VersionID.self, forKey: .pin))
+    }
+
+    /// `pin` is omitted when nil, so a form that pins nothing — which is nearly all of them — reads
+    /// on disk as a list of parts.
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(part, forKey: .part)
+        try c.encodeIfPresent(pin, forKey: .pin)
+    }
+}
+
+/// A section of a song: a name, the parts stitched together, and its length in bars.
 public struct Section: Identifiable, Hashable, Codable, Sendable {
     public let id: SectionID
     public var name: String
-    /// The stitch: the part versions this section plays, in order of layering.
-    public var stitch: [VersionID]
+    /// The stitch: the parts this section plays, in order of layering.
+    public var stitch: [Lane]
     public var lengthInBars: Int
     /// 0…1, when the arrangement has an intensity curve.
     public var intensity: Double?
     public var transitionIn: Transition?
     public var transitionOut: Transition?
 
-    public init(id: SectionID = SectionID(), name: String, stitch: [VersionID], lengthInBars: Int,
+    public init(id: SectionID = SectionID(), name: String, stitch: [Lane], lengthInBars: Int,
                 intensity: Double? = nil, transitionIn: Transition? = nil, transitionOut: Transition? = nil) {
         self.id = id
         self.name = name
@@ -87,10 +130,8 @@ public struct Experiment: Identifiable, Hashable, Codable, Sendable {
         self.note = note
     }
 
-    /// Turns the experiment into a section that stitches exactly these versions.
-    public func stitched(as name: String? = nil, lengthInBars: Int) -> Section {
-        Section(name: name ?? self.name, stitch: versions, lengthInBars: lengthInBars)
-    }
+    // `stitched(as:lengthInBars:)` moved to `Song`. An experiment holds version ids and a stitch
+    // holds parts, and only the song knows which part a version belongs to.
 }
 
 /// A song: sections in order, every part version ever made for it (append-only), and the seeds it grew from.
@@ -152,6 +193,38 @@ public struct Song: Identifiable, Hashable, Codable, Sendable {
 
     /// The newest version of a part.
     public func latestVersion(of partID: PartID) -> PartVersion? { versions(of: partID).last }
+
+    /// The version a lane plays: its pin when the song still holds it, otherwise the part's newest.
+    ///
+    /// A pin to a version the song no longer holds follows the part rather than going silent. The
+    /// form said "this part"; losing one of its versions is not a reason to stop playing it.
+    public func version(playing lane: Lane) -> PartVersion? {
+        if let pin = lane.pin, let pinned = version(pin) { return pinned }
+        return latestVersion(of: lane.part)
+    }
+
+    /// Everything a section plays, in stitch order, skipping any lane whose part the song no longer
+    /// holds at all.
+    public func versions(playing section: Section) -> [PartVersion] {
+        section.stitch.compactMap { version(playing: $0) }
+    }
+
+    /// Lanes for these versions: each one's part, following it. What a caller holding version ids
+    /// means when it says "a section that plays these".
+    public func lanes(_ ids: [VersionID]) -> [Lane] {
+        ids.compactMap { version($0).map { Lane(part: $0.partID) } }
+    }
+
+    /// An experiment as a section: **pinned**, because an experiment is a named combination of
+    /// these particular versions and not of whatever their parts become later. It is the one place
+    /// in the app that pins on purpose, and the reason `Lane.pin` exists at all.
+    public func stitched(_ experiment: Experiment, as name: String? = nil, lengthInBars: Int) -> Section {
+        Section(name: name ?? experiment.name,
+                stitch: experiment.versions.compactMap { id in
+                    version(id).map { Lane(part: $0.partID, pin: id) }
+                },
+                lengthInBars: lengthInBars)
+    }
 
     /// Every distinct part in the song, in order of first appearance.
     public var partIDs: [PartID] {
@@ -417,4 +490,20 @@ public struct Library: Hashable, Codable, Sendable {
         let all = records.flatMap(\.mediaReferences) + samples.map(\.media) + ideas.flatMap(\.mediaReferences)
         return all.filter { seen.insert($0).inserted }
     }
+}
+
+
+extension Array where Element == PartVersion {
+    /// These versions as lanes that follow their parts: what a default stitch is, and what nearly
+    /// every caller that used to hand `Section` a list of version ids actually meant.
+    public var lanes: [Lane] { map { Lane(part: $0.partID) } }
+}
+
+extension Array where Element == PartID {
+    /// These parts as lanes that follow them.
+    public var lanes: [Lane] { map { Lane(part: $0) } }
+}
+
+extension Array where Element == Lane {
+    public func contains(part: PartID) -> Bool { contains { $0.part == part } }
 }

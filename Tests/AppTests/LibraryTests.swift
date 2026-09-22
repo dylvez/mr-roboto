@@ -54,7 +54,7 @@ enum LibraryFixture {
         let seed = Seed(kind: .importedRecord(record.id))
         song.seeds.append(seed)
         let built = FormFixture.build()
-        let groove = try #require(built.song.version(built.groove))
+        let groove = try #require(built.song.latestVersion(of: built.groove))
         try song.append(groove)
         let chop = PartVersion(partID: PartID(),
                                kind: .sample(Sample(media: record.media, slices: [SliceMarker(position: 0.1)], detectedTempo: 92,

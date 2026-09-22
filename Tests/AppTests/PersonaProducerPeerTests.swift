@@ -26,7 +26,7 @@ struct PersonaProducerTests {
         song.seeds.append(Seed(kind: .brief("A late-night walk home, drums from a record and a bass that waits.")))
         let groove = try #require(Guidance.grooves(in: song).last)
         let bass = try #require(Guidance.basslines(in: song).last)
-        song.sections = [Section(name: "Verse", stitch: [groove.id, bass.id], lengthInBars: 16)]
+        song.sections = [Section(name: "Verse", stitch: [groove, bass].lanes, lengthInBars: 16)]
         let arranged = SongObservation.of(song)
         #expect(arranged.hasSections)
         #expect(arranged.briefWords == 13)
@@ -68,15 +68,15 @@ struct PersonaPeerTests {
     func readsTheForm() throws {
         var song = FormFixture.build().song
         song.tempo = 120
-        let groove = try #require(Guidance.grooves(in: song).last).id
-        let bass = try #require(Guidance.basslines(in: song).last).id
+        let groove = try #require(Guidance.grooves(in: song).last).partID
+        let bass = try #require(Guidance.basslines(in: song).last).partID
         #expect(peer.read(FormObservation.of(song)).first?.rule == "peer.finish-then-judge")
 
-        song.sections = [Section(name: "Intro", stitch: [groove], lengthInBars: 4),
-                         Section(name: "Verse", stitch: [groove, bass], lengthInBars: 16),
-                         Section(name: "Hook", stitch: [groove, bass], lengthInBars: 8),
-                         Section(name: "Verse", stitch: [groove, bass], lengthInBars: 16),
-                         Section(name: "Hook", stitch: [groove, bass], lengthInBars: 8)]
+        song.sections = [Section(name: "Intro", stitch: [groove].lanes, lengthInBars: 4),
+                         Section(name: "Verse", stitch: [groove, bass].lanes, lengthInBars: 16),
+                         Section(name: "Hook", stitch: [groove, bass].lanes, lengthInBars: 8),
+                         Section(name: "Verse", stitch: [groove, bass].lanes, lengthInBars: 16),
+                         Section(name: "Hook", stitch: [groove, bass].lanes, lengthInBars: 8)]
         let form = FormObservation.of(song)
         #expect(form.sectionCount == 5 && form.turns == 3 && form.repeats == 2)
         #expect(form.hookArrivalSeconds == 40, "20 bars at 120 in 4/4")
@@ -92,8 +92,8 @@ struct PersonaPeerTests {
         #expect(readings.first { $0.rule == "peer.something-lifts" }?.holds == true)
 
         // No hook named, and nothing lifting.
-        song.sections = [Section(name: "A", stitch: [groove], lengthInBars: 8), Section(name: "A", stitch: [groove], lengthInBars: 8),
-                         Section(name: "A", stitch: [groove], lengthInBars: 8), Section(name: "B", stitch: [groove], lengthInBars: 8)]
+        song.sections = [Section(name: "A", stitch: [groove].lanes, lengthInBars: 8), Section(name: "A", stitch: [groove].lanes, lengthInBars: 8),
+                         Section(name: "A", stitch: [groove].lanes, lengthInBars: 8), Section(name: "B", stitch: [groove].lanes, lengthInBars: 8)]
         let flat = peer.read(FormObservation.of(song))
         #expect(flat.first { $0.rule == "peer.hook-inside-thirty" }?.says.contains("Nothing is named as a hook") == true)
         #expect(flat.first { $0.rule == "peer.repetition" }?.holds == true, "2 of 4 repeat, under the ceiling")

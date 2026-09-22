@@ -17,9 +17,14 @@ private enum FormToolFixture {
     struct Rig {
         var app: AppState
         var toolbox: DirectorToolbox
+        /// Version ids, which is what the tools take as input.
         var groove: VersionID
         var bass: VersionID
         var progression: VersionID
+        /// And the parts they belong to, which is what a stitch names.
+        var groovePart: PartID
+        var bassPart: PartID
+        var progressionPart: PartID
         var directory: URL
         func clean() { try? FileManager.default.removeItem(at: directory) }
     }
@@ -29,12 +34,14 @@ private enum FormToolFixture {
         let directory = GuidanceFixture.temporaryDirectory("form-tools")
         let built = FormFixture.build(tempo: tempo)
         let app = FormFixture.app(built, in: directory)
-        let groove = built.groove
-        let bass = built.bass
+        let groove = try #require(built.song.latestVersion(of: built.groove)).id
+        let bass = try #require(built.song.latestVersion(of: built.bass)).id
+        let progression = try #require(built.song.latestVersion(of: built.progression)).id
         let workbench = DirectorWorkbench(engines: DirectorTestEngines.make(bars: 4))
         let toolbox = DirectorTools.toolbox(workbench: workbench, workspace: AppStateWorkspace(app))
-        return Rig(app: app, toolbox: toolbox, groove: groove, bass: bass,
-                   progression: built.progression, directory: directory)
+        return Rig(app: app, toolbox: toolbox, groove: groove, bass: bass, progression: progression,
+                   groovePart: built.groove, bassPart: built.bass, progressionPart: built.progression,
+                   directory: directory)
     }
 
     static func json(_ result: ClaudeToolResult) -> [String: Any] {
@@ -92,15 +99,15 @@ struct DirectorFormToolTests {
 
         // Arranging again keeps a named section's stitch even after it was hand-edited.
         var edited = song.sections
-        edited[1].stitch = [rig.groove]
+        edited[1].stitch = [rig.groovePart].lanes
         #expect(rig.app.arrange(edited))
         let again = await rig.toolbox.run(ClaudeToolUse(id: "b", name: "arrange", input: .object([
             .init("form", .string("verse 8 | hook 8")),
         ])))
         #expect(!again.isError)
         #expect(rig.app.song?.sections.map(\.name) == ["Verse", "Hook"])
-        #expect(rig.app.song?.sections[0].stitch == [rig.groove], "the verse kept what it was stitched from")
-        #expect(rig.app.song?.sections[1].stitch.contains(rig.bass) == true)
+        #expect(rig.app.song?.sections[0].stitch == [rig.groovePart].lanes, "the verse kept what it was stitched from")
+        #expect(rig.app.song?.sections[1].stitch.contains(part: rig.bassPart) == true)
     }
 
     @Test("the Director stitches the chords too: a form it writes has harmony in it")
@@ -116,7 +123,7 @@ struct DirectorFormToolTests {
         ])))
         #expect(!result.isError, "\(result.content)")
         let song = try #require(rig.app.song)
-        #expect(song.sections[0].stitch.contains(rig.progression), "the form has no chords in it")
+        #expect(song.sections[0].stitch.contains(part: rig.progressionPart), "the form has no chords in it")
         #expect(rig.app.playback.segments.first?.progression != nil)
         #expect(rig.app.playback.summary.contains("Chords"))
 
@@ -128,7 +135,7 @@ struct DirectorFormToolTests {
             .init("position", .int(1)),
         ])))
         #expect(!stitched.isError, "a progression was refused: \(stitched.content)")
-        #expect(rig.app.song?.sections.last?.stitch == [rig.progression])
+        #expect(rig.app.song?.sections.last?.stitch == [rig.progressionPart].lanes)
     }
 
     @Test("with nothing that plays, arrange refuses and says what would make it possible")
@@ -151,7 +158,7 @@ struct DirectorFormToolTests {
     func stitches() async throws {
         let rig = try FormToolFixture.rig()
         defer { rig.clean() }
-        #expect(rig.app.arrange([Section(name: "Verse", stitch: [rig.groove, rig.bass], lengthInBars: 16)]))
+        #expect(rig.app.arrange([Section(name: "Verse", stitch: [rig.groovePart, rig.bassPart].lanes, lengthInBars: 16)]))
 
         // A bridge with no bass, after the verse.
         let result = await rig.toolbox.run(ClaudeToolUse(id: "s", name: "stitch_section", input: .object([
@@ -160,7 +167,7 @@ struct DirectorFormToolTests {
         ])))
         #expect(!result.isError, "\(result.content)")
         #expect(rig.app.song?.sections.map(\.name) == ["Verse", "Bridge"])
-        #expect(rig.app.song?.sections[1].stitch == [rig.groove])
+        #expect(rig.app.song?.sections[1].stitch == [rig.groovePart].lanes)
 
         // An intro first, from the newest of everything.
         let intro = await rig.toolbox.run(ClaudeToolUse(id: "i", name: "stitch_section", input: .object([
@@ -168,7 +175,7 @@ struct DirectorFormToolTests {
         ])))
         #expect(!intro.isError, "\(intro.content)")
         #expect(rig.app.song?.sections.map(\.name) == ["Intro", "Verse", "Bridge"])
-        #expect(rig.app.song?.sections[0].stitch.contains(rig.bass) == true)
+        #expect(rig.app.song?.sections[0].stitch.contains(part: rig.bassPart) == true)
 
         // Past the end appends; a lyric is not something a section plays; a dry chop neither.
         // (A progression is — see `arrangesWithChords`. It was refused here until the transport
@@ -201,7 +208,7 @@ struct DirectorFormToolTests {
     func readSongSections() async throws {
         let rig = try FormToolFixture.rig()
         defer { rig.clean() }
-        #expect(rig.app.arrange([Section(name: "Verse", stitch: [rig.groove, rig.bass], lengthInBars: 16)]))
+        #expect(rig.app.arrange([Section(name: "Verse", stitch: [rig.groovePart, rig.bassPart].lanes, lengthInBars: 16)]))
         let result = await rig.toolbox.run(ClaudeToolUse(id: "r", name: "read_song", input: .object([])))
         let out = FormToolFixture.json(result)
         let sections = FormToolFixture.sections(out)
@@ -231,7 +238,7 @@ struct DirectorStructureChoiceTests {
         #expect(app.canPerform(choice.action))
 
         #expect(throws: DirectorChoiceProblem.self) {
-            try DirectorSurfaceChoice.make(surface: .structure, title: "The form", fill: .parts([built.groove]),
+            try DirectorSurfaceChoice.make(surface: .structure, title: "The form", fill: .parts([built.song.latestVersion(of: built.groove)!.id]),
                                            because: "", in: stage)
         }
         // Every other part surface still needs something bound.

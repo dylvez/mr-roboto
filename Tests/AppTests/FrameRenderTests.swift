@@ -96,9 +96,9 @@ struct FrameRenderTests {
         SurfaceRegistry.registerSurfaces()
         let built = FormFixture.build()
         let app = app(built.song)
-        app.arrange([Section(name: "Intro", stitch: [built.groove], lengthInBars: 4),
-                     Section(name: "Verse", stitch: [built.groove, built.bass], lengthInBars: 16),
-                     Section(name: "Hook", stitch: [built.groove, built.bass], lengthInBars: 8)])
+        app.arrange([Section(name: "Intro", stitch: [built.groove].lanes, lengthInBars: 4),
+                     Section(name: "Verse", stitch: [built.groove, built.bass].lanes, lengthInBars: 16),
+                     Section(name: "Hook", stitch: [built.groove, built.bass].lanes, lengthInBars: 8)])
         app.perform(SurfaceAction(surface: .structure, title: built.song.title))
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-structure")
     }
@@ -119,7 +119,8 @@ struct FrameRenderTests {
         let (song, groove, chop) = try LibraryFixture.songWithChop("Arrival", record: record, app: app)
         #expect(app.keepAsIdea(groove) != nil)
         #expect(app.saveToSamples(chop) != nil)
-        app.arrange([Section(name: "Verse", stitch: [groove, chop], lengthInBars: 16), Section(name: "Hook", stitch: [groove], lengthInBars: 8)])
+        app.arrange([Section(name: "Verse", stitch: song.lanes([groove, chop]), lengthInBars: 16),
+                     Section(name: "Hook", stitch: song.lanes([groove]), lengthInBars: 8)])
         app.save()
         let album = try #require(app.createAlbum(title: "Interior Season", artist: "Vessel"))
         #expect(app.addSong(song.id, to: album))
@@ -203,7 +204,8 @@ extension FrameRenderTests {
                                     subject: "Verse, as it is",
                                     a: .init(persona: .engineer, name: "Engineer", says: engineer.says, readings: [CompareReading(.integratedLUFS, -22.3, unit: "LUFS")]),
                                     b: .init(persona: .producer, name: "Producer", says: producer.says, readings: [CompareReading(.partsPerSong, 2, unit: "parts")]),
-                                    reference: built.groove, vocabulary: Engineer.bible)
+                                    reference: built.song.latestVersion(of: built.groove)?.id,
+                                    vocabulary: Engineer.bible)
         let workspace = AppStateWorkspace(app)
         #expect(workspace.openDisagreement(card) == card.title)
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-compare-disagreement")
@@ -216,7 +218,7 @@ extension FrameRenderTests {
         FontRegistration.registerBundledFonts()
         SurfaceRegistry.registerSurfaces()
         var song = FormFixture.build(tempo: 120).song
-        let ids = [Guidance.grooves(in: song).last!.id, Guidance.basslines(in: song).last!.id]
+        let ids = [Guidance.grooves(in: song).last!, Guidance.basslines(in: song).last!].lanes
         song.sections = [Section(name: "Verse", stitch: ids, lengthInBars: 4), Section(name: "Hook", stitch: ids, lengthInBars: 2)]
         let part = PartID()
         for pass in 1...2 {
@@ -251,7 +253,7 @@ extension FrameRenderTests {
         FontRegistration.registerBundledFonts()
         SurfaceRegistry.registerSurfaces()
         var song = FormFixture.build(tempo: 92).song
-        let ids = [Guidance.grooves(in: song).last!.id, Guidance.basslines(in: song).last!.id]
+        let ids = [Guidance.grooves(in: song).last!, Guidance.basslines(in: song).last!].lanes
         song.sections = [Section(name: "Verse", stitch: ids, lengthInBars: 2)]
         let app = app(song)
         let mixerID = try #require(app.perform(Guidance.dockAction(for: .mixer, in: app.song)))
@@ -288,7 +290,7 @@ extension FrameRenderTests {
             var song = FormFixture.build(tempo: tempo).song
             song.title = title
             song.key = key
-            let stitch = [Guidance.grooves(in: song).last!.id, Guidance.basslines(in: song).last!.id]
+            let stitch = [Guidance.grooves(in: song).last!, Guidance.basslines(in: song).last!].lanes
             song.sections = [Section(name: "Verse", stitch: stitch, lengthInBars: 16), Section(name: "Hook", stitch: stitch, lengthInBars: 8)]
             app.open(song)
             app.save()

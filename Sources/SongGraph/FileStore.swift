@@ -157,13 +157,27 @@ public struct SongStore: Sendable {
     /// True when the package directory holds a `song.json`.
     public var exists: Bool { Files.isDirectory(packageURL) && Files.exists(documentURL) }
 
-    /// Reads and, if needed, migrates the song. Media is not checked; see `verifyMedia(for:)`.
-    public func load() throws -> Song {
+    /// Where a document is kept before a migration rewrites what it means.
+    public static let backupsDirectoryName = "backups"
+
+    /// Reads and, if needed, migrates the song — copying `song.json` aside first when what is on
+    /// disk is older than this build writes. Media is not checked; see `verifyMedia(for:)`.
+    ///
+    /// The copy is the only way back if a migration was wrong, and nothing else in the app can
+    /// reproduce it: the next `save()` overwrites the old bytes with the new shape. Only the
+    /// document is copied — no migration has ever touched a `MediaRef`, so copying `media/` would
+    /// duplicate the record for nothing, and a second `.roboto` beside this one would hold a
+    /// duplicate `SongID` that `openPackage` resolves by id rather than by filename.
+    ///
+    /// Idempotent by its name: a package already holding `backups/song-schema-2.json` is not copied
+    /// again, so opening a migrated-but-unsaved song twice writes one file rather than two.
+    public func load(backingUpOldSchemas backingUp: Bool = true) throws -> Song {
         try FileCoordination.read(packageURL) { url in
             guard Files.isDirectory(url) else { throw SongGraphError.notAPackage(path: url.path) }
             let document = url.appendingPathComponent(SongStore.documentName)
             guard Files.exists(document) else { throw SongGraphError.missingDocument(path: document.path) }
             let data = try Data(contentsOf: document)
+            if backingUp { try? Self.backUp(data, from: url) }
             do {
                 return try SongGraphCodec.decodeSong(from: data)
             } catch let error as SongGraphError {
@@ -172,6 +186,18 @@ public struct SongStore: Sendable {
                 throw SongGraphError.malformedDocument(path: document.path, reason: "\(error)")
             }
         }
+    }
+
+    /// Copies an older document into `backups/`, named for the schema it holds. Best effort: a
+    /// backup that cannot be written must not stop a song from opening.
+    private static func backUp(_ data: Data, from packageURL: URL) throws {
+        let version = SchemaMigrator.schemaVersion(of: try SongGraphCodec.decode(JSONValue.self, from: data))
+        guard version < SongGraphSchema.current else { return }
+        let folder = packageURL.appendingPathComponent(backupsDirectoryName, isDirectory: true)
+        let file = folder.appendingPathComponent("song-schema-\(version).json")
+        guard !Files.exists(file) else { return }
+        try Files.ensureDirectory(folder)
+        try data.write(to: file, options: .atomic)
     }
 
     /// Writes `song.json` (atomically), creating the package and its media directory if needed.
