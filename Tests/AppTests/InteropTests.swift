@@ -132,3 +132,43 @@ struct MasterExportTests {
         #expect(refused.isError)
     }
 }
+
+@Suite("Interop: MIDI out is the song, not its history")
+struct MIDIExportShapeTests {
+
+    @Test("only a part's newest version leaves, once")
+    func newestVersionOnly() throws {
+        var song = Song(title: "Arrival", tempo: 92)
+        let part = PartID()
+        let first = Bassline(notes: [NoteEvent(pitch: Pitch(midi: 38), start: 0, duration: 1)], sound: "finger")
+        let second = Bassline(notes: [NoteEvent(pitch: Pitch(midi: 45), start: 0, duration: 1),
+                                      NoteEvent(pitch: Pitch(midi: 43), start: 1, duration: 1)], sound: "finger")
+        try song.append(PartVersion(partID: part, kind: .bassline(first), author: .user, operation: Operation.written, note: "v1"))
+        try song.append(PartVersion(partID: part, kind: .bassline(second), author: .user, operation: Operation.edit, note: "v2"))
+        let file = MIDIExport.file(for: song)
+        #expect(file.tracks.count == 1)
+        #expect(file.tracks[0].notes.map(\.pitch) == [45, 43])
+    }
+
+    @Test("an arranged song lays each section's parts on the section's bars, repeated to fill it")
+    func arrangedTiling() throws {
+        var song = Song(title: "Arrival", tempo: 120)
+        let groove = Groove(stepsPerBar: 16, bars: 1, swing: 0, patterns: [
+            GroovePattern(voice: .kick, steps: (0..<16).map { $0 == 0 ? .normal : .rest }),
+        ])
+        let bass = Bassline(notes: [NoteEvent(pitch: Pitch(midi: 38), start: 0, duration: 1)], sound: "finger")
+        let grooveVersion = PartVersion(partID: PartID(), kind: .groove(groove), author: .user, operation: Operation.written, note: "Kick")
+        let bassVersion = PartVersion(partID: PartID(), kind: .bassline(bass), author: .user, operation: Operation.written, note: "Bass")
+        try song.append(grooveVersion)
+        try song.append(bassVersion)
+        song.sections = [Section(name: "Intro", stitch: [Lane(part: grooveVersion.partID)], lengthInBars: 2),
+                         Section(name: "Verse", stitch: [Lane(part: grooveVersion.partID), Lane(part: bassVersion.partID)], lengthInBars: 2)]
+        let file = MIDIExport.file(for: song)
+        let ticksPerBar = 480 * 4
+        let kicks = try #require(file.tracks.first { $0.name == "Kick" })
+        #expect(kicks.notes.map(\.start) == [0, ticksPerBar, 2 * ticksPerBar, 3 * ticksPerBar], "one kick a bar across both sections")
+        let bassTrack = try #require(file.tracks.first { $0.name == "Bass" })
+        #expect(bassTrack.notes.map(\.start) == [2 * ticksPerBar, 3 * ticksPerBar], "the bass starts where the verse does")
+        #expect(kicks.markers.map(\.text) == ["Intro", "Verse"])
+    }
+}

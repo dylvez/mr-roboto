@@ -236,6 +236,7 @@ struct LiveComposer: View {
     @Bindable var band: DirectorSession
     @FocusState.Binding var isComposing: Bool
     @State fileprivate var showsAddressing = false
+    @State private var isSettingKey = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -276,18 +277,89 @@ struct LiveComposer: View {
 
             // Honest and quiet: what the session has spent, in the place you spend it, at the size
             // of a footnote. Before the first turn it says whether there is a key at all, which is
-            // the only other thing you would want to know from here.
-            Text(band.footnote)
-                .font(Design.Typography.ui(11.5, weight: .regular))
-                .foregroundStyle(band.keyStatus.hasKey ? Design.Palette.inkSecondary : Design.Palette.warn)
-                .fixedSize(horizontal: false, vertical: true)
-                .help("What this session has spent, and how much of each prompt came out of the cache.")
+            // the only other thing you would want to know from here — and, with none, the way to
+            // give it one. The sentence used to name an environment variable and the keychain, two
+            // places a person does not reach from inside an app.
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(band.footnote)
+                    .font(Design.Typography.ui(11.5, weight: .regular))
+                    .foregroundStyle(band.keyStatus.hasKey ? Design.Palette.inkSecondary : Design.Palette.warn)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .help("What this session has spent, and how much of each prompt came out of the cache.")
+                Spacer(minLength: 0)
+                if !band.isWorking {
+                    Button(band.keyStatus.hasKey ? "Key…" : "Set the key…") { isSettingKey = true }
+                        .buttonStyle(.plain)
+                        .font(Design.Typography.ui(11.5, weight: .medium))
+                        .foregroundStyle(Design.Palette.accent)
+                        .help(band.keyStatus.hasKey ? "Change or forget the band's API key" : "Give the band an Anthropic API key, kept in your keychain")
+                }
+            }
         }
         .padding(.horizontal, 28)
         .padding(.top, 16)
         .padding(.bottom, 24)
         .onExitCommand { band.cancel() }
         .task { await band.refreshKeyStatus() }
+        .sheet(isPresented: $isSettingKey) { APIKeySheet(band: band) }
+    }
+}
+
+/// Where the band's key is typed: once, into the keychain, and never shown again.
+struct APIKeySheet: View {
+    let band: DirectorSession
+    @Environment(\.dismiss) private var dismiss
+    @State private var text = ""
+    @State private var problem: String?
+    @State private var isWorking = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SmallLabel("The band's key")
+            Text("An Anthropic API key. It is kept in your keychain under Mr. Roboto and sent only to api.anthropic.com; the app never shows it again. \(band.keyStatus.sentence)")
+                .font(Design.Typography.prose(13.5))
+                .foregroundStyle(Design.Palette.inkSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            SecureField("sk-ant-…", text: $text)
+                .textFieldStyle(.roundedBorder)
+                .font(Design.Typography.numeric(13))
+                .onSubmit { Task { await keep() } }
+            if let problem {
+                Text(problem)
+                    .font(Design.Typography.ui(11.5, weight: .regular))
+                    .foregroundStyle(Design.Palette.warn)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            HStack(spacing: 8) {
+                if case .present(.keychain) = band.keyStatus {
+                    FrameButton(title: "Forget the key", emphasis: .quiet, isEnabled: !isWorking) { Task { await forget() } }
+                }
+                Spacer()
+                FrameButton(title: "Cancel", emphasis: .quiet, isEnabled: !isWorking) { dismiss() }
+                FrameButton(title: "Keep", emphasis: .accent, isEnabled: !isWorking && ClaudeCredentials.looksLikeKey(text.trimmingCharacters(in: .whitespacesAndNewlines))) {
+                    Task { await keep() }
+                }
+            }
+        }
+        .padding(Design.Metric.inset)
+        .frame(width: 440)
+        .background(Design.Palette.panel)
+        .foregroundStyle(Design.Palette.ink)
+    }
+
+    private func keep() async {
+        isWorking = true
+        defer { isWorking = false }
+        if let failure = await band.storeKey(text) { problem = failure; return }
+        text = ""
+        dismiss()
+    }
+
+    private func forget() async {
+        isWorking = true
+        defer { isWorking = false }
+        if let failure = await band.forgetKey() { problem = failure; return }
+        dismiss()
     }
 }
 

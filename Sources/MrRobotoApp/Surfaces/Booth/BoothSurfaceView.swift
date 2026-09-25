@@ -1,7 +1,11 @@
 import SongGraph
 import SwiftUI
 
-/// The Booth: the section to sing to, the input's level, arm, Record and Stop.
+/// The Booth: the section to sing to, the input's level, Record and Stop.
+///
+/// There is no Arm. The model has an armed state, but the only thing that can read the input is a
+/// recorder on the running transport, so a level cannot be shown before Record starts the song —
+/// and an Arm that changed a word in the header and nothing else was a control that did nothing.
 struct BoothSurfaceView: View {
     @Bindable var model: BoothModel
 
@@ -37,7 +41,7 @@ struct BoothSurfaceView: View {
 
     private var stateLine: String {
         switch model.state {
-        case .idle: return "Idle"
+        case .idle: return "Idle · next is take \(model.nextPass)"
         case .armed: return "Armed · next is take \(model.nextPass)"
         case .recording: return "Recording take \(model.nextPass)"
         }
@@ -54,24 +58,39 @@ struct BoothSurfaceView: View {
             }
             BoothLabel("Input")
             inputPicker
-            LevelBar(level: model.level)
-                .frame(width: 260, height: 10)
+            VStack(alignment: .leading, spacing: 3) {
+                LevelBar(level: model.level)
+                    .frame(width: 260, height: 10)
+                    .help(model.state == .recording ? "The input's peak, buffer by buffer." : "The input's level shows while a take records; the recorder is the only thing that hears it.")
+                    .accessibilityLabel("Input level")
+                    .accessibilityValue(model.state == .recording ? String(format: "%.0f percent", model.level * 100) : "not recording")
+                // Said under the meter, so an empty bar before the first take is not read as no input.
+                Text(model.state == .recording ? "Input level" : "Input level · shows while recording")
+                    .font(Design.Typography.ui(10.5))
+                    .foregroundStyle(Design.Palette.inkTertiary)
+            }
             HStack(spacing: 8) {
                 Toggle("Punch out at the section's end", isOn: $model.punchesOut).toggleStyle(.checkbox)
                     .font(Design.Typography.ui(12))
+                    .tint(Design.Palette.accent)
+                    .help("Stops the take by itself on the section's last bar.")
             }
             BoothLabel("Transport")
             HStack(spacing: 8) {
                 if model.state == .recording {
+                    // No bare Space here: the app's transport already owns Space, and two controls
+                    // on one key stop different things depending on which one wins.
                     Button("Stop") { Task { await model.stopRecording(stopSong: true) } }
-                        .keyboardShortcut(.space, modifiers: [])
+                        .help("Ends the take and stops the song.")
                     Button("Stop and keep playing") { Task { await model.stopRecording() } }
+                        .help("Ends the take; the song plays on.")
                 } else {
-                    Button(model.state == .armed ? "Disarm" : "Arm") { model.state == .armed ? model.disarm() : model.arm() }
                     Button("Record") { Task { await model.record() } }
                         .keyboardShortcut("r", modifiers: [])
                         .buttonStyle(.borderedProminent)
                         .tint(Design.Palette.warn)
+                        .help("Starts a take now, and the song with it if it is stopped. Press R.")
+                    KeyHint("R")
                 }
             }
             .font(Design.Typography.ui(12.5))
@@ -197,5 +216,24 @@ struct BoothLabel: View {
     init(_ text: String) { self.text = text }
     var body: some View {
         Text(text.uppercased()).font(Design.Typography.label).tracking(1.1).foregroundStyle(Design.Palette.inkTertiary)
+    }
+}
+
+/// A key drawn as a key cap beside the control it presses, because a shortcut on a button in a
+/// panel is invisible otherwise: only a menu shows its key equivalent.
+struct KeyHint: View {
+    let key: String
+    init(_ key: String) { self.key = key }
+    var body: some View {
+        Text(key)
+            .font(Design.Typography.numeric(10.5, weight: .medium))
+            .foregroundStyle(Design.Palette.inkSecondary)
+            .frame(minWidth: Design.Metric.tagHeight, minHeight: Design.Metric.tagHeight)
+            .padding(.horizontal, 4)
+            .background(Design.Palette.panelAlt, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
+            .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
+                .stroke(Design.Palette.lineStrong, lineWidth: Design.Metric.hairline))
+            .help("Press \(key) to record.")
+            .accessibilityHidden(true)
     }
 }

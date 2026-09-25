@@ -313,7 +313,20 @@ struct CompareModelTests {
         let refused = await model.choose("Trip-Hop")
         #expect(!refused)
         #expect(model.chosenID == "Neo-Soul Pocket")
-        #expect(model.lastError?.contains("would not take") == true)
+        #expect(model.lastError?.contains("could not be taken") == true)
+        // What the footer prints is a sentence for the person reading it, not a log line.
+        #expect(model.lastError?.hasPrefix("compare:") == false)
+    }
+
+    @Test("What went wrong is said in sentences, not in log lines")
+    func errorsAreSentences() {
+        let errors: [CompareError] = [.notEnoughCandidates(1), .tooManyCandidates(5), .tooManyLevers(3), .unknownCandidate("x")]
+        for error in errors {
+            #expect(!error.description.hasPrefix("compare:"), "\(error.description)")
+            #expect(error.description.hasSuffix("."), "\(error.description)")
+        }
+        #expect(CompareError.notEnoughCandidates(1).description.contains("at least two"))
+        #expect(CompareError.unknownCandidate("x").description.contains("no candidate called x"))
     }
 
     @Test("Critic findings ride on the rows without being acted on")
@@ -335,6 +348,29 @@ struct CompareModelTests {
         let swing = try #require(model.candidate("Lo-Fi Hip-Hop")?.reading(.swingPercent))
         #expect(abs(swing.value - 60) < 0.001)
     }
+
+    @Test("A row's findings can be read, not only counted: every one of them, warnings first")
+    func findingsCanBeRead() throws {
+        let (model, _) = try CompareFixtures.feelComparison()
+        func finding(_ headline: String, _ severity: Finding.Severity) -> Finding {
+            Finding(critic: .swingClash, criticName: "Swing check", persona: .beatmaker,
+                    subject: .bar(0), locus: Locus(bar: 0, beat: 0, start: 0, end: 2),
+                    headline: headline, why: "Because.", severity: severity,
+                    measurement: Measurement(.swingPercent, measured: 40,
+                                             threshold: .atMost(.swingPercent, 10, unit: "ms"), unit: "ms"),
+                    first: Fix("a", title: "a", detail: "a", change: .setSwing(percent: 54)),
+                    second: Fix("b", title: "b", detail: "b", change: .setSwing(percent: 50)))
+        }
+        model.attach([finding("a note", .note), finding("a warning", .warn)], to: "Lo-Fi Hip-Hop")
+
+        // The count on the row is warnings only — a note is not worth a mark on a row you scan.
+        #expect(model.findingCount == 1)
+        // What opens when the count is pressed is all of it, the warning first.
+        #expect(model.findings(on: "Lo-Fi Hip-Hop").map(\.headline) == ["a warning", "a note"])
+        #expect(model.findings(on: "Trip-Hop").isEmpty)
+        #expect(model.findings(on: "no such row").isEmpty)
+    }
+
 
     @Test("The surface binds to the versions it is comparing")
     func bindsToVersions() throws {

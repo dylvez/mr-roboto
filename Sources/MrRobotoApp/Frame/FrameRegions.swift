@@ -124,7 +124,15 @@ struct CollapsedStrip: View {
     /// Set when the strip is holding something you would want to know about — proposals waiting in a
     /// collapsed rail. Drawn in the accent, which is the frame's one way of saying "here".
     var isAccented: Bool = false
+    /// Set when what it is holding is something that went wrong — a save that failed, an export
+    /// refused — reported into a rail that was folded. The warning colour, over the accent.
+    var isWarning: Bool = false
     let expand: () -> Void
+
+    private var tint: Color {
+        if isWarning { return Design.Palette.warn }
+        return isAccented ? Design.Palette.accent : Design.Palette.inkSecondary
+    }
 
     var body: some View {
         Button(action: expand) {
@@ -136,12 +144,12 @@ struct CollapsedStrip: View {
                 if !badge.isEmpty {
                     Text(badge)
                         .font(Design.Typography.numeric(10.5))
-                        .foregroundStyle(isAccented ? Design.Palette.accent : Design.Palette.inkSecondary)
+                        .foregroundStyle(tint)
                 }
                 Text(region.title.uppercased())
                     .font(Design.Typography.label)
                     .tracking(1.4)
-                    .foregroundStyle(isAccented ? Design.Palette.accent : Design.Palette.inkSecondary)
+                    .foregroundStyle(tint)
                     .fixedSize()
                     .rotationEffect(.degrees(-90))
                     // A rotation does not change a view's layout bounds, so the strip reserves the
@@ -155,7 +163,9 @@ struct CollapsedStrip: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help("Show \(region.title) (⌥⌘\(region.shortcut))")
+        .help(isWarning
+              ? "Show \(region.title) (⌥⌘\(region.shortcut)) — \(badge) line\(badge == "1" ? "" : "s") from the app landed here while it was folded"
+              : "Show \(region.title) (⌥⌘\(region.shortcut))")
     }
 }
 
@@ -181,12 +191,13 @@ struct RegionColumn<Content: View>: View {
     let app: AppState
     var badge: String = ""
     var isAccented: Bool = false
+    var isWarning: Bool = false
     @ViewBuilder var content: () -> Content
 
     var body: some View {
         Group {
             if app.regions.isCollapsed(region) {
-                CollapsedStrip(region: region, badge: badge, isAccented: isAccented) {
+                CollapsedStrip(region: region, badge: badge, isAccented: isAccented, isWarning: isWarning) {
                     app.regions.setCollapsed(false, for: region)
                 }
             } else {

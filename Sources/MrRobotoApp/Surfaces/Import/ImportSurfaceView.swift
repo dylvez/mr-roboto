@@ -90,11 +90,17 @@ private struct DropWell: View {
                 .font(Design.Typography.ui(12.5, weight: .regular))
                 .foregroundStyle(Design.Palette.inkSecondary)
                 .multilineTextAlignment(.center)
+            // ⌘I, the same key File ▸ Import Record answers to, so the two ways in agree.
             Button("Choose a File…") {
                 if let url = FilePanels.chooseAudio() { model.drop(url) }
             }
             .font(Design.Typography.ui(12.5))
-            .keyboardShortcut("o", modifiers: .command)
+            .keyboardShortcut("i", modifiers: .command)
+            .help("Choose an audio file to import (⌘I)")
+            // The toggle sits where the drop happens: it arms separation for the file about to be
+            // dropped, and a switch you cannot reach until the drop is over is not a switch.
+            ImportToggleChip("Separate stems", isOn: $model.separatesStems,
+                             help: "Also split the dropped record into drums, bass, vocals and other. About twelve seconds more.")
             if case .cancelled = model.state {
                 Text("Cancelled. Nothing was written.")
                     .font(Design.Typography.ui(12))
@@ -142,10 +148,11 @@ private struct ImportProgressStrip: View {
                 if let fraction = progress.fraction {
                     ProgressView(value: fraction)
                         .progressViewStyle(.linear)
+                        .tint(Design.Palette.accent)
                         .frame(width: 160)
                 } else {
                     HStack(spacing: 6) {
-                        ProgressView().progressViewStyle(.linear).frame(width: 120)
+                        ProgressView().progressViewStyle(.linear).tint(Design.Palette.accent).frame(width: 120)
                         Text(String(format: "%.0f s", progress.elapsed))
                             .font(Design.Typography.numeric(11))
                             .foregroundStyle(Design.Palette.inkTertiary)
@@ -170,7 +177,14 @@ private struct WaveformPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            PanelLabel("Waveform")
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                PanelLabel("Waveform")
+                // The one gesture this panel takes is invisible until it is said: nothing on the
+                // plate suggests a drag, and the lever below it is disabled until one happens.
+                Text("Drag across the waveform to choose the bars to chop; they play when you let go.")
+                    .font(Design.Typography.ui(11.5, weight: .regular))
+                    .foregroundStyle(Design.Palette.inkSecondary)
+            }
             GeometryReader { geometry in
                 ZStack(alignment: .topLeading) {
                     Canvas { context, size in
@@ -189,6 +203,10 @@ private struct WaveformPanel: View {
             .frame(height: layout.waveformHeight)
             .background(Design.Palette.plate)
             .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Waveform of \(model.title)")
+            .accessibilityValue(model.selectionLabel.map { "\($0) selected" } ?? "No region selected")
+            .accessibilityHint("Drag across it to choose a region; the region plays when you let go.")
         }
     }
 
@@ -339,7 +357,7 @@ private struct PromoteBar: View {
     var body: some View {
         HStack(spacing: 12) {
             Button {
-                try? model.promoteSelection()
+                model.pressPromote()
             } label: {
                 Text("Promote region to a part")
                     .font(Design.Typography.ui(13, weight: .semibold))
@@ -351,10 +369,23 @@ private struct PromoteBar: View {
             }
             .buttonStyle(.plain)
             .disabled(model.selection == nil)
+            .opacity(model.selection == nil ? 0.4 : 1)
+            // A disabled lever says what would enable it, not just that it is off.
+            .help(model.selectionLabel.map { "Cut \($0) into a new sample part and open it in the Chop lane" }
+                  ?? "Drag across the waveform to choose a region first")
 
-            // Two ways to the same place. The toggle arms separation for the *next* drop; the button
-            // runs it on the record already on screen, which is the case a song opened from the
-            // library is always in.
+            // What a drag on the waveform produced, so the selection is a thing with a name before
+            // it is a thing that was promoted.
+            if let selection = model.selection, let label = model.selectionLabel {
+                Text("\(label) · \(String(format: "%.1f s", selection.duration))")
+                    .font(Design.Typography.numeric(11.5))
+                    .foregroundStyle(Design.Palette.inkSecondary)
+            }
+
+            // Two ways to the same place. The button runs separation on the record already on
+            // screen, which is the case a song opened from the library is always in. The chip arms
+            // it for the import that is running: `run` reads the flag when the analysis finishes,
+            // so up to then the choice is still open, and after that there is nothing to choose.
             if model.canSeparateStems {
                 Button {
                     model.separateStems()
@@ -371,13 +402,9 @@ private struct PromoteBar: View {
                 }
                 .buttonStyle(.plain)
                 .help("Split this record into drums, bass, vocals and other, into this song's package")
-            } else {
-                Toggle(isOn: $model.separatesStems) {
-                    Text("Separate stems")
-                        .font(Design.Typography.ui(13, weight: .semibold))
-                }
-                .toggleStyle(.switch)
-                .disabled(model.state.isBusy)
+            } else if model.canStillChooseStems {
+                ImportToggleChip("Separate stems", isOn: $model.separatesStems,
+                                 help: "Also split this record into drums, bass, vocals and other once the analysis finishes")
             }
 
             Spacer()
@@ -388,6 +415,46 @@ private struct PromoteBar: View {
                     .foregroundStyle(Design.Palette.inkSecondary)
             }
         }
+    }
+}
+
+// MARK: - A toggle as a chip
+
+/// An on/off chip in the bench's chip style — the same face `BoothChip` wears, drawn here so this
+/// surface does not depend on another surface's private furniture. An untinted native switch was
+/// the one control on the panel in the system's colours rather than the instrument's.
+private struct ImportToggleChip: View {
+    let title: String
+    @Binding var isOn: Bool
+    let help: String
+
+    init(_ title: String, isOn: Binding<Bool>, help: String) {
+        self.title = title
+        _isOn = isOn
+        self.help = help
+    }
+
+    var body: some View {
+        Button {
+            isOn.toggle()
+        } label: {
+            Text(title)
+                .font(Design.Typography.ui(11.5, weight: isOn ? .semibold : .regular))
+                .foregroundStyle(isOn ? Design.Palette.accent : Design.Palette.inkSecondary)
+                .lineLimit(1)
+                .fixedSize()
+                .padding(.horizontal, 8)
+                .frame(height: Design.Metric.chipHeight)
+                .background(isOn ? Design.Palette.accentSoft : Design.Palette.panelAlt,
+                            in: RoundedRectangle(cornerRadius: Design.Metric.corner))
+                .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
+                    .stroke(isOn ? Design.Palette.accent.opacity(0.35) : Design.Palette.line, lineWidth: Design.Metric.hairline))
+        }
+        .buttonStyle(.plain)
+        .help(help)
+        .accessibilityLabel(title)
+        .accessibilityValue(isOn ? "on" : "off")
+        .accessibilityAddTraits(.isToggle)
     }
 }
 
@@ -415,11 +482,17 @@ private struct StemLanesPanel: View {
         }
     }
 
-    /// The empty state names the lever that fills it rather than explaining the absence.
+    /// The empty state names the lever that fills it rather than explaining the absence — and names
+    /// the lever that is actually on screen, which depends on where the import is.
     private var emptyLine: String {
         if model.state.phase == .separating { return "Separating — lanes appear as each stem lands." }
         if model.canSeparateStems { return "No stems yet. Separate stems, above, splits this record into four." }
-        return "No stems. Turn on Separate stems before dropping a record."
+        if model.canStillChooseStems {
+            return model.separatesStems
+                ? "Stems will be separated once the analysis finishes."
+                : "No stems yet. Turn on Separate stems, above, to split this record when the analysis finishes."
+        }
+        return "No stems."
     }
 }
 
@@ -433,14 +506,18 @@ private struct StemLaneRow: View {
             Text(lane.name.rawValue)
                 .font(Design.Typography.ui(12.5))
                 .frame(width: layout.laneLabelWidth, alignment: .leading)
-            LaneButton(title: "S", isOn: lane.isSoloed) { model.toggleSolo(lane.name) }
-            LaneButton(title: "M", isOn: lane.isMuted) { model.toggleMute(lane.name) }
+            LaneButton(title: "S", isOn: lane.isSoloed, help: "Solo \(lane.name.rawValue)",
+                       label: "Solo \(lane.name.rawValue)") { model.toggleSolo(lane.name) }
+            LaneButton(title: "M", isOn: lane.isMuted, help: "Mute \(lane.name.rawValue)",
+                       label: "Mute \(lane.name.rawValue)") { model.toggleMute(lane.name) }
             Button { model.audition(stem: lane.name) } label: {
                 Text("audition")
                     .font(Design.Typography.ui(11.5, weight: .regular))
                     .foregroundStyle(Design.Palette.accent)
             }
             .buttonStyle(.plain)
+            .help("Play the \(lane.name.rawValue) stem over the selected region, or its first eight seconds")
+            .accessibilityLabel("Audition \(lane.name.rawValue)")
             Spacer()
             Text(lane.duration.map { String(format: "%.1f s", $0) } ?? "—")
                 .font(Design.Typography.numeric(11))
@@ -453,9 +530,13 @@ private struct StemLaneRow: View {
     }
 }
 
+/// A one-letter console button. The letter is the console's convention; the help and the
+/// accessibility label say the word.
 private struct LaneButton: View {
     let title: String
     let isOn: Bool
+    let help: String
+    let label: String
     let action: () -> Void
 
     var body: some View {
@@ -468,6 +549,10 @@ private struct LaneButton: View {
                 .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
         }
         .buttonStyle(.plain)
+        .help(help)
+        .accessibilityLabel(label)
+        .accessibilityValue(isOn ? "on" : "off")
+        .accessibilityAddTraits(.isToggle)
     }
 }
 
@@ -478,7 +563,24 @@ private struct ProvenancePanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            PanelLabel("Provenance and clearance")
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                PanelLabel("Provenance and clearance")
+                Spacer()
+                // The form writes nothing by itself: it is kept, like an arrangement, and until it
+                // is the surface says so. Before the record is on disk there is nothing to keep it
+                // into; an edit made while the stems are still landing waits for the run to end.
+                if model.hasUnkeptProvenance {
+                    Text(model.state.phase == .ready ? "Not kept yet" : "Keep it once the import finishes")
+                        .font(Design.Typography.ui(11, weight: .regular))
+                        .foregroundStyle(Design.Palette.inkTertiary)
+                }
+                FrameButton(title: "Keep", emphasis: .outlined,
+                            isEnabled: model.hasUnkeptProvenance && model.state.phase == .ready) {
+                    model.keepProvenance()
+                }
+                .help(keepHelp)
+                .accessibilityLabel("Keep provenance")
+            }
             Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 6) {
                 GridRow {
                     Field("Source title", text: $model.provenance.title)
@@ -507,10 +609,21 @@ private struct ProvenancePanel: View {
                     .font(Design.Typography.prose(13))
                     .foregroundStyle(Design.Palette.inkSecondary)
             }
+            // Where it goes, so the form is not a field that leads nowhere: the row names the source
+            // an album's clearance sheet lists; the seed note carries the rest of the form.
+            Text("Kept in the library's record and the song's seed note. Album ▸ Clearances names its sources from the record.")
+                .font(Design.Typography.ui(11, weight: .regular))
+                .foregroundStyle(Design.Palette.inkTertiary)
         }
         .padding(Design.Metric.inset)
         .background(Design.Palette.panelAlt)
         .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+    }
+
+    private var keepHelp: String {
+        if model.state.phase != .ready { return "The import writes the form when the record is on disk" }
+        if !model.hasUnkeptProvenance { return "The record already has this form" }
+        return "Write the form to the library's record and the song's seed note"
     }
 }
 

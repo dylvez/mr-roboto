@@ -21,9 +21,10 @@ public struct GridLayout: Equatable, Sendable {
     public static let stepSpacing: CGFloat = 2
     public static let rulerHeight: CGFloat = 14
 
-    /// Header, the two levers, the picker row and the provenance line, plus the gutters between
-    /// them. Measured from the view, not guessed: these are the blocks that are not the grid.
-    static let chromeHeight: CGFloat = 22 + 72 + 54 + 18 + 4 * Design.Metric.gutter
+    /// Header, the two levers, the picker row (its brush caption included) and the provenance
+    /// line, plus the gutters between them. Measured from the view, not guessed: these are the
+    /// blocks that are not the grid.
+    static let chromeHeight: CGFloat = 22 + 72 + 62 + 18 + 4 * Design.Metric.gutter
 
     public let size: CGSize
     public let contentSize: CGSize

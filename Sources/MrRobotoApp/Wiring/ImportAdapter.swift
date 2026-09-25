@@ -60,6 +60,46 @@ struct ImportAdapter: ImportHosting {
     func didCommit(_ version: PartVersion, in song: Song) async {
         await app.adoptPromotedRegion(version, from: song)
     }
+
+    /// The provenance form was kept. The record row is library-level and goes to `library.json`
+    /// whichever song is open. The seed lives in the song: when that song is the one the frame has
+    /// open, the frame's copy is the truth — it may hold versions the package does not yet — so
+    /// the seed changes there, the way a title does, and the frame saves it. Otherwise the package
+    /// on disk is the only copy and is written directly.
+    ///
+    /// The frame's library is a mirror of the disk, replaced wholesale rather than edited, so it is
+    /// re-read afterwards and the sidebar shows the row as kept.
+    func keepProvenance(_ record: Record, seed: Seed, in song: Song) async throws {
+        let library = live.library
+        if await app.adoptKeptSeed(seed, of: song.id) {
+            try await Task.detached(priority: .userInitiated) {
+                try ProvenanceWriter.write(record, seed: seed, in: song, savingPackage: false, to: library)
+            }.value
+        } else {
+            try await live.keepProvenance(record, seed: seed, in: song)
+        }
+        await app.reloadLibrary()
+    }
+}
+
+extension AppState {
+
+    /// The frame's half of keeping a provenance form: the seed on the open song. True when that
+    /// song is open and took it — the frame marks the song unsaved and saves it — and false when
+    /// it is not open, in which case the package on disk is the only copy and the surface writes
+    /// it.
+    @discardableResult
+    func adoptKeptSeed(_ seed: Seed, of songID: SongID) -> Bool {
+        guard song?.id == songID else { return false }
+        updateSong { open in
+            if let index = open.seeds.firstIndex(where: { $0.id == seed.id }) {
+                open.seeds[index] = seed
+            } else {
+                open.seeds.append(seed)
+            }
+        }
+        return true
+    }
 }
 
 extension AppState {

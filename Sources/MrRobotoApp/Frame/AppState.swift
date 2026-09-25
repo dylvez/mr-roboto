@@ -220,7 +220,32 @@ public final class AppState {
     public private(set) var activeSection: SectionID?
 
     /// True when the song has versions that are not on disk yet. The header's Save is quiet otherwise.
-    public private(set) var hasUnsavedChanges = false
+    public internal(set) var hasUnsavedChanges = false
+
+    /// How long the song sits unsaved before the frame saves it itself. Nil turns autosave off.
+    ///
+    /// A version is append-only and an arrangement has its own Keep, so nothing here is a change
+    /// you would want to lose by *not* saving; what you would lose is the work, if the app went
+    /// down between a commit and a ⌘S. So the frame saves a few seconds after the last change,
+    /// quietly — the Save button and the "unsaved" mark still say where you stand. A test that
+    /// wants the write now sets this short; one that wants to assert on "unsaved" leaves it long.
+    @ObservationIgnored public var autosaveDelay: Duration? = .seconds(4)
+    @ObservationIgnored private var autosave: Task<Void, Never>?
+
+    /// Where the frame remembers the little it remembers between launches: the last song opened.
+    @ObservationIgnored let defaults: UserDefaults
+
+    /// What deleting a song does with its package: the system Trash, where Finder can put it back.
+    /// A test moves it somewhere it can look instead.
+    @ObservationIgnored var trash: (URL) throws -> URL? = LibraryStore.systemTrash
+
+    /// The song the frame opens on launch, when the library still holds it.
+    public static let lastOpenedSongKey = "frame.lastOpenedSong"
+
+    /// Set by File ▸ New Song: the song has nothing in it yet and the one thing worth doing first
+    /// is naming it and giving it a tempo and a key, so the header opens the song's settings
+    /// unasked. The header takes it, so it fires once.
+    public var wantsSongSettings = false
 
     // MARK: Bench
 
@@ -366,13 +391,15 @@ public final class AppState {
     ///   - transportHost: the audio. Inject a double in tests.
     ///   - regions: which flanking regions are folded away. Defaults to what `UserDefaults`
     ///     remembers; a test injects one over a scratch suite rather than writing the app's own.
+    ///   - defaults: where the last opened song is remembered. A test injects a scratch suite.
     public init(library: Library = Library(),
                 song: Song? = nil,
                 store: LibraryStore? = nil,
                 status: LibraryStatus? = nil,
                 transportHost: TransportHost = LiveTransportHost(),
                 regions: RegionVisibility? = nil,
-                primers: PrimerStore? = nil) {
+                primers: PrimerStore? = nil,
+                defaults: UserDefaults = .standard) {
         self.library = library
         self.store = store
         self.sessions = store.map { SessionRecorder(libraryDirectory: $0.directoryURL) }
@@ -380,6 +407,7 @@ public final class AppState {
         self.bench = Bench()
         self.regions = regions ?? RegionVisibility()
         self.primers = primers ?? PrimerStore()
+        self.defaults = defaults
         self.libraryStatus = status ?? store.map { library.isEmpty ? .empty($0.directoryURL) : .loaded($0.directoryURL) } ?? .unset
         if let song {
             openSongWithoutLogging(song)
@@ -398,6 +426,11 @@ public final class AppState {
         // The transport plays through the same engine and the same sampler the surfaces audition
         // through. `SurfaceWiring` owns that service, so this is where the two halves meet.
         state.attach(playback: LiveSongPlayer(service: SurfaceWiring.shared.service(for: state)))
+        // The wiring holds the surfaces' models, so it is what knows which of them has unkept work.
+        state.hasUnkeptChanges = { SurfaceWiring.shared.hasUnkeptChanges(for: $0) }
+        // Where you left off. A launch used to land on an empty bench every time, with the song
+        // you were in one click away in the sidebar; that click was the whole of most launches.
+        state.reopenLastSong()
         // The band. Building it touches nothing and reaches nowhere: the client has no key until it
         // is asked for one, the workbench holds no audio, and the toolbox is a list of schemas. The
         // key is looked up once, off the launch path, so the composer can say "the band needs a key"
@@ -547,7 +580,48 @@ public final class AppState {
     /// song *is* something: a record with a waveform, a key, a tempo and its stems, or failing that
     /// the newest thing anyone made in it. `Guidance.opening(_:)` decides which, and a song holding
     /// nothing Gate A can show opens on nothing rather than on a surface with a shrug in it.
-    public func open(_ song: Song) {
+    public func open(_ requested: Song) {
+        // Reopening the song that is open — its row in the sidebar, pressed again — is not a way
+        // to throw its work away: the library's copy of it is only as new as the last save, so
+        // the one in the frame is the one that opens.
+        let song = self.song?.id == requested.id ? (self.song ?? requested) : requested
+        let stillUnsaved = hasUnsavedChanges && self.song?.id == song.id
+        // The song that was open keeps its work. Opening another one used to drop whatever had not
+        // been saved, without a word — the one place in the frame where a click lost something.
+        if hasUnsavedChanges, self.song?.id != song.id { save() }
+        if let previous = self.song, previous.id != song.id { band?.songChanged() }
+        leaveSong()
+        openSongWithoutLogging(song)
+        if stillUnsaved {
+            hasUnsavedChanges = true
+            scheduleAutosave()
+        }
+        defaults.set(song.id.rawValue.uuidString, forKey: Self.lastOpenedSongKey)
+        restoreRail(for: song)
+        note(.you, "Opened \(song.title)", detail: provenanceSummary(of: song))
+        if let opening = Guidance.opening(song) { perform(opening) }
+    }
+
+    /// Closes the open song: saved if it needs it, the bench cleared, nothing in the frame. File ▸
+    /// Close Song, and what deleting the open song does first.
+    /// - Parameter saving: false when the song is about to be thrown away.
+    public func closeSong(saving: Bool = true) {
+        guard let current = song else { return }
+        if saving, hasUnsavedChanges { save() }
+        if transport != .stopped { Task { await stopTransport() } }
+        leaveSong()
+        song = nil
+        selectedVersion = nil
+        activeSection = nil
+        hasUnsavedChanges = false
+        autosave?.cancel()
+        defaults.removeObject(forKey: Self.lastOpenedSongKey)
+        refreshPlayback()
+        note(.you, "Closed \(current.title)")
+    }
+
+    /// Everything that was about the song that was open: the bench, its bindings, the answers.
+    private func leaveSong() {
         for item in bench.items { bench.close(item.id) }
         bindings.removeAll()
         requests.removeAll()
@@ -557,10 +631,21 @@ public final class AppState {
         // part the new song does not hold; `canPerform` would filter them, but silently, and a
         // Director's answer that vanishes without a word is worse than one that is cleared.
         director.removeAll()
-        openSongWithoutLogging(song)
-        restoreRail(for: song)
-        note(.you, "Opened \(song.title)", detail: provenanceSummary(of: song))
-        if let opening = Guidance.opening(song) { perform(opening) }
+    }
+
+    /// The song the last launch was in, when the library still holds it.
+    public var lastOpenedSong: Song? {
+        guard let raw = defaults.string(forKey: Self.lastOpenedSongKey), let uuid = UUID(uuidString: raw) else { return nil }
+        return library.song(SongID(rawValue: uuid))
+    }
+
+    /// Opens the song the last launch was in, if there is one. Quiet otherwise: a first launch, or
+    /// a song since deleted, lands on the empty bench as before.
+    @discardableResult
+    public func reopenLastSong() -> Bool {
+        guard song == nil, let last = lastOpenedSong else { return false }
+        open(last)
+        return true
     }
 
     /// One change to the open song that is not a version — a seed added, a title changed. Marks
@@ -571,6 +656,19 @@ public final class AppState {
         song = current
         hasUnsavedChanges = true
         refreshPlayback()
+        scheduleAutosave()
+    }
+
+    /// Saves the song a little after the last change, once. Every change to the song passes
+    /// through here, so a burst of commits is one write, after the burst.
+    private func scheduleAutosave() {
+        autosave?.cancel()
+        guard let delay = autosaveDelay, store != nil else { return }
+        autosave = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: delay)
+            guard !Task.isCancelled, let self, self.hasUnsavedChanges else { return }
+            self.save(quietly: true)
+        }
     }
 
     private func openSongWithoutLogging(_ song: Song) {
@@ -590,7 +688,10 @@ public final class AppState {
     }
 
     /// Writes the open song and the library back to disk. Honest about failure: nothing is swallowed.
-    public func save() {
+    /// - Parameter quietly: true when the frame is saving on its own (autosave, a song switch), so
+    ///   the rail does not fill with saves you did not ask for. A failure is never quiet.
+    public func save(quietly: Bool = false) {
+        autosave?.cancel()
         guard let store else {
             note(.session, "Nowhere to save to", detail: "This session has no library directory.")
             return
@@ -605,9 +706,11 @@ public final class AppState {
             try store.save(updated)
             library = updated
             hasUnsavedChanges = false
+            lastSaveError = nil
             libraryStatus = .loaded(store.directoryURL)
-            note(.you, "Saved \(song.title)", detail: store.directoryURL.path)
+            if !quietly { note(.you, "Saved \(song.title)", detail: store.directoryURL.path) }
         } catch {
+            lastSaveError = "\(error)"
             note(.session, "Save failed", detail: "\(error)")
         }
     }
@@ -666,6 +769,7 @@ public final class AppState {
             // A stem that just landed, or a groove that just committed, is playable now: the bar
             // should not need a reopen to notice.
             refreshPlayback()
+            scheduleAutosave()
             if version.type == .mix, transport.isPlaying, let host = playbackHost {
                 // M6: a mix move lands on the strips while the song plays.
                 let mix = playback.mix, section = activeSection
@@ -720,6 +824,7 @@ public final class AppState {
             activeSection = cleaned.first?.id
         }
         refreshPlayback()
+        scheduleAutosave()
         let bars = cleaned.reduce(0) { $0 + $1.lengthInBars }
         note(.you, cleaned.isEmpty ? "Cleared the arrangement" : "Arranged \(cleaned.count) section\(cleaned.count == 1 ? "" : "s")",
              detail: cleaned.isEmpty ? nil : cleaned.map { "\($0.name) \($0.lengthInBars)" }.joined(separator: " · ") + " · \(bars) bars")
@@ -736,10 +841,15 @@ public final class AppState {
 
     /// Opens a surface on the bench, retiring the oldest unpinned one when it is full (the `Bench`'s own
     /// rule). Returns the id, which is also the key for `bound(for:)`.
+    /// Whether an open surface is holding work that has not been kept. The wiring knows, because
+    /// it holds the models; a test with no wiring answers no for everything.
+    @ObservationIgnored var hasUnkeptChanges: (BenchItem) -> Bool = { _ in false }
+
     @discardableResult
     public func openSurface(_ kind: SurfaceKind, title: String, bound: [VersionID] = [],
                             id: SurfaceID = SurfaceID()) -> SurfaceID {
-        let retired = bench.open(BenchItem(id: id, kind: kind, title: title))
+        // A surface holding unkept work is not the one that goes to make room.
+        let retired = bench.open(BenchItem(id: id, kind: kind, title: title)) { [hasUnkeptChanges] in !hasUnkeptChanges($0) }
         bindings[id] = bound
         note(.you, "Opened \(kind.rawValue)", detail: title)
         if let retired, retired.id != id {
@@ -748,8 +858,31 @@ public final class AppState {
             surfaceLevers[retired.id] = nil
             answers[retired.id] = nil
             note(.session, "Closed \(retired.kind.rawValue) to make room", detail: retired.title)
+        } else if bench.items.count > Design.maximumOpenSurfaces {
+            note(.session, "The bench is one over: every surface on it is holding unkept work",
+                 detail: "Keep or close one of them, and the bench is back to \(Design.maximumOpenSurfaces).")
         }
         return id
+    }
+
+    /// Whether closing this surface would lose something. The ✕ asks before it does.
+    public func closingWouldLoseWork(_ id: SurfaceID) -> Bool {
+        guard let item = bench.items.first(where: { $0.id == id }) else { return false }
+        return hasUnkeptChanges(item)
+    }
+
+    /// Closes every surface on the bench.
+    /// - Parameter keepingUnkept: true leaves the surfaces holding unkept work open and says so —
+    ///   what a menu item does, having no way to ask; the dock's control asks and passes false.
+    public func closeAllSurfaces(keepingUnkept: Bool = false) {
+        var kept: [BenchItem] = []
+        for item in bench.items {
+            if keepingUnkept, hasUnkeptChanges(item) { kept.append(item) } else { closeSurface(item.id) }
+        }
+        if !kept.isEmpty {
+            note(.session, "\(kept.count) surface\(kept.count == 1 ? " is" : "s are") still open: unkept work",
+                 detail: kept.map { "\($0.kind.rawValue): \($0.title)" }.joined(separator: ", ") + ". Keep it, or close each with its ✕.")
+        }
     }
 
     public func closeSurface(_ id: SurfaceID) {
@@ -815,9 +948,41 @@ public final class AppState {
     /// Adds a line to the conversation rail. Surfaces use this to say what they did, in your voice.
     public func note(_ text: String, detail: String? = nil) { note(.you, text, detail: detail) }
 
+    /// Lines the app wrote while the rail was folded away, not yet looked at.
+    ///
+    /// The rail starts collapsed, and it is where a failed save, a refused export or a stem
+    /// that could not be read is reported. A line written into a folded column is a line nobody
+    /// reads; so the strip counts them, in the warning colour, until the rail is opened.
+    public private(set) var unseenSessionNotes = 0
+
+    /// The rail was opened, or its lines were otherwise read.
+    public func markRailSeen() { unseenSessionNotes = 0 }
+
+    /// Why the last save failed, or nil. The header says it beside the Save button, because a
+    /// save that fails in a folded rail is a save you believe happened.
+    public private(set) var lastSaveError: String?
+
+    /// What the frame is doing that takes a while — "Exporting the master…" — or nil. The header
+    /// shows it with a spinner. An export used to run with nothing on screen at all: press the
+    /// menu item, and for twenty seconds nothing, then a Finder window.
+    public private(set) var busy: String?
+
+    /// Runs long work with the header saying what it is. One thing at a time: a second request
+    /// while one runs is refused, with a line saying so.
+    public func whileBusy<T>(_ what: String, _ work: () async throws -> T) async rethrows -> T? {
+        guard busy == nil else {
+            note(.session, "Still \(busy!.lowercased())", detail: "Wait for it to finish before \(what.lowercased())")
+            return nil
+        }
+        busy = what
+        defer { busy = nil }
+        return try await work()
+    }
+
     /// Adds a line attributed to the app rather than to you.
     public func note(_ source: SessionEntry.Source, _ text: String, detail: String? = nil) {
         log.append(SessionEntry(source: source, text: text, detail: detail))
+        if source == .session, regions.isCollapsed(.rail) { unseenSessionNotes += 1 }
         let who: String
         switch source {
         case .you: who = "you"
@@ -872,9 +1037,28 @@ public final class AppState {
     ///   transport is started, then the frame begins following the engine's own position.
     /// * **playable, but no audio device** — the engine's error, verbatim, in `.unavailable`.
     public func startTransport() async {
+        await startTransport(fromBar: 0)
+    }
+
+    /// The song bar the running transport started from: 0 for the top. Every reading of the
+    /// player is this many bars later in the song than the engine says, and the frame adds it.
+    public private(set) var playbackStartBar = 0
+
+    /// Seconds from the song's top to where the transport started.
+    private var playbackOffsetSeconds: Double {
+        guard playbackStartBar > 0 else { return 0 }
+        return clock.seconds(forBar: playbackStartBar)
+    }
+
+    /// Plays from a bar of the song rather than the top: the sections from there on, and the takes
+    /// where they fall. Playback only ever began at bar 1, so hearing the hook meant sitting
+    /// through everything before it, and the Booth recorded from bar 1 whatever section you had
+    /// picked. Double-clicking a section in the transport strip, ⇧Space, and Record in the Booth
+    /// all come here.
+    public func startTransport(fromBar bar: Int) async {
         guard transport != .playing, transport != .starting else { return }
         refreshPlayback()
-        let plan = playback
+        let plan = playback.starting(atBar: max(0, bar))
         guard plan.isPlayable else {
             let silence = plan.silence ?? SongPlayback.Silence(headline: "Nothing to play", detail: "")
             transport = .nothingToPlay(silence)
@@ -889,10 +1073,13 @@ public final class AppState {
             // single frame is rendered.
             try await playbackHost.begin(plan, clock: clock)
             try await transportHost.start(clock: clock)
+            playbackStartBar = plan.startsAtBar
             transport = .playing
-            playhead = 0
+            playhead = playbackOffsetSeconds
+            followSection(atSeconds: playhead)
             follow()
-            note(.you, "Play",
+            let from = plan.startsAtBar > 0 ? (song?.sections.first { sectionStartBar($0.id) == plan.startsAtBar }?.name ?? "bar \(plan.startsAtBar + 1)") : nil
+            note(.you, from.map { "Play from \($0)" } ?? "Play",
                  detail: plan.summary + String(format: " · %.0f bpm · %@",
                                                clock.tempo, clock.timeSignature.description))
             await noteUnmixedParts(in: plan)
@@ -901,6 +1088,29 @@ public final class AppState {
             transport = .unavailable("\(error)")
             note(.session, "The transport could not start", detail: "\(error)")
         }
+    }
+
+    /// Plays from the first bar of a section. A section the song does not hold plays from the top.
+    public func startTransport(fromSection id: SectionID?) async {
+        if transport == .playing || transport == .starting { await stopTransport() }
+        await startTransport(fromBar: id.flatMap(sectionStartBar) ?? 0)
+    }
+
+    /// ⇧Space: from the section that is lit in the strip.
+    public func playFromActiveSection() async {
+        await startTransport(fromSection: activeSection)
+    }
+
+    /// The bar a section starts on, from the sections' lengths laid end to end. Nil when the song
+    /// does not hold it.
+    public func sectionStartBar(_ id: SectionID) -> Int? {
+        guard let song else { return nil }
+        var bar = 0
+        for section in song.sections {
+            if section.id == id { return bar }
+            bar += max(1, section.lengthInBars)
+        }
+        return nil
     }
 
     /// Puts a newly made part into the form, and says how many sections took it.
@@ -953,6 +1163,7 @@ public final class AppState {
         await playbackHost?.end()
         transport = .stopped
         playhead = 0
+        playbackStartBar = 0
         note(.you, "Stop")
     }
 
@@ -975,8 +1186,9 @@ public final class AppState {
                 guard let self, let host = self.playbackHost, self.transport.isPlaying else { return }
                 let reading = await host.reading()
                 guard !Task.isCancelled, self.transport.isPlaying else { return }
-                self.playhead = reading.seconds
-                self.followSection(atSeconds: reading.seconds)
+                // The engine counts from where it started; the song counts from its top.
+                self.playhead = reading.seconds + self.playbackOffsetSeconds
+                self.followSection(atSeconds: self.playhead)
                 if !reading.isRunning {
                     await self.stopTransport()
                     return
@@ -991,8 +1203,10 @@ public final class AppState {
         guard let song, !song.sections.isEmpty else { return nil }
         let beatsPerBar = Double(max(1, clock.timeSignature.beatsPerBar))
         var bar = Int((clock.beat(forSeconds: max(0, seconds)) / beatsPerBar).rounded(.down))
-        // Looping, the form comes round: bar 46 of a 46-bar song is its first bar again.
-        if isLooping, song.lengthInBars > 0 { bar %= song.lengthInBars }
+        // Looping, the form comes round: bar 46 of a 46-bar song is its first bar again — or,
+        // started from bar 12, its twelfth: a loop from a section runs that section to the end.
+        let from = min(playbackStartBar, max(0, song.lengthInBars - 1))
+        if isLooping, song.lengthInBars > from, bar >= from { bar = from + (bar - from) % (song.lengthInBars - from) }
         var start = 0
         for section in song.sections {
             start += max(1, section.lengthInBars)

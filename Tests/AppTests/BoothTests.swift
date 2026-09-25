@@ -64,7 +64,17 @@ private final class StubBoothHost: BoothHosting, TakesHosting {
     }
 }
 
+/// Waits for the model's own tasks — the meter's poll, an audition's end — to land.
+@MainActor
+private func settle(_ predicate: @MainActor () -> Bool) async {
+    for _ in 0..<1_000 {
+        if predicate() { return }
+        try? await Task.sleep(for: .milliseconds(2))
+    }
+}
+
 private func tone(frames: Int, rate: Double, hz: Double) -> AVAudioPCMBuffer {
+
     let format = AVAudioFormat(standardFormatWithSampleRate: rate, channels: 1)!
     let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(frames))!
     buffer.frameLength = AVAudioFrameCount(frames)
@@ -201,6 +211,65 @@ struct BoothTests {
         #expect(host.comps.first?.0.seams.count == 2)
         #expect(PartLabel.title(of: comp) == "Comp")
     }
+
+    @Test("the Takes surface with nothing bound has no lane and no comp to keep: its empty state is the Booth's door")
+    func noTakes() {
+        let host = StubBoothHost(song: song())
+        let takes = TakesModel(host: host, takes: [], song: host.song)
+        #expect(takes.takes.isEmpty, "the view draws the empty note off this")
+        #expect(takes.plan.spans.isEmpty)
+        #expect(takes.take(forBar: 0) == nil)
+        #expect(!takes.keepComp())
+        #expect(takes.lastError == "No bars to comp.")
+        #expect(host.comps.isEmpty)
+    }
+
+    @Test("a take's play control follows the take: it goes back by itself when the take runs out, and a new audition supersedes it")
+    func auditionEnds() async throws {
+        let host = StubBoothHost(song: song())
+        let booth = BoothModel(host: host)
+        func take(_ pass: Int, seconds: Double) -> PartVersion {
+            let frames = AVAudioFramePosition(seconds * 48_000)
+            let rec = Recorder.Recording(url: URL(fileURLWithPath: "/dev/null"), sampleRate: 48_000, channelCount: 1, frames: frames,
+                                         capturedAt: 0, latencySeconds: 0, input: "Stub mic")
+            return host.keep(rec, take: Take(section: booth.section, startBar: 0, pass: pass))!
+        }
+        let short = take(1, seconds: 0.1), long = take(2, seconds: 8)
+        let takes = TakesModel(host: host, takes: [short, long], song: host.song)
+
+        // The host's audition returns at once; the surface keeps the mark up for the take's length.
+        await takes.audition(short)
+        #expect(takes.playing == short.id)
+        await settle { takes.playing == nil }
+        #expect(takes.playing == nil, "a finished take still read as playing")
+
+        // A second audition before the first ends takes over, and the first's end does not clear it.
+        await takes.audition(short)
+        await takes.audition(long)
+        try await Task.sleep(for: .milliseconds(300))
+        #expect(takes.playing == long.id, "the short take's end cleared the long take's mark")
+
+        takes.stopAudition()
+        #expect(takes.playing == nil)
+    }
+
+    @Test("the meter follows the recorder's peak while a take records and rests at zero otherwise")
+    func meter() async throws {
+        let host = StubBoothHost(song: song())
+        host.transport = Transport(clock: host.clock, mode: .offline(sampleRate: 48_000, maximumFrames: 4_096), originSampleTime: 0)
+        let start = host.clock.frame(forBar: 2)
+        host.buffers = (0..<4).map { i in (tone(frames: 2_048, rate: 48_000, hz: 220), AVAudioTime(sampleTime: start + AVAudioFramePosition(i * 2_048), atRate: 48_000)) }
+        let model = BoothModel(host: host)
+        #expect(model.level == 0, "nothing hears the input before a take: the recorder is the only tap on it")
+
+        await model.record()
+        await settle { model.level > 0.3 }
+        #expect(abs(model.level - 0.4) < 0.01, "the 0.4 tone's peak, buffer by buffer: \(model.level)")
+
+        _ = await model.stopRecording(stopSong: true)
+        #expect(model.level == 0, "a stopped take leaves the meter at rest")
+    }
+
 
     @Test("Sing is the last step on both paths, opens the Booth, then the takes")
     func singOnThePath() {

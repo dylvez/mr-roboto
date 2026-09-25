@@ -258,7 +258,41 @@ public enum Guidance {
                 action: SurfaceAction(surface: .structure, title: song.title)))
         }
 
-        // 7. A sound to shape.
+        // 7. Arranged, and nothing sung over it yet: the Booth. Then the takes, uncomped; then the
+        //    mix; then the master. The path strip has drawn these steps since M5 and M6, but the
+        //    list of what to do next stopped at the arrangement, so a finished beat was told
+        //    "nothing obvious left" with the singing, the mix and the master still to do.
+        if !song.sections.isEmpty {
+            let takes = self.takes(in: song)
+            if takes.isEmpty {
+                out.append(Proposal(
+                    title: "Sing over \(song.title)",
+                    rationale: "The Booth plays the song under you and lands the take on the bar you sang it on; "
+                        + "every take stays, and the band reads them in Takes.",
+                    action: SurfaceAction(surface: .booth, title: song.title)))
+            } else if comps(in: song).isEmpty, let newest = takes.last {
+                let part = takes.filter { $0.partID == newest.partID }
+                out.append(Proposal(
+                    title: "Comp the \(count(part.count, "take"))",
+                    rationale: "Choose which take each bar comes from and keep one version, seams crossfaded.",
+                    action: SurfaceAction(surface: .takes, title: takesTitle(of: part, in: song), bound: part.map(\.id))))
+            }
+            if mixes(in: song).isEmpty {
+                out.append(Proposal(
+                    title: "Mix \(song.title)",
+                    rationale: "A strip per part: level, pan, EQ and a compressor, with meters while it plays. "
+                        + "Every move you let go of is a mix version.",
+                    action: SurfaceAction(surface: .mixer, title: song.title)))
+            } else if let mix = mixes(in: song).last {
+                out.append(Proposal(
+                    title: "Read the master",
+                    rationale: "Loudness, true peak and crest against the target; the Engineer says what to change first. "
+                        + "Then File ▸ Export.",
+                    action: SurfaceAction(surface: .master, title: song.title, bound: [mix.id])))
+            }
+        }
+
+        // 8. A sound to shape.
         if let sound = sounds(in: song).last {
             out.append(Proposal(
                 title: "Shape \(PartLabel.title(of: sound)) in Sound",
@@ -617,6 +651,15 @@ public enum PartActions {
         case .analysis:
             return showTheRecord(in: song)
 
+        case .audio(let audio) where audio.take != nil || audio.comp != nil:
+            // A sung take, or the comp of several: the Takes surface, on every take of its part.
+            // These rows used to open the Record surface — or nothing, in a song with no record.
+            let takes = Guidance.takes(in: song).filter { $0.partID == version.partID }
+            let bound = takes.isEmpty ? [version.id] : takes.map(\.id)
+            return Proposal(title: "Open in Takes",
+                            rationale: "\(Guidance.count(takes.count, "take")) of this part, lane by lane against the bars; choose a comp.",
+                            action: SurfaceAction(surface: .takes, title: Guidance.takesTitle(of: takes, in: song), bound: bound))
+
         case .audio(let audio) where audio.role == .take:
             return showTheRecord(in: song)
 
@@ -674,9 +717,13 @@ public enum PartActions {
                             action: SurfaceAction(surface: .lyrics, title: PartLabel.title(of: version), bound: [version.id]))
 
         case .melody:
-            // No surface edits a melody yet. Saying nothing is the honest answer; its surface
-            // arrives with the rest of the catalog.
-            return nil
+            // The Piano roll in melody mode: the same grid the bass is drawn on, on the tune's own
+            // instrument, read by the Melodist. A tune you drew used to be the one part in the
+            // ledger that could not be opened again.
+            return Proposal(title: "Open in the Piano roll",
+                            rationale: "The tune over the bar, on its instrument; the Melodist's readings below.",
+                            action: SurfaceAction(surface: .pianoRoll, title: PartLabel.title(of: version),
+                                                  bound: [version.id]))
 
         case .mix:
             return Proposal(title: "Open in the Mixer",

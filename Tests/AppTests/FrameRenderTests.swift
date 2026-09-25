@@ -58,6 +58,17 @@ struct FrameRenderTests {
         try write(FieldGuideView(), size: CGSize(width: 620, height: 900), name: "field-guide")
     }
 
+    @Test("every region open at the window's minimum: the dock falls back to glyphs and nothing paints over the rail")
+    func everyRegionOpenAtTheMinimum() throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        let built = GuidanceFixture.separated()
+        let app = app(built.song)
+        app.regions.setCollapsed(false, for: .rail)
+        let width = FrameLayout.minimumWindowWidth(collapsed: [])
+        try write(FrameView(app: app), size: CGSize(width: width, height: FrameLayout.minimumWindowHeight), name: "frame-minimum-all-open")
+    }
+
     @Test("the app icon, at 1024 and at Dock sizes")
     func icon() throws {
         try write(AppIconArt(), size: CGSize(width: 512, height: 512), name: "app-icon-1024")

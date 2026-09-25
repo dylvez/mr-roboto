@@ -62,7 +62,9 @@ final class GridAdapter: GridHosting {
         }
     }
 
-    func commit(_ version: PartVersion) async {
+    /// Whether the song took it. `record` says no when there is no song to take it, and the
+    /// surface shows that rather than a version that went nowhere.
+    func commit(_ version: PartVersion) async -> Bool {
         await app.record(version)
     }
 

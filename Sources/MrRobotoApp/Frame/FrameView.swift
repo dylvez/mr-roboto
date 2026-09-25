@@ -134,6 +134,59 @@ public enum FrameLayout {
         surfaceMinimumHeight + headerHeight + transportHeight + horizontalDividers
             + dockHeight + Design.Metric.hairline + 2 * benchPadding
     }
+
+    // MARK: Growing the window to fit
+
+    /// The frame a window should take so that its content is at least `minimum` wide and tall,
+    /// on a screen of `visible` (the screen less the menu bar and the Dock). Nil when the window
+    /// already fits and nothing has to move.
+    ///
+    /// The window grows to the right and down, keeps its origin where the screen allows, and is
+    /// pushed left or up when growing would run it off the edge — the way a person would drag it.
+    /// It never grows past the screen: a frame wider than the display is clipped again on the far
+    /// side, which is the state this exists to end.
+    public static func fittedFrame(for window: CGRect, minimum: CGSize, visible: CGRect) -> CGRect? {
+        let width = max(window.width, min(minimum.width, visible.width))
+        let height = max(window.height, min(minimum.height, visible.height))
+        guard width > window.width || height > window.height else { return nil }
+        var x = window.minX
+        var y = window.minY
+        // Cocoa's y grows upward: a window that grows taller keeps its top where it was.
+        y -= height - window.height
+        if x + width > visible.maxX { x = visible.maxX - width }
+        if y < visible.minY { y = visible.minY }
+        x = max(visible.minX, x)
+        y = min(y, visible.maxY - height)
+        return CGRect(x: x, y: y, width: width, height: height)
+    }
+}
+
+/// Grows the window when the frame's minimum outgrows it — a region opened, a first launch on a
+/// remembered size that no longer fits — and leaves it alone otherwise.
+///
+/// An `NSViewRepresentable` because that is the honest way to reach the window from inside SwiftUI:
+/// the view is invisible, sits behind the frame, and asks its window for a size once it is in one.
+private struct WindowFitter: NSViewRepresentable {
+    let minimumWidth: CGFloat
+    let minimumHeight: CGFloat
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView(frame: .zero)
+        view.isHidden = true
+        return view
+    }
+
+    func updateNSView(_ view: NSView, context: Context) {
+        let minimum = CGSize(width: minimumWidth, height: minimumHeight)
+        // On the next turn of the loop: the window is attached after the view is, and a size asked
+        // for during a layout pass is a size asked for too early.
+        DispatchQueue.main.async {
+            guard let window = view.window, !window.styleMask.contains(.fullScreen) else { return }
+            let visible = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? window.frame
+            guard let fitted = FrameLayout.fittedFrame(for: window.frame, minimum: minimum, visible: visible) else { return }
+            window.setFrame(fitted, display: true, animate: false)
+        }
+    }
 }
 
 /// The persistent frame. Library, session rail, bench, parts ledger, transport — these never move,
@@ -147,6 +200,7 @@ struct FrameView: View {
     var registry: SurfaceRegistry = .shared
 
     var body: some View {
+        let minimumWidth = FrameLayout.minimumWindowWidth(collapsed: app.regions.collapsed)
         VStack(spacing: 0) {
             HeaderBar(app: app)
             Hairline()
@@ -156,7 +210,8 @@ struct FrameView: View {
                 }
                 Hairline(axis: .vertical)
                 RegionColumn(region: .rail, app: app, badge: railBadge,
-                             isAccented: !app.proposals.isEmpty) {
+                             isAccented: !app.proposals.isEmpty || app.unseenSessionNotes > 0,
+                             isWarning: app.unseenSessionNotes > 0) {
                     ConversationRail(app: app)
                 }
                 Hairline(axis: .vertical)
@@ -173,8 +228,16 @@ struct FrameView: View {
         }
         .background(Design.Palette.paper)
         .foregroundStyle(Design.Palette.ink)
-        .frame(minWidth: FrameLayout.minimumWindowWidth(collapsed: app.regions.collapsed),
-               minHeight: FrameLayout.minimumWindowHeight)
+        .frame(minWidth: minimumWidth, minHeight: FrameLayout.minimumWindowHeight)
+        // "Asking for a region back asks the window for its width" — but SwiftUI only raises the
+        // window's *minimum*; it does not grow a window that is already smaller than it. With
+        // all three regions open at the default 1440 the frame was 1509 wide, centred, and cut
+        // off on both sides: "RARY" for LIBRARY, the Save button half gone. This grows the window.
+        .background(WindowFitter(minimumWidth: minimumWidth, minimumHeight: FrameLayout.minimumWindowHeight))
+        .onChange(of: app.regions.isCollapsed(.rail)) { _, collapsed in
+            // The rail opened: its lines have been looked at.
+            if !collapsed { app.markRailSeen() }
+        }
     }
 
     /// A collapsed region still says how much it is holding, so putting one away is not the same as
@@ -184,7 +247,10 @@ struct FrameView: View {
         return count == 0 ? "" : "\(count)"
     }
 
+    /// Lines the app wrote while the rail was folded come first: a failed save is worth more than a
+    /// count of suggestions. Then the suggestions, then the length of the log.
     private var railBadge: String {
+        if app.unseenSessionNotes > 0 { return "\(app.unseenSessionNotes)" }
         let waiting = app.proposals.count
         return waiting > 0 ? "\(waiting)" : (app.log.isEmpty ? "" : "\(app.log.count)")
     }

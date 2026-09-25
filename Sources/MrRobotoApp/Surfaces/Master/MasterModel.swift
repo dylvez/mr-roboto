@@ -14,8 +14,31 @@ public final class MasterModel {
         /// The spectrum in dB, 48 log-spaced bars from 40 Hz to 16 kHz.
         public var spectrumDB: [Double]
         public var readings: [PersonaReading]
+        /// What was actually bounced and measured — see `Scope`. The numbers are the same kind
+        /// either way; what they are the numbers *of* is not, and the surface says which.
+        public var scope: Scope
         /// The first reading that does not hold: what to change first.
         public var firstToChange: PersonaReading? { readings.first { !$0.holds } }
+    }
+
+    /// How much of the song a reading covers.
+    ///
+    /// An arranged song is bounced one section at a time, and the Master reads the first — a
+    /// whole-song bounce on every lever move is not something to wait for. An unarranged song has
+    /// no sections to pick from and bounces whole. A reading of the first section is not the song's
+    /// integrated loudness, and calling it that would be the one lie a mastering surface must not
+    /// tell, so the scope travels with the reading.
+    public enum Scope: Equatable, Sendable {
+        case wholeSong
+        case firstSection(name: String)
+
+        /// The label beside the numbers: "Whole song" or "First section · Verse".
+        public var label: String {
+            switch self {
+            case .wholeSong: return "Whole song"
+            case .firstSection(let name): return "First section · \(name)"
+            }
+        }
     }
 
     public let surfaceID: SurfaceID
@@ -24,6 +47,10 @@ public final class MasterModel {
     public let targets: Master
     public private(set) var reading: Reading?
     public private(set) var isReading = false
+    /// True once a lever that changes the bounce has moved since the reading was taken. The
+    /// numbers are still shown, dimmed: they were true of a mix that is no longer the one on the
+    /// strips.
+    public private(set) var isStale = false
     public private(set) var lastError: String?
     public private(set) var lastNote: String?
 
@@ -52,17 +79,27 @@ public final class MasterModel {
 
     public var song: Song? { host.song }
 
+    /// What the next reading will cover. The host bounces a section only when the plan is arranged
+    /// (`SongPlayback.isArranged`); otherwise it bounces the whole song whatever it is asked.
+    public var scope: Scope {
+        guard host.playback.isArranged, let first = host.song?.sections.first else { return .wholeSong }
+        return .firstSection(name: first.name)
+    }
+
     /// Bounces the song (or its first section) through the mix and reads it.
     public func read() async {
         isReading = true
         defer { isReading = false }
         do {
+            let scope = self.scope
             let section = host.song?.sections.first?.id
             let (planar, rate) = try await host.bounce(mix: mix, section: section)
             let observation = MixObservation.measure(label: host.song?.title ?? "Song", mix: planar, sampleRate: rate)
             let truePeak = MixMeter.truePeakDB(planar, sampleRate: rate)
             let spectrum = Self.logSpectrum(MixMeter.powerSpectrum(planar, sampleRate: rate), sampleRate: rate)
-            reading = Reading(observation: observation, truePeakDBTP: truePeak, spectrumDB: spectrum, readings: Engineer().read(observation))
+            reading = Reading(observation: observation, truePeakDBTP: truePeak, spectrumDB: spectrum,
+                              readings: Engineer().read(observation), scope: scope)
+            isStale = false
             lastError = nil
         } catch {
             lastError = "The bounce could not be read: \(error)"
@@ -94,9 +131,18 @@ public final class MasterModel {
 
     // MARK: Levers
 
+    /// The target is what the reading is judged against, not something in the bounce, so moving
+    /// it leaves the reading current. The ceiling and the gain change the audio, so they stale it.
     public func setTarget(_ lufs: Double) { mix.master.targetLUFS = max(-30, min(-6, lufs)); host.preview(mix) }
-    public func setCeiling(_ dBTP: Double) { mix.master.ceilingDBTP = max(-12, min(0, dBTP)); host.preview(mix) }
-    public func setGain(_ dB: Double) { mix.master.gainDB = max(-24, min(24, dB)); host.preview(mix) }
+    public func setCeiling(_ dBTP: Double) { move { $0.master.ceilingDBTP = max(-12, min(0, dBTP)) } }
+    public func setGain(_ dB: Double) { move { $0.master.gainDB = max(-24, min(24, dB)) } }
+
+    private func move(_ change: (inout Mix) -> Void) {
+        let before = mix
+        change(&mix)
+        if mix != before, reading != nil { isStale = true }
+        host.preview(mix)
+    }
 
     /// Applies the suggested gain and keeps it.
     public func hitTheTarget() {

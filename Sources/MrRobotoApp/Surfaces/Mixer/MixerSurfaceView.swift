@@ -30,7 +30,8 @@ struct MixerSurfaceView: View {
                 .font(Design.Typography.numeric(12))
                 .foregroundStyle(Design.Palette.inkSecondary)
             Spacer()
-            Button("Revert") { model.revert() }.font(Design.Typography.ui(12)).disabled(model.mix == (model.base.flatMap { if case .mix(let m) = $0.kind { m } else { nil } } ?? .unity))
+            // No Revert here. Every move let go of is already a version, so there is never a working
+            // change to throw away; going back is done from the ledger, as the footer says.
         }
     }
 
@@ -70,24 +71,32 @@ struct MixerSurfaceView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(row.label).font(Design.Typography.ui(13, weight: .medium)).lineLimit(1)
                 HStack(spacing: 4) {
-                    MixToggle("M", isOn: strip.isMuted, tint: Design.Palette.warn) { model.toggleMute(row.part) }
-                    MixToggle("S", isOn: strip.isSoloed, tint: Design.Palette.accent) { model.toggleSolo(row.part) }
+                    MixToggle("M", isOn: strip.isMuted, tint: Design.Palette.warn,
+                              help: strip.isMuted ? "Unmute \(row.label)" : "Mute \(row.label)",
+                              label: "\(strip.isMuted ? "Unmute" : "Mute") \(row.label)") { model.toggleMute(row.part) }
+                    MixToggle("S", isOn: strip.isSoloed, tint: Design.Palette.accent,
+                              help: strip.isSoloed ? "Unsolo \(row.label)" : "Solo \(row.label): hear it on its own",
+                              label: "\(strip.isSoloed ? "Unsolo" : "Solo") \(row.label)") { model.toggleSolo(row.part) }
                     learnChip(.strip(index))
                 }
             }
             .frame(width: 120, alignment: .leading)
-            fader(value: strip.gainDB, range: -60...12, format: "%+.1f dB", width: 200) { model.setGain($0, for: row.part) }
-            fader(value: strip.pan, range: -1...1, format: "%+.2f", width: 90) { model.setPan($0, for: row.part) }
-            fader(value: strip.sendDB ?? -60, range: -60...0, format: "%.0f dB", width: 90) { model.setSend($0 <= -59.5 ? nil : $0, for: row.part) }
+            fader(value: strip.gainDB, range: -60...12, format: "%+.1f dB", width: 200, name: "\(row.label) level") { model.setGain($0, for: row.part) }
+            fader(value: strip.pan, range: -1...1, format: "%+.2f", width: 90, name: "\(row.label) pan") { model.setPan($0, for: row.part) }
+            fader(value: strip.sendDB ?? MixerModel.sendOffDB, range: MixerModel.sendOffDB...0, format: "%.0f dB", width: 90,
+                  name: "\(row.label) send", readout: MixerModel.sendReadout(strip.sendDB)) { model.setSend(MixerModel.send(fromFader: $0), for: row.part) }
             HStack(spacing: 4) {
                 ForEach(0..<3, id: \.self) { band in
                     if strip.eq.indices.contains(band) {
-                        fader(value: strip.eq[band].gainDB, range: -18...18, format: "%+.0f", width: 78) { model.setEQ(band: band, gainDB: $0, for: row.part) }
+                        fader(value: strip.eq[band].gainDB, range: -18...18, format: "%+.0f", width: 78,
+                              name: "\(row.label) EQ band \(band + 1)") { model.setEQ(band: band, gainDB: $0, for: row.part) }
                     }
                 }
             }
             .frame(width: 250, alignment: .leading)
-            MixToggle(strip.compressor == nil ? "off" : "on", isOn: strip.compressor != nil, tint: Design.Palette.accent) {
+            MixToggle(strip.compressor == nil ? "off" : "on", isOn: strip.compressor != nil, tint: Design.Palette.accent,
+                      help: strip.compressor == nil ? "Put a compressor on \(row.label)" : "Take the compressor off \(row.label)",
+                      label: "\(row.label) compressor \(strip.compressor == nil ? "off" : "on")") {
                 model.setCompressor(strip.compressor == nil ? Compressor() : nil, for: row.part)
             }
             .frame(width: 60, alignment: .leading)
@@ -98,14 +107,19 @@ struct MixerSurfaceView: View {
         .padding(.vertical, 3)
     }
 
-    private func fader(value: Double, range: ClosedRange<Double>, format: String, width: CGFloat, set: @escaping (Double) -> Void) -> some View {
+    /// A slider with its value under it. `readout` overrides the formatted value where the number
+    /// would lie — a send at the bottom of its travel is off, not −60 dB.
+    private func fader(value: Double, range: ClosedRange<Double>, format: String, width: CGFloat, name: String,
+                       readout: String? = nil, set: @escaping (Double) -> Void) -> some View {
         VStack(alignment: .leading, spacing: 1) {
             Slider(value: Binding(get: { value }, set: set), in: range) { editing in
                 if !editing { model.endGesture() }
             }
             .controlSize(.mini)
             .tint(Design.Palette.accent)
-            Text(String(format: format, value)).font(Design.Typography.numeric(9.5)).foregroundStyle(Design.Palette.inkTertiary)
+            .accessibilityLabel(name)
+            .help("\(name): heard while held, a mix version when let go.")
+            Text(readout ?? String(format: format, value)).font(Design.Typography.numeric(9.5)).foregroundStyle(Design.Palette.inkTertiary)
         }
         .frame(width: width)
     }
@@ -117,9 +131,9 @@ struct MixerSurfaceView: View {
                 learnChip(.master)
             }
             .frame(width: 120, alignment: .leading)
-            fader(value: model.mix.master.gainDB, range: -24...24, format: "%+.1f dB", width: 200) { model.setMaster(gainDB: $0) }
-            fader(value: model.mix.master.ceilingDBTP, range: -12...0, format: "ceiling %.1f dBTP", width: 140) { model.setMaster(ceilingDBTP: $0) }
-            fader(value: model.mix.master.targetLUFS, range: -30 ... -6, format: "target %.0f LUFS", width: 140) { model.setMaster(targetLUFS: $0) }
+            fader(value: model.mix.master.gainDB, range: -24...24, format: "%+.1f dB", width: 200, name: "Master gain") { model.setMaster(gainDB: $0) }
+            fader(value: model.mix.master.ceilingDBTP, range: -12...0, format: "ceiling %.1f dBTP", width: 140, name: "Master ceiling") { model.setMaster(ceilingDBTP: $0) }
+            fader(value: model.mix.master.targetLUFS, range: -30 ... -6, format: "target %.0f LUFS", width: 140, name: "Master target") { model.setMaster(targetLUFS: $0) }
             Spacer()
         }
         .padding(.top, 6)
@@ -140,6 +154,11 @@ struct MixerSurfaceView: View {
                 Button(model.isReadingOverlay ? "Reading…" : "Read") { Task { await model.readOverlay() } }
                     .font(Design.Typography.ui(12))
                     .disabled(model.overlayA == nil || model.overlayB == nil || model.isReadingOverlay)
+                    .help("Bounces the two chosen strips on their own and shows where they share energy.")
+                if model.isReadingOverlay {
+                    ProgressView().controlSize(.small).tint(Design.Palette.accent)
+                        .accessibilityLabel("Reading the overlay")
+                }
             }
             if !model.overlay.isEmpty {
                 let a = model.rows.first { $0.part == model.overlayA }?.label ?? "A"
@@ -183,22 +202,33 @@ struct MixLabel: View {
     }
 }
 
+/// A one-letter switch on a strip: M, S, the compressor's on/off. Terse on the strip, so it
+/// carries the whole verb in its help and its accessibility label.
 struct MixToggle: View {
     let title: String
     let isOn: Bool
     let tint: Color
+    let help: String
+    let label: String
     let action: () -> Void
-    init(_ title: String, isOn: Bool, tint: Color, action: @escaping () -> Void) { self.title = title; self.isOn = isOn; self.tint = tint; self.action = action }
+    init(_ title: String, isOn: Bool, tint: Color, help: String, label: String, action: @escaping () -> Void) {
+        self.title = title; self.isOn = isOn; self.tint = tint; self.help = help; self.label = label; self.action = action
+    }
     var body: some View {
         Button(action: action) {
             Text(title)
                 .font(Design.Typography.numeric(10, weight: .semibold))
                 .foregroundStyle(isOn ? tint : Design.Palette.inkTertiary)
-                .frame(width: 22, height: 16)
-                .background(isOn ? tint.opacity(0.15) : Design.Palette.panelAlt, in: RoundedRectangle(cornerRadius: 3))
-                .overlay(RoundedRectangle(cornerRadius: 3).stroke(isOn ? tint.opacity(0.4) : Design.Palette.line, lineWidth: Design.Metric.hairline))
+                .padding(.horizontal, 4)
+                .frame(minWidth: Design.Metric.tagHeight, minHeight: Design.Metric.tagHeight)
+                .background(isOn ? tint.opacity(0.15) : Design.Palette.panelAlt, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
+                .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(isOn ? tint.opacity(0.4) : Design.Palette.line, lineWidth: Design.Metric.hairline))
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .help(help)
+        .accessibilityLabel(label)
+        .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 }
 

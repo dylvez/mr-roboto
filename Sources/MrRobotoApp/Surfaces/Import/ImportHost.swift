@@ -55,11 +55,56 @@ public protocol ImportHosting: Sendable {
 
     /// A new part version left the surface. The frame's parts ledger wants to know.
     func didCommit(_ version: PartVersion, in song: Song) async
+
+    /// The provenance form was kept. `record` is the library row with its title and artist as the
+    /// form has them; `seed` is the song's seed with the whole form in its note; `song` is the
+    /// draft's song holding that seed. The host writes them where the library keeps them.
+    func keepProvenance(_ record: Record, seed: Seed, in song: Song) async throws
 }
 
 extension ImportHosting {
     public func stopAudition() async {}
     public func didCommit(_ version: PartVersion, in song: Song) async {}
+
+    /// Straight to `library`: the row into `library.json`, the seed into the song's package. The
+    /// app's host does the second half through the frame instead, because the frame may hold the
+    /// song open with versions the package does not have yet.
+    public func keepProvenance(_ record: Record, seed: Seed, in song: Song) async throws {
+        let library = self.library
+        try await Task.detached(priority: .userInitiated) {
+            try ProvenanceWriter.write(record, seed: seed, in: song, savingPackage: true, to: library)
+        }.value
+    }
+}
+
+/// The two files a kept provenance form touches, and nothing else.
+///
+/// `LibraryStore.save(_:)` rewrites every song package from whatever copy it is handed, which for
+/// a form edit is a lot of disk for two fields and a real chance of putting a stale copy of an open
+/// song over a fresher one. So the row goes through `saveDocument`, which writes `library.json`
+/// alone, and the seed goes through the one package that holds it.
+public enum ProvenanceWriter {
+    /// Blocking; callers run it off the main actor.
+    /// - Parameter savingPackage: false when the song is open in the frame, which then owns the
+    ///   package and saves the seed itself.
+    public static func write(_ record: Record, seed: Seed, in song: Song, savingPackage: Bool, to library: LibraryStore) throws {
+        var document = library.exists ? try library.load() : Library()
+        if let index = document.records.firstIndex(where: { $0.id == record.id }) {
+            document.records[index] = record
+        } else {
+            document.records.append(record)
+        }
+        if savingPackage {
+            var kept = song
+            if let index = kept.seeds.firstIndex(where: { $0.id == seed.id }) {
+                kept.seeds[index] = seed
+            } else {
+                kept.seeds.append(seed)
+            }
+            try library.songStore(for: song.id).save(kept)
+        }
+        try library.saveDocument(document)
+    }
 }
 
 // MARK: - Errors

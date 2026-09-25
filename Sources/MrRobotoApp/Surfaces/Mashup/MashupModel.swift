@@ -23,6 +23,15 @@ public final class MashupModel {
     /// The bar the preview starts on, 1-based as the surface shows it.
     public var previewBar = 1
 
+    /// How far the other song can slide against the grid, in bars: back over a minute of it, or
+    /// forward past the end of most records. The stepper and the typed field both keep to it.
+    nonisolated public static let barShiftRange = -64...256
+
+    /// A shift inside the range, so a typed 999 lands on the edge rather than in the plan.
+    nonisolated public static func clampedBarShift(_ bars: Int) -> Int {
+        max(barShiftRange.lowerBound, min(barShiftRange.upperBound, bars))
+    }
+
     public private(set) var isMaking = false
     public private(set) var isPreviewing = false
     public private(set) var progress: (what: String, fraction: Double)?
@@ -96,6 +105,10 @@ public final class MashupModel {
     }
 
     public func resetSemitones(_ side: Side) { if side == .a { semitonesA = nil } else { semitonesB = nil } }
+
+    /// File ▸ Import Record, from the surface that has nothing to offer until two records are in:
+    /// the open dialog, then the Record surface reading what was chosen.
+    public func importRecord() { MrRobotoApp.importRecord(app) }
 
     /// The usual mashup: everything but the voice from the backbone, the voice from the other.
     private func chooseDefaults() {

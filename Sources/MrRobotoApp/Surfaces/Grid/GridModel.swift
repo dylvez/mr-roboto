@@ -108,6 +108,49 @@ public final class GridModel {
     /// Versions this surface has made, oldest first.
     public private(set) var versions: [PartVersion] = []
     public private(set) var lastError: String?
+    /// The version the last keep made, for the header to say so. Nil until one is kept, and set
+    /// aside again — by `hasUnkeptChanges` turning true — once the pattern moves on from it.
+    public private(set) var lastKept: PartVersion?
+
+    /// Whether the groove on screen differs from the last version kept, or from the one the grid
+    /// was opened on. Only the groove counts: it is what a keep files. Tempo, the machine and the
+    /// tier map are how it is heard here, not what it is. A fresh grid has something to keep once
+    /// a step is painted, and nothing before.
+    public var hasUnkeptChanges: Bool {
+        guard let kept = versions.last ?? base, case .groove(let keptGroove) = kept.kind else { return isPainted }
+        return keptGroove != groove
+    }
+
+    /// True once any step is a hit.
+    public var isPainted: Bool {
+        steps.values.contains { row in row.contains { $0 != .rest } }
+    }
+
+    /// The grid as it stood before the last feel was loaded, so a feel is a thing you can try and
+    /// then put back. One deep — the pattern before the feel before that is gone — which is what
+    /// "before the last feel load" means.
+    public private(set) var beforeFeel: Snapshot?
+    public var canRestore: Bool { beforeFeel != nil }
+
+    /// A feel chosen while steps were painted, waiting for the word. The picker shows it as
+    /// chosen; nothing on the grid changes until `confirmPendingFeel()`.
+    public private(set) var pendingFeel: Feel?
+
+    /// Everything a feel replaces, held together so a restore puts back all of it or none of it.
+    public struct Snapshot: Sendable {
+        let voices: [DrumVoice]
+        let steps: [DrumVoice: [VelocityTier]]
+        let stepsPerBar: Int
+        let bars: Int
+        let swing: Swing
+        let velocities: VelocityMap
+        let humanize: Humanize
+        let voiceFeels: [DrumVoice: VoiceFeel]
+        let timeSignature: TimeSignature
+        let tempo: Double
+        let feelName: String?
+        let provenance: Provenance?
+    }
 
     /// The chain the groove plays through, carried across an edit untouched: painting a step is not
     /// a request to clean the groove. The Grid does not draw or move it — that is the Sound surface's.
@@ -208,14 +251,17 @@ public final class GridModel {
 
     // MARK: Editing steps
 
-    /// Click: a rest becomes the brush tier, anything else becomes a rest. Auditions either way,
-    /// because hearing what you just removed is how you know you removed the right one.
+    /// Click: the step takes the brush tier, and a step already at that tier becomes a rest. So a
+    /// click puts down what the brush says whatever was there, and a second click takes it back
+    /// up — the brush picker means what it shows. Auditions either way, because hearing what you
+    /// just removed is how you know you removed the right one.
     public func toggle(_ voice: DrumVoice, step: Int) {
-        let next: VelocityTier = tier(voice, step: step) == .rest ? brush : .rest
+        let paint: VelocityTier = brush == .rest ? .normal : brush
+        let next: VelocityTier = tier(voice, step: step) == paint ? .rest : paint
         set(next, voice: voice, step: step)
     }
 
-    /// Repeated click on the same step walks the tiers: normal → accent → ghost → rest.
+    /// ⌥-click on the same step walks the tiers: normal → accent → ghost → rest.
     public func cycle(_ voice: DrumVoice, step: Int) {
         let next: VelocityTier
         switch tier(voice, step: step) {
@@ -323,8 +369,12 @@ public final class GridModel {
         push()
     }
 
+    /// What the tempo lever runs over. This is the groove's audition tempo — what the loop plays at
+    /// on this surface — not the song's, which the header sets.
+    public static let tempoRange: ClosedRange<Double> = 20...300
+
     public func setTempo(_ bpm: Double) {
-        tempo = max(20, min(300, bpm))
+        tempo = max(Self.tempoRange.lowerBound, min(Self.tempoRange.upperBound, bpm))
         push()
     }
 
@@ -352,8 +402,11 @@ public final class GridModel {
     // MARK: Feel picker
 
     /// Loads a feel: its pattern, its velocities, its swing, its pocket, its tempo — and its
-    /// provenance, which stays on the surface so it can be shown and later cited.
+    /// provenance, which stays on the surface so it can be shown and later cited. What was there
+    /// is kept in `beforeFeel` first, so `restoreBeforeFeel()` can put it back.
     public func load(_ feel: Feel) {
+        beforeFeel = snapshot
+        pendingFeel = nil
         voices = feel.groove.patterns.map(\.voice)
         steps = Dictionary(uniqueKeysWithValues: feel.groove.patterns.map { ($0.voice, $0.steps) })
         stepsPerBar = max(1, feel.groove.stepsPerBar)
@@ -369,12 +422,79 @@ public final class GridModel {
         push()
     }
 
-    /// Loads a feel by name from the library.
+    /// Loads a feel by name from the library, outright. The empty name puts back what was there
+    /// before the last feel load, when there is such a thing.
     @discardableResult
     public func loadFeel(named name: String) -> Bool {
+        guard !name.isEmpty else {
+            guard canRestore else { return false }
+            restoreBeforeFeel()
+            return true
+        }
         guard let feel = feelLibrary.feel(named: name) else { return false }
         load(feel)
         return true
+    }
+
+    /// Whether loading a feel now would replace work: steps are painted, and they are not simply
+    /// the loaded feel untouched. Switching between feels you have not edited does not nag.
+    public var feelLoadNeedsConfirmation: Bool {
+        guard isPainted else { return false }
+        if let feelName, let current = feelLibrary.feel(named: feelName), current.groove == groove { return false }
+        return true
+    }
+
+    /// The picker's action. The empty name (the picker's "—") puts back what was there before the
+    /// last feel load. A name loads that feel outright when nothing painted would be lost, and
+    /// stages it as `pendingFeel` for `confirmPendingFeel()` when something would — a feel
+    /// replaces the steps, the swing, the velocities and the tempo in one stroke, which is too
+    /// much to lose to a slip in a menu.
+    public func chooseFeel(named name: String) {
+        guard !name.isEmpty else {
+            pendingFeel = nil
+            restoreBeforeFeel()
+            return
+        }
+        guard let feel = feelLibrary.feel(named: name) else { return }
+        if feelLoadNeedsConfirmation {
+            pendingFeel = feel
+        } else {
+            load(feel)
+        }
+    }
+
+    /// The word: the staged feel replaces what is painted.
+    public func confirmPendingFeel() {
+        guard let feel = pendingFeel else { return }
+        load(feel)
+    }
+
+    public func cancelPendingFeel() { pendingFeel = nil }
+
+    /// Puts back the grid as it stood before the last feel load — pattern, levers, meter, tempo
+    /// and the feel's name — and forgets the snapshot, since what it held is now on screen.
+    public func restoreBeforeFeel() {
+        guard let before = beforeFeel else { return }
+        beforeFeel = nil
+        voices = before.voices
+        steps = before.steps
+        stepsPerBar = before.stepsPerBar
+        bars = before.bars
+        swing = before.swing
+        velocities = before.velocities
+        humanize = before.humanize
+        voiceFeels = before.voiceFeels
+        timeSignature = before.timeSignature
+        tempo = before.tempo
+        feelName = before.feelName
+        provenance = before.provenance
+        push()
+    }
+
+    private var snapshot: Snapshot {
+        Snapshot(voices: voices, steps: steps, stepsPerBar: stepsPerBar, bars: bars, swing: swing,
+                 velocities: velocities, humanize: humanize, voiceFeels: voiceFeels,
+                 timeSignature: timeSignature, tempo: tempo, feelName: feelName, provenance: provenance)
     }
 
     /// Feels worth offering at the grid's current tempo and meter, best first.
@@ -408,7 +528,17 @@ public final class GridModel {
                                   operation: Operation.written, note: text)
         }
         versions.append(version)
-        Task { [host] in await host.commit(version) }
+        lastKept = version
+        lastError = nil
+        Task { @MainActor [host, weak self] in
+            let kept = await host.commit(version)
+            guard !kept, let self else { return }
+            // Refused: the version is not in the song, so it is not in this list either, and the
+            // keep control comes back for another try.
+            versions.removeAll { $0.id == version.id }
+            if lastKept?.id == version.id { lastKept = nil }
+            lastError = "The song would not take that version."
+        }
         return version
     }
 

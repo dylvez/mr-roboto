@@ -60,8 +60,21 @@ struct FrameCommands: Commands {
         }
 
         CommandGroup(replacing: .newItem) {
-            Button("New Song") { app.open(Song(title: MrRobotoApp.untitledName())) }
-                .keyboardShortcut("n", modifiers: .command)
+            Button("New Song") {
+                app.open(Song(title: MrRobotoApp.untitledName()))
+                // A song with nothing in it: the first thing to do is name it and give it a tempo
+                // and a key, so the header opens the settings rather than leaving "Untitled, 120,
+                // no key" to be discovered later.
+                app.wantsSongSettings = true
+            }
+            .keyboardShortcut("n", modifiers: .command)
+            Button("Song Settings…") { app.wantsSongSettings = true }
+                .keyboardShortcut(",", modifiers: [.command, .shift])
+                .disabled(app.song == nil)
+            Button("Close Song") { app.closeSong() }
+                .keyboardShortcut("w", modifiers: [.command, .shift])
+                .disabled(app.song == nil)
+            Divider()
             // The dialog first: cancelling it opens nothing, and choosing a file opens the Record
             // surface already importing it. The surface's own well still takes a drop.
             Button("Import Record…") { MrRobotoApp.importRecord(app) }
@@ -81,9 +94,9 @@ struct FrameCommands: Commands {
             }
             .disabled(app.song == nil)
             Menu("Export") {
-                Button("Master…") { MrRobotoApp.export(app) { try await Export.master(app, to: $0).wav } }
-                Button("Stems…") { MrRobotoApp.export(app) { try await Export.stems(app, to: $0).first } }
-                Button("MIDI…") { MrRobotoApp.export(app) { try Export.midi(app, to: $0) } }
+                Button("Master…") { MrRobotoApp.export(app, what: "Exporting the master…") { try await Export.master(app, to: $0).wav } }
+                Button("Stems…") { MrRobotoApp.export(app, what: "Exporting the stems…") { try await Export.stems(app, to: $0).first } }
+                Button("MIDI…") { MrRobotoApp.export(app, what: "Exporting MIDI…") { try Export.midi(app, to: $0) } }
             }
             .disabled(app.song == nil)
             Button("Import Voice…") {
@@ -124,6 +137,12 @@ struct FrameCommands: Commands {
                 Task { await SurfaceWiring.shared.player(for: app).spaceBar() }
             }
             .keyboardShortcut(.space, modifiers: [])
+
+            Button("Play from Section") {
+                Task { await app.playFromActiveSection() }
+            }
+            .keyboardShortcut(.space, modifiers: .shift)
+            .disabled(app.song?.sections.isEmpty ?? true)
 
             Button("Play the Surface in Front") {
                 guard let item = app.bench.active ?? app.bench.items.last,
@@ -187,10 +206,9 @@ struct FrameCommands: Commands {
                 .keyboardShortcut("8", modifiers: .command)
                 .disabled(app.song == nil)
             Divider()
-            Button("Close All Surfaces") {
-                for item in app.bench.items { app.closeSurface(item.id) }
-            }
-            .disabled(app.bench.items.isEmpty)
+            // A menu cannot ask, so it leaves a surface holding unkept work open and says so.
+            Button("Close All Surfaces") { app.closeAllSurfaces(keepingUnkept: true) }
+                .disabled(app.bench.items.isEmpty)
         }
     }
 }
@@ -217,9 +235,16 @@ extension MrRobotoApp {
         "Untitled, \(date.formatted(.dateTime.month(.abbreviated).day()))"
     }
 
-    /// Asks where, then exports there; the rail says what happened.
+    /// Asks where, then exports there with the header saying so; the rail says what happened, and
+    /// Finder shows the file.
+    /// - Parameter what: "Exporting the master…" — the header's line while it runs.
     @MainActor
-    static func export(_ app: AppState, _ run: @escaping @MainActor (URL) async throws -> URL?) {
+    static func export(_ app: AppState, what: String = "Exporting…",
+                       _ run: @escaping @MainActor (URL) async throws -> URL?) {
+        guard app.busy == nil else {
+            app.note(.session, "Still \(app.busy!.lowercased())", detail: "Wait for it to finish before exporting again.")
+            return
+        }
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
@@ -227,14 +252,19 @@ extension MrRobotoApp {
         panel.prompt = "Export here"
         panel.message = "The folder the files go in."
         if let song = app.song {
+            // The song's own folder is suggested but not made: a cancelled dialog used to leave an
+            // empty folder behind in ~/Music for every song you thought about exporting.
             let suggested = Export.defaultDirectory(for: song)
-            try? FileManager.default.createDirectory(at: suggested, withIntermediateDirectories: true)
-            panel.directoryURL = suggested
+            let base = suggested.deletingLastPathComponent()
+            try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+            panel.directoryURL = FileManager.default.fileExists(atPath: suggested.path) ? suggested : base
+            panel.nameFieldStringValue = suggested.lastPathComponent
         }
         guard panel.runModal() == .OK, let directory = panel.url else { return }
         Task { @MainActor in
             do {
-                if let url = try await run(directory) { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+                let url = try await app.whileBusy(what) { try await run(directory) }
+                if let found = url.flatMap({ $0 }) { NSWorkspace.shared.activateFileViewerSelecting([found]) }
             } catch {
                 app.note(.session, "The export failed", detail: "\(error)")
             }

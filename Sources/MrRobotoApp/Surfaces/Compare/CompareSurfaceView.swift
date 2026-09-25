@@ -60,6 +60,7 @@ public struct CompareSurfaceView: View {
             .buttonStyle(.plain)
             .foregroundStyle(model.selectedID == nil ? Design.Palette.inkTertiary : Design.Palette.accent)
             .disabled(model.selectedID == nil)
+            .help(model.selectedID == nil ? "Press a row to select it first." : "Commits the selected row as a version.")
         }
     }
 
@@ -89,24 +90,27 @@ private struct ReferenceBand: View {
     let layout: CompareLayout
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 8) {
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 5) {
                 Text("JUDGED AGAINST")
                     .font(Design.Typography.label)
                     .tracking(1.1)
                     .foregroundStyle(Design.Palette.inkTertiary)
-                Spacer()
-                PlayDot(isPlaying: model.isPlayingReference) { model.auditionReference() }
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Text(model.reference.title)
+                        .font(Design.Typography.prose(15, weight: .medium))
+                    Text(model.reference.kind)
+                        .font(Design.Typography.ui(11))
+                        .foregroundStyle(Design.Palette.inkSecondary)
+                    if layout.referenceReadingsInline { Spacer(); readings }
+                }
+                if !layout.referenceReadingsInline { readings }
             }
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text(model.reference.title)
-                    .font(Design.Typography.prose(15, weight: .medium))
-                Text(model.reference.kind)
-                    .font(Design.Typography.ui(11))
-                    .foregroundStyle(Design.Palette.inkSecondary)
-                if layout.referenceReadingsInline { Spacer(); readings }
-            }
-            if !layout.referenceReadingsInline { readings }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            // A column of its own at the trailing edge, so the band's height stays the text's and
+            // the chip never sits over the readings.
+            PlayChip(title: model.reference.title, isPlaying: model.isPlayingReference,
+                     play: { model.auditionReference() }, stop: { model.stop() })
         }
         .padding(12)
         .frame(height: layout.referenceHeight, alignment: .topLeading)
@@ -146,7 +150,10 @@ private struct LeverStrip: View {
                         Slider(value: Binding(get: { model.value(of: lever) },
                                               set: { model.setLever(lever, to: $0) }),
                                in: lever.range)
+                            .tint(Design.Palette.accent)
                             .frame(width: CompareLayout.leverWidth - 64)
+                            .help("\(lever.label): moves \(lever.engineField), on every row at once.")
+                            .accessibilityLabel(lever.label)
                         Text(String(format: "%.4g%@", model.value(of: lever),
                                     lever.unit.isEmpty ? "" : " " + lever.unit))
                             .font(Design.Typography.numeric(12))
@@ -225,32 +232,31 @@ private struct CandidateRow: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 7) {
-                    PlayDot(isPlaying: model.isPlaying(candidate.id)) { model.audition(candidate.id) }
-                    Text(candidate.title)
-                        .font(Design.Typography.prose(14, weight: isSelected ? .semibold : .regular))
-                        .lineLimit(1)
-                    if !candidate.warnings.isEmpty {
-                        Text("\(candidate.warnings.count)")
-                            .font(Design.Typography.numeric(10))
-                            .padding(.horizontal, 5)
-                            .frame(height: 16)
-                            .background(Design.Palette.warnSoft)
-                            .foregroundStyle(Design.Palette.warn)
-                            .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+            HStack(spacing: 8) {
+                // Beside the text column, not inside its first line, so a row keeps the height its
+                // text needs and the chip is a target of its own on every row.
+                PlayChip(title: candidate.title, isPlaying: model.isPlaying(candidate.id),
+                         play: { model.audition(candidate.id) }, stop: { model.stop() })
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 7) {
+                        Text(candidate.title)
+                            .font(Design.Typography.prose(14, weight: isSelected ? .semibold : .regular))
+                            .lineLimit(1)
+                        if !candidate.warnings.isEmpty {
+                            FindingsBadge(model: model, candidate: candidate)
+                        }
                     }
-                }
-                if let persona = candidate.proposedBy {
-                    Text(persona.rawValue)
-                        .font(Design.Typography.ui(10))
-                        .foregroundStyle(Design.Palette.inkTertiary)
-                }
-                if layout.showsRationale, !candidate.rationale.isEmpty {
-                    Text(candidate.rationale)
-                        .font(Design.Typography.ui(11, weight: .regular))
-                        .foregroundStyle(Design.Palette.inkSecondary)
-                        .lineLimit(2)
+                    if let persona = candidate.proposedBy {
+                        Text(persona.rawValue)
+                            .font(Design.Typography.ui(10))
+                            .foregroundStyle(Design.Palette.inkTertiary)
+                    }
+                    if layout.showsRationale, !candidate.rationale.isEmpty {
+                        Text(candidate.rationale)
+                            .font(Design.Typography.ui(11, weight: .regular))
+                            .foregroundStyle(Design.Palette.inkSecondary)
+                            .lineLimit(2)
+                    }
                 }
             }
             .frame(width: layout.titleWidth, alignment: .leading)
@@ -305,21 +311,80 @@ private struct DifferenceCell: View {
 
 // MARK: - Shared bits
 
-/// The audition affordance. Small, always present on every row, and the whole reason this surface
-/// is worth opening.
-private struct PlayDot: View {
+/// The audition affordance. Present on every row and on the reference, and the whole reason this
+/// surface is worth opening — so it is the frame's chip, at a size you can hit, and it reads as
+/// play or stop rather than as a dot. Pressing it while its row sounds stops the row; the host is
+/// told, so the sound actually ends rather than only the mark going out.
+private struct PlayChip: View {
+    let title: String
     let isPlaying: Bool
-    let action: () -> Void
+    let play: () -> Void
+    let stop: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            Circle()
-                .fill(isPlaying ? Design.Palette.accent : Design.Palette.inkTertiary)
-                .frame(width: 9, height: 9)
-                .padding(4)
+        ChipButton(systemImage: isPlaying ? "stop.fill" : "play.fill",
+                   help: isPlaying ? "Stop \(title)" : "Play \(title) under the levers as they sit",
+                   isOn: isPlaying) {
+            isPlaying ? stop() : play()
+        }
+        .accessibilityLabel(isPlaying ? "Stop \(title)" : "Play \(title)")
+    }
+}
+
+/// The count of warnings on a row, and the way to read them: press it and the findings open
+/// beside it, each with the bar and the critic's one sentence on why. The count stays a count on
+/// the row because a row is a thing you scan; the sentences are for when you have asked.
+private struct FindingsBadge: View {
+    @Bindable var model: CompareModel
+    let candidate: CompareCandidate
+    @State private var isOpen = false
+
+    private var findings: [Finding] { model.findings(on: candidate.id) }
+
+    var body: some View {
+        Button { isOpen.toggle() } label: {
+            Text("\(candidate.warnings.count)")
+                .font(Design.Typography.numeric(10))
+                .padding(.horizontal, 5)
+                .frame(height: 16)
+                .background(Design.Palette.warnSoft)
+                .foregroundStyle(Design.Palette.warn)
+                .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .help(candidate.warnings.map(\.headline).joined(separator: "\n") + "\nPress to read the findings.")
+        .accessibilityLabel("\(candidate.warnings.count) finding\(candidate.warnings.count == 1 ? "" : "s") on \(candidate.title); press to read them")
+        .popover(isPresented: $isOpen, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("What the band found on \(candidate.title)".uppercased())
+                    .font(Design.Typography.label)
+                    .tracking(1.1)
+                    .foregroundStyle(Design.Palette.inkTertiary)
+                ForEach(findings) { finding in
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Text(finding.headline)
+                                .font(Design.Typography.prose(13, weight: .medium))
+                                .foregroundStyle(finding.severity == .warn ? Design.Palette.warn : Design.Palette.ink)
+                            Text(finding.locus.spoken)
+                                .font(Design.Typography.numeric(10.5))
+                                .foregroundStyle(Design.Palette.inkTertiary)
+                        }
+                        Text(finding.why)
+                            .font(Design.Typography.ui(11.5, weight: .regular))
+                            .foregroundStyle(Design.Palette.inkSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text("\(finding.criticName) · \(finding.persona.rawValue)")
+                            .font(Design.Typography.ui(10))
+                            .foregroundStyle(Design.Palette.inkTertiary)
+                    }
+                }
+            }
+            .padding(Design.Metric.inset)
+            .frame(width: 320, alignment: .leading)
+            .background(Design.Palette.panel)
+        }
     }
 }
 

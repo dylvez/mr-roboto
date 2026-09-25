@@ -21,8 +21,14 @@ public struct ChopLaneView: View {
             let layout = ChopLaneLayout(size: geometry.size, sliceCount: surface.sliceCount)
             VStack(alignment: .leading, spacing: Design.Metric.gutter) {
                 header
-                ChopLanePlate(surface: surface)
-                    .frame(height: layout.plateHeight)
+                // The caption is drawn inside the plate's budgeted height rather than as a row of
+                // its own: the layout's chrome sum is pinned by its tests, and a line of small
+                // print is not worth a shorter pad bank.
+                VStack(alignment: .leading, spacing: 4) {
+                    ChopLanePlate(surface: surface)
+                    plateCaption
+                }
+                .frame(height: layout.plateHeight)
                 ChopLanePads(surface: surface, layout: layout)
                 levers
                 ChopLaneInspector(surface: surface)
@@ -55,11 +61,33 @@ public struct ChopLaneView: View {
                 .buttonStyle(.plain)
                 .font(Design.Typography.ui(12))
                 .foregroundStyle(Design.Palette.accent)
+                .help("Play the bar as it is cut, every slice where the record put it")
             Button("Stop") { surface.stop() }
                 .buttonStyle(.plain)
                 .font(Design.Typography.ui(12))
                 .foregroundStyle(Design.Palette.inkSecondary)
+                .help("Stop whatever this lane is playing")
+            // The keep verb, in the shape every surface gives it. Disabled means there is nothing
+            // new to write, and the help says so rather than leaving a grey word unexplained.
+            Button("Keep chop") { surface.keepChop() }
+                .buttonStyle(.plain)
+                .font(Design.Typography.ui(12, weight: .semibold))
+                .foregroundStyle(surface.canKeepChop
+                                 ? Design.Palette.accent : Design.Palette.inkTertiary)
+                .disabled(!surface.canKeepChop)
+                .help(surface.whyChopCannotBeKept
+                      ?? "Keep the markers, and the class each pad was called, as a new version of this bar")
         }
+    }
+
+    /// How the plate is worked, said once under it. Everything named here exists: there is no
+    /// keyboard delete, so the line does not claim one.
+    private var plateCaption: some View {
+        Text("Drag a marker to move it · double-click the bar to add one · a pad's … menu deletes one · Esc cancels a drag")
+            .font(Design.Typography.ui(11))
+            .foregroundStyle(Design.Palette.inkSecondary)
+            .lineLimit(1)
+            .truncationMode(.tail)
     }
 
     // MARK: The two levers
@@ -92,12 +120,16 @@ public struct ChopLaneView: View {
             Slider(value: $surface.sensitivity, in: 0...1)
                 .controlSize(.small)
                 .tint(Design.Palette.accent)
-            Text(surface.handEdited
-                 ? "Moving this re-slices the bar and drops your marker edits."
-                 : "Higher finds more slices, ghost notes included.")
+                .help("How finely the bar is cut. Higher finds more onsets; it re-slices as it moves.")
+                .accessibilityLabel("Sensitivity")
+            // The warning names what the dial would drop — markers, overrides, trims — because
+            // `resliceFromDetection` drops all three and a warning about one of them is a lie
+            // about the other two.
+            Text(surface.resliceWarning ?? "Higher finds more slices, ghost notes included.")
                 .font(Design.Typography.ui(11))
-                .foregroundStyle(surface.handEdited
-                                 ? Design.Palette.warn : Design.Palette.inkSecondary)
+                .foregroundStyle(surface.resliceWarning == nil
+                                 ? Design.Palette.inkSecondary : Design.Palette.warn)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -123,16 +155,33 @@ public struct ChopLaneView: View {
                 }
                 .labelsHidden()
                 .font(Design.Typography.ui(12))
+                .help("Whose rhythm the chop is played in. As cut plays the bar as it was.")
+                .accessibilityLabel("Feel")
                 Button("Play") { surface.playRegroove() }
                     .buttonStyle(.plain)
                     .font(Design.Typography.ui(12))
                     .foregroundStyle(surface.feel == nil
                                      ? Design.Palette.inkTertiary : Design.Palette.accent)
                     .disabled(surface.feel == nil)
+                    .help(surface.feel == nil
+                          ? "Pick a feel first"
+                          : "Hear the chop in this feel at this tempo")
+                // Keep sits beside Play on purpose: what is kept is what was just heard, and the
+                // help says which of the things that must be true first is not.
+                Button("Keep re-groove") { surface.keepRegroove() }
+                    .buttonStyle(.plain)
+                    .font(Design.Typography.ui(12, weight: .semibold))
+                    .foregroundStyle(surface.canKeepRegroove
+                                     ? Design.Palette.accent : Design.Palette.inkTertiary)
+                    .disabled(!surface.canKeepRegroove)
+                    .help(surface.whyRegrooveCannotBeKept
+                          ?? "Keep this feel as a new groove made from the chop; the Grid opens on it")
             }
             Slider(value: $surface.tempo, in: 60...180, step: 1)
                 .controlSize(.small)
-                .tint(Design.Palette.inkTertiary)
+                .tint(Design.Palette.accent)
+                .help("The re-groove's tempo, in beats per minute")
+                .accessibilityLabel("Re-groove tempo")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -147,8 +196,21 @@ public struct ChopLaneView: View {
 /// where the pointer actually is, and the bright marker where it will land. That difference *is*
 /// the snap, made visible rather than merely felt, and the label beside it names what it caught —
 /// "onset", or a grid position like "2e".
+///
+/// A press has to travel `dragThreshold` before it is a drag, so a plain click on the plate moves
+/// nothing. A double-click adds a marker where it lands, and Escape lets go of a drag without
+/// moving the marker.
 struct ChopLanePlate: View {
     @Bindable var surface: ChopLaneSurface
+
+    /// How far the mouse travels before a press is a drag rather than a click.
+    static let dragThreshold: CGFloat = 4
+
+    /// Set by Escape mid-drag. The gesture keeps reporting until the mouse goes up, and without
+    /// this the next report would quietly begin a fresh drag on the marker that was just let go.
+    @State private var dragCancelled = false
+    /// Escape reaches the plate only while it has focus, so a drag takes focus as it starts.
+    @FocusState private var isFocused: Bool
 
     var body: some View {
         GeometryReader { geometry in
@@ -161,23 +223,44 @@ struct ChopLanePlate: View {
                 snapReadout(size: size, duration: duration)
             }
             .contentShape(Rectangle())
+            .onTapGesture(count: 2) { location in
+                surface.addMarker(at: ChopLaneWaveform.time(atX: location.x,
+                                                            width: size.width, duration: duration))
+            }
             .gesture(
-                DragGesture(minimumDistance: 0)
+                DragGesture(minimumDistance: Self.dragThreshold)
                     .onChanged { value in
+                        guard !dragCancelled else { return }
                         let time = ChopLaneWaveform.time(atX: value.startLocation.x,
                                                          width: size.width, duration: duration)
                         if surface.drag == nil, let nearest = nearestSlice(to: time) {
+                            isFocused = true
                             surface.beginDrag(slice: nearest)
                         }
                         surface.dragMarker(to: ChopLaneWaveform.time(atX: value.location.x,
                                                                      width: size.width,
                                                                      duration: duration))
                     }
-                    .onEnded { _ in surface.endDrag() }
+                    .onEnded { _ in
+                        if dragCancelled {
+                            dragCancelled = false
+                        } else {
+                            surface.endDrag()
+                        }
+                    }
             )
         }
         .background(Design.Palette.plate)
         .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+        .focusable()
+        .focusEffectDisabled()
+        .focused($isFocused)
+        .onExitCommand {
+            guard surface.drag != nil else { return }
+            surface.cancelDrag()
+            dragCancelled = true
+        }
+        .accessibilityLabel("The bar's waveform, with a marker at the start of each slice")
     }
 
     private func nearestSlice(to time: Double) -> Int? {
@@ -288,7 +371,9 @@ struct ChopLanePlate: View {
 /// Which slice is on which pad, what it was called, and how sure the classifier was.
 ///
 /// Touching a pad plays it. That is the whole interaction, and it is why the kit is refreshed on
-/// edits rather than on touches.
+/// edits rather than on touches. The selected pad also carries a small … menu with the things a
+/// right-click offers on every pad — the override and the marker's deletion — so neither is a
+/// gesture you have to know about.
 ///
 /// The column count is `layout.padColumns`, from the lane's real width, and the pads then share that
 /// width exactly. The old `.adaptive(minimum: 104)` was a fixed rule in adaptive clothing: it packed
@@ -332,6 +417,9 @@ struct ChopLanePads: View {
                         .font(Design.Typography.numeric(9))
                         .foregroundStyle(Design.Palette.inkTertiary)
                 }
+                if selected {
+                    padMenu(for: index)
+                }
             }
             Text(classification?.kind.rawValue ?? "—")
                 .font(Design.Typography.ui(13, weight: .medium))
@@ -352,27 +440,54 @@ struct ChopLanePads: View {
         .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
         .contentShape(Rectangle())
         .onTapGesture { surface.audition(slice: index) }
-        .contextMenu {
-            // The override. The classifier is wrong sometimes by design, so the correction is one
-            // gesture away from the thing being corrected.
-            ForEach(SliceClass.allCases, id: \.rawValue) { kind in
-                Button(kind.rawValue) { surface.override(slice: index, as: kind) }
-            }
-            if surface.overrides[index] != nil {
-                Divider()
-                Button("Back to the classifier") { surface.clearOverride(slice: index) }
-            }
-            Divider()
-            Button("Delete marker") { surface.removeMarker(slice: index) }
+        .help("Play slice \(index). Right-click to call it something else or to delete its marker.")
+        .contextMenu { padMenuItems(for: index) }
+    }
+
+    /// The … on the selected pad: the context menu, visible.
+    private func padMenu(for index: Int) -> some View {
+        Menu {
+            padMenuItems(for: index)
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(Design.Typography.ui(11, weight: .semibold))
+                .foregroundStyle(Design.Palette.accent)
+                .frame(width: 18, height: 14)
+                .contentShape(Rectangle())
         }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("Call slice \(index) something else, give it back to the classifier, or delete its marker")
+        .accessibilityLabel("Slice \(index) options")
+    }
+
+    /// The override and the marker's deletion. One list, reached two ways.
+    @ViewBuilder
+    private func padMenuItems(for index: Int) -> some View {
+        // The override. The classifier is wrong sometimes by design, so the correction is one
+        // gesture away from the thing being corrected.
+        ForEach(SliceClass.allCases, id: \.rawValue) { kind in
+            Button(kind.rawValue) { surface.override(slice: index, as: kind) }
+                .help("Call slice \(index) a \(kind.rawValue), whatever the classifier heard")
+        }
+        if surface.overrides[index] != nil {
+            Divider()
+            Button("Back to the classifier") { surface.clearOverride(slice: index) }
+                .help("Drop the override and let the classifier name slice \(index) again")
+        }
+        Divider()
+        Button("Delete marker") { surface.removeMarker(slice: index) }
+            .help("Remove the marker that starts slice \(index); its audio joins the slice before it")
     }
 
     private func trimSummary(_ edit: ChopLaneSurface.SliceEdit) -> String {
         var parts: [String] = []
-        if edit.tuneCents != 0 { parts.append("\(Int(edit.tuneCents))¢") }
-        if edit.gainDB != 0 { parts.append(String(format: "%+.0f dB", edit.gainDB)) }
+        if edit.tuneCents != 0 { parts.append(ChopLaneReadout.pitch(edit.tuneCents)) }
+        if edit.gainDB != 0 { parts.append(ChopLaneReadout.gain(edit.gainDB)) }
         if edit.reverse { parts.append("rev") }
-        if let ratio = edit.stretchRatio { parts.append(String(format: "×%.2f", ratio)) }
+        if edit.stretchRatio != nil { parts.append(ChopLaneReadout.stretch(edit.stretchRatio)) }
         return parts.joined(separator: " ")
     }
 
@@ -401,6 +516,10 @@ struct ChopLanePads: View {
 
 /// Per-slice pitch, gain, reverse and stretch, plus the re-groove's overflow rule. Secondary by
 /// construction: one selected slice at a time, and nothing here competes with the two levers.
+///
+/// Each slider has its value written beside it, with its unit, because a slider with no readout
+/// is a slider you cannot repeat. Double-clicking the readout puts that one control back where it
+/// started; "reset" puts the whole slice back.
 struct ChopLaneInspector: View {
     @Bindable var surface: ChopLaneSurface
 
@@ -421,25 +540,43 @@ struct ChopLaneInspector: View {
     }
 
     private func controls(for index: Int) -> some View {
-        HStack(spacing: 12) {
+        let edit = surface.edit(forSlice: index)
+        return HStack(spacing: 12) {
             Text("SLICE \(index)")
                 .font(Design.Typography.label)
                 .tracking(0.8)
                 .foregroundStyle(Design.Palette.inkTertiary)
-            slider("pitch", binding: tuneBinding(index), range: Self.tuneRange)
-            slider("gain", binding: gainBinding(index), range: Self.gainRange)
-            slider("stretch", binding: stretchBinding(index),
-                   range: ChopLaneSurface.stretchRange)
+            slider("pitch", binding: tuneBinding(index), range: Self.tuneRange,
+                   readout: ChopLaneReadout.pitch(edit.tuneCents),
+                   isNeutral: edit.tuneCents == 0,
+                   help: "Pitch, in cents. Double-click the value to put it back to 0¢.") {
+                surface.setTune(0, slice: index)
+            }
+            slider("gain", binding: gainBinding(index), range: Self.gainRange,
+                   readout: ChopLaneReadout.gain(edit.gainDB),
+                   isNeutral: edit.gainDB == 0,
+                   help: "Gain, in decibels. Double-click the value to put it back to 0 dB.") {
+                surface.setGain(0, slice: index)
+            }
+            slider("stretch", binding: stretchBinding(index), range: ChopLaneSurface.stretchRange,
+                   readout: ChopLaneReadout.stretch(edit.stretchRatio),
+                   isNeutral: edit.stretchRatio == nil,
+                   help: "Output length over input length. Double-click the value to play the slice at its natural length.") {
+                surface.setStretch(nil, slice: index)
+            }
             Toggle("reverse", isOn: reverseBinding(index))
                 .toggleStyle(.checkbox)
                 .font(Design.Typography.ui(11))
+                .help("Play the slice backwards")
             plainButton("reset", tint: Design.Palette.inkSecondary) {
                 surface.resetSlice(index)
             }
+            .help("Put every trim on this slice back where it started")
             Spacer()
             plainButton("audition", tint: Design.Palette.accent) {
                 surface.audition(slice: index)
             }
+            .help("Play this slice")
         }
     }
 
@@ -463,15 +600,29 @@ struct ChopLaneInspector: View {
                 set: { surface.setStretch($0 == 1 ? nil : $0, slice: index) })
     }
 
-    private func slider(_ name: String, binding: Binding<Double>,
-                        range: ClosedRange<Double>) -> some View {
+    private func slider(_ name: String, binding: Binding<Double>, range: ClosedRange<Double>,
+                        readout: String, isNeutral: Bool, help: String,
+                        reset: @escaping () -> Void) -> some View {
         HStack(spacing: 4) {
             Text(name)
                 .font(Design.Typography.ui(11))
                 .foregroundStyle(Design.Palette.inkSecondary)
             Slider(value: binding, in: range)
                 .controlSize(.mini)
-                .frame(width: 92)
+                .frame(minWidth: 64, maxWidth: 92)
+                .tint(Design.Palette.accent)
+                .help(help)
+                .accessibilityLabel(name)
+            // A fixed width so the row does not breathe as the number changes length.
+            Text(readout)
+                .font(Design.Typography.numeric(10))
+                .foregroundStyle(isNeutral ? Design.Palette.inkTertiary : Design.Palette.ink)
+                .lineLimit(1)
+                .frame(width: 50, alignment: .trailing)
+                .contentShape(Rectangle())
+                .onTapGesture(count: 2, perform: reset)
+                .help(help)
+                .accessibilityLabel("\(name) \(readout)")
         }
     }
 
@@ -481,5 +632,30 @@ struct ChopLaneInspector: View {
             .buttonStyle(.plain)
             .font(Design.Typography.ui(11))
             .foregroundStyle(tint)
+    }
+}
+
+// MARK: - Readouts
+
+/// The numbers beside the inspector's sliders, and on a pad's trim summary, spelled one way.
+///
+/// Pure, so the wording is checkable without a view: a sign on anything that is not zero, the
+/// unit on everything, and one decimal on gain because a dB is coarse enough to want one.
+enum ChopLaneReadout {
+    /// "+120¢", "-1200¢", "0¢".
+    static func pitch(_ cents: Float) -> String {
+        let whole = Int(cents.rounded())
+        return whole == 0 ? "0¢" : String(format: "%+d¢", whole)
+    }
+
+    /// "+3.5 dB", "-6.0 dB", "0.0 dB".
+    static func gain(_ dB: Float) -> String {
+        let tenths = (dB * 10).rounded() / 10
+        return tenths == 0 ? "0.0 dB" : String(format: "%+.1f dB", tenths)
+    }
+
+    /// "×1.50"; nil is the natural length, "×1.00".
+    static func stretch(_ ratio: Double?) -> String {
+        String(format: "×%.2f", ratio ?? 1)
     }
 }

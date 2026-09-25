@@ -409,7 +409,7 @@ struct GuidanceLedgerTests {
         .groove: .grid,
         .sound: .sound,
         .progression: .chords,
-        .melody: nil,
+        .melody: .pianoRoll,
         .lyric: .lyrics,
         .bassline: .pianoRoll,
         .mix: .mixer,
@@ -505,12 +505,13 @@ struct GuidanceLedgerTests {
         #expect(app.bench.items.filter { $0.kind == .chopLane }.count == 1)
     }
 
-    @Test("a part Gate A cannot edit offers nothing rather than a button that opens nothing")
-    func inertKindsSayNothing() {
+    @Test("every kind opens somewhere now: the melody, last to get a surface, opens the Piano roll on itself")
+    func melodyOpensTheRoll() {
         let built = GuidanceFixture.everyKind()
-        // Only the melody now: the Lyrics surface arrived with M4.
         for version in built.song.versions where version.type == .melody {
-            #expect(PartActions.primary(for: version, in: built.song) == nil)
+            let action = PartActions.primary(for: version, in: built.song)
+            #expect(action?.action.surface == .pianoRoll)
+            #expect(action?.action.bound == [version.id])
         }
     }
 

@@ -150,8 +150,12 @@ public final class Bench {
     /// Opens a surface, retiring the oldest unpinned one if the bench is full, and makes it the one
     /// you are working in. Returns what it retired, so the frame can say what it closed rather than
     /// having a panel vanish.
+    /// - Parameter retirable: whether a surface may be closed to make room. The frame answers with
+    ///   "has it nothing unkept": a surface holding edits is not retired for a newcomer, and when
+    ///   every unpinned surface is holding something the bench goes one over rather than losing
+    ///   any of it. Work is the one thing a rule about tidiness does not get to take.
     @discardableResult
-    public func open(_ item: BenchItem) -> BenchItem? {
+    public func open(_ item: BenchItem, retirable: (BenchItem) -> Bool = { _ in true }) -> BenchItem? {
         if let existing = items.firstIndex(where: { $0.id == item.id }) {
             items[existing] = item
             activeID = item.id
@@ -159,14 +163,15 @@ public final class Bench {
         }
         var retired: BenchItem?
         if items.count >= Design.maximumOpenSurfaces {
-            if let oldest = items.enumerated()
-                .filter({ !$0.element.isPinned })
+            let candidates = items.enumerated().filter { !$0.element.isPinned }
+            if let oldest = candidates.filter({ retirable($0.element) })
                 .min(by: { $0.element.openedAt < $1.element.openedAt })?.offset {
                 retired = items.remove(at: oldest)
-            } else {
-                // Everything is pinned: the newest pin gives way rather than refusing to answer.
-                retired = items.removeFirst()
+            } else if candidates.isEmpty, let first = items.firstIndex(where: { retirable($0) }) {
+                // Everything is pinned: the oldest pin gives way rather than refusing to answer.
+                retired = items.remove(at: first)
             }
+            // Otherwise everything unpinned is holding work: nothing goes.
         }
         items.append(item)
         activeID = item.id

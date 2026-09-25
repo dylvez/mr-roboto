@@ -10,6 +10,9 @@ public protocol BoothHosting: AnyObject {
     var isPlaying: Bool { get }
     var playhead: Double { get }
     func play() async
+    /// Plays from a section's first bar, so a take is sung against the section it is for rather
+    /// than after everything before it. Nil, or a section the song does not hold, is the top.
+    func play(from section: SectionID?) async
     func stop() async
     /// A recorder against the running transport, on the chosen input. Throws when there is no input.
     func recorder() async throws -> Recorder
@@ -31,6 +34,8 @@ public protocol BoothHosting: AnyObject {
 public extension BoothHosting {
     func recordingStarted(section: SectionID?, startedAt: Double) {}
     func recordingEnded(endedAt: Double) {}
+    /// A host with no notion of sections plays from the top.
+    func play(from section: SectionID?) async { await play() }
 }
 
 /// The Booth: pick a section, arm, record while the song plays, stop — that is a take.
@@ -122,7 +127,9 @@ public final class BoothModel {
     public func record() async {
         guard state != .recording else { return }
         lastError = nil
-        if !host.isPlaying { await host.play() }
+        // From the section the take is for. The song used to start from bar 1 whatever section
+        // was picked, so singing the hook meant waiting through everything before it.
+        if !host.isPlaying { await host.play(from: section) }
         guard host.isPlaying else {
             lastError = "The song did not start, so there is nothing to sing to."
             state = .idle

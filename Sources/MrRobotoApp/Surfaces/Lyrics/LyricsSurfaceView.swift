@@ -36,20 +36,46 @@ struct LyricsSurfaceView: View {
         }
     }
 
+    /// The hint reads the same in the live editor and in a test render: a placeholder in the
+    /// page's own type, gone the moment there are words.
+    private static let placeholder = "A line each; a blank line between stanzas."
+
     private var page: some View {
         VStack(alignment: .leading, spacing: 4) {
             LyricLabel("Words")
-            if Design.isOffscreenRender {
-                Text(model.text.isEmpty ? "A line each; a blank line between stanzas." : model.text)
-                    .font(Design.Typography.prose(13))
-                    .foregroundStyle(model.text.isEmpty ? Design.Palette.inkTertiary : Design.Palette.ink)
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
-            } else {
-                TextEditor(text: $model.text)
-                    .font(Design.Typography.prose(13))
-                    .scrollContentBackground(.hidden)
-                    .frame(minHeight: 200, maxHeight: .infinity)
+            Group {
+                if Design.isOffscreenRender {
+                    Text(model.text.isEmpty ? Self.placeholder : model.text)
+                        .font(Design.Typography.prose(13))
+                        .foregroundStyle(model.text.isEmpty ? Design.Palette.inkTertiary : Design.Palette.ink)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity, minHeight: 200, maxHeight: .infinity, alignment: .topLeading)
+                } else {
+                    TextEditor(text: $model.text)
+                        .font(Design.Typography.prose(13))
+                        .scrollContentBackground(.hidden)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 8)
+                        .frame(minHeight: 200, maxHeight: .infinity)
+                        .overlay(alignment: .topLeading) {
+                            if model.text.isEmpty {
+                                Text(Self.placeholder)
+                                    .font(Design.Typography.prose(13))
+                                    .foregroundStyle(Design.Palette.inkTertiary)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 8)
+                                    .allowsHitTesting(false)
+                            }
+                        }
+                        .help("The words, a line each; a blank line between stanzas")
+                        .accessibilityLabel("Words")
+                }
             }
+            // A page with an edge, so the place to type is visible before anything is typed.
+            .background(Design.Palette.panel, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
+            .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
+                .stroke(Design.Palette.line, lineWidth: Design.Metric.hairline))
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
     }
@@ -102,11 +128,8 @@ struct LyricsSurfaceView: View {
                 Text(error).font(Design.Typography.ui(11.5)).foregroundStyle(Design.Palette.warn)
             }
             Spacer()
-            Button("Keep as a new version") { Task { await model.commit() } }
-                .buttonStyle(.plain)
-                .font(Design.Typography.ui(12, weight: .semibold))
-                .foregroundStyle(Design.Palette.accent)
-                .disabled(model.isEmpty)
+            if let kept = model.lastKept, !model.hasUnkeptChanges { KeptNote(version: kept) }
+            KeepButton(isEnabled: model.hasUnkeptChanges) { Task { await model.commit() } }
         }
     }
 }

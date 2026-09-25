@@ -89,6 +89,40 @@ public struct ClaudeCredentials: ClaudeKeySource {
     }
 
     public func hasKey() -> Bool { origin != .absent }
+
+    /// Keeps a key the user typed, in the keychain. The one place the app writes a key, and it
+    /// writes what it was given: until this the only ways in were an environment variable and a
+    /// keychain item made by hand, neither of which a person finds from inside the app.
+    ///
+    /// Rejects an empty key and one that does not look like one, so a pasted sentence cannot
+    /// become the credential. Returns what went wrong, or nil.
+    public func store(_ key: String) -> String? {
+        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "The key is empty." }
+        guard Self.looksLikeKey(trimmed) else { return "That does not look like an API key: they start with sk-ant- and have no spaces." }
+        do {
+            try keychain.store(password: trimmed, service: Self.keychainService, account: Self.keychainAccount)
+        } catch {
+            return "The keychain would not keep it: \(error)"
+        }
+        return nil
+    }
+
+    /// Takes the keychain's key out. The environment's, if any, is not the app's to remove.
+    public func forget() -> String? {
+        do {
+            try keychain.remove(service: Self.keychainService, account: Self.keychainAccount)
+        } catch {
+            return "The keychain would not let it go: \(error)"
+        }
+        return nil
+    }
+
+    /// `sk-ant-…`, one token, long enough to be one. Anthropic's keys start so; a prefix check is
+    /// what keeps a stray paste out, not a guarantee the key is live.
+    public static func looksLikeKey(_ text: String) -> Bool {
+        text.hasPrefix("sk-ant-") && text.count >= 20 && !text.contains { $0.isWhitespace }
+    }
 }
 
 /// The keychain, behind a door, so a test never touches the login keychain.
@@ -96,15 +130,59 @@ public protocol ClaudeKeychain: Sendable {
     func password(service: String, account: String) -> String?
     /// Whether the item is there. Must not read the secret.
     func exists(service: String, account: String) -> Bool
+    /// Keeps a secret, replacing one already there.
+    func store(password: String, service: String, account: String) throws
+    /// Removes the item. Removing one that is not there is not an error.
+    func remove(service: String, account: String) throws
 }
 
 public extension ClaudeKeychain {
     func exists(service: String, account: String) -> Bool { password(service: service, account: account) != nil }
+    /// A keychain that only reads — a test double counting lookups — refuses to write, in the
+    /// keychain's own words, rather than pretending it kept something.
+    func store(password: String, service: String, account: String) throws { throw KeychainFailure(status: errSecUnimplemented) }
+    func remove(service: String, account: String) throws { throw KeychainFailure(status: errSecUnimplemented) }
+}
+
+/// What the keychain said when it would not do something.
+public struct KeychainFailure: Error, CustomStringConvertible, Sendable {
+    public let status: OSStatus
+    public var description: String {
+        (SecCopyErrorMessageString(status, nil) as String?) ?? "OSStatus \(status)"
+    }
 }
 
 /// The real one.
 public struct SystemKeychain: ClaudeKeychain {
     public init() {}
+
+    public func store(password: String, service: String, account: String) throws {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+        ]
+        let data = Data(password.utf8)
+        let update: [String: Any] = [kSecValueData as String: data]
+        let updated = SecItemUpdate(query as CFDictionary, update as CFDictionary)
+        if updated == errSecSuccess { return }
+        guard updated == errSecItemNotFound else { throw KeychainFailure(status: updated) }
+        var item = query
+        item[kSecValueData as String] = data
+        item[kSecAttrLabel as String] = "Mr. Roboto — Anthropic API key"
+        let added = SecItemAdd(item as CFDictionary, nil)
+        guard added == errSecSuccess else { throw KeychainFailure(status: added) }
+    }
+
+    public func remove(service: String, account: String) throws {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+        ]
+        let status = SecItemDelete(query as CFDictionary)
+        guard status == errSecSuccess || status == errSecItemNotFound else { throw KeychainFailure(status: status) }
+    }
 
     public func password(service: String, account: String) -> String? {
         let query: [String: Any] = [
@@ -135,9 +213,29 @@ public struct SystemKeychain: ClaudeKeychain {
     }
 }
 
-/// An in-memory keychain for tests.
-public struct ClaudeMemoryKeychain: ClaudeKeychain {
-    private let entries: [String: String]
+/// An in-memory keychain for tests. A class, so a test can store through one handle and read
+/// back through another that shares it — which is what the app does with the real one.
+public final class ClaudeMemoryKeychain: ClaudeKeychain, @unchecked Sendable {
+    private let lock = NSLock()
+    private var entries: [String: String]
+
     public init(_ entries: [String: String] = [:]) { self.entries = entries }
-    public func password(service: String, account: String) -> String? { entries["\(service)/\(account)"] }
+
+    public func password(service: String, account: String) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        return entries["\(service)/\(account)"]
+    }
+
+    public func store(password: String, service: String, account: String) throws {
+        lock.lock()
+        defer { lock.unlock() }
+        entries["\(service)/\(account)"] = password
+    }
+
+    public func remove(service: String, account: String) throws {
+        lock.lock()
+        defer { lock.unlock() }
+        entries["\(service)/\(account)"] = nil
+    }
 }

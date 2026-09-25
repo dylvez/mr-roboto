@@ -581,10 +581,19 @@ extension AppState {
         guard let spec = InstrumentVoiceSpec.preset(id: id), let song else { return false }
         guard SongPlayback.instrumentID(for: part, in: song) != spec.id else { return false }
         let name = part.flatMap { id in song.versions.last { $0.partID == id } }.map(PartLabel.title(of:))
+        let note = name.map { "\(spec.name) for \($0)" } ?? "\(spec.name) for the chords and the tune"
+        // One pick is one part: the next choice is a version of it, not a part of its own. The
+        // picker used to make a fresh part on every click, so trying five presets to hear them
+        // left five "Kit" rows in the ledger, each with one version.
+        if let previous = song.versions.last(where: { version in
+            if case .sound(let sound) = version.kind, sound.forPart == part { return InstrumentVoiceSpec.preset(id: sound.instrument) != nil }
+            return false
+        }) {
+            return record(previous.deriving(.sound(Sound(instrument: spec.id, forPart: part)), by: .user,
+                                            operation: Operation.written, note: note))
+        }
         return record(PartVersion(partID: PartID(),
                                   kind: .sound(Sound(instrument: spec.id, forPart: part)), author: .user,
-                                  operation: Operation.written,
-                                  note: name.map { "\(spec.name) for \($0)" }
-                                      ?? "\(spec.name) for the chords and the tune"))
+                                  operation: Operation.written, note: note))
     }
 }

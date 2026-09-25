@@ -31,8 +31,15 @@ public enum DrumMap {
 public enum MIDIExport {
     public static let ticksPerBeat = 480
 
-    /// One track per written part — grooves on channel 10, bass lines, melodies, progressions as
-    /// block chords — the tempo, the time signature, and the sections as markers on the first track.
+    /// The song as it plays: one track per written **part** — grooves on channel 10, bass lines,
+    /// melodies, progressions as block chords — the tempo, the time signature, and the sections as
+    /// markers on the first track.
+    ///
+    /// An arranged song is laid out the way the transport lays it out: each section's parts start
+    /// on the section's bar and repeat to fill its length. An unarranged one has each part's newest
+    /// version once, from bar 1. Either way a part appears once, as what it is now: the file used
+    /// to hold every version ever made of everything, each from bar 1 on top of the others, which
+    /// was the song's history, not the song.
     public static func file(for song: Song) -> MIDIFile {
         let beatsPerBar = song.timeSignature.beatsPerBar
         var file = MIDIFile(ticksPerBeat: ticksPerBeat, tempo: song.tempo, beatsPerBar: beatsPerBar, beatUnit: song.timeSignature.beatUnit, tracks: [])
@@ -42,39 +49,68 @@ public enum MIDIExport {
             markers.append(.init(tick: file.ticks(beats: Double(bar * beatsPerBar)), text: section.name))
             bar += section.lengthInBars
         }
-        for version in song.versions {
+
+        // Where each part plays: (start bar, bars) spans, in the order the parts were first made.
+        var order: [PartID] = []
+        var spans: [PartID: [(startBar: Int, bars: Int)]] = [:]
+        func place(_ part: PartID, at startBar: Int, bars: Int) {
+            if spans[part] == nil { order.append(part) }
+            spans[part, default: []].append((startBar, bars))
+        }
+        if song.sections.contains(where: { !$0.stitch.isEmpty }) {
+            var at = 0
+            for section in song.sections {
+                for lane in section.stitch where song.version(playing: lane) != nil {
+                    place(lane.part, at: at, bars: max(1, section.lengthInBars))
+                }
+                at += max(1, section.lengthInBars)
+            }
+        } else {
+            for part in song.partIDs { place(part, at: 0, bars: 0) }
+        }
+
+        for part in order {
+            // Graph order rather than `latestVersion`: versions kept in the same millisecond tie
+            // on their timestamp, and the graph is the order they were made in.
+            guard let version = song.versions.last(where: { $0.partID == part }), let placed = spans[part] else { continue }
             let name = PartLabel.title(of: version)
             switch version.kind {
             case .groove(let groove):
                 let ticksPerStep = Double(ticksPerBeat * beatsPerBar) / Double(max(1, groove.stepsPerBar))
+                let patternBars = max(1, groove.bars)
                 var notes: [MIDIFile.Note] = []
-                for pattern in groove.patterns {
-                    for (index, tier) in pattern.steps.enumerated() where tier != .rest {
-                        notes.append(.init(channel: 9, pitch: DrumMap.note(for: pattern.voice), velocity: tier.velocity,
-                                           start: Int((Double(index) * ticksPerStep).rounded()), length: max(1, Int(ticksPerStep / 2))))
+                for span in placed {
+                    let repeats = span.bars == 0 ? 1 : Int((Double(span.bars) / Double(patternBars)).rounded(.up))
+                    for pass in 0..<repeats {
+                        let offset = Double((span.startBar + pass * patternBars) * beatsPerBar * ticksPerBeat)
+                        let limit = span.bars == 0 ? Double.infinity : Double((span.startBar + span.bars) * beatsPerBar * ticksPerBeat)
+                        for pattern in groove.patterns {
+                            for (index, tier) in pattern.steps.enumerated() where tier != .rest {
+                                let start = offset + Double(index) * ticksPerStep
+                                guard start < limit else { continue }
+                                notes.append(.init(channel: 9, pitch: DrumMap.note(for: pattern.voice), velocity: tier.velocity,
+                                                   start: Int(start.rounded()), length: max(1, Int(ticksPerStep / 2))))
+                            }
+                        }
                     }
                 }
                 file.tracks.append(.init(name: name, notes: notes))
             case .bassline(let line):
-                file.tracks.append(.init(name: name, notes: line.notes.map { note in
-                    .init(channel: 0, pitch: note.pitch.midi, velocity: note.velocity, start: file.ticks(beats: note.start), length: max(1, file.ticks(beats: note.duration)))
-                }, program: 33))
+                file.tracks.append(.init(name: name, notes: tiled(line.notes, over: placed, beatsPerBar: beatsPerBar, file: file, channel: 0), program: 33))
             case .melody(let melody):
-                file.tracks.append(.init(name: name, notes: melody.notes.map { note in
-                    .init(channel: 1, pitch: note.pitch.midi, velocity: note.velocity, start: file.ticks(beats: note.start), length: max(1, file.ticks(beats: note.duration)))
-                }, program: 0))
+                file.tracks.append(.init(name: name, notes: tiled(melody.notes, over: placed, beatsPerBar: beatsPerBar, file: file, channel: 1), program: 0))
             case .progression(let progression):
-                var notes: [MIDIFile.Note] = []
+                var events: [NoteEvent] = []
                 var beat = 0.0
                 for bar in progression.bars {
                     for span in bar.chords {
                         for pitch in Self.pitches(of: span.chord) {
-                            notes.append(.init(channel: 2, pitch: pitch, velocity: 80, start: file.ticks(beats: beat), length: max(1, file.ticks(beats: span.beats))))
+                            events.append(NoteEvent(pitch: Pitch(midi: pitch), start: beat, duration: span.beats, velocity: 80))
                         }
                         beat += span.beats
                     }
                 }
-                file.tracks.append(.init(name: name, notes: notes, program: 4))
+                file.tracks.append(.init(name: name, notes: tiled(events, over: placed, beatsPerBar: beatsPerBar, file: file, channel: 2), program: 4))
             default:
                 continue
             }
@@ -84,6 +120,32 @@ public enum MIDIExport {
             else { file.tracks[0].markers = markers }
         }
         return file
+    }
+
+    /// A written line laid over every span it plays in, repeating at its own length (rounded up to
+    /// whole bars, as the players cycle it) until the span is filled, and cut at the span's end. A
+    /// span of zero bars — the unarranged song — takes the line once, whole.
+    static func tiled(_ events: [NoteEvent], over spans: [(startBar: Int, bars: Int)], beatsPerBar: Int,
+                      file: MIDIFile, channel: Int) -> [MIDIFile.Note] {
+        guard !events.isEmpty else { return [] }
+        let lengthBeats = events.map(\.end).max() ?? 0
+        let cycleBars = max(1, Int((lengthBeats / Double(beatsPerBar)).rounded(.up)))
+        var out: [MIDIFile.Note] = []
+        for span in spans {
+            let repeats = span.bars == 0 ? 1 : Int((Double(span.bars) / Double(cycleBars)).rounded(.up))
+            let limit = span.bars == 0 ? Double.infinity : Double((span.startBar + span.bars) * beatsPerBar)
+            for pass in 0..<repeats {
+                let offset = Double((span.startBar + pass * cycleBars) * beatsPerBar)
+                for note in events {
+                    let start = offset + note.start
+                    guard start < limit else { continue }
+                    let duration = min(note.duration, limit - start)
+                    out.append(.init(channel: channel, pitch: note.pitch.midi, velocity: note.velocity,
+                                     start: file.ticks(beats: start), length: max(1, file.ticks(beats: duration))))
+                }
+            }
+        }
+        return out
     }
 
     /// The chord's pitches around C4.

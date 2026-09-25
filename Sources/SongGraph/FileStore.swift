@@ -431,6 +431,21 @@ public struct LibraryStore: Sendable {
         throw SongGraphError.missingSongPackage(id)
     }
 
+    /// Moves a song's package out of the library — to the Trash, unless told otherwise — and
+    /// returns where it went. The next `load()` no longer sees it; nothing inside the package is
+    /// touched, so putting it back is putting the folder back.
+    @discardableResult
+    public func trashSong(_ id: SongID, using trash: (URL) throws -> URL? = LibraryStore.systemTrash) throws -> URL? {
+        try trash(try songStore(for: id).packageURL)
+    }
+
+    /// The system Trash, where Finder can put a package back.
+    public static func systemTrash(_ url: URL) throws -> URL? {
+        var moved: NSURL?
+        try FileManager.default.trashItem(at: url, resultingItemURL: &moved)
+        return moved as URL?
+    }
+
     /// Stores media at the library level by content hash; a hash already present is not written again.
     @discardableResult
     public func addMedia(_ data: Data, fileExtension: String, kind: MediaKind) throws -> MediaRef {

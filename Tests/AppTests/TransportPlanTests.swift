@@ -633,3 +633,156 @@ struct TransportFrameTests {
         }
     }
 }
+
+// MARK: - What was sung
+
+/// Takes and comps were the one kind of audio the transport never played: the Booth put them on a
+/// bar and the plan never looked. Now a part whose newest version is a take or a comp is a track,
+/// at the bar it was sung on, arranged or not.
+@Suite("Transport plan: the takes play in the song") @MainActor
+struct TransportTakesTests {
+
+    private let media = URL(fileURLWithPath: "/System/Library/Sounds/Pop.aiff")
+
+    private func take(part: PartID, pass: Int, startBar: Int, section: SectionID? = nil, offset: Double? = nil,
+                      hash: Character = "a") -> PartVersion {
+        let audio = Audio(media: MediaRef(hash: ContentHash(hex: String(repeating: hash, count: 64))!, fileExtension: "wav"),
+                          role: .take, sampleRate: 48_000, channelCount: 1, duration: 4,
+                          alignmentOffset: offset, take: Take(section: section, startBar: startBar, pass: pass))
+        return PartVersion(partID: part, kind: .audio(audio), author: .user, operation: Operation.recorded, note: "Take \(pass)")
+    }
+
+    @Test("A take plays at the bar it was sung on, beside the groove")
+    func takeInAFlatSong() {
+        let part = PartID()
+        let song = TransportFixture.song([TransportFixture.grooveVersion(), take(part: part, pass: 1, startBar: 4)])
+        let plan = SongPlayback.plan(for: song, mediaURL: TransportFixture.resolver(media))
+        #expect(plan.groove != nil)
+        #expect(plan.tracks.count == 1)
+        #expect(plan.tracks[0].name == "Take 1")
+        #expect(plan.tracks[0].part == part)
+        // Bar 4 at 120 in 4/4: eight seconds in.
+        #expect(abs(plan.tracks[0].startsAt - 8) < 0.001)
+        #expect(plan.parts.contains(part), "and it gets a strip")
+    }
+
+    @Test("The last pass of a part plays, not every pass; a comp stands in for its takes")
+    func newestOfThePart() {
+        let part = PartID()
+        var song = TransportFixture.song([take(part: part, pass: 1, startBar: 0), take(part: part, pass: 2, startBar: 0, hash: "b")])
+        var plan = SongPlayback.plan(for: song, mediaURL: TransportFixture.resolver(media))
+        #expect(plan.tracks.map(\.name) == ["Take 2"])
+
+        let comp = Audio(media: MediaRef(hash: ContentHash(hex: String(repeating: "c", count: 64))!, fileExtension: "wav"),
+                         role: .take, sampleRate: 48_000, channelCount: 1, duration: 4, alignmentOffset: 1.25,
+                         comp: CompPlan(spans: [CompPlan.Span(startBar: 0, endBar: 1, take: song.versions[0].id)]))
+        try? song.append(PartVersion(partID: part, kind: .audio(comp), author: .user, parents: song.versions.map(\.id),
+                                     operation: Operation.comped, note: "Comp of 2 takes"))
+        plan = SongPlayback.plan(for: song, mediaURL: TransportFixture.resolver(media))
+        #expect(plan.tracks.map(\.name) == ["Comp"])
+        #expect(plan.tracks[0].startsAt == 1.25, "a comp is placed by its own alignment")
+    }
+
+    @Test("An arranged song plays its takes too, where the record and the stems do not run")
+    func takeInAnArrangedSong() {
+        let groove = TransportFixture.grooveVersion()
+        let record = TransportFixture.audioVersion(role: .take, hash: "d")
+        let part = PartID()
+        var song = TransportFixture.song([groove, record])
+        song.sections = [Section(name: "Verse", stitch: [Lane(part: groove.partID)], lengthInBars: 8)]
+        try? song.append(take(part: part, pass: 1, startBar: 2, section: song.sections[0].id))
+        let plan = SongPlayback.plan(for: song, mediaURL: TransportFixture.resolver(media))
+        #expect(plan.isArranged)
+        #expect(plan.tracks.map(\.name) == ["Take 1"], "the take, and not the record")
+        #expect(abs(plan.tracks[0].startsAt - 4) < 0.001)
+        #expect(plan.parts.contains(part))
+    }
+
+    @Test("A take whose audio is missing says so rather than playing silence")
+    func missingTake() {
+        let song = TransportFixture.song([take(part: PartID(), pass: 1, startBar: 0)])
+        let plan = SongPlayback.plan(for: song, mediaURL: TransportFixture.resolver(nil))
+        #expect(!plan.isPlayable)
+        #expect(plan.silence?.headline.contains("audio is missing") == true)
+    }
+}
+
+// MARK: - From a bar
+
+@Suite("Transport plan: playing from a bar") @MainActor
+struct TransportFromBarTests {
+
+    private let media = URL(fileURLWithPath: "/System/Library/Sounds/Pop.aiff")
+
+    private func arranged() -> (song: Song, groove: PartVersion, bass: PartVersion) {
+        let groove = TransportFixture.grooveVersion()
+        let bass = PartVersion(partID: PartID(), kind: .bassline(Bassline(notes: [NoteEvent(pitch: Pitch(midi: 40), start: 0, duration: 1)], sound: "finger")),
+                               author: .user, operation: Operation.written, note: "Bass")
+        var song = TransportFixture.song([groove, bass])
+        song.sections = [Section(name: "Intro", stitch: [Lane(part: groove.partID)], lengthInBars: 4),
+                         Section(name: "Verse", stitch: [Lane(part: groove.partID), Lane(part: bass.partID)], lengthInBars: 8),
+                         Section(name: "Hook", stitch: [Lane(part: groove.partID)], lengthInBars: 4)]
+        return (song, groove, bass)
+    }
+
+    @Test("From a section's first bar: the sections before it go, the rest move up")
+    func fromASectionBoundary() {
+        let (song, _, _) = arranged()
+        let plan = SongPlayback.plan(for: song, mediaURL: TransportFixture.resolver(media)).starting(atBar: 4)
+        #expect(plan.startsAtBar == 4)
+        #expect(plan.segments.map(\.name) == ["Verse", "Hook"])
+        #expect(plan.segments.map(\.startBar) == [0, 8])
+        #expect(plan.segments.map(\.lengthInBars) == [8, 4])
+        #expect(plan.lengthInBars == 12)
+        #expect(abs(plan.startOffsetSeconds - 8) < 0.001, "four bars at 120 in 4/4")
+        #expect(plan.isPlayable)
+    }
+
+    @Test("From inside a section: what is left of it plays, from its own first beat")
+    func fromInsideASection() {
+        let (song, _, _) = arranged()
+        let plan = SongPlayback.plan(for: song, mediaURL: TransportFixture.resolver(media)).starting(atBar: 6)
+        #expect(plan.segments.map(\.name) == ["Verse", "Hook"])
+        #expect(plan.segments.map(\.lengthInBars) == [6, 4])
+        #expect(plan.segments.map(\.startBar) == [0, 6])
+    }
+
+    @Test("Past the end there is nothing to play, and the plan says so")
+    func pastTheEnd() {
+        let (song, _, _) = arranged()
+        let plan = SongPlayback.plan(for: song, mediaURL: TransportFixture.resolver(media)).starting(atBar: 40)
+        #expect(!plan.isPlayable)
+        #expect(plan.silence?.headline == "Nothing plays from bar 41")
+    }
+
+    @Test("A take is moved with the bar, and one already sounding is played from that point of its file")
+    func takesMove() {
+        let part = PartID()
+        var song = TransportFixture.song([TransportFixture.grooveVersion()])
+        song.sections = [Section(name: "Verse", stitch: [Lane(part: song.versions[0].partID)], lengthInBars: 16)]
+        let audio = Audio(media: GuidanceFixture.media("e"), role: .take, sampleRate: 48_000, channelCount: 1,
+                          duration: 10, alignmentOffset: 6, take: Take(startBar: 3))
+        try? song.append(PartVersion(partID: part, kind: .audio(audio), author: .user, operation: Operation.recorded, note: "Take 1"))
+        // From bar 2 (four seconds in): the take, at six seconds, is now two seconds in.
+        var plan = SongPlayback.plan(for: song, mediaURL: TransportFixture.resolver(media)).starting(atBar: 2)
+        #expect(plan.tracks.count == 1)
+        #expect(abs(plan.tracks[0].startsAt - 2) < 0.001)
+        #expect(plan.tracks[0].skip == 0)
+        // From bar 4 (eight seconds in): the take started two seconds ago, so its first two seconds are skipped.
+        plan = SongPlayback.plan(for: song, mediaURL: TransportFixture.resolver(media)).starting(atBar: 4)
+        #expect(plan.tracks[0].startsAt == 0)
+        #expect(abs(plan.tracks[0].skip - 2) < 0.001)
+        // From bar 10 (twenty seconds in): the take is over, and is not scheduled.
+        plan = SongPlayback.plan(for: song, mediaURL: TransportFixture.resolver(media)).starting(atBar: 10)
+        #expect(plan.tracks.isEmpty)
+        #expect(plan.isPlayable, "the groove still plays")
+    }
+
+    @Test("Bar zero is the plan unchanged")
+    func fromTheTop() {
+        let (song, _, _) = arranged()
+        let plan = SongPlayback.plan(for: song, mediaURL: TransportFixture.resolver(media))
+        #expect(plan.starting(atBar: 0) == plan)
+        #expect(plan.startOffsetSeconds == 0)
+    }
+}

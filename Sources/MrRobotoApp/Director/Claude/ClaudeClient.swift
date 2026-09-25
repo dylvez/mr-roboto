@@ -105,13 +105,30 @@ public actor ClaudeClient {
         return .present(.absent)
     }
 
-    /// The key, read once and kept for this client's life.
+    /// The key, read once and kept for this client's life — or until it is changed here.
     private var heldKey: ClaudeAPIKey?
     private func key() -> ClaudeAPIKey? {
         if let heldKey { return heldKey }
         guard let read = keySource.apiKey(), !read.isEmpty else { return nil }
         heldKey = read
         return read
+    }
+
+    /// Keeps a key the user typed, through the credentials this client reads, and reads it fresh
+    /// on the next request. Returns what went wrong, or nil. A client built over a fixed key (a
+    /// test) has nowhere to keep one and says so.
+    public func storeKey(_ text: String) -> String? {
+        guard let credentials = keySource as? ClaudeCredentials else { return "This session's key is fixed." }
+        if let problem = credentials.store(text) { return problem }
+        heldKey = nil
+        return nil
+    }
+
+    /// Takes the keychain's key out and forgets the one held. The environment's stays.
+    public func forgetKey() -> String? {
+        guard let credentials = keySource as? ClaudeCredentials else { return "This session's key is fixed." }
+        heldKey = nil
+        return credentials.forget()
     }
 
     // MARK: Sending

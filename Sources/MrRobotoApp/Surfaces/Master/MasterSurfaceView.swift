@@ -4,6 +4,9 @@ import SwiftUI
 /// Readings against the target, the spectrum, the levers, and the Engineer's lines.
 struct MasterSurfaceView: View {
     @Bindable var model: MasterModel
+    /// The frame, when the registry hands one over: what an export needs. A view built from its
+    /// model alone (a render, a test) has none, and points at the menu instead.
+    var app: AppState?
 
     var body: some View {
         VStack(alignment: .leading, spacing: Design.Metric.gutter) {
@@ -29,12 +32,51 @@ struct MasterSurfaceView: View {
             Text(String(format: "target %.0f LUFS · ceiling %.1f dBTP", model.mix.master.targetLUFS, model.mix.master.ceilingDBTP))
                 .font(Design.Typography.numeric(12)).foregroundStyle(Design.Palette.inkSecondary)
             Spacer()
-            Button(model.isReading ? "Reading…" : "Read the bounce") { Task { await model.read() } }
+            if model.isReading {
+                ProgressView().controlSize(.small).tint(Design.Palette.accent)
+                    .accessibilityLabel("Bouncing and reading")
+            }
+            Button(model.isReading ? "Reading…" : (model.reading == nil ? "Read the bounce" : (model.isStale ? "Read again" : "Read again")))
+                { Task { await model.read() } }
                 .font(Design.Typography.ui(12)).disabled(model.isReading)
+                .help(readHelp)
+        }
+    }
+
+    /// What Read will actually measure, said before it is pressed.
+    private var readHelp: String {
+        switch model.scope {
+        case .wholeSong: return "Bounces the whole song through the mix and reads it."
+        case .firstSection(let name): return "Bounces the first section (\(name)) through the mix and reads it. An arranged song is read a section at a time."
+        }
+    }
+
+    /// Which stretch the numbers describe, and whether they still describe the mix on the strips.
+    @ViewBuilder
+    private var readingScope: some View {
+        if let reading = model.reading {
+            HStack(spacing: 8) {
+                MixLabel(reading.scope.label)
+                if model.isStale {
+                    Text("· a lever moved since; read again")
+                        .font(Design.Typography.ui(11))
+                        .foregroundStyle(Design.Palette.warn)
+                }
+            }
+            .help(reading.scope == .wholeSong
+                  ? "The numbers are of the whole song."
+                  : "The numbers are of the first section only, not the song's integrated loudness.")
         }
     }
 
     private var numbers: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            readingScope
+            numberRow
+        }
+    }
+
+    private var numberRow: some View {
         HStack(spacing: 10) {
             number("Integrated", model.reading.map { String(format: "%.1f", $0.observation.integratedLUFS) } ?? "—", unit: "LUFS",
                    off: model.reading.map { abs($0.observation.integratedLUFS - model.mix.master.targetLUFS) > 2 } ?? false)
@@ -44,6 +86,8 @@ struct MasterSurfaceView: View {
             number("Tilt", model.reading.map { String(format: "%.0f", $0.observation.tiltDB) } ?? "—", unit: "dB", off: false)
             number("Top end", model.reading.map { String(format: "%.1f", $0.observation.bandwidthHz / 1000) } ?? "—", unit: "kHz", off: false)
         }
+        // Dimmed once a lever has moved: still true of the mix they were read from, not of this one.
+        .opacity(model.isStale ? 0.5 : 1)
     }
 
     private func number(_ label: String, _ value: String, unit: String, off: Bool) -> some View {
@@ -102,6 +146,8 @@ struct MasterSurfaceView: View {
             Text(label).font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.inkSecondary)
             Slider(value: Binding(get: { value }, set: set), in: range) { editing in if !editing { model.endGesture() } }
                 .controlSize(.small).tint(Design.Palette.accent).frame(width: 170)
+                .accessibilityLabel(label)
+                .help("\(label): heard while held, a mix version when let go.")
             Text(String(format: format, value)).font(Design.Typography.numeric(10)).foregroundStyle(Design.Palette.inkTertiary)
         }
     }
@@ -132,13 +178,26 @@ struct MasterSurfaceView: View {
 
     @ViewBuilder
     private var footer: some View {
-        if let error = model.lastError {
-            Text(error).font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.warn)
-        } else if let note = model.lastNote {
-            Text("Kept: \(note)").font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.inkTertiary)
-        } else {
-            Text(String(format: "The target and the ceiling are %@; a lever let go of is a mix version.", model.targets.targetLUFS == -14 && model.targets.ceilingDBTP == -1 ? "the delivery defaults" : "the album's"))
-                .font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.inkTertiary)
+        VStack(alignment: .leading, spacing: 4) {
+            if let error = model.lastError {
+                Text(error).font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.warn)
+            } else if let note = model.lastNote {
+                Text("Kept: \(note)").font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.inkTertiary)
+            } else {
+                Text(String(format: "The target and the ceiling are %@; a lever let go of is a mix version.", model.targets.targetLUFS == -14 && model.targets.ceilingDBTP == -1 ? "the delivery defaults" : "the album's"))
+                    .font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.inkTertiary)
+            }
+            // The export, from the surface that reads the master: the same call the File menu
+            // makes. A view built from its model alone has no frame to ask and points at the menu.
+            if let app {
+                FrameButton(title: "Export master…", emphasis: .outlined, isEnabled: app.song != nil && app.busy == nil) {
+                    MrRobotoApp.export(app, what: "Exporting the master…") { try await Export.master(app, to: $0).wav }
+                }
+                .help("The whole song through the mix, limited at the ceiling, as a 24-bit WAV beside a report. Asks where first.")
+            } else {
+                Text("Export the master from File ▸ Export ▸ Master…")
+                    .font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.inkTertiary)
+            }
         }
     }
 }

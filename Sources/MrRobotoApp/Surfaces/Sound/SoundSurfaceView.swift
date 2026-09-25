@@ -177,6 +177,7 @@ struct SoundSurfaceView: View {
                 Text(control.readout)
                     .font(Design.Typography.numeric(12))
                     .foregroundStyle(Design.Palette.inkSecondary)
+                resetChip(control)
             }
             slider(control)
             if let honestly = control.honestly {
@@ -189,7 +190,29 @@ struct SoundSurfaceView: View {
         // The cap. A slider is not more precise for being longer, and six of them drawn at 1233
         // points is the ugliness this whole exercise is meant to avoid.
         .frame(maxWidth: layout.controlWidth, alignment: .leading)
+        .help(control.honestly ?? "\(control.name): \(control.readout)")
         .contextMenu { Button("Back to the preset") { surface.reset(control.parameter) } }
+    }
+
+    /// The way back to the preset, visible beside the readout once the knob has left it. It was
+    /// right-click only before, which is a way back you have to know about.
+    @ViewBuilder
+    private func resetChip(_ control: SoundControl) -> some View {
+        if !surface.isAtPreset(control.parameter) {
+            Button { surface.reset(control.parameter) } label: {
+                Image(systemName: "arrow.uturn.backward")
+                    .font(Design.Typography.ui(10))
+                    .foregroundStyle(Design.Palette.inkSecondary)
+                    .frame(width: Design.Metric.tagHeight, height: Design.Metric.tagHeight)
+                    .background(Design.Palette.panelAlt, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
+                    .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
+                        .stroke(Design.Palette.line, lineWidth: Design.Metric.hairline))
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help("Back to the preset: puts \(control.name) where the machine had it, and plays it.")
+            .accessibilityLabel("\(control.name) back to the preset")
+        }
     }
 
     private func quietGrid(_ controls: [SoundControl], _ layout: SoundLayout) -> some View {
@@ -205,6 +228,7 @@ struct SoundSurfaceView: View {
                         Text(control.readout)
                             .font(Design.Typography.numeric(11))
                             .foregroundStyle(Design.Palette.inkTertiary)
+                        resetChip(control)
                     }
                     slider(control)
                     // What the control is really wired to, drawn rather than hidden in a tooltip —
@@ -217,7 +241,9 @@ struct SoundSurfaceView: View {
                     }
                 }
                 .frame(maxWidth: layout.controlWidth, alignment: .leading)
-                .help(control.honestly ?? "")
+                // Narrow, the wiring line is tooltip-only, so the tooltip is always there; and a
+                // control with nothing to confess still names itself and its value.
+                .help(control.honestly ?? "\(control.name): \(control.readout)")
                 .contextMenu { Button("Back to the preset") { surface.reset(control.parameter) } }
             }
         }
@@ -231,6 +257,8 @@ struct SoundSurfaceView: View {
         }
         .controlSize(.small)
         .tint(control.isProminent ? Design.Palette.accent : Design.Palette.lineStrong)
+        .accessibilityLabel(control.name)
+        .accessibilityValue(control.readout)
     }
 
     private func binding(_ control: SoundControl) -> Binding<Double> {
@@ -269,15 +297,29 @@ struct SoundSurfaceView: View {
                     .background(Design.Palette.warnSoft, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
             }
             Spacer()
-            if surface.isDirty {
-                Button("Revert") { surface.revert() }
-                    .buttonStyle(.plain)
+            // A knob let go of is a version: that is how this surface was designed ("auditioned on
+            // every knob"), and it is why there is no Keep and no Revert here — by the time either
+            // could be pressed, the move is already kept. What the footer does instead is say so.
+            // The one time a draft outlives a release is when the host refused it, and then the
+            // draft is offered again rather than left looking kept.
+            if surface.lastCommitWasRefused, surface.isDirty {
+                Text("This move could not be kept; the reason is in the rail.")
                     .font(Design.Typography.ui(12))
-                    .foregroundStyle(Design.Palette.inkSecondary)
-                Button("Keep as a new version") { surface.commit() }
+                    .foregroundStyle(Design.Palette.warn)
+                Button("Try again") { surface.commit() }
                     .buttonStyle(.plain)
                     .font(Design.Typography.ui(12, weight: .semibold))
                     .foregroundStyle(Design.Palette.accent)
+                    .help("Hands the same move to the host again as a new version.")
+            } else if surface.isDirty {
+                Text("Kept as a version when you let go")
+                    .font(Design.Typography.ui(12))
+                    .foregroundStyle(Design.Palette.inkTertiary)
+            } else if surface.lastKept != nil {
+                Text(keptLine)
+                    .font(Design.Typography.ui(12))
+                    .foregroundStyle(Design.Palette.inkTertiary)
+                    .help("Every knob let go of is a new version of the same part; the ledger lists them and any one of them can be gone back to from there.")
             } else {
                 Text("No change since this version")
                     .font(Design.Typography.ui(12))
@@ -285,6 +327,14 @@ struct SoundSurfaceView: View {
             }
         }
         .frame(height: Design.Metric.chipHeight)
+    }
+
+    /// "Last move kept as a new version of Kick · 3 this session". The panel has no song to count
+    /// versions in, so it counts its own rather than guessing at the ledger's number.
+    private var keptLine: String {
+        let name = surface.lastKept.map(PartLabel.title(of:)) ?? surface.subjectName
+        let count = surface.keptCount
+        return "Last move kept as a new version of \(name) · \(count) this session"
     }
 
     // MARK: A machine card

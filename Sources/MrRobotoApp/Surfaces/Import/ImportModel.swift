@@ -148,6 +148,64 @@ public struct ImportProvenance: Sendable, Equatable {
                         note: [rightsHolder.isEmpty ? nil : "rights: \(rightsHolder)",
                                note.isEmpty ? nil : note].compactMap { $0 }.joined(separator: "; ").nilIfEmpty)
     }
+
+    // MARK: Where the form lives between sessions
+
+    /// The seed note an imported song carries, which is where this form is kept.
+    ///
+    /// The library's `Record` row holds a title and an artist and nothing else, and the graph has
+    /// no field for a label, a year, a rights holder or a clearance, so the seed's note — free text
+    /// on the one seed an imported song has — is where they go. One line says where the file came
+    /// from and what it is, in the words a sleeve note would use; then one line per field, so the
+    /// form can be read back exactly when the song is opened again. Empty fields are left out.
+    public func seedNote(sourcePath: String) -> String {
+        var lines = [citation.isEmpty ? "imported from \(sourcePath)" : "imported from \(sourcePath) — \(citation)"]
+        let fields = [("title", title), ("artist", artist), ("label", label), ("year", year),
+                      ("rights", rightsHolder), ("note", note)]
+        for (key, value) in fields where !value.isEmpty {
+            lines.append("\(key): \(value)")
+        }
+        lines.append("clearance: \(clearance.rawValue)")
+        return lines.joined(separator: "\n")
+    }
+
+    /// The path a seed note says the record was imported from, when it says.
+    public static func sourcePath(in seedNote: String?) -> String? {
+        let prefix = "imported from "
+        guard let first = seedNote?.split(separator: "\n", maxSplits: 1).first, first.hasPrefix(prefix) else { return nil }
+        let rest = first.dropFirst(prefix.count)
+        let path = rest.components(separatedBy: " — ").first ?? String(rest)
+        return path.isEmpty ? nil : path
+    }
+
+    /// The form as the library keeps it: the record row for the title and artist, the seed note
+    /// for everything (its field lines win over the row, since they were written together and the
+    /// note is the fuller copy). A note from before the field lines carried only the clearance, in
+    /// brackets on its first line, and that is still read.
+    public static func restored(from seed: Seed?, record: Record?) -> ImportProvenance {
+        var form = ImportProvenance(title: record?.title ?? "", artist: record?.artist ?? "")
+        guard let note = seed?.note else { return form }
+        let lines = note.split(separator: "\n", omittingEmptySubsequences: false)
+        for line in lines.dropFirst() {
+            guard let separator = line.range(of: ": ") else { continue }
+            let value = String(line[separator.upperBound...])
+            switch line[..<separator.lowerBound] {
+            case "title": form.title = value
+            case "artist": form.artist = value
+            case "label": form.label = value
+            case "year": form.year = value
+            case "rights": form.rightsHolder = value
+            case "note": form.note = value
+            case "clearance": form.clearance = ClearanceStatus(rawValue: value) ?? form.clearance
+            default: continue
+            }
+        }
+        if lines.count == 1, let first = lines.first,
+           let open = first.range(of: "[clearance: "), let close = first[open.upperBound...].firstIndex(of: "]") {
+            form.clearance = ClearanceStatus(rawValue: String(first[open.upperBound..<close])) ?? form.clearance
+        }
+        return form
+    }
 }
 
 extension String {
@@ -253,6 +311,10 @@ public final class ImportModel {
 
     public var provenance = ImportProvenance()
 
+    /// The form as the record on disk has it. The form is unkept while it differs from this; an
+    /// import fills it at write time and `keepProvenance()` fills it after.
+    public private(set) var keptProvenance = ImportProvenance()
+
     /// Whether dropping a file also runs Demucs. Off by default: separation is twelve seconds a
     /// track and not every import wants stems.
     public var separatesStems = false
@@ -262,6 +324,28 @@ public final class ImportModel {
     private let host: any ImportHosting
     private var runTask: Task<Void, Never>?
     private var startedAt: ContinuousClock.Instant?
+
+    /// Promoted regions the host has not yet been told about. `didCommit` is a notification on its
+    /// own task, so for a moment the version is in the draft and nowhere else.
+    private var pendingCommits: Set<VersionID> = []
+    /// Writes of the package or the provenance that are still in flight.
+    private var pendingWrites = 0
+
+    // MARK: What is not yet kept
+
+    /// True while this surface holds work the song on disk does not: an import or a separation
+    /// still running, a promoted region the host has not taken yet, a save still writing, or a
+    /// provenance form edited since it was last kept. An import that has written its versions is
+    /// kept; so is a promotion the host has recorded.
+    public var hasUnkeptChanges: Bool {
+        state.isBusy || !pendingCommits.isEmpty || pendingWrites > 0 || hasUnkeptProvenance
+    }
+
+    /// The form differs from what the record on disk says. Only meaningful once there is a
+    /// record: before the drop the form is simply what the import will write.
+    public var hasUnkeptProvenance: Bool {
+        draft != nil && provenance != keptProvenance
+    }
 
     public init(host: any ImportHosting) {
         self.host = host
@@ -294,6 +378,13 @@ public final class ImportModel {
     public func range(ofBar index: Int) -> SongGraph.TimeRange? {
         guard let bars = draft?.analysis.bars, bars.indices.contains(index) else { return nil }
         return bars[index]
+    }
+
+    /// What the selection would be called if it were promoted now: "Bars 3–4", or the seconds
+    /// when the region falls outside the detected bars. The promote bar shows it so a drag on the
+    /// waveform has a visible result before anything is cut.
+    public var selectionLabel: String? {
+        selection.map(defaultRegionName)
     }
 
     // MARK: Running an import
@@ -379,9 +470,16 @@ public final class ImportModel {
             downbeats = analysis.downbeats
 
             let seed = song.seeds.first
-            let resolved = record ?? Record(title: song.title, artist: song.artist, media: take.media,
-                                            analysis: analysisVersion)
-            provenance = ImportProvenance(title: resolved.title, artist: resolved.artist)
+            // A library that has lost the record's row gets it back under the id the seed already
+            // names, so keeping the form reconnects the two rather than adding a row nothing points at.
+            var seededRecord: RecordID?
+            if let seed, case .importedRecord(let id) = seed.kind { seededRecord = id }
+            let resolved = record ?? Record(id: seededRecord ?? RecordID(), title: song.title, artist: song.artist,
+                                            media: take.media, analysis: analysisVersion)
+            // The form comes back as it was kept: the row for the title and artist, the seed note
+            // for the rest. Reopening a song used to reset every field but those two.
+            provenance = .restored(from: seed, record: resolved)
+            keptProvenance = provenance
             draft = ImportDraft(sourceURL: url, record: resolved,
                                 seed: seed ?? Seed(kind: .importedRecord(resolved.id)),
                                 song: song,
@@ -427,6 +525,17 @@ public final class ImportModel {
     /// which is most of them after the first session.
     public var canSeparateStems: Bool { draft != nil && stems.isEmpty && !state.isBusy }
 
+    /// True while an import is running and has not yet reached the point where it reads
+    /// `separatesStems`. `run` reads the flag the moment the analysis finishes, so up to then
+    /// flipping it still decides whether stems come with this record; after that the choice is
+    /// made and the toggle would be a lie.
+    public var canStillChooseStems: Bool {
+        switch state {
+        case .reading, .analyzing: return true
+        default: return false
+        }
+    }
+
     /// Runs separation on the record this surface is showing and hands each stem back as a part
     /// version, exactly as an import with the toggle on would have.
     ///
@@ -446,10 +555,10 @@ public final class ImportModel {
     private func runSeparation(_ url: URL, songID: SongID) async {
         startedAt = ContinuousClock.now
         lastError = nil
+        let scratch = FileManager.default.temporaryDirectory
+            .appendingPathComponent("MrRoboto/Separate/\(UUID().uuidString)", isDirectory: true)
         do {
             transition(to: .separating(url), detail: "separating", fraction: 0.05)
-            let scratch = FileManager.default.temporaryDirectory
-                .appendingPathComponent("MrRoboto/Separate/\(UUID().uuidString)", isDirectory: true)
             _ = try await host.separate(url, into: scratch) { [weak self] step in
                 Task { @MainActor [weak self] in self?.note(step) }
             } stemDidLand: { [weak self] name, fileURL in
@@ -463,13 +572,22 @@ public final class ImportModel {
         } catch is CancellationError {
             // Unlike an import, there is a package here already and it is untouched: the stems are
             // in a scratch directory and no version was recorded, so cancelling really is nothing.
-            stems = []
-            state = .ready(songID)
-            progress = ImportProgress(phase: .ready, fraction: 1, detail: "cancelled", elapsed: elapsed)
+            abandonSeparation(of: songID, scratch: scratch, phase: .cancelled, detail: "cancelled")
         } catch {
-            lastError = "\(error)"
-            transition(to: .failed("\(error)"), detail: "\(error)")
+            // The same is true of a failure, so the record stays on screen with the reason beside
+            // it. Going back to the drop target here read as the record itself having been lost.
+            lastError = "Separation failed: \(error)"
+            abandonSeparation(of: songID, scratch: scratch, phase: .failed, detail: "separation failed")
         }
+    }
+
+    /// A separation that did not finish: the lanes it started go, the scratch files go, the phase
+    /// is logged, and the record is back where it was.
+    private func abandonSeparation(of songID: SongID, scratch: URL, phase: ImportPhase, detail: String) {
+        stems = []
+        try? FileManager.default.removeItem(at: scratch)
+        if phaseLog.last != phase { phaseLog.append(phase) }
+        transition(to: .ready(songID), detail: detail, fraction: 1)
     }
 
     /// Copies each separated stem into the song's package and hands it to the host as a version.
@@ -532,7 +650,12 @@ public final class ImportModel {
             // 3. The draft: a record, a seed, a song and the two versions that describe the record.
             let analysis = ImportAnalysisMapping.musicAnalysis(from: report, fallbackDuration: info.duration)
             downbeats = analysis.downbeats
+            // The file's name is the record's until the form says otherwise, and the form shows it
+            // so what the record is called is on screen rather than implied. The form as it stands
+            // now is what the package will carry, so from here it counts as kept.
+            if provenance.title.isEmpty { provenance.title = url.deletingPathExtension().lastPathComponent }
             draft = makeDraft(url: url, info: info, report: report, analysis: analysis)
+            keptProvenance = provenance
             transition(to: .analyzed(url), detail: "analysed", fraction: separatesStems ? 0.55 : 0.9)
 
             // 4. Stems, if asked for. They land in `<Name>.stems/` beside the source, outside the
@@ -582,6 +705,7 @@ public final class ImportModel {
         packageURL = nil
         selection = nil
         lastError = nil
+        keptProvenance = ImportProvenance()
     }
 
     // MARK: Promoting a region
@@ -625,12 +749,18 @@ public final class ImportModel {
         try draft.song.append(version)
         self.draft = draft
         promoted.append(version)
+        lastError = nil
 
         // Plays on touch: promoting a bar plays that bar.
         auditionRegion(range)
 
+        // The host hears about it on its own task, so until then the version is unkept.
         let song = draft.song
-        Task { [host] in await host.didCommit(version, in: song) }
+        pendingCommits.insert(version.id)
+        Task { [weak self, host] in
+            await host.didCommit(version, in: song)
+            self?.pendingCommits.remove(version.id)
+        }
 
         // If the package is already on disk, the new version belongs in it now, not at some later
         // save nobody remembers to make.
@@ -647,6 +777,17 @@ public final class ImportModel {
         return try promote(selection, named: name)
     }
 
+    /// The Promote lever as the surface presses it: the selection is promoted, or the reason it
+    /// could not be lands in `lastError`, where the failure note shows it. A thrown error at a
+    /// button has nowhere to go but `try?`, which is how a click came to do nothing.
+    public func pressPromote() {
+        do {
+            try promoteSelection()
+        } catch {
+            lastError = "\(error)"
+        }
+    }
+
     /// Promotes a whole detected bar.
     @discardableResult
     public func promoteBar(_ index: Int) throws -> PartVersion {
@@ -659,6 +800,46 @@ public final class ImportModel {
             return first == last ? "Bar \(first + 1)" : "Bars \(first + 1)–\(last + 1)"
         }
         return String(format: "%.2f–%.2f s", range.start, range.end)
+    }
+
+    // MARK: Keeping the provenance
+
+    /// Writes the provenance form into the record: the library's row takes the title and artist,
+    /// the song's seed note takes the whole form, and the host puts both where they live.
+    ///
+    /// Only once the record is on disk. Before that the form is what the import will write when it
+    /// gets there, and an edit made while the stems are still separating is picked up the same way:
+    /// the write at the end of the run takes the form as it stood at analysis, and whatever changed
+    /// after that shows as unkept until this is pressed.
+    public func keepProvenance() {
+        guard case .ready = state, var draft, provenance != keptProvenance else { return }
+
+        // A record keeps its name: an emptied title field means "as it was", not "untitled".
+        if provenance.title.isEmpty { provenance.title = draft.record.title }
+        draft.record.title = provenance.title
+        draft.record.artist = provenance.artist
+
+        let note = provenance.seedNote(sourcePath: ImportProvenance.sourcePath(in: draft.seed.note) ?? draft.sourceURL.path)
+        draft.seed.note = note
+        if let index = draft.song.seeds.firstIndex(where: { $0.id == draft.seed.id }) {
+            draft.song.seeds[index].note = note
+        } else {
+            draft.song.seeds.append(draft.seed)
+        }
+        self.draft = draft
+
+        let kept = provenance
+        let record = draft.record, seed = draft.seed, song = draft.song
+        pendingWrites += 1
+        Task { [weak self, host] in
+            do {
+                try await host.keepProvenance(record, seed: seed, in: song)
+                self?.keptProvenance = kept
+            } catch {
+                self?.lastError = "Could not keep the provenance: \(error)"
+            }
+            self?.pendingWrites -= 1
+        }
     }
 
     // MARK: Auditioning
@@ -770,18 +951,14 @@ public final class ImportModel {
     }
 
     private func makeDraft(url: URL, info: AudioFileInfo, report: AnalysisReport, analysis: MusicAnalysis) -> ImportDraft {
-        let fallbackTitle = url.deletingPathExtension().lastPathComponent
-        let title = provenance.title.isEmpty ? fallbackTitle : provenance.title
+        let title = provenance.title.isEmpty ? url.deletingPathExtension().lastPathComponent : provenance.title
         let artist = provenance.artist
 
         // The media reference is filled in at write time, when the bytes are actually hashed into the
         // library; until then the draft carries a placeholder-free reference by hashing nothing.
         let record = Record(title: title, artist: artist, media: MediaRef.placeholder(for: url))
-        let citation = provenance.citation
-        let seedNote = citation.isEmpty
-            ? "imported from \(url.path)"
-            : "imported from \(url.path) — \(citation) [clearance: \(provenance.clearance.rawValue)]"
-        let seed = Seed(kind: .importedRecord(record.id), note: seedNote)
+        // The seed note carries the whole form, which is how it is read back when the song is reopened.
+        let seed = Seed(kind: .importedRecord(record.id), note: provenance.seedNote(sourcePath: url.path))
 
         var song = Song(title: title,
                         artist: artist,
@@ -887,6 +1064,8 @@ public final class ImportModel {
     private func resaveDraft() async {
         guard let draft else { return }
         let library = host.library
+        pendingWrites += 1
+        defer { pendingWrites -= 1 }
         do {
             var libraryValue = try await offMainActor { () -> Library in
                 library.exists ? try library.load() : Library()

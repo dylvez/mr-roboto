@@ -20,6 +20,12 @@ public protocol TakesHosting: AnyObject {
     /// the rail, when it cannot be.
     func keepComp(_ rendered: Comp.Rendered, plan: CompPlan, takes: [PartVersion]) -> PartVersion?
     func note(_ text: String, detail: String?)
+    /// Opens the Booth, where takes come from. A host with no frame does nothing.
+    func openBooth()
+}
+
+public extension TakesHosting {
+    func openBooth() {}
 }
 
 /// The Takes surface: lanes of takes against the bars, a comp chosen bar by bar, and the band's
@@ -45,6 +51,8 @@ public final class TakesModel {
 
     private let host: any TakesHosting
     private let board: CriticBoard
+    /// Clears `playing` when the auditioned take runs out. See `audition(_:)` for why this exists.
+    private var playingUntilEnd: Task<Void, Never>?
 
     public init(host: any TakesHosting, takes: [PartVersion], song: Song?, surfaceID: SurfaceID = SurfaceID(),
                 board: CriticBoard = .standard) {
@@ -116,6 +124,9 @@ public final class TakesModel {
 
     /// Renders the plan and keeps it as a version. False, with the reason, when it cannot be.
     @discardableResult
+    /// The Booth, from the empty state: where a first take comes from.
+    public func openBooth() { host.openBooth() }
+
     public func keepComp() -> Bool {
         lastError = nil
         let plan = self.plan
@@ -142,13 +153,37 @@ public final class TakesModel {
         }
     }
 
+    /// Plays a take and shows it as playing for as long as it lasts.
+    ///
+    /// The host's audition is fire-and-forget: it returns once the take is handed to the player,
+    /// not when the take ends, and nothing reports the end. So the surface counts the take's own
+    /// length and puts the play control back itself — otherwise a take that has finished still
+    /// reads as playing until you press Stop on silence.
     public func audition(_ version: PartVersion) async {
+        playingUntilEnd?.cancel()
         playing = version.id
         await host.audition(version)
+        guard playing == version.id else { return }
+        let seconds = Self.duration(of: version, in: host)
+        playingUntilEnd = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(seconds))
+            guard !Task.isCancelled, let self, self.playing == version.id else { return }
+            self.playing = nil
+        }
     }
 
     public func stopAudition() {
+        playingUntilEnd?.cancel()
+        playingUntilEnd = nil
         playing = nil
         host.stopAudition()
+    }
+
+    /// How long a take plays for: the version's own record of its length, else the audio's, else
+    /// nothing — a take with no audio plays nothing and stops at once.
+    private static func duration(of version: PartVersion, in host: any TakesHosting) -> Double {
+        if let duration = Guidance.audio(of: version)?.duration, duration > 0 { return duration }
+        guard let audio = host.audio(of: version), audio.sampleRate > 0 else { return 0 }
+        return Double(audio.planar.first?.count ?? 0) / audio.sampleRate
     }
 }

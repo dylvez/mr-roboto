@@ -26,9 +26,12 @@ struct MergeSurfaceView: View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             Text(model.title).font(Design.Typography.prose(16, weight: .medium))
             if !model.isReady {
-                Text("A merge needs two parts: a chop, a bass line, a progression or a groove each.")
+                // Says how to get here, not only what is missing: the surface opens from the
+                // ledger's context menu and nowhere else.
+                Text("A merge needs two parts. Right-click a chop, bass line, chords or groove in Parts and choose Merge with….")
                     .font(Design.Typography.ui(11.5, weight: .regular))
                     .foregroundStyle(Design.Palette.warn)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             Spacer()
             Button("Both") { model.playBoth() }
@@ -36,10 +39,12 @@ struct MergeSurfaceView: View {
                 .font(Design.Typography.ui(12, weight: .medium))
                 .foregroundStyle(Design.Palette.accent)
                 .disabled(!model.isReady)
+                .help("Both fragments together, each moved as the plan says")
             Button("Stop") { model.stop() }
                 .buttonStyle(.plain)
                 .font(Design.Typography.ui(12))
                 .foregroundStyle(Design.Palette.inkSecondary)
+                .help("Stop what is playing")
         }
     }
 
@@ -84,13 +89,21 @@ struct MergeSurfaceView: View {
                 Spacer()
                 if model.fragment(lane)?.kind != .groove, model.move(lane) != nil {
                     MergeChip("−1") { model.nudge(lane, by: -1) }
+                        .help("A semitone down, by ear, from where the key arithmetic put it")
+                        .accessibilityLabel("Down a semitone")
                     Text(String(format: "%+d st", model.move(lane)?.semitones ?? 0))
                         .font(Design.Typography.numeric(11.5))
                         .foregroundStyle(model.override(lane) == nil ? Design.Palette.inkSecondary : Design.Palette.accent)
                         .frame(width: 44)
+                        .help(model.override(lane) == nil ? "Semitones moved, by the key" : "Semitones moved, by ear")
                     MergeChip("+1") { model.nudge(lane, by: 1) }
+                        .help("A semitone up, by ear, from where the key arithmetic put it")
+                        .accessibilityLabel("Up a semitone")
+                    // "By the key", as Mashup says it: the same undo of the same hand on the same
+                    // arithmetic, so it reads the same on both surfaces.
                     if model.override(lane) != nil {
-                        MergeChip("Rules") { model.resetOverride(lane) }
+                        MergeChip("By the key") { model.resetOverride(lane) }
+                            .help("Back to what the key arithmetic chose, forgetting the nudge")
                     }
                 }
                 Button("Play") { model.play(lane) }
@@ -98,6 +111,7 @@ struct MergeSurfaceView: View {
                     .font(Design.Typography.ui(12, weight: .medium))
                     .foregroundStyle(Design.Palette.accent)
                     .disabled(model.version(lane) == nil)
+                    .help("This fragment alone, moved as the plan says")
             }
             if let move = model.move(lane) {
                 Text(move.sentence)
@@ -132,7 +146,10 @@ struct MergeSurfaceView: View {
                 Text("Stitched as \(section.name), \(section.lengthInBars) bars. The transport plays it; Structure shows it.")
                     .font(Design.Typography.ui(11.5, weight: .regular)).foregroundStyle(Design.Palette.inkSecondary)
             } else if model.isWorking {
-                Text("Rendering…").font(Design.Typography.ui(11.5, weight: .regular)).foregroundStyle(Design.Palette.inkSecondary)
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small).tint(Design.Palette.accent)
+                    Text("Rendering…").font(Design.Typography.ui(11.5, weight: .regular)).foregroundStyle(Design.Palette.inkSecondary)
+                }
             }
             Spacer()
             MergeLabel("Section")
@@ -150,6 +167,7 @@ struct MergeSurfaceView: View {
                 .font(Design.Typography.ui(12, weight: .semibold))
                 .foregroundStyle(Design.Palette.accent)
                 .disabled(!model.isReady || model.isWorking)
+                .help("Render both moves for keeps, as new versions derived from the originals, and add a section to the end of the form that plays them together")
         }
     }
 }

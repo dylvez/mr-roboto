@@ -46,6 +46,7 @@ struct MashupSurfaceView: View {
                 BoothLabel(side == .a ? "Song A" : "Song B")
                 if model.backbone == side {
                     Text("THE GRID").font(Design.Typography.label).tracking(1.1).foregroundStyle(Design.Palette.accent)
+                        .help("Both songs meet on this one's tempo and bars")
                 }
             }
             Picker("Song", selection: Binding(get: { (side == .a ? model.a : model.b)?.description ?? "" },
@@ -58,6 +59,9 @@ struct MashupSurfaceView: View {
             }
             .labelsHidden()
             .frame(maxWidth: 320, alignment: .leading)
+            // Choosing a song picks its stems afresh and drops the nudges. That is `chooseDefaults`,
+            // and it is right — the picks were for another song — but it happens without a word.
+            .help("Which song this side is. Choosing another picks its stems afresh and forgets any nudge by ear.")
 
             if let song, let source {
                 Text("\(source.key?.name ?? "no key") · \(Int((source.tempo ?? song.tempo).rounded())) bpm · \(StructureModel.clock(source.duration)) · first downbeat at \(String(format: "%.2f", source.firstDownbeat)) s")
@@ -66,25 +70,42 @@ struct MashupSurfaceView: View {
                 FlowRow(spacing: 6) {
                     ForEach(model.available(side), id: \.self) { stem in
                         BoothChip(stem == Mashups.full ? "Full record" : stem.capitalized, isOn: model.stems(side).contains(stem)) { model.toggle(stem, on: side) }
+                            .help(stem == Mashups.full ? "The whole record, in place of its stems" : "The \(stem) stem on its own")
                     }
                 }
                 if model.available(side) == [Mashups.full] {
-                    Text("No stems yet. Separate them on this song's Record surface to take the voice or the drums alone.")
+                    Text("No stems yet, so this side can only give the whole record. Separate the stems on this song's Record surface to take the voice or the drums alone.")
                         .font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.inkTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 HStack(spacing: 6) {
                     Button("−") { model.nudge(side, by: -1) }
+                        .help("A semitone down, by ear, from where the key arithmetic put it")
+                        .accessibilityLabel("Down a semitone")
                     Text(semitoneLine(side)).font(Design.Typography.numeric(11.5)).lineLimit(1).fixedSize().frame(minWidth: 170, alignment: .leading)
                     Button("+") { model.nudge(side, by: 1) }
-                    if model.semitones(side) != nil { Button("By the key") { model.resetSemitones(side) } }
+                        .help("A semitone up, by ear, from where the key arithmetic put it")
+                        .accessibilityLabel("Up a semitone")
+                    if model.semitones(side) != nil {
+                        Button("By the key") { model.resetSemitones(side) }
+                            .help("Back to what the key arithmetic chose, forgetting the nudge")
+                    }
                     Spacer()
-                    if model.backbone != side { Button("Make this the grid") { model.setBackbone(side) } }
+                    if model.backbone != side {
+                        Button("Make this the grid") { model.setBackbone(side) }
+                            .help("Put both songs on \(song.title)'s tempo and bars. The stem picks, the nudges and the bar shift start over for the new grid.")
+                    }
                 }
                 .font(Design.Typography.ui(12))
                 .controlSize(.small)
             } else if model.candidates.isEmpty {
                 Text("No song in the library has been analysed yet. Import two records first; each becomes a song that knows its bars and key.")
                     .font(Design.Typography.ui(12)).foregroundStyle(Design.Palette.inkSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button("Import a Record…") { model.importRecord() }
+                    .font(Design.Typography.ui(12))
+                    .controlSize(.small)
+                    .help("File ▸ Import Record… (⌘I): choose an audio file, and the Record surface reads its bars and key.")
             }
         }
         .padding(12)
@@ -102,13 +123,28 @@ struct MashupSurfaceView: View {
 
     // MARK: Where they meet
 
+    /// The shift, clamped on the way in: the stepper cannot leave the range, but a typed number can.
+    private var barShift: Binding<Int> {
+        Binding(get: { model.barShift }, set: { model.barShift = MashupModel.clampedBarShift($0) })
+    }
+
     private var meeting: some View {
         HStack(spacing: 12) {
             BoothLabel("They meet")
-            Stepper(value: $model.barShift, in: -64...256) {
+            Stepper(value: barShift, in: MashupModel.barShiftRange) {
                 Text(meetLine).font(Design.Typography.ui(12.5))
             }
             .fixedSize()
+            .help("Slide the other song along the grid a bar at a time. Below zero it starts before the grid does.")
+            // Typed as well as stepped: sixty-four clicks is no way to reach bar 65.
+            TextField("bars", value: barShift, format: .number)
+                .textFieldStyle(.roundedBorder)
+                .font(Design.Typography.numeric(11.5))
+                .multilineTextAlignment(.trailing)
+                .frame(width: 56)
+                .help("The shift in bars, typed: \(MashupModel.barShiftRange.lowerBound) to \(MashupModel.barShiftRange.upperBound). Return keeps it.")
+                .accessibilityLabel("Bar shift")
+            Text("bars").font(Design.Typography.ui(11, weight: .regular)).foregroundStyle(Design.Palette.inkTertiary)
             Spacer()
         }
     }
@@ -147,22 +183,31 @@ struct MashupSurfaceView: View {
                     .textFieldStyle(.roundedBorder)
                     .font(Design.Typography.ui(12.5))
                     .frame(width: 260)
+                    .help("The new song's title. Empty, it is A × B.")
                 Stepper(value: $model.previewBar, in: 1...max(1, model.plan?.lengthInBars ?? 1)) {
                     Text("from bar \(model.previewBar)").font(Design.Typography.numeric(11.5))
                 }
                 .fixedSize()
+                .help("Where the preview starts")
                 Button(model.isPreviewing ? "Rendering…" : "Preview 8 Bars") { Task { await model.preview() } }
                     .disabled(model.blocker != nil || model.isPreviewing || model.isMaking)
+                    .help("Eight bars from there, through the plan, played now")
                 Button("Stop") { model.stopPreview() }
+                    .help("Stop the preview")
                 Spacer()
-                Button(model.isMaking ? "Making…" : "Make the Song") { Task { await model.make() } }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(model.blocker != nil || model.isMaking)
+                // Says what it does: the whole mashup rendered as a new song, which is then the
+                // open song. There is no stopping it once it has started, so the name should
+                // not read as a smaller thing than it is.
+                FrameButton(title: model.isMaking ? "Making…" : "Make the song and open it", emphasis: .accent,
+                            isEnabled: model.blocker == nil && !model.isMaking) {
+                    Task { await model.make() }
+                }
+                .help("Render the whole mashup as a new song in the library and open it in place of the one you have open. It cannot be stopped once started.")
             }
             .font(Design.Typography.ui(12.5))
             if let progress = model.progress {
                 HStack(spacing: 8) {
-                    ProgressView(value: progress.fraction).frame(width: 220)
+                    ProgressView(value: progress.fraction).frame(width: 220).tint(Design.Palette.accent)
                     Text(progress.what).font(Design.Typography.ui(11.5)).foregroundStyle(Design.Palette.inkSecondary)
                 }
             }

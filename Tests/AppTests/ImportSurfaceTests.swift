@@ -92,6 +92,10 @@ struct StubImportHost: ImportHosting {
     /// everywhere else.
     var analysisHold: Duration? = nil
     var stems: [StemName: URL] = [:]
+    /// How long separation pretends to take, so a cancel can land in the middle of it.
+    var separationHold: Duration? = nil
+    /// What separation fails with, when it is meant to fail.
+    var separationFailure: String? = nil
     let log = ImportHostLog()
 
     func analyze(_ url: URL, progress: @escaping @Sendable (ImportStep) -> Void) async throws -> AnalysisReport {
@@ -105,6 +109,8 @@ struct StubImportHost: ImportHosting {
     func separate(_ url: URL, into directory: URL,
                   progress: @escaping @Sendable (ImportStep) -> Void,
                   stemDidLand: @escaping @Sendable (StemName, URL) -> Void) async throws -> [StemName: URL] {
+        if let separationHold { try await Task.sleep(for: separationHold) }
+        if let separationFailure { throw StubImportHostError.separation(separationFailure) }
         for (name, fileURL) in stems.sorted(by: { $0.key.rawValue < $1.key.rawValue }) {
             try Task.checkCancellation()
             stemDidLand(name, fileURL)
@@ -119,6 +125,16 @@ struct StubImportHost: ImportHosting {
 
     func didCommit(_ version: PartVersion, in song: Song) async {
         log.commit(version)
+    }
+}
+
+enum StubImportHostError: Error, CustomStringConvertible {
+    case separation(String)
+
+    var description: String {
+        switch self {
+        case .separation(let reason): return reason
+        }
     }
 }
 

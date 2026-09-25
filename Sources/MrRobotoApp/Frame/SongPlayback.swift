@@ -48,17 +48,22 @@ public struct SongPlayback: Equatable, Sendable {
         public var duration: Double
         /// The part the version belongs to: which strip it plays through (M6).
         public var part: PartID?
+        /// Seconds of the file's head that are not played: what falls before the bar the
+        /// transport was started from (`starting(atBar:)`). The file's frame at `skip` is what
+        /// sounds at `startsAt`.
+        public var skip: Double
 
         public var id: VersionID { version }
 
         public init(version: VersionID, name: String, url: URL,
-                    startsAt: Double = 0, duration: Double = 0, part: PartID? = nil) {
+                    startsAt: Double = 0, duration: Double = 0, part: PartID? = nil, skip: Double = 0) {
             self.version = version
             self.name = name
             self.url = url
             self.startsAt = max(0, startsAt)
             self.duration = duration
             self.part = part
+            self.skip = max(0, skip)
         }
     }
 
@@ -333,6 +338,60 @@ public struct SongPlayback: Equatable, Sendable {
         return copy
     }
 
+    /// The song bar this plan's transport zero is: 0 for the top, or the bar `starting(atBar:)`
+    /// moved it to. The frame adds it back to every reading, so the readout says the song's bar.
+    public var startsAtBar: Int = 0
+
+    /// The same plan from bar `bar` of the song: everything before it dropped, everything after it
+    /// moved up so that the bar is transport zero. Playback always began at bar 1, so to hear the
+    /// hook you sat through the intro and the verse, and the Booth recorded from bar 1 whatever
+    /// section you picked.
+    ///
+    /// Sections: those over by `bar` go; one straddling it keeps its remaining bars and starts its
+    /// parts again from their own first beat (a section boundary, which is what a person picks, is
+    /// exact). Takes and the record: moved by the same seconds, and one already sounding at `bar`
+    /// is played from that point of the file (`Track.skip`). An unarranged song's voices loop from
+    /// their own start whatever the bar, which is what looping means.
+    public func starting(atBar bar: Int) -> SongPlayback {
+        guard bar > 0 else { return self }
+        var copy = self
+        copy.startsAtBar = bar
+        let clock = TransportClock(tempo: max(1, tempo), timeSignature: timeSignature)
+        let offset = clock.seconds(forBar: bar)
+        copy.segments = segments.compactMap { segment in
+            guard segment.endBar > bar else { return nil }
+            var moved = segment
+            moved.startBar = max(0, segment.startBar - bar)
+            moved.lengthInBars = segment.endBar - max(segment.startBar, bar)
+            return moved
+        }
+        copy.lengthInBars = lengthInBars.map { max(1, $0 - bar) }
+        copy.tracks = tracks.compactMap { track in
+            var moved = track
+            let startsAt = track.startsAt - offset
+            if startsAt < 0 {
+                let skip = track.skip - startsAt
+                guard skip < track.duration else { return nil }
+                moved.skip = skip
+                moved.startsAt = 0
+            } else {
+                moved.startsAt = startsAt
+            }
+            return moved
+        }
+        if isArranged, !copy.isPlayable {
+            copy.silence = Silence(headline: "Nothing plays from bar \(bar + 1)",
+                                   detail: "Every section is over by then. Pick an earlier one, or press play for the top.")
+        }
+        return copy
+    }
+
+    /// Seconds from the song's top to this plan's transport zero.
+    public var startOffsetSeconds: Double {
+        guard startsAtBar > 0, tempo > 0 else { return 0 }
+        return TransportClock(tempo: tempo, timeSignature: timeSignature).seconds(forBar: startsAtBar)
+    }
+
     // MARK: One of a kind, for the readers that only ask whether there is one
     //
     // As on `Segment`: these were stored, and the plan could hold exactly what they could name.
@@ -475,6 +534,11 @@ public struct SongPlayback: Equatable, Sendable {
         var missingMedia = false
         if song.sections.contains(where: { !$0.stitch.isEmpty }) {
             plan.segments = segments(of: song, mediaURL: mediaURL, missingMedia: &missingMedia)
+            // What was sung, where it was sung. The record does not run to the form, but a take
+            // was recorded *against* the form, on a bar of it, and it plays there. The arranged
+            // player lays its dusty sections on at most two nodes; the rest are for these.
+            plan.tracks = Array(takeTracks(in: song, mediaURL: mediaURL, missingMedia: &missingMedia)
+                                    .prefix(max(0, maximumTracks - 2)))
             if !plan.isPlayable {
                 plan.silence = missingMedia
                     ? silence(for: song, audioVersions: [], missingMedia: true)
@@ -524,11 +588,39 @@ public struct SongPlayback: Equatable, Sendable {
                                      duration: audio.duration,
                                      part: version.partID))
         }
+        // Then what was sung, on the nodes the record left.
+        let room = max(0, maximumTracks - plan.dustyPlayers - plan.tracks.count)
+        plan.tracks += takeTracks(in: song, mediaURL: mediaURL, missingMedia: &missingMedia).prefix(room)
 
         if !plan.isPlayable {
             plan.silence = silence(for: song, audioVersions: audioVersions, missingMedia: missingMedia)
         }
         return plan
+    }
+
+    /// The sung parts, placed where they were sung: for every part whose newest version is a take
+    /// or a comp, that version. A comp is a version of its takes' part, so a comped part plays the
+    /// comp and one still being sung plays its last pass — never every pass at once.
+    ///
+    /// These were the one kind of audio the transport never played. The Booth recorded them on a
+    /// bar, the Takes surface flagged and comped them, and neither the song nor an export ever
+    /// sounded them: you could sing a hook and not hear it in the hook.
+    static func takeTracks(in song: Song, mediaURL: (MediaRef) -> URL?, missingMedia: inout Bool) -> [Track] {
+        let clock = TransportClock(tempo: max(1, song.tempo), timeSignature: song.timeSignature)
+        var out: [Track] = []
+        for partID in song.partIDs {
+            // Graph order, not `latestVersion`: two versions made in the same millisecond — a
+            // comp kept straight after its takes — are ordered by id there, and the ledger already
+            // counts the graph for the same reason.
+            guard let version = song.versions.last(where: { $0.partID == partID }), let audio = Guidance.audio(of: version),
+                  audio.take != nil || audio.comp != nil else { continue }
+            guard let url = mediaURL(audio.media) else { missingMedia = true; continue }
+            let startsAt = audio.alignmentOffset
+                ?? audio.take.map { clock.seconds(forBar: $0.startBar, beat: $0.startBeat) } ?? 0
+            out.append(Track(version: version.id, name: PartLabel.title(of: version), url: url,
+                             startsAt: startsAt, duration: audio.duration, part: partID))
+        }
+        return out
     }
 
     /// A dirtied chop on the transport, or nil when its media is not in the package.

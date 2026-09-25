@@ -23,7 +23,19 @@ public final class LyricsModel {
     public private(set) var base: PartVersion?
     public private(set) var versions: [PartVersion] = []
     public private(set) var lastError: String?
+    /// The version the last keep made, for the footer to say so. Nil until one is kept, and set
+    /// aside again — by `hasUnkeptChanges` turning true — once the words move on from it.
+    public private(set) var lastKept: PartVersion?
     public let corpus: LyricCorpus
+
+    /// Whether the words on the page differ from the last version kept, or from the one the
+    /// surface was opened on. The keep control follows this, so pressing it twice cannot file the
+    /// same words twice; an empty page has nothing to keep.
+    public var hasUnkeptChanges: Bool {
+        guard !isEmpty else { return false }
+        guard let kept = versions.last ?? base, case .lyric(let keptLyric) = kept.kind else { return true }
+        return keptLyric.lines != lyric.lines
+    }
     public let songTitle: String?
 
     private let host: any LyricsHosting
@@ -95,6 +107,7 @@ public final class LyricsModel {
         }
         guard await host.commit(version) else { lastError = "The song would not take that version."; return nil }
         versions.append(version)
+        lastKept = version
         return version
     }
 }

@@ -122,7 +122,7 @@ final class LiveSongPlayer: SongPlaybackHost {
             guard index < engine.players.count else { break }
             let buffer: AVAudioPCMBuffer
             do {
-                buffer = try Self.read(track.url, in: engine.format)
+                buffer = Self.skipping(try Self.read(track.url, in: engine.format), seconds: track.skip)
             } catch {
                 throw Failure.unreadable(track.name, "\(error)")
             }
@@ -250,6 +250,25 @@ final class LiveSongPlayer: SongPlaybackHost {
             let node = try engine.player(next)
             try Self.route(node, part: part, on: graph)
             let source = SequenceTrackSource(player: node, events: events, cycle: cycleSeconds)
+            engine.add(source)
+            sequences.append(source)
+            next += 1
+        }
+
+        // The takes, each on its own node at the bar it was sung on, and coming round with the
+        // form when the loop is on — which is why they are sequences of one rather than
+        // `AudioTrackSource`s: that one loops at its own length, not the form's.
+        for track in plan.tracks {
+            guard next < engine.players.count else { throw Failure.unreadable(track.name, "no player node is free") }
+            let buffer: AVAudioPCMBuffer
+            do {
+                buffer = Self.skipping(try Self.read(track.url, in: engine.format), seconds: track.skip)
+            } catch {
+                throw Failure.unreadable(track.name, "\(error)")
+            }
+            let node = try engine.player(next)
+            try Self.route(node, part: track.part, on: graph)
+            let source = SequenceTrackSource(player: node, events: [(buffer, track.startsAt)], cycle: cycleSeconds)
             engine.add(source)
             sequences.append(source)
             next += 1
@@ -415,6 +434,22 @@ final class LiveSongPlayer: SongPlaybackHost {
     private static func route(_ node: AVAudioNode?, part: PartID?, on graph: MixGraph) throws {
         guard let node else { return }
         if let part { try graph.route(node, to: part) } else { try graph.unroute(node) }
+    }
+
+    /// The buffer from `seconds` in: what a take that was already sounding at the bar the
+    /// transport started from plays. The whole buffer when there is nothing to skip; an empty
+    /// one when the skip is past its end, which the plan already declines to schedule.
+    static func skipping(_ buffer: AVAudioPCMBuffer, seconds: Double) -> AVAudioPCMBuffer {
+        guard seconds > 0, buffer.format.sampleRate > 0 else { return buffer }
+        let skip = AVAudioFrameCount(min(Double(buffer.frameLength), (seconds * buffer.format.sampleRate).rounded()))
+        let remaining = buffer.frameLength - skip
+        guard let trimmed = AVAudioPCMBuffer(pcmFormat: buffer.format, frameCapacity: max(1, remaining)) else { return buffer }
+        trimmed.frameLength = remaining
+        guard remaining > 0, let from = buffer.floatChannelData, let into = trimmed.floatChannelData else { return trimmed }
+        for channel in 0..<Int(buffer.format.channelCount) {
+            into[channel].update(from: from[channel] + Int(skip), count: Int(remaining))
+        }
+        return trimmed
     }
 
     func reading() async -> PlaybackReading {

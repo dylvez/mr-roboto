@@ -103,7 +103,15 @@ extension SurfaceWiring {
         case .sound:
             return version(bound.first { PartPlayer.canPlay($0) }, "this sound") ?? song()
         case .structure:
-            return song("the form")
+            // The form you are looking at, which means the working copy: an arrangement with
+            // unkept edits is kept first, as `StructureModel.play()` was written to do, so what
+            // plays is what is on screen and not what was last kept. The footer says so.
+            guard app.song != nil else { return nil }
+            let model = structureModel(for: item, app: app)
+            return SurfaceAudition(id: id, label: "the form") { player in
+                if model.isDirty { _ = await model.keep() }
+                await player.playSong(id: id, label: app.song?.title ?? "The song")
+            }
         case .booth, .mixer, .master, .lyrics:
             return song()
         case .album, .cast, .compare, .check:

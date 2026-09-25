@@ -25,13 +25,22 @@ final class BoothAdapter: BoothHosting, TakesHosting {
     var playhead: Double { app.playhead }
 
     func play() async { await app.startTransport() }
+    func play(from section: SectionID?) async { await app.startTransport(fromSection: section) }
     func stop() async { await app.stopTransport() }
+
+    /// The Takes surface's way into the Booth, on the song's active section.
+    func openBooth() { app.perform(Guidance.dockAction(for: .booth, in: app.song)) }
 
     func recorder() async throws -> Recorder {
         let engine = try await app.engine()
         let choice = input
         let device = choice.device(in: inputs)
-        return try await Self.recorder(on: engine, uid: device?.uid, channel: choice.channel(on: device), deviceName: device?.name ?? "Input")
+        // The transport counts from where it started; a take is placed in the song. When the song
+        // was started from a section, the recorder is handed a transport whose zero is the song's
+        // top, so the take's alignment is a song time and lands on the bar it was sung on.
+        let offset = app.playbackStartBar > 0 ? app.clock.seconds(forBar: app.playbackStartBar) : 0
+        return try await Self.recorder(on: engine, uid: device?.uid, channel: choice.channel(on: device),
+                                       deviceName: device?.name ?? "Input", songOffset: offset)
     }
 
     var inputs: [AudioInputDevice] { AudioDevices.inputs() }
@@ -42,12 +51,27 @@ final class BoothAdapter: BoothHosting, TakesHosting {
     }
 
     @AudioActor
-    private static func recorder(on engine: Engine, uid: String?, channel: Int?, deviceName: String) throws -> Recorder {
+    private static func recorder(on engine: Engine, uid: String?, channel: Int?, deviceName: String,
+                                 songOffset: Double = 0) throws -> Recorder {
         guard let transport = engine.transport else { throw RecorderError.notRecording }
         // The chosen device on the input node; a device that cannot be set leaves the default, and the take says which.
         var name = deviceName
         do { try engine.setInputDevice(uid: uid) } catch { name = "Input" }
-        return Recorder(source: InputNodeSource(engine: engine.avEngine, channel: channel, deviceName: name), transport: transport)
+        return Recorder(source: InputNodeSource(engine: engine.avEngine, channel: channel, deviceName: name),
+                        transport: Self.shifted(transport, by: songOffset))
+    }
+
+    /// The same transport with its zero `seconds` earlier, so a time read against it is a song
+    /// time when the engine started partway through the song. The engine keeps its own.
+    nonisolated static func shifted(_ transport: Transport, by seconds: Double) -> Transport {
+        guard seconds > 0 else { return transport }
+        var clock = transport.clock
+        if let start = clock.startHostTime {
+            let back = TransportClock.hostTicks(forSeconds: seconds)
+            clock.startHostTime = back > start ? 0 : start - back
+        }
+        return Transport(clock: clock, mode: transport.mode,
+                         originSampleTime: transport.originSampleTime - clock.frame(forSeconds: seconds))
     }
 
     func scratchURL() -> URL {

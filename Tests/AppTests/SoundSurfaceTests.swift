@@ -366,6 +366,49 @@ struct SoundSurfaceTests {
         #expect(host.recorded.isEmpty)
     }
 
+    @Test("a knob let go of says what it became: the version kept, counted, and a refusal owned up to")
+    func theFooterKnowsWhatWasKept() throws {
+        let (surface, host) = SoundFixture.surface()
+        #expect(surface.lastKept == nil && surface.keptCount == 0 && !surface.lastCommitWasRefused)
+
+        surface.setValue(0.7, for: .machine(.decay))
+        let first = try #require(surface.commit())
+        #expect(surface.lastKept?.id == first.id && surface.keptCount == 1)
+
+        // A refusal leaves the draft on the knobs and says so; it is not counted as kept.
+        host.accepts = false
+        surface.setValue(0.2, for: .machine(.tone))
+        #expect(surface.commit() == nil)
+        #expect(surface.lastCommitWasRefused && surface.isDirty)
+        #expect(surface.lastKept?.id == first.id && surface.keptCount == 1)
+
+        // Trying again with the host back lands the same draft, and the refusal is over.
+        host.accepts = true
+        let second = try #require(surface.commit())
+        #expect(!surface.lastCommitWasRefused && surface.lastKept?.id == second.id && surface.keptCount == 2)
+    }
+
+    @Test("a control knows whether it sits on the preset, so the way back is offered only when there is one")
+    func atPreset() throws {
+        let (surface, _) = SoundFixture.surface("tr808", .kick)
+        let decay = try #require(surface.controls(for: .voice).first { $0.parameter == .machine(.decay) })
+        #expect(surface.isAtPreset(.machine(.decay)))
+        surface.setValue(decay.value == decay.range.upperBound ? decay.range.lowerBound : decay.range.upperBound, for: .machine(.decay))
+        #expect(!surface.isAtPreset(.machine(.decay)))
+        surface.reset(.machine(.decay))
+        #expect(surface.isAtPreset(.machine(.decay)))
+
+        // A chain control's preset is the chain's base preset, whichever was applied last.
+        surface.apply(.vinyl)
+        #expect(surface.isAtPreset(.chain(.mix)))
+        surface.setValue(0.5, for: .chain(.mix))
+        #expect(!surface.isAtPreset(.chain(.mix)))
+        surface.reset(.chain(.mix))
+        #expect(surface.isAtPreset(.chain(.mix)))
+        #expect(surface.draft.degrade.matchingPreset == .vinyl, "back to the preset means back to vinyl, not to clean")
+    }
+
+
     @Test("with nothing selected the surface starts a part instead of editing one")
     func withNothingSelectedItStartsAPart() throws {
         let host = SoundHostStub(selectedPart: nil)

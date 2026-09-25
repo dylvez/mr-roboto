@@ -179,6 +179,13 @@ struct MashupBuildTests {
         #expect(made.title == "Arrival Interview" && app.song?.id == made.id && model.lastError == nil)
     }
 
+    @Test("the bar shift keeps to its range, typed or stepped")
+    func barShiftRange() {
+        #expect(MashupModel.clampedBarShift(3) == 3)
+        #expect(MashupModel.clampedBarShift(-100) == MashupModel.barShiftRange.lowerBound)
+        #expect(MashupModel.clampedBarShift(999) == MashupModel.barShiftRange.upperBound)
+    }
+
     @Test("the Director: plan_mashup says the plan, mashup makes the song")
     func tools() async throws {
         let directory = WiringFixture.temporaryDirectory("mashup-tools")

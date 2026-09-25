@@ -191,6 +191,113 @@ struct PianoRollTests {
         try await Task.sleep(for: .milliseconds(20))
         #expect(stub.played.first == model.bassline)
     }
+
+    @Test("a hand-edited line holds the levers: they move, the notes stay, until the explicit rewrite")
+    func leversHeldOverHandEdits() {
+        let stub = RollStub()
+        let model = PianoRollModel(host: stub, groove: Self.kicking(), key: Self.key, tempo: 92)
+        #expect(!model.leversAreHeld, "a written line is the writer's to rewrite")
+        model.addNote(pitch: 38, at: 2.5)
+        let edited = model.notes
+        #expect(model.leversAreHeld)
+
+        model.setLag(60)
+        #expect(model.lagMS == 60, "the lever moves")
+        #expect(model.notes == edited, "the notes do not")
+        model.setDensity(0.9)
+        model.setEarlyAlternation(true)
+        model.rewrite()
+        model.setLineage(.programmed)
+        #expect(model.notes == edited, "no lever, and not Rewrite, writes over a hand edit")
+        #expect(model.isHandEdited)
+        #expect(model.sound == "sub", "the lineage's sound still follows: a sound change keeps the notes")
+
+        model.writeOverHandEdits()
+        #expect(!model.isHandEdited)
+        #expect(!model.leversAreHeld)
+        #expect(model.notes != edited, "the explicit step is the one thing that rewrites")
+        let written = model.notes
+        model.setLag(20)
+        #expect(model.notes != written, "and the levers write live again")
+
+        // Opened on a line, the levers are held from the start: that line is the user's.
+        let editor = PianoRollModel(host: stub, groove: Self.kicking(), key: Self.key, tempo: 92, bassline: model.commit())
+        #expect(editor.leversAreHeld)
+        let opened = editor.notes
+        editor.setDensity(0.1)
+        #expect(editor.notes == opened)
+
+        // Without a groove there is nothing the levers could write, so nothing is held either.
+        let bare = PianoRollModel(host: stub, groove: nil, key: Self.key, tempo: 92)
+        bare.addNote(pitch: 40, at: 0)
+        #expect(!bare.leversAreHeld)
+    }
+
+    @Test("click selects, Delete removes the selection, Escape clears it")
+    func selection() {
+        let model = PianoRollModel(host: RollStub(), groove: Self.kicking(), key: Self.key, tempo: 92)
+        let count = model.notes.count
+        #expect(model.selectedNote == nil)
+        model.select(0)
+        #expect(model.selectedNote == 0)
+        model.select(999)
+        #expect(model.selectedNote == nil, "an index the list does not have selects nothing")
+        model.select(1)
+        model.clearSelection()
+        #expect(model.selectedNote == nil)
+        model.deleteSelectedNote()
+        #expect(model.notes.count == count, "nothing selected, nothing removed")
+
+        model.addNote(pitch: 45, at: 3)
+        #expect(model.selectedNote.map { model.notes[$0].pitch.midi } == 45, "a new note is the selection, one Delete from undone")
+        model.deleteSelectedNote()
+        #expect(model.notes.count == count)
+        #expect(model.selectedNote == nil)
+
+        model.select(0)
+        model.writeOverHandEdits()
+        #expect(model.selectedNote == nil, "a rewrite replaces the list, so an index into it means nothing")
+    }
+
+    @Test("the keep control follows the notes: nothing to keep after a keep, something again after an edit")
+    func unkeptChanges() async throws {
+        let stub = RollStub()
+        let model = PianoRollModel(host: stub, groove: Self.kicking(), key: Self.key, tempo: 92)
+        #expect(model.hasUnkeptChanges, "a written line nobody has kept")
+        let first = model.commit()
+        #expect(!model.hasUnkeptChanges)
+        #expect(model.lastKept?.id == first.id)
+
+        model.setSound("sub")
+        #expect(model.hasUnkeptChanges, "the sound is on the part, so it counts")
+        model.setSound("finger")
+        #expect(!model.hasUnkeptChanges)
+
+        model.addNote(pitch: 40, at: 1)
+        #expect(model.hasUnkeptChanges)
+        let second = model.commit()
+        #expect(!model.hasUnkeptChanges)
+        #expect(model.lastKept?.id == second.id)
+
+        // Opened on a line: nothing to keep until it is touched, and a mode switch is a touch.
+        let editor = PianoRollModel(host: stub, groove: Self.kicking(), key: Self.key, tempo: 92, bassline: first)
+        #expect(!editor.hasUnkeptChanges)
+        editor.setMode(.melody)
+        #expect(editor.hasUnkeptChanges, "a melody is a different part from the bass line it was opened on")
+        editor.setMode(.bass)
+        #expect(!editor.hasUnkeptChanges)
+
+        // A refused keep hands the control back and leaves no version behind.
+        stub.refuses = true
+        editor.addNote(pitch: 41, at: 0)
+        let refused = editor.commit()
+        #expect(editor.versions.map(\.id) == [refused.id])
+        try await Task.sleep(for: .milliseconds(20))
+        #expect(editor.lastError != nil)
+        #expect(editor.versions.isEmpty, "a refused version is not a version")
+        #expect(editor.lastKept == nil)
+        #expect(editor.hasUnkeptChanges)
+    }
 }
 
 @Suite("Chords") @MainActor
@@ -267,6 +374,72 @@ struct ChordsTests {
         let second = try #require(editor.commit())
         #expect(second.parents == [version.id])
         #expect(second.operation == Operation.edit)
+    }
+
+    @Test("the key is typed: a key it reads moves the bars; one it does not leaves the key alone and says so")
+    func keyField() {
+        let model = ChordsModel(host: ChordsStub(), key: Key(tonic: NoteName(.c)))
+        #expect(model.progression?.key == Key(tonic: NoteName(.c)))
+
+        #expect(model.setKey(parsing: "F# minor"))
+        let fSharpMinor = Key(tonic: NoteName(.f, .sharp), mode: .aeolian)
+        #expect(model.key == fSharpMinor)
+        #expect(model.keyProblem == nil)
+        #expect(model.progression?.key == fSharpMinor, "the default bars follow the key")
+        #expect(model.progression?.bars.first?.chords.first?.chord.root == .fSharp)
+
+        #expect(!model.setKey(parsing: "H major"))
+        #expect(model.keyProblem?.contains("Not a key") == true)
+        #expect(model.key == fSharpMinor, "a line that does not read leaves the key alone")
+        #expect(model.progression?.key == fSharpMinor)
+
+        #expect(!model.setKey(parsing: "   "))
+        #expect(model.keyProblem != nil)
+
+        #expect(model.setKey(parsing: "Bb"))
+        #expect(model.key == Key(tonic: NoteName(.b, .flat)), "a tonic alone is its major")
+        #expect(model.keyProblem == nil, "a good line clears the problem")
+        #expect(model.setKey(parsing: "E dorian"))
+        #expect(model.key.mode == .dorian)
+    }
+
+    @Test("a typo leaves the last bars on screen but marks them stale, and there is nothing to keep")
+    func staleBars() {
+        let model = ChordsModel(host: ChordsStub(), key: Key(tonic: NoteName(.c)))
+        model.text = "Dm7 G7 | Cmaj7"
+        #expect(!model.barsAreStale)
+        #expect(model.hasUnkeptChanges)
+
+        model.text = "Dm7 G7 | Cmaj7 | Xz"
+        #expect(model.barsAreStale)
+        #expect(model.progression?.bars.count == 2, "the last line that read is still there")
+        #expect(!model.hasUnkeptChanges, "a line with a typo has nothing to keep")
+
+        model.text = "Dm7 G7 | Cmaj7 | Am7"
+        #expect(!model.barsAreStale)
+        #expect(model.progression?.bars.count == 3)
+    }
+
+    @Test("the keep control follows the bars: nothing to keep after a keep, something again after a change")
+    func unkeptChanges() throws {
+        let stub = ChordsStub()
+        let model = ChordsModel(host: stub, key: Key(tonic: NoteName(.c)))
+        #expect(model.hasUnkeptChanges, "the fresh I–IV–V–I is a progression the song does not have")
+        let first = try #require(model.commit())
+        #expect(!model.hasUnkeptChanges)
+        #expect(model.lastKept?.id == first.id)
+
+        model.text = "Dm7 G7 | Cmaj7"
+        #expect(model.hasUnkeptChanges)
+        model.text = ""
+        #expect(!model.hasUnkeptChanges, "back to the kept bars")
+        model.setKey(Key(tonic: NoteName(.d), mode: .aeolian))
+        #expect(model.hasUnkeptChanges, "the key is part of the progression")
+
+        let editor = ChordsModel(host: stub, key: Key(tonic: NoteName(.c)), progression: first)
+        #expect(!editor.hasUnkeptChanges, "opened on a version: nothing to keep until it is touched")
+        editor.text = "Am7 | Fmaj7"
+        #expect(editor.hasUnkeptChanges)
     }
 }
 

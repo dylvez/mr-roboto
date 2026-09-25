@@ -7,6 +7,10 @@ import SwiftUI
 struct CastSurfaceView: View {
     let app: AppState
 
+    /// Why the last chip click did nothing, when it did nothing: the room cannot be emptied, and
+    /// a click that is refused in silence looks like a click that missed.
+    @State private var refusal: String?
+
     private var roster: [any Persona] { Cast.standard.personas }
     private var inRoom: Set<String> {
         let ids = app.song?.cast ?? []
@@ -33,12 +37,18 @@ struct CastSurfaceView: View {
             Text("\(inRoom.count) of \(roster.count) in the room")
                 .font(Design.Typography.numeric(12))
                 .foregroundStyle(Design.Palette.inkSecondary)
+            if let refusal {
+                Text(refusal)
+                    .font(Design.Typography.ui(11.5, weight: .regular))
+                    .foregroundStyle(Design.Palette.warn)
+            }
             Spacer()
             if app.song?.cast?.isEmpty == false {
-                Button("Everyone") { app.setCast([]) }
+                Button("Everyone") { refusal = nil; app.setCast([]) }
                     .buttonStyle(.plain)
                     .font(Design.Typography.ui(12))
                     .foregroundStyle(Design.Palette.accent)
+                    .help("Put the whole roster back in the room. A song with no cast list has everyone.")
             }
         }
     }
@@ -81,6 +91,7 @@ struct CastSurfaceView: View {
             Spacer()
             CastChip(present ? "In the room" : "Out", isOn: present) { toggle(bible.id) }
                 .disabled(app.song == nil)
+                .help(chipHelp(bible.name, present: present))
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -89,12 +100,23 @@ struct CastSurfaceView: View {
         .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
     }
 
+    private func chipHelp(_ name: String, present: Bool) -> String {
+        if app.song == nil { return "Open a song to cast it." }
+        guard present else { return "Bring \(name) into the room: the band consults them on this song again." }
+        if inRoom.count == 1 { return "\(name) is the last one in the room, and at least one member stays." }
+        return "Take \(name) out of the room: the band stops consulting them on this song."
+    }
+
     private func toggle(_ id: PersonaID) {
         var ids = inRoom
         if ids.contains(id.rawValue) { ids.remove(id.rawValue) } else { ids.insert(id.rawValue) }
-        // Keep roster order, and an empty room is not a room: the last one stays.
+        // Keep roster order, and an empty room is not a room: the last one stays, and says so.
         let ordered = roster.map(\.bible.id).filter { ids.contains($0.rawValue) }
-        guard !ordered.isEmpty else { return }
+        guard !ordered.isEmpty else {
+            refusal = "At least one member stays in the room."
+            return
+        }
+        refusal = nil
         app.setCast(ordered.count == roster.count ? [] : ordered)
     }
 
@@ -106,6 +128,13 @@ struct CastSurfaceView: View {
         }
         return VStack(alignment: .leading, spacing: 6) {
             Text("HOUSE CALLS").font(Design.Typography.label).tracking(1.1).foregroundStyle(Design.Palette.inkTertiary)
+            // What a call is, once, above the list. The chips say "Encoded" and "Alternative",
+            // and neither word explains itself; the bible's own text for each is on the chip.
+            Text("An open question is one a bible's research could have gone either way on. Encoded is the reading the bible ships with; Alternative is the other, stated fairly. A call here is what this house plays on this song, and a persona reading a part says both: what the record says, and what the house chose.")
+                .font(Design.Typography.ui(11.5, weight: .regular))
+                .foregroundStyle(Design.Palette.inkSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.bottom, 4)
             if questions.isEmpty {
                 Text("Nobody in the room has an open question.")
                     .font(Design.Typography.ui(12, weight: .regular)).foregroundStyle(Design.Palette.inkSecondary)
@@ -128,9 +157,13 @@ struct CastSurfaceView: View {
                     CastChip("Encoded", isOn: call?.choice == "encoded") {
                         app.recordHouseCall(question: question.id, choice: .encoded, how: "by ear, on the Cast surface")
                     }
+                    .disabled(app.song == nil)
+                    .help("The reading the bible ships with: \(question.encoded)")
                     CastChip("Alternative", isOn: call?.choice == "alternative") {
                         app.recordHouseCall(question: question.id, choice: .alternative, how: "by ear, on the Cast surface")
                     }
+                    .disabled(app.song == nil)
+                    .help("The other reading: \(question.alternative)")
                 }
                 .padding(.vertical, 3)
             }

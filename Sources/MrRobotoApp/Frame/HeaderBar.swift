@@ -4,8 +4,9 @@ import SwiftUI
 /// The header: which song you are in, and the two things you can do to the song as a whole.
 /// History is the song graph's own history — every version, newest first — not an invented feed.
 struct HeaderBar: View {
-    let app: AppState
+    @Bindable var app: AppState
     @State private var isShowingHistory = false
+    @State private var isShowingSettings = false
 
     var body: some View {
         HStack(spacing: 14) {
@@ -20,18 +21,68 @@ struct HeaderBar: View {
                 .fill(Design.Palette.lineStrong)
                 .frame(width: Design.Metric.hairline, height: 22)
             SmallLabel("Song")
-            Text(app.song?.title ?? "No song open")
-                .font(Design.Typography.ui(17, weight: .medium))
-                .foregroundStyle(app.song == nil ? Design.Palette.inkTertiary : Design.Palette.ink)
+            // The title is the way into the song's settings: press it to rename the song or set
+            // its tempo, key and meter. Before this the title was a label, and a song made with
+            // File ▸ New Song kept "Untitled, Sept 17" at 120 with no key for as long as it lived.
+            Button {
+                isShowingSettings.toggle()
+            } label: {
+                HStack(spacing: 6) {
+                    Text(app.song?.title ?? "No song open")
+                        .font(Design.Typography.ui(17, weight: .medium))
+                        .foregroundStyle(app.song == nil ? Design.Palette.inkTertiary : Design.Palette.ink)
+                        .lineLimit(1)
+                    if app.song != nil {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(Design.Palette.inkTertiary)
+                    }
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(app.song == nil)
+            .help("Rename the song, or set its tempo, key and meter (⌘⇧,)")
+            .accessibilityLabel(app.song.map { "Song: \($0.title). Settings" } ?? "No song open")
+            .popover(isPresented: $isShowingSettings, arrowEdge: .bottom) {
+                SongSettingsPopover(app: app)
+            }
+            .onChange(of: app.wantsSongSettings) { _, wants in
+                // File ▸ New Song and the menu item ask for the settings; the header opens them.
+                guard wants else { return }
+                app.wantsSongSettings = false
+                if app.song != nil { isShowingSettings = true }
+            }
             if app.hasUnsavedChanges {
                 Text("unsaved")
                     .font(Design.Typography.label)
                     .foregroundStyle(Design.Palette.warn)
+                    .help("Saved on its own a few seconds after the last change, and on ⌘S.")
             }
             Spacer(minLength: 16)
             // Where you are in the work. See `WorkPath`.
             PathStrip(app: app)
             Spacer(minLength: 16)
+            if let busy = app.busy {
+                HStack(spacing: 6) {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(Design.Palette.accent)
+                    Text(busy)
+                        .font(Design.Typography.ui(12, weight: .regular))
+                        .foregroundStyle(Design.Palette.inkSecondary)
+                        .lineLimit(1)
+                }
+                .help("Working. The rail says what happened when it is done.")
+            }
+            if let failure = app.lastSaveError {
+                // A save that failed in a folded rail is a save you believe happened. Said here,
+                // beside the button that failed.
+                Text("Save failed")
+                    .font(Design.Typography.label)
+                    .foregroundStyle(Design.Palette.warn)
+                    .help(failure)
+            }
             FrameButton(title: "History", emphasis: .quiet, isEnabled: app.song != nil) {
                 isShowingHistory.toggle()
             }

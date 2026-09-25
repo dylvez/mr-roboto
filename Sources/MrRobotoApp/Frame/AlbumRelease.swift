@@ -129,9 +129,11 @@ extension Export {
 
     /// Every track bounced through its own mix, trimmed to the album's target, limited at its
     /// ceiling, written as `NN — Title.wav` beside `cover.png` and `album.json`. The album
-    /// records what each track was cut as.
+    /// records what each track was cut as. `progress` is told each track as it starts, one-based,
+    /// so a surface can say "track 2 of 5" while the bounce runs.
     @MainActor
-    public static func release(_ app: AppState, album albumID: AlbumID, to directory: URL) async throws -> (folder: URL, report: AlbumReport) {
+    public static func release(_ app: AppState, album albumID: AlbumID, to directory: URL,
+                               progress: (@MainActor (_ track: Int, _ of: Int, _ title: String) -> Void)? = nil) async throws -> (folder: URL, report: AlbumReport) {
         guard let store = app.store, let album = app.library.album(albumID) else { throw ReleaseFailure.noAlbum }
         guard !album.songs.isEmpty else { throw ReleaseFailure.noTracks }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -140,6 +142,7 @@ extension Export {
         var running = 0.0
         for (index, id) in album.songs.enumerated() {
             guard let song = app.song?.id == id ? app.song : app.library.song(id) else { continue }
+            progress?(index + 1, album.songs.count, song.title)
             let plan = SongPlayback.plan(for: song) { ref in try? store.mediaURL(for: ref, song: song.id) }.looping(false)
             guard plan.isPlayable else { throw ReleaseFailure.unplayable(song.title) }
             let stems = try await SectionBounce.render(plan, section: nil, kitsDirectory: AuditionService.defaultKitsDirectory)

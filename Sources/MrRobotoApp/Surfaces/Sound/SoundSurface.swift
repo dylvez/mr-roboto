@@ -137,6 +137,16 @@ public final class SoundSurface {
 
     public var isDirty: Bool { draft != committed }
 
+    /// The version the last commit wrote, so the panel can say what a knob let go of became. Nil
+    /// until something has been kept here.
+    public private(set) var lastKept: PartVersion?
+    /// How many versions this surface has written since it opened. The panel cannot number a
+    /// version the way the ledger does — it has no song to count in — so it counts its own.
+    public private(set) var keptCount = 0
+    /// Set when the host refused the last commit, so the draft is still on the knobs and the panel
+    /// says so rather than "no change". Cleared by the next commit that lands.
+    public private(set) var lastCommitWasRefused = false
+
     // MARK: Dirtying a part
 
     /// A voice, or a sample or groove being put through the chain. Decided by what is bound.
@@ -318,6 +328,21 @@ public final class SoundSurface {
         audition()
     }
 
+    /// Whether a control sits where the machine preset (or the chain's base preset) put it, so the
+    /// panel can offer "back to the preset" only where there is somewhere to go back to.
+    public func isAtPreset(_ parameter: SoundControl.Parameter) -> Bool {
+        guard let current = controls(for: panel(of: parameter)).first(where: { $0.parameter == parameter })?.value
+        else { return true }
+        return abs(current - presetValue(of: parameter)) < 1e-9
+    }
+
+    private func presetValue(of parameter: SoundControl.Parameter) -> Double {
+        switch parameter {
+        case .machine(let knob): return value(of: knob, in: draft.factorySpec.controls)
+        case .chain: return chainValue(of: parameter, in: DegradeSettings(preset: draft.chainBase)) ?? 0
+        }
+    }
+
     /// Puts one control back where the machine preset had it.
     public func reset(_ parameter: SoundControl.Parameter) {
         switch parameter {
@@ -449,10 +474,20 @@ public final class SoundSurface {
         let version = boundVersion?.deriving(kind, by: .user, operation: Operation.edit, note: note)
             ?? PartVersion(partID: PartID(), kind: kind, author: .user,
                            operation: Operation.written, note: note)
-        guard host?.record(version) == true else { return nil }
+        guard host?.record(version) == true else {
+            lastCommitWasRefused = true
+            return nil
+        }
         boundVersion = version
         committed = draft
+        kept(version)
         return version
+    }
+
+    private func kept(_ version: PartVersion) {
+        lastKept = version
+        keptCount += 1
+        lastCommitWasRefused = false
     }
 
     /// A dirtied part: a new version of the **same** part — the bound version as its parent,
@@ -463,16 +498,21 @@ public final class SoundSurface {
         guard let bound = boundVersion,
               let version = Dust.version(dirtying: bound, through: chainPasses, by: .user, note: note)
         else { return nil }
-        guard host?.record(version) == true else { return nil }
+        guard host?.record(version) == true else {
+            lastCommitWasRefused = true
+            return nil
+        }
         boundVersion = version
         stacksPass = false
-        let kept = draft
+        let heard = draft
         rebase()
         // `rebase` rebuilds the state from the stored pass; the draft is what was heard, so keep it
         // exactly (it is equal, bar a preset name the pass could not name).
-        draft = kept
-        committed = kept
+        draft = heard
+        committed = heard
+        kept(version)
         return version
+
     }
 
     // MARK: Applying a value

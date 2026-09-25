@@ -95,12 +95,43 @@ public final class PianoRollModel {
     /// say so before they do it.
     public private(set) var isHandEdited = false
 
+    /// Whether the levers are held off the notes. A line edited by hand is the user's, and a lever
+    /// re-running the writer over it would drop every edit in one silent stroke — so while the line
+    /// is hand-edited a lever only moves itself. `writeOverHandEdits()` is the explicit step that
+    /// lets the writer replace the line; nothing else does.
+    public var leversAreHeld: Bool { writesFromLevers && isHandEdited && groove != nil }
+
+    /// The note a click picked out, as an index into `notes`. Delete removes it, Escape clears it.
+    /// Dropped whenever the list is replaced or re-ordered, because an index into a different list
+    /// is a different note.
+    public private(set) var selectedNote: Int?
+
     // MARK: Versions and readings
 
     public private(set) var base: PartVersion?
     public private(set) var versions: [PartVersion] = []
     public private(set) var lastError: String?
     public private(set) var readings: [PersonaReading] = []
+    /// The version the last keep made, for the footer to say so. Nil until one is kept, and set
+    /// aside again — by `hasUnkeptChanges` turning true — once the notes move on from it.
+    public private(set) var lastKept: PartVersion?
+
+    /// Whether what is on screen differs from the last version kept, or from the one the roll was
+    /// opened on. The keep control follows this, so pressing it twice cannot file the same line
+    /// twice; a fresh roll with notes on it has everything to keep.
+    public var hasUnkeptChanges: Bool {
+        guard let kept = versions.last ?? base else { return !notes.isEmpty }
+        switch kept.kind {
+        case .bassline(let line):
+            guard mode == .bass, line.notes == notes else { return true }
+            if let keptSound = line.sound, keptSound != sound { return true }
+            return false
+        case .melody(let tune):
+            return mode != .melody || tune.notes != notes
+        default:
+            return true
+        }
+    }
 
     /// The pitch range the roll draws: the lineage's register, widened to hold the notes.
     /// Whether the writer's levers apply. A tune is drawn by hand: nothing in the app writes one,
@@ -150,6 +181,8 @@ public final class PianoRollModel {
                 tempo: Double, timeSignature: TimeSignature = .fourFour,
                 kickDecaySeconds: Double = 0,
                 bassline: PartVersion? = nil,
+                melody: PartVersion? = nil,
+                instrument: String? = nil,
                 lineage: BassLineage = .palladino, seed: UInt64 = 0xBA55_0001,
                 surfaceID: SurfaceID = SurfaceID()) {
         self.host = host
@@ -169,10 +202,19 @@ public final class PianoRollModel {
         self.seed = seed
         self.notes = []
         self.sound = lineage.defaultSound
+        if let instrument, InstrumentVoiceSpec.preset(id: instrument) != nil { self.instrument = instrument }
         if let bassline, case .bassline(let line) = bassline.kind {
             base = bassline
             notes = line.notes
             sound = line.sound ?? lineage.defaultSound
+            isHandEdited = true
+            refreshReadings()
+        } else if let melody, case .melody(let tune) = melody.kind {
+            // Opened on a tune: melody mode, its notes, its instrument, and every commit derives
+            // from it. The writer never runs — nothing in the band writes a melody.
+            base = melody
+            mode = .melody
+            notes = tune.notes
             isHandEdited = true
             refreshReadings()
         } else {
@@ -213,42 +255,56 @@ public final class PianoRollModel {
                            sound: sound, seed: seed)
     }
 
-    /// Writes the line from the levers. Replaces whatever is on screen.
+    /// Writes the line from the levers. Replaces whatever is on screen, hand edits included: the
+    /// lever setters go through `writeUnlessHeld()` so they cannot reach this over a hand edit, and
+    /// `writeOverHandEdits()` is the one caller that means to.
     public func write() {
         guard let request else { return }
         let line = BassWriter.write(request)
         notes = line.notes
         sound = line.sound ?? sound
         isHandEdited = false
+        selectedNote = nil
         refreshReadings()
+    }
+
+    /// The explicit step: the writer replaces a hand-edited line with one from the levers as they
+    /// stand now. Pressed, not slid into.
+    public func writeOverHandEdits() { write() }
+
+    /// A lever moved. Runs the writer unless the line is edited by hand, in which case the lever
+    /// has moved and the notes have not — the readings refresh because the sound may have.
+    private func writeUnlessHeld() {
+        guard !leversAreHeld else { refreshReadings(); return }
+        write()
     }
 
     /// A different line from the same levers.
     public func rewrite() {
         seed &+= 0x9E37_79B9
-        write()
+        writeUnlessHeld()
     }
 
     public func setLineage(_ value: BassLineage) {
         lineage = value
         lagMS = value.defaultLagMS
         sound = value.defaultSound
-        write()
+        writeUnlessHeld()
     }
 
     public func setLag(_ milliseconds: Double) {
         lagMS = min(Bassist.lagCeilingMS, max(-25, milliseconds))
-        write()
+        writeUnlessHeld()
     }
 
     public func setDensity(_ value: Double) {
         density = min(1, max(0, value))
-        write()
+        writeUnlessHeld()
     }
 
     public func setEarlyAlternation(_ on: Bool) {
         earlyAlternation = on
-        write()
+        writeUnlessHeld()
     }
 
     /// The bass sound. Does not rewrite: the same notes through another voice.
@@ -283,6 +339,8 @@ public final class PianoRollModel {
         notes.append(note)
         notes.sort { ($0.start, $0.pitch.midi) < ($1.start, $1.pitch.midi) }
         isHandEdited = true
+        // The new note is the selection, so a stray click is one Delete from undone.
+        selectedNote = notes.firstIndex(of: note)
         refreshReadings()
         audition(note)
     }
@@ -310,7 +368,24 @@ public final class PianoRollModel {
         guard notes.indices.contains(index) else { return }
         notes.remove(at: index)
         isHandEdited = true
+        selectedNote = nil
         refreshReadings()
+    }
+
+    // MARK: Selection
+
+    /// A click on a note. An index the list does not have clears the selection rather than
+    /// pointing at nothing.
+    public func select(_ index: Int?) {
+        selectedNote = index.flatMap { notes.indices.contains($0) ? $0 : nil }
+    }
+
+    public func clearSelection() { selectedNote = nil }
+
+    /// The Delete key. Nothing selected, nothing removed.
+    public func deleteSelectedNote() {
+        guard let selectedNote else { return }
+        deleteNote(at: selectedNote)
     }
 
     /// Sixteenths, with the lag kept: snapping moves the grid part of a start and leaves the
@@ -386,10 +461,16 @@ public final class PianoRollModel {
                                   operation: Operation.written, note: text)
         }
         versions.append(version)
+        lastKept = version
         lastError = nil
         Task { @MainActor [host, weak self] in
             let kept = await host.commit(version)
-            if !kept { self?.lastError = "The host refused the version." }
+            guard !kept, let self else { return }
+            // Refused: the version is not in the song, so it is not in this list either, and the
+            // keep control comes back for another try.
+            versions.removeAll { $0.id == version.id }
+            if lastKept?.id == version.id { lastKept = nil }
+            lastError = "The host refused the version."
         }
         return version
     }

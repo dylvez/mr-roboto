@@ -137,7 +137,7 @@ public final class CheckModel {
     /// Plays what a fix would sound like, without applying it.
     public func hear(_ fix: Fix) {
         guard finding.fix(fix.id) != nil else {
-            lastError = "check: \(fix.id) is not one of this finding's fixes"
+            lastError = "\(fix.title) is not one of this finding's fixes."
             return
         }
         lastError = nil
@@ -167,13 +167,13 @@ public final class CheckModel {
     @discardableResult
     public func apply(_ fix: Fix) async -> CheckOutcome {
         guard finding.fix(fix.id) != nil else {
-            let outcome = CheckOutcome.refused("check: \(fix.id) is not one of this finding's fixes")
+            let outcome = CheckOutcome.refused("\(fix.title) is not one of this finding's fixes.")
             lastOutcome = outcome
             lastError = outcome.spoken
             return outcome
         }
         guard let host else {
-            let outcome = CheckOutcome.refused("check: no host to apply through")
+            let outcome = CheckOutcome.refused("Nothing is hosting this Check, so the fix cannot be applied.")
             lastOutcome = outcome
             lastError = outcome.spoken
             return outcome
@@ -193,7 +193,8 @@ public final class CheckModel {
         return outcome
     }
 
-    /// "I hear it and I want it." Records the decision without pretending anything was fixed.
+    /// "I hear it and I want it": the finding is left as it is. Records the decision without
+    /// pretending anything was fixed.
     public func dismiss() {
         isDismissed = true
         lastError = nil

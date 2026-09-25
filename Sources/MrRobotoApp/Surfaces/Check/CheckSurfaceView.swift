@@ -53,7 +53,9 @@ public struct CheckSurfaceView: View {
             if model.isResolved {
                 Tag(text: "fixed", tint: Design.Palette.accent, ground: Design.Palette.accentSoft)
             } else if model.isDismissed {
-                Tag(text: "kept", tint: Design.Palette.inkSecondary, ground: Design.Palette.panelAlt)
+                // "Left as is", not "kept": Keep is the verb for saving a version everywhere else
+                // in the frame, and a dismissed finding saved nothing.
+                Tag(text: "left as is", tint: Design.Palette.inkSecondary, ground: Design.Palette.panelAlt)
             } else if model.finding.severity == .warn {
                 Tag(text: "warn", tint: Design.Palette.warn, ground: Design.Palette.warnSoft)
             } else {
@@ -95,15 +97,18 @@ public struct CheckSurfaceView: View {
             }
             Spacer()
             if model.isOpen {
-                Button("I hear it and I want it") { model.dismiss() }
+                Button("Leave it") { model.dismiss() }
                     .font(Design.Typography.ui(11.5))
                     .buttonStyle(.plain)
                     .foregroundStyle(Design.Palette.inkSecondary)
+                    .help("I hear it and I want it: leave the part as it is. Nothing is fixed and nothing is lost; the card can be reopened.")
+                    .accessibilityLabel("Leave it as it is")
             } else if model.isDismissed {
                 Button("Look again") { model.reopen() }
                     .font(Design.Typography.ui(11.5))
                     .buttonStyle(.plain)
                     .foregroundStyle(Design.Palette.inkSecondary)
+                    .help("Reopens the finding so its fixes can be heard and applied.")
             }
         }
     }

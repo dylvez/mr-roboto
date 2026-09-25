@@ -102,6 +102,22 @@ public final class MixerModel {
     public func setGain(_ dB: Double, for part: PartID) { update(part) { $0.gainDB = max(-60, min(12, dB)) } }
     public func setPan(_ pan: Double, for part: PartID) { update(part) { $0.pan = max(-1, min(1, pan)) } }
     public func setSend(_ dB: Double?, for part: PartID) { update(part) { $0.sendDB = dB.map { max(-60, min(0, $0)) } } }
+
+    /// The send fader's bottom is off, not −60 dB. The slider runs −60…0 because a fader needs a
+    /// bottom; a strip with no send is `sendDB == nil`, and the two must read and set the same.
+    public nonisolated static let sendOffDB: Double = -60
+
+    /// What a send fader's position means: nil at the bottom, else the level.
+    public nonisolated static func send(fromFader dB: Double) -> Double? {
+        dB <= sendOffDB + 0.5 ? nil : dB
+    }
+
+    /// What the readout under a send fader says: "off" for no send, else the level in dB.
+    public nonisolated static func sendReadout(_ sendDB: Double?) -> String {
+        guard let sendDB, sendDB > sendOffDB + 0.5 else { return "off" }
+        return String(format: "%.0f dB", sendDB)
+    }
+
     public func toggleMute(_ part: PartID) { update(part) { $0.isMuted.toggle() }; endGesture() }
     public func toggleSolo(_ part: PartID) { update(part) { $0.isSoloed.toggle() }; endGesture() }
     public func setEQ(band index: Int, gainDB: Double, for part: PartID) {
@@ -137,12 +153,6 @@ public final class MixerModel {
         committed = mix
         lastNote = note
         return version
-    }
-
-    /// Reverts the working mix to the version it descends from.
-    public func revert() {
-        mix = committed
-        host.preview(mix)
     }
 
     /// "Bass −3 dB; Kick EQ 80 Hz −6 dB; master ceiling −1 dBTP" — every field that moved.

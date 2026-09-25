@@ -40,6 +40,8 @@ final class GridHostLog: @unchecked Sendable {
 
 struct StubGridHost: GridHosting {
     let log = GridHostLog()
+    /// A host with no song to take the version, so the surface has to say so.
+    var refuses = false
 
     func audition(_ voice: DrumVoice, velocity: Int) async {
         log.audition(voice, velocity)
@@ -54,8 +56,10 @@ struct StubGridHost: GridHosting {
         log.machine(machine.id)
     }
 
-    func commit(_ version: PartVersion) async {
+    func commit(_ version: PartVersion) async -> Bool {
+        if refuses { return false }
         log.commit(version)
+        return true
     }
 }
 
@@ -341,6 +345,123 @@ struct GridSurfaceTests {
         let suggestions = model.suggestedFeels(limit: 5)
         #expect(!suggestions.isEmpty)
         #expect(suggestions.allSatisfy { $0.timeSignature == .fourFour })
+    }
+
+    @Test("a feel asks first when steps are painted, and — puts back what was there")
+    func feelLoadAsksAndRestores() {
+        let model = GridModel(host: StubGridHost())
+        let library = FeelLibrary.standard
+        let first = library.feels[0], second = library.feels[1]
+        #expect(!model.canRestore)
+
+        // Nothing painted: the feel loads outright, and there is a before — even if it was silence.
+        model.chooseFeel(named: first.name)
+        #expect(model.groove == first.groove)
+        #expect(model.pendingFeel == nil)
+        #expect(model.canRestore)
+
+        // A feel nobody has edited gives way to the next without a question.
+        model.chooseFeel(named: second.name)
+        #expect(model.groove == second.groove)
+        #expect(model.pendingFeel == nil)
+
+        // Edited: the next feel waits for the word, and nothing changes until it comes.
+        let voice = model.voices[0]
+        let restStep = (0..<model.stepCount).first { model.tier(voice, step: $0) == .rest } ?? 0
+        model.set(.accent, voice: voice, step: restStep)
+        let edited = model.groove
+        #expect(model.feelLoadNeedsConfirmation)
+        model.chooseFeel(named: first.name)
+        #expect(model.pendingFeel?.name == first.name)
+        #expect(model.groove == edited)
+        #expect(model.feelName == second.name)
+        model.cancelPendingFeel()
+        #expect(model.pendingFeel == nil)
+        #expect(model.groove == edited)
+
+        model.chooseFeel(named: first.name)
+        model.confirmPendingFeel()
+        #expect(model.pendingFeel == nil)
+        #expect(model.groove == first.groove)
+        #expect(model.feelName == first.name)
+
+        // — puts back what was there before that load: the edited pattern, its feel's name, its tempo.
+        model.chooseFeel(named: "")
+        #expect(model.groove == edited)
+        #expect(model.feelName == second.name)
+        #expect(model.tempo == second.suggestedTempo)
+        #expect(!model.canRestore, "one deep: what was restored is now on screen")
+        #expect(model.loadFeel(named: "") == false, "nothing further back to put back")
+    }
+
+    @Test("a tap paints what the brush says, and a second tap takes it back")
+    func tapHonoursBrush() {
+        let model = GridModel(host: StubGridHost())
+        model.brush = .accent
+        model.toggle(.kick, step: 0)
+        #expect(model.tier(.kick, step: 0) == .accent, "a tap paints the brush tier, not always normal")
+        model.toggle(.kick, step: 0)
+        #expect(model.tier(.kick, step: 0) == .rest, "the same tap on the same tier is a rest")
+
+        model.set(.normal, voice: .kick, step: 4)
+        model.brush = .ghost
+        model.toggle(.kick, step: 4)
+        #expect(model.tier(.kick, step: 4) == .ghost, "a tap on another tier repaints it with the brush rather than erasing")
+
+        model.brush = .rest
+        model.toggle(.kick, step: 8)
+        #expect(model.tier(.kick, step: 8) == .normal, "a rest brush cannot paint nothing")
+    }
+
+    // MARK: Keeping
+
+    @Test("the keep control follows the groove: nothing to keep until a step is painted, nothing again once it is kept")
+    func unkeptChanges() {
+        let host = StubGridHost()
+        let model = GridModel(host: host)
+        #expect(!model.hasUnkeptChanges, "a silent fresh grid has nothing to keep")
+        model.setSwing(percent: 60)
+        #expect(!model.hasUnkeptChanges, "swing on a silent grid is still nothing to keep")
+
+        model.toggle(.kick, step: 0)
+        #expect(model.hasUnkeptChanges)
+        let first = model.commit()
+        #expect(!model.hasUnkeptChanges, "just kept: the version is what is on screen")
+        #expect(model.lastKept?.id == first.id)
+
+        model.setSwing(percent: 66)
+        #expect(model.hasUnkeptChanges, "swing is part of the groove, so it counts")
+        model.setSwing(percent: 60)
+        #expect(!model.hasUnkeptChanges, "back where the kept version is")
+        model.setTempo(120)
+        model.setGhostLevel(0.3)
+        #expect(!model.hasUnkeptChanges, "tempo and the tier map are how it is heard here, not what is kept")
+
+        model.clearAll()
+        #expect(model.hasUnkeptChanges, "silence differs from the kept version")
+
+        // Opened on a version: nothing to keep until an edit.
+        let editor = GridModel(host: host, version: first)
+        #expect(!editor.hasUnkeptChanges)
+        editor.toggle(.snare, step: 4)
+        #expect(editor.hasUnkeptChanges)
+    }
+
+    @Test("a host that refuses the version says so, and the version does not stay in the list")
+    func refusedKeep() async {
+        var host = StubGridHost()
+        host.refuses = true
+        let model = GridModel(host: host)
+        model.toggle(.kick, step: 0)
+        let version = model.commit()
+        #expect(model.versions.map(\.id) == [version.id])
+
+        for _ in 0..<1_000 where model.lastError == nil { try? await Task.sleep(for: .milliseconds(1)) }
+        #expect(model.lastError != nil)
+        #expect(model.versions.isEmpty, "a refused version is not a version")
+        #expect(model.lastKept == nil)
+        #expect(model.hasUnkeptChanges, "and the keep control comes back")
+        #expect(host.log.commits.isEmpty)
     }
 
     // MARK: Rendering

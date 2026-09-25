@@ -38,9 +38,10 @@ struct PianoRollSurfaceView: View {
                     .font(Design.Typography.ui(11.5, weight: .regular))
                     .foregroundStyle(Design.Palette.inkTertiary)
             } else if model.groove == nil {
-                Text("No groove to sit under: this line is on the grid.")
+                Text("No groove yet — the line plays to the bar on its own. Open the Grid to paint one and this roll will sit under it.")
                     .font(Design.Typography.ui(11.5, weight: .regular))
                     .foregroundStyle(Design.Palette.warn)
+                    .fixedSize(horizontal: false, vertical: true)
             } else if model.usesDefaultChords {
                 Text("No chords stated — written to the key's I–IV–V–I.")
                     .font(Design.Typography.ui(11.5, weight: .regular))
@@ -51,12 +52,43 @@ struct PianoRollSurfaceView: View {
         }
     }
 
+    /// The writer's levers in bass mode; in melody mode nothing writes, so the row is the instrument
+    /// and a line saying how a tune is drawn.
     @ViewBuilder
     private var levers: some View {
         if model.mode == .melody {
-            InstrumentPicker(selected: model.instrument) { model.setInstrument($0) }
+            HStack(alignment: .top, spacing: 18) {
+                InstrumentPicker(selected: model.instrument) { model.setInstrument($0) }
+                Text("Click an empty cell to add a note; drag to move; double-click to delete.")
+                    .font(Design.Typography.ui(11.5, weight: .regular))
+                    .foregroundStyle(Design.Palette.inkSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 2)
+                Spacer(minLength: 0)
+            }
         } else {
-            bassLevers
+            VStack(alignment: .leading, spacing: 8) {
+                bassLevers
+                if model.leversAreHeld { heldLeversNote }
+            }
+        }
+    }
+
+    /// The line's hand edits are the user's. The levers keep moving — they describe the line you
+    /// would get — but they do not write over the edits until this chip is pressed. The same rule
+    /// the Chop lane applies to its sensitivity slider, made a step rather than a warning.
+    private var heldLeversNote: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(Design.Palette.warn)
+            Text("Edited by hand. The levers would rewrite the whole line and drop those edits, so they are held until you say so.")
+                .font(Design.Typography.ui(11.5, weight: .regular))
+                .foregroundStyle(Design.Palette.warn)
+                .fixedSize(horizontal: false, vertical: true)
+            RollChip("Rewrite anyway", isOn: false) { model.writeOverHandEdits() }
+                .help("Replace the hand-edited line with one written from the levers as they stand")
+                .accessibilityLabel("Rewrite the line from the levers, dropping the hand edits")
         }
     }
 
@@ -67,6 +99,7 @@ struct PianoRollSurfaceView: View {
                 HStack(spacing: 4) {
                     ForEach(BassLineage.allCases, id: \.self) { lineage in
                         RollChip(lineage.name, isOn: model.lineage == lineage) { model.setLineage(lineage) }
+                            .help("Write the line the way \(lineage.name) would")
                     }
                 }
             }
@@ -75,6 +108,9 @@ struct PianoRollSurfaceView: View {
                 HStack(spacing: 8) {
                     Slider(value: Binding(get: { model.lagMS }, set: { model.setLag($0) }), in: -25...90)
                         .frame(width: 160)
+                        .tint(Design.Palette.accent)
+                        .help("How far the bass lands behind the kick, in milliseconds")
+                        .accessibilityLabel("Lag behind the kick")
                     Text(String(format: "%+.0f ms", model.lagMS))
                         .font(Design.Typography.numeric(12))
                         .frame(width: 54, alignment: .leading)
@@ -85,8 +121,16 @@ struct PianoRollSurfaceView: View {
             }
             VStack(alignment: .leading, spacing: 3) {
                 RollLabel("Density")
-                Slider(value: Binding(get: { model.density }, set: { model.setDensity($0) }), in: 0...1)
-                    .frame(width: 120)
+                HStack(spacing: 8) {
+                    Slider(value: Binding(get: { model.density }, set: { model.setDensity($0) }), in: 0...1)
+                        .frame(width: 120)
+                        .tint(Design.Palette.accent)
+                        .help("How many attacks a bar the writer allows itself: sparse at the left, the lineage's ceiling at the right")
+                        .accessibilityLabel("Density")
+                    Text(String(format: "%.0f%%", model.density * 100))
+                        .font(Design.Typography.numeric(12))
+                        .frame(width: 38, alignment: .leading)
+                }
             }
             VStack(alignment: .leading, spacing: 3) {
                 RollLabel("Sound")
@@ -148,23 +192,61 @@ struct PianoRollSurfaceView: View {
                 Text(error).font(Design.Typography.ui(11.5)).foregroundStyle(Design.Palette.warn)
             }
             Spacer()
-            Text(model.isHandEdited ? "Edited by hand" : "As written")
-                .font(Design.Typography.ui(11.5))
-                .foregroundStyle(Design.Palette.inkTertiary)
-            Button("Keep as a new version") { model.commit() }
-                .buttonStyle(.plain)
-                .font(Design.Typography.ui(12, weight: .semibold))
-                .foregroundStyle(Design.Palette.accent)
-                .disabled(model.notes.isEmpty)
+            if let kept = model.lastKept, !model.hasUnkeptChanges {
+                KeptNote(version: kept)
+            } else {
+                Text(model.isHandEdited ? "Edited by hand" : "As written")
+                    .font(Design.Typography.ui(11.5))
+                    .foregroundStyle(Design.Palette.inkTertiary)
+            }
+            KeepButton(isEnabled: !model.notes.isEmpty && model.hasUnkeptChanges) { model.commit() }
         }
+    }
+}
+
+// MARK: - The keep control and its answer
+
+/// "Keep as a new version", as every editing surface offers it: greyed until something has
+/// changed since the last keep, so pressing it twice cannot file the same thing twice.
+struct KeepButton: View {
+    let isEnabled: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button("Keep as a new version", action: action)
+            .buttonStyle(.plain)
+            .font(Design.Typography.ui(12, weight: .semibold))
+            .foregroundStyle(Design.Palette.accent)
+            .disabled(!isEnabled)
+            .opacity(isEnabled ? 1 : 0.4)
+            .help(isEnabled ? "File what is on the surface as a new version of this part"
+                            : "Nothing has changed since the last version was kept")
+    }
+}
+
+/// What the footer says once a keep has landed and nothing has moved since: the version, by the
+/// name the ledger will show it under.
+struct KeptNote: View {
+    let version: PartVersion
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: "checkmark")
+                .font(.system(size: 9, weight: .bold))
+            Text("Kept")
+                .font(Design.Typography.ui(11.5, weight: .medium))
+        }
+        .foregroundStyle(Design.Palette.accent)
+        .help("Kept as \(PartLabel.title(of: version))")
+        .accessibilityLabel("Kept as \(PartLabel.title(of: version))")
     }
 }
 
 // MARK: - The lane
 
 /// The notes over the bar, with the kicks under them. Beats across, pitches down (high at the
-/// top). Drag a note to move it, its right edge to lengthen it; double-click to delete; click an
-/// empty cell to add.
+/// top). Drag a note to move it, its right edge to lengthen it; click a note to select it and
+/// Delete removes it (double-click does too); click an empty cell to add.
 private struct NoteLane: View {
     @Bindable var model: PianoRollModel
 
@@ -173,6 +255,9 @@ private struct NoteLane: View {
     static let minimumRowHeight: CGFloat = 9
 
     @State private var drag: Drag?
+    /// The lane takes keyboard focus on a click so Delete and Escape reach it. Without focus the
+    /// keys go to whatever had it last, which is usually a text field on another surface.
+    @FocusState private var isFocused: Bool
 
     private struct Drag {
         var index: Int
@@ -183,6 +268,26 @@ private struct NoteLane: View {
     }
 
     var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            lane
+            Text(caption)
+                .font(Design.Typography.ui(11, weight: .regular))
+                .foregroundStyle(Design.Palette.inkTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// Says what the gestures do, because none of them is labelled. The selected note is named so
+    /// Delete is never a guess about what it will remove.
+    private var caption: String {
+        if let index = model.selectedNote, model.notes.indices.contains(index) {
+            let note = model.notes[index]
+            return "\(note.pitch.name()) at beat \(String(format: "%.2f", note.start + 1)) selected — Delete removes it, Escape clears the selection. Drag to move, drag the right edge to lengthen."
+        }
+        return "Click a note to select it; Delete or a double-click removes it. Drag to move, drag the right edge to lengthen; click an empty cell to add a note."
+    }
+
+    private var lane: some View {
         GeometryReader { geometry in
             let register = model.register
             let rows = register.count
@@ -249,29 +354,49 @@ private struct NoteLane: View {
                     .frame(width: width, height: laneHeight)
                     .offset(x: Self.labelWidth)
                     .onTapGesture { location in
+                        isFocused = true
                         let beat = Double((location.x - Self.labelWidth) / beatWidth)
                         let row = Int(location.y / rowHeight)
                         let midi = register.upperBound - row
                         model.addNote(pitch: midi, at: beat)
                     }
-                // The notes.
+                // The notes. The selected one is outlined in ink so it reads apart from its
+                // neighbours in any theme, not only by a shade of the accent.
                 ForEach(Array(model.notes.enumerated()), id: \.offset) { index, note in
                     let row = register.upperBound - note.pitch.midi
                     let isGhost = note.velocity < 56
+                    let isSelected = model.selectedNote == index
                     RoundedRectangle(cornerRadius: 2)
                         .fill(isGhost ? Design.Palette.accent.opacity(0.35) : Design.Palette.accent.opacity(0.85))
-                        .overlay(RoundedRectangle(cornerRadius: 2).strokeBorder(Design.Palette.accent, lineWidth: Design.Metric.hairline))
+                        .overlay(RoundedRectangle(cornerRadius: 2)
+                            .strokeBorder(isSelected ? Design.Palette.ink : Design.Palette.accent,
+                                          lineWidth: isSelected ? 2 : Design.Metric.hairline))
                         .overlay(alignment: .trailing) {
                             Rectangle().fill(Design.Palette.panel.opacity(0.6)).frame(width: 3)
                         }
                         .frame(width: max(6, CGFloat(note.duration) * beatWidth - 1), height: max(4, rowHeight - 1))
                         .offset(x: Self.labelWidth + CGFloat(note.start) * beatWidth, y: CGFloat(row) * rowHeight)
                         .onTapGesture(count: 2) { model.deleteNote(at: index) }
-                        .onTapGesture { model.audition(note) }
+                        .onTapGesture {
+                            isFocused = true
+                            model.select(index)
+                            model.audition(note)
+                        }
                         .gesture(noteDrag(index: index, note: note, beatWidth: beatWidth, rowHeight: rowHeight))
-                        .help("\(note.pitch.name()) · beat \(String(format: "%.2f", note.start + 1)) · \(String(format: "%.2f", note.duration)) beats")
+                        .help("\(note.pitch.name()) · beat \(String(format: "%.2f", note.start + 1)) · \(String(format: "%.2f", note.duration)) beats · click to select, Delete to remove")
+                        .accessibilityLabel("\(note.pitch.name()) at beat \(String(format: "%.2f", note.start + 1))\(isSelected ? ", selected" : "")")
                 }
             }
+        }
+        .focusable()
+        .focusEffectDisabled()
+        .focused($isFocused)
+        .onKeyPress(.delete) { model.deleteSelectedNote(); return .handled }
+        .onKeyPress(.deleteForward) { model.deleteSelectedNote(); return .handled }
+        .onKeyPress(.escape) {
+            guard model.selectedNote != nil else { return .ignored }
+            model.clearSelection()
+            return .handled
         }
     }
 

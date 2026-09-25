@@ -22,6 +22,12 @@ struct BenchColumn: View {
             content
         }
         .background(Design.Palette.paper)
+        // Never wider than the column it was given. A row in here that could not fit — the dock,
+        // once it held seven chips — made the whole column wider than its frame; SwiftUI centred
+        // the overflow, and the column's own background painted over the last 88 points of the
+        // rail beside it, so every card in the rail looked cut off at the right. The dock fits
+        // now, and this is the belt to that braces.
+        .clipped()
     }
 
     @ViewBuilder
@@ -95,11 +101,15 @@ struct SurfaceDock: View {
     var body: some View {
         HStack(spacing: 8) {
             SmallLabel("Surfaces")
-            // Six chips with their shortcuts when the bench is wide enough; without the shortcuts
-            // (they are still in the tooltips and the Surfaces menu) when it is not.
+            // Seven chips with their shortcuts when the bench is wide enough; without the shortcuts
+            // when it is not; and as glyphs alone at the bench's minimum, where even the names did
+            // not fit — the names and the shortcuts are in the tooltips and the Surfaces menu
+            // either way. A dock that cannot fit its chips is what made the bench overflow its
+            // column and paint over the rail.
             ViewThatFits(in: .horizontal) {
-                chips(compact: false)
-                chips(compact: true)
+                chips(.full)
+                chips(.compact)
+                chips(.glyphs)
             }
             Spacer(minLength: 8)
             if let proposal = app.dockProposal {
@@ -110,7 +120,19 @@ struct SurfaceDock: View {
             }
             if !app.bench.items.isEmpty {
                 FrameButton(title: "Close all", emphasis: .quiet) {
-                    for item in app.bench.items { app.closeSurface(item.id) }
+                    if app.bench.items.contains(where: { app.closingWouldLoseWork($0.id) }) {
+                        isConfirmingCloseAll = true
+                    } else {
+                        app.closeAllSurfaces()
+                    }
+                }
+                .help("Close every surface on the bench. One holding unkept work asks first.")
+                .confirmationDialog("Close every surface? Some hold edits that were not kept.",
+                                    isPresented: $isConfirmingCloseAll, titleVisibility: .visible) {
+                    Button("Close all anyway", role: .destructive) { app.closeAllSurfaces() }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text(unkeptNames)
                 }
             }
         }
@@ -119,12 +141,20 @@ struct SurfaceDock: View {
         .background(Design.Palette.paper)
     }
 
-    private func chips(compact: Bool) -> some View {
+    @State private var isConfirmingCloseAll = false
+
+    /// "Grid: Boom-bap pocket, Chords: Dm7 G7" — what would go.
+    private var unkeptNames: String {
+        app.bench.items.filter { app.closingWouldLoseWork($0.id) }
+            .map { "\($0.kind.rawValue): \($0.title)" }.joined(separator: ", ")
+    }
+
+    private func chips(_ style: DockChip.Style) -> some View {
         HStack(spacing: 8) {
             ForEach(Array(SurfaceKind.gateA.enumerated()), id: \.element) { index, kind in
                 DockChip(kind: kind,
                          shortcut: "⌘\(index + 1)",
-                         compact: compact,
+                         style: style,
                          isOpen: app.bench.items.contains { $0.kind == kind },
                          isActive: app.bench.active?.kind == kind) {
                     app.showSurface(kind)
@@ -135,9 +165,12 @@ struct SurfaceDock: View {
 }
 
 private struct DockChip: View {
+    /// How much of the chip there is room for, widest first.
+    enum Style { case full, compact, glyphs }
+
     let kind: SurfaceKind
     let shortcut: String
-    var compact = false
+    var style: Style = .full
     let isOpen: Bool
     let isActive: Bool
     let action: () -> Void
@@ -146,11 +179,13 @@ private struct DockChip: View {
         Button(action: action) {
             HStack(spacing: 6) {
                 Glyph(name: kind.glyph.name, symbol: kind.glyph.symbol, size: 13)
-                Text(kind.rawValue)
-                    .font(Design.Typography.ui(12.5, weight: isActive ? .semibold : .medium))
-                    .lineLimit(1)
-                    .fixedSize()
-                if !compact {
+                if style != .glyphs {
+                    Text(kind.rawValue)
+                        .font(Design.Typography.ui(12.5, weight: isActive ? .semibold : .medium))
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+                if style == .full {
                     Text(shortcut)
                         .font(Design.Typography.numeric(10))
                         .foregroundStyle(isActive ? Design.Palette.accent : Design.Palette.inkTertiary)
@@ -170,6 +205,7 @@ private struct DockChip: View {
         }
         .buttonStyle(.plain)
         .help(helpText)
+        .accessibilityLabel("\(kind.rawValue), \(shortcut)\(isActive ? ", filling the bench" : isOpen ? ", open" : "")")
     }
 
     private var helpText: String {

@@ -222,15 +222,20 @@ final class SurfaceWiring {
         let signature = song?.timeSignature ?? .fourFour
         let key = Guidance.analysis(in: song)?.dominantKey ?? song?.key ?? Key(tonic: NoteName(.c))
         var basslineVersion: PartVersion?
+        var melodyVersion: PartVersion?
         var grooveVersion: PartVersion?
         for id in app.bound(for: item.id) {
             guard let version = app.version(id) else { continue }
             switch version.kind {
             case .bassline: basslineVersion = basslineVersion ?? version
+            case .melody: melodyVersion = melodyVersion ?? version
             case .groove: grooveVersion = grooveVersion ?? version
             default: break
             }
         }
+        // A tune plays on its own instrument — its newest pick, else the song's — and the roll
+        // opens in melody mode on it, so the ledger row that is a melody opens as one.
+        let melodyInstrument = melodyVersion.flatMap { version in song.map { SongPlayback.instrumentID(for: version.partID, in: $0) } }
         if grooveVersion == nil, let song { grooveVersion = Guidance.grooves(in: song).last }
         var groove: Groove?
         if let grooveVersion, case .groove(let g) = grooveVersion.kind { groove = g }
@@ -241,6 +246,7 @@ final class SurfaceWiring {
         let model = PianoRollModel(host: adapter, groove: groove, grooveVersion: grooveVersion?.id,
                                    chords: chords, key: key, tempo: tempo, timeSignature: signature,
                                    kickDecaySeconds: Self.kickDecay(in: song), bassline: basslineVersion,
+                                   melody: melodyVersion, instrument: melodyInstrument,
                                    surfaceID: item.id)
         let levers = app.levers(for: item.id)
         model.adoptLevers(lag: levers.first { $0.quantity == .lag }?.value,
@@ -402,6 +408,32 @@ final class SurfaceWiring {
     /// The Chop lane this surface is drawing, when it has one. The only way a critic's marks reach
     /// a lane — `PersonaDirecting.mark(_:on:)` goes through here, and nothing else writes one.
     func chopBinding(holding id: SurfaceID) -> ChopLaneBinding? { chops[id] }
+
+    /// Whether a surface is holding work that has not been kept: a grid painted and not committed,
+    /// a line edited, an arrangement not kept, a chop re-grooved and not kept, an import still
+    /// running. Read from the models this wiring already holds; a surface with no model yet has
+    /// nothing to lose.
+    ///
+    /// The bench used to retire the oldest unpinned surface to make room for a fourth, and the ✕
+    /// closed at once, and either could take an hour's edits with one line in the rail. Both ask
+    /// this first now.
+    func hasUnkeptChanges(for item: BenchItem) -> Bool {
+        switch item.kind {
+        case .importRecord: return imports[item.id]?.hasUnkeptChanges ?? false
+        case .grid: return grids[item.id]?.hasUnkeptChanges ?? false
+        case .chopLane:
+            if case .ready(let surface)? = chops[item.id]?.state { return surface.hasUnkeptChanges }
+            return false
+        case .pianoRoll: return rolls[item.id]?.hasUnkeptChanges ?? false
+        case .chords: return chordSheets[item.id]?.hasUnkeptChanges ?? false
+        case .lyrics: return lyricSheets[item.id]?.hasUnkeptChanges ?? false
+        case .structure: return structures[item.id]?.isDirty ?? false
+        case .booth: return booths[item.id]?.state == .recording
+        case .sound, .album, .merge, .cast, .takes, .mixer, .master, .mashup, .compare, .check:
+            // Sound and the Mixer keep every move as they go; the rest hold nothing of their own.
+            return false
+        }
+    }
 
     /// The first bound version that actually holds a groove. A grid opened on a sample (say, from
     /// the ledger) is an empty grid rather than a crash.

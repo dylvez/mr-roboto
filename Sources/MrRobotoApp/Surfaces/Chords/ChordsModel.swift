@@ -43,9 +43,29 @@ public final class ChordsModel {
     public private(set) var key: Key
     public private(set) var progression: Progression?
     public private(set) var problem: String?
+    /// What the key field last failed to read, or nil while the key is what was typed. The key
+    /// itself stays put on a bad line: a field that half-read "F#m" as F major would be worse than
+    /// one that says no.
+    public private(set) var keyProblem: String?
     public private(set) var base: PartVersion?
     public private(set) var versions: [PartVersion] = []
     public private(set) var lastError: String?
+    /// The version the last keep made, for the footer to say so. Nil until one is kept, and set
+    /// aside again — by `hasUnkeptChanges` turning true — once the chords move on from it.
+    public private(set) var lastKept: PartVersion?
+
+    /// Whether the bars on screen are a progression the song does not have yet: something that
+    /// reads, and differs from the last version kept or the one the surface was opened on. A line
+    /// with a typo has nothing to keep; a fresh surface's I–IV–V–I does.
+    public var hasUnkeptChanges: Bool {
+        guard problem == nil, let progression else { return false }
+        guard let kept = versions.last ?? base, case .progression(let keptProgression) = kept.kind else { return true }
+        return keptProgression != progression
+    }
+
+    /// True while the line has a typo: the bars still show the last line that read, and the view
+    /// says so rather than letting them pass for what is typed.
+    public var barsAreStale: Bool { problem != nil }
     /// The instrument these chords are voiced on, by preset id.
     public var instrument: String { host.instrument }
 
@@ -105,7 +125,24 @@ public final class ChordsModel {
 
     public func setKey(_ newKey: Key) {
         key = newKey
+        keyProblem = nil
         parse()
+    }
+
+    /// The key as a line you type: "D major", "F# minor", "Bb", "E dorian" — whatever `Key` reads.
+    /// A line it does not read leaves the key alone and says so in `keyProblem`; true when the
+    /// key changed to what was typed.
+    @discardableResult
+    public func setKey(parsing text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        guard let parsed = Key(parsing: trimmed) else {
+            keyProblem = trimmed.isEmpty
+                ? "Type a key, like D major or F# minor."
+                : "Not a key I know — try D major, F# minor or E dorian."
+            return false
+        }
+        setKey(parsed)
+        return true
     }
 
     /// The Roman numeral of a chord in the key, or its symbol when it is not diatonic.
@@ -137,8 +174,16 @@ public final class ChordsModel {
             version = PartVersion(partID: PartID(), kind: payload, author: .user, operation: Operation.written, note: text)
         }
         versions.append(version)
+        lastKept = version
+        lastError = nil
         Task { @MainActor [host, weak self] in
-            if await !host.commit(version) { self?.lastError = "The host refused the version." }
+            let kept = await host.commit(version)
+            guard !kept, let self else { return }
+            // Refused: the version is not in the song, so it is not in this list either, and the
+            // keep control comes back for another try.
+            versions.removeAll { $0.id == version.id }
+            if lastKept?.id == version.id { lastKept = nil }
+            lastError = "The host refused the version."
         }
         return version
     }

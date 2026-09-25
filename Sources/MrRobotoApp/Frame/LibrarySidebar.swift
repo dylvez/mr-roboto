@@ -273,6 +273,11 @@ struct LibrarySidebar: View {
     struct RowView: View {
         let row: Row
         let app: AppState
+        /// A delete asks once. Nothing in the library could be unmade before this, and the first
+        /// way to unmake something must not be a slip of the mouse.
+        @State private var isConfirmingDelete = false
+        @State private var isRenaming = false
+        @State private var newTitle = ""
 
         var body: some View {
             Button {
@@ -316,11 +321,82 @@ struct LibrarySidebar: View {
                 }
                 if let id = row.opens {
                     Button("Open") { app.openSong(id) }
+                    Divider()
+                    Button("Rename…") { newTitle = row.title; isRenaming = true }
+                    Button("Duplicate") { app.duplicateSong(id) }
+                    Button("Show in Finder") { app.revealInFinder(song: id) }
+                    Divider()
+                    Button("Move to Trash…") { isConfirmingDelete = true }
                 }
                 if let id = row.opensAlbum {
                     Button("Open") { app.openAlbum(id) }
+                    Divider()
+                    Button("Rename…") { newTitle = row.title; isRenaming = true }
+                    Button("Delete Album…") { isConfirmingDelete = true }
+                }
+                if row.opens == nil, row.opensAlbum == nil {
+                    Divider()
+                    Button("Remove from Library…") { isConfirmingDelete = true }
                 }
             }
+            .confirmationDialog(deleteQuestion, isPresented: $isConfirmingDelete, titleVisibility: .visible) {
+                Button(deleteVerb, role: .destructive) { delete() }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text(deleteDetail)
+            }
+            .alert("Rename", isPresented: $isRenaming) {
+                TextField("Title", text: $newTitle)
+                Button("Rename") { rename() }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text(row.opensAlbum != nil ? "A new name for the album." : "A new name for the song. Its package on disk keeps its file name.")
+            }
+        }
+
+        // MARK: What a delete does, said before it does it
+
+        private var deleteQuestion: String {
+            switch row.payload.kind {
+            case .song: return "Move “\(row.title)” to the Trash?"
+            case .album: return "Delete the album “\(row.title)”?"
+            case .idea: return "Remove the idea “\(row.title)” from the library?"
+            case .sample: return "Remove “\(row.title)” from Samples?"
+            case .record: return "Remove “\(row.title)” from Records?"
+            }
+        }
+
+        private var deleteDetail: String {
+            switch row.payload.kind {
+            case .song: return "The song's package goes to the Trash, where Finder can put it back. It leaves every album it is on."
+            case .album: return "Its songs stay in the library; only the order, the targets and the clearances go."
+            case .idea: return "Songs that adopted it copied its audio and keep playing."
+            case .sample: return "Songs that adopted it copied its audio and keep playing."
+            case .record: return "Its audio stays in the library folder, so songs flipped from it still play. Only the row goes."
+            }
+        }
+
+        private var deleteVerb: String {
+            switch row.payload.kind {
+            case .song: return "Move to Trash"
+            case .album: return "Delete Album"
+            case .idea, .sample, .record: return "Remove"
+            }
+        }
+
+        private func delete() {
+            switch row.payload.kind {
+            case .song: app.deleteSong(SongID(rawValue: row.payload.id))
+            case .album: app.deleteAlbum(AlbumID(rawValue: row.payload.id))
+            case .idea: app.removeIdea(VersionID(rawValue: row.payload.id))
+            case .sample: app.removeSample(SampleID(rawValue: row.payload.id))
+            case .record: app.removeRecord(RecordID(rawValue: row.payload.id))
+            }
+        }
+
+        private func rename() {
+            if let id = row.opens { app.renameSong(id, to: newTitle) }
+            else if let id = row.opensAlbum { app.renameAlbum(id, to: newTitle.trimmingCharacters(in: .whitespacesAndNewlines)) }
         }
     }
 }

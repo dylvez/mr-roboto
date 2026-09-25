@@ -53,6 +53,22 @@ public enum Export {
         return cleaned.isEmpty ? "Untitled" : cleaned
     }
 
+    /// A path nothing is at yet: the one asked for, or the same name with " 2", " 3"… before the
+    /// extension. An export used to delete whatever was at its path first, so exporting twice
+    /// silently replaced the first master — the one you might already have sent somewhere.
+    static func unique(_ url: URL) -> URL {
+        guard FileManager.default.fileExists(atPath: url.path) else { return url }
+        let stem = url.deletingPathExtension().lastPathComponent
+        let ext = url.pathExtension
+        let directory = url.deletingLastPathComponent()
+        var suffix = 2
+        while true {
+            let candidate = directory.appendingPathComponent("\(stem) \(suffix)").appendingPathExtension(ext)
+            if !FileManager.default.fileExists(atPath: candidate.path) { return candidate }
+            suffix += 1
+        }
+    }
+
     /// The whole song through the mix, limited at the ceiling, as a 24-bit WAV beside a JSON report.
     @MainActor
     public static func master(_ app: AppState, to directory: URL) async throws -> (wav: URL, report: URL, summary: MasterReport) {
@@ -62,7 +78,7 @@ public enum Export {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let stems = try await SectionBounce.render(plan, section: nil, kitsDirectory: AuditionService.defaultKitsDirectory)
         let planar = stems.mix
-        let wav = directory.appendingPathComponent("\(safe(song.title)) — master.wav")
+        let wav = unique(directory.appendingPathComponent("\(safe(song.title)) — master.wav"))
         try writeWAV24(planar, sampleRate: stems.sampleRate, to: wav)
         let mix = plan.mix ?? .unity
         let clearances = app.library.albums.first { $0.songs.contains(song.id) }.map { app.sources(of: $0) } ?? []
@@ -76,7 +92,7 @@ public enum Export {
             key: song.key.map { "\($0)" }, tempo: song.tempo,
             clearances: clearances.map { .init(source: $0.source, status: $0.status.rawValue) },
             exportedAt: ISO8601DateFormatter().string(from: Date()))
-        let report = directory.appendingPathComponent("\(safe(song.title)) — master.json")
+        let report = wav.deletingPathExtension().appendingPathExtension("json")
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         try encoder.encode(summary).write(to: report)
@@ -106,7 +122,7 @@ public enum Export {
             // master is at unity and the ceiling is lifted to 0 with its head room.
             solo.mix?.master.ceilingDBTP = 0
             let stems = try await SectionBounce.render(solo, section: nil, kitsDirectory: AuditionService.defaultKitsDirectory)
-            let url = directory.appendingPathComponent("\(safe(song.title)) — \(safe(strip.label)).wav")
+            let url = unique(directory.appendingPathComponent("\(safe(song.title)) — \(safe(strip.label)).wav"))
             try writeWAV24(stems.mix, sampleRate: stems.sampleRate, to: url)
             out.append(url)
         }
@@ -121,7 +137,7 @@ public enum Export {
         let file = MIDIExport.file(for: song)
         guard !file.tracks.isEmpty else { throw Failure.noWrittenParts }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let url = directory.appendingPathComponent("\(safe(song.title)).mid")
+        let url = unique(directory.appendingPathComponent("\(safe(song.title)).mid"))
         try file.write(to: url)
         app.note(.session, "Exported \(file.tracks.count) track\(file.tracks.count == 1 ? "" : "s") of MIDI", detail: url.path)
         return url
@@ -147,7 +163,8 @@ public enum Export {
             let lane = planar[min(channel, planar.count - 1)]
             for i in 0..<frames { buffer.floatChannelData![channel][i] = max(-1, min(1, lane[i])) }
         }
-        try? FileManager.default.removeItem(at: url)
+        // Never over something already there: the callers pick a free name with `unique`, and a
+        // caller that did not gets the error rather than a file quietly gone.
         let file = try AVAudioFile(forWriting: url, settings: settings, commonFormat: .pcmFormatFloat32, interleaved: false)
         try file.write(from: buffer)
     }

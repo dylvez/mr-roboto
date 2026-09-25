@@ -200,6 +200,12 @@ public actor Director {
     /// "the band needs a key" rather than swallowing a sentence and failing at the request.
     public func keyStatus() async -> ClaudeKeyStatus { await client.keyStatus() }
 
+    /// Keeps a key the user typed; what went wrong, or nil.
+    public func storeKey(_ text: String) async -> String? { await client.storeKey(text) }
+
+    /// Forgets the keychain's key; what went wrong, or nil.
+    public func forgetKey() async -> String? { await client.forgetKey() }
+
     public func spend() async -> ClaudeSpend { await client.spend }
 
     /// What the session has spent, as one line. Shown under the composer.

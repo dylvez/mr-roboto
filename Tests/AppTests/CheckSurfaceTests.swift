@@ -246,8 +246,11 @@ struct CheckModelTests {
     func noHost() async {
         let model = CheckModel(finding: CheckFixtures.lateCut())
         let outcome = await model.apply(model.fixes[0])
-        #expect(outcome == .refused("check: no host to apply through"))
+        #expect(outcome == .refused("Nothing is hosting this Check, so the fix cannot be applied."))
         #expect(!model.isResolved)
+        // The card prints this line, so it is a sentence for the reader, not a log line.
+        #expect(model.lastError?.hasPrefix("check:") == false)
+
     }
 
     @Test("Keeping a finding is recorded as keeping it, not as fixing it")

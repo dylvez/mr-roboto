@@ -107,7 +107,7 @@ struct PartsLedger: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help(action.map { "\($0.title) — \($0.rationale)" } ?? "Gate A has no surface for this kind of part yet")
+            .help(action.map { "\($0.title) — \($0.rationale)" } ?? "Nothing opens on this part; it is here for the history.")
             // Beside the row's own button, not inside it: a button in a button's label gets no clicks.
             .overlay(alignment: .topTrailing) { PartPlayButton(version: version, app: app) }
             .contextMenu {

@@ -42,16 +42,24 @@ struct StructureSurfaceView: View {
                 ForEach(model.sections) { section in
                     SectionBlock(model: model, section: section)
                 }
-                Rectangle()
-                    .fill(Color.clear)
+                // The tail: where a block dropped past the last one lands. Outlined, so there is
+                // something to aim at. It used to be a clear box of the same size, which is a
+                // target only to someone who already knew it was there.
+                RoundedRectangle(cornerRadius: Design.Metric.corner)
+                    .strokeBorder(Design.Palette.lineStrong,
+                                  style: StrokeStyle(lineWidth: Design.Metric.hairline, dash: [3, 3]))
                     .frame(width: 40, height: 44)
+                    .contentShape(Rectangle())
                     .dropDestination(for: String.self) { ids, _ in
                         drop(ids, before: nil)
                     }
+                    .help("Drop a section here to put it last.")
+                    .accessibilityLabel("End of the form: drop a section here to put it last")
             }
             HStack(spacing: 4) {
                 ForEach(StructureModel.Preset.allCases, id: \.self) { preset in
                     FormChip("+ \(preset.rawValue)", isOn: false) { model.add(preset) }
+                        .help("Add a \(preset.bars)-bar \(preset.rawValue.lowercased()) after the selected section, playing the newest of everything")
                 }
             }
             // What the whole form leaves out, above the section detail rather than inside it: a
@@ -90,7 +98,10 @@ struct StructureSurfaceView: View {
             if let error = model.lastError {
                 Text(error).font(Design.Typography.ui(11.5)).foregroundStyle(Design.Palette.warn)
             } else if model.isDirty {
-                Text("Not kept yet: the transport plays what was last kept.")
+                // Two things keep without being asked, and the line says which. A library row
+                // dropped on a section stitches into the *kept* form, so the drop keeps first.
+                // The header's Play control does not: it plays the song as it was last kept.
+                Text("Not kept yet: the transport bar plays what was last kept. Play up here, and a library row dropped on a section, keep the arrangement first.")
                     .font(Design.Typography.ui(11.5, weight: .regular))
                     .foregroundStyle(Design.Palette.inkSecondary)
             }
@@ -100,11 +111,13 @@ struct StructureSurfaceView: View {
                 .font(Design.Typography.ui(12))
                 .foregroundStyle(Design.Palette.inkSecondary)
                 .disabled(!model.isDirty)
+                .help("Back to the form as it was last kept")
             Button("Keep arrangement") { Task { await model.keep() } }
                 .buttonStyle(.plain)
                 .font(Design.Typography.ui(12, weight: .semibold))
                 .foregroundStyle(Design.Palette.accent)
                 .disabled(!model.isDirty)
+                .help("Hand the sections to the song. Nothing is versioned: the sections are the song's, and the transport plays them from now on.")
         }
     }
 }
@@ -187,6 +200,12 @@ private struct SectionDetail: View {
     let model: StructureModel
     let section: SongGraph.Section
 
+    /// The section whose Remove has been clicked once. Remove asks: the first click turns the
+    /// chip into "Remove Verse?" in the warn colour and the second removes; any other click on
+    /// the panel, or selecting another section, puts it back. Keep and Revert are still there,
+    /// so one question is enough and a sheet would be too much.
+    @State private var armedRemove: SectionID?
+
     private static let lengths = [1, 2, 4, 8, 16, 32]
 
     /// A chip's words. The version titles this app writes are sentences — "Brushes under the C
@@ -199,6 +218,9 @@ private struct SectionDetail: View {
         guard let reason = layer.silentReason else { return title }
         return "\(title) (\(reason))"
     }
+
+    private var isArmed: Bool { armedRemove == section.id }
+    private func disarm() { armedRemove = nil }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -215,20 +237,30 @@ private struct SectionDetail: View {
                 VStack(alignment: .leading, spacing: 4) {
                     FormLabel("Bars")
                     HStack(spacing: 4) {
-                        FormChip("−", isOn: false) { model.setLength(section.id, bars: section.lengthInBars - 1) }
+                        FormChip("−", isOn: false) { disarm(); model.setLength(section.id, bars: section.lengthInBars - 1) }
+                            .help("One bar shorter")
+                            .accessibilityLabel("One bar shorter")
                         ForEach(Self.lengths, id: \.self) { bars in
-                            FormChip("\(bars)", isOn: section.lengthInBars == bars) { model.setLength(section.id, bars: bars) }
+                            FormChip("\(bars)", isOn: section.lengthInBars == bars) { disarm(); model.setLength(section.id, bars: bars) }
+                                .help("\(bars) bar\(bars == 1 ? "" : "s")")
                         }
-                        FormChip("+", isOn: false) { model.setLength(section.id, bars: section.lengthInBars + 1) }
+                        FormChip("+", isOn: false) { disarm(); model.setLength(section.id, bars: section.lengthInBars + 1) }
+                            .help("One bar longer")
+                            .accessibilityLabel("One bar longer")
                     }
                 }
                 VStack(alignment: .leading, spacing: 4) {
                     FormLabel("Order")
                     HStack(spacing: 4) {
-                        FormChip("◀", isOn: false) { model.moveEarlier(section.id) }
-                        FormChip("▶", isOn: false) { model.moveLater(section.id) }
-                        FormChip("Duplicate", isOn: false) { model.duplicate(section.id) }
-                        FormChip("Remove", isOn: false) { model.remove(section.id) }
+                        FormChip("◀", isOn: false) { disarm(); model.moveEarlier(section.id) }
+                            .help("Move \(section.name) one place earlier in the form")
+                            .accessibilityLabel("Move \(section.name) earlier")
+                        FormChip("▶", isOn: false) { disarm(); model.moveLater(section.id) }
+                            .help("Move \(section.name) one place later in the form")
+                            .accessibilityLabel("Move \(section.name) later")
+                        FormChip("Duplicate", isOn: false) { disarm(); model.duplicate(section.id) }
+                            .help("A copy of \(section.name) right after it, playing the same parts")
+                        removeChip
                     }
                 }
             }
@@ -252,6 +284,7 @@ private struct SectionDetail: View {
                                 ForEach(choice.layers) { layer in
                                     FormChip(Self.chipTitle(layer),
                                              isOn: section.stitch.contains(part: layer.id)) {
+                                        disarm()
                                         model.toggle(layer.id, in: section.id)
                                     }
                                     .help(layer.plays ? layer.title
@@ -266,7 +299,7 @@ private struct SectionDetail: View {
                         Text("This section does not play the \(missing) the song has.")
                             .font(Design.Typography.ui(11.5, weight: .regular))
                             .foregroundStyle(Design.Palette.inkSecondary)
-                        FormChip("Add \(missing)", isOn: false) { model.fill(section.id) }
+                        FormChip("Add \(missing)", isOn: false) { disarm(); model.fill(section.id) }
                     }
                 }
                 if let silence = model.silence(of: section) {
@@ -281,6 +314,21 @@ private struct SectionDetail: View {
         .background(Design.Palette.panelAlt)
         .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.line, lineWidth: Design.Metric.hairline))
         .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+        .onChange(of: section.id) { disarm() }
+    }
+
+    private var removeChip: some View {
+        FormChip(isArmed ? "Remove \(section.name)?" : "Remove", isOn: false, warns: isArmed) {
+            if isArmed {
+                disarm()
+                model.remove(section.id)
+            } else {
+                armedRemove = section.id
+            }
+        }
+        .help(isArmed ? "Click again to take \(section.name) out of the form. Revert brings it back until you keep."
+                      : "Take \(section.name) out of the form. Asks once; the parts it plays stay in the song.")
+        .accessibilityLabel(isArmed ? "Confirm removing \(section.name)" : "Remove \(section.name)")
     }
 }
 
@@ -315,22 +363,30 @@ struct FlowRow: Layout {
 private struct FormChip: View {
     let title: String
     let isOn: Bool
+    /// A chip that is a warning rather than a choice — the armed Remove. Warn ink on the warn
+    /// ground, so it cannot be read as one more option in the row.
+    let warns: Bool
     let action: () -> Void
-    init(_ title: String, isOn: Bool, action: @escaping () -> Void) { self.title = title; self.isOn = isOn; self.action = action }
+    init(_ title: String, isOn: Bool, warns: Bool = false, action: @escaping () -> Void) {
+        self.title = title; self.isOn = isOn; self.warns = warns; self.action = action
+    }
+
+    private var ink: Color { warns ? Design.Palette.warn : isOn ? Design.Palette.accent : Design.Palette.inkSecondary }
+    private var ground: Color { warns ? Design.Palette.warnSoft : isOn ? Design.Palette.accentSoft : Design.Palette.panel }
+    private var edge: Color { warns ? Design.Palette.warn.opacity(0.5) : isOn ? Design.Palette.accent.opacity(0.35) : Design.Palette.line }
 
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(Design.Typography.ui(11.5, weight: isOn ? .semibold : .regular))
-                .foregroundStyle(isOn ? Design.Palette.accent : Design.Palette.inkSecondary)
+                .font(Design.Typography.ui(11.5, weight: isOn || warns ? .semibold : .regular))
+                .foregroundStyle(ink)
                 .lineLimit(1)
                 .fixedSize()
                 .padding(.horizontal, 8)
                 .frame(height: Design.Metric.chipHeight)
-                .background(isOn ? Design.Palette.accentSoft : Design.Palette.panel,
-                            in: RoundedRectangle(cornerRadius: Design.Metric.corner))
+                .background(ground, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
                 .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
-                    .stroke(isOn ? Design.Palette.accent.opacity(0.35) : Design.Palette.line, lineWidth: Design.Metric.hairline))
+                    .stroke(edge, lineWidth: Design.Metric.hairline))
         }
         .buttonStyle(.plain)
     }

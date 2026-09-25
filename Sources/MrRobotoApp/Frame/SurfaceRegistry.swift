@@ -123,7 +123,7 @@ public final class SurfaceRegistry {
             MixerSurfaceView(model: SurfaceWiring.shared.mixerModel(for: item, app: app), midi: SurfaceWiring.shared.midi(for: app))
         }
         registry.register(.master) { item, app in
-            MasterSurfaceView(model: SurfaceWiring.shared.masterModel(for: item, app: app))
+            MasterSurfaceView(model: SurfaceWiring.shared.masterModel(for: item, app: app), app: app)
         }
     }
 
@@ -155,6 +155,8 @@ struct SurfaceHost: View {
     let item: BenchItem
     let app: AppState
     var registry: SurfaceRegistry = .shared
+    /// The ✕ pressed on a surface holding unkept work: it asks once before it closes.
+    @State private var isConfirmingClose = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -218,8 +220,18 @@ struct SurfaceHost: View {
                        isOn: item.isPinned) {
                 app.setPinned(!item.isPinned, for: item.id)
             }
-            ChipButton(systemImage: "xmark", help: "Close this surface") {
-                app.closeSurface(item.id)
+            ChipButton(systemImage: "xmark",
+                       help: app.closingWouldLoseWork(item.id)
+                           ? "Close this surface — it has edits that were not kept, so it asks first"
+                           : "Close this surface") {
+                if app.closingWouldLoseWork(item.id) { isConfirmingClose = true } else { app.closeSurface(item.id) }
+            }
+            .confirmationDialog("Close \(item.kind.rawValue)? It has edits that were not kept.",
+                                isPresented: $isConfirmingClose, titleVisibility: .visible) {
+                Button("Close anyway", role: .destructive) { app.closeSurface(item.id) }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("What was kept is in the song. What was not is only here.")
             }
         }
         .padding(.horizontal, Design.Metric.inset)

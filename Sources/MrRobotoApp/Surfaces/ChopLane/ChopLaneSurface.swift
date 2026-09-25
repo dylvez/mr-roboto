@@ -24,8 +24,9 @@ import Synchronization
 ///
 /// The marker positions live in a part version, not here. `commitChop` writes them; reopening the
 /// lane on that version restores them. What is genuinely surface-local is the audition rig (the
-/// rendered kit, the stretch cache) and the in-flight drag — none of which is an edit until it is
-/// committed.
+/// rendered kit, the stretch cache), the in-flight drag, and a fingerprint of what was last kept
+/// so the lane can say whether it is holding anything the ledger is not — none of which is an
+/// edit until it is committed.
 @MainActor
 @Observable
 public final class ChopLaneSurface: Surface {
@@ -157,6 +158,25 @@ public final class ChopLaneSurface: Surface {
     /// The last thing that went wrong, for the surface's own footer. Never an alert.
     public private(set) var lastError: String?
 
+    // MARK: What has been kept
+    //
+    // A lane is closed by the bench, not by a keep, so it has to know what it is still holding
+    // that the ledger is not. Each of the two commits leaves a fingerprint of what it wrote; the
+    // lane compares what it would write now against that.
+
+    /// What `commitChop` last wrote, or what the lane opened on. Nil when the lane opened with no
+    /// version, because then nobody has ever kept this chop.
+    ///
+    /// Opening is not a change: a lane opened on a version takes the fingerprint of its own fresh
+    /// detection, so an untouched lane never claims to hold unkept work and the bench can close it
+    /// without a word. Only what the user does after that counts.
+    private var keptChop: [SliceMarker]?
+    /// The re-groove last heard through `playRegroove`. A re-groove has been made when it has been
+    /// played, and not before: a feel picked and never played is a setting, not a thing to keep.
+    private var playedRegroove: RegrooveSetting?
+    /// The re-groove `commitRegroove` last wrote.
+    private var keptRegroove: RegrooveSetting?
+
     /// Which pad the eye is on. Auditioning one selects it.
     public var selectedSlice: Int?
 
@@ -182,6 +202,21 @@ public final class ChopLaneSurface: Surface {
     /// Feels worth offering for this bar, best first.
     public var suggestedFeels: [Feel] {
         feels.suggest(for: FeelLibrary.Request(tempo: source.tempo, limit: 8))
+    }
+
+    /// Everything that decides what a re-groove sounds like, as one comparable value. Two
+    /// re-grooves with the same setting are the same re-groove, which is how the lane knows
+    /// whether the one it is hearing is the one it kept.
+    public struct RegrooveSetting: Hashable, Sendable {
+        public var feelName: String
+        public var tempo: Double
+        public var repeats: Int
+        public var overlap: Regroove.Overlap
+    }
+
+    /// The re-groove the levers currently describe, or nil with no feel picked.
+    public var currentRegroove: RegrooveSetting? {
+        feel.map { RegrooveSetting(feelName: $0.name, tempo: tempo, repeats: repeats, overlap: overlap) }
     }
 
     // MARK: Audition
@@ -219,6 +254,7 @@ public final class ChopLaneSurface: Surface {
             feelName = suggested.name
             tempo = source.tempo ?? suggested.suggestedTempo
         }
+        keptChop = version == nil ? nil : sliceMarkers
     }
 
     /// Point the lane at a host after the fact — the frame builds the surface, then adopts it.
@@ -231,10 +267,34 @@ public final class ChopLaneSurface: Surface {
 
     public var sliceCount: Int { chop.count }
 
+    /// What turning the sensitivity dial would throw away, said before it is turned. Nil when
+    /// nothing is at stake because the lane is exactly what the detector made of it.
+    ///
+    /// `resliceFromDetection` clears the pad overrides and trims along with the markers, so the
+    /// warning has to name all three or it is a warning about the wrong thing.
+    public var resliceWarning: String? {
+        Self.resliceWarning(handEdited: handEdited, overrides: overrides.count, trims: edits.count)
+    }
+
+    /// The warning's wording, kept pure so it can be checked without a bar.
+    public nonisolated static func resliceWarning(handEdited: Bool, overrides: Int,
+                                                  trims: Int) -> String? {
+        var lost: [String] = []
+        if handEdited { lost.append("your marker edits") }
+        if overrides > 0 { lost.append(overrides == 1 ? "1 pad override" : "\(overrides) pad overrides") }
+        if trims > 0 { lost.append(trims == 1 ? "1 pad's trims" : "\(trims) pads' trims") }
+        guard !lost.isEmpty else { return nil }
+        let list = lost.count == 1
+            ? lost[0]
+            : lost.dropLast().joined(separator: ", ") + " and " + lost[lost.count - 1]
+        return "Moving this re-slices the bar and drops \(list)."
+    }
+
     /// Re-detect at the current sensitivity and re-slice from scratch.
     ///
     /// Hand edits do not survive this, and that is the honest behaviour: the markers were a
-    /// function of the dial, and the dial moved. `handEdited` exists so the view can say so first.
+    /// function of the dial, and the dial moved. `resliceWarning` exists so the view can say so
+    /// first.
     public func resliceFromDetection() {
         guard source.isWellFormed else { return }
         slicedAtSensitivity = min(1, max(0, sensitivity))
@@ -616,6 +676,7 @@ public final class ChopLaneSurface: Surface {
             // The host is now holding the re-groove's kit, so the pad map has to be re-sent
             // before a pad is touched again.
             needsAuditionRefresh = true
+            playedRegroove = currentRegroove
             lastError = nil
         } catch {
             lastError = "\(error)"
@@ -677,6 +738,7 @@ public final class ChopLaneSurface: Surface {
         guard host.record(version) else { throw ChopLaneError.versionRefused }
         versions = [version.id]
         handEdited = false
+        keptChop = sliceMarkers
         return version
     }
 
@@ -696,6 +758,7 @@ public final class ChopLaneSurface: Surface {
         } ?? PartVersion(partID: PartID(), kind: .groove(feel.groove), author: .user,
                          parents: versions, operation: Operation.regroove, note: summary)
         guard host.record(version) else { throw ChopLaneError.versionRefused }
+        keptRegroove = currentRegroove
         return version
     }
 
@@ -703,6 +766,91 @@ public final class ChopLaneSurface: Surface {
     private var parent: PartVersion? {
         guard let id = versions.last else { return nil }
         return host?.song?.version(id)
+    }
+
+    // MARK: Keeping
+    //
+    // The two commits above throw, and a view has nowhere to put a throw. These are the verbs the
+    // view presses: each one says beforehand whether it can be pressed and why not, and afterwards
+    // routes whatever went wrong into `lastError`, where the footer already looks.
+
+    /// True when the chop the lane would write differs from the one it last wrote.
+    ///
+    /// The comparison is on `sliceMarkers`, which is what `commitChop` writes: the markers and
+    /// the class each slice was called. Pad trims are deliberately not in it. They are not in the
+    /// version either, so a Keep enabled by a trim would keep nothing, and the button would be
+    /// promising what the ledger cannot hold.
+    public var hasUnkeptChopEdits: Bool {
+        guard sliceCount > 0 else { return false }
+        guard let keptChop else { return true }
+        return sliceMarkers != keptChop
+    }
+
+    /// True when a re-groove has been heard that the ledger does not have.
+    public var hasUnkeptRegroove: Bool {
+        guard let playedRegroove else { return false }
+        return playedRegroove != keptRegroove
+    }
+
+    /// True when closing this lane would lose something. The frame asks before it does.
+    public var hasUnkeptChanges: Bool { hasUnkeptChopEdits || hasUnkeptRegroove }
+
+    public var canKeepChop: Bool { whyChopCannotBeKept == nil }
+
+    /// Why Keep chop is disabled, in words the button can show. Nil when it is not.
+    public var whyChopCannotBeKept: String? {
+        if sliceCount == 0 { return "There are no slices to keep." }
+        if !hasUnkeptChopEdits { return "Nothing has changed since this bar was kept." }
+        return nil
+    }
+
+    public var canKeepRegroove: Bool { whyRegrooveCannotBeKept == nil }
+
+    /// Why Keep re-groove is disabled. Nil when it is not.
+    ///
+    /// What is kept is what was heard, so the current setting has to have been played. And a
+    /// groove is spawned from the chop version it was played with, so an unkept chop goes first:
+    /// otherwise the groove's lineage would name a cut that is not the one it came from.
+    public var whyRegrooveCannotBeKept: String? {
+        guard let current = currentRegroove else { return "Pick a feel first." }
+        if current != playedRegroove {
+            return "Play the re-groove first, so what is kept is what was heard."
+        }
+        if hasUnkeptChopEdits {
+            return "Keep the chop first, so the groove can say which cut it came from."
+        }
+        if current == keptRegroove { return "This re-groove is already kept." }
+        return nil
+    }
+
+    /// Keep the chop as a new version of this bar. The note is the bar's own label, which is what
+    /// the lane will be titled by when it is reopened on the version.
+    public func keepChop() {
+        guard canKeepChop else {
+            lastError = whyChopCannotBeKept
+            return
+        }
+        do {
+            try commitChop(note: source.label)
+            lastError = nil
+        } catch {
+            lastError = "\(error)"
+        }
+    }
+
+    /// Keep the re-groove as a new groove part. The host decides what happens next; the frame's
+    /// adapter opens the Grid on it.
+    public func keepRegroove() {
+        guard canKeepRegroove else {
+            lastError = whyRegrooveCannotBeKept
+            return
+        }
+        do {
+            try commitRegroove()
+            lastError = nil
+        } catch {
+            lastError = "\(error)"
+        }
     }
 
     // MARK: Levers

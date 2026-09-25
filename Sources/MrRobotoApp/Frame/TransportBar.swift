@@ -11,6 +11,7 @@ import SwiftUI
 /// song with nothing to sound says so in the middle of the bar instead of lighting up.
 struct TransportBar: View {
     let app: AppState
+    @State private var isShowingSettings = false
 
     var body: some View {
         HStack(spacing: 36) {
@@ -126,17 +127,31 @@ struct TransportBar: View {
         return "No controller"
     }
 
+    /// The key, the tempo and the meter — and, pressed, the place to change them. They are read
+    /// here more than anywhere, so this is where a person reaches to set them.
     private var keyAndTempo: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 14) {
-            Text(app.song?.key?.name ?? "No key")
-                .font(Design.Typography.ui(17, weight: .medium))
-                .foregroundStyle(app.song?.key == nil ? Design.Palette.inkTertiary : Design.Palette.ink)
-            Text("\(Int(app.clock.tempo.rounded())) bpm")
-                .font(Design.Typography.numeric(12))
-                .foregroundStyle(Design.Palette.inkSecondary)
-            Text(app.clock.timeSignature.description)
-                .font(Design.Typography.numeric(12))
-                .foregroundStyle(Design.Palette.inkTertiary)
+        Button {
+            isShowingSettings.toggle()
+        } label: {
+            HStack(alignment: .firstTextBaseline, spacing: 14) {
+                Text(app.song?.key?.name ?? "No key")
+                    .font(Design.Typography.ui(17, weight: .medium))
+                    .foregroundStyle(app.song?.key == nil ? Design.Palette.inkTertiary : Design.Palette.ink)
+                Text("\(Int(app.clock.tempo.rounded())) bpm")
+                    .font(Design.Typography.numeric(12))
+                    .foregroundStyle(Design.Palette.inkSecondary)
+                Text(app.clock.timeSignature.description)
+                    .font(Design.Typography.numeric(12))
+                    .foregroundStyle(Design.Palette.inkTertiary)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(app.song == nil)
+        .help(app.song == nil ? "The key, tempo and meter of the open song" : "Set the song's key, tempo and meter")
+        .accessibilityLabel("Key \(app.song?.key?.name ?? "none"), \(Int(app.clock.tempo.rounded())) beats per minute, \(app.clock.timeSignature.description). Settings")
+        .popover(isPresented: $isShowingSettings, arrowEdge: .top) {
+            SongSettingsPopover(app: app)
         }
     }
 
@@ -151,22 +166,27 @@ struct TransportBar: View {
         } else {
             HStack(alignment: .bottom, spacing: 6) {
                 ForEach(sections) { section in
-                    Button {
-                        app.setActiveSection(section.id)
-                    } label: {
-                        VStack(spacing: 6) {
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(app.activeSection == section.id ? Design.Palette.accent : Design.Palette.ink)
-                                .frame(width: TransportBar.blockWidth(bars: section.lengthInBars), height: 10)
-                            Text(section.name.uppercased())
-                                .font(Design.Typography.label)
-                                .tracking(1.1)
-                                .foregroundStyle(app.activeSection == section.id ? Design.Palette.accent : Design.Palette.inkSecondary)
-                        }
-                        .contentShape(Rectangle())
+                    // A click lights the section; a double-click plays from it. Not a Button: a
+                    // button's own tap would take the first click and the double never arrives.
+                    VStack(spacing: 6) {
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(app.activeSection == section.id ? Design.Palette.accent : Design.Palette.ink)
+                            .frame(width: TransportBar.blockWidth(bars: section.lengthInBars), height: 10)
+                        Text(section.name.uppercased())
+                            .font(Design.Typography.label)
+                            .tracking(1.1)
+                            .foregroundStyle(app.activeSection == section.id ? Design.Palette.accent : Design.Palette.inkSecondary)
                     }
-                    .buttonStyle(.plain)
-                    .help("\(section.name) · \(section.lengthInBars) bars")
+                    .contentShape(Rectangle())
+                    .onTapGesture(count: 2) {
+                        app.setActiveSection(section.id)
+                        Task { await app.startTransport(fromSection: section.id) }
+                    }
+                    .onTapGesture { app.setActiveSection(section.id) }
+                    .help("\(section.name) · \(section.lengthInBars) bars, from bar \((app.sectionStartBar(section.id) ?? 0) + 1). Click to light it; double-click to play from it (⇧Space).")
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("\(section.name), \(section.lengthInBars) bars\(app.activeSection == section.id ? ", lit" : "")")
+                    .accessibilityAddTraits(.isButton)
                 }
                 Spacer(minLength: 0)
             }

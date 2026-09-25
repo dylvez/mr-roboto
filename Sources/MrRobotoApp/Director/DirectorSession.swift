@@ -128,6 +128,23 @@ public final class DirectorSession {
         keyStatus = await director.keyStatus()
     }
 
+    /// Keeps a key the user typed in the rail, then asks again whether there is one. Returns what
+    /// went wrong, or nil; the key itself is never held here and never logged.
+    public func storeKey(_ text: String) async -> String? {
+        if let problem = await director.storeKey(text) { return problem }
+        await refreshKeyStatus()
+        app?.note(.session, "The band has a key", detail: keyStatus.sentence)
+        return nil
+    }
+
+    /// Takes the keychain's key out, then asks again.
+    public func forgetKey() async -> String? {
+        if let problem = await director.forgetKey() { return problem }
+        await refreshKeyStatus()
+        app?.note(.session, "The band's key was forgotten", detail: keyStatus.sentence)
+        return nil
+    }
+
     /// What the composer says under the field. Never a stack trace; never a key.
     public var footnote: String {
         if isWorking { return activity ?? "Working…" }
@@ -202,6 +219,17 @@ public final class DirectorSession {
         activity = "Stopping…"
         let director = self.director
         Task { await director.cancel() }
+    }
+
+    /// Another song is open: the thread starts over. A turn in flight is stopped first.
+    ///
+    /// The conversation used to carry across songs untouched, so the Director in song B could be
+    /// holding version ids and a reading of song A, and would act on them until the tools refused
+    /// it. What the band spent survives; that is the client's ledger, not the thread's.
+    public func songChanged() {
+        if isWorking { cancel() }
+        let director = self.director
+        Task { await director.clear() }
     }
 
     // MARK: Watching a turn

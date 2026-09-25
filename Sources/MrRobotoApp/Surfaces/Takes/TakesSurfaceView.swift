@@ -8,8 +8,12 @@ struct TakesSurfaceView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Design.Metric.gutter) {
             header
-            lanes
-            footer
+            if model.takes.isEmpty {
+                empty
+            } else {
+                lanes
+                footer
+            }
         }
         .padding(Design.Metric.inset)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -26,6 +30,19 @@ struct TakesSurfaceView: View {
             Button("Keep the comp") { model.keepComp() }
                 .font(Design.Typography.ui(12.5))
                 .disabled(model.takes.isEmpty)
+                .help("Renders the comp lane as one new version, with the takes as its parents.")
+        }
+    }
+
+    /// With nothing to comp there is no lane to draw. Takes come from the Booth, and this surface
+    /// cannot open it — its host records and plays takes, nothing more — so it says where to go.
+    private var empty: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            EmptyNote(title: "No takes yet.",
+                      detail: "Takes are recorded in the Booth: pick a section, press Record and sing it. "
+                          + "Every take you stop lands here as a lane.")
+            FrameButton(title: "Open the Booth", emphasis: .accent) { model.openBooth() }
+                .help("The Booth, on the song's active section (⌘0)")
         }
     }
 
@@ -51,14 +68,19 @@ struct TakesSurfaceView: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     if let version {
+                        let isPlaying = model.playing == version.id
                         Button {
-                            Task { model.playing == version.id ? model.stopAudition() : await model.audition(version) }
+                            Task { isPlaying ? model.stopAudition() : await model.audition(version) }
                         } label: {
-                            Image(systemName: model.playing == version.id ? "stop.fill" : "play.fill")
-                                .font(.system(size: 9))
+                            Image(systemName: isPlaying ? "stop.fill" : "play.fill")
+                                .font(Design.Typography.ui(9))
                                 .foregroundStyle(Design.Palette.accent)
+                                .frame(width: Design.Metric.tagHeight, height: Design.Metric.tagHeight)
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
+                        .help(isPlaying ? "Stop \(title)" : "Play \(title) on its own")
+                        .accessibilityLabel(isPlaying ? "Stop \(title)" : "Play \(title)")
                     }
                     Text(title).font(Design.Typography.ui(13, weight: isComp ? .semibold : .medium)).lineLimit(1)
                 }
@@ -120,6 +142,22 @@ struct TakesSurfaceView: View {
         }
         .buttonStyle(.plain)
         .disabled(isComp || !covers)
+        .help(cellHelp(bar: bar, isComp: isComp, version: version, covers: covers))
+        .accessibilityLabel(isComp ? "Comp, bar \(bar + 1)" : "Bar \(bar + 1)")
+    }
+
+    /// Why a cell does what it does — and, for the ones that do nothing, why not. The comp lane is
+    /// read-only because it is the result of the choices on the take lanes, and there is no way to
+    /// hear it before keeping it: the host plays takes, not a plan.
+    private func cellHelp(bar: Int, isComp: Bool, version: PartVersion?, covers: Bool) -> String {
+        if isComp {
+            let from = model.take(forBar: bar).flatMap { id in model.takes.first { $0.id == id } }.map(PartLabel.title(of:))
+            return (from.map { "Bar \(bar + 1) comes from \($0). " } ?? "")
+                + "The comp lane shows the choice; press a bar on a take's lane to change it. Keep the comp to hear it."
+        }
+        guard let version else { return "" }
+        guard covers else { return "\(PartLabel.title(of: version)) has no audio under bar \(bar + 1)." }
+        return "Take bar \(bar + 1) from \(PartLabel.title(of: version))."
     }
 
     /// Whether a take has audio under this bar.

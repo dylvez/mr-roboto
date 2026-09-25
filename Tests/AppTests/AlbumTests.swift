@@ -37,6 +37,13 @@ private enum AlbumFixture {
     }
 }
 
+/// What `Export.release` told a surface as it went: a reference, so a `@MainActor` closure can
+/// append to it without a captured `var`.
+@MainActor
+private final class Told {
+    var lines: [String] = []
+}
+
 @Suite("Album: grown, read and released", .serialized) @MainActor
 struct AlbumTests {
 
@@ -101,8 +108,10 @@ struct AlbumTests {
         let (app, id) = AlbumFixture.app(in: directory)
         app.setGap(3, before: app.library.album(id)!.songs[1], in: id)
         let out = directory.appendingPathComponent("release", isDirectory: true)
-        let result = try await Export.release(app, album: id, to: out)
+        let told = Told()
+        let result = try await Export.release(app, album: id, to: out) { track, of, title in told.lines.append("\(track)/\(of) \(title)") }
         #expect(result.report.tracks.count == 3)
+        #expect(told.lines == ["1/3 Arrival", "2/3 Exit Interview", "3/3 Fluorescent"], "the surface is told each track as it starts")
         for track in result.report.tracks {
             #expect(abs(track.integratedLUFS - -14) <= 1.0, "\(track.title) at \(track.integratedLUFS)")
             #expect(track.truePeakDBTP <= -1.0, "\(track.title) peaks at \(track.truePeakDBTP)")
@@ -133,5 +142,57 @@ struct AlbumTests {
             let png = CoverRenderer.png(CoverDesign(layout: layout), title: "Soft Machine", artist: "Vessel", pixels: 600)
             #expect(png != nil && (png?.count ?? 0) > 1_000, "\(layout)")
         }
+    }
+
+    @Test("the surface's helpers: the songs still to add, a gap typed by hand, and where a release lands")
+    func surfaceHelpers() throws {
+        let directory = LibraryFixture.directory("album-surface")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let (app, id) = AlbumFixture.app(in: directory)
+        let album = try #require(app.library.album(id))
+        // Every library song is on the album, so the menu has nothing to offer — until one comes off.
+        #expect(AlbumSurfaceView.addable(to: album, from: app.library, open: nil).isEmpty)
+        #expect(app.removeSong(album.songs[1], from: id))
+        let shorter = try #require(app.library.album(id))
+        #expect(AlbumSurfaceView.addable(to: shorter, from: app.library, open: nil).map(\.title) == ["Exit Interview"])
+        // The open song is offered before it is saved, since `addSong` takes it; a saved one is not offered twice.
+        let unsaved = Song(title: "Unsaved")
+        #expect(AlbumSurfaceView.addable(to: shorter, from: app.library, open: unsaved).map(\.title) == ["Exit Interview", "Unsaved"])
+        #expect(AlbumSurfaceView.addable(to: shorter, from: app.library, open: app.library.song(album.songs[1])).map(\.title) == ["Exit Interview"])
+        // A gap typed by hand: seconds, with or without the unit, clamped to what `setGap` keeps.
+        #expect(AlbumSurfaceView.gapSeconds(parsing: "3") == 3)
+        #expect(AlbumSurfaceView.gapSeconds(parsing: " 3,5 s ") == 3.5)
+        #expect(AlbumSurfaceView.gapSeconds(parsing: "0.25") == 0.25)
+        #expect(AlbumSurfaceView.gapSeconds(parsing: "99") == 30)
+        #expect(AlbumSurfaceView.gapSeconds(parsing: "-1") == 0)
+        #expect(AlbumSurfaceView.gapSeconds(parsing: "two") == nil)
+        #expect(AlbumSurfaceView.gapSeconds(parsing: "") == nil)
+        // A release lands where the Director's tool puts it: the export directory, a folder per album.
+        #expect(AlbumReleaseModel.folder(for: album, app: app).path.hasSuffix("Music/Mr. Roboto/Exports/Soft Machine"))
+        app.exportDirectory = directory
+        #expect(AlbumReleaseModel.folder(for: album, app: app).path == directory.appendingPathComponent("Soft Machine", isDirectory: true).path)
+        // Every clearance state has a word and a reason, and the reason starts with the word.
+        for status in ClearanceStatus.allCases {
+            #expect(AlbumSurfaceView.help(status).hasPrefix(AlbumSurfaceView.label(status)), "\(status)")
+        }
+    }
+
+    @Test("a release that cannot start says why on the surface and in the rail, and the button is free again")
+    func releaseRefused() async throws {
+        let directory = LibraryFixture.directory("album-release-refused")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let app = LibraryFixture.app(directory)
+        let id = try #require(app.createAlbum(title: "Empty", artist: "Vessel"))
+        app.exportDirectory = directory
+        let model = AlbumReleaseModel()
+        let count = app.log.count
+        #expect(await model.release(id, app: app, reveal: false) == nil)
+        #expect(model.failure == Export.ReleaseFailure.noTracks.description)
+        #expect(!model.isReleasing && model.progressLine == nil && model.folder == nil)
+        #expect(app.log.dropFirst(count).contains { $0.text.contains("Could not release Empty") })
+        #expect(!FileManager.default.fileExists(atPath: directory.appendingPathComponent("Empty").path), "nothing was written")
+        // An album the library no longer holds.
+        #expect(await model.release(AlbumID(), app: app, reveal: false) == nil)
+        #expect(model.failure == Export.ReleaseFailure.noAlbum.description)
     }
 }

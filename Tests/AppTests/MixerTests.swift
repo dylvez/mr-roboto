@@ -136,6 +136,63 @@ struct MixerTests {
         #expect(host.committed.count == 1 && host.committed[0].2.hasPrefix("master +"))
     }
 
+    @Test("the Master says what it read — the first section or the whole song — and marks the reading stale once the bounce would differ")
+    func readingScope() async throws {
+        let (song, plan) = fixture()
+        let host = StubMixHost(song: song, playback: plan)
+        let model = MasterModel(host: host)
+        // What is bounced is the host's call: a section only of an arranged plan. The model's scope
+        // must say the same thing the bounce will do, whichever it is.
+        let expected: MasterModel.Scope = host.playback.isArranged
+            ? .firstSection(name: try #require(song.sections.first?.name))
+            : .wholeSong
+        #expect(model.scope == expected)
+        #expect(MasterModel.Scope.wholeSong.label == "Whole song")
+        #expect(MasterModel.Scope.firstSection(name: "Verse").label == "First section · Verse")
+
+        await model.read()
+        let reading = try #require(model.reading)
+        #expect(reading.scope == expected)
+        #expect(!model.isStale)
+
+        // The target is what the numbers are judged against, not something in the bounce.
+        model.setTarget(-16)
+        #expect(!model.isStale)
+        // The gain and the ceiling are in the bounce, so the numbers are of a mix that is gone.
+        model.setGain(3)
+        #expect(model.isStale)
+        await model.read()
+        #expect(!model.isStale)
+        model.setCeiling(-2)
+        #expect(model.isStale)
+        // A lever put back where it was is not a change.
+        model.setCeiling(-2)
+        await model.read()
+        model.setCeiling(model.mix.master.ceilingDBTP)
+        #expect(!model.isStale)
+    }
+
+    @Test("a send at the bottom of its travel is off, and reads as off rather than as -60 dB")
+    func sendReadsOff() {
+        #expect(MixerModel.sendReadout(nil) == "off")
+        #expect(MixerModel.sendReadout(MixerModel.sendOffDB) == "off")
+        #expect(MixerModel.sendReadout(-12) == "-12 dB")
+        #expect(MixerModel.sendReadout(0) == "0 dB")
+        #expect(MixerModel.send(fromFader: MixerModel.sendOffDB) == nil)
+        #expect(MixerModel.send(fromFader: -59.8) == nil, "the fader's bottom notch is off, not a level")
+        #expect(MixerModel.send(fromFader: -30) == -30)
+        // And what the fader sets is what the readout says.
+        let (song, plan) = fixture()
+        let host = StubMixHost(song: song, playback: plan)
+        let model = MixerModel(host: host)
+        let part = model.rows[0].part
+        model.setSend(MixerModel.send(fromFader: -60), for: part)
+        #expect(model.strip(part).sendDB == nil && MixerModel.sendReadout(model.strip(part).sendDB) == "off")
+        model.setSend(MixerModel.send(fromFader: -18), for: part)
+        #expect(model.strip(part).sendDB == -18 && MixerModel.sendReadout(model.strip(part).sendDB) == "-18 dB")
+
+    }
+
     @Test("Mix is the last step on both paths and opens the Mixer, then the Master once arranged and mixed")
     func path() throws {
         var (song, _) = fixture()

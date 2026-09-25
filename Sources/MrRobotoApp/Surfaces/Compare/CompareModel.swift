@@ -24,7 +24,8 @@ public struct CompareSurface: Surface {
     }
 }
 
-/// What went wrong, in the surface's own words.
+/// What went wrong, in plain sentences: these reach the footer of the surface, so they are written
+/// for whoever is reading it rather than for whoever filled it.
 public enum CompareError: Error, CustomStringConvertible, Equatable {
     case notEnoughCandidates(Int)
     case tooManyCandidates(Int)
@@ -34,13 +35,13 @@ public enum CompareError: Error, CustomStringConvertible, Equatable {
     public var description: String {
         switch self {
         case .notEnoughCandidates(let n):
-            return "compare: \(n) candidate\(n == 1 ? "" : "s") — a comparison needs at least two"
+            return "A comparison needs at least two candidates; this one has \(n)."
         case .tooManyCandidates(let n):
-            return "compare: \(n) candidates — four is the most a row-wise comparison stays readable at"
+            return "\(n) candidates is too many; four is the most a row-wise comparison stays readable at."
         case .tooManyLevers(let n):
-            return "compare: \(n) levers — the surface takes at most two"
+            return "\(n) levers is too many; the surface takes at most two."
         case .unknownCandidate(let id):
-            return "compare: no candidate called \(id)"
+            return "There is no candidate called \(id)."
         }
     }
 }
@@ -229,6 +230,14 @@ public final class CompareModel {
         candidates.reduce(0) { $0 + $1.warnings.count }
     }
 
+    /// Everything the critics said about one candidate, warnings first, then notes — what the row
+    /// shows when its count is pressed. The count is warnings only; the reading is all of it,
+    /// because a note is worth reading once you have asked.
+    public func findings(on id: CompareCandidate.ID) -> [Finding] {
+        guard let candidate = candidate(id) else { return [] }
+        return candidate.findings.sorted { $0.severity > $1.severity }
+    }
+
     // MARK: Choosing
 
     /// Picks a row and plays it. Selecting *is* auditioning — this is the surface where that matters
@@ -251,7 +260,7 @@ public final class CompareModel {
             return false
         }
         guard let host else {
-            lastError = "compare: no host to commit through"
+            lastError = "Nothing is hosting this comparison, so \(candidate.title) cannot be taken."
             return false
         }
         let taken = await host.choose(candidate)
@@ -260,7 +269,7 @@ public final class CompareModel {
             selectedID = id
             lastError = nil
         } else {
-            lastError = "compare: the host would not take \(candidate.title)"
+            lastError = "\(candidate.title) could not be taken; the reason is in the rail."
         }
         return taken
     }

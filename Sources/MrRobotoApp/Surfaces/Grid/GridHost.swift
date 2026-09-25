@@ -29,12 +29,14 @@ public protocol GridHosting: Sendable {
     /// Swap the drum machine under the running pattern.
     func loadMachine(_ machine: SynthMachine) async throws
 
-    /// A new part version left the surface.
-    func commit(_ version: PartVersion) async
+    /// A new part version left the surface. `false` when the host refused it, so the surface can
+    /// say so instead of showing a version the song does not have.
+    @discardableResult
+    func commit(_ version: PartVersion) async -> Bool
 }
 
 extension GridHosting {
-    public func commit(_ version: PartVersion) async {}
+    public func commit(_ version: PartVersion) async -> Bool { true }
 }
 
 // MARK: - The live host
