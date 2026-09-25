@@ -51,6 +51,17 @@ public final class DirectorSession {
         Cast.standard.inRoom(for: app?.song).personas.map { ($0.bible.id, $0.bible.name) }
     }
 
+    /// Set when a surface asks for its member: the composer takes focus and the field is theirs.
+    /// The rail takes it, so it fires once.
+    public var wantsFocus = false
+
+    /// A surface's "Ask": this member only, the rail open, the field ready. A member the song's
+    /// cast has left out of the room is not addressed, and the message goes to everyone.
+    public func ask(_ id: PersonaID) {
+        addressed = room.contains(where: { $0.id == id }) ? [id] : []
+        wantsFocus = true
+    }
+
     public func toggleAddressed(_ id: PersonaID) {
         if addressed.contains(id) { addressed.remove(id) } else { addressed.insert(id) }
         // Everyone chosen is everyone: the same as nobody chosen.
@@ -194,6 +205,8 @@ public final class DirectorSession {
     }
 
     private func start(_ text: String) {
+        // The band reads the song as it is on screen, not as it was a moment ago.
+        app?.keepSurfaceWork()
         isWorking = true
         streaming = ""
         activity = "Thinking…"

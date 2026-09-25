@@ -67,16 +67,9 @@ public struct ChopLaneView: View {
                 .font(Design.Typography.ui(12))
                 .foregroundStyle(Design.Palette.inkSecondary)
                 .help("Stop whatever this lane is playing")
-            // The keep verb, in the shape every surface gives it. Disabled means there is nothing
-            // new to write, and the help says so rather than leaving a grey word unexplained.
-            Button("Keep chop") { surface.keepChop() }
-                .buttonStyle(.plain)
-                .font(Design.Typography.ui(12, weight: .semibold))
-                .foregroundStyle(surface.canKeepChop
-                                 ? Design.Palette.accent : Design.Palette.inkTertiary)
-                .disabled(!surface.canKeepChop)
-                .help(surface.whyChopCannotBeKept
-                      ?? "Keep the markers, and the class each pad was called, as a new version of this bar")
+            // The chop keeps itself a moment after the last edit, like every surface.
+            surface.statusBar
+                .fixedSize()
         }
     }
 
@@ -166,16 +159,16 @@ public struct ChopLaneView: View {
                     .help(surface.feel == nil
                           ? "Pick a feel first"
                           : "Hear the chop in this feel at this tempo")
-                // Keep sits beside Play on purpose: what is kept is what was just heard, and the
-                // help says which of the things that must be true first is not.
-                Button("Keep re-groove") { surface.keepRegroove() }
+                // Making a groove sits beside Play on purpose: what is made is what was just heard.
+                // It is a button because it is a new part, not an edit to this one.
+                Button("Make the groove") { surface.keepRegroove() }
                     .buttonStyle(.plain)
                     .font(Design.Typography.ui(12, weight: .semibold))
                     .foregroundStyle(surface.canKeepRegroove
                                      ? Design.Palette.accent : Design.Palette.inkTertiary)
                     .disabled(!surface.canKeepRegroove)
                     .help(surface.whyRegrooveCannotBeKept
-                          ?? "Keep this feel as a new groove made from the chop; the Grid opens on it")
+                          ?? "Make a new groove from the chop in this feel; the Grid opens on it")
             }
             Slider(value: $surface.tempo, in: 60...180, step: 1)
                 .controlSize(.small)

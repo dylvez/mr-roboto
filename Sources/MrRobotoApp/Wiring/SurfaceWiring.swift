@@ -307,7 +307,14 @@ final class SurfaceWiring {
     /// The takes bound to the item, as lanes; the comp is kept through the same adapter.
     func takesModel(for item: BenchItem, app: AppState) -> TakesModel {
         prune(app)
-        if let existing = takeSheets[item.id] { return existing }
+        if let existing = takeSheets[item.id] {
+            // Takes sung in the Booth while this surface is open join its lanes: every take of the
+            // part it shows. Cheap when nothing is new — the model compares ids first.
+            if let song = app.song, let part = existing.takes.first?.partID {
+                existing.update(takes: Guidance.takes(in: song).filter { $0.partID == part }, song: song)
+            }
+            return existing
+        }
         let bound = app.bound(for: item.id).compactMap { app.version($0) }
         let model = TakesModel(host: BoothAdapter(app: app, service: service(for: app)), takes: bound,
                                song: app.song, surfaceID: item.id)
@@ -371,6 +378,23 @@ final class SurfaceWiring {
 
     /// Forget everything the bench no longer holds. Called on every lookup, which is at most three
     /// items, and is what makes a closed surface's engine work and its draft go away together.
+    /// Lets go of a surface's model, so the next draw builds it again from its binding — after
+    /// the frame changed what the surface is bound to (a version restored from Parts).
+    func discardModel(for id: SurfaceID) {
+        imports[id] = nil; importAdapters[id] = nil
+        grids[id] = nil; gridAdapters[id] = nil
+        sounds[id] = nil; soundAdapters[id] = nil
+        chops[id] = nil
+        rolls[id] = nil; bassAdapters[id] = nil
+        chordSheets[id] = nil; chordsAdapters[id] = nil
+        structures[id] = nil
+        merges[id] = nil
+        lyricSheets[id] = nil
+        takeSheets[id] = nil
+        mixers[id] = nil
+        masters[id] = nil
+    }
+
     func prune(_ app: AppState) {
         let open = Set(app.bench.items.map(\.id))
         imports = imports.filter { open.contains($0.key) }
@@ -409,31 +433,72 @@ final class SurfaceWiring {
     /// a lane — `PersonaDirecting.mark(_:on:)` goes through here, and nothing else writes one.
     func chopBinding(holding id: SurfaceID) -> ChopLaneBinding? { chops[id] }
 
-    /// Whether a surface is holding work that has not been kept: a grid painted and not committed,
-    /// a line edited, an arrangement not kept, a chop re-grooved and not kept, an import still
-    /// running. Read from the models this wiring already holds; a surface with no model yet has
-    /// nothing to lose.
-    ///
-    /// The bench used to retire the oldest unpinned surface to make room for a fourth, and the ✕
-    /// closed at once, and either could take an hour's edits with one line in the rail. Both ask
-    /// this first now.
+    /// The model behind a surface that edits a part, when it has been built. Nil for a surface
+    /// that keeps nothing of its own (Sound and the Mixer keep every move as they make it; the rest
+    /// hold nothing), and for one the bench has not drawn yet.
+    func keeper(for item: BenchItem) -> (any KeepsAsItGoes)? {
+        switch item.kind {
+        case .grid: return grids[item.id]
+        case .pianoRoll: return rolls[item.id]
+        case .chords: return chordSheets[item.id]
+        case .lyrics: return lyricSheets[item.id]
+        case .structure: return structures[item.id]
+        case .chopLane:
+            if case .ready(let surface)? = chops[item.id]?.state { return surface }
+            return nil
+        default: return nil
+        }
+    }
+
+    /// Whether a surface is holding work that has not been kept. With every editing surface
+    /// keeping itself, this is a moment's window after an edit, a keep the song refused, an import
+    /// still running, or a take being recorded.
     func hasUnkeptChanges(for item: BenchItem) -> Bool {
         switch item.kind {
         case .importRecord: return imports[item.id]?.hasUnkeptChanges ?? false
-        case .grid: return grids[item.id]?.hasUnkeptChanges ?? false
-        case .chopLane:
-            if case .ready(let surface)? = chops[item.id]?.state { return surface.hasUnkeptChanges }
-            return false
-        case .pianoRoll: return rolls[item.id]?.hasUnkeptChanges ?? false
-        case .chords: return chordSheets[item.id]?.hasUnkeptChanges ?? false
-        case .lyrics: return lyricSheets[item.id]?.hasUnkeptChanges ?? false
-        case .structure: return structures[item.id]?.isDirty ?? false
         case .booth: return booths[item.id]?.state == .recording
-        case .sound, .album, .merge, .cast, .takes, .mixer, .master, .mashup, .compare, .check:
-            // Sound and the Mixer keep every move as they go; the rest hold nothing of their own.
-            return false
+        default: return keeper(for: item)?.hasUnkeptChanges ?? false
         }
     }
+
+    /// Keeps what every open surface is holding, now. The frame calls this before it reads the
+    /// song — play, save, a song switch, a Director turn, quitting — so what is on screen is what
+    /// is in the song. Returns false when any keep was refused.
+    @discardableResult
+    func keepAll(on bench: Bench) -> Bool {
+        var allKept = true
+        for item in bench.items {
+            if let keeper = keeper(for: item), keeper.hasUnkeptChanges, !keeper.keepNow() { allKept = false }
+        }
+        return allKept
+    }
+
+    /// The part a surface is working on, when it has one: what its header's "heard" tag is about.
+    /// The binding alone is not enough — a Piano roll opened under a groove is bound to the groove,
+    /// and a new groove has no part until its first keep — so the models answer where they can.
+    func part(for item: BenchItem, app: AppState) -> PartID? {
+        switch item.kind {
+        case .grid:
+            if let model = grids[item.id] { return (model.versions.last ?? model.base)?.partID }
+        case .pianoRoll:
+            if let model = rolls[item.id] { return model.part }
+            return nil
+        case .chords:
+            if let model = chordSheets[item.id] { return model.part }
+        case .mixer, .master, .structure, .booth, .takes, .album, .cast, .mashup, .merge, .compare, .check, .lyrics:
+            return nil
+        default:
+            break
+        }
+        guard let song = app.song, let first = app.bound(for: item.id).first else { return nil }
+        return song.version(first)?.partID
+    }
+
+    /// ⌘Z on the surface in front.
+    func undo(for item: BenchItem) { keeper(for: item)?.undo() }
+    func redo(for item: BenchItem) { keeper(for: item)?.redo() }
+    func canUndo(for item: BenchItem) -> Bool { keeper(for: item)?.canUndo ?? false }
+    func canRedo(for item: BenchItem) -> Bool { keeper(for: item)?.canRedo ?? false }
 
     /// The first bound version that actually holds a groove. A grid opened on a sample (say, from
     /// the ledger) is an empty grid rather than a crash.

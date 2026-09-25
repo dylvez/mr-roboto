@@ -126,18 +126,9 @@ public final class GridModel {
         steps.values.contains { row in row.contains { $0 != .rest } }
     }
 
-    /// The grid as it stood before the last feel was loaded, so a feel is a thing you can try and
-    /// then put back. One deep — the pattern before the feel before that is gone — which is what
-    /// "before the last feel load" means.
-    public private(set) var beforeFeel: Snapshot?
-    public var canRestore: Bool { beforeFeel != nil }
-
-    /// A feel chosen while steps were painted, waiting for the word. The picker shows it as
-    /// chosen; nothing on the grid changes until `confirmPendingFeel()`.
-    public private(set) var pendingFeel: Feel?
-
-    /// Everything a feel replaces, held together so a restore puts back all of it or none of it.
-    public struct Snapshot: Sendable {
+    /// Everything an edit can change — a feel load changes nearly all of it at once — held together
+    /// so ⌘Z puts back all of it or none of it. One of these per edit.
+    public struct Snapshot: Sendable, Equatable {
         let voices: [DrumVoice]
         let steps: [DrumVoice: [VelocityTier]]
         let stepsPerBar: Int
@@ -160,6 +151,32 @@ public final class GridModel {
 
     private let host: any GridHosting
     private var paintMode: GridPaintMode?
+
+    // MARK: Keeping as it goes
+
+    /// Every edit, for ⌘Z. A drag is one entry, however many cells it crossed.
+    private var history = EditHistory<Snapshot>()
+    /// The grid as it stood when the current drag began.
+    private var paintBefore: Snapshot?
+    /// Keeps the groove a moment after the last edit. A test sets its delay to nil and keeps by hand.
+    public let autoKeep = AutoKeep()
+
+    // MARK: The Beatmaker
+
+    /// What the Beatmaker says about the groove on screen, rule by rule, refreshed after every edit.
+    /// Empty while nothing is painted: a silent grid has no pocket to read, and "swing 50 %, outside
+    /// the corpus" said about silence is noise.
+    ///
+    /// Read from the grid's own render options — its velocities, swing, pocket and humanize — rather
+    /// than from a groove stripped of them, because those are most of what the Beatmaker reads. It is
+    /// arithmetic over a few hundred steps, so it runs on every edit without a debounce.
+    public private(set) var readings: [PersonaReading] = []
+    private let beatmaker = Beatmaker()
+
+    /// The readings that did not hold: what the Beatmaker would say first.
+    public var flags: [PersonaReading] { readings.filter { !$0.holds } }
+    /// The readings that held.
+    public var holds: [PersonaReading] { readings.filter(\.holds) }
 
     // MARK: Init
 
@@ -186,6 +203,7 @@ public final class GridModel {
         self.humanize = humanize
         self.voiceFeels = voiceFeels
         self.feelLibrary = feelLibrary
+        refreshReadings()
     }
 
     /// A grid opened against an existing groove version, so edits derive from it.
@@ -237,6 +255,22 @@ public final class GridModel {
     /// True on the steps swing moves, so the view can mark the lever's effect on the grid itself.
     public func isSwung(step: Int) -> Bool { swing.isSwung(step: step) }
 
+    /// True on the first step of every bar after the first, where the view draws a bar line.
+    public func startsBar(step: Int) -> Bool {
+        step > 0 && step < stepCount && step % stepsPerBar == 0
+    }
+
+    /// What the ruler says over a step. A one-bar grid counts its beats, 1 to 4, as it always has.
+    /// Past one bar the bar number leads, the way a sequencer counts: "2" where bar two starts and
+    /// "2.3" on its third beat — a bare "3" would not say which bar it was in.
+    public func rulerLabel(step: Int) -> String {
+        guard step % stepsPerBeat == 0 else { return "" }
+        let beat = (step % stepsPerBar) / stepsPerBeat + 1
+        guard bars > 1 else { return "\(beat)" }
+        let bar = step / stepsPerBar + 1
+        return beat == 1 ? "\(bar)" : "\(bar).\(beat)"
+    }
+
     /// The pattern as the graph stores it. The round trip: `GridModel(groove: g).groove == g`.
     public var groove: Groove {
         Groove(stepsPerBar: stepsPerBar, bars: bars, swing: swing.factor,
@@ -275,11 +309,13 @@ public final class GridModel {
 
     /// Sets a step outright. The tier picker and the modifier-held click both land here.
     public func set(_ tier: VelocityTier, voice: DrumVoice, step: Int) {
-        guard var row = steps[voice], row.indices.contains(step) else { return }
+        guard var row = steps[voice], row.indices.contains(step), row[step] != tier else { return }
+        let before = snapshot
         row[step] = tier
         steps[voice] = row
         if tier != .rest { play(voice, velocity: velocity(voice, step: step)) }
-        push()
+        // A drag records itself once, when it ends; a click is its own edit.
+        if paintMode == nil { edited(from: before) } else { push() }
     }
 
     // MARK: Painting
@@ -288,6 +324,7 @@ public final class GridModel {
     /// whole gesture.
     public func beginPaint(_ voice: DrumVoice, step: Int, tier: VelocityTier? = nil) {
         let brushTier = tier ?? brush
+        paintBefore = snapshot
         paintMode = self.tier(voice, step: step) == .rest ? .paint(brushTier) : .erase
         continuePaint(voice, step: step)
     }
@@ -305,18 +342,115 @@ public final class GridModel {
         }
     }
 
-    public func endPaint() { paintMode = nil }
+    public func endPaint() {
+        paintMode = nil
+        if let before = paintBefore { edited(from: before) }
+        paintBefore = nil
+    }
 
     /// Clears one voice's row.
     public func clear(_ voice: DrumVoice) {
         guard steps[voice] != nil else { return }
+        let before = snapshot
         steps[voice] = Array(repeating: .rest, count: stepCount)
-        push()
+        edited(from: before)
     }
 
     public func clearAll() {
+        let before = snapshot
         for voice in voices { steps[voice] = Array(repeating: .rest, count: stepCount) }
-        push()
+        edited(from: before)
+    }
+
+    // MARK: Length
+
+    /// The lengths the grid offers. Any count in `barRange` is a legal groove; these are the ones a
+    /// loop is actually made at.
+    public static let lengthChoices = [1, 2, 4, 8]
+    /// Sixteen bars of sixteenths is 256 steps a row, which is already more than a grid is for.
+    public static let barRange = 1...16
+
+    /// Sets how many bars the loop is. Lengthening repeats what is there, bar by bar, into the new
+    /// bars — a one-bar beat becomes four bars of the same beat, ready to vary — because an empty
+    /// three bars after a full one is a gap, not a longer groove. Shortening drops the bars past the
+    /// new end; ⌘Z brings them back.
+    public func setBars(_ count: Int) {
+        let target = min(Self.barRange.upperBound, max(Self.barRange.lowerBound, count))
+        guard target != bars else { return }
+        let before = snapshot
+        let oldCount = stepCount
+        let newCount = stepsPerBar * target
+        for voice in voices {
+            let row = steps[voice] ?? []
+            // Read as exactly the old length first, so a row stored short or long still repeats
+            // from its own first bar.
+            let old = (0..<oldCount).map { $0 < row.count ? row[$0] : VelocityTier.rest }
+            steps[voice] = (0..<newCount).map { old[$0 % max(1, oldCount)] }
+        }
+        bars = target
+        edited(from: before)
+    }
+
+    /// Whether doubling would stay inside `barRange`.
+    public var canDoubleLength: Bool { bars * 2 <= Self.barRange.upperBound }
+
+    /// Copies what is there once more: two bars become four, the second two a copy of the first.
+    public func doubleLength() {
+        guard canDoubleLength else { return }
+        setBars(bars * 2)
+    }
+
+    // MARK: Voices
+
+    /// Every voice a row can be: the twelve the synthesized machines have sounds for, in the order a
+    /// kit lists them, and `perc`, which the feels and MIDI import write but no machine here plays.
+    public static let knownVoices: [DrumVoice] = {
+        var voices = SynthVoiceKind.allCases.map(\.drumVoice)
+        if !voices.contains(.perc) { voices.append(.perc) }
+        return voices
+    }()
+
+    /// The voices a "+ Voice" menu offers: every known voice not already a row.
+    public var addableVoices: [DrumVoice] {
+        Self.knownVoices.filter { !voices.contains($0) }
+    }
+
+    /// Whether the current machine has a sound for this voice. A row it has none for still paints
+    /// and keeps — another kit may play it — but on this machine it is silent, and the grid says so.
+    public func machineSounds(_ voice: DrumVoice) -> Bool {
+        machine.voices.contains { $0.kind.drumVoice == voice }
+    }
+
+    /// A voice as a person says it: "closed hat", not "closedHat".
+    public static func name(of voice: DrumVoice) -> String {
+        var words = ""
+        for character in voice.rawValue {
+            if character.isUppercase, !words.isEmpty { words.append(" ") }
+            words.append(Character(character.lowercased()))
+        }
+        return words
+    }
+
+    /// Appends an empty row for a voice the grid does not have yet.
+    public func addVoice(_ voice: DrumVoice) {
+        guard !voices.contains(voice) else { return }
+        let before = snapshot
+        voices.append(voice)
+        steps[voice] = Array(repeating: .rest, count: stepCount)
+        edited(from: before)
+    }
+
+    /// Whether a row can go: the last one cannot, so the grid is always a grid.
+    public var canRemoveVoice: Bool { voices.count > 1 }
+
+    /// Drops a voice's row, hits and all. The voice's own feel — its lag, its swing — stays in the
+    /// pocket, so adding the row back plays where it did.
+    public func removeVoice(_ voice: DrumVoice) {
+        guard canRemoveVoice, voices.contains(voice) else { return }
+        let before = snapshot
+        voices.removeAll { $0 == voice }
+        steps[voice] = nil
+        edited(from: before)
     }
 
     // MARK: The swing lever
@@ -336,9 +470,10 @@ public final class GridModel {
     public static let maximumPercent = Swing.maximumPercent
 
     public func setSwing(_ newSwing: Swing) {
+        let before = snapshot
         swing = newSwing
         // No reload: the player picks the new options up on the next iteration it renders.
-        push()
+        edited(from: before)
     }
 
     public func setSwing(percent: Double) { setSwing(Swing(percent: percent)) }
@@ -358,15 +493,17 @@ public final class GridModel {
 
     public func setGhostLevel(_ level: Double) {
         let clamped = min(1, max(0, level))
+        let before = snapshot
         velocities = VelocityMap(ghost: Int((Double(velocities.normal) * clamped).rounded()),
                                  normal: velocities.normal,
                                  accent: velocities.accent)
-        push()
+        edited(from: before)
     }
 
     public func setVelocities(_ map: VelocityMap) {
+        let before = snapshot
         velocities = map
-        push()
+        edited(from: before)
     }
 
     /// What the tempo lever runs over. This is the groove's audition tempo — what the loop plays at
@@ -376,11 +513,15 @@ public final class GridModel {
     public func setTempo(_ bpm: Double) {
         tempo = max(Self.tempoRange.lowerBound, min(Self.tempoRange.upperBound, bpm))
         push()
+        // Not an edit to the groove, but the Beatmaker reads in milliseconds, and a step is a
+        // different number of them at another tempo.
+        refreshReadings()
     }
 
     public func setHumanize(_ value: Humanize) {
+        let before = snapshot
         humanize = value
-        push()
+        edited(from: before)
     }
 
     // MARK: Kit picker
@@ -402,11 +543,14 @@ public final class GridModel {
     // MARK: Feel picker
 
     /// Loads a feel: its pattern, its velocities, its swing, its pocket, its tempo — and its
-    /// provenance, which stays on the surface so it can be shown and later cited. What was there
-    /// is kept in `beforeFeel` first, so `restoreBeforeFeel()` can put it back.
+    /// provenance, which stays on the surface so it can be shown and later cited.
+    ///
+    /// Outright, with no question first. A feel replaces the steps, the swing, the velocities and
+    /// the tempo in one stroke, and that used to wait for a confirmation and leave a "put back"
+    /// chip behind it. Both were ⌘Z by another name: the load is one edit like any other, so one
+    /// undo puts back everything it replaced.
     public func load(_ feel: Feel) {
-        beforeFeel = snapshot
-        pendingFeel = nil
+        let before = snapshot
         voices = feel.groove.patterns.map(\.voice)
         steps = Dictionary(uniqueKeysWithValues: feel.groove.patterns.map { ($0.voice, $0.steps) })
         stepsPerBar = max(1, feel.groove.stepsPerBar)
@@ -419,63 +563,19 @@ public final class GridModel {
         tempo = feel.suggestedTempo
         feelName = feel.name
         provenance = feel.provenance
-        push()
+        edited(from: before)
     }
 
-    /// Loads a feel by name from the library, outright. The empty name puts back what was there
-    /// before the last feel load, when there is such a thing.
+    /// Loads a feel by name from the library, outright. False when the library has no such feel.
     @discardableResult
     public func loadFeel(named name: String) -> Bool {
-        guard !name.isEmpty else {
-            guard canRestore else { return false }
-            restoreBeforeFeel()
-            return true
-        }
         guard let feel = feelLibrary.feel(named: name) else { return false }
         load(feel)
         return true
     }
 
-    /// Whether loading a feel now would replace work: steps are painted, and they are not simply
-    /// the loaded feel untouched. Switching between feels you have not edited does not nag.
-    public var feelLoadNeedsConfirmation: Bool {
-        guard isPainted else { return false }
-        if let feelName, let current = feelLibrary.feel(named: feelName), current.groove == groove { return false }
-        return true
-    }
-
-    /// The picker's action. The empty name (the picker's "—") puts back what was there before the
-    /// last feel load. A name loads that feel outright when nothing painted would be lost, and
-    /// stages it as `pendingFeel` for `confirmPendingFeel()` when something would — a feel
-    /// replaces the steps, the swing, the velocities and the tempo in one stroke, which is too
-    /// much to lose to a slip in a menu.
-    public func chooseFeel(named name: String) {
-        guard !name.isEmpty else {
-            pendingFeel = nil
-            restoreBeforeFeel()
-            return
-        }
-        guard let feel = feelLibrary.feel(named: name) else { return }
-        if feelLoadNeedsConfirmation {
-            pendingFeel = feel
-        } else {
-            load(feel)
-        }
-    }
-
-    /// The word: the staged feel replaces what is painted.
-    public func confirmPendingFeel() {
-        guard let feel = pendingFeel else { return }
-        load(feel)
-    }
-
-    public func cancelPendingFeel() { pendingFeel = nil }
-
-    /// Puts back the grid as it stood before the last feel load — pattern, levers, meter, tempo
-    /// and the feel's name — and forgets the snapshot, since what it held is now on screen.
-    public func restoreBeforeFeel() {
-        guard let before = beforeFeel else { return }
-        beforeFeel = nil
+    /// Puts a whole state back on screen. Undo and redo both come through here.
+    private func apply(_ before: Snapshot) {
         voices = before.voices
         steps = before.steps
         stepsPerBar = before.stepsPerBar
@@ -488,7 +588,6 @@ public final class GridModel {
         tempo = before.tempo
         feelName = before.feelName
         provenance = before.provenance
-        push()
     }
 
     private var snapshot: Snapshot {
@@ -527,18 +626,16 @@ public final class GridModel {
             version = PartVersion(partID: PartID(), kind: payload, author: .user,
                                   operation: Operation.written, note: text)
         }
+        autoKeep.cancel()
+        // Synchronous, so a keep asked for by the frame — play, save, a song switch — is in the
+        // song before the frame reads it.
+        guard host.commit(version) else {
+            lastError = "The song would not take that version."
+            return version
+        }
         versions.append(version)
         lastKept = version
         lastError = nil
-        Task { @MainActor [host, weak self] in
-            let kept = await host.commit(version)
-            guard !kept, let self else { return }
-            // Refused: the version is not in the song, so it is not in this list either, and the
-            // keep control comes back for another try.
-            versions.removeAll { $0.id == version.id }
-            if lastKept?.id == version.id { lastKept = nil }
-            lastError = "The song would not take that version."
-        }
         return version
     }
 
@@ -582,4 +679,69 @@ public final class GridModel {
 
     /// Pushes the current pattern without editing anything, for a host that has just come up.
     public func resend() { push() }
+
+    // MARK: Keeping
+
+    /// After every edit to the groove: remember the state before it for ⌘Z, hand the engine the
+    /// new pattern, let the Beatmaker read it, and keep it once the edits settle.
+    private func edited(from before: Snapshot) {
+        history.record(before, now: snapshot)
+        push()
+        refreshReadings()
+        guard hasUnkeptChanges else { autoKeep.cancel(); return }
+        autoKeep.schedule { [weak self] in self?.keepNow() }
+    }
+
+    // MARK: Reading
+
+    /// The Beatmaker's reading of what is on screen. Assigned only when it changed, so a drag that
+    /// does not move a reading does not redraw the panel under the grid.
+    private func refreshReadings() {
+        let next: [PersonaReading]
+        if isPainted {
+            let observation = GrooveObservation(label: title, groove: groove, options: renderOptions,
+                                                tempo: tempo, timeSignature: timeSignature)
+            // Flags first: what did not hold is what the Beatmaker would say first.
+            let read = beatmaker.read(observation)
+            next = read.filter { !$0.holds } + read.filter(\.holds)
+        } else {
+            next = []
+        }
+        if next != readings { readings = next }
+    }
+}
+
+extension GridModel: KeepsAsItGoes {
+    @discardableResult
+    public func keepNow() -> Bool {
+        guard hasUnkeptChanges else { autoKeep.cancel(); return true }
+        let version = commit()
+        return versions.last?.id == version.id
+    }
+
+    public var canUndo: Bool { history.canUndo }
+    public var canRedo: Bool { history.canRedo }
+
+    public func undo() {
+        guard let previous = history.undo(from: snapshot) else { return }
+        apply(previous)
+        push()
+        refreshReadings()
+        autoKeep.schedule { [weak self] in self?.keepNow() }
+    }
+
+    public func redo() {
+        guard let next = history.redo(from: snapshot) else { return }
+        apply(next)
+        push()
+        refreshReadings()
+        autoKeep.schedule { [weak self] in self?.keepNow() }
+    }
+
+    public var keepLine: KeepLine {
+        if let lastError { return .refused(lastError) }
+        if hasUnkeptChanges { return .pending }
+        if let kept = versions.last ?? base { return .kept(title: PartLabel.title(of: kept)) }
+        return .untouched
+    }
 }

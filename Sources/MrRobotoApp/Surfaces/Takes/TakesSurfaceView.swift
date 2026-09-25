@@ -2,6 +2,10 @@ import SongGraph
 import SwiftUI
 
 /// Takes as lanes against the bars, the comp lane on top, flags on the bars they belong to.
+///
+/// The lanes themselves are `TakesLanes`, which the Booth draws too, under the section it records:
+/// singing and comping are one act there, and this surface is where a ledger row or the Director
+/// opens one part's takes on their own.
 struct TakesSurfaceView: View {
     @Bindable var model: TakesModel
 
@@ -11,8 +15,12 @@ struct TakesSurfaceView: View {
             if model.takes.isEmpty {
                 empty
             } else {
-                lanes
-                footer
+                // Scrolls rather than overflows: an evening's takes are more lanes than a
+                // surface is tall.
+                ScrollsInside {
+                    TakesLanes(model: model)
+                }
+                TakesNote(model: model)
             }
         }
         .padding(Design.Metric.inset)
@@ -27,33 +35,98 @@ struct TakesSurfaceView: View {
                 .font(Design.Typography.numeric(12))
                 .foregroundStyle(Design.Palette.inkSecondary)
             Spacer()
-            Button("Keep the comp") { model.keepComp() }
-                .font(Design.Typography.ui(12.5))
-                .disabled(model.takes.isEmpty)
-                .help("Renders the comp lane as one new version, with the takes as its parents.")
+            MakeCompButton(model: model)
         }
     }
 
-    /// With nothing to comp there is no lane to draw. Takes come from the Booth, and this surface
-    /// cannot open it — its host records and plays takes, nothing more — so it says where to go.
+    /// With nothing to comp there is no lane to draw. Takes come from the Booth, so it says where
+    /// to go and opens it.
     private var empty: some View {
         VStack(alignment: .leading, spacing: 12) {
             EmptyNote(title: "No takes yet.",
                       detail: "Takes are recorded in the Booth: pick a section, press Record and sing it. "
-                          + "Every take you stop lands here as a lane.")
+                          + "Every take you stop lands there and here as a lane.")
             FrameButton(title: "Open the Booth", emphasis: .accent) { model.openBooth() }
                 .help("The Booth, on the song's active section (⌘0)")
         }
     }
+}
 
-    private var lanes: some View {
+/// A pane's content, scrolling inside the pane rather than pushing the surface past its edge.
+///
+/// Offscreen — the test renders — an AppKit scroll view draws nothing at all, so there the content
+/// is drawn clipped to the pane instead, and a render shows what the pane holds.
+struct ScrollsInside<Content: View>: View {
+    private let content: Content
+    init(@ViewBuilder _ content: () -> Content) { self.content = content() }
+
+    var body: some View {
+        if Design.isOffscreenRender {
+            // A minimum of zero, or the frame grows to the content's height and clips nothing.
+            content
+                .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .topLeading)
+                .clipped()
+        } else {
+            ScrollView(.vertical) { content }
+                .scrollBounceBehavior(.basedOnSize)
+        }
+    }
+}
+
+/// "Make the comp": the comp lane rendered as one new version with the takes as its parents.
+///
+/// A button, not something that happens as the bars are chosen — the app's rule (`Keeping.swift`)
+/// is that an edit keeps itself and making something new is a decision. Off once the comp lane is
+/// the comp already made, so pressing it twice cannot file the same audio twice.
+struct MakeCompButton: View {
+    var model: TakesModel
+
+    var body: some View {
+        Button("Make the comp") { model.keepComp() }
+            .font(Design.Typography.ui(12.5))
+            .disabled(model.takes.isEmpty || model.compIsCurrent)
+            .help(model.compIsCurrent
+                  ? "The comp lane is the comp already made. Take a bar from another take to make a new one."
+                  : "Renders the comp lane as one new version, with the takes as its parents.")
+    }
+}
+
+/// The line under the lanes: what went wrong making the comp, or how the lanes work.
+struct TakesNote: View {
+    var model: TakesModel
+
+    var body: some View {
+        if let error = model.lastError {
+            Text(error).font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.warn)
+        } else {
+            Text("Press a bar on a take's lane to take that bar from it. The comp is one version; the takes stay under it.")
+                .font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.inkTertiary)
+        }
+    }
+}
+
+/// The comp lane and a lane per take, the bars across, the band's flags under the take they are on.
+/// Drawn by the Takes surface and by the Booth, so the two cannot disagree about what a lane is.
+struct TakesLanes: View {
+    var model: TakesModel
+    /// The column the lane names sit in. The Booth shares its width with the words, so it runs
+    /// this narrower than the Takes surface does.
+    var titleWidth: CGFloat = 150
+
+    var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            laneRow(title: "Comp", subtitle: model.comp.map { "kept as \(PartLabel.title(of: $0))" } ?? "choose a take for each bar",
-                    isComp: true, version: nil)
+            laneRow(title: "Comp", subtitle: compLine, isComp: true, version: nil)
             ForEach(model.takes) { take in
                 laneRow(title: PartLabel.title(of: take), subtitle: detail(take), isComp: false, version: take)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+
+    /// What the comp lane is: the version it was made as, until a bar is chosen differently.
+    private var compLine: String {
+        guard let comp = model.comp else { return "a take for each bar" }
+        return model.compIsCurrent ? "in the song as \(PartLabel.title(of: comp))" : "changed since \(PartLabel.title(of: comp))"
     }
 
     private func detail(_ take: PartVersion) -> String {
@@ -65,42 +138,46 @@ struct TakesSurfaceView: View {
     private func laneRow(title: String, subtitle: String, isComp: Bool, version: PartVersion?) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    if let version {
-                        let isPlaying = model.playing == version.id
-                        Button {
-                            Task { isPlaying ? model.stopAudition() : await model.audition(version) }
-                        } label: {
-                            Image(systemName: isPlaying ? "stop.fill" : "play.fill")
-                                .font(Design.Typography.ui(9))
-                                .foregroundStyle(Design.Palette.accent)
-                                .frame(width: Design.Metric.tagHeight, height: Design.Metric.tagHeight)
-                                .contentShape(Rectangle())
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        if let version {
+                            let isPlaying = model.playing == version.id
+                            Button {
+                                Task { isPlaying ? model.stopAudition() : await model.audition(version) }
+                            } label: {
+                                Image(systemName: isPlaying ? "stop.fill" : "play.fill")
+                                    .font(Design.Typography.ui(9))
+                                    .foregroundStyle(Design.Palette.accent)
+                                    .frame(width: Design.Metric.tagHeight, height: Design.Metric.tagHeight)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .help(isPlaying ? "Stop \(title)" : "Play \(title) on its own")
+                            .accessibilityLabel(isPlaying ? "Stop \(title)" : "Play \(title)")
                         }
-                        .buttonStyle(.plain)
-                        .help(isPlaying ? "Stop \(title)" : "Play \(title) on its own")
-                        .accessibilityLabel(isPlaying ? "Stop \(title)" : "Play \(title)")
+                        Text(title).font(Design.Typography.ui(13, weight: isComp ? .semibold : .medium)).lineLimit(1)
                     }
-                    Text(title).font(Design.Typography.ui(13, weight: isComp ? .semibold : .medium)).lineLimit(1)
+                    Text(subtitle).font(Design.Typography.numeric(10.5)).foregroundStyle(Design.Palette.inkTertiary)
+                        .lineLimit(1)
+                        .help(subtitle)
                 }
-                Text(subtitle).font(Design.Typography.numeric(10.5)).foregroundStyle(Design.Palette.inkTertiary).lineLimit(1)
-            }
-            .frame(width: 150, alignment: .leading)
-            HStack(spacing: 2) {
-                ForEach(Array(model.bars), id: \.self) { bar in
-                    barCell(bar: bar, isComp: isComp, version: version)
+                .frame(width: titleWidth, alignment: .leading)
+                HStack(spacing: 2) {
+                    ForEach(Array(model.bars), id: \.self) { bar in
+                        barCell(bar: bar, isComp: isComp, version: version)
+                    }
                 }
-            }
             }
             if let version, let flags = model.flags[version.id], !flags.isEmpty {
-                // The band's flags, each a chip that opens its Check: the bar and the number.
-                HStack(spacing: 6) {
+                // The band's flags, each a chip that opens its Check: the bar and the number. They
+                // wrap, so a take the band has a lot to say about stays inside its lane.
+                FlowRow(spacing: 6) {
                     ForEach(flags) { finding in
                         Button { model.openCheck(finding, on: version) } label: {
                             Text(finding.headline)
                                 .font(Design.Typography.numeric(10.5))
                                 .foregroundStyle(finding.severity == .warn ? Design.Palette.warn : Design.Palette.inkSecondary)
+                                .lineLimit(1)
                                 .padding(.horizontal, 6)
                                 .frame(height: 18)
                                 .background(finding.severity == .warn ? Design.Palette.warnSoft : Design.Palette.panelAlt,
@@ -110,7 +187,7 @@ struct TakesSurfaceView: View {
                         .help(finding.why)
                     }
                 }
-                .padding(.leading, 158)
+                .padding(.leading, titleWidth + 8)
             }
         }
         .padding(.vertical, 4)
@@ -132,13 +209,20 @@ struct TakesSurfaceView: View {
                 if flagged {
                     Circle().fill(Design.Palette.warn).frame(width: 5, height: 5).padding(3)
                 }
-                Text("\(bar + 1)")
-                    .font(Design.Typography.numeric(9))
-                    .foregroundStyle(isChosen && covers ? Design.Palette.accent : Design.Palette.inkTertiary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // The number steps aside when a long section leaves the cell narrower than it,
+                // rather than the lane growing past its pane.
+                ViewThatFits(in: .horizontal) {
+                    Text("\(bar + 1)")
+                        .font(Design.Typography.numeric(9))
+                        .foregroundStyle(isChosen && covers ? Design.Palette.accent : Design.Palette.inkTertiary)
+                        .lineLimit(1)
+                    Color.clear
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .frame(minWidth: 22, maxWidth: .infinity)
+            .frame(minWidth: 6, maxWidth: .infinity)
             .frame(height: 26)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(isComp || !covers)
@@ -148,12 +232,12 @@ struct TakesSurfaceView: View {
 
     /// Why a cell does what it does — and, for the ones that do nothing, why not. The comp lane is
     /// read-only because it is the result of the choices on the take lanes, and there is no way to
-    /// hear it before keeping it: the host plays takes, not a plan.
+    /// hear it before making it: the host plays takes, not a plan.
     private func cellHelp(bar: Int, isComp: Bool, version: PartVersion?, covers: Bool) -> String {
         if isComp {
             let from = model.take(forBar: bar).flatMap { id in model.takes.first { $0.id == id } }.map(PartLabel.title(of:))
             return (from.map { "Bar \(bar + 1) comes from \($0). " } ?? "")
-                + "The comp lane shows the choice; press a bar on a take's lane to change it. Keep the comp to hear it."
+                + "The comp lane shows the choice; press a bar on a take's lane to change it. Make the comp to hear it."
         }
         guard let version else { return "" }
         guard covers else { return "\(PartLabel.title(of: version)) has no audio under bar \(bar + 1)." }
@@ -162,20 +246,8 @@ struct TakesSurfaceView: View {
 
     /// Whether a take has audio under this bar.
     private func covers(_ version: PartVersion, bar: Int) -> Bool {
-        guard let audio = Guidance.audio(of: version), let take = audio.take else { return false }
-        let start = model.clock.seconds(forBar: take.startBar) + take.startBeat * model.clock.secondsPerBeat
-        let end = start + audio.duration
+        guard let span = TakesModel.seconds(of: version, clock: model.clock) else { return false }
         let barStart = model.clock.seconds(forBar: bar), barEnd = model.clock.seconds(forBar: bar + 1)
-        return end > barStart + 0.05 && start < barEnd - 0.05
-    }
-
-    @ViewBuilder
-    private var footer: some View {
-        if let error = model.lastError {
-            Text(error).font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.warn)
-        } else {
-            Text("Press a bar on a take's lane to take that bar from it. The comp is one version; the takes stay under it.")
-                .font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.inkTertiary)
-        }
+        return span.end > barStart + 0.05 && span.start < barEnd - 0.05
     }
 }

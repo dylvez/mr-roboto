@@ -62,7 +62,11 @@ final class BassAdapter: PianoRollHosting {
         }
     }
 
-    func commit(_ version: PartVersion) async -> Bool {
+    /// What the Bassist said last, so a line kept a moment after every edit does not put the same
+    /// sentence in the rail each time.
+    private var lastSaid: String?
+
+    func commit(_ version: PartVersion) -> Bool {
         guard app.record(version) else { return false }
         // What the Bassist says about what was kept, in the rail, in its name.
         if let song = app.song, case .bassline(let line) = version.kind,
@@ -71,15 +75,20 @@ final class BassAdapter: PianoRollHosting {
                 if case .progression(let p) = version.kind { return p.spans }
                 return nil
             } ?? []
-            let observation = BassObservation(label: PartLabel.title(of: version), bassline: line, groove: groove,
+            // A line longer than its groove is read against the groove repeated under it, as it
+            // plays; read against one bar of kick, bars two to eight would have nothing under them.
+            let heard = line.lengthInBars.map { groove.tiled(toBars: $0) } ?? groove
+            let observation = BassObservation(label: PartLabel.title(of: version), bassline: line, groove: heard,
                                               chords: chords, tempo: song.tempo, timeSignature: song.timeSignature)
             let readings = Bassist().read(observation)
             let flags = readings.filter { !$0.holds }
-            let line = flags.isEmpty
-                ? readings.first { $0.rule == "bassist.lag-budget" || $0.rule == "bassist.808-is-the-bass" }?.says
-                    ?? "That sits where it should."
-                : flags.map(\.says).joined(separator: " ")
-            app.note(.persona("Bassist"), line, detail: PartLabel.title(of: version))
+            // Only what went wrong, and only when it changes: the readings are on the surface
+            // already, and a line kept as you go would otherwise be a line in the rail each time.
+            let line = flags.map(\.says).joined(separator: " ")
+            if !flags.isEmpty, line != lastSaid {
+                app.note(.persona("Bassist"), line, detail: PartLabel.title(of: version))
+            }
+            lastSaid = flags.isEmpty ? nil : line
         }
         return true
     }
@@ -121,5 +130,13 @@ final class ChordsAdapter: ChordsHosting {
         await service.playInstrument(pitches.map { VoiceSampler.Hit(note: $0, velocity: 92, at: 0, duration: duration) })
     }
 
-    func commit(_ version: PartVersion) async -> Bool { app.record(version) }
+    func commit(_ version: PartVersion) -> Bool { app.record(version) }
+
+    /// The bass line the chords are played over, so the Harmonist's reading on the surface can say
+    /// whether the bass agrees — the same newest line the rail's reading uses.
+    var bassline: Bassline? {
+        guard let song = app.song, let version = Guidance.basslines(in: song).last,
+              case .bassline(let line) = version.kind else { return nil }
+        return line
+    }
 }

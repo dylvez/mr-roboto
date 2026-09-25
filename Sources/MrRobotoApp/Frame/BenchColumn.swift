@@ -66,7 +66,7 @@ struct BenchColumn: View {
                 HStack(spacing: 8) {
                     Button("Import a Record…") { MrRobotoApp.importRecord(app) }
                         .buttonStyle(.borderedProminent)
-                    Button("New Song") { app.open(Song(title: MrRobotoApp.untitledName())) }
+                    Button("New Song") { app.open(Song.new(title: MrRobotoApp.untitledName())) }
                 }
                 .font(Design.Typography.ui(12.5))
             }
@@ -120,6 +120,7 @@ struct SurfaceDock: View {
             }
             if !app.bench.items.isEmpty {
                 FrameButton(title: "Close all", emphasis: .quiet) {
+                    app.keepSurfaceWork()
                     if app.bench.items.contains(where: { app.closingWouldLoseWork($0.id) }) {
                         isConfirmingCloseAll = true
                     } else {
@@ -127,7 +128,7 @@ struct SurfaceDock: View {
                     }
                 }
                 .help("Close every surface on the bench. One holding unkept work asks first.")
-                .confirmationDialog("Close every surface? Some hold edits that were not kept.",
+                .confirmationDialog("Close every surface? The song would not take some of their edits.",
                                     isPresented: $isConfirmingCloseAll, titleVisibility: .visible) {
                     Button("Close all anyway", role: .destructive) { app.closeAllSurfaces() }
                     Button("Cancel", role: .cancel) {}
@@ -149,11 +150,14 @@ struct SurfaceDock: View {
             .map { "\($0.kind.rawValue): \($0.title)" }.joined(separator: ", ")
     }
 
+    /// The seven the dock always carries, then the ones the song has reached.
+    private var kinds: [SurfaceKind] { SurfaceKind.gateA + Guidance.laterSurfaces(for: app.song) }
+
     private func chips(_ style: DockChip.Style) -> some View {
         HStack(spacing: 8) {
-            ForEach(Array(SurfaceKind.gateA.enumerated()), id: \.element) { index, kind in
+            ForEach(kinds, id: \.self) { kind in
                 DockChip(kind: kind,
-                         shortcut: "⌘\(index + 1)",
+                         shortcut: Guidance.dockShortcut(for: kind),
                          style: style,
                          isOpen: app.bench.items.contains { $0.kind == kind },
                          isActive: app.bench.active?.kind == kind) {
@@ -245,6 +249,6 @@ private struct NextStepChip: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help("\(proposal.title) — \(proposal.rationale)")
+        .help("\(proposal.title) — \(proposal.rationale) (⌘])")
     }
 }

@@ -19,7 +19,7 @@ enum MixReader {
         var whole = plan
         whole.mix = mix ?? plan.mix
         let target = whole.isArranged ? section : nil
-        let stems = try await SectionBounce.render(whole, section: target, kitsDirectory: kitsDirectory)
+        let stems = try await SectionBounce.render(whole, section: target, kitsDirectory: kitsDirectory, onlyTheMix: true)
         var solos: [(part: PartID, label: String, planar: [[Float]])] = []
         for strip in strips(of: plan, song: song) {
             var solo = whole
@@ -29,7 +29,7 @@ enum MixReader {
             own.isSoloed = true
             soloMix.set(own)
             solo.mix = soloMix
-            let rendered = try await SectionBounce.render(solo, section: target, kitsDirectory: kitsDirectory)
+            let rendered = try await SectionBounce.render(solo, section: target, kitsDirectory: kitsDirectory, onlyTheMix: true)
             solos.append((strip.part, strip.label, rendered.mix))
         }
         return MixObservation.measure(label: song?.title ?? stems.label, mix: stems.mix, sampleRate: stems.sampleRate, strips: solos)

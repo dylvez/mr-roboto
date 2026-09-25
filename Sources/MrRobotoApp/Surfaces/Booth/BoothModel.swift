@@ -8,11 +8,17 @@ public protocol BoothHosting: AnyObject {
     var song: Song? { get }
     var clock: TransportClock { get }
     var isPlaying: Bool { get }
+    /// Song time. While a count-in runs it reads before the section's first bar — below zero when
+    /// the section is the song's first.
     var playhead: Double { get }
     func play() async
     /// Plays from a section's first bar, so a take is sung against the section it is for rather
     /// than after everything before it. Nil, or a section the song does not hold, is the top.
     func play(from section: SectionID?) async
+    /// Plays from `countInBars` bars before a section's first bar, with a click through those bars;
+    /// `click` keeps the click going for the whole take. A take started during the count-in is
+    /// placed in song time like any other, so its alignment sits before the section's start.
+    func play(from section: SectionID?, countInBars: Int, click: Bool) async
     func stop() async
     /// A recorder against the running transport, on the chosen input. Throws when there is no input.
     func recorder() async throws -> Recorder
@@ -29,6 +35,9 @@ public protocol BoothHosting: AnyObject {
     func recordingStarted(section: SectionID?, startedAt: Double)
     /// The take stopped, whatever it held.
     func recordingEnded(endedAt: Double)
+    /// What the Booth's own takes lanes read the takes through, and keep a comp through. The
+    /// Booth's host is usually the Takes surface's host as well, so by default it is itself.
+    var takesHost: (any TakesHosting)? { get }
 }
 
 public extension BoothHosting {
@@ -36,9 +45,13 @@ public extension BoothHosting {
     func recordingEnded(endedAt: Double) {}
     /// A host with no notion of sections plays from the top.
     func play(from section: SectionID?) async { await play() }
+    /// A host with no count-in starts on the section's first bar, as it always did.
+    func play(from section: SectionID?, countInBars: Int, click: Bool) async { await play(from: section) }
+    var takesHost: (any TakesHosting)? { self as? any TakesHosting }
 }
 
-/// The Booth: pick a section, arm, record while the song plays, stop — that is a take.
+/// The Booth: the one place you sing. Pick a section, press Record, sing to the words, stop — that
+/// is a take, and it lands at once in the section's lanes underneath, where the comp is chosen.
 @MainActor
 @Observable
 public final class BoothModel {
@@ -52,14 +65,16 @@ public final class BoothModel {
     public let surfaceID: SurfaceID
     public private(set) var state: State = .idle
     /// The section the take is for. Nil records against the whole song.
-    public var section: SectionID?
+    public var section: SectionID? {
+        didSet { if section != oldValue { showLanes() } }
+    }
     /// Stop on the section's last bar by itself.
     public var punchesOut = true
     /// Whether the input is heard through the engine while recording.
     public var monitors = false
     /// The last buffer's peak, 0…1, while recording.
     public private(set) var level: Float = 0
-    /// Takes kept this session, newest last.
+    /// The song's takes, newest last.
     public private(set) var takes: [PartVersion] = []
     public private(set) var lastError: String?
     /// Transport seconds the recorder started at, for the display.
@@ -69,16 +84,63 @@ public final class BoothModel {
         didSet { host.input = input }
     }
 
-    private let host: any BoothHosting
-    private var recorder: Recorder?
-    private var watching: Task<Void, Never>?
+    // MARK: Count-in and click
 
-    public init(host: any BoothHosting, surfaceID: SurfaceID = SurfaceID()) {
+    /// The count-ins on offer. Two bars is as long as anyone waits to sing; more is a rehearsal.
+    public static let countInChoices = [0, 1, 2]
+    static let countInKey = "booth.countInBars"
+    static let clickKey = "booth.click"
+
+    /// Bars of click before the section's first bar when Record starts the song. Remembered, since
+    /// a singer who wants two bars wants them every take.
+    public var countInBars: Int {
+        didSet {
+            let bounded = Self.bounded(countInBars)
+            if bounded != countInBars { countInBars = bounded; return }
+            defaults.set(countInBars, forKey: Self.countInKey)
+        }
+    }
+    /// The click through the whole take, not just the count-in. Remembered.
+    public var click: Bool {
+        didSet { defaults.set(click, forKey: Self.clickKey) }
+    }
+    /// Bars of count-in still to go, while the song is in the bars before the section. Nil
+    /// otherwise — including when the song was already playing, since then nothing counted in.
+    public private(set) var countInBarsLeft: Int?
+
+    // MARK: The takes of the chosen section
+
+    /// The chosen section's takes as lanes, with the comp. Nil when the host cannot read takes.
+    public private(set) var lanes: TakesModel?
+
+    private let host: any BoothHosting
+    @ObservationIgnored private let defaults: UserDefaults
+    @ObservationIgnored private var recorder: Recorder?
+    @ObservationIgnored private var watching: Task<Void, Never>?
+    /// Song seconds the count-in ends at — the section's first bar — for the take being recorded,
+    /// when Record started the song with a count-in. The take begins there, whatever the recorder
+    /// caught before it.
+    @ObservationIgnored private var countInEnds: Double?
+    /// How many bars this take was counted in with, so the count reads "2… 1…" and not just "1…".
+    @ObservationIgnored private var countedIn = 0
+    /// One lanes model per section, so a comp half-chosen on the Verse is still there after a look
+    /// at the Hook, and a section's takes are read once rather than on every chip press.
+    @ObservationIgnored private var lanesBySection: [SectionID?: TakesModel] = [:]
+
+    public init(host: any BoothHosting, surfaceID: SurfaceID = SurfaceID(), defaults: UserDefaults = .standard) {
         self.host = host
         self.surfaceID = surfaceID
+        self.defaults = defaults
         self.section = host.song?.sections.first?.id
         self.takes = host.song.map(Guidance.takes(in:)) ?? []
         self.input = host.input
+        self.countInBars = Self.bounded((defaults.object(forKey: Self.countInKey) as? Int) ?? 1)
+        self.click = defaults.bool(forKey: Self.clickKey)
+        showLanes()
+    }
+
+    private static func bounded(_ bars: Int) -> Int {
+        min(max(bars, countInChoices.first ?? 0), countInChoices.last ?? 2)
     }
 
     /// The input devices here now.
@@ -109,8 +171,33 @@ public final class BoothModel {
 
     /// Which pass of this section the next take is.
     public var nextPass: Int {
-        (takes.compactMap { Guidance.audio(of: $0)?.take }.filter { $0.section == section }.map(\.pass).max() ?? 0) + 1
+        (sectionTakes.compactMap { Guidance.audio(of: $0)?.take }.map(\.pass).max() ?? 0) + 1
     }
+
+    /// The takes sung to the chosen section, oldest first.
+    public var sectionTakes: [PartVersion] { takes(of: section) }
+
+    /// The takes sung to a section, oldest first; nil is the takes sung to the whole song.
+    public func takes(of section: SectionID?) -> [PartVersion] {
+        takes.filter { Guidance.audio(of: $0)?.take?.section == section }
+    }
+
+    // MARK: The words
+
+    /// The song's newest lyric: the words in view while you sing. Graph order, not timestamps,
+    /// because two versions kept in the same millisecond tie on time.
+    public var lyric: PartVersion? { host.song?.versions.last { $0.type == .lyric } }
+
+    /// The newest lyric's lines, blank lines kept: they are the gaps between stanzas.
+    public var lyricLines: [LyricLine] {
+        guard let lyric, case .lyric(let words) = lyric.kind else { return [] }
+        return words.lines
+    }
+
+    /// Whether there is anything to sing: a lyric of only blank lines is no words.
+    public var hasWords: Bool { lyricLines.contains { !$0.syllables.isEmpty } }
+
+    // MARK: Recording
 
     public func arm() {
         guard state == .idle else { return }
@@ -123,16 +210,27 @@ public final class BoothModel {
         state = .idle
     }
 
-    /// Starts the song if it is not playing, and the recorder with it.
+    /// Starts the song if it is not playing — counted in, from the section — and the recorder with it.
     public func record() async {
         guard state != .recording else { return }
         lastError = nil
+        countInEnds = nil
+        countedIn = 0
         // From the section the take is for. The song used to start from bar 1 whatever section
-        // was picked, so singing the hook meant waiting through everything before it.
-        if !host.isPlaying { await host.play(from: section) }
+        // was picked, so singing the hook meant waiting through everything before it. The count-in
+        // only applies when Record starts the song: joining a song already playing has nothing to
+        // count in to.
+        if !host.isPlaying {
+            await host.play(from: section, countInBars: countInBars, click: click)
+            if countInBars > 0 {
+                countInEnds = host.clock.seconds(forBar: sectionBars?.lowerBound ?? 0)
+                countedIn = countInBars
+            }
+        }
         guard host.isPlaying else {
             lastError = "The song did not start, so there is nothing to sing to."
             state = .idle
+            countInEnds = nil
             return
         }
         do {
@@ -141,11 +239,13 @@ public final class BoothModel {
             self.recorder = recorder
             startedAt = host.playhead
             state = .recording
+            countInBarsLeft = barsLeftToCount(at: host.playhead)
             host.recordingStarted(section: section, startedAt: host.playhead)
             watch()
         } catch {
             lastError = "\(error)"
             state = .idle
+            countInEnds = nil
         }
     }
 
@@ -155,10 +255,14 @@ public final class BoothModel {
         watching?.cancel()
         watching = nil
         guard state == .recording, let recorder else { return nil }
+        let begins = countInEnds
+        let endedAt = host.playhead
         self.recorder = nil
         state = .idle
         level = 0
-        host.recordingEnded(endedAt: host.playhead)
+        countInBarsLeft = nil
+        countInEnds = nil
+        host.recordingEnded(endedAt: endedAt)
         let recording: Recorder.Recording
         do {
             recording = try recorder.stop()
@@ -168,11 +272,21 @@ public final class BoothModel {
             return nil
         }
         if stopSong { await host.stop() }
+        // Stopped before the section began: all the recorder heard was the click. Every take
+        // stays, but this was never a take, and filing it would put an empty lane in the comp.
+        if let begins, endedAt < begins {
+            lastError = "Stopped during the count-in, so there was no take to keep."
+            return nil
+        }
         guard recording.frames > 0 else {
             lastError = "Nothing was recorded."
             return nil
         }
-        let placed = recording.alignmentSeconds ?? startedAt ?? 0
+        var placed = recording.alignmentSeconds ?? startedAt ?? 0
+        // A take counted in begins on the section's first bar: what the recorder caught before it
+        // is the click and a breath. The audio keeps its own alignment, so nothing is lost and
+        // playback knows where to trim.
+        if let begins, placed < begins { placed = begins }
         let position = host.clock.position(forSeconds: max(0, placed))
         let take = Take(section: section, startBar: position.bar, startBeat: position.beat, input: recording.input,
                         latencyCompensation: recording.latencySeconds, pass: nextPass)
@@ -180,27 +294,80 @@ public final class BoothModel {
             lastError = "The take could not be kept."
             return nil
         }
-        takes.append(version)
+        if !takes.contains(where: { $0.id == version.id }) { takes.append(version) }
+        // Into the lanes at once, so the take just sung is there to hear and to comp from.
+        showLanes()
         return version
     }
 
-    /// Follows the level, and punches out at the section's end.
+    /// What the Booth says while it counts in: "Counting in: 2… 1…", a number added each bar the
+    /// way a person counts a band in. Nil once the section starts.
+    public var countInLine: String? {
+        guard let left = countInBarsLeft else { return nil }
+        let from = max(countedIn, left)
+        return "Counting in: " + stride(from: from, through: left, by: -1).map { "\($0)…" }.joined(separator: " ")
+    }
+
+    /// Bars of count-in left at a song time: 2 through the first of two bars, 1 through the last.
+    private func barsLeftToCount(at playhead: Double) -> Int? {
+        guard let ends = countInEnds, playhead < ends else { return nil }
+        let bars = Int(((ends - playhead) / host.clock.secondsPerBar).rounded(.up))
+        return max(1, min(bars, max(1, countedIn)))
+    }
+
+    /// Follows the level and the count-in, and punches out at the section's end.
     private func watch() {
         watching?.cancel()
         watching = Task { @MainActor [weak self] in
             while !Task.isCancelled {
                 guard let self, let recorder = self.recorder else { return }
                 self.level = recorder.peak
-                if self.punchesOut, let bars = self.sectionBars, self.host.playhead >= self.host.clock.seconds(forBar: bars.upperBound) {
+                let playhead = self.host.playhead
+                let left = self.barsLeftToCount(at: playhead)
+                if left != self.countInBarsLeft { self.countInBarsLeft = left }
+                if !self.host.isPlaying {
                     await self.stopRecording()
                     return
                 }
-                if !self.host.isPlaying {
+                // Never during the count-in: those bars are before the take, and the section's
+                // end is measured from where the take begins.
+                if self.countInBarsLeft == nil, self.punchesOut, let bars = self.sectionBars,
+                   playhead >= self.host.clock.seconds(forBar: bars.upperBound) {
                     await self.stopRecording()
                     return
                 }
                 try? await Task.sleep(for: .milliseconds(50))
             }
+        }
+    }
+
+    // MARK: The lanes
+
+    /// The song changed under the Booth — a take kept elsewhere, the words rewritten, a section
+    /// removed. Takes are read again from the song, and a section that is gone falls back to the first.
+    public func songChanged() {
+        guard let song = host.song else { return }
+        if let section, !song.sections.contains(where: { $0.id == section }) {
+            self.section = song.sections.first?.id
+        }
+        let fresh = Guidance.takes(in: song)
+        guard fresh.map(\.id) != takes.map(\.id) else { return }
+        takes = fresh
+        showLanes()
+    }
+
+    /// Puts the chosen section's lanes up, built the first time the section is shown and brought
+    /// up to date with its takes after that.
+    private func showLanes() {
+        guard let takesHost = host.takesHost else { lanes = nil; return }
+        let wanted = sectionTakes
+        if let existing = lanesBySection[section] {
+            existing.update(takes: wanted, song: host.song)
+            lanes = existing
+        } else {
+            let made = TakesModel(host: takesHost, takes: wanted, song: host.song)
+            lanesBySection[section] = made
+            lanes = made
         }
     }
 }

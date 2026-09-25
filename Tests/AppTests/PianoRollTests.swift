@@ -35,7 +35,7 @@ final class RollStub: PianoRollHosting {
     var instrumentParts: [PartID?] = []
     func setInstrument(_ id: String, for part: PartID?) { instrument = id; instrumentParts.append(part) }
     func stop() async {}
-    func commit(_ version: PartVersion) async -> Bool {
+    func commit(_ version: PartVersion) -> Bool {
         if refuses { return false }
         committed.append(version)
         return true
@@ -50,7 +50,7 @@ final class ChordsStub: ChordsHosting {
     func audition(pitches: [Int], duration: Double) async { auditioned.append(pitches) }
     var instrumentParts: [PartID?] = []
     func setInstrument(_ id: String, for part: PartID?) { instrument = id; instrumentParts.append(part) }
-    func commit(_ version: PartVersion) async -> Bool { committed.append(version); return true }
+    func commit(_ version: PartVersion) -> Bool { committed.append(version); return true }
 }
 
 @Suite("Piano roll") @MainActor
@@ -263,8 +263,11 @@ struct PianoRollTests {
     func unkeptChanges() async throws {
         let stub = RollStub()
         let model = PianoRollModel(host: stub, groove: Self.kicking(), key: Self.key, tempo: 92)
-        #expect(model.hasUnkeptChanges, "a written line nobody has kept")
-        let first = model.commit()
+        model.autoKeep.delay = nil
+        #expect(!model.hasUnkeptChanges, "the writer's draft is a proposal: opening the roll writes nothing into the song")
+        #expect(model.keepLine == .untouched)
+        model.useThisLine()
+        let first = try #require(model.versions.last)
         #expect(!model.hasUnkeptChanges)
         #expect(model.lastKept?.id == first.id)
 
@@ -281,22 +284,22 @@ struct PianoRollTests {
 
         // Opened on a line: nothing to keep until it is touched, and a mode switch is a touch.
         let editor = PianoRollModel(host: stub, groove: Self.kicking(), key: Self.key, tempo: 92, bassline: first)
+        editor.autoKeep.delay = nil
         #expect(!editor.hasUnkeptChanges)
         editor.setMode(.melody)
         #expect(editor.hasUnkeptChanges, "a melody is a different part from the bass line it was opened on")
         editor.setMode(.bass)
         #expect(!editor.hasUnkeptChanges)
 
-        // A refused keep hands the control back and leaves no version behind.
+        // A refused keep leaves no version behind, and says so at once.
         stub.refuses = true
         editor.addNote(pitch: 41, at: 0)
-        let refused = editor.commit()
-        #expect(editor.versions.map(\.id) == [refused.id])
-        try await Task.sleep(for: .milliseconds(20))
+        _ = editor.commit()
         #expect(editor.lastError != nil)
         #expect(editor.versions.isEmpty, "a refused version is not a version")
         #expect(editor.lastKept == nil)
         #expect(editor.hasUnkeptChanges)
+        if case .refused = editor.keepLine {} else { Issue.record("the status line says the song refused it") }
     }
 }
 
@@ -424,8 +427,10 @@ struct ChordsTests {
     func unkeptChanges() throws {
         let stub = ChordsStub()
         let model = ChordsModel(host: stub, key: Key(tonic: NoteName(.c)))
-        #expect(model.hasUnkeptChanges, "the fresh I–IV–V–I is a progression the song does not have")
-        let first = try #require(model.commit())
+        model.autoKeep.delay = nil
+        #expect(!model.hasUnkeptChanges, "the empty sheet's I–IV–V–I is a suggestion until something is typed")
+        model.useTheseChords()
+        let first = try #require(model.versions.last)
         #expect(!model.hasUnkeptChanges)
         #expect(model.lastKept?.id == first.id)
 

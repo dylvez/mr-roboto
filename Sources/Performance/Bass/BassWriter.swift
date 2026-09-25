@@ -86,11 +86,16 @@ public struct BassRequest: Hashable, Sendable {
     /// The bass sound, by voice id. Nil takes the lineage's default.
     public var sound: String?
     public var seed: UInt64
+    /// How many bars the line is. Nil is the groove's own length, which is all a line could be
+    /// before this: a one-bar groove gave a one-bar line, so an eight-bar phrase could not exist.
+    /// Longer than the groove, the groove is read as it plays — repeated — so the kick is there in
+    /// every bar of the line and the chords cycle over all of it.
+    public var bars: Int?
 
     public init(key: Key, chords: [ChordSpan] = [], groove: Groove, tempo: Double,
                 timeSignature: TimeSignature = .fourFour, lineage: BassLineage = .palladino,
                 lagMS: Double? = nil, density: Double = 0.5, earlyAlternation: Bool = false,
-                sound: String? = nil, seed: UInt64 = 0xBA55_0001) {
+                sound: String? = nil, seed: UInt64 = 0xBA55_0001, bars: Int? = nil) {
         self.key = key
         self.chords = chords
         self.groove = groove
@@ -102,7 +107,15 @@ public struct BassRequest: Hashable, Sendable {
         self.earlyAlternation = earlyAlternation
         self.sound = sound
         self.seed = seed
+        self.bars = bars.map { max(1, $0) }
     }
+
+    /// The line's length in bars: the one asked for, else the groove's.
+    public var lineBars: Int { max(1, bars ?? groove.bars) }
+
+    /// The groove as the line hears it: repeated, or cut, to the line's length. What the writer
+    /// places onsets against, and what a reading of the line should be measured against too.
+    public var lineGroove: Groove { groove.tiled(toBars: lineBars) }
 
     /// The chords the writer actually uses: the stated ones, or the key's I–IV–V–I.
     public var effectiveChords: [ChordSpan] {
@@ -142,9 +155,12 @@ public enum BassWriter {
 
     public static func write(_ request: BassRequest) -> Bassline {
         let beatsPerBar = Double(max(1, request.timeSignature.beatsPerBar))
-        let bars = max(1, request.groove.bars)
+        // The groove repeated across the whole line, so the kicks under bar eight are bar one's
+        // kicks again rather than nothing, and the harmony map cycles to the line's end.
+        let groove = request.lineGroove
+        let bars = max(1, groove.bars)
         let totalBeats = beatsPerBar * Double(bars)
-        let kicks = kickOnsets(in: request.groove, beatsPerBar: beatsPerBar)
+        let kicks = kickOnsets(in: groove, beatsPerBar: beatsPerBar)
         let harmony = HarmonyMap(chords: request.effectiveChords, totalBeats: totalBeats)
         var rng = BassRandom(seed: request.seed)
 
@@ -188,7 +204,10 @@ public enum BassWriter {
             placed.append(NoteEvent(pitch: Pitch(midi: draft.pitch), start: max(0, start),
                                     duration: end - max(0, start), velocity: draft.velocity))
         }
-        return Bassline(notes: placed, sound: request.sound ?? request.lineage.defaultSound, key: request.key)
+        // The length is stated, not left to the notes: a line whose last bar is a held rest, or a
+        // programmed line whose last kick is early in the bar, is still `bars` long.
+        return Bassline(notes: placed, sound: request.sound ?? request.lineage.defaultSound, key: request.key,
+                        lengthInBars: bars)
     }
 
     // MARK: Lineage A — Palladino

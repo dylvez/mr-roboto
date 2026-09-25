@@ -10,8 +10,10 @@ import Testing
 
 // M5 R3–R5: the Booth keeps a take on the bar it was sung on; Takes comps them; Sing is on the path.
 
+/// A Booth's host with no engine: buffers for a recorder, a song to keep takes in, and a transport
+/// that starts where it is told. Shared with `SingingTests`.
 @MainActor
-private final class StubBoothHost: BoothHosting, TakesHosting {
+final class StubBoothHost: BoothHosting, TakesHosting {
     var song: Song?
     var clock = TransportClock(tempo: 120, timeSignature: .fourFour, sampleRate: 48_000)
     var isPlaying = false
@@ -26,6 +28,21 @@ private final class StubBoothHost: BoothHosting, TakesHosting {
     init(song: Song) { self.song = song }
 
     func play() async { isPlaying = true; playhead = 0 }
+    /// What Record asked for, in order.
+    var plays: [(section: SectionID?, countInBars: Int, click: Bool)] = []
+    /// Starts in song time, as the app's transport does: the count-in reads before the section's
+    /// first bar, below zero when that is the top.
+    func play(from section: SectionID?, countInBars: Int, click: Bool) async {
+        plays.append((section, countInBars, click))
+        var start = 0
+        for candidate in song?.sections ?? [] {
+            if candidate.id == section { break }
+            start += candidate.lengthInBars
+        }
+        if section == nil || song?.sections.contains(where: { $0.id == section }) != true { start = 0 }
+        isPlaying = true
+        playhead = clock.seconds(forBar: start) - Double(countInBars) * clock.secondsPerBar
+    }
     func stop() async { isPlaying = false }
     func recorder() async throws -> Recorder {
         let source: any RecordingSource = try BufferSource(buffers, latencySeconds: 0.01, name: "Stub mic")
@@ -85,6 +102,19 @@ private func tone(frames: Int, rate: Double, hz: Double) -> AVAudioPCMBuffer {
 @Suite("Booth: a take lands on its bar", .serialized) @MainActor
 struct BoothTests {
 
+    /// These tests are about where a take lands, on a stub whose transport never moves, so they
+    /// sing with no count-in. The Booth reads its settings when it is made, so the domain that
+    /// said "off" is gone again before the test runs. (Not `register(defaults:)`: that domain is
+    /// the whole process's, and would reach every other Booth under test.)
+    private func booth(_ host: StubBoothHost) -> BoothModel {
+        let suite = "booth-tests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.set(0, forKey: "booth.countInBars")
+        let model = BoothModel(host: host, defaults: defaults)
+        defaults.removePersistentDomain(forName: suite)
+        return model
+    }
+
     private func song() -> Song {
         var song = FormFixture.build(tempo: 120).song
         let ids = [Guidance.grooves(in: song).last!, Guidance.basslines(in: song).last!].lanes
@@ -100,7 +130,7 @@ struct BoothTests {
         let start = host.clock.frame(forBar: 2)
         host.buffers = (0..<4).map { i in (tone(frames: 2_048, rate: 48_000, hz: 220), AVAudioTime(sampleTime: start + AVAudioFramePosition(i * 2_048), atRate: 48_000)) }
 
-        let model = BoothModel(host: host)
+        let model = booth(host)
         #expect(model.section == host.song?.sections.first?.id)
         #expect(model.sectionBars == 0..<4)
         #expect(model.nextPass == 1)
@@ -138,7 +168,7 @@ struct BoothTests {
             for f in 0..<2_048 { buffer.floatChannelData![0][f] = Float(0.4 * sin(2 * .pi * 220 * Double(f) / 48_000)); buffer.floatChannelData![1][f] = 0 }
             return (buffer, AVAudioTime(sampleTime: host.clock.frame(forBar: 1) + AVAudioFramePosition(i * 2_048), atRate: 48_000))
         }
-        let model = BoothModel(host: host)
+        let model = booth(host)
         #expect(model.inputLine == "MacBook Pro Microphone — the system's default input.")
         model.input = InputChoice(deviceUID: "scarlett", channel: 0)
         #expect(host.input == model.input, "the choice reaches the host")
@@ -176,7 +206,7 @@ struct BoothTests {
     func noInput() async {
         let host = StubBoothHost(song: song())
         host.buffers = []
-        let model = BoothModel(host: host)
+        let model = booth(host)
         await model.record()
         #expect(model.state == .idle && model.lastError != nil)
     }
@@ -184,7 +214,7 @@ struct BoothTests {
     @Test("the Takes surface chooses bars from takes and keeps a comp with the takes as parents")
     func comping() throws {
         let host = StubBoothHost(song: song())
-        let model0 = BoothModel(host: host)
+        let model0 = booth(host)
         // Two takes of the verse (bars 0–4 at 120 = 8 s), placed at 0 by hand.
         func take(_ pass: Int, hz: Double) -> PartVersion {
             let rec = Recorder.Recording(url: URL(fileURLWithPath: "/dev/null"), sampleRate: 48_000, channelCount: 1, frames: 8 * 48_000,
@@ -227,7 +257,7 @@ struct BoothTests {
     @Test("a take's play control follows the take: it goes back by itself when the take runs out, and a new audition supersedes it")
     func auditionEnds() async throws {
         let host = StubBoothHost(song: song())
-        let booth = BoothModel(host: host)
+        let booth = self.booth(host)
         func take(_ pass: Int, seconds: Double) -> PartVersion {
             let frames = AVAudioFramePosition(seconds * 48_000)
             let rec = Recorder.Recording(url: URL(fileURLWithPath: "/dev/null"), sampleRate: 48_000, channelCount: 1, frames: frames,
@@ -259,7 +289,7 @@ struct BoothTests {
         host.transport = Transport(clock: host.clock, mode: .offline(sampleRate: 48_000, maximumFrames: 4_096), originSampleTime: 0)
         let start = host.clock.frame(forBar: 2)
         host.buffers = (0..<4).map { i in (tone(frames: 2_048, rate: 48_000, hz: 220), AVAudioTime(sampleTime: start + AVAudioFramePosition(i * 2_048), atRate: 48_000)) }
-        let model = BoothModel(host: host)
+        let model = booth(host)
         #expect(model.level == 0, "nothing hears the input before a take: the recorder is the only tap on it")
 
         await model.record()

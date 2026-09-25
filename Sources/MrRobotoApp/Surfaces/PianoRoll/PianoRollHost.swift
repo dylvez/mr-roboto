@@ -22,9 +22,10 @@ public protocol PianoRollHosting: AnyObject {
     /// surface working on nothing yet sets.
     func setInstrument(_ id: String, for part: PartID?)
     func stop() async
-    /// A new part version left the surface. `false` when the host refused it.
-    @discardableResult
-    func commit(_ version: PartVersion) async -> Bool
+    /// A new part version left the surface. `false` when the host refused it. Synchronous, so a
+    /// keep the frame asks for before it plays is in the song before the transport reads it.
+    @MainActor @discardableResult
+    func commit(_ version: PartVersion) -> Bool
 }
 
 /// What the Chords surface needs: a chord sounded on touch, and a version taken.
@@ -37,5 +38,12 @@ public protocol ChordsHosting: AnyObject {
     /// surface working on nothing yet sets.
     func setInstrument(_ id: String, for part: PartID?)
     @discardableResult
-    func commit(_ version: PartVersion) async -> Bool
+    func commit(_ version: PartVersion) -> Bool
+    /// The song's newest bass line, for the Harmonist to ask whether it agrees with the chords.
+    /// Nil when there is none, and then nothing is said about the bass.
+    var bassline: Bassline? { get }
+}
+
+extension ChordsHosting {
+    public var bassline: Bassline? { nil }
 }

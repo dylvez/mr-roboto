@@ -83,7 +83,18 @@ struct TransportBar: View {
                     .foregroundStyle(app.isLooping ? Design.Palette.accent : Design.Palette.inkTertiary)
             }
             .buttonStyle(.plain)
-            .help("Loop")
+            .help("Loop (⌘L)")
+
+            Button {
+                app.toggleClick()
+            } label: {
+                Image(systemName: "metronome")
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundStyle(app.isClicking ? Design.Palette.accent : Design.Palette.inkTertiary)
+            }
+            .buttonStyle(.plain)
+            .help(app.isClicking ? "Click on: a metronome plays with the song (⌘K)" : "Click (⌘K)")
+            .accessibilityLabel(app.isClicking ? "Click on" : "Click off")
 
             if case .unavailable(let reason) = app.transport {
                 Image(systemName: "exclamationmark.triangle")

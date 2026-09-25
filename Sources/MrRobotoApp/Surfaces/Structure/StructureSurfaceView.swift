@@ -86,7 +86,7 @@ struct StructureSurfaceView: View {
 
     private var emptyHint: some View {
         Text(model.isEmpty
-             ? "No sections yet. Add one: it plays the newest groove, bass line, chords, tune and dusty chop, and follows them as you work. The transport plays the sections in order."
+             ? "No sections yet. Add one: it plays the newest groove, bass line, chords, tune and chop, and follows them as you work. The transport plays the sections in order."
              : "Select a section to name it, set its bars and choose what plays in it.")
             .font(Design.Typography.ui(12, weight: .regular))
             .foregroundStyle(Design.Palette.inkSecondary)
@@ -95,29 +95,8 @@ struct StructureSurfaceView: View {
 
     private var footer: some View {
         HStack(spacing: 12) {
-            if let error = model.lastError {
-                Text(error).font(Design.Typography.ui(11.5)).foregroundStyle(Design.Palette.warn)
-            } else if model.isDirty {
-                // Two things keep without being asked, and the line says which. A library row
-                // dropped on a section stitches into the *kept* form, so the drop keeps first.
-                // The header's Play control does not: it plays the song as it was last kept.
-                Text("Not kept yet: the transport bar plays what was last kept. Play up here, and a library row dropped on a section, keep the arrangement first.")
-                    .font(Design.Typography.ui(11.5, weight: .regular))
-                    .foregroundStyle(Design.Palette.inkSecondary)
-            }
+            model.statusBar
             Spacer()
-            Button("Revert") { model.revert() }
-                .buttonStyle(.plain)
-                .font(Design.Typography.ui(12))
-                .foregroundStyle(Design.Palette.inkSecondary)
-                .disabled(!model.isDirty)
-                .help("Back to the form as it was last kept")
-            Button("Keep arrangement") { Task { await model.keep() } }
-                .buttonStyle(.plain)
-                .font(Design.Typography.ui(12, weight: .semibold))
-                .foregroundStyle(Design.Palette.accent)
-                .disabled(!model.isDirty)
-                .help("Hand the sections to the song. Nothing is versioned: the sections are the song's, and the transport plays them from now on.")
         }
     }
 }
@@ -335,13 +314,16 @@ private struct SectionDetail: View {
 /// Chips that wrap onto the next line rather than running off the panel.
 struct FlowRow: Layout {
     var spacing: CGFloat = 4
+    /// Between lines, when it should differ from between items. Nil is the same.
+    var lineSpacing: CGFloat? = nil
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let width = proposal.width ?? 600
+        let lineGap = lineSpacing ?? spacing
         var x: CGFloat = 0, y: CGFloat = 0, rowHeight: CGFloat = 0
         for subview in subviews {
             let size = subview.sizeThatFits(.unspecified)
-            if x > 0, x + size.width > width { x = 0; y += rowHeight + spacing; rowHeight = 0 }
+            if x > 0, x + size.width > width { x = 0; y += rowHeight + lineGap; rowHeight = 0 }
             x += size.width + spacing
             rowHeight = max(rowHeight, size.height)
         }
@@ -349,10 +331,11 @@ struct FlowRow: Layout {
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let lineGap = lineSpacing ?? spacing
         var x: CGFloat = 0, y: CGFloat = 0, rowHeight: CGFloat = 0
         for subview in subviews {
             let size = subview.sizeThatFits(.unspecified)
-            if x > 0, x + size.width > bounds.width { x = 0; y += rowHeight + spacing; rowHeight = 0 }
+            if x > 0, x + size.width > bounds.width { x = 0; y += rowHeight + lineGap; rowHeight = 0 }
             subview.place(at: CGPoint(x: bounds.minX + x, y: bounds.minY + y), proposal: .unspecified)
             x += size.width + spacing
             rowHeight = max(rowHeight, size.height)

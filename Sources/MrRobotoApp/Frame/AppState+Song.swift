@@ -101,6 +101,21 @@ extension AppState {
     }
 }
 
+// MARK: - A new song has a shape
+
+extension Song {
+    /// The form a new song starts with: an intro, a verse and a hook, empty. Every part you make
+    /// joins all three (`AppState.joinForm`), so the transport plays a form from the first groove,
+    /// and Structure is where you shape it rather than a step you have to remember to take.
+    public static let startingForm: [(name: String, bars: Int)] = [("Intro", 4), ("Verse", 16), ("Hook", 8)]
+
+    /// A new song from nothing, with the starting form.
+    public static func new(title: String, key: Key? = nil, tempo: Double = 120) -> Song {
+        Song(title: title, key: key, tempo: tempo,
+             sections: startingForm.map { Section(name: $0.name, stitch: [], lengthInBars: $0.bars) })
+    }
+}
+
 // MARK: - The library, managed
 
 /// Songs, albums, ideas, samples and records could be made and never unmade: the sidebar had no
@@ -260,5 +275,143 @@ extension AppState {
             return
         }
         NSWorkspace.shared.activateFileViewerSelecting([package.packageURL])
+    }
+}
+
+// MARK: - A step back, from the ledger
+
+/// "Back one version", and "make this one current" — the ledger's half of undo.
+///
+/// ⌘Z steps a surface back through its own edits. This steps a *part* back through its versions,
+/// from anywhere, whether a surface is open on it or not: the Director's line you did not want, a
+/// mix move from yesterday. Nothing is deleted — the graph only grows — so a restore is a new
+/// version carrying the older music, and the one it replaced is a step back from that.
+extension AppState {
+
+    /// Makes an older version of its part current again. False when the song does not hold it,
+    /// or it is already the newest.
+    @discardableResult
+    public func restore(_ id: VersionID) -> Bool {
+        guard let song, let target = song.version(id) else { return false }
+        let history = song.versions.filter { $0.partID == target.partID }
+        guard let newest = history.last, newest.id != id else { return false }
+        let number = history.firstIndex { $0.id == id }.map { $0 + 1 }
+        let restored = newest.deriving(target.kind, by: .user, operation: Operation.restored,
+                                       note: target.note ?? PartLabel.title(of: target),
+                                       alsoFrom: [target.id])
+        guard record(restored, joiningForm: false) else { return false }
+        note(.you, "Back to \(PartLabel.title(of: target))\(number.map { " (v\($0))" } ?? "")",
+             detail: "A new version with v\(number ?? 0)'s music; nothing was removed.")
+        refreshSurfaces(showing: target.partID, now: restored.id)
+        return true
+    }
+
+    /// The version "back one" would restore: the one before the music the part plays now. After a
+    /// restore that is the one before the version it restored, so pressing it again keeps going
+    /// back rather than bouncing between two.
+    public func stepBackTarget(for part: PartID) -> PartVersion? {
+        guard let song else { return nil }
+        let history = song.versions.filter { $0.partID == part }
+        guard let newest = history.last else { return nil }
+        let pointer = newest.operation == Operation.restored ? (newest.parents.last ?? newest.id) : newest.id
+        guard let index = history.firstIndex(where: { $0.id == pointer }), index > 0 else { return nil }
+        return history[index - 1]
+    }
+
+    /// Back one version of a part.
+    @discardableResult
+    public func stepBack(_ part: PartID) -> Bool {
+        guard let target = stepBackTarget(for: part) else { return false }
+        return restore(target.id)
+    }
+
+    /// Rebinds every open surface showing this part to its new version, so the surface draws what
+    /// the song now plays instead of the draft it was holding.
+    func refreshSurfaces(showing part: PartID, now version: VersionID) {
+        guard let song else { return }
+        for item in bench.items {
+            let bound = self.bound(for: item.id)
+            guard bound.contains(where: { song.version($0)?.partID == part }) else { continue }
+            rebindSurface(item.id, to: bound.map { song.version($0)?.partID == part ? version : $0 })
+            discardSurfaceModel(item.id)
+        }
+    }
+}
+
+// MARK: - Is it heard?
+
+/// Whether a part plays in the song, and if not, why — said on the surface that holds it.
+///
+/// Doing the right thing and hearing nothing was the one failure the frame never explained: a part
+/// written after the form was arranged sat in no section; a second groove in an unarranged song was
+/// quietly replaced by the newest; the record and its stems stop the moment a section plays
+/// anything. Each was documented somewhere. Now the surface says it, in its header.
+public enum Audibility: Equatable, Sendable {
+    /// Heard: "in Verse and Hook", "in the song".
+    case plays(String)
+    /// Not heard, the reason, and — when one move fixes it — that move.
+    case silent(String, fix: AudibilityFix?)
+}
+
+public enum AudibilityFix: Equatable, Sendable {
+    /// Stitch the part into every section.
+    case addToEverySection(PartID)
+    /// Open Structure, where the choice is the person's.
+    case openStructure
+}
+
+extension AppState {
+
+    /// Nil for a part that is not the kind of thing that plays (an analysis, a sound pick, a mix,
+    /// words), so no header says "not in the song" about a lyric.
+    public func audibility(of part: PartID) -> Audibility? {
+        guard let song, let newest = song.versions.last(where: { $0.partID == part }) else { return nil }
+        let plan = playback
+        if let audio = Guidance.audio(of: newest) {
+            if audio.take != nil || audio.comp != nil {
+                return plan.tracks.contains { $0.part == part } ? .plays("in the song, where it was sung")
+                    : .silent("Its audio is missing, or every player is taken", fix: nil)
+            }
+            if plan.isArranged {
+                return .silent("The record and its stems stop once a section plays something; chop what you want from them", fix: nil)
+            }
+            return plan.tracks.contains { $0.part == part } ? .plays("in the song") : nil
+        }
+        guard StructureModel.playableTypes.contains(newest.type) else { return nil }
+        guard StructureModel.plays(newest) else { return .silent("Empty: nothing in it plays yet", fix: nil) }
+        let kind = StructureModel.name(of: newest.type).lowercased()
+        if plan.isArranged {
+            let sections = song.sections.filter { $0.stitch.contains { $0.part == part } }.map(\.name)
+            guard !sections.isEmpty else {
+                return .silent("In no section, so the form never plays it", fix: .addToEverySection(part))
+            }
+            if sections.count == song.sections.count { return .plays("in every section") }
+            return .plays("in " + Self.listed(sections))
+        }
+        if plan.parts.contains(part) { return .plays("in the song") }
+        return .silent("The song plays its newest \(kind) until it is arranged; put this one in a section to hear it",
+                       fix: .openStructure)
+    }
+
+    /// Carries out a fix from a surface header.
+    public func apply(_ fix: AudibilityFix) {
+        switch fix {
+        case .addToEverySection(let part):
+            guard let song, !song.sections.isEmpty else { return }
+            let sections = song.sections.map { section -> Section in
+                var section = section
+                if !section.stitch.contains(where: { $0.part == part }) { section.stitch.append(Lane(part: part)) }
+                return section
+            }
+            arrange(sections)
+        case .openStructure:
+            perform(Guidance.dockAction(for: .structure, in: song))
+        }
+    }
+
+    /// "Verse", "Verse and Hook", "Intro, Verse and Hook".
+    static func listed(_ names: [String]) -> String {
+        guard names.count > 1 else { return names.first ?? "" }
+        return names.dropLast().joined(separator: ", ") + " and " + names[names.count - 1]
     }
 }

@@ -81,16 +81,31 @@ public struct Progression: Hashable, Codable, Sendable {
 /// A melody: notes with pitch, start and duration in beats, and velocity.
 public struct Melody: Hashable, Codable, Sendable {
     public var notes: [NoteEvent]
+    /// How many bars one pass of the tune covers, when it was said. Nil is "to the end of the last
+    /// note, rounded up to the bar", which is what every melody meant before this was carried. A
+    /// four-bar phrase whose fourth bar is a breath has to say so here, or the breath is lost and
+    /// the phrase loops after three. Synthesized coding omits it when nil, so older documents
+    /// round-trip byte for byte.
+    public var lengthInBars: Int?
 
-    public init(notes: [NoteEvent]) { self.notes = notes }
+    public init(notes: [NoteEvent], lengthInBars: Int? = nil) {
+        self.notes = notes
+        self.lengthInBars = lengthInBars.map { max(1, $0) }
+    }
 
-    /// The melody moved by `semitones`.
+    /// The melody moved by `semitones`. Moving the pitches does not move the bar line.
     public func transposed(by semitones: Int) -> Melody {
-        Melody(notes: notes.map { NoteEvent(pitch: $0.pitch + semitones, start: $0.start, duration: $0.duration, velocity: $0.velocity) })
+        Melody(notes: notes.map { NoteEvent(pitch: $0.pitch + semitones, start: $0.start, duration: $0.duration, velocity: $0.velocity) },
+               lengthInBars: lengthInBars)
     }
 
     /// Length in beats to the end of the last note.
     public var lengthInBeats: Double { notes.map(\.end).max() ?? 0 }
+
+    /// The bars one pass covers: the stated length, else the notes rounded up to whole bars.
+    public func loopBars(beatsPerBar: Int) -> Int {
+        phraseBars(stated: lengthInBars, lastNoteEnd: lengthInBeats, beatsPerBar: beatsPerBar)
+    }
 }
 
 /// A bassline: notes, like a melody, kept as its own kind because personas treat it differently.
@@ -103,33 +118,55 @@ public struct Bassline: Hashable, Sendable {
     /// The key the line was written in, so a line kept as an idea still knows where it stands and
     /// a merge can move it by arithmetic. Nil for a line from before keys were carried.
     public var key: Key?
+    /// How many bars one pass of the line covers, when it was said. Nil is "to the end of the last
+    /// note, rounded up", as every line before this meant. An eight-bar phrase over a one-bar
+    /// groove, or a line whose last bar is a rest, needs it: the notes alone cannot say where a
+    /// silence ends.
+    public var lengthInBars: Int?
 
-    public init(notes: [NoteEvent], sound: String? = nil, key: Key? = nil) {
+    public init(notes: [NoteEvent], sound: String? = nil, key: Key? = nil, lengthInBars: Int? = nil) {
         self.notes = notes
         self.sound = sound
         self.key = key
+        self.lengthInBars = lengthInBars.map { max(1, $0) }
     }
 
     public var lengthInBeats: Double { notes.map(\.end).max() ?? 0 }
+
+    /// The bars one pass covers: the stated length, else the notes rounded up to whole bars.
+    public func loopBars(beatsPerBar: Int) -> Int {
+        phraseBars(stated: lengthInBars, lastNoteEnd: lengthInBeats, beatsPerBar: beatsPerBar)
+    }
+}
+
+/// One rule for how long a written line is, so the players, the MIDI file and the Piano roll
+/// cannot disagree about where a phrase repeats. A stated length wins, rests at the end and all; a
+/// note ringing a hair past it does not double the loop, it overlaps the next pass as a tail would.
+/// Without one, the last note's end rounded up to the bar, as it always was — never less than one.
+private func phraseBars(stated: Int?, lastNoteEnd: Double, beatsPerBar: Int) -> Int {
+    if let stated { return max(1, stated) }
+    return max(1, Int((lastNoteEnd / Double(max(1, beatsPerBar))).rounded(.up)))
 }
 
 extension Bassline: Codable {
-    private enum CodingKeys: String, CodingKey { case notes, sound, key }
+    private enum CodingKeys: String, CodingKey { case notes, sound, key, lengthInBars }
 
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         self.init(notes: try c.decode([NoteEvent].self, forKey: .notes),
                   sound: try c.decodeIfPresent(String.self, forKey: .sound),
-                  key: try c.decodeIfPresent(Key.self, forKey: .key))
+                  key: try c.decodeIfPresent(Key.self, forKey: .key),
+                  lengthInBars: try c.decodeIfPresent(Int.self, forKey: .lengthInBars))
     }
 
-    /// `sound` and `key` are omitted when nil, so a bassline written before they existed round-trips
-    /// byte for byte.
+    /// `sound`, `key` and `lengthInBars` are omitted when nil, so a bassline written before they
+    /// existed round-trips byte for byte.
     public func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(notes, forKey: .notes)
         try c.encodeIfPresent(sound, forKey: .sound)
         try c.encodeIfPresent(key, forKey: .key)
+        try c.encodeIfPresent(lengthInBars, forKey: .lengthInBars)
     }
 }
 
@@ -264,6 +301,30 @@ public struct Groove: Hashable, Sendable {
     }
 
     public var stepCount: Int { stepsPerBar * bars }
+
+    /// The groove as it plays for `bars` bars: its steps repeated from its own start, the last
+    /// pass cut at the bar line. Same steps per bar, same swing, same chain — the pattern the
+    /// transport loops, written out.
+    ///
+    /// What a line longer than its groove is read against. A four-bar bass phrase over a one-bar
+    /// kick is four bars of that kick; the writer, the Bassist and the lane under the Piano roll
+    /// all need the kick to be there in bar four, not only in bar one. Asked for fewer bars than
+    /// it has, it is the first `bars` of itself.
+    public func tiled(toBars bars: Int) -> Groove {
+        let target = max(1, bars)
+        guard target != self.bars else { return self }
+        let cycle = max(1, stepCount)
+        let count = stepsPerBar * target
+        let tiledPatterns = patterns.map { pattern in
+            // A pattern shorter than the groove is silent past its end, as the player plays it.
+            GroovePattern(voice: pattern.voice, steps: (0..<count).map { index in
+                let step = index % cycle
+                return step < pattern.steps.count ? pattern.steps[step] : .rest
+            })
+        }
+        return Groove(stepsPerBar: stepsPerBar, bars: target, swing: swing, patterns: tiledPatterns,
+                      degradation: degradation)
+    }
 }
 
 extension Groove: Codable {

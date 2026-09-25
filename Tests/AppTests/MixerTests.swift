@@ -1,8 +1,10 @@
+import AppKit
 import AudioEngine
 import Foundation
 import MusicTheory
 import Performance
 import SongGraph
+import SwiftUI
 import Testing
 
 @testable import MrRobotoApp
@@ -19,6 +21,10 @@ private final class StubMixHost: MixHosting {
     var previews: [Mix] = []
     var committed: [(Mix, PartVersion?, String)] = []
     var bounceResult: (planar: [[Float]], sampleRate: Double) = ([[Float](repeating: 0, count: 4800)], 48_000)
+    /// Every section a bounce was asked for, nil for the whole song.
+    var bounced: [SectionID?] = []
+    /// When set, a bounce waits here until the test lets it go: the only way to see a read in flight.
+    var hold: AsyncStream<Void>?
 
     init(song: Song, playback: SongPlayback) { self.song = song; self.playback = playback }
 
@@ -31,7 +37,11 @@ private final class StubMixHost: MixHosting {
         return version
     }
     func meters(for parts: [PartID]) async -> [PartID: (peak: Float, rms: Float)] { [:] }
-    func bounce(mix: Mix, section: SectionID?) async throws -> (planar: [[Float]], sampleRate: Double) { bounceResult }
+    func bounce(mix: Mix, section: SectionID?) async throws -> (planar: [[Float]], sampleRate: Double) {
+        bounced.append(section)
+        if let hold { for await _ in hold { break } }
+        return bounceResult
+    }
     func note(_ text: String, detail: String?) {}
 }
 
@@ -134,25 +144,32 @@ struct MixerTests {
         #expect(suggested > 6 && suggested < 30)
         model.hitTheTarget()
         #expect(host.committed.count == 1 && host.committed[0].2.hasPrefix("master +"))
+        // Counted from the gain the reading was bounced at, so it is not suggested again on top of
+        // itself: pressing it twice is the same as pressing it once.
+        #expect(model.suggestedGainDB == suggested)
+        model.hitTheTarget()
+        #expect(host.committed.count == 1)
     }
 
-    @Test("the Master says what it read — the first section or the whole song — and marks the reading stale once the bounce would differ")
+    @Test("the Master says what it read — the whole song — and marks the reading stale once the bounce would differ")
     func readingScope() async throws {
         let (song, plan) = fixture()
         let host = StubMixHost(song: song, playback: plan)
         let model = MasterModel(host: host)
-        // What is bounced is the host's call: a section only of an arranged plan. The model's scope
-        // must say the same thing the bounce will do, whichever it is.
-        let expected: MasterModel.Scope = host.playback.isArranged
-            ? .firstSection(name: try #require(song.sections.first?.name))
-            : .wholeSong
-        #expect(model.scope == expected)
-        #expect(MasterModel.Scope.wholeSong.label == "Whole song")
-        #expect(MasterModel.Scope.firstSection(name: "Verse").label == "First section · Verse")
+        // Whatever the plan, the reading is of the whole song: the bounce is asked for no section,
+        // and the scope counts what `SectionBounce` will render when it is asked for none.
+        let bars = try SectionBounce.isolate(plan, section: nil).2
+        #expect(model.scope == MasterModel.Scope(bars: bars, sections: plan.segments.count))
+        #expect(model.scope.label == "Whole song")
+        #expect(MasterModel.Scope(bars: 24, sections: 3).detail == "3 sections · 24 bars")
+        #expect(MasterModel.Scope(bars: 1, sections: 0).detail == "1 bar")
+        #expect(MasterModel.Scope(bars: 46, sections: 5).progressLine == "Bouncing 46 bars…")
 
         await model.read()
         let reading = try #require(model.reading)
-        #expect(reading.scope == expected)
+        #expect(reading.scope == model.scope && reading.scope.label == "Whole song")
+        #expect(host.bounced == [nil], "a section was asked for: \(host.bounced)")
+        #expect(abs(reading.seconds - 0.1) < 1e-9, "4 800 frames at 48 kHz")
         #expect(!model.isStale)
 
         // The target is what the numbers are judged against, not something in the bounce.
@@ -170,6 +187,9 @@ struct MixerTests {
         await model.read()
         model.setCeiling(model.mix.master.ceilingDBTP)
         #expect(!model.isStale)
+        model.setGain(6)
+        model.setGain(3)
+        #expect(!model.isStale, "back where it was read")
     }
 
     @Test("a send at the bottom of its travel is off, and reads as off rather than as -60 dB")
@@ -205,5 +225,197 @@ struct MixerTests {
         let after = WorkPath.steps(for: song, active: (kind: .master, bound: []), canPerform: { _ in true }).steps.first { $0.kind == .mix }!
         #expect(after.count == initial + 1 && after.isHere && after.action?.surface == .master)
         #expect(PartLabel.title(of: Guidance.mixes(in: song)[0]) == "Mix")
+    }
+}
+
+// The Mixer and the Master folded into one surface: the Master as the Mixer's second tab, working
+// on the Mixer's mix, and reading the whole song rather than its first section.
+
+@Suite("Mixer: the Master as a tab, on one mix", .serialized) @MainActor
+struct MixerMasterTabTests {
+
+    /// A song in two sections, so "the first section" and "the whole song" are different lengths.
+    private func arranged(verse: Int = 4, hook: Int = 8) throws -> (Song, SongPlayback) {
+        var song = FormFixture.build(tempo: 92).song
+        let lanes = [try #require(Guidance.grooves(in: song).last), try #require(Guidance.basslines(in: song).last)].lanes
+        song.sections = [Section(name: "Verse", stitch: lanes, lengthInBars: verse),
+                         Section(name: "Hook", stitch: lanes, lengthInBars: hook)]
+        return (song, SongPlayback.plan(for: song) { _ in nil })
+    }
+
+    @Test("an arranged song is read whole — every section in order — and says so while it bounces")
+    func wholeSongOfAnArrangement() async throws {
+        let (song, plan) = try arranged()
+        #expect(plan.isArranged && plan.segments.count == 2, "the point of the test")
+        let host = StubMixHost(song: song, playback: plan)
+        let (stream, release) = AsyncStream.makeStream(of: Void.self)
+        host.hold = stream
+        let model = MasterModel(host: host)
+        #expect(model.scope == MasterModel.Scope(bars: 12, sections: 2))
+        #expect(model.scope.label == "Whole song" && model.scope.detail == "2 sections · 12 bars")
+        #expect(model.progressLine == nil)
+
+        let reading = Task { await model.read() }
+        for _ in 0..<1_000 where !model.isReading { await Task.yield() }
+        #expect(model.isReading)
+        #expect(model.progressLine == "Bouncing 12 bars…")
+        // A lever moved while the bounce runs: the reading is of the mix as it was, and lands stale.
+        model.setGain(2)
+        release.yield()
+        await reading.value
+        #expect(!model.isReading && model.progressLine == nil)
+        #expect(host.bounced == [nil], "the Master asked for a section: \(host.bounced)")
+        let read = try #require(model.reading)
+        #expect(read.scope == MasterModel.Scope(bars: 12, sections: 2) && read.scope.label == "Whole song")
+        #expect(read.mix.master.gainDB == 0 && model.isStale)
+    }
+
+    @Test("through the real adapter, a reading of an arranged song is as long as the song, not its first section")
+    func wholeSongThroughTheAdapter() async throws {
+        let (song, _) = try arranged(verse: 1, hook: 2)
+        let directory = WiringFixture.temporaryDirectory("master-whole-song")
+        defer { WiringFixture.remove(directory) }
+        let app = BandFixture.app(in: directory, song: song)
+        app.refreshPlayback()
+        #expect(app.playback.isArranged)
+        let model = MasterModel(host: MixAdapter(app: app))
+        #expect(model.scope == MasterModel.Scope(bars: 3, sections: 2))
+        await model.read()
+        let reading = try #require(model.reading, "\(model.lastError ?? "")")
+        let bar = 4 * 60 / 92.0
+        // Three bars and the half-second tail; the Verse alone would be one.
+        #expect(abs(reading.seconds - (3 * bar + 0.5)) < 0.05, "\(reading.seconds) s")
+        #expect(reading.observation.integratedLUFS.isFinite)
+    }
+
+    @Test("the Mixer shows a Master tab only when it is given a Master, and the Master then reads the Mixer's mix")
+    func masterTab() throws {
+        let (song, plan) = try arranged()
+        let host = StubMixHost(song: song, playback: plan)
+        // A song on an album with its own targets and never mixed: both start there, not at −14.
+        host.playback.mix = nil
+        host.targets = Master(gainDB: 0, ceilingDBTP: -2, targetLUFS: -16)
+        let mixer = MixerModel(host: host)
+        #expect(mixer.mix.master == host.targets)
+
+        let alone = MixerSurfaceView(model: mixer)
+        #expect(alone.tabs == [.strips])
+        mixer.tab = .master
+        #expect(alone.shownTab == .strips, "asked for a Master it was not given: the strips")
+
+        let master = MasterModel(host: host)
+        #expect(!master.isFollowingMixer && master.mix.master == host.targets)
+        let folded = MixerSurfaceView(model: mixer, master: master)
+        #expect(folded.tabs == [.strips, .master] && folded.shownTab == .master)
+        #expect(master.isFollowingMixer)
+        _ = MixerSurfaceView(model: mixer, master: master)
+        #expect(master.isFollowingMixer, "building the view again changes nothing")
+
+        // A strip moved on the Strips tab is in the mix the Master tab reads and bounces.
+        let part = try #require(mixer.rows.first?.part)
+        mixer.setGain(-5, for: part)
+        #expect(master.mix.strip(for: part)?.gainDB == -5)
+
+        // It draws at the bench's minimum, on either tab.
+        for tab in MixerModel.Tab.allCases {
+            mixer.tab = tab
+            let renderer = ImageRenderer(content: MixerSurfaceView(model: mixer, master: master)
+                .frame(width: Design.Metric.surfaceMinimumWidth, height: Design.Metric.surfaceMinimumHeight))
+            #expect(renderer.nsImage != nil, "\(tab)")
+        }
+    }
+
+    @Test("a master lever moved on the Mixer's tab is a mix version on the Mixer's line, and stales the reading")
+    func leverOnTheTab() async throws {
+        let (song, plan) = try arranged()
+        let host = StubMixHost(song: song, playback: plan)
+        let mixer = MixerModel(host: host)
+        let master = MasterModel(host: host)
+        _ = MixerSurfaceView(model: mixer, master: master)
+
+        let part = try #require(mixer.rows.first?.part)
+        mixer.setGain(-4, for: part)
+        let stripMove = try #require(mixer.endGesture())
+
+        await master.read()
+        #expect(master.reading != nil && !master.isStale)
+        #expect(master.reading?.mix.strip(for: part)?.gainDB == -4, "the Master read the Mixer's mix, strip move and all")
+
+        master.setGain(2)
+        #expect(master.isStale)
+        #expect(mixer.mix.master.gainDB == 2, "the master row on the strips shows it")
+        #expect(host.previews.last?.master.gainDB == 2, "heard while held")
+        let version = try #require(master.endGesture())
+        #expect(version.parents == [stripMove.id], "one line of versions, not a sibling of the strip move")
+        #expect(version.note == "master +2.0 dB", "\(version.note ?? "")")
+        guard case .mix(let kept) = version.kind else { Issue.record("not a mix version"); return }
+        #expect(kept.strip(for: part)?.gainDB == -4 && kept.master.gainDB == 2, "the strip move survives the master move")
+        #expect(mixer.base?.id == version.id && master.base?.id == version.id)
+        #expect(master.lastNote == "master +2.0 dB")
+        #expect(master.endGesture() == nil, "nothing moved since")
+
+        // The target is what the numbers are judged against: it moves without staling them...
+        await master.read()
+        master.setTarget(-10)
+        #expect(!master.isStale && mixer.mix.master.targetLUFS == -10)
+        #expect(master.endGesture()?.note == "target -10 LUFS")
+        // ...while a strip moved on the other tab stales them, as a lever does,
+        mixer.setGain(-8, for: part)
+        #expect(master.isStale)
+        // and so does the controller's master knob, which moves the Mixer.
+        mixer.setGain(-4, for: part)
+        #expect(!master.isStale)
+        mixer.setMaster(gainDB: 5)
+        #expect(master.mix.master.gainDB == 5 && master.isStale)
+    }
+}
+
+// The folded Mixer drawn offscreen, both tabs, at the bench's minimum and at a working width. Off
+// by default, like the frame renders:
+//
+//     MRROBOTO_RENDER=/path/to/dir swift test --filter MixerRender
+
+@Suite("Mixer render", .enabled(if: ProcessInfo.processInfo.environment["MRROBOTO_RENDER"] != nil,
+                                "set MRROBOTO_RENDER to a directory to write the renders"))
+@MainActor
+struct MixerRenderTests {
+
+    @Test("the Mixer's strips and Master tabs, at the bench's minimum and wide")
+    func tabs() async throws {
+        FontRegistration.registerBundledFonts()
+        let directory = URL(fileURLWithPath: try #require(ProcessInfo.processInfo.environment["MRROBOTO_RENDER"]))
+        var song = FormFixture.build(tempo: 92).song
+        let lanes = [try #require(Guidance.grooves(in: song).last), try #require(Guidance.basslines(in: song).last)].lanes
+        song.sections = [Section(name: "Verse", stitch: lanes, lengthInBars: 4), Section(name: "Hook", stitch: lanes, lengthInBars: 8)]
+        let host = StubMixHost(song: song, playback: SongPlayback.plan(for: song) { _ in nil })
+        let rate = 48_000.0
+        host.bounceResult = ([(0..<Int(2 * rate)).map { Float(0.05 * sin(2 * .pi * 1_000 * Double($0) / rate)) }], rate)
+        let mixer = MixerModel(host: host)
+        let master = MasterModel(host: host)
+        _ = MixerSurfaceView(model: mixer, master: master)
+        await master.read()
+        mixer.setGain(-3, for: mixer.rows[0].part)
+        mixer.endGesture()
+
+        let sizes = [("minimum", CGSize(width: Design.Metric.surfaceMinimumWidth, height: Design.Metric.surfaceMinimumHeight)),
+                     ("wide", CGSize(width: 1100, height: 720))]
+        for tab in MixerModel.Tab.allCases {
+            mixer.tab = tab
+            for (name, size) in sizes {
+                try write(MixerSurfaceView(model: mixer, master: master), size: size, to: directory, name: "mixer-\(tab.rawValue.lowercased())-\(name)")
+            }
+        }
+        for (name, size) in sizes {
+            try write(MasterSurfaceView(model: MasterModel(host: host)), size: size, to: directory, name: "master-alone-\(name)")
+        }
+    }
+
+    private func write<V: View>(_ view: V, size: CGSize, to directory: URL, name: String) throws {
+        let renderer = ImageRenderer(content: view.frame(width: size.width, height: size.height))
+        renderer.scale = 2
+        let image = try #require(renderer.nsImage)
+        let tiff = try #require(image.tiffRepresentation)
+        let png = try #require(NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]))
+        try png.write(to: directory.appendingPathComponent("\(name).png"))
     }
 }

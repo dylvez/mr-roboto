@@ -46,9 +46,13 @@ enum SectionBounce {
     /// Renders one section of an arranged plan, or the whole song (every section in order, or the
     /// flat plan) when `section` is nil. The tail is half a second past the last bar, so a ringing
     /// kick is counted.
+    /// - Parameter onlyTheMix: skip the drums-only and bass-only renders. The Engineer's reading of
+    ///   who owns the low end needs them; a loudness reading, an export and a strip solo do not,
+    ///   and a whole song rendered three times over was most of what a master reading cost.
     @AudioActor
     static func render(_ plan: SongPlayback, section: SectionID? = nil, kitsDirectory: URL,
-                       sampleRate: Double = 48_000, tailSeconds: Double = 0.5) async throws -> Stems {
+                       sampleRate: Double = 48_000, tailSeconds: Double = 0.5,
+                       onlyTheMix: Bool = false) async throws -> Stems {
         let clock = TransportClock(tempo: plan.tempo, timeSignature: plan.timeSignature, sampleRate: sampleRate)
         let (base, label, bars) = try isolate(plan, section: section)
         let seconds = clock.seconds(forBeat: Double(bars * plan.timeSignature.beatsPerBar)) + tailSeconds
@@ -61,6 +65,7 @@ enum SectionBounce {
             // The ceiling is not on the live chain (a lookahead limiter has latency): it is here.
             stems.mix = Limiter.apply(stems.mix, sampleRate: sampleRate, ceilingDBTP: master.ceilingDBTP)
         }
+        if onlyTheMix { return stems }
         if has(base, .drums) {
             stems.drums = try await renderOne(base, part: .drums, clock: clock, frames: frames, kitsDirectory: kitsDirectory, sampleRate: sampleRate)
         }

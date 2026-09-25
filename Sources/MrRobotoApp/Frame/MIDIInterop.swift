@@ -96,9 +96,11 @@ public enum MIDIExport {
                 }
                 file.tracks.append(.init(name: name, notes: notes))
             case .bassline(let line):
-                file.tracks.append(.init(name: name, notes: tiled(line.notes, over: placed, beatsPerBar: beatsPerBar, file: file, channel: 0), program: 33))
+                file.tracks.append(.init(name: name, notes: tiled(line.notes, over: placed, beatsPerBar: beatsPerBar, file: file, channel: 0,
+                                                            lengthInBars: line.lengthInBars), program: 33))
             case .melody(let melody):
-                file.tracks.append(.init(name: name, notes: tiled(melody.notes, over: placed, beatsPerBar: beatsPerBar, file: file, channel: 1), program: 0))
+                file.tracks.append(.init(name: name, notes: tiled(melody.notes, over: placed, beatsPerBar: beatsPerBar, file: file, channel: 1,
+                                                            lengthInBars: melody.lengthInBars), program: 0))
             case .progression(let progression):
                 var events: [NoteEvent] = []
                 var beat = 0.0
@@ -122,14 +124,19 @@ public enum MIDIExport {
         return file
     }
 
-    /// A written line laid over every span it plays in, repeating at its own length (rounded up to
-    /// whole bars, as the players cycle it) until the span is filled, and cut at the span's end. A
-    /// span of zero bars — the unarranged song — takes the line once, whole.
+    /// A written line laid over every span it plays in, repeating at its own length until the span
+    /// is filled, and cut at the span's end. A span of zero bars — the unarranged song — takes the
+    /// line once, whole.
+    ///
+    /// Its own length is `lengthInBars` when the part states one, exactly as the players cycle it:
+    /// a four-bar phrase whose fourth bar is a rest repeats after the rest, not after the third bar.
+    /// Without one, the last note's end rounded up to whole bars.
     static func tiled(_ events: [NoteEvent], over spans: [(startBar: Int, bars: Int)], beatsPerBar: Int,
-                      file: MIDIFile, channel: Int) -> [MIDIFile.Note] {
+                      file: MIDIFile, channel: Int, lengthInBars: Int? = nil) -> [MIDIFile.Note] {
         guard !events.isEmpty else { return [] }
         let lengthBeats = events.map(\.end).max() ?? 0
-        let cycleBars = max(1, Int((lengthBeats / Double(beatsPerBar)).rounded(.up)))
+        let cycleBars = lengthInBars.map { max(1, $0) }
+            ?? max(1, Int((lengthBeats / Double(beatsPerBar)).rounded(.up)))
         var out: [MIDIFile.Note] = []
         for span in spans {
             let repeats = span.bars == 0 ? 1 : Int((Double(span.bars) / Double(cycleBars)).rounded(.up))

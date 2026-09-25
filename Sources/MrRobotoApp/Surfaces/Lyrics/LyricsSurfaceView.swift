@@ -123,14 +123,7 @@ struct LyricsSurfaceView: View {
     }
 
     private var footer: some View {
-        HStack {
-            if let error = model.lastError {
-                Text(error).font(Design.Typography.ui(11.5)).foregroundStyle(Design.Palette.warn)
-            }
-            Spacer()
-            if let kept = model.lastKept, !model.hasUnkeptChanges { KeptNote(version: kept) }
-            KeepButton(isEnabled: model.hasUnkeptChanges) { Task { await model.commit() } }
-        }
+        model.statusBar
     }
 }
 

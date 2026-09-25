@@ -68,7 +68,8 @@ final class MixAdapter: MixHosting {
         var plan = app.playback
         plan.mix = mix
         let stems = try await SectionBounce.render(plan, section: plan.isArranged ? section : nil,
-                                                   kitsDirectory: AuditionService.defaultKitsDirectory)
+                                                   kitsDirectory: AuditionService.defaultKitsDirectory,
+                                                   onlyTheMix: true)
         return (stems.mix, stems.sampleRate)
     }
 

@@ -102,6 +102,20 @@ public enum SurfaceKind: String, CaseIterable, Sendable {
 
     /// Whether this surface only exists as an answer to something.
     public var isAnswer: Bool { Self.answers.contains(self) }
+
+    /// The band member whose work this surface is: who "Ask" in its header addresses.
+    public var owner: PersonaID? {
+        switch self {
+        case .grid, .sound: return PersonaID("beatmaker")
+        case .chopLane, .importRecord, .merge, .mashup: return PersonaID("sampler")
+        case .pianoRoll: return PersonaID("bassist")
+        case .chords: return PersonaID("harmonist")
+        case .lyrics: return PersonaID("lyricist")
+        case .booth, .takes, .structure, .album: return PersonaID("producer")
+        case .mixer, .master: return PersonaID("engineer")
+        case .cast, .compare, .check: return nil
+        }
+    }
 }
 
 /// A surface in the bench, with the state the frame owns rather than the surface.

@@ -73,6 +73,10 @@ public enum Operation {
     /// Takes of one part chosen bar by bar and rendered into one audio version. Its parents are
     /// every take it drew from; its `Audio.comp` is the plan.
     public static let comped = "comped"
+    /// An older version made current again: the same music as the version it restores, as a new
+    /// version whose parents are the one it replaced and the one it restores, so "back one" twice
+    /// knows where it has got to. Nothing is removed; the history only grows.
+    public static let restored = "restored"
     /// A fix the band offered and you took — a note shifted by its measured cents, an onset nudged
     /// by its milliseconds — as a new version whose parent is the take. The take is never changed.
     public static let corrected = "corrected"

@@ -171,4 +171,31 @@ struct MIDIExportShapeTests {
         #expect(bassTrack.notes.map(\.start) == [2 * ticksPerBar, 3 * ticksPerBar], "the bass starts where the verse does")
         #expect(kicks.markers.map(\.text) == ["Intro", "Verse"])
     }
+
+    @Test("a line with a stated length repeats at it, its trailing rest kept, not at its last note")
+    func statedLengthTiling() throws {
+        var song = Song(title: "Arrival", tempo: 120)
+        // One note in bar one of a two-bar line: bar two is a rest, and the line says so.
+        let bass = Bassline(notes: [NoteEvent(pitch: Pitch(midi: 38), start: 0, duration: 1)], sound: "finger", lengthInBars: 2)
+        let tune = Melody(notes: [NoteEvent(pitch: Pitch(midi: 72), start: 1, duration: 1)], lengthInBars: 4)
+        let bassVersion = PartVersion(partID: PartID(), kind: .bassline(bass), author: .user, operation: Operation.written, note: "Bass")
+        let tuneVersion = PartVersion(partID: PartID(), kind: .melody(tune), author: .user, operation: Operation.written, note: "Tune")
+        try song.append(bassVersion)
+        try song.append(tuneVersion)
+        song.sections = [Section(name: "Verse", stitch: [Lane(part: bassVersion.partID), Lane(part: tuneVersion.partID)],
+                                 lengthInBars: 8)]
+        let file = MIDIExport.file(for: song)
+        let ticksPerBar = 480 * 4
+        let bassTrack = try #require(file.tracks.first { $0.name == "Bass" })
+        #expect(bassTrack.notes.map(\.start) == [0, 2, 4, 6].map { $0 * ticksPerBar }, "every other bar, not every bar")
+        let tuneTrack = try #require(file.tracks.first { $0.name == "Tune" })
+        #expect(tuneTrack.notes.map(\.start) == [480, 4 * ticksPerBar + 480], "every fourth bar")
+
+        // The helper on its own: without a length, the last note decides, as before.
+        let unstated = MIDIExport.tiled(bass.notes, over: [(startBar: 0, bars: 4)], beatsPerBar: 4, file: file, channel: 0)
+        #expect(unstated.map(\.start) == [0, 1, 2, 3].map { $0 * ticksPerBar })
+        let stated = MIDIExport.tiled(bass.notes, over: [(startBar: 0, bars: 4)], beatsPerBar: 4, file: file, channel: 0,
+                                      lengthInBars: 2)
+        #expect(stated.map(\.start) == [0, 2].map { $0 * ticksPerBar })
+    }
 }

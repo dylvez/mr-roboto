@@ -59,20 +59,60 @@ struct ChordsSurfaceView: View {
                     .opacity(model.barsAreStale ? 0.4 : 1)
                     .accessibilityHint(model.barsAreStale ? "Stale: the last line that read" : "")
                 }
+                HarmonistReadings(model: model)
+                    .opacity(model.barsAreStale ? 0.4 : 1)
             }
             Spacer(minLength: 0)
-            HStack {
-                if let error = model.lastError {
-                    Text(error).font(Design.Typography.ui(11.5)).foregroundStyle(Design.Palette.warn)
+            HStack(spacing: 10) {
+                model.statusBar
+                if !model.isTouched, model.base == nil, model.isDefault {
+                    Text("A suggestion until you type.")
+                        .font(Design.Typography.ui(11.5))
+                        .foregroundStyle(Design.Palette.inkTertiary)
+                    FrameButton(title: "Use these chords", emphasis: .accent) { model.useTheseChords() }
+                        .help("Put the key's I–IV–V–I into the song as its chords. Typing does the same.")
                 }
-                Spacer()
-                if let kept = model.lastKept, !model.hasUnkeptChanges { KeptNote(version: kept) }
-                KeepButton(isEnabled: model.hasUnkeptChanges) { model.commit() }
             }
         }
         .padding(Design.Metric.inset)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Design.Palette.panel)
+    }
+}
+
+/// The Harmonist on the surface: its reading of the bars, under them, as the Bassist's sits under
+/// the Piano roll. What did not hold comes first, in the warning colour, because that is what it
+/// would say first; what holds follows, quieter. Refreshed on every parse, so it answers the line
+/// as it is typed rather than after it is kept.
+private struct HarmonistReadings: View {
+    let model: ChordsModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                if let emblem = Art.emblem(forPersona: "Harmonist") { ArtImage(emblem, width: 18) }
+                Text("THE HARMONIST")
+                    .font(Design.Typography.label)
+                    .tracking(1.1)
+                    .foregroundStyle(Design.Palette.inkTertiary)
+            }
+            ForEach(model.orderedReadings) { reading in
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Image(systemName: reading.holds ? "checkmark" : "exclamationmark.triangle")
+                        .font(Design.Typography.ui(9, weight: .bold))
+                        .foregroundStyle(reading.holds ? Design.Palette.inkTertiary : Design.Palette.warn)
+                        .frame(width: 12)
+                        .accessibilityHidden(true)
+                    Text(reading.says)
+                        .font(Design.Typography.prose(12.5))
+                        .foregroundStyle(reading.holds ? Design.Palette.inkSecondary : Design.Palette.warn)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(reading.holds ? reading.says : "Flag: \(reading.says)")
+            }
+        }
+        .padding(.top, 4)
     }
 }
 

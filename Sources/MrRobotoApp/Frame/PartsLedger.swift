@@ -111,6 +111,14 @@ struct PartsLedger: View {
             // Beside the row's own button, not inside it: a button in a button's label gets no clicks.
             .overlay(alignment: .topTrailing) { PartPlayButton(version: version, app: app) }
             .contextMenu {
+                if let target = app.stepBackTarget(for: part.id) {
+                    // The ledger's undo: the part's music as it was one version ago, as a new
+                    // version. ⌘Z does the same on the surface in front, edit by edit.
+                    Button("Back to \(LedgerGroups.versionLabel(target, parent: nil)) (v\(app.versionNumber(of: target.id) ?? 0))") {
+                        app.stepBack(part.id)
+                    }
+                    Divider()
+                }
                 Button("Keep as idea") { app.keepAsIdea(version.id) }
                     .disabled(app.store == nil)
                 if version.type == .sample {
@@ -179,6 +187,12 @@ private struct VersionChips: View {
                 .buttonStyle(.plain)
                 .help(action.map { "Open this version in \($0.surface.rawValue)" } ?? app.provenanceLine(for: version))
                 .overlay(alignment: .trailing) { PartPlayButton(version: version, app: app, size: 7).padding(.trailing, 3) }
+                .contextMenu {
+                    if version.id != part.newest.id {
+                        Button("Make v\(index + 1) the current version") { app.restore(version.id) }
+                            .help("The song plays this version's music again, as a new version. Nothing is removed.")
+                    }
+                }
             }
         }
     }

@@ -64,8 +64,8 @@ final class GridAdapter: GridHosting {
 
     /// Whether the song took it. `record` says no when there is no song to take it, and the
     /// surface shows that rather than a version that went nowhere.
-    func commit(_ version: PartVersion) async -> Bool {
-        await app.record(version)
+    @MainActor func commit(_ version: PartVersion) -> Bool {
+        app.record(version)
     }
 
     /// Loads the grid's machine if the shared sampler is not already holding it. Another surface

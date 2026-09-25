@@ -366,6 +366,8 @@ public final class AppState {
     /// Whether playback should loop. The frame owns the flag; the sources honour it, through
     /// `SongPlayback.loops`.
     public private(set) var isLooping = false
+    /// Whether the transport clicks while it plays. The frame owns the flag, as it does the loop.
+    public private(set) var isClicking = false
 
     /// What the transport would play, from the song graph.
     ///
@@ -426,8 +428,19 @@ public final class AppState {
         // The transport plays through the same engine and the same sampler the surfaces audition
         // through. `SurfaceWiring` owns that service, so this is where the two halves meet.
         state.attach(playback: LiveSongPlayer(service: SurfaceWiring.shared.service(for: state)))
-        // The wiring holds the surfaces' models, so it is what knows which of them has unkept work.
+        // The wiring holds the surfaces' models, so it is what knows which of them has unkept work,
+        // and what keeps it.
         state.hasUnkeptChanges = { SurfaceWiring.shared.hasUnkeptChanges(for: $0) }
+        state.keepAllSurfaces = { [weak state] in
+            guard let state else { return }
+            SurfaceWiring.shared.keepAll(on: state.bench)
+        }
+        state.keepSurface = { item in _ = SurfaceWiring.shared.keeper(for: item)?.keepNow() }
+        state.discardSurfaceModel = { SurfaceWiring.shared.discardModel(for: $0) }
+        state.showMasterTab = { [weak state] id in
+            guard let state, let item = state.bench.items.first(where: { $0.id == id }) else { return }
+            SurfaceWiring.shared.mixerModel(for: item, app: state).tab = .master
+        }
         // Where you left off. A launch used to land on an empty bench every time, with the song
         // you were in one click away in the sidebar; that click was the whole of most launches.
         state.reopenLastSong()
@@ -584,6 +597,8 @@ public final class AppState {
         // Reopening the song that is open — its row in the sidebar, pressed again — is not a way
         // to throw its work away: the library's copy of it is only as new as the last save, so
         // the one in the frame is the one that opens.
+        // What is on screen is the open song's: keep it before anything is switched.
+        keepSurfaceWork()
         let song = self.song?.id == requested.id ? (self.song ?? requested) : requested
         let stillUnsaved = hasUnsavedChanges && self.song?.id == song.id
         // The song that was open keeps its work. Opening another one used to drop whatever had not
@@ -607,6 +622,7 @@ public final class AppState {
     /// - Parameter saving: false when the song is about to be thrown away.
     public func closeSong(saving: Bool = true) {
         guard let current = song else { return }
+        if saving { keepSurfaceWork() }
         if saving, hasUnsavedChanges { save() }
         if transport != .stopped { Task { await stopTransport() } }
         leaveSong()
@@ -691,6 +707,7 @@ public final class AppState {
     /// - Parameter quietly: true when the frame is saving on its own (autosave, a song switch), so
     ///   the rail does not fill with saves you did not ask for. A failure is never quiet.
     public func save(quietly: Bool = false) {
+        keepSurfaceWork()
         autosave?.cancel()
         guard let store else {
             note(.session, "Nowhere to save to", detail: "This session has no library directory.")
@@ -845,9 +862,28 @@ public final class AppState {
     /// it holds the models; a test with no wiring answers no for everything.
     @ObservationIgnored var hasUnkeptChanges: (BenchItem) -> Bool = { _ in false }
 
+    /// Keeps what every open surface is holding, now. Every editing surface keeps itself a moment
+    /// after an edit; this is the moment brought forward, for whenever the frame is about to read
+    /// the song. The wiring installs it; a test with no wiring has nothing to keep.
+    @ObservationIgnored var keepAllSurfaces: () -> Void = {}
+
+    /// Keeps one surface's work, before it closes.
+    @ObservationIgnored var keepSurface: (BenchItem) -> Void = { _ in }
+
+    /// Lets go of a surface's model so the next draw rebuilds it from its binding.
+    @ObservationIgnored var discardSurfaceModel: (SurfaceID) -> Void = { _ in }
+
+    /// Turns an open Mixer to its Master tab. The wiring installs it.
+    @ObservationIgnored var showMasterTab: (SurfaceID) -> Void = { _ in }
+
+    /// What is on screen goes into the song before the frame reads it.
+    public func keepSurfaceWork() { keepAllSurfaces() }
+
     @discardableResult
     public func openSurface(_ kind: SurfaceKind, title: String, bound: [VersionID] = [],
                             id: SurfaceID = SurfaceID()) -> SurfaceID {
+        // Whatever the bench retires to make room should have nothing left to lose.
+        if bench.items.count >= Design.maximumOpenSurfaces { keepSurfaceWork() }
         // A surface holding unkept work is not the one that goes to make room.
         let retired = bench.open(BenchItem(id: id, kind: kind, title: title)) { [hasUnkeptChanges] in !hasUnkeptChanges($0) }
         bindings[id] = bound
@@ -887,6 +923,7 @@ public final class AppState {
 
     public func closeSurface(_ id: SurfaceID) {
         guard let item = bench.items.first(where: { $0.id == id }) else { return }
+        keepSurface(item)
         bench.close(id)
         bindings[id] = nil
         albumBindings[id] = nil
@@ -1021,7 +1058,7 @@ public final class AppState {
         playback = SongPlayback.plan(for: song) { [store, song] ref in
             guard let store else { return nil }
             return try? store.mediaURL(for: ref, song: song?.id)
-        }.looping(isLooping)
+        }.looping(isLooping).clicking(isClicking)
     }
 
     /// Play what the song actually has.
@@ -1046,9 +1083,12 @@ public final class AppState {
 
     /// Seconds from the song's top to where the transport started.
     private var playbackOffsetSeconds: Double {
-        guard playbackStartBar > 0 else { return 0 }
+        guard playbackStartBar != 0 else { return 0 }
         return clock.seconds(forBar: playbackStartBar)
     }
+
+    /// True while the transport is counting in, before the bar it was started for.
+    public var isCountingIn: Bool { transport.isPlaying && playhead < 0 }
 
     /// Plays from a bar of the song rather than the top: the sections from there on, and the takes
     /// where they fall. Playback only ever began at bar 1, so hearing the hook meant sitting
@@ -1056,9 +1096,18 @@ public final class AppState {
     /// picked. Double-clicking a section in the transport strip, ⇧Space, and Record in the Booth
     /// all come here.
     public func startTransport(fromBar bar: Int) async {
+        await startTransport(fromBar: bar, countIn: 0, click: nil)
+    }
+
+    /// From `bar`, after `countIn` bars of click. `click` true keeps the click going for the whole
+    /// of playback (the Booth's Click); nil leaves it to the transport's own toggle.
+    public func startTransport(fromBar bar: Int, countIn: Int, click: Bool?) async {
         guard transport != .playing, transport != .starting else { return }
+        // Play what is on screen: an edit a moment old is in the song before the plan is read.
+        keepSurfaceWork()
         refreshPlayback()
-        let plan = playback.starting(atBar: max(0, bar))
+        var plan = playback.starting(atBar: max(0, bar), countIn: countIn)
+        if let click { plan = plan.clicking(click || isClicking) }
         guard plan.isPlayable else {
             let silence = plan.silence ?? SongPlayback.Silence(headline: "Nothing to play", detail: "")
             transport = .nothingToPlay(silence)
@@ -1092,8 +1141,21 @@ public final class AppState {
 
     /// Plays from the first bar of a section. A section the song does not hold plays from the top.
     public func startTransport(fromSection id: SectionID?) async {
+        await startTransport(fromSection: id, countInBars: 0, click: nil)
+    }
+
+    /// The Booth's Record: from the section's first bar, after a count-in, with or without a click.
+    public func startTransport(fromSection id: SectionID?, countInBars: Int, click: Bool?) async {
         if transport == .playing || transport == .starting { await stopTransport() }
-        await startTransport(fromBar: id.flatMap(sectionStartBar) ?? 0)
+        await startTransport(fromBar: id.flatMap(sectionStartBar) ?? 0, countIn: countInBars, click: click)
+    }
+
+    /// The transport's Click, on or off. Like the loop, it takes effect the next time you press play.
+    public func toggleClick() {
+        isClicking.toggle()
+        playback = playback.clicking(isClicking)
+        note(.you, isClicking ? "Click on" : "Click off",
+             detail: transport.isPlaying ? "Takes effect the next time you press play." : nil)
     }
 
     /// ⇧Space: from the section that is lit in the strip.
@@ -1229,6 +1291,11 @@ public final class AppState {
 
     /// Bar and beat, 1-based, the way a transport reads: `"12.3"`.
     public var positionText: String {
+        if playhead < 0 {
+            // Counting in: the bars left before the song, the way a drummer counts them.
+            let left = Int((-playhead / clock.secondsPerBar).rounded(.up))
+            return "In \(max(1, left))"
+        }
         let position = clock.position(forSeconds: max(0, playhead))
         return "\(max(1, position.bar + 1)).\(Int(position.beat) + 1)"
     }

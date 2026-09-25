@@ -45,7 +45,7 @@ public enum MergeRender {
             var moved = note
             moved.pitch = note.pitch.transposed(by: move.semitones)
             return moved
-        }, sound: line.sound, key: move.key ?? line.key)
+        }, sound: line.sound, key: move.key ?? line.key, lengthInBars: line.lengthInBars)
     }
 
     /// A progression moved by arithmetic: every chord by `semitones`, the key with it.

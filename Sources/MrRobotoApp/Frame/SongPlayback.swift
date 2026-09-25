@@ -67,7 +67,7 @@ public struct SongPlayback: Equatable, Sendable {
         }
     }
 
-    /// A dusty chop, placed on the transport: its bar of the record, looped from transport zero,
+    /// A chop, placed on the transport: its bar of the record, looped from transport zero,
     /// through its own chain.
     public struct ChopTrack: Equatable, Sendable, Identifiable {
         public var version: VersionID
@@ -76,8 +76,8 @@ public struct SongPlayback: Equatable, Sendable {
         public var url: URL
         /// The span of that media the chop covers, in the media's own seconds.
         public var region: SongGraph.TimeRange
-        /// The chain it plays through, first pass nearest the media. Never empty: a dry chop is
-        /// the lane's raw material and is not put on the transport.
+        /// The chain it plays through, first pass nearest the media. Empty is a dry chop, played
+        /// as it was cut.
         public var passes: [Degradation]
         /// The part the chop belongs to: which strip it plays through (M6).
         public var part: PartID?
@@ -339,8 +339,35 @@ public struct SongPlayback: Equatable, Sendable {
     }
 
     /// The song bar this plan's transport zero is: 0 for the top, or the bar `starting(atBar:)`
-    /// moved it to. The frame adds it back to every reading, so the readout says the song's bar.
+    /// moved it to — negative when the transport counts in before the song's first bar. The frame
+    /// adds it back to every reading, so the readout says the song's bar.
     public var startsAtBar: Int = 0
+
+    /// A metronome for the whole of playback: the transport's Click, or the Booth's.
+    public var click = false
+    /// Bars of click before anything sounds: the Booth's count-in. Always clicked, whatever
+    /// `click` says; the parts start when it ends.
+    public var countInBars = 0
+
+    /// Transport seconds at which an unarranged song's looping parts start: 0, or the end of a
+    /// count-in. An arranged plan places its sections by bar and needs no such thing.
+    public var voicesStartAt: Double = 0
+
+    /// The same plan with the frame's click applied.
+    public func clicking(_ on: Bool) -> SongPlayback {
+        var copy = self
+        copy.click = on
+        return copy
+    }
+
+    /// The same plan from `bar`, with `countIn` bars of click before it. The count-in is played as
+    /// the bars *before* the section, so a take sung against it lands where it was sung.
+    public func starting(atBar bar: Int, countIn: Int) -> SongPlayback {
+        let lead = max(0, countIn)
+        var copy = starting(atBar: bar - lead)
+        copy.countInBars = lead
+        return copy
+    }
 
     /// The same plan from bar `bar` of the song: everything before it dropped, everything after it
     /// moved up so that the bar is transport zero. Playback always began at bar 1, so to hear the
@@ -353,7 +380,7 @@ public struct SongPlayback: Equatable, Sendable {
     /// is played from that point of the file (`Track.skip`). An unarranged song's voices loop from
     /// their own start whatever the bar, which is what looping means.
     public func starting(atBar bar: Int) -> SongPlayback {
-        guard bar > 0 else { return self }
+        guard bar != 0 else { return self }
         var copy = self
         copy.startsAtBar = bar
         let clock = TransportClock(tempo: max(1, tempo), timeSignature: timeSignature)
@@ -379,6 +406,9 @@ public struct SongPlayback: Equatable, Sendable {
             }
             return moved
         }
+        // Before the song's first bar there is nothing to play: an unarranged song's loops wait
+        // for the song to begin rather than starting under the count-in.
+        if bar < 0 { copy.voicesStartAt = voicesStartAt - offset }
         if isArranged, !copy.isPlayable {
             copy.silence = Silence(headline: "Nothing plays from bar \(bar + 1)",
                                    detail: "Every section is over by then. Pick an earlier one, or press play for the top.")
@@ -388,7 +418,7 @@ public struct SongPlayback: Equatable, Sendable {
 
     /// Seconds from the song's top to this plan's transport zero.
     public var startOffsetSeconds: Double {
-        guard startsAtBar > 0, tempo > 0 else { return 0 }
+        guard startsAtBar != 0, tempo > 0 else { return 0 }
         return TransportClock(tempo: tempo, timeSignature: timeSignature).seconds(forBar: startsAtBar)
     }
 
@@ -543,7 +573,7 @@ public struct SongPlayback: Equatable, Sendable {
                 plan.silence = missingMedia
                     ? silence(for: song, audioVersions: [], missingMedia: true)
                     : Silence(headline: "\(song.title)'s sections play nothing yet",
-                              detail: "Open Structure and stitch a groove, a bass line or a dusty chop into a section.")
+                              detail: "Open Structure and stitch a groove, a bass line or a chop into a section.")
             }
             return plan
         }
@@ -561,13 +591,13 @@ public struct SongPlayback: Equatable, Sendable {
             plan.voices.append(voice)
         }
 
-        // A dusty chop. Only the newest chop, and only when it has been dirtied: a clean chop is the
-        // lane's raw material, but a dirtied one is a sound decision about the song, and the one move
-        // this app's first idiom is built around. It stands in for the audio it was cut from — the
-        // drums stem and a loop of one of its bars together would be the drums twice, for the same
-        // reason the stems stand in for the take.
-        if let version = Guidance.samples(in: song).last, case .sample(let sample) = version.kind,
-           !sample.degradation.isEmpty {
+        // The newest chop, dry or dusty. A chop used to play only once it had been dirtied — the
+        // clean one was "the lane's raw material" — so cutting a bar was a thing you made and could
+        // not hear in the song. It sounds as cut now, and dust is a choice about its sound rather
+        // than the gate to hearing it. It stands in for the audio it was cut from: the drums stem
+        // and a loop of one of its bars together would be the drums twice, for the same reason the
+        // stems stand in for the take.
+        if let version = Guidance.samples(in: song).last, case .sample(let sample) = version.kind {
             if let voice = voice(for: version, in: song, mediaURL: mediaURL, missingMedia: &missingMedia) {
                 plan.voices.append(voice)
                 shadowed = sample.media
@@ -615,10 +645,15 @@ public struct SongPlayback: Equatable, Sendable {
             guard let version = song.versions.last(where: { $0.partID == partID }), let audio = Guidance.audio(of: version),
                   audio.take != nil || audio.comp != nil else { continue }
             guard let url = mediaURL(audio.media) else { missingMedia = true; continue }
-            let startsAt = audio.alignmentOffset
-                ?? audio.take.map { clock.seconds(forBar: $0.startBar, beat: $0.startBeat) } ?? 0
+            // Where the audio's first frame sits, and where the take itself begins: the bar the
+            // Booth was recording for. They differ by a count-in — the audio starts in it, bars
+            // before the section — and what plays is the take, not the breath before it.
+            let takeStart = audio.take.map { clock.seconds(forBar: $0.startBar, beat: $0.startBeat) }
+            let aligned = audio.alignmentOffset ?? takeStart ?? 0
+            let begins = max(0, aligned, takeStart.map { $0 - 0.05 } ?? aligned)
             out.append(Track(version: version.id, name: PartLabel.title(of: version), url: url,
-                             startsAt: startsAt, duration: audio.duration, part: partID))
+                             startsAt: begins, duration: audio.duration, part: partID,
+                             skip: max(0, begins - aligned)))
         }
         return out
     }
@@ -686,7 +721,7 @@ public struct SongPlayback: Equatable, Sendable {
             return .melody(melody, version: version.id, part: version.partID,
                            name: PartLabel.title(of: version),
                            sound: instrumentID(for: version.partID, in: song))
-        case .sample(let sample) where !sample.degradation.isEmpty:
+        case .sample(let sample) where !sample.slices.isEmpty:
             if let chop = chopTrack(version, sample, in: song, mediaURL: mediaURL) { return .chop(chop) }
             missingMedia = true
             return nil

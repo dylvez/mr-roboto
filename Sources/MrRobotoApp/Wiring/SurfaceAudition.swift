@@ -109,7 +109,7 @@ extension SurfaceWiring {
             guard app.song != nil else { return nil }
             let model = structureModel(for: item, app: app)
             return SurfaceAudition(id: id, label: "the form") { player in
-                if model.isDirty { _ = await model.keep() }
+                model.keep()
                 await player.playSong(id: id, label: app.song?.title ?? "The song")
             }
         case .booth, .mixer, .master, .lyrics:

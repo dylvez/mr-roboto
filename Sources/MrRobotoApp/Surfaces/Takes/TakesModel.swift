@@ -29,19 +29,22 @@ public extension TakesHosting {
 }
 
 /// The Takes surface: lanes of takes against the bars, a comp chosen bar by bar, and the band's
-/// flags on the bars they belong to.
+/// flags on the bars they belong to. The Booth draws the same lanes for the section it records.
 @MainActor
 @Observable
 public final class TakesModel {
 
     public let surfaceID: SurfaceID
     public private(set) var takes: [PartVersion]
-    public let sectionName: String?
+    public private(set) var sectionName: String?
     /// The bars the lanes span, 0-based, end exclusive.
     public private(set) var bars: Range<Int>
     /// Which take each bar comes from. A bar with no choice comes from the newest take.
     public private(set) var choices: [Int: VersionID] = [:]
     public private(set) var comp: PartVersion?
+    /// The plan `comp` was made from, so the comp lane can tell a comp that stands from one the
+    /// choices have moved on from.
+    private var compPlan: CompPlan?
     public private(set) var playing: VersionID?
     public private(set) var lastError: String?
     /// The band's findings on the takes, by version: cents and milliseconds at the bar.
@@ -60,26 +63,60 @@ public final class TakesModel {
         self.board = board
         self.surfaceID = surfaceID
         self.takes = takes
-        let taken = takes.compactMap { Guidance.audio(of: $0) }
-        if let song, let section = taken.compactMap(\.take?.section).first,
-           let index = song.sections.firstIndex(where: { $0.id == section }) {
-            let start = song.sections.prefix(index).map(\.lengthInBars).reduce(0, +)
-            sectionName = song.sections[index].name
-            bars = start..<(start + song.sections[index].lengthInBars)
-        } else {
-            sectionName = nil
-            let clock = host.clock
-            let first = taken.compactMap(\.take?.startBar).min() ?? 0
-            let last = taken.map { ($0.take?.startBar ?? 0) + Int(($0.duration / clock.secondsPerBar).rounded(.up)) }.max() ?? first + 1
-            bars = first..<max(first + 1, last)
-        }
+        let span = Self.span(of: takes, song: song, clock: host.clock)
+        sectionName = span.name
+        bars = span.bars
         read()
     }
 
     public var clock: TransportClock { host.clock }
 
-    /// Reads every take and asks the critics. Called once on open; again after a new take.
-    public func read() {
+    /// The section the takes were sung to and the bars it spans; takes sung to the whole song span
+    /// from the first one's start to the last one's end.
+    private static func span(of takes: [PartVersion], song: Song?, clock: TransportClock) -> (name: String?, bars: Range<Int>) {
+        let taken = takes.compactMap { Guidance.audio(of: $0) }
+        if let song, let section = taken.compactMap(\.take?.section).first,
+           let index = song.sections.firstIndex(where: { $0.id == section }) {
+            let start = song.sections.prefix(index).map(\.lengthInBars).reduce(0, +)
+            return (song.sections[index].name, start..<(start + song.sections[index].lengthInBars))
+        }
+        let spans = takes.compactMap { seconds(of: $0, clock: clock) }
+        let first = spans.map { clock.position(forSeconds: max(0, $0.start)).bar }.min() ?? 0
+        let last = spans.map { Int(($0.end / clock.secondsPerBar).rounded(.up)) }.max() ?? first + 1
+        return (nil, first..<max(first + 1, last))
+    }
+
+    /// Where a take's audio sits in the song, in seconds. It starts where the take says it begins —
+    /// the section's first bar, for a take that was counted in — and ends where its audio ends,
+    /// which is measured from the audio's own alignment: a counted-in take's audio starts in the
+    /// count-in, before the take does.
+    static func seconds(of version: PartVersion, clock: TransportClock) -> (start: Double, end: Double)? {
+        guard let audio = Guidance.audio(of: version), let take = audio.take else { return nil }
+        let start = clock.seconds(forBar: take.startBar) + take.startBeat * clock.secondsPerBeat
+        return (start, (audio.alignmentOffset ?? start) + audio.duration)
+    }
+
+    /// Takes the lanes' takes again: a take just stopped in the Booth, or a section's takes read
+    /// again from the song. Choices on takes still here are kept, and only takes not read before
+    /// are read, so the band does not re-read a whole evening for one new take.
+    public func update(takes newTakes: [PartVersion], song: Song?) {
+        guard newTakes.map(\.id) != takes.map(\.id) else { return }
+        takes = newTakes
+        let span = Self.span(of: newTakes, song: song, clock: host.clock)
+        sectionName = span.name
+        bars = span.bars
+        let here = Set(newTakes.map(\.id))
+        choices = choices.filter { here.contains($0.value) && bars.contains($0.key) }
+        analyses = analyses.filter { here.contains($0.key) }
+        flags = flags.filter { here.contains($0.key) }
+        if let playing, !here.contains(playing) { stopAudition() }
+        read(newTakes.filter { analyses[$0.id] == nil })
+    }
+
+    /// Reads every take and asks the critics. Called once on open.
+    public func read() { read(takes) }
+
+    private func read(_ takes: [PartVersion]) {
         for take in takes {
             guard let audio = host.audio(of: take) else { continue }
             let analysis = TakeAnalysis.of(audio.planar, sampleRate: audio.sampleRate, alignmentSeconds: audio.alignmentSeconds,
@@ -122,11 +159,17 @@ public final class TakesModel {
         return CompPlan(spans: spans)
     }
 
-    /// Renders the plan and keeps it as a version. False, with the reason, when it cannot be.
-    @discardableResult
     /// The Booth, from the empty state: where a first take comes from.
     public func openBooth() { host.openBooth() }
 
+    /// Whether the comp lane is the comp last made: false before one is made, and false again once
+    /// a bar is chosen differently. Making the same comp twice would file the same audio twice.
+    public var compIsCurrent: Bool { comp != nil && compPlan == plan }
+
+    /// Renders the plan and keeps it as a version — "Make the comp". A new version out of takes is
+    /// a decision, so this is a button and never happens by itself. False, with the reason, when
+    /// it cannot be.
+    @discardableResult
     public func keepComp() -> Bool {
         lastError = nil
         let plan = self.plan
@@ -146,6 +189,10 @@ public final class TakesModel {
                 return false
             }
             comp = version
+            compPlan = plan
+            // The comp's choices, pinned: a take sung after it must not quietly become every
+            // unchosen bar of the comp lane, which would read as the comp changing by itself.
+            for span in plan.spans { for bar in span.startBar..<span.endBar { choices[bar] = span.take } }
             return true
         } catch {
             lastError = "\(error)"

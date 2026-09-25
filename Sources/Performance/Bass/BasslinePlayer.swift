@@ -11,8 +11,9 @@ import SongGraph
 /// lands where the writer put it. That is R8 arriving at the speaker: a note that ends on the beat
 /// ends on the beat because the note-off was scheduled there, not because the sample ran out.
 ///
-/// One iteration is the line rounded up to whole bars. `bars` caps the performance like the groove
-/// player's; nil loops until the transport stops.
+/// One iteration is the line's own length: the bars it says it is when it says (a phrase whose
+/// last bar is a rest keeps the rest), else its notes rounded up to whole bars. `bars` caps the
+/// performance like the groove player's; nil loops until the transport stops.
 public final class BasslinePlayer: ScheduledSource {
 
     public let sampler: VoiceSampler
@@ -47,11 +48,10 @@ public final class BasslinePlayer: ScheduledSource {
 
     // MARK: Shape
 
-    /// The line's length in whole bars: what one iteration covers.
-    public var barsPerLoop: Int {
-        let beatsPerBar = Double(timeline.beatsPerBar)
-        return max(1, Int((bassline.lengthInBeats / beatsPerBar).rounded(.up)))
-    }
+    /// The line's length in whole bars: what one iteration covers. The stated length when the line
+    /// has one, so an eight-bar phrase over a one-bar groove loops at eight and a trailing rest bar
+    /// is part of the loop rather than dropped from it.
+    public var barsPerLoop: Int { bassline.loopBars(beatsPerBar: timeline.beatsPerBar) }
 
     public var beatsPerLoop: Double { Double(barsPerLoop * timeline.beatsPerBar) }
 

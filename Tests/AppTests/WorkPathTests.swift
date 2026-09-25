@@ -114,10 +114,15 @@ struct WorkPathTests {
         #expect(PathFixture.step(.arrange, steps)?.action == nil)
 
         var song = try PathFixture.dusty().built.song
+        let groove = try #require(song.versions.first(where: StructureModel.plays))
         song.sections = [Section(name: "Intro", stitch: [], lengthInBars: 4), Section(name: "Verse", stitch: [], lengthInBars: 16)]
+        let shaped = WorkPath.steps(for: song, active: (kind: .structure, bound: []), canPerform: PathFixture.always).steps
+        #expect(try #require(PathFixture.step(.arrange, shaped)).count == 0,
+                "an empty form is a shape, not an arrangement: a new song starts with one")
+        song.sections[1].stitch = [Lane(part: groove.partID)]
         let arranged = WorkPath.steps(for: song, active: (kind: .structure, bound: []), canPerform: PathFixture.always).steps
         let arrange = try #require(PathFixture.step(.arrange, arranged))
-        #expect(arrange.count == 2)
+        #expect(arrange.count == 1, "sections that play something")
         #expect(arrange.isHere, "the Structure surface lights the Arrange step")
     }
 

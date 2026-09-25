@@ -200,7 +200,7 @@ extension AppState {
             guard let index = sections.firstIndex(where: { $0.id == sectionID }) else { return true }
             guard StructureModel.plays(version) else {
                 note(.session, "\(PartLabel.title(of: version)) does not play on the transport, so it was adopted but not stitched",
-                     detail: version.type == .sample ? "Dust it first; a dry chop is the lane's raw material." : nil)
+                     detail: version.type == .sample ? "The chop has no slices to play." : nil)
                 return true
             }
             sections[index].stitch.append(Lane(part: version.partID))
@@ -554,7 +554,7 @@ extension AppState {
             }
         } else {
             if hasUnsavedChanges { save() }
-            open(Song(title: name.isEmpty ? "Untitled" : name, key: key, tempo: tempo))
+            open(Song.new(title: name.isEmpty ? "Untitled" : name, key: key, tempo: tempo))
         }
         record(PartVersion(partID: PartID(), kind: .sound(Sound(instrument: machine)), author: .persona("Director"),
                            operation: Operation.written, note: "The drum machine for this song"))

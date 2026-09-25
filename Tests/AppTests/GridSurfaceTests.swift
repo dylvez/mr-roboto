@@ -56,7 +56,7 @@ struct StubGridHost: GridHosting {
         log.machine(machine.id)
     }
 
-    func commit(_ version: PartVersion) async -> Bool {
+    @MainActor func commit(_ version: PartVersion) -> Bool {
         if refuses { return false }
         log.commit(version)
         return true
@@ -347,51 +347,299 @@ struct GridSurfaceTests {
         #expect(suggestions.allSatisfy { $0.timeSignature == .fourFour })
     }
 
-    @Test("a feel asks first when steps are painted, and — puts back what was there")
-    func feelLoadAsksAndRestores() {
+    @Test("a feel loads outright over painted steps, and ⌘Z puts back everything it replaced")
+    func feelLoadUndoes() {
         let model = GridModel(host: StubGridHost())
+        model.autoKeep.delay = nil
         let library = FeelLibrary.standard
         let first = library.feels[0], second = library.feels[1]
-        #expect(!model.canRestore)
+        #expect(first.groove != second.groove, "the test needs two different pockets")
 
-        // Nothing painted: the feel loads outright, and there is a before — even if it was silence.
-        model.chooseFeel(named: first.name)
+        #expect(model.loadFeel(named: first.name))
         #expect(model.groove == first.groove)
-        #expect(model.pendingFeel == nil)
-        #expect(model.canRestore)
 
-        // A feel nobody has edited gives way to the next without a question.
-        model.chooseFeel(named: second.name)
-        #expect(model.groove == second.groove)
-        #expect(model.pendingFeel == nil)
-
-        // Edited: the next feel waits for the word, and nothing changes until it comes.
+        // Edited, then another feel: no question in between. It loads.
         let voice = model.voices[0]
         let restStep = (0..<model.stepCount).first { model.tier(voice, step: $0) == .rest } ?? 0
         model.set(.accent, voice: voice, step: restStep)
         let edited = model.groove
-        #expect(model.feelLoadNeedsConfirmation)
-        model.chooseFeel(named: first.name)
-        #expect(model.pendingFeel?.name == first.name)
-        #expect(model.groove == edited)
-        #expect(model.feelName == second.name)
-        model.cancelPendingFeel()
-        #expect(model.pendingFeel == nil)
-        #expect(model.groove == edited)
-
-        model.chooseFeel(named: first.name)
-        model.confirmPendingFeel()
-        #expect(model.pendingFeel == nil)
-        #expect(model.groove == first.groove)
-        #expect(model.feelName == first.name)
-
-        // — puts back what was there before that load: the edited pattern, its feel's name, its tempo.
-        model.chooseFeel(named: "")
-        #expect(model.groove == edited)
+        #expect(model.loadFeel(named: second.name))
+        #expect(model.groove == second.groove)
         #expect(model.feelName == second.name)
         #expect(model.tempo == second.suggestedTempo)
-        #expect(!model.canRestore, "one deep: what was restored is now on screen")
-        #expect(model.loadFeel(named: "") == false, "nothing further back to put back")
+
+        // One undo is the whole load: the edited pattern, and the first feel's name, tempo and levers.
+        model.undo()
+        #expect(model.groove == edited)
+        #expect(model.feelName == first.name)
+        #expect(model.tempo == first.suggestedTempo)
+        #expect(model.swing == first.swing)
+        #expect(model.velocities == first.velocities)
+        #expect(model.voiceFeels == first.voices)
+        #expect(model.provenance == first.provenance)
+
+        // The one before that is the edit, and before that the first load over an empty grid.
+        model.undo()
+        #expect(model.groove == first.groove)
+        model.undo()
+        #expect(!model.isPainted)
+        #expect(model.feelName == nil)
+        #expect(!model.canUndo)
+
+        // And forward again, all the way to the second feel.
+        model.redo(); model.redo(); model.redo()
+        #expect(model.groove == second.groove)
+        #expect(model.feelName == second.name)
+
+        // A name the library does not have changes nothing.
+        #expect(model.loadFeel(named: "No Such Feel") == false)
+        #expect(model.groove == second.groove)
+    }
+
+    // MARK: Length
+
+    @Test("lengthening repeats the bars that are there; shortening drops the ones past the end")
+    func setBarsRepeatsAndTruncates() {
+        let model = GridModel(host: StubGridHost())
+        model.autoKeep.delay = nil
+        model.set(.accent, voice: .kick, step: 0)
+        model.set(.normal, voice: .snare, step: 4)
+        model.set(.ghost, voice: .closedHat, step: 15)
+        let oneBar = model.groove
+
+        model.setBars(4)
+        #expect(model.bars == 4)
+        #expect(model.stepCount == 64)
+        #expect(model.groove.bars == 4)
+        for pattern in model.groove.patterns {
+            let original = oneBar.patterns.first { $0.voice == pattern.voice }?.steps ?? []
+            #expect(pattern.steps.count == 64)
+            for bar in 0..<4 {
+                #expect(Array(pattern.steps[bar * 16 ..< (bar + 1) * 16]) == original,
+                        "bar \(bar + 1) of \(pattern.voice) is a copy of the one bar there was")
+            }
+        }
+
+        // Vary bar 3, then shorten to two: bars 3 and 4 go, the variation with them.
+        model.set(.accent, voice: .snare, step: 2 * 16 + 12)
+        model.setBars(2)
+        #expect(model.stepCount == 32)
+        for pattern in model.groove.patterns {
+            let original = oneBar.patterns.first { $0.voice == pattern.voice }?.steps ?? []
+            #expect(pattern.steps == original + original)
+        }
+
+        // Two bars to three repeats cyclically: the third bar is the first again, not the second.
+        model.set(.normal, voice: .clap, step: 16 + 8)
+        model.setBars(3)
+        #expect(model.tier(.clap, step: 16 + 8) == .normal)
+        #expect(model.tier(.clap, step: 32 + 8) == .rest)
+        #expect(model.tier(.kick, step: 32) == .accent)
+
+        // Doubling copies what is there once more: three bars become six, the second three a copy.
+        let three = model.groove
+        model.doubleLength()
+        #expect(model.bars == 6)
+        for pattern in model.groove.patterns {
+            let original = three.patterns.first { $0.voice == pattern.voice }?.steps ?? []
+            #expect(pattern.steps == original + original)
+        }
+
+        // The range is clamped, and doubling stops at its top.
+        model.setBars(0)
+        #expect(model.bars == 1)
+        model.setBars(40)
+        #expect(model.bars == GridModel.barRange.upperBound)
+        #expect(!model.canDoubleLength)
+        model.doubleLength()
+        #expect(model.bars == GridModel.barRange.upperBound)
+        #expect(GridModel.lengthChoices == [1, 2, 4, 8])
+    }
+
+    @Test("a length change is one edit: ⌘Z puts back the bars and every step that was in them")
+    func setBarsUndoes() {
+        let host = StubGridHost()
+        let model = GridModel(host: host)
+        model.autoKeep.delay = nil
+        model.set(.accent, voice: .kick, step: 0)
+        _ = model.commit()
+        let oneBar = model.groove
+
+        model.setBars(2)
+        #expect(model.hasUnkeptChanges, "a longer groove is a different groove, so it keeps")
+        #expect(model.keepLine == .pending)
+        model.set(.accent, voice: .snare, step: 16 + 4)
+        let varied = model.groove
+
+        // Shortening loses the variation; one undo brings the second bar back with it.
+        model.setBars(1)
+        #expect(model.groove == oneBar)
+        model.undo()
+        #expect(model.bars == 2)
+        #expect(model.groove == varied)
+        #expect(model.tier(.snare, step: 16 + 4) == .accent)
+
+        model.undo()   // the variation
+        model.undo()   // the lengthening
+        #expect(model.bars == 1)
+        #expect(model.groove == oneBar)
+        #expect(!model.hasUnkeptChanges, "back where the kept version is")
+
+        model.redo()
+        #expect(model.bars == 2)
+
+        // Setting the length it already is changes nothing and is not an edit.
+        let undoable = model.canRedo
+        model.setBars(2)
+        #expect(model.canRedo == undoable, "a no-op does not clear the way forward")
+    }
+
+    @Test("the ruler counts beats in one bar and bars past it, and bar lines fall where bars start")
+    func rulerAndBarLines() {
+        let model = GridModel(host: StubGridHost())
+        #expect(model.rulerLabel(step: 0) == "1")
+        #expect(model.rulerLabel(step: 4) == "2")
+        #expect(model.rulerLabel(step: 12) == "4")
+        #expect(model.rulerLabel(step: 1) == "")
+        #expect(!model.startsBar(step: 0), "no line before the first bar")
+
+        model.setBars(2)
+        #expect(model.rulerLabel(step: 0) == "1")
+        #expect(model.rulerLabel(step: 4) == "1.2")
+        #expect(model.rulerLabel(step: 16) == "2")
+        #expect(model.rulerLabel(step: 28) == "2.4")
+        #expect(model.startsBar(step: 16))
+        #expect(!model.startsBar(step: 8))
+        #expect(!model.startsBar(step: 32), "no line after the last bar")
+    }
+
+    // MARK: Voices
+
+    @Test("a voice can be added as an empty row and removed, and ⌘Z undoes either")
+    func addAndRemoveVoices() {
+        let model = GridModel(host: StubGridHost())
+        model.autoKeep.delay = nil
+        let usual: [DrumVoice] = [.kick, .snare, .closedHat, .openHat, .clap]
+        #expect(model.voices == usual)
+        #expect(model.addableVoices.contains(.ride))
+        #expect(!model.addableVoices.contains(.kick), "a voice already a row is not offered")
+
+        model.addVoice(.ride)
+        #expect(model.voices == usual + [.ride])
+        #expect(model.groove.patterns.last?.voice == .ride)
+        #expect(model.groove.patterns.last?.steps == Array(repeating: .rest, count: 16))
+        #expect(!model.addableVoices.contains(.ride))
+        model.set(.normal, voice: .ride, step: 2)
+
+        // Adding it twice is not two rows.
+        model.addVoice(.ride)
+        #expect(model.voices.filter { $0 == .ride }.count == 1)
+
+        // A row added to a longer grid is as long as the grid.
+        model.setBars(2)
+        model.addVoice(.lowTom)
+        #expect(model.groove.patterns.last?.steps.count == 32)
+        model.undo(); model.undo()
+        #expect(model.bars == 1)
+
+        model.set(.accent, voice: .snare, step: 4)
+        model.removeVoice(.snare)
+        #expect(!model.voices.contains(.snare))
+        #expect(model.groove.patterns.allSatisfy { $0.voice != .snare })
+        #expect(model.addableVoices.contains(.snare))
+
+        // Undo brings the row back in its place, with its hits.
+        model.undo()
+        #expect(model.voices == usual + [.ride])
+        #expect(model.tier(.snare, step: 4) == .accent)
+
+        model.undo()   // the snare hit
+        model.undo()   // the ride hit
+        model.undo()   // the ride row
+        #expect(model.voices == usual)
+        model.redo()
+        #expect(model.voices == usual + [.ride])
+
+        // The last row cannot go: the grid is always a grid.
+        let single = GridModel(host: StubGridHost(), groove: GridModel.emptyGroove(voices: [.kick]))
+        #expect(!single.canRemoveVoice)
+        single.removeVoice(.kick)
+        #expect(single.voices == [.kick])
+        #expect(!single.canUndo)
+    }
+
+    @Test("the voice menu knows every machine's voices, and says which the machine has no sound for")
+    func voiceMenuKnowsTheMachines() {
+        let model = GridModel(host: StubGridHost())
+        for machine in SynthMachine.all {
+            for spec in machine.voices {
+                #expect(GridModel.knownVoices.contains(spec.kind.drumVoice),
+                        "\(machine.name)'s \(spec.kind) is not offered")
+            }
+        }
+        // perc is written by the feels and by MIDI import, and no machine here plays it.
+        #expect(GridModel.knownVoices.contains(.perc))
+        #expect(SynthMachine.all.allSatisfy { machine in
+            !machine.voices.contains { $0.kind.drumVoice == .perc }
+        })
+        #expect(!model.machineSounds(.perc))
+        #expect(model.machineSounds(.ride))
+        #expect(model.machineSounds(DrumVoice("cowbell")))
+
+        #expect(GridModel.name(of: .closedHat) == "closed hat")
+        #expect(GridModel.name(of: .lowTom) == "low tom")
+        #expect(GridModel.name(of: .kick) == "kick")
+    }
+
+    // MARK: The Beatmaker
+
+    @Test("the Beatmaker reads the painted groove under the grid, flags first, and again after every edit")
+    func beatmakerReadsTheGrid() {
+        let model = GridModel(host: StubGridHost())
+        model.autoKeep.delay = nil
+        #expect(model.readings.isEmpty, "nothing painted, nothing to read")
+
+        model.set(.accent, voice: .kick, step: 0)
+        model.set(.normal, voice: .snare, step: 4)
+        model.set(.normal, voice: .snare, step: 12)
+        for step in stride(from: 0, to: 16, by: 2) { model.set(.normal, voice: .closedHat, step: step) }
+        #expect(!model.readings.isEmpty)
+
+        // Straight is outside the 54–58 % the corpus sits in: a flag, and flags come first.
+        #expect(model.flags.contains { $0.rule == "beatmaker.swing-default" })
+        #expect(model.readings.first?.holds == false)
+        #expect(model.readings == model.flags + model.holds)
+        // The standard tier map puts a ghost 7 dB under a normal hit, which holds.
+        #expect(model.holds.contains { $0.rule == "beatmaker.ghost-depth" })
+
+        // It is the persona's own reading of what is on screen, levers included.
+        let direct = Beatmaker().read(GrooveObservation(label: model.title, groove: model.groove,
+                                                        options: model.renderOptions, tempo: model.tempo,
+                                                        timeSignature: model.timeSignature))
+        #expect(Set(direct) == Set(model.readings))
+
+        // The edit that answers the flag clears it at once.
+        model.setSwing(percent: 56)
+        #expect(!model.flags.contains { $0.rule == "beatmaker.swing-default" })
+        #expect(model.holds.contains { $0.rule == "beatmaker.swing-default" })
+
+        // Undo reads again too.
+        model.undo()
+        #expect(model.flags.contains { $0.rule == "beatmaker.swing-default" })
+
+        // A feel with a displaced snare is read in milliseconds at the grid's tempo.
+        let displaced = FeelLibrary.standard.feels.first {
+            abs(GrooveObservation($0).lagMS(.snare)) >= Beatmaker.perceptionFloorMS
+        }
+        #expect(displaced != nil, "the library has a feel that moves its snare")
+        if let lofi = displaced {
+            model.load(lofi)
+            #expect(model.readings.contains { $0.rule == "beatmaker.snare-direction" },
+                    "\(lofi.name) moves its snare, and the Beatmaker says which way")
+        }
+
+        model.clearAll()
+        #expect(model.readings.isEmpty, "cleared, nothing to read")
     }
 
     @Test("a tap paints what the brush says, and a second tap takes it back")
@@ -452,11 +700,10 @@ struct GridSurfaceTests {
         var host = StubGridHost()
         host.refuses = true
         let model = GridModel(host: host)
+        model.autoKeep.delay = nil
         model.toggle(.kick, step: 0)
-        let version = model.commit()
-        #expect(model.versions.map(\.id) == [version.id])
-
-        for _ in 0..<1_000 where model.lastError == nil { try? await Task.sleep(for: .milliseconds(1)) }
+        _ = model.commit()
+        // The keep is synchronous now: refused is refused at once.
         #expect(model.lastError != nil)
         #expect(model.versions.isEmpty, "a refused version is not a version")
         #expect(model.lastKept == nil)

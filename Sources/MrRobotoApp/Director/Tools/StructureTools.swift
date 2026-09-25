@@ -96,15 +96,14 @@ enum FormTools {
             guard StructureModel.playableTypes.contains(version.type) else {
                 throw DirectorToolFailure(
                     tool: tool, reason: "A \(version.type.rawValue) is not something a section plays.",
-                    suggestion: "Stitch grooves, bass lines, progressions, melodies and dusty chops; "
+                    suggestion: "Stitch grooves, bass lines, progressions, melodies and chops; "
                         + "a lyric, an analysis and a sound pick are read elsewhere.")
             }
             guard StructureModel.plays(version) else {
                 throw DirectorToolFailure(
                     tool: tool,
-                    reason: version.type == .sample ? "\(PartLabel.title(of: version)) is a dry chop, and only a dusty one plays on the transport."
-                                                    : "\(PartLabel.title(of: version)) has nothing in it to play.",
-                    suggestion: version.type == .sample ? "degrade_part it first, then stitch the dusty version."
+                    reason: "\(PartLabel.title(of: version)) has nothing in it to play.",
+                    suggestion: version.type == .sample ? "Name a chop with slices in it."
                                                         : "Name a version with hits, notes or chords in it.")
             }
             return Lane(part: version.partID)
@@ -134,7 +133,7 @@ public struct ArrangeTool: DirectorTool {
     public var purpose: String {
         "Arrange the song into sections and replace its form: \"intro 4 | verse 16 | hook 8 | verse 16 | "
         + "hook 8 | outro 4\" is six sections with their bars. Each plays the song's newest groove, bass "
-        + "line and dusty chop; a repeated name plays the same stitch as its first; a section already in "
+        + "line and chop; a repeated name plays the same stitch as its first; a section already in "
         + "the song by that name keeps what it was stitched from. Bars come from the tempo: a bar of 4/4 "
         + "at 92 bpm is 2.6 seconds, so two minutes is 46 bars. Nothing is versioned — the form is the "
         + "song's — and the transport plays the sections in order."
@@ -237,7 +236,7 @@ public struct StitchSectionTool: DirectorTool {
         + "it as the part is worked on — naming a version id here names its part. Use it when a section "
         + "plays something other than the newest of everything: a verse with no bass, a hook with a "
         + "second groove over the first. With versions empty it plays the newest groove, bass line, "
-        + "progression, melody and dusty chop. To state the whole form at once, arrange."
+        + "progression, melody and chop. To state the whole form at once, arrange."
     }
     public var schema: DirectorJSON {
         Schema.object([
@@ -245,7 +244,7 @@ public struct StitchSectionTool: DirectorTool {
             ("bars", Schema.integer("Its length in bars.", minimum: 1, maximum: 128)),
             ("versions", Schema.array(
                 "Ids of what plays in it, from read_song: grooves, bass lines, progressions, melodies "
-                + "and dusty chops. A section follows the part an id belongs to, so it keeps playing that "
+                + "and chops, dry or dusty. A section follows the part an id belongs to, so it keeps playing that "
                 + "part as newer versions of it are made. Empty for the newest of each kind.",
                 of: Schema.string("A version id, or the id of the part it belongs to."))),
             ("position", Schema.integer(

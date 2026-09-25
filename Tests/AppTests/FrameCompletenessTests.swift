@@ -434,7 +434,7 @@ private final class StubRollHost: PianoRollHosting {
     func playMelody(_ notes: [NoteEvent], tempo: Double, timeSignature: TimeSignature, instrument: String) async {}
     func setInstrument(_ id: String, for part: PartID?) {}
     func stop() async {}
-    func commit(_ version: PartVersion) async -> Bool { committed.append(version); return true }
+    func commit(_ version: PartVersion) -> Bool { committed.append(version); return true }
 }
 
 // MARK: - The window and the files

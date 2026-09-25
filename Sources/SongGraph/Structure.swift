@@ -186,9 +186,15 @@ public struct Song: Identifiable, Hashable, Codable, Sendable {
 
     public func version(_ id: VersionID) -> PartVersion? { versions.first { $0.id == id } }
 
-    /// Every version of a part, oldest first.
+    /// Every version of a part, oldest first — in the order the graph recorded them.
+    ///
+    /// Not by timestamp. `createdAt` is kept to the millisecond, and two versions of one part can
+    /// share one: a surface keeping itself a moment after an edit, a version restored from the
+    /// ledger in the same tick as the keep before it. Sorting then fell back to the ids, which are
+    /// random, so "the newest version" — what a section plays — could be an older one. The graph
+    /// is append-only, so the order it holds is the order things happened.
     public func versions(of partID: PartID) -> [PartVersion] {
-        versions.filter { $0.partID == partID }.sorted { ($0.createdAt, $0.id) < ($1.createdAt, $1.id) }
+        versions.filter { $0.partID == partID }
     }
 
     /// The newest version of a part.

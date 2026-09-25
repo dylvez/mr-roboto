@@ -3,9 +3,26 @@ import Performance
 import SongGraph
 
 /// The Mixer: a strip per part the transport plays, edited live, every gesture a mix version.
+///
+/// With a `MasterModel` beside it the surface is the whole mix — the strips on one tab, the master
+/// read against its target on the other — and the Master works on this model's mix (see
+/// `MasterModel.follow(_:)`), so there is one working mix and one line of versions under both.
 @MainActor
 @Observable
 public final class MixerModel {
+
+    /// The two halves of the mix surface.
+    public enum Tab: String, CaseIterable, Identifiable, Sendable {
+        /// A row per part: level, pan, send, EQ, the compressor, a meter; the overlay under them.
+        case strips = "Strips"
+        /// The whole song read against the target, and the master's gain, ceiling and target.
+        case master = "Master"
+        public var id: String { rawValue }
+    }
+
+    /// Which tab the surface shows. On the model rather than in the view so whatever opens the
+    /// Mixer can open it on the Master: a surface asked for the readings should show them.
+    public var tab: Tab = .strips
 
     /// One strip on the surface.
     public struct Row: Identifiable, Sendable {
@@ -52,12 +69,9 @@ public final class MixerModel {
         self.host = host
         self.surfaceID = surfaceID
         self.base = base
-        let starting: Mix
-        if let base, case .mix(let stored) = base.kind {
-            starting = stored
-        } else {
-            starting = host.playback.mix ?? .unity
-        }
+        // The same start as the Master's, so on a song with no mix yet the master row and the
+        // Master tab both show the album's target rather than one of them showing −14.
+        let starting = MasterModel.startingMix(host: host, base: base)
         mix = starting
         committed = starting
         let rows = Self.rows(of: host.playback, song: host.song, mix: starting)
@@ -152,6 +166,9 @@ public final class MixerModel {
         base = version
         committed = mix
         lastNote = note
+        // A failure is only news until the next keep lands; left up, it would sit over every
+        // kept move after it, since the footer shows an error first.
+        lastError = nil
         return version
     }
 

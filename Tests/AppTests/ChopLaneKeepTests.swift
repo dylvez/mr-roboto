@@ -119,7 +119,7 @@ struct ChopLaneKeepTests {
 
     // MARK: Keep re-groove
 
-    @Test("a re-groove is keepable once it has been heard, and after the chop it came from")
+    @Test("a groove can be made once the re-groove has been heard; making it keeps the chop first")
     func regrooveKeepPath() throws {
         let (lane, host) = ChopLaneFixtures.cleanLane()
         lane.feelName = Self.feelName
@@ -132,12 +132,10 @@ struct ChopLaneKeepTests {
         lane.playRegroove()
         #expect(lane.lastError == nil)
         #expect(lane.hasUnkeptRegroove)
-        #expect(lane.hasUnkeptChanges)
-        // Heard, but the chop it was played with is not in the ledger yet.
-        #expect(!lane.canKeepRegroove)
-        #expect(lane.whyRegrooveCannotBeKept?.contains("chop") == true)
-
-        lane.keepChop()
+        // A re-groove heard is a thing tried, not work to lose: what is unkept here is only the
+        // chop itself, which this lane (opened on no version) has never kept.
+        #expect(lane.hasUnkeptChanges == lane.hasUnkeptChopEdits)
+        // Making the groove keeps the chop it was played with first, so the lineage is right.
         #expect(lane.canKeepRegroove)
         lane.keepRegroove()
         #expect(lane.lastError == nil)
@@ -157,7 +155,6 @@ struct ChopLaneKeepTests {
         #expect(!lane.hasUnkeptChanges)
         lane.playRegroove()
         #expect(lane.canKeepRegroove)
-        #expect(lane.hasUnkeptChanges)
         lane.keepRegroove()
         #expect(host.madeVersions.count == 3)
         #expect(!lane.hasUnkeptChanges)

@@ -24,6 +24,10 @@ public final class KeysPlayer: ScheduledSource {
     /// length and the end of its last note differ by `Voicing.hold`, and it is the written length
     /// that repeats.
     public var lengthInBeats: Double
+    /// The bars one iteration covers when the part said so — a melody with a stated length. It
+    /// wins over `lengthInBeats` and over where the last note stops, so a phrase whose last bar is
+    /// a breath repeats after the breath, and a tail ringing past the bar line does not add a bar.
+    public var lengthInBars: Int?
     public var timeline: GrooveTimeline
     public var bars: Int?
     /// Drop the notes past `bars` rather than rounding the last iteration up: a section's bars are
@@ -46,10 +50,11 @@ public final class KeysPlayer: ScheduledSource {
     private var nextLoop = 0
 
     public init(sampler: VoiceSampler, notes: [NoteEvent], lengthInBeats: Double,
-                timeline: GrooveTimeline, bars: Int? = nil) {
+                timeline: GrooveTimeline, bars: Int? = nil, lengthInBars: Int? = nil) {
         self.sampler = sampler
         self.notes = notes
         self.lengthInBeats = max(0, lengthInBeats)
+        self.lengthInBars = lengthInBars.map { max(1, $0) }
         self.timeline = timeline
         self.bars = bars
     }
@@ -61,17 +66,19 @@ public final class KeysPlayer: ScheduledSource {
                   lengthInBeats: Voicing.lengthInBeats(of: progression), timeline: timeline, bars: bars)
     }
 
-    /// A melody, as written.
+    /// A melody, as written, at its own length: the bars it says it is, rests included.
     public convenience init(sampler: VoiceSampler, melody: Melody,
                             timeline: GrooveTimeline, bars: Int? = nil) {
-        self.init(sampler: sampler, notes: melody.notes, lengthInBeats: melody.lengthInBeats,
-                  timeline: timeline, bars: bars)
+        let stated = melody.lengthInBars.map { Double($0 * timeline.beatsPerBar) }
+        self.init(sampler: sampler, notes: melody.notes, lengthInBeats: stated ?? melody.lengthInBeats,
+                  timeline: timeline, bars: bars, lengthInBars: melody.lengthInBars)
     }
 
     // MARK: Shape
 
     /// The performance's length in whole bars: what one iteration covers.
     public var barsPerLoop: Int {
+        if let lengthInBars { return max(1, lengthInBars) }
         let beatsPerBar = Double(timeline.beatsPerBar)
         let written = max(lengthInBeats, notes.map(\.end).max() ?? 0)
         return max(1, Int((written / beatsPerBar).rounded(.up)))

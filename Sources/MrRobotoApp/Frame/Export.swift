@@ -76,7 +76,8 @@ public enum Export {
         let plan = app.playback.looping(false)
         guard plan.isPlayable else { throw Failure.nothingToBounce }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let stems = try await SectionBounce.render(plan, section: nil, kitsDirectory: AuditionService.defaultKitsDirectory)
+        let stems = try await SectionBounce.render(plan, section: nil, kitsDirectory: AuditionService.defaultKitsDirectory,
+                                                   onlyTheMix: true)
         let planar = stems.mix
         let wav = unique(directory.appendingPathComponent("\(safe(song.title)) — master.wav"))
         try writeWAV24(planar, sampleRate: stems.sampleRate, to: wav)
@@ -121,7 +122,8 @@ public enum Export {
             // No ceiling on a stem: `renderOne` reads the plan's master for the limiter, so the
             // master is at unity and the ceiling is lifted to 0 with its head room.
             solo.mix?.master.ceilingDBTP = 0
-            let stems = try await SectionBounce.render(solo, section: nil, kitsDirectory: AuditionService.defaultKitsDirectory)
+            let stems = try await SectionBounce.render(solo, section: nil, kitsDirectory: AuditionService.defaultKitsDirectory,
+                                                       onlyTheMix: true)
             let url = unique(directory.appendingPathComponent("\(safe(song.title)) — \(safe(strip.label)).wav"))
             try writeWAV24(stems.mix, sampleRate: stems.sampleRate, to: url)
             out.append(url)

@@ -1,37 +1,121 @@
 import SongGraph
 import SwiftUI
 
-/// Strips as rows: fader, pan, send, mute, solo, three bands, the compressor, a meter. The
-/// overlay under them says where two parts share energy.
+/// The mix, on one surface. Strips as rows — fader, pan, send, mute, solo, three bands, the
+/// compressor, a meter — with the overlay under them saying where two parts share energy; and,
+/// given a Master, a second tab reading the whole song against its target with the master's levers.
+///
+/// They were two surfaces, each opened on its own, on a bench that draws one at a time: the Master
+/// read what the Mixer set, and seeing whether a strip move helped the loudness meant swapping
+/// surfaces. Now it is a tab, and both tabs move one working mix (`MasterModel.follow(_:)`).
 struct MixerSurfaceView: View {
     @Bindable var model: MixerModel
     /// The controller, for Learn on a fader. Nil in a render with no rig.
     var midi: MIDIControl?
+    /// The Master tab's model. Nil draws the strips alone, as the Mixer did before it had one.
+    var master: MasterModel?
+    /// The frame, for the Master tab's export. Nil points at the File menu instead.
+    var app: AppState?
+
+    init(model: MixerModel, midi: MIDIControl? = nil, master: MasterModel? = nil, app: AppState? = nil) {
+        self.model = model
+        self.midi = midi
+        self.master = master
+        self.app = app
+        // One mix under both tabs. Idempotent, so the view being rebuilt costs nothing.
+        master?.follow(model)
+    }
+
+    /// The tabs this surface offers: the Master only when there is a Master to show.
+    var tabs: [MixerModel.Tab] { master == nil ? [.strips] : MixerModel.Tab.allCases }
+
+    /// The tab drawn: the model's choice, unless it asks for a Master this view was not given.
+    var shownTab: MixerModel.Tab { tabs.contains(model.tab) ? model.tab : .strips }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Design.Metric.gutter) {
+        VStack(alignment: .leading, spacing: 12) {
             header
-            strips
-            masterRow
-            overlay
+            MixScroll(.vertical) {
+                Group {
+                    switch shownTab {
+                    case .strips: stripsTab
+                    case .master:
+                        if let master { MasterPanel(model: master) }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+            }
             footer
         }
         .padding(Design.Metric.inset)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Design.Palette.panel)
+        // On the surface, not the strips tab: switching to the Master and back should find the
+        // meters moving, not restarting from a level that was true when you left.
         .onAppear { model.startMetering() }
         .onDisappear { model.stopMetering() }
     }
 
     private var header: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
+        HStack(alignment: .center, spacing: 10) {
             Text("Mixer").font(Design.Typography.prose(16, weight: .medium))
             Text("\(model.rows.count) strip\(model.rows.count == 1 ? "" : "s") · \(model.base.map { "on \(PartLabel.title(of: $0))" } ?? "at unity")")
                 .font(Design.Typography.numeric(12))
                 .foregroundStyle(Design.Palette.inkSecondary)
-            Spacer()
+                .lineLimit(1)
+                .truncationMode(.middle)
+            Spacer(minLength: 8)
             // No Revert here. Every move let go of is already a version, so there is never a working
             // change to throw away; going back is done from the ledger, as the footer says.
+            if tabs.count > 1 { tabPicker }
+        }
+    }
+
+    /// Strips | Master.
+    @ViewBuilder
+    private var tabPicker: some View {
+        if Design.isOffscreenRender {
+            // A segmented control is AppKit's and renders as a blocked-out rectangle offscreen.
+            HStack(spacing: 4) {
+                ForEach(tabs) { tab in
+                    BoothChip(tab.rawValue, isOn: shownTab == tab) { model.tab = tab }
+                }
+            }
+        } else {
+            Picker("Show", selection: Binding(get: { shownTab }, set: { model.tab = $0 })) {
+                ForEach(tabs) { tab in Text(tab.rawValue).tag(tab) }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .tint(Design.Palette.accent)
+            .fixedSize()
+            .accessibilityLabel("Mixer view")
+            .help("Strips: a row per part. Master: the whole song read against its target, with the master's gain and ceiling.")
+        }
+    }
+
+    /// The strips, the master row and the overlay. Each band of it keeps its natural width when
+    /// the bench is wide and scrolls sideways when it is not — a strip row alone is over 900
+    /// points, and the bench's minimum is 640.
+    private var stripsTab: some View {
+        VStack(alignment: .leading, spacing: Design.Metric.gutter) {
+            fitting {
+                VStack(alignment: .leading, spacing: Design.Metric.gutter) {
+                    strips
+                    masterRow
+                }
+            }
+            fitting { overlay }
+        }
+    }
+
+    /// Its content at full width when that fits, else the same content in a sideways scroll.
+    /// Not a scroll always: in a scroll the meters would stop stretching to the bench's width.
+    private func fitting<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        let content = content()
+        return ViewThatFits(in: .horizontal) {
+            content
+            MixScroll(.horizontal) { content.padding(.bottom, 8) }
         }
     }
 
@@ -134,9 +218,26 @@ struct MixerSurfaceView: View {
             fader(value: model.mix.master.gainDB, range: -24...24, format: "%+.1f dB", width: 200, name: "Master gain") { model.setMaster(gainDB: $0) }
             fader(value: model.mix.master.ceilingDBTP, range: -12...0, format: "ceiling %.1f dBTP", width: 140, name: "Master ceiling") { model.setMaster(ceilingDBTP: $0) }
             fader(value: model.mix.master.targetLUFS, range: -30 ... -6, format: "target %.0f LUFS", width: 140, name: "Master target") { model.setMaster(targetLUFS: $0) }
-            Spacer()
+            if let master { lastReading(master) }
+            Spacer(minLength: 0)
         }
         .padding(.top, 6)
+    }
+
+    /// What the Master last read, on the strips: whether the moves you are making here are
+    /// landing the song on its target, without leaving the strips to find out. Pressing it opens
+    /// the Master tab.
+    private func lastReading(_ master: MasterModel) -> some View {
+        let reading = master.reading
+        let text = reading.map { String(format: "%.1f LUFS · %.1f dBTP", $0.observation.integratedLUFS, $0.truePeakDBTP) } ?? "Not read"
+        return BoothChip(text, isOn: false) { model.tab = .master }
+            .opacity(master.isStale ? 0.5 : 1)
+            .help(reading == nil
+                  ? "The whole song has not been read through this mix. Opens the Master tab."
+                  : (master.isStale
+                     ? "The whole song's last reading, from before the mix moved. Opens the Master tab to read it again."
+                     : "The whole song's last reading against the target. Opens the Master tab."))
+            .accessibilityLabel(reading == nil ? "Master not read; open the Master tab" : "Master reading \(text)\(master.isStale ? ", out of date" : ""); open the Master tab")
     }
 
     private var overlay: some View {
@@ -183,13 +284,41 @@ struct MixerSurfaceView: View {
 
     @ViewBuilder
     private var footer: some View {
-        if let error = model.lastError {
+        if shownTab == .master, let master {
+            MasterFooter(model: master, app: app)
+        } else if let error = model.lastError {
             Text(error).font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.warn)
         } else if let note = model.lastNote {
             Text("Kept: \(note)").font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.inkTertiary)
         } else {
-            Text("Every move you let go of is a mix version; revert it from the ledger. Pick two strips and Read for the overlay.")
+            Text("Every move you let go of is a mix version; step back from Parts. Pick two strips and Read for the overlay.")
                 .font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.inkTertiary)
+        }
+    }
+}
+
+/// A scroll view that steps aside in an offscreen render. `ImageRenderer` draws an NSScrollView's
+/// content as nothing, so a render of a scrolling surface came out blank; there the content is
+/// drawn as it is, from the top left, and clipped by the frame — which is what a render is for.
+struct MixScroll<Content: View>: View {
+    let axes: Axis.Set
+    let content: Content
+    init(_ axes: Axis.Set, @ViewBuilder content: () -> Content) {
+        self.axes = axes
+        self.content = content()
+    }
+    var body: some View {
+        if Design.isOffscreenRender {
+            // Content at its full size along the scrolling axes, in a frame that takes what it is
+            // offered along them and no more. The zero minimums matter: without them the frame
+            // grows to the content it holds and pushes the surface's own header off the render.
+            content
+                .fixedSize(horizontal: axes.contains(.horizontal), vertical: axes.contains(.vertical))
+                .frame(minWidth: 0, maxWidth: .infinity, alignment: .topLeading)
+                .frame(minHeight: 0, maxHeight: axes.contains(.vertical) ? .infinity : nil, alignment: .topLeading)
+                .clipped()
+        } else {
+            ScrollView(axes) { content }
         }
     }
 }

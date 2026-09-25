@@ -24,12 +24,13 @@ public enum Primer {
                         + "stems here — drums, bass, vocals, other — and each stem becomes something you can chop.")
         case .chopLane:
             return ("Chop lane",
-                    "A chop is one bar cut from a stem. Its slices play on the pads, and onset sensitivity "
-                        + "sets how many there are. Re-groove puts the slices on a feel, which makes a groove for the Grid.")
+                    "A chop is one bar cut from a stem, and it plays in the song as cut. Its slices play on the pads, and "
+                        + "onset sensitivity sets how many there are; your edits keep themselves. Re-groove puts the slices on a "
+                        + "feel, and Make the groove turns that into a groove for the Grid.")
         case .grid:
             return ("Grid",
-                    "A groove is steps, swing and ghost notes for each drum voice. Paint steps, choose a feel, "
-                        + "and commit: every commit is a new version, so the one before it is still there.")
+                    "A groove is steps, swing and ghost notes for each drum voice, one bar or several. Paint steps, choose "
+                        + "a feel, set the bars; it keeps itself a moment after you stop, as a new version, and ⌘Z steps back.")
         case .sound:
             return ("Sound",
                     "Two jobs. On a chop or a groove, it adds dust — a machine at a mix, kept as a new version "
@@ -37,22 +38,24 @@ public enum Primer {
         case .chords:
             return ("Chords",
                     "A progression, typed the way a lead sheet says it: Dm7 G7 | Cmaj7. Bars are separated by |. "
-                        + "Click a bar to hear it; keep it and the bass writer reads it. With none, the bass is written to the key.")
+                        + "Click a bar to hear it. What you type keeps itself, and the bass writer reads it. With none, the bass "
+                        + "is written to the key.")
         case .pianoRoll where variant == "melody":
             return ("Piano roll · melody",
-                    "A tune over the bar, drawn by hand: click to place a note, drag it to move it. Nothing in the band "
-                        + "writes a melody, so this one is yours. Pick the instrument it plays on above; it is the song's, "
-                        + "so the chords use it too.")
+                    "A tune, drawn by hand and as many bars long as you set: click to place a note, drag it to move it. "
+                        + "Nothing in the band writes a melody, so this one is yours, and the Melodist reads it below. It keeps "
+                        + "itself as you go.")
         case .pianoRoll:
             return ("Piano roll",
-                    "A bass line over the bar, with the groove's kicks drawn under it so the lag is visible. The levers "
-                        + "re-run the writer in a named player's hands; drag a note to move it. The Bassist reads the result below.")
+                    "A bass line, with the groove's kicks drawn under it so the lag is visible. The levers re-run the writer "
+                        + "in a named player's hands; drag a note to move it. The writer's line is a proposal until you touch it; "
+                        + "then it keeps itself. The Bassist reads the result below.")
         case .structure:
             return ("Structure",
                     "The song's form: sections in order, each a name, a length in bars and the parts stitched into it. "
                         + "A section plays each part's newest version and follows it as you work, so keeping a new take is "
-                        + "heard where the old one was. Drag a block to reorder, set its bars, duplicate it; keep the "
-                        + "arrangement and the transport plays the sections one after another.")
+                        + "heard where the old one was. Drag a block to reorder, set its bars, duplicate it; the form keeps "
+                        + "itself, and double-clicking a section in the transport plays from it.")
         case .album:
             return ("Album",
                     "An album is songs in order, with the loudness targets they are delivered to and a clearance state for "
@@ -61,7 +64,7 @@ public enum Primer {
             return ("Lyrics",
                     "Type the words, a line each, a blank line between stanzas. Every syllable gets its stress from the dictionary, "
                         + "every stanza its rhyme scheme, and the Lyricist reads the lines against each other and against everything "
-                        + "this house has sung. Keep it and it is a version like any part.")
+                        + "this house has sung. The words keep themselves as a version, like any part.")
         case .cast:
             return ("Cast",
                     "Who is in the room for this song. Each persona owns one thing and listens for it first; take one out "
@@ -81,9 +84,9 @@ public enum Primer {
                         + "offered, and taking it is yours.")
         case .booth:
             return ("Booth",
-                    "Pick a section, press Record: the song plays under you and the take lands on the bar you sang it on, "
-                        + "latency taken out. Stop is a take; every take stays. Nothing is tuned or moved here — the band "
-                        + "reads it in Takes and offers, never fixes.")
+                    "Pick a section and a count-in, press Record: the song plays from that section under you, with the words "
+                        + "in view, and the take lands on the bar you sang it on, latency taken out. Every take stays, lane by "
+                        + "lane below, where the band flags bars and you make the comp.")
         case .mashup:
             return ("Mashup",
                     "Two songs from the library on one grid. One keeps its tempo and key — usually the instrumental — and the "
@@ -92,8 +95,8 @@ public enum Primer {
         case .mixer:
             return ("Mixer",
                     "A strip per part: fader, pan, send, mute and solo, three bands of EQ and a compressor, with meters while "
-                        + "the song plays. Every move you let go of is a mix version — revert it from the ledger. Pick two strips "
-                        + "and the overlay says where they share energy, band by band, in dB.")
+                        + "the song plays. Every move you let go of is a mix version — step back from Parts. Pick two strips "
+                        + "and the overlay says where they share energy, band by band, in dB. The master is on its own tab.")
         case .master:
             return ("Master",
                     "The last bounce read against the target: integrated loudness, true peak, crest and the spectrum. The "
@@ -102,7 +105,7 @@ public enum Primer {
         case .takes:
             return ("Takes",
                     "Every take of one part, lane by lane against the bars, with the band's flags on the bar they belong "
-                        + "to — cents and milliseconds, never adjectives. Choose which take each bar comes from and keep the "
+                        + "to — cents and milliseconds, never adjectives. Choose which take each bar comes from and make the "
                         + "comp: one version, seams crossfaded, the takes under it in the history.")
         }
     }

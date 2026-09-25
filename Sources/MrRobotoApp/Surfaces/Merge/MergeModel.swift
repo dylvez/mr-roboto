@@ -256,7 +256,7 @@ public final class MergeModel {
         for version in [a, b].compactMap({ $0 }) {
             switch version.kind {
             case .groove(let groove): bars = max(bars, groove.bars)
-            case .bassline(let line): bars = max(bars, Int((line.lengthInBeats / beatsPerBar).rounded(.up)))
+            case .bassline(let line): bars = max(bars, line.loopBars(beatsPerBar: Int(beatsPerBar)))
             case .progression(let progression): bars = max(bars, progression.bars.count)
             default: break
             }

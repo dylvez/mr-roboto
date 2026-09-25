@@ -221,7 +221,9 @@ extension WorkPath {
         case .chords: return parts(Guidance.progressions(in: song))
         case .bass: return parts(Guidance.basslines(in: song))
         case .dust: return parts(song.versions.filter { !$0.kind.degradation.isEmpty })
-        case .arrange: return song.sections.count
+        // Sections that play something: a new song's empty Intro, Verse and Hook are a shape
+        // waiting for parts, not an arrangement.
+        case .arrange: return song.sections.filter { !$0.stitch.isEmpty }.count
         case .sing: return Guidance.takes(in: song).count
         case .mix: return Guidance.mixes(in: song).count
         }

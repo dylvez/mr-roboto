@@ -22,6 +22,10 @@ public struct ChordsSurface: Surface {
 /// Roman numerals, plays a bar when you touch it, and commits the progression as a version the
 /// bass writer reads. Nothing is stored as text: the part is the chords, and the text is one way
 /// of saying them.
+///
+/// The Harmonist reads the bars as they parse and its readings sit under them, the way the
+/// Bassist's sit under the Piano roll: the one who owns the chords is on the surface where the
+/// chords are written, not only in the rail after they are kept.
 @MainActor
 @Observable
 public final class ChordsModel {
@@ -38,7 +42,12 @@ public final class ChordsModel {
 
     /// What is typed. Parsed on every change; a symbol that cannot be read is named in `problem`.
     public var text: String {
-        didSet { parse() }
+        didSet {
+            parse()
+            guard !isApplyingState, oldValue != text else { return }
+            willEdit(ChordsState(text: oldValue, key: key), kind: "text")
+            didEdit()
+        }
     }
     public private(set) var key: Key
     public private(set) var progression: Progression?
@@ -50,6 +59,9 @@ public final class ChordsModel {
     public private(set) var base: PartVersion?
     public private(set) var versions: [PartVersion] = []
     public private(set) var lastError: String?
+    /// What the Harmonist says about the bars on screen, refreshed on every parse. Read against the
+    /// song's newest bass line when there is one, so a bass that disagrees is named here.
+    public private(set) var readings: [PersonaReading] = []
     /// The version the last keep made, for the footer to say so. Nil until one is kept, and set
     /// aside again — by `hasUnkeptChanges` turning true — once the chords move on from it.
     public private(set) var lastKept: PartVersion?
@@ -59,8 +71,57 @@ public final class ChordsModel {
     /// with a typo has nothing to keep; a fresh surface's I–IV–V–I does.
     public var hasUnkeptChanges: Bool {
         guard problem == nil, let progression else { return false }
-        guard let kept = versions.last ?? base, case .progression(let keptProgression) = kept.kind else { return true }
+        guard let kept = versions.last ?? base, case .progression(let keptProgression) = kept.kind else { return isTouched }
         return keptProgression != progression
+    }
+
+    /// Whether anything has been typed or chosen. The I–IV–V–I an empty sheet shows is a
+    /// suggestion, not chords the song has — `useTheseChords()` takes it as it is.
+    public private(set) var isTouched = false
+
+    // MARK: Keeping as it goes
+
+    struct ChordsState: Equatable, Sendable {
+        var text: String
+        var key: Key
+    }
+
+    private var history = EditHistory<ChordsState>()
+    private var lastEdit: (kind: String, at: Date)?
+    private var isApplyingState = false
+    /// Keeps the chords a moment after the last edit. A test sets its delay to nil.
+    public let autoKeep = AutoKeep()
+
+    private var state: ChordsState {
+        get { ChordsState(text: text, key: key) }
+        set {
+            isApplyingState = true
+            key = newValue.key
+            text = newValue.text
+            isApplyingState = false
+            keyProblem = nil
+            parse()
+        }
+    }
+
+    /// Typing is one step of undo per pause, not per key.
+    private func willEdit(_ before: ChordsState, kind: String) {
+        let now = Date()
+        defer { lastEdit = (kind, now) }
+        if let last = lastEdit, last.kind == kind, now.timeIntervalSince(last.at) < 1.5 { return }
+        history.record(before)
+    }
+
+    private func didEdit() {
+        isTouched = true
+        guard hasUnkeptChanges else { autoKeep.cancel(); return }
+        autoKeep.schedule { [weak self] in self?.keepNow() }
+    }
+
+    /// Takes the suggested I–IV–V–I as the song's chords.
+    public func useTheseChords() {
+        isTouched = true
+        keepNow()
     }
 
     /// True while the line has a typo: the bars still show the last line that read, and the view
@@ -98,6 +159,7 @@ public final class ChordsModel {
 
     /// Reads `text` as the key's I–IV–V–I when it is empty, so an open surface is never blank.
     private func parse() {
+        defer { refreshReadings() }
         let trimmed = text.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else {
             progression = Progression(key: key, bars: Self.defaultBars(in: key, beatsPerBar: beatsPerBar))
@@ -113,6 +175,23 @@ public final class ChordsModel {
         }
     }
 
+    // MARK: The Harmonist
+
+    /// The Harmonist's reading of the bars on screen. On a typo those are the last bars that read,
+    /// and so are the readings; the view dims both together.
+    private func refreshReadings() {
+        guard let progression else { readings = []; return }
+        let observation = HarmonyObservation.of(progression, label: title, bassline: host.bassline,
+                                                beatsPerBar: beatsPerBar)
+        readings = Harmonist().read(observation)
+    }
+
+    /// The readings that did not hold: what the Harmonist would say first.
+    public var flags: [PersonaReading] { readings.filter { !$0.holds } }
+
+    /// Flags first, then what holds — the order the panel shows them in.
+    public var orderedReadings: [PersonaReading] { flags + readings.filter(\.holds) }
+
     /// I–IV–V–I in the key, a bar each: what the bass writer uses when nothing is stated.
     static func defaultBars(in key: Key, beatsPerBar: Int) -> [ProgressionBar] {
         [1, 4, 5, 1].compactMap { degree in
@@ -124,9 +203,12 @@ public final class ChordsModel {
     public var isDefault: Bool { text.trimmingCharacters(in: .whitespaces).isEmpty }
 
     public func setKey(_ newKey: Key) {
+        guard newKey != key else { keyProblem = nil; return }
+        willEdit(state, kind: "key")
         key = newKey
         keyProblem = nil
         parse()
+        didEdit()
     }
 
     /// The key as a line you type: "D major", "F# minor", "Bb", "E dorian" — whatever `Key` reads.
@@ -173,18 +255,48 @@ public final class ChordsModel {
         } else {
             version = PartVersion(partID: PartID(), kind: payload, author: .user, operation: Operation.written, note: text)
         }
+        autoKeep.cancel()
+        // Synchronous, so a keep the frame asks for before it plays is in the song when it reads.
+        guard host.commit(version) else {
+            lastError = "The song would not take these chords."
+            return nil
+        }
         versions.append(version)
         lastKept = version
         lastError = nil
-        Task { @MainActor [host, weak self] in
-            let kept = await host.commit(version)
-            guard !kept, let self else { return }
-            // Refused: the version is not in the song, so it is not in this list either, and the
-            // keep control comes back for another try.
-            versions.removeAll { $0.id == version.id }
-            if lastKept?.id == version.id { lastKept = nil }
-            lastError = "The host refused the version."
-        }
         return version
+    }
+}
+
+extension ChordsModel: KeepsAsItGoes {
+    @discardableResult
+    public func keepNow() -> Bool {
+        guard hasUnkeptChanges else { autoKeep.cancel(); return true }
+        return commit() != nil
+    }
+
+    public var canUndo: Bool { history.canUndo }
+    public var canRedo: Bool { history.canRedo }
+
+    public func undo() {
+        guard let previous = history.undo(from: state) else { return }
+        lastEdit = nil
+        state = previous
+        didEdit()
+    }
+
+    public func redo() {
+        guard let next = history.redo(from: state) else { return }
+        lastEdit = nil
+        state = next
+        didEdit()
+    }
+
+    public var keepLine: KeepLine {
+        if let lastError { return .refused(lastError) }
+        if problem != nil { return .refused("Not kept while a chord does not read.") }
+        if hasUnkeptChanges { return .pending }
+        if let kept = versions.last ?? base { return .kept(title: PartLabel.title(of: kept)) }
+        return .untouched
     }
 }

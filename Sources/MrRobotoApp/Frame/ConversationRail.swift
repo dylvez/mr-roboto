@@ -301,6 +301,11 @@ struct LiveComposer: View {
         .padding(.bottom, 24)
         .onExitCommand { band.cancel() }
         .task { await band.refreshKeyStatus() }
+        .onChange(of: band.wantsFocus, initial: true) { _, wants in
+            guard wants else { return }
+            band.wantsFocus = false
+            isComposing = true
+        }
         .sheet(isPresented: $isSettingKey) { APIKeySheet(band: band) }
     }
 }

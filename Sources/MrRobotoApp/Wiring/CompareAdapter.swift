@@ -160,7 +160,7 @@ final class CompareAdapter: CompareHosting {
         return Bassline(notes: line.notes.map { note in
             NoteEvent(pitch: note.pitch, start: max(0, note.start - median + beats),
                       duration: note.duration, velocity: note.velocity)
-        }, sound: line.sound)
+        }, sound: line.sound, key: line.key, lengthInBars: line.lengthInBars)
     }
 
     /// The chain a row plays through.

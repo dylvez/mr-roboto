@@ -30,7 +30,12 @@ public struct PianoRollSurface: Surface {
 ///
 /// Notes are edited in place: drag to move (across for time, up and down for pitch), drag the
 /// right edge to lengthen, double-click to delete, click an empty cell to add. An edit refreshes
-/// the readings; nothing is committed until you say so.
+/// the readings and keeps itself a moment later.
+///
+/// The line has a length of its own, in bars, that is not the groove's. A four-bar melody or an
+/// eight-bar bass phrase over a one-bar groove is a line the roll can hold: the groove is read
+/// repeated under it — the kick lane, the writer and the Bassist all see the kick in every bar —
+/// and the length is kept on the part, so a last bar that is a rest stays a bar.
 @MainActor
 @Observable
 public final class PianoRollModel {
@@ -82,6 +87,14 @@ public final class PianoRollModel {
     public private(set) var instrument: String = InstrumentVoiceSpec.rhodes.id
     public private(set) var notes: [NoteEvent]
     public private(set) var sound: String
+    /// How many bars the line is. Its own, not the groove's: kept on the part, so the players loop
+    /// it at this length and a trailing rest is part of the phrase. Undoable like any edit.
+    public private(set) var lengthInBars: Int
+
+    /// The lengths the control offers. Any length the line arrives with is honoured too.
+    public static let lengthChoices = [1, 2, 4, 8, 16]
+    /// The longest line the roll will make. Double stops here.
+    public static let longestLine = 16
 
     // MARK: The writer's levers
 
@@ -120,17 +133,99 @@ public final class PianoRollModel {
     /// opened on. The keep control follows this, so pressing it twice cannot file the same line
     /// twice; a fresh roll with notes on it has everything to keep.
     public var hasUnkeptChanges: Bool {
-        guard let kept = versions.last ?? base else { return !notes.isEmpty }
+        guard let kept = lastKeptOfThisKind else { return isTouched && !notes.isEmpty }
         switch kept.kind {
         case .bassline(let line):
-            guard mode == .bass, line.notes == notes else { return true }
+            if line.notes != notes { return true }
             if let keptSound = line.sound, keptSound != sound { return true }
-            return false
+            return (line.lengthInBars ?? openedLength) != lengthInBars
         case .melody(let tune):
-            return mode != .melody || tune.notes != notes
+            return tune.notes != notes || (tune.lengthInBars ?? openedLength) != lengthInBars
         default:
             return true
         }
+    }
+
+    /// The newest version this roll kept or was opened on that is the same kind of part as the
+    /// mode says it is writing. A roll opened on a bass line and switched to melody is writing a
+    /// new part, not a new version of the bass line — a part does not change what it is.
+    private var lastKeptOfThisKind: PartVersion? {
+        let type: PartType = mode == .melody ? .melody : .bassline
+        return versions.last { $0.type == type } ?? (base?.type == type ? base : nil)
+    }
+
+    /// The length the roll gave a bound line that did not state one. That line is "as long as its
+    /// notes", and opening it is not an edit: only a length the person sets differs from it.
+    private var openedLength: Int = 1
+
+    /// Whether the person has done anything to the line. The line the writer drafts when the roll
+    /// opens under a groove is a proposal until then — played, not kept — so opening the Piano
+    /// roll to look is not writing a part into the song. `useThisLine()` accepts it untouched.
+    public private(set) var isTouched = false
+
+    // MARK: Keeping as it goes
+
+    /// What ⌘Z steps back through: the notes and the levers that wrote them.
+    struct RollState: Equatable, Sendable {
+        var notes: [NoteEvent]
+        var lengthInBars: Int
+        var sound: String
+        var mode: Mode
+        var lineage: BassLineage
+        var lagMS: Double
+        var density: Double
+        var earlyAlternation: Bool
+        var seed: UInt64
+        var isHandEdited: Bool
+    }
+
+    private var history = EditHistory<RollState>()
+    /// The edit in progress, so a drag or a slider is one step of undo, not one per frame.
+    private var lastEdit: (kind: String, at: Date)?
+    /// Keeps the line a moment after the last edit. A test sets its delay to nil and keeps by hand.
+    public let autoKeep = AutoKeep()
+
+    private var state: RollState {
+        get {
+            RollState(notes: notes, lengthInBars: lengthInBars, sound: sound, mode: mode, lineage: lineage, lagMS: lagMS, density: density,
+                      earlyAlternation: earlyAlternation, seed: seed, isHandEdited: isHandEdited)
+        }
+        set {
+            notes = newValue.notes
+            lengthInBars = newValue.lengthInBars
+            sound = newValue.sound
+            mode = newValue.mode
+            lineage = newValue.lineage
+            lagMS = newValue.lagMS
+            density = newValue.density
+            earlyAlternation = newValue.earlyAlternation
+            seed = newValue.seed
+            isHandEdited = newValue.isHandEdited
+            selectedNote = nil
+            refreshReadings()
+        }
+    }
+
+    /// Before an edit. Repeats of the same kind of edit in quick succession — a drag, a slider —
+    /// are folded into the first, so ⌘Z takes back the gesture rather than its last frame.
+    private func willEdit(_ kind: String) {
+        let now = Date()
+        defer { lastEdit = (kind, now) }
+        if let last = lastEdit, last.kind == kind, now.timeIntervalSince(last.at) < 0.75 { return }
+        history.record(state)
+    }
+
+    /// After an edit: the line is the person's now, and it keeps itself once they stop.
+    private func didEdit() {
+        isTouched = true
+        guard hasUnkeptChanges else { autoKeep.cancel(); return }
+        autoKeep.schedule { [weak self] in self?.keepNow() }
+    }
+
+    /// Accepts the line the writer drafted, untouched, as a part of the song.
+    public func useThisLine() {
+        isTouched = true
+        keepNow()
     }
 
     /// The pitch range the roll draws: the lineage's register, widened to hold the notes.
@@ -138,14 +233,16 @@ public final class PianoRollModel {
     /// and a lever that silently did would be the Bassist writing melodies.
     public var writesFromLevers: Bool { mode == .bass }
 
-    public var melody: Melody { Melody(notes: notes) }
+    public var melody: Melody { Melody(notes: notes, lengthInBars: lengthInBars) }
 
     /// Who reads what this roll is writing.
     public var readingPersona: String { mode == .bass ? "Bassist" : "Melodist" }
 
     public func setMode(_ value: Mode) {
         guard value != mode else { return }
+        willEdit("mode")
         mode = value
+        defer { didEdit() }
         // A bass line dragged into melody mode keeps its notes; they just sound an octave up on a
         // different instrument, which is usually what you wanted when you switched.
         refreshReadings()
@@ -202,11 +299,17 @@ public final class PianoRollModel {
         self.seed = seed
         self.notes = []
         self.sound = lineage.defaultSound
+        // A fresh line is as long as the groove it is written under; a bound one is reset below.
+        self.lengthInBars = max(1, groove?.bars ?? 1)
         if let instrument, InstrumentVoiceSpec.preset(id: instrument) != nil { self.instrument = instrument }
+        let beatsPerBar = max(1, timeSignature.beatsPerBar)
         if let bassline, case .bassline(let line) = bassline.kind {
             base = bassline
             notes = line.notes
             sound = line.sound ?? lineage.defaultSound
+            lengthInBars = Self.openingLength(stated: line.lengthInBars, notes: line.notes, groove: groove,
+                                              beatsPerBar: beatsPerBar)
+            openedLength = lengthInBars
             isHandEdited = true
             refreshReadings()
         } else if let melody, case .melody(let tune) = melody.kind {
@@ -215,6 +318,9 @@ public final class PianoRollModel {
             base = melody
             mode = .melody
             notes = tune.notes
+            lengthInBars = Self.openingLength(stated: tune.lengthInBars, notes: tune.notes, groove: groove,
+                                              beatsPerBar: beatsPerBar)
+            openedLength = lengthInBars
             isHandEdited = true
             refreshReadings()
         } else {
@@ -222,23 +328,39 @@ public final class PianoRollModel {
         }
     }
 
+    /// A bound line's length: the one it states, else the larger of the groove's bars and the
+    /// bars its notes reach — so a line from before lengths were kept opens no shorter than the
+    /// groove it sits under, and never cuts a note off.
+    static func openingLength(stated: Int?, notes: [NoteEvent], groove: Groove?, beatsPerBar: Int) -> Int {
+        if let stated { return max(1, stated) }
+        let reach = Int(((notes.map(\.end).max() ?? 0) / Double(max(1, beatsPerBar))).rounded(.up))
+        return max(1, groove?.bars ?? 1, reach)
+    }
+
     // MARK: Reading
 
-    public var bassline: Bassline { Bassline(notes: notes, sound: sound, key: key) }
+    public var bassline: Bassline { Bassline(notes: notes, sound: sound, key: key, lengthInBars: lengthInBars) }
 
     public var beatsPerBar: Int { max(1, timeSignature.beatsPerBar) }
-    public var bars: Int { max(1, groove?.bars ?? Int((bassline.lengthInBeats / Double(beatsPerBar)).rounded(.up))) }
+    /// The line's bars: its own length, which may be longer (or shorter) than the groove's.
+    public var bars: Int { lengthInBars }
     public var totalBeats: Double { Double(bars * beatsPerBar) }
 
-    /// The groove's kick onsets in beats, swung as it swings them, for the lane under the notes.
+    /// The groove as this line hears it: repeated to the line's length, or cut to it. What the kick
+    /// lane draws, what the writer writes against and what the Bassist reads against — so bar
+    /// eight of a phrase over a one-bar groove has a kick under it, as it does when it plays.
+    public var lineGroove: Groove? { groove?.tiled(toBars: lengthInBars) }
+
+    /// The groove's kick onsets in beats, swung as it swings them, for the lane under the notes —
+    /// across the whole line, not only the groove's own bars.
     public var kickBeats: [Double] {
-        guard let groove else { return [] }
-        return BassWriter.kickOnsets(in: groove, beatsPerBar: Double(beatsPerBar))
+        guard let lineGroove else { return [] }
+        return BassWriter.kickOnsets(in: lineGroove, beatsPerBar: Double(beatsPerBar))
     }
 
     public var observation: BassObservation? {
-        guard let groove else { return nil }
-        return BassObservation(label: title, bassline: bassline, groove: groove, chords: chords,
+        guard let lineGroove else { return nil }
+        return BassObservation(label: title, bassline: bassline, groove: lineGroove, chords: chords,
                                tempo: tempo, timeSignature: timeSignature, options: grooveOptions,
                                kickDecaySeconds: kickDecaySeconds)
     }
@@ -252,7 +374,7 @@ public final class PianoRollModel {
         guard let groove else { return nil }
         return BassRequest(key: key, chords: chords, groove: groove, tempo: tempo, timeSignature: timeSignature,
                            lineage: lineage, lagMS: lagMS, density: density, earlyAlternation: earlyAlternation,
-                           sound: sound, seed: seed)
+                           sound: sound, seed: seed, bars: lengthInBars)
     }
 
     /// Writes the line from the levers. Replaces whatever is on screen, hand edits included: the
@@ -263,6 +385,7 @@ public final class PianoRollModel {
         let line = BassWriter.write(request)
         notes = line.notes
         sound = line.sound ?? sound
+        lengthInBars = line.lengthInBars ?? lengthInBars
         isHandEdited = false
         selectedNote = nil
         refreshReadings()
@@ -270,7 +393,11 @@ public final class PianoRollModel {
 
     /// The explicit step: the writer replaces a hand-edited line with one from the levers as they
     /// stand now. Pressed, not slid into.
-    public func writeOverHandEdits() { write() }
+    public func writeOverHandEdits() {
+        willEdit("rewrite-over")
+        write()
+        didEdit()
+    }
 
     /// A lever moved. Runs the writer unless the line is edited by hand, in which case the lever
     /// has moved and the notes have not — the readings refresh because the sound may have.
@@ -281,38 +408,50 @@ public final class PianoRollModel {
 
     /// A different line from the same levers.
     public func rewrite() {
+        willEdit("rewrite")
         seed &+= 0x9E37_79B9
         writeUnlessHeld()
+        didEdit()
     }
 
     public func setLineage(_ value: BassLineage) {
+        willEdit("lineage")
         lineage = value
         lagMS = value.defaultLagMS
         sound = value.defaultSound
         writeUnlessHeld()
+        didEdit()
     }
 
     public func setLag(_ milliseconds: Double) {
+        willEdit("lag")
         lagMS = min(Bassist.lagCeilingMS, max(-25, milliseconds))
         writeUnlessHeld()
+        didEdit()
     }
 
     public func setDensity(_ value: Double) {
+        willEdit("density")
         density = min(1, max(0, value))
         writeUnlessHeld()
+        didEdit()
     }
 
     public func setEarlyAlternation(_ on: Bool) {
+        willEdit("early")
         earlyAlternation = on
         writeUnlessHeld()
+        didEdit()
     }
 
     /// The bass sound. Does not rewrite: the same notes through another voice.
     public func setSound(_ id: String) {
-        guard BassVoiceSpec.all.contains(where: { $0.id == id }) else { return }
+        guard BassVoiceSpec.all.contains(where: { $0.id == id }), id != sound else { return }
+        willEdit("sound")
         sound = id
         refreshReadings()
         if let first = notes.first { audition(first) }
+        didEdit()
     }
 
     /// The levers the Director hung on the surface, as the sliders' starting positions.
@@ -331,9 +470,65 @@ public final class PianoRollModel {
         if lag != nil || density != nil { write() }
     }
 
+    // MARK: The line's length
+
+    /// The line becomes `bars` long. Longer, and the new bars are empty — unless the line is still
+    /// the writer's, in which case the writer writes the whole length, since a lever is what the
+    /// writer's line answers to. Shorter, and every note past the new end goes, and a note that
+    /// would ring over it is cut at it. Both are one step of ⌘Z.
+    public func setLength(_ bars: Int) {
+        let target = min(Self.longestLine, max(1, bars))
+        guard target != lengthInBars else { return }
+        willEdit("length")
+        defer { didEdit() }
+        lengthInBars = target
+        if writesFromLevers, !isHandEdited, groove != nil {
+            write()
+            return
+        }
+        trimToLength()
+        selectedNote = nil
+        refreshReadings()
+    }
+
+    /// Whether Double has room: the line twice over is no longer than the roll will make.
+    public var canDouble: Bool { lengthInBars * 2 <= Self.longestLine }
+
+    /// The line twice: every note copied into the bars after it, and the length doubled. The usual
+    /// way a one-bar idea becomes a phrase — the copy is there to be changed, and changing it is
+    /// the point, so the line is the person's from here and the levers hold off it.
+    public func double() {
+        guard canDouble else { return }
+        willEdit("double")
+        defer { didEdit() }
+        let offset = totalBeats
+        let copies = notes.filter { $0.start < offset }.map { note in
+            NoteEvent(pitch: note.pitch, start: note.start + offset, duration: note.duration, velocity: note.velocity)
+        }
+        lengthInBars *= 2
+        notes += copies
+        notes.sort { ($0.start, $0.pitch.midi) < ($1.start, $1.pitch.midi) }
+        if !copies.isEmpty { isHandEdited = true }
+        selectedNote = nil
+        refreshReadings()
+    }
+
+    /// Drops the notes that start at or past the end, and cuts the ones that ring over it.
+    private func trimToLength() {
+        let end = totalBeats
+        notes = notes.compactMap { note in
+            guard note.start < end - 1e-9 else { return nil }
+            var kept = note
+            kept.duration = min(note.duration, end - note.start)
+            return kept
+        }
+    }
+
     // MARK: Editing notes
 
     public func addNote(pitch: Int, at beat: Double, duration: Double = 0.5) {
+        willEdit("add")
+        defer { didEdit() }
         let start = max(0, min(totalBeats - 0.125, Self.snap(beat)))
         let note = NoteEvent(pitch: Pitch(midi: pitch), start: start, duration: max(0.125, duration), velocity: 100)
         notes.append(note)
@@ -347,6 +542,8 @@ public final class PianoRollModel {
 
     public func moveNote(at index: Int, toStart start: Double, pitch: Int) {
         guard notes.indices.contains(index) else { return }
+        willEdit("move \(index)")
+        defer { didEdit() }
         var note = notes[index]
         note.start = max(0, min(totalBeats - note.duration, Self.snap(start)))
         note.pitch = Pitch(midi: max(0, min(127, pitch)))
@@ -359,6 +556,8 @@ public final class PianoRollModel {
 
     public func resizeNote(at index: Int, toDuration duration: Double) {
         guard notes.indices.contains(index) else { return }
+        willEdit("resize \(index)")
+        defer { didEdit() }
         notes[index].duration = max(0.125, min(totalBeats - notes[index].start, Self.snap(duration)))
         isHandEdited = true
         refreshReadings()
@@ -366,6 +565,8 @@ public final class PianoRollModel {
 
     public func deleteNote(at index: Int) {
         guard notes.indices.contains(index) else { return }
+        willEdit("delete")
+        defer { didEdit() }
         notes.remove(at: index)
         isHandEdited = true
         selectedNote = nil
@@ -452,7 +653,7 @@ public final class PianoRollModel {
         let payload: PartKind = mode == .melody ? .melody(melody) : .bassline(bassline)
         let text = note ?? defaultNote
         let version: PartVersion
-        if let previous = versions.last ?? base {
+        if let previous = lastKeptOfThisKind {
             version = previous.deriving(payload, by: .user, operation: isHandEdited ? Operation.edit : Operation.written,
                                         note: text)
         } else {
@@ -460,31 +661,62 @@ public final class PianoRollModel {
                                   parents: grooveVersion.map { [$0] } ?? [],
                                   operation: Operation.written, note: text)
         }
+        autoKeep.cancel()
+        // Synchronous, so a keep the frame asks for before it plays is in the song when it reads.
+        guard host.commit(version) else {
+            lastError = "The song would not take that line."
+            return version
+        }
         versions.append(version)
         lastKept = version
         lastError = nil
-        Task { @MainActor [host, weak self] in
-            let kept = await host.commit(version)
-            guard !kept, let self else { return }
-            // Refused: the version is not in the song, so it is not in this list either, and the
-            // keep control comes back for another try.
-            versions.removeAll { $0.id == version.id }
-            if lastKept?.id == version.id { lastKept = nil }
-            lastError = "The host refused the version."
-        }
         return version
     }
 
     private var defaultNote: String {
         if mode == .melody {
             let name = InstrumentVoiceSpec.preset(id: instrument)?.name ?? instrument
-            return "Melody, \(notes.count) note\(notes.count == 1 ? "" : "s") on the \(name)"
+            return "Melody, \(notes.count) note\(notes.count == 1 ? "" : "s") on the \(name), \(lengthInBars) bar\(lengthInBars == 1 ? "" : "s")"
         }
         var parts = [isHandEdited ? "Bass line, edited" : "\(lineage.name) line"]
+        if let groove, lengthInBars != groove.bars { parts.append("\(lengthInBars) bars") }
         if lagMS != 0 { parts.append(String(format: "%+.0f ms behind the kick", lagMS)) }
         parts.append(String(format: "%.0f bpm", tempo))
         parts.append(BassVoiceSpec.all.first { $0.id == sound }?.name ?? sound)
         if usesDefaultChords { parts.append("to the key's I–IV–V–I") }
         return parts.joined(separator: ", ")
+    }
+}
+
+extension PianoRollModel: KeepsAsItGoes {
+    @discardableResult
+    public func keepNow() -> Bool {
+        guard hasUnkeptChanges else { autoKeep.cancel(); return true }
+        let version = commit()
+        return versions.last?.id == version.id
+    }
+
+    public var canUndo: Bool { history.canUndo }
+    public var canRedo: Bool { history.canRedo }
+
+    public func undo() {
+        guard let previous = history.undo(from: state) else { return }
+        lastEdit = nil
+        state = previous
+        didEdit()
+    }
+
+    public func redo() {
+        guard let next = history.redo(from: state) else { return }
+        lastEdit = nil
+        state = next
+        didEdit()
+    }
+
+    public var keepLine: KeepLine {
+        if let lastError { return .refused(lastError) }
+        if hasUnkeptChanges { return .pending }
+        if let kept = lastKeptOfThisKind { return .kept(title: PartLabel.title(of: kept)) }
+        return .untouched
     }
 }

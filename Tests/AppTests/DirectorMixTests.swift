@@ -93,7 +93,9 @@ struct DirectorMixProofTests {
             let mix = try #require(Guidance.mix(in: song))
             #expect(mix.master.targetLUFS == -14 && mix.master.ceilingDBTP == -1 && mix.master.gainDB == 6)
             #expect(Guidance.mixes(in: song).last?.note?.hasPrefix("master +6.0 dB") == true, "\(Guidance.mixes(in: song).last?.note ?? "")")
-            #expect(rig.app.bench.items.contains { $0.kind == .master })
+            // The master is the Mixer's own tab now: asking for the Master opens the Mixer on it.
+            #expect(rig.app.bench.items.contains { $0.kind == .mixer })
+            #expect(!rig.app.bench.items.contains { $0.kind == .master })
         }
         // The Engineer refuses a ceiling at zero, and the refusal names the counter.
         let box = rig.director

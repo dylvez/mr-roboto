@@ -275,6 +275,85 @@ struct FillGridTests {
         #expect(thirtyTwo.stepWidth < sixteen.stepWidth)
         #expect(thirtyTwo.stepWidth >= GridLayout.minimumStepWidth)
     }
+
+    // The Grid sets its own length now, so a row can be 64 or 128 steps. An equal share of the
+    // width at eight bars is about four points a step — a cell nobody can hit — so past the floor
+    // the steps keep it and scroll sideways under a pinned label column instead of shrinking.
+
+    @Test("One bar never scrolls sideways; four and eight bars keep the floor and scroll")
+    func longGridsScrollRatherThanShrink() {
+        for size in SurfaceGeometry.all {
+            #expect(layout(size, steps: 16).stepsScroll == false, "one bar fits at \(size)")
+            for steps in [64, 128] {
+                let long = layout(size, steps: steps)
+                #expect(long.stepsScroll, "\(steps) steps scroll at \(size)")
+                #expect(long.stepWidth == GridLayout.minimumStepWidth)
+                #expect(long.stepsContentWidth
+                            == CGFloat(steps) * GridLayout.minimumStepWidth
+                            + CGFloat(steps - 1) * GridLayout.stepSpacing)
+                #expect(long.stepsContentWidth > long.contentSize.width - long.labelWidth)
+            }
+        }
+        // Two bars fit from the default window up, and scroll only at the window minimum.
+        #expect(layout(Geometry.minimum, steps: 32).stepsScroll)
+        #expect(layout(Geometry.standard, steps: 32).stepsScroll == false)
+        #expect(layout(Geometry.wide, steps: 32).stepsScroll == false)
+    }
+
+    @Test("Scrolled steps leave the scroller its room without making five voices scroll up and down")
+    func scrolledStepsStillFitTheHeight() {
+        for size in SurfaceGeometry.all {
+            let long = layout(size, steps: 64)
+            #expect(long.gridScrolls == false, "five voices of four bars should fit at \(size)")
+            #expect(long.gridHeight
+                        == GridLayout.rulerHeight + CGFloat(long.voiceCount) * long.rowHeight
+                        + CGFloat(long.voiceCount - 1) * GridLayout.rowSpacing + GridLayout.scrollerAllowance)
+            #expect(long.rowHeight >= GridLayout.minimumRowHeight)
+        }
+    }
+
+    @Test("The step under the pointer is arithmetic on the pitch, with no dead strip between cells")
+    func stepUnderThePointer() {
+        let long = layout(Geometry.standard, steps: 64)
+        let pitch = long.stepPitch
+        #expect(pitch == GridLayout.minimumStepWidth + GridLayout.stepSpacing)
+        #expect(long.step(atX: 0) == 0)
+        #expect(long.step(atX: pitch * 17 + 1) == 17)
+        // The spacing after a cell belongs to it, so a drag across the gap does not drop a step.
+        #expect(long.step(atX: pitch * 18 - 0.5) == 17)
+        #expect(long.step(atX: long.x(ofStep: 63)) == 63)
+        #expect(long.step(atX: long.stepsContentWidth + pitch) == nil)
+        #expect(long.step(atX: -1) == nil)
+        // A bar line sits in the gap before its bar's first step, never over a cell.
+        #expect(long.barLineX(beforeStep: 16) == long.x(ofStep: 16) - GridLayout.stepSpacing)
+        #expect(long.barLineX(beforeStep: 16) >= long.x(ofStep: 15) + long.stepWidth)
+    }
+
+    @Test("The notes under the grid take what height is left, and the empty grid's picture needs room")
+    func notesTakeWhatIsLeft() {
+        let tight = layout(Geometry.minimum)
+        let standard = layout(Geometry.standard)
+        #expect(tight.notesHeight == GridLayout.notesMinimumHeight)
+        #expect(standard.notesHeight > tight.notesHeight)
+        #expect(tight.showsEmptyArt == false, "at the window minimum the empty grid says it in words")
+        #expect(standard.showsEmptyArt)
+        for size in SurfaceGeometry.all {
+            let layout = self.layout(size)
+            // Everything stacked is the panel: the notes are the remainder, not a guess.
+            let stacked = layout.chromeHeight - GridLayout.notesMinimumHeight
+                + layout.gridAreaHeight + layout.notesHeight
+            #expect(abs(stacked - layout.contentSize.height) < 0.001)
+        }
+    }
+
+    @Test("The pickers take one row from the default window up, and two at the window minimum")
+    func pickersWrapOnlyWhenNarrow() {
+        #expect(layout(Geometry.minimum).pickersWrap)
+        #expect(layout(Geometry.standard).pickersWrap == false)
+        #expect(layout(Geometry.wide).pickersWrap == false)
+        // Two rows cost height, and the budget says so: the minimum's chrome is the taller.
+        #expect(layout(Geometry.minimum).chromeHeight > layout(Geometry.standard).chromeHeight)
+    }
 }
 
 // MARK: - Sound

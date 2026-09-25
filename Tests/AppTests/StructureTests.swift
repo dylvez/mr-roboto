@@ -63,7 +63,7 @@ private final class StubStructureHost: StructureHosting {
     var arranged: [[Section]] = []
     var played = 0
     var refuses = false
-    func arrange(_ sections: [Section]) async -> Bool {
+    func arrange(_ sections: [Section]) -> Bool {
         guard !refuses else { return false }
         arranged.append(sections)
         return true
@@ -90,13 +90,13 @@ struct StructureModelTests {
         #expect(model.layers.contains { $0.id == built.bass && $0.plays })
         #expect(model.layers.contains { $0.id == built.progression && $0.plays },
                 "the chords are offered, and they play: the transport sounds them")
-        #expect(model.layers.contains { $0.id == built.dryChop && !$0.plays }, "the dry chop is offered, and said not to play")
+        #expect(model.layers.contains { $0.id == built.dryChop && $0.plays }, "a chop plays as cut, dry or dusty")
         #expect(model.isEmpty)
 
         let verse = model.add(.verse)
         #expect(verse.lengthInBars == 16)
-        #expect(verse.stitch == [built.groove, built.bass, built.progression].lanes,
-                "the newest groove, bass line and chords; the dry chop is not stitched")
+        #expect(verse.stitch == [built.groove, built.bass, built.progression, built.dryChop].lanes,
+                "the newest groove, bass line, chords and chop")
         #expect(verse.stitch.allSatisfy { $0.pin == nil }, "a new section follows its parts")
         #expect(model.sections.count == 1)
         #expect(model.selected == verse.id)
@@ -120,11 +120,11 @@ struct StructureModelTests {
         #expect(choices.map(\.type) == [.groove, .bassline, .progression, .melody, .sample],
                 "one row per kind the song has, in stitch order")
         #expect(choices.map { StructureModel.name(of: $0.type) } == ["Groove", "Bass", "Chords", "Tune", "Chop"])
-        #expect(model.kinds(of: verse) == ["Groove", "Bass", "Chords"],
+        #expect(model.kinds(of: verse) == ["Groove", "Bass", "Chords", "Chop"],
                 "what the block says it plays, in words rather than anonymous dots")
-        #expect(try #require(model.layer(built.dryChop)).silentReason == "dry")
+        #expect(try #require(model.layer(built.dryChop)).silentReason == nil, "a dry chop plays")
         let melody = try #require(model.layers.first { $0.type == .melody })
-        #expect(melody.silentReason == "empty", "an empty melody is not 'dry': that is a word about chops")
+        #expect(melody.silentReason == "empty")
     }
 
     @Test("a section names what it leaves out, and one move puts it in")
@@ -132,15 +132,15 @@ struct StructureModelTests {
         let (model, built) = model()
         let verse = model.add(name: "Verse", bars: 16, stitch: [built.groove].lanes)
 
-        #expect(model.missing(from: verse) == [.bassline, .progression])
-        #expect(model.missingText(from: verse) == "bass and chords")
+        #expect(model.missing(from: verse) == [.bassline, .progression, .sample])
+        #expect(model.missingText(from: verse) == "bass, chords and chop")
 
         model.fill(verse.id)
         let filled = try #require(model.sections.first { $0.id == verse.id })
         #expect(model.missing(from: filled).isEmpty)
         #expect(filled.stitch.contains(part: built.progression), "the chords are in the form now")
         #expect(model.missingText(from: filled) == nil)
-        #expect(model.kinds(of: filled) == ["Groove", "Bass", "Chords"])
+        #expect(model.kinds(of: filled) == ["Groove", "Bass", "Chords", "Chop"])
     }
 
     @Test("two bass parts in one section both stay: a form plays everything it names")
@@ -335,7 +335,7 @@ struct StructureSongTests {
                                Section(name: "Hook", stitch: [built.groove].lanes, lengthInBars: 8)]
         let model = StructureModel(host: host, song: built.song)
 
-        #expect(model.orphanedText == "bass and chords")
+        #expect(model.orphanedText == "bass, chords and chop")
         model.fillAll()
         #expect(model.orphanedText == nil)
         #expect(model.sections.allSatisfy { $0.stitch.contains(part: built.progression) })
@@ -433,8 +433,8 @@ struct StructureSongTests {
         model.add(.verse)
         model.add(.hook)
         #expect(model.sections.allSatisfy { $0.stitch.contains(part: groove) && $0.stitch.contains(part: bass) })
-        // The dry chop is offered but does not play; the transport says which.
-        #expect(model.layers.contains { $0.id == chop && !$0.plays })
+        // The chop plays as cut.
+        #expect(model.layers.contains { $0.id == chop && $0.plays })
         #expect(await model.keep())
         #expect(app.song?.sections.map(\.name) == ["Intro", "Verse", "Hook"])
         app.save()

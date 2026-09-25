@@ -30,13 +30,14 @@ public protocol GridHosting: Sendable {
     func loadMachine(_ machine: SynthMachine) async throws
 
     /// A new part version left the surface. `false` when the host refused it, so the surface can
-    /// say so instead of showing a version the song does not have.
-    @discardableResult
-    func commit(_ version: PartVersion) async -> Bool
+    /// say so instead of showing a version the song does not have. Synchronous: a keep the frame
+    /// asks for before it plays must be in the song before the transport reads it.
+    @MainActor @discardableResult
+    func commit(_ version: PartVersion) -> Bool
 }
 
 extension GridHosting {
-    public func commit(_ version: PartVersion) async -> Bool { true }
+    @MainActor public func commit(_ version: PartVersion) -> Bool { true }
 }
 
 // MARK: - The live host

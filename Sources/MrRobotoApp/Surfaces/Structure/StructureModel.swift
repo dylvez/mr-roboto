@@ -19,9 +19,10 @@ public struct StructureSurface: Surface {
 /// What the Structure surface needs from whatever hosts it: the form kept, and the transport.
 @MainActor
 public protocol StructureHosting: AnyObject {
-    /// Replace the song's sections. `false` when the host refused (nothing open).
+    /// Replace the song's sections. `false` when the host refused (nothing open). Synchronous, so
+    /// a form kept before the transport plays is the form it plays.
     @discardableResult
-    func arrange(_ sections: [Section]) async -> Bool
+    func arrange(_ sections: [Section]) -> Bool
     /// Play the song from the top, as the space bar does.
     func play() async
     func stop() async
@@ -67,12 +68,12 @@ public final class StructureModel {
         /// which says everything about the part and nothing about which part it is.
         public var kind: String { StructureModel.name(of: type) }
 
-        /// Why it does not play, in a word, or nil when it does. A clean chop is "dry" — the lane's
-        /// raw material, waiting to be dirtied; anything else silent is simply "empty", and saying
-        /// "dry" about a melody, as this surface used to, is not a word about melodies at all.
+        /// Why it does not play, in a word, or nil when it does: "empty" is the only reason left. A
+        /// clean chop used to be "dry" and silent; it plays as cut now, so every part that has
+        /// something in it plays.
         public var silentReason: String? {
             guard !plays else { return nil }
-            return type == .sample ? "dry" : "empty"
+            return "empty"
         }
     }
 
@@ -149,7 +150,7 @@ public final class StructureModel {
     /// A library row dropped on a section.
     public func receive(_ payload: LibraryDragPayload, into section: SectionID) async -> Bool {
         // The host stitches into the *kept* form, so unkept edits are kept first rather than lost.
-        if isDirty { guard await keep() else { return false } }
+        if isDirty { guard keep() else { return false } }
         return await host.receive(payload, into: section)
     }
 
@@ -224,6 +225,29 @@ public final class StructureModel {
 
     public func select(_ id: SectionID?) { selected = id }
 
+    // MARK: Keeping as it goes
+
+    /// Every change to the form, for ⌘Z. The form is not versioned — it is the song's ordering of
+    /// its parts — so this history is the only way back through it, and it lives with the surface.
+    private var history = EditHistory<[Section]>()
+    private var lastEdit: (kind: String, at: Date)?
+    /// Keeps the form a moment after the last change. A test sets its delay to nil.
+    public let autoKeep = AutoKeep()
+
+    /// Runs one change to the form: remembered for undo, kept once the changes settle. Renaming a
+    /// section a letter at a time is one step of undo, not one per letter.
+    private func edit(_ kind: String, _ change: () -> Void) {
+        let before = sections
+        change()
+        guard sections != before else { return }
+        let now = Date()
+        if !(lastEdit.map { $0.kind == kind && now.timeIntervalSince($0.at) < 1.5 } ?? false) {
+            history.record(before)
+        }
+        lastEdit = (kind, now)
+        autoKeep.schedule { [weak self] in self?.keep() }
+    }
+
     /// A section in the preset's shape, stitched from the newest of everything, after the selected
     /// section or at the end.
     @discardableResult
@@ -235,7 +259,7 @@ public final class StructureModel {
     public func add(name: String, bars: Int, stitch: [Lane]? = nil) -> Section {
         let section = Section(name: name, stitch: stitch ?? defaultStitch, lengthInBars: max(1, bars))
         let at = selected.flatMap { id in sections.firstIndex { $0.id == id } }.map { $0 + 1 } ?? sections.count
-        sections.insert(section, at: at)
+        edit("add") { sections.insert(section, at: at) }
         selected = section.id
         return section
     }
@@ -252,7 +276,7 @@ public final class StructureModel {
 
     public func remove(_ id: SectionID) {
         guard let index = sections.firstIndex(where: { $0.id == id }) else { return }
-        sections.remove(at: index)
+        edit("remove") { _ = sections.remove(at: index) }
         if selected == id { selected = sections.isEmpty ? nil : sections[min(index, sections.count - 1)].id }
     }
 
@@ -264,7 +288,7 @@ public final class StructureModel {
         let copy = Section(name: original.name, stitch: original.stitch, lengthInBars: original.lengthInBars,
                            intensity: original.intensity, transitionIn: original.transitionIn,
                            transitionOut: original.transitionOut)
-        sections.insert(copy, at: index + 1)
+        edit("duplicate") { sections.insert(copy, at: index + 1) }
         selected = copy.id
         return copy
     }
@@ -272,34 +296,38 @@ public final class StructureModel {
     /// Moves a section so that it lands at `index` in the resulting list.
     public func move(_ id: SectionID, to index: Int) {
         guard let from = sections.firstIndex(where: { $0.id == id }) else { return }
-        let section = sections.remove(at: from)
-        sections.insert(section, at: max(0, min(index, sections.count)))
+        edit("move") {
+            let section = sections.remove(at: from)
+            sections.insert(section, at: max(0, min(index, sections.count)))
+        }
     }
 
     /// Drops `id` before `target`, or at the end when `target` is nil.
     public func move(_ id: SectionID, before target: SectionID?) {
         guard id != target, let from = sections.firstIndex(where: { $0.id == id }) else { return }
-        let section = sections.remove(at: from)
-        let to = target.flatMap { t in sections.firstIndex { $0.id == t } } ?? sections.count
-        sections.insert(section, at: to)
+        edit("move") {
+            let section = sections.remove(at: from)
+            let to = target.flatMap { t in sections.firstIndex { $0.id == t } } ?? sections.count
+            sections.insert(section, at: to)
+        }
     }
 
     public func moveEarlier(_ id: SectionID) {
         guard let index = sections.firstIndex(where: { $0.id == id }), index > 0 else { return }
-        sections.swapAt(index, index - 1)
+        edit("move") { sections.swapAt(index, index - 1) }
     }
 
     public func moveLater(_ id: SectionID) {
         guard let index = sections.firstIndex(where: { $0.id == id }), index < sections.count - 1 else { return }
-        sections.swapAt(index, index + 1)
+        edit("move") { sections.swapAt(index, index + 1) }
     }
 
     public func rename(_ id: SectionID, to name: String) {
-        update(id) { $0.name = name }
+        edit("rename \(id)") { update(id) { $0.name = name } }
     }
 
     public func setLength(_ id: SectionID, bars: Int) {
-        update(id) { $0.lengthInBars = max(1, min(128, bars)) }
+        edit("length \(id)") { update(id) { $0.lengthInBars = max(1, min(128, bars)) } }
     }
 
     /// Puts a part into a section's stitch, or takes it out.
@@ -310,13 +338,13 @@ public final class StructureModel {
     /// names now, so two grooves is a thing you can mean — and a part is in a section once or not
     /// at all, which is the only rule left.
     public func toggle(_ part: PartID, in id: SectionID) {
-        update(id) { section in
+        edit("toggle") { update(id) { section in
             if let at = section.stitch.firstIndex(where: { $0.part == part }) {
                 section.stitch.remove(at: at)
             } else {
                 section.stitch.append(Lane(part: part))
             }
-        }
+        } }
     }
 
     /// A section naming each part once.
@@ -354,16 +382,22 @@ public final class StructureModel {
 
     /// Puts every part no section plays into every section. One move for the case above.
     public func fillAll() {
-        for section in sections { fill(section.id) }
+        edit("fill all") { for section in sections { fillWithoutRecording(section.id) } }
     }
 
     /// Stitches the newest playable version of every kind this section is missing into it: the
     /// same choice `defaultStitch` makes for a new section, offered to one that already exists.
     public func fill(_ id: SectionID) {
+        edit("fill") { fillWithoutRecording(id) }
+    }
+
+    private func fillWithoutRecording(_ id: SectionID) {
         guard let section = sections.first(where: { $0.id == id }) else { return }
         for type in missing(from: section) {
             guard let layer = layers.last(where: { $0.type == type && $0.plays }) else { continue }
-            toggle(layer.id, in: id)
+            update(id) { section in
+                if !section.stitch.contains(where: { $0.part == layer.id }) { section.stitch.append(Lane(part: layer.id)) }
+            }
         }
     }
 
@@ -375,9 +409,12 @@ public final class StructureModel {
     // MARK: Keeping
 
     /// Hands the working copy to the song. Nothing is versioned: the sections *are* the song's.
-    public func keep() async -> Bool {
+    @discardableResult
+    public func keep() -> Bool {
+        autoKeep.cancel()
+        guard isDirty else { return true }
         lastError = nil
-        guard await host.arrange(sections) else {
+        guard host.arrange(sections) else {
             lastError = "Nothing is open to keep the arrangement in."
             return false
         }
@@ -386,13 +423,14 @@ public final class StructureModel {
     }
 
     public func revert() {
+        autoKeep.cancel()
         sections = committed
         if selected.map({ id in sections.contains { $0.id == id } }) != true { selected = sections.first?.id }
     }
 
     /// Keeps, then plays from the top.
     public func play() async {
-        guard await keep() else { return }
+        guard keep() else { return }
         await host.play()
     }
 
@@ -424,7 +462,8 @@ public final class StructureModel {
         case .bassline(let line): return !line.notes.isEmpty
         case .progression(let progression): return !progression.chords.isEmpty
         case .melody(let melody): return !melody.notes.isEmpty
-        case .sample(let sample): return !sample.degradation.isEmpty
+        // A chop plays as cut, dry or dusty: a bar you cut is a bar you can hear.
+        case .sample(let sample): return !sample.slices.isEmpty
         default: return false
         }
     }
@@ -441,5 +480,37 @@ public final class StructureModel {
     nonisolated static func clock(_ seconds: Double) -> String {
         let total = Int(seconds.rounded())
         return String(format: "%d:%02d", total / 60, total % 60)
+    }
+}
+
+extension StructureModel: KeepsAsItGoes {
+    public var hasUnkeptChanges: Bool { isDirty }
+
+    @discardableResult
+    public func keepNow() -> Bool { keep() }
+
+    public var canUndo: Bool { history.canUndo }
+    public var canRedo: Bool { history.canRedo }
+
+    public func undo() {
+        guard let previous = history.undo(from: sections) else { return }
+        lastEdit = nil
+        sections = previous
+        if selected.map({ id in sections.contains { $0.id == id } }) != true { selected = sections.first?.id }
+        autoKeep.schedule { [weak self] in self?.keep() }
+    }
+
+    public func redo() {
+        guard let next = history.redo(from: sections) else { return }
+        lastEdit = nil
+        sections = next
+        if selected.map({ id in sections.contains { $0.id == id } }) != true { selected = sections.first?.id }
+        autoKeep.schedule { [weak self] in self?.keep() }
+    }
+
+    public var keepLine: KeepLine {
+        if let lastError { return .refused(lastError) }
+        if isDirty { return .pending }
+        return committed.isEmpty ? .untouched : .kept(title: "\(committed.count) section\(committed.count == 1 ? "" : "s")")
     }
 }

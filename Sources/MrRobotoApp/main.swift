@@ -24,7 +24,7 @@ struct MrRobotoApp: App {
             FrameView(app: app)
                 .onAppear {
                     activation.opener = { [app] url in app.openPackage(at: url) }
-                    activation.onQuit = { [app] in app.saveIfNeeded(); app.sessions?.flush() }
+                    activation.onQuit = { [app] in app.keepSurfaceWork(); app.saveIfNeeded(); app.sessions?.flush() }
                 }
                 // The floor: every region folded away, one surface at the size it needs. `FrameView`
                 // raises it to whatever the regions you have open actually require, so asking for a
@@ -61,7 +61,7 @@ struct FrameCommands: Commands {
 
         CommandGroup(replacing: .newItem) {
             Button("New Song") {
-                app.open(Song(title: MrRobotoApp.untitledName()))
+                app.open(Song.new(title: MrRobotoApp.untitledName()))
                 // A song with nothing in it: the first thing to do is name it and give it a tempo
                 // and a key, so the header opens the settings rather than leaving "Untitled, 120,
                 // no key" to be discovered later.
@@ -123,6 +123,15 @@ struct FrameCommands: Commands {
                 .disabled(app.song == nil)
         }
 
+        // Undo and Redo reach the surface in front, which steps back through its own edits. A text
+        // field that is being typed in keeps its own: the words undo as words.
+        CommandGroup(replacing: .undoRedo) {
+            Button("Undo") { MrRobotoApp.undo(app, redo: false) }
+                .keyboardShortcut("z", modifiers: .command)
+            Button("Redo") { MrRobotoApp.undo(app, redo: true) }
+                .keyboardShortcut("z", modifiers: [.command, .shift])
+        }
+
         CommandGroup(replacing: .saveItem) {
             Button("Save") { app.save() }
                 .keyboardShortcut("s", modifiers: .command)
@@ -163,6 +172,8 @@ struct FrameCommands: Commands {
 
             Toggle("Loop", isOn: Binding(get: { app.isLooping }, set: { _ in app.toggleLoop() }))
                 .keyboardShortcut("l", modifiers: .command)
+            Toggle("Click", isOn: Binding(get: { app.isClicking }, set: { _ in app.toggleClick() }))
+                .keyboardShortcut("k", modifiers: .command)
         }
 
         // The three visual directions, live. Switching repaints every body that reads a token and
@@ -202,6 +213,14 @@ struct FrameCommands: Commands {
                 .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: .command)
             }
             Divider()
+            // The path's next step, from anywhere: what the rail's What next and the dock's Next
+            // chip offer, without reaching for either.
+            Button(app.proposals.first.map { "Next: \($0.title)" } ?? "Next Step") {
+                if let next = app.proposals.first { app.perform(next.action) }
+            }
+            .keyboardShortcut("]", modifiers: .command)
+            .disabled(app.proposals.isEmpty)
+            Divider()
             Button("Cast…") { app.openSurface(.cast, title: app.song?.title ?? "Cast") }
                 .keyboardShortcut("8", modifiers: .command)
                 .disabled(app.song == nil)
@@ -229,6 +248,17 @@ extension MrRobotoApp {
         if let item = app.bench.items.first(where: { $0.id == id }) {
             SurfaceWiring.shared.importModel(for: item, app: app).drop(url)
         }
+    }
+
+    /// ⌘Z: the text field being typed in, when there is one; otherwise the surface in front.
+    @MainActor
+    static func undo(_ app: AppState, redo: Bool) {
+        if NSApp.keyWindow?.firstResponder is NSText {
+            NSApp.sendAction(redo ? Selector(("redo:")) : Selector(("undo:")), to: nil, from: nil)
+            return
+        }
+        guard let item = app.bench.active else { return }
+        if redo { SurfaceWiring.shared.redo(for: item) } else { SurfaceWiring.shared.undo(for: item) }
     }
 
     static func untitledName(_ date: Date = Date()) -> String {

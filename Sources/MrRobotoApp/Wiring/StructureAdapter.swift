@@ -9,7 +9,7 @@ final class StructureAdapter: StructureHosting {
 
     init(app: AppState) { self.app = app }
 
-    func arrange(_ sections: [Section]) async -> Bool { app.arrange(sections) }
+    func arrange(_ sections: [Section]) -> Bool { app.arrange(sections) }
 
     func play() async {
         await app.stopTransport()

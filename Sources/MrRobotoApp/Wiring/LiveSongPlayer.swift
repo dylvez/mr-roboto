@@ -67,6 +67,8 @@ final class LiveSongPlayer: SongPlaybackHost {
     private var bouncedHits = 0
     /// Transport seconds at which the plan runs out, or nil when it loops forever.
     private var endsAt: Double?
+    /// The click, when the plan asks for one: the count-in, or the whole of playback.
+    private var metronome: Metronome?
 
     nonisolated init(service: AuditionService) {
         self.service = service
@@ -96,13 +98,16 @@ final class LiveSongPlayer: SongPlaybackHost {
 
         if plan.isArranged {
             try await beginArranged(plan, clock: clock, engine: engine, graph: graph)
+            startClick(plan, clock: clock, engine: engine, graph: graph, firstFreeNode: nodesInUse)
             return
         }
 
         // Every voice the plan names, on its own part's sampler and strip. One loop rather than
         // one block per kind: a plan can hold two grooves or a pad and a lead, and a block per kind
         // can only ever place the first of each.
-        let timeline = GrooveTimeline.tempo(clock.tempo, timeSignature: clock.timeSignature)
+        // After a count-in when there is one: the loops wait for the song to begin.
+        let timeline = GrooveTimeline.tempo(clock.tempo, timeSignature: clock.timeSignature,
+                                            startingAt: plan.voicesStartAt)
         var driving = Set<AuditionService.SamplerKey>()
         for voice in plan.voices {
             // A dusty groove is not played live: it is bounced through its chain below, onto a
@@ -165,7 +170,7 @@ final class LiveSongPlayer: SongPlaybackHost {
             }
             let node = try engine.player(next)
             try Self.route(node, part: voice.part, on: graph)
-            let source = AudioTrackSource(player: node, buffer: buffer, startsAt: 0, loops: plan.loops)
+            let source = AudioTrackSource(player: node, buffer: buffer, startsAt: plan.voicesStartAt, loops: plan.loops)
             engine.add(source)
             tracks.append(source)
             next += 1
@@ -175,6 +180,7 @@ final class LiveSongPlayer: SongPlaybackHost {
                 || !tracks.isEmpty else {
             throw Failure.nothingScheduled
         }
+        startClick(plan, clock: clock, engine: engine, graph: graph, firstFreeNode: next)
 
         // When only audio is playing and nothing loops, the plan has an end; a groove loops (or runs
         // to the song's length, which `GroovePlayer.endTime` already knows) so the reading below
@@ -281,7 +287,37 @@ final class LiveSongPlayer: SongPlaybackHost {
         endsAt = plan.loops ? nil : plan.formSeconds
     }
 
+    /// Player nodes the arranged path has taken: one per sequence.
+    private var nodesInUse: Int { sequences.count }
+
+    /// The metronome, on the first player node the plan left free, straight to the main mixer (a
+    /// click belongs to no part and no strip). The count-in's bars always click; `plan.click`
+    /// keeps it going. With every node taken the click is left out rather than a part — a click
+    /// is not worth losing the song for.
+    private func startClick(_ plan: SongPlayback, clock: TransportClock, engine: Engine, graph: MixGraph,
+                            firstFreeNode: Int) {
+        guard plan.click || plan.countInBars > 0, firstFreeNode < engine.players.count else { return }
+        let bars: Int
+        if plan.click {
+            // A looping song clicks as long as it plays; a grid of a few hundred bars is that.
+            bars = plan.loops ? 512 : plan.countInBars + (plan.lengthInBars ?? 64) + 1
+        } else {
+            bars = plan.countInBars
+        }
+        guard bars > 0, let click = try? Metronome(engine: engine, playerIndex: firstFreeNode,
+                                                     clock: clock, bars: bars) else { return }
+        try? Self.route(click.player, part: nil, on: graph)
+        engine.add(click)
+        metronome = click
+    }
+
     func end() async {
+        if let metronome {
+            engine?.remove(metronome)
+            metronome.transportWillStop()
+            metronome.player.stop()
+        }
+        metronome = nil
         if let engine {
             (try? engine.mixGraph())?.releaseSlots()
             for track in tracks { engine.remove(track) }

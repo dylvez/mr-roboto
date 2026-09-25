@@ -13,7 +13,7 @@ final class LyricsStub: LyricsHosting {
     /// A host with no song to take the version, so the surface has to say so.
     var refuses = false
 
-    func commit(_ version: PartVersion) async -> Bool {
+    func commit(_ version: PartVersion) -> Bool {
         if refuses { return false }
         committed.append(version)
         return true

@@ -250,7 +250,7 @@ public enum Guidance {
         }
 
         // 6. Parts that play and no form yet: the song gets arranged.
-        if song.sections.isEmpty, !grooves(in: song).isEmpty || !samples(in: song).isEmpty {
+        if !song.sections.contains(where: { !$0.stitch.isEmpty }), !grooves(in: song).isEmpty || !samples(in: song).isEmpty {
             out.append(Proposal(
                 title: "Arrange \(song.title) into sections",
                 rationale: "Structure lays the groove, the bass line and the chop out as intro, verse and hook, "
@@ -262,7 +262,8 @@ public enum Guidance {
         //    mix; then the master. The path strip has drawn these steps since M5 and M6, but the
         //    list of what to do next stopped at the arrangement, so a finished beat was told
         //    "nothing obvious left" with the singing, the mix and the master still to do.
-        if !song.sections.isEmpty {
+        if song.sections.contains(where: { !$0.stitch.isEmpty }),
+           song.versions.contains(where: StructureModel.plays) {
             let takes = self.takes(in: song)
             if takes.isEmpty {
                 out.append(Proposal(
@@ -401,6 +402,35 @@ public enum Guidance {
             // a Compare with nothing to compare is not a surface, it is an empty promise. The
             // unbound action this returns is refused by `canPerform` for exactly that reason.
             return fallback
+        }
+    }
+
+    // MARK: The dock as the song grows
+
+    /// The surfaces past the first seven that the dock carries once the song has reached them: the
+    /// words and the Booth once there is a form that plays, the Mixer once there is something to
+    /// mix. Before that they are a keystroke away (⌘9, ⌘0, ⇧⌘M) but not on the shelf, so a first
+    /// session is not a row of twelve chips.
+    public static func laterSurfaces(for song: Song?) -> [SurfaceKind] {
+        guard let song else { return [] }
+        let playsAForm = song.sections.contains { !$0.stitch.isEmpty } && song.versions.contains(where: StructureModel.plays)
+        var out: [SurfaceKind] = []
+        if playsAForm || song.versions.contains(where: { $0.type == .lyric }) { out.append(.lyrics) }
+        if playsAForm || !takes(in: song).isEmpty { out.append(.booth) }
+        if playsAForm || !mixes(in: song).isEmpty { out.append(.mixer) }
+        return out
+    }
+
+    /// What the dock's chip says after the name: the key that opens it.
+    public static func dockShortcut(for kind: SurfaceKind) -> String {
+        if let index = SurfaceKind.gateA.firstIndex(of: kind) { return "⌘\(index + 1)" }
+        switch kind {
+        case .lyrics: return "⌘9"
+        case .booth: return "⌘0"
+        case .mixer: return "⇧⌘M"
+        case .takes: return "⇧⌘T"
+        case .master: return "⌥⌘M"
+        default: return ""
         }
     }
 
@@ -797,6 +827,16 @@ extension AppState {
     /// the panel you were just in, not retire something to make room for its twin.
     @discardableResult
     public func perform(_ action: SurfaceAction) -> SurfaceID? {
+        // The master lives on the Mixer's own tab now: one surface and one working mix, rather than
+        // two surfaces each saving moves off the same parent. Whoever asks for the Master — the
+        // path, a proposal, the Director — gets the Mixer, on that tab.
+        if action.surface == .master {
+            var mixer = action
+            mixer.surface = .mixer
+            let id = perform(mixer)
+            if let id { showMasterTab(id) }
+            return id
+        }
         guard canPerform(action) else {
             note(.session, "That is not something this song can do right now", detail: action.title)
             return nil

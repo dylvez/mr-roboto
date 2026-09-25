@@ -145,7 +145,8 @@ extension Export {
             progress?(index + 1, album.songs.count, song.title)
             let plan = SongPlayback.plan(for: song) { ref in try? store.mediaURL(for: ref, song: song.id) }.looping(false)
             guard plan.isPlayable else { throw ReleaseFailure.unplayable(song.title) }
-            let stems = try await SectionBounce.render(plan, section: nil, kitsDirectory: AuditionService.defaultKitsDirectory)
+            let stems = try await SectionBounce.render(plan, section: nil, kitsDirectory: AuditionService.defaultKitsDirectory,
+                                                       onlyTheMix: true)
             let measured = MixMeter.integratedLoudness(stems.mix, sampleRate: stems.sampleRate)
             var trim = measured.isFinite ? album.targets.integratedLUFS - measured : 0
             func cut(_ trimDB: Double) -> [[Float]] {

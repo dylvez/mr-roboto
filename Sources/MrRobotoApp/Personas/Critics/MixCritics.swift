@@ -52,7 +52,7 @@ public struct MaskingCritic: MixCritic {
                 measurement: Measurement(.lowEndSeparationDB, measured: pair.gapDB,
                                          threshold: .atLeast(.lowEndSeparationDB, input.noticeableDB, unit: "dB"), unit: "dB"),
                 first: Fix("cut-quieter", title: String(format: "Cut %@ %.0f dB at %.0f Hz", pair.quieterLabel, -cut, hz),
-                           detail: "The part that does not own the band gives it up: room, not level. A mix version; revert it from the ledger.",
+                           detail: "The part that does not own the band gives it up: room, not level. A mix version; step back from Parts.",
                            change: .mixStrip(part: pair.quieter, gainDB: nil, bandHz: hz, bandDB: cut)),
                 second: Fix("cut-louder", title: String(format: "Cut %@ %.0f dB at %.0f Hz instead", pair.louderLabel, -cut, hz),
                             detail: "The other way round, when the quieter part is the one that should own it. A mix version.",

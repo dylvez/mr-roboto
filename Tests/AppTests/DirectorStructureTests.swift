@@ -187,15 +187,16 @@ struct DirectorFormToolTests {
         ])))
         #expect(refused.isError)
         #expect(refused.content.contains("not something a section plays"))
+        // A chop is stitched as cut: dry is a sound, not a reason to refuse.
         let dry = try #require(rig.app.song?.versions.first { $0.type == .sample })
-        let dryRefused = await rig.toolbox.run(ClaudeToolUse(id: "d", name: "stitch_section", input: .object([
-            .init("name", .string("Outro")), .init("bars", .int(4)),
+        let dryStitched = await rig.toolbox.run(ClaudeToolUse(id: "d", name: "stitch_section", input: .object([
+            .init("name", .string("Break")), .init("bars", .int(2)),
             .init("versions", .array([.string(dry.id.description)])), .init("position", .int(99)),
         ])))
-        #expect(dryRefused.isError)
-        #expect(dryRefused.content.contains("dry chop"))
-        #expect(dryRefused.content.contains("degrade_part"))
-        #expect(rig.app.song?.sections.count == 3)
+        #expect(!dryStitched.isError, "\(dryStitched.content)")
+        #expect(rig.app.song?.sections.count == 4)
+        let sections = rig.app.song?.sections ?? []
+        #expect(rig.app.arrange(Array(sections.dropLast())), "back to three for the rest of the test")
 
         let outro = await rig.toolbox.run(ClaudeToolUse(id: "o", name: "stitch_section", input: .object([
             .init("name", .string("Outro")), .init("bars", .int(4)), .init("versions", .array([])), .init("position", .int(99)),

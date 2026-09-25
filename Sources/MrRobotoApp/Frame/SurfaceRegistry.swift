@@ -1,3 +1,4 @@
+import SongGraph
 import SwiftUI
 
 /// How a `SurfaceKind` becomes a view.
@@ -119,8 +120,12 @@ public final class SurfaceRegistry {
         registry.register(.takes) { item, app in
             TakesSurfaceView(model: SurfaceWiring.shared.takesModel(for: item, app: app))
         }
+        // The Mixer carries the master on its own tab: one surface, one working mix.
         registry.register(.mixer) { item, app in
-            MixerSurfaceView(model: SurfaceWiring.shared.mixerModel(for: item, app: app), midi: SurfaceWiring.shared.midi(for: app))
+            MixerSurfaceView(model: SurfaceWiring.shared.mixerModel(for: item, app: app),
+                             midi: SurfaceWiring.shared.midi(for: app),
+                             master: SurfaceWiring.shared.masterModel(for: item, app: app),
+                             app: app)
         }
         registry.register(.master) { item, app in
             MasterSurfaceView(model: SurfaceWiring.shared.masterModel(for: item, app: app), app: app)
@@ -169,7 +174,13 @@ struct SurfaceHost: View {
                 // The surface takes everything the bench gives it. This is the other half of drawing
                 // one at a time: a panel that sized itself to its content left the rest of the bench
                 // blank, which looked like the frame had simply run out of things to say.
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                //
+                // And never more: `minWidth: 0` stops a surface whose row will not fit from asking the
+                // frame for its width. When one did, the frame's columns gave it up — the collapsed
+                // Band strip went to nothing and the rail was painted over. A row that will not fit
+                // is clipped here, and wraps in the surface itself.
+                .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .clipped()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Design.Palette.panel)
@@ -198,6 +209,15 @@ struct SurfaceHost: View {
             if crumbs.count > 1 {
                 LineageCrumbs(crumbs: crumbs, app: app)
             }
+            // Whether it is heard in the song, and the one move that fixes it when it is not.
+            if let part = boundPart, let audibility = app.audibility(of: part) {
+                // The words when there is room, the glyph alone when not: the tag gives way before
+                // anything you press does.
+                ViewThatFits(in: .horizontal) {
+                    AudibilityTag(audibility: audibility, apply: { app.apply($0) })
+                    AudibilityTag(audibility: audibility, apply: { app.apply($0) }, compact: true)
+                }
+            }
             // The band takes the free space between the words and the buttons, and only that, so
             // it never sits under anything you read or press.
             SurfaceBand(kind: item.kind)
@@ -206,6 +226,15 @@ struct SurfaceHost: View {
                 .layoutPriority(-1)
                 .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 5 }
             SurfacePlayControl(item: item, app: app)
+            if let owner = item.kind.owner, let band = app.band,
+               let name = Cast.standard.persona(owner)?.bible.name {
+                // The member this surface belongs to, a click away: the rail opens on them.
+                ChipButton(systemImage: "bubble.left", help: "Ask the \(name) about this") {
+                    app.regions.setCollapsed(false, for: .rail)
+                    band.ask(owner)
+                }
+                .accessibilityLabel("Ask the \(name)")
+            }
             ChipButton(systemImage: "questionmark",
                        help: app.primers.isShowing(item.kind)
                            ? "Hide what \(item.kind.rawValue) is for"
@@ -224,19 +253,25 @@ struct SurfaceHost: View {
                        help: app.closingWouldLoseWork(item.id)
                            ? "Close this surface — it has edits that were not kept, so it asks first"
                            : "Close this surface") {
+                // Closing keeps what is there; it only asks when the song refused the keep.
+                app.keepSurfaceWork()
                 if app.closingWouldLoseWork(item.id) { isConfirmingClose = true } else { app.closeSurface(item.id) }
             }
-            .confirmationDialog("Close \(item.kind.rawValue)? It has edits that were not kept.",
+            .confirmationDialog("Close \(item.kind.rawValue)? The song would not take its last edits.",
                                 isPresented: $isConfirmingClose, titleVisibility: .visible) {
                 Button("Close anyway", role: .destructive) { app.closeSurface(item.id) }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("What was kept is in the song. What was not is only here.")
+                Text("What was kept is in the song. The edits it refused are only here, and closing drops them.")
             }
         }
         .padding(.horizontal, Design.Metric.inset)
         .padding(.vertical, 12)
     }
+
+    /// The part the surface is working on — not always its binding: a Piano roll under a groove is
+    /// bound to the groove, and the tag is about the line.
+    private var boundPart: PartID? { SurfaceWiring.shared.part(for: item, app: app) }
 
     /// The lineage of the first bound part, when there is one.
     private var crumbs: [PartLineage.Crumb] {
@@ -274,5 +309,72 @@ struct SurfacePlaceholder: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Design.Metric.inset)
         .background(Design.Palette.panelAlt)
+    }
+}
+
+
+/// In a surface header: heard, or not and why. Quiet when it plays; the warning colour, with the
+/// fix as a button, when it does not.
+struct AudibilityTag: View {
+    let audibility: Audibility
+    let apply: (AudibilityFix) -> Void
+    /// The glyph alone, the words in the tooltip.
+    var compact = false
+
+    var body: some View {
+        switch audibility {
+        case .plays(let where_):
+            HStack(spacing: 4) {
+                Image(systemName: "speaker.wave.2")
+                    .font(Design.Typography.ui(9.5, weight: .medium))
+                if !compact {
+                    Text(where_)
+                        .font(Design.Typography.ui(11, weight: .regular))
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+            }
+            .foregroundStyle(Design.Palette.inkTertiary)
+            .help("Heard in the song \(where_). Structure decides where each part plays.")
+            .accessibilityElement(children: .combine)
+        case .silent(let why, let fix):
+            HStack(spacing: 6) {
+                Image(systemName: "speaker.slash")
+                    .font(Design.Typography.ui(9.5, weight: .medium))
+                if !compact {
+                    Text("Not in the song")
+                        .font(Design.Typography.ui(11, weight: .medium))
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+                if let fix, !compact {
+                    Button(fix.title) { apply(fix) }
+                        .buttonStyle(.plain)
+                        .font(Design.Typography.ui(11, weight: .semibold))
+                        .foregroundStyle(Design.Palette.accent)
+                        .help(fix.help)
+                }
+            }
+            .foregroundStyle(Design.Palette.warn)
+            .help(why)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Not in the song. \(why)")
+        }
+    }
+}
+
+extension AudibilityFix {
+    var title: String {
+        switch self {
+        case .addToEverySection: return "Add to every section"
+        case .openStructure: return "Open Structure"
+        }
+    }
+
+    var help: String {
+        switch self {
+        case .addToEverySection: return "Stitch this part into every section of the form. Structure takes it out of any you did not mean."
+        case .openStructure: return "Arrange the song so each section says what it plays."
+        }
     }
 }

@@ -180,6 +180,48 @@ public final class ChopLaneSurface: Surface {
     /// Which pad the eye is on. Auditioning one selects it.
     public var selectedSlice: Int?
 
+    // MARK: Keeping as it goes
+
+    /// What ⌘Z steps back through: the cut, the classes and the trims.
+    struct ChopState: Equatable, Sendable {
+        var markers: [Double]
+        var overrides: [Int: SliceClass]
+        var edits: [Int: SliceEdit]
+        var handEdited: Bool
+    }
+
+    private var history = EditHistory<ChopState>()
+    private var lastEdit: (kind: String, at: Date)?
+    /// Keeps the chop a moment after the last edit. A test sets its delay to nil.
+    public let autoKeep = AutoKeep()
+
+    private var state: ChopState {
+        ChopState(markers: markers, overrides: overrides, edits: edits, handEdited: handEdited)
+    }
+
+    private func apply(_ restored: ChopState) {
+        markers = restored.markers
+        overrides = restored.overrides
+        edits = restored.edits
+        handEdited = restored.handEdited
+        rebuildChop()
+    }
+
+    /// Before an edit; a slider dragged is one step of undo.
+    private func willEdit(_ kind: String) {
+        let now = Date()
+        defer { lastEdit = (kind, now) }
+        if let last = lastEdit, last.kind == kind, now.timeIntervalSince(last.at) < 0.75 { return }
+        history.record(state)
+    }
+
+    /// After an edit: the chop keeps itself once the edits settle. Trims are not in the version,
+    /// so a trim alone is undoable but has nothing to keep.
+    private func didEdit() {
+        guard hasUnkeptChopEdits else { autoKeep.cancel(); return }
+        autoKeep.schedule { [weak self] in self?.keepNow() }
+    }
+
     // MARK: Re-groove
 
     public let feels: FeelLibrary
@@ -297,6 +339,8 @@ public final class ChopLaneSurface: Surface {
     /// first.
     public func resliceFromDetection() {
         guard source.isWellFormed else { return }
+        willEdit("sensitivity")
+        defer { didEdit() }
         slicedAtSensitivity = min(1, max(0, sensitivity))
         var detector = SpectralFluxOnsetDetector()
         detector.threshold = onsetThreshold
@@ -431,10 +475,12 @@ public final class ChopLaneSurface: Surface {
         guard markers.indices.contains(markerIndex(forSlice: current.sliceIndex) ?? -1),
               let markerIndex = markerIndex(forSlice: current.sliceIndex) else { return }
         guard abs(markers[markerIndex] - current.time) > 1e-9 else { return }
+        willEdit("drag")
         markers[markerIndex] = current.time
         markers.sort()
         handEdited = true
         rebuildChop()
+        didEdit()
     }
 
     public func cancelDrag() { drag = nil }
@@ -445,18 +491,22 @@ public final class ChopLaneSurface: Surface {
         let minimum = Chopper().minimumSliceDuration
         guard time > minimum, time < source.duration - minimum else { return }
         guard !markers.contains(where: { abs($0 - time) < minimum }) else { return }
+        willEdit("add")
         markers.append(time)
         markers.sort()
         handEdited = true
         rebuildChop()
+        didEdit()
     }
 
     /// Remove a slice's marker; its audio joins the slice before it.
     public func removeMarker(slice index: Int) {
         guard let markerIndex = markerIndex(forSlice: index), markers.count > 1 else { return }
+        willEdit("remove")
         markers.remove(at: markerIndex)
         handEdited = true
         rebuildChop()
+        didEdit()
     }
 
     /// The marker that produced a slice. Not always `slice` itself: the chopper can insert a
@@ -486,15 +536,20 @@ public final class ChopLaneSurface: Surface {
 
     /// Force a slice's class. Sticks through a re-groove and through a commit.
     public func override(slice index: Int, as kind: SliceClass) {
-        guard chop.slices.indices.contains(index) else { return }
+        guard chop.slices.indices.contains(index), overrides[index] != kind else { return }
+        willEdit("override")
         overrides[index] = kind
         classifications = SliceClassifier().classify(chop, in: source.mono, overrides: overrides)
+        didEdit()
     }
 
     /// Give a slice back to the classifier.
     public func clearOverride(slice index: Int) {
-        guard overrides.removeValue(forKey: index) != nil else { return }
+        guard overrides[index] != nil else { return }
+        willEdit("override")
+        overrides.removeValue(forKey: index)
         classifications = SliceClassifier().classify(chop, in: source.mono, overrides: overrides)
+        didEdit()
     }
 
     // MARK: Per-slice controls
@@ -557,16 +612,22 @@ public final class ChopLaneSurface: Surface {
     }
 
     public func resetSlice(_ index: Int) {
-        guard edits.removeValue(forKey: index) != nil else { return }
+        guard edits[index] != nil else { return }
+        willEdit("reset \(index)")
+        edits.removeValue(forKey: index)
         needsAuditionRefresh = true
+        didEdit()
     }
 
     private func update(slice index: Int, _ change: (inout SliceEdit) -> Void) {
         guard chop.slices.indices.contains(index) else { return }
         var edit = edits[index] ?? SliceEdit()
         change(&edit)
+        guard edit != (edits[index] ?? SliceEdit()) else { return }
+        willEdit("trim \(index)")
         if edit.isNeutral { edits.removeValue(forKey: index) } else { edits[index] = edit }
         needsAuditionRefresh = true
+        didEdit()
     }
 
     // MARK: The map
@@ -735,9 +796,9 @@ public final class ChopLaneSurface: Surface {
             $0.deriving(.sample(sample), by: .user, operation: Operation.chop, note: note)
         } ?? PartVersion(partID: partID, kind: .sample(sample), author: .user,
                          parents: versions, operation: Operation.chop, note: note)
+        autoKeep.cancel()
         guard host.record(version) else { throw ChopLaneError.versionRefused }
         versions = [version.id]
-        handEdited = false
         keptChop = sliceMarkers
         return version
     }
@@ -792,8 +853,9 @@ public final class ChopLaneSurface: Surface {
         return playedRegroove != keptRegroove
     }
 
-    /// True when closing this lane would lose something. The frame asks before it does.
-    public var hasUnkeptChanges: Bool { hasUnkeptChopEdits || hasUnkeptRegroove }
+    /// True when closing this lane would lose something. A re-groove heard and not made is not
+    /// in it: that is a thing tried, and making it is a decision with its own button.
+    public var hasUnkeptChanges: Bool { hasUnkeptChopEdits }
 
     public var canKeepChop: Bool { whyChopCannotBeKept == nil }
 
@@ -814,12 +876,9 @@ public final class ChopLaneSurface: Surface {
     public var whyRegrooveCannotBeKept: String? {
         guard let current = currentRegroove else { return "Pick a feel first." }
         if current != playedRegroove {
-            return "Play the re-groove first, so what is kept is what was heard."
+            return "Play the re-groove first, so what is made is what was heard."
         }
-        if hasUnkeptChopEdits {
-            return "Keep the chop first, so the groove can say which cut it came from."
-        }
-        if current == keptRegroove { return "This re-groove is already kept." }
+        if current == keptRegroove { return "This groove is already made." }
         return nil
     }
 
@@ -845,6 +904,8 @@ public final class ChopLaneSurface: Surface {
             lastError = whyRegrooveCannotBeKept
             return
         }
+        // The chop first, so the groove's lineage names the cut it was played from.
+        guard keepNow() else { return }
         do {
             try commitRegroove()
             lastError = nil
@@ -862,4 +923,45 @@ public final class ChopLaneSurface: Surface {
 
     /// The two this surface spends its prominence on. Everything else is secondary.
     public nonisolated static let prominentLevers: [Lever] = [.sensitivity, .feel]
+}
+
+extension ChopLaneSurface: KeepsAsItGoes {
+    @discardableResult
+    public func keepNow() -> Bool {
+        guard hasUnkeptChopEdits else { autoKeep.cancel(); return true }
+        do {
+            try commitChop(note: source.label)
+            lastError = nil
+            return true
+        } catch {
+            lastError = "\(error)"
+            return false
+        }
+    }
+
+    public var canUndo: Bool { history.canUndo }
+    public var canRedo: Bool { history.canRedo }
+
+    public func undo() {
+        guard let previous = history.undo(from: state) else { return }
+        lastEdit = nil
+        apply(previous)
+        didEdit()
+    }
+
+    public func redo() {
+        guard let next = history.redo(from: state) else { return }
+        lastEdit = nil
+        apply(next)
+        didEdit()
+    }
+
+    public var keepLine: KeepLine {
+        if let lastError { return .refused(lastError) }
+        if hasUnkeptChopEdits { return .pending }
+        if keptChop != nil, let id = versions.last, let version = host?.song?.version(id) {
+            return .kept(title: PartLabel.title(of: version))
+        }
+        return .untouched
+    }
 }

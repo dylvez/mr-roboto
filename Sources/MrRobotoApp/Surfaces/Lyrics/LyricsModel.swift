@@ -4,8 +4,9 @@ import SongGraph
 /// What the Lyrics surface needs from its host: a version taken.
 @MainActor
 public protocol LyricsHosting: AnyObject {
+    /// Synchronous, so a keep the frame asks for before it plays is in the song when it reads.
     @discardableResult
-    func commit(_ version: PartVersion) async -> Bool
+    func commit(_ version: PartVersion) -> Bool
 }
 
 /// The Lyrics surface's model: text in, a lyric with stresses and a scheme out, the Lyricist's
@@ -16,7 +17,38 @@ public protocol LyricsHosting: AnyObject {
 public final class LyricsModel {
 
     public let surfaceID: SurfaceID
-    public var text: String { didSet { parse() } }
+    public var text: String {
+        didSet {
+            parse()
+            guard !isApplyingState, oldValue != text else { return }
+            let now = Date()
+            // One step of undo per pause in the typing, not per key.
+            if lastTyped.map({ now.timeIntervalSince($0) >= 1.5 }) ?? true { history.record(oldValue) }
+            lastTyped = now
+            didEdit()
+        }
+    }
+
+    // MARK: Keeping as it goes
+
+    private var history = EditHistory<String>()
+    private var lastTyped: Date?
+    private var isApplyingState = false
+    /// Keeps the words a moment after the last edit. A test sets its delay to nil.
+    public let autoKeep = AutoKeep()
+
+    private func didEdit() {
+        guard hasUnkeptChanges else { autoKeep.cancel(); return }
+        autoKeep.schedule { [weak self] in self?.keepNow() }
+    }
+
+    private func apply(_ words: String) {
+        isApplyingState = true
+        text = words
+        isApplyingState = false
+        lastTyped = nil
+        didEdit()
+    }
     public private(set) var lyric: Lyric
     public private(set) var observation: LyricObservation?
     public private(set) var readings: [PersonaReading] = []
@@ -94,8 +126,9 @@ public final class LyricsModel {
 
     /// Keeps the words as a version: derived from the one it opened on, or a new part.
     @discardableResult
-    public func commit() async -> PartVersion? {
+    public func commit() -> PartVersion? {
         lastError = nil
+        autoKeep.cancel()
         guard !isEmpty else { lastError = "Nothing to keep."; return nil }
         let payload = PartKind.lyric(lyric)
         let note = "\(observation?.lineCount ?? 0) lines · \(observation?.schemes.joined(separator: " / ") ?? "")"
@@ -105,10 +138,38 @@ public final class LyricsModel {
         } else {
             version = PartVersion(partID: PartID(), kind: payload, author: .user, operation: Operation.written, note: note)
         }
-        guard await host.commit(version) else { lastError = "The song would not take that version."; return nil }
+        guard host.commit(version) else { lastError = "The song would not take that version."; return nil }
         versions.append(version)
         lastKept = version
         return version
+    }
+}
+
+extension LyricsModel: KeepsAsItGoes {
+    @discardableResult
+    public func keepNow() -> Bool {
+        guard hasUnkeptChanges else { autoKeep.cancel(); return true }
+        return commit() != nil
+    }
+
+    public var canUndo: Bool { history.canUndo }
+    public var canRedo: Bool { history.canRedo }
+
+    public func undo() {
+        guard let previous = history.undo(from: text) else { return }
+        apply(previous)
+    }
+
+    public func redo() {
+        guard let next = history.redo(from: text) else { return }
+        apply(next)
+    }
+
+    public var keepLine: KeepLine {
+        if let lastError { return .refused(lastError) }
+        if hasUnkeptChanges { return .pending }
+        if let kept = versions.last ?? base { return .kept(title: PartLabel.title(of: kept)) }
+        return .untouched
     }
 }
 
@@ -119,13 +180,20 @@ final class LyricsAdapter: LyricsHosting {
     private let app: AppState
     init(app: AppState) { self.app = app }
 
-    func commit(_ version: PartVersion) async -> Bool {
+    /// What the Lyricist said last, so words kept as you type do not repeat it in the rail.
+    private var lastSaid: String?
+
+    func commit(_ version: PartVersion) -> Bool {
         guard app.record(version) else { return false }
         if case .lyric(let lyric) = version.kind {
             let readings = Lyricist().read(LyricObservation.of(lyric, label: PartLabel.title(of: version), corpus: app.voice, title: app.song?.title))
             let flags = readings.filter { !$0.holds }
-            app.note(.persona("Lyricist"), flags.isEmpty ? (readings.first?.says ?? "That holds.") : flags.map(\.says).joined(separator: " "),
-                     detail: PartLabel.title(of: version))
+            // The readings are on the surface; the rail hears only what changed and went wrong.
+            let line = flags.map(\.says).joined(separator: " ")
+            if !flags.isEmpty, line != lastSaid {
+                app.note(.persona("Lyricist"), line, detail: PartLabel.title(of: version))
+            }
+            lastSaid = flags.isEmpty ? nil : line
         }
         return true
     }
