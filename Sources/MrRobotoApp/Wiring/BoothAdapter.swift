@@ -23,6 +23,7 @@ final class BoothAdapter: BoothHosting, TakesHosting {
     var clock: TransportClock { app.clock }
     var isPlaying: Bool { app.transport.isPlaying }
     var playhead: Double { app.playhead }
+    var isLooping: Bool { app.isRunningALoop }
 
     func play() async { await app.startTransport() }
     func play(from section: SectionID?) async { await app.startTransport(fromSection: section) }
@@ -105,11 +106,15 @@ final class BoothAdapter: BoothHosting, TakesHosting {
     func recordingStarted(section: SectionID?, startedAt: Double) {
         let midi = SurfaceWiring.shared.midi(for: app)
         guard midi.mode != .off else { return }
-        Task {
-            guard let clock = await songClock() else { return }
+        captureStarting = Task {
+            guard let clock = await songClock(), !Task.isCancelled else { return }
             midi.beginCapture(section: section, clock: clock, startedAt: startedAt)
         }
     }
+
+    /// The capture's start, which waits for the engine: a take stopped before it lands must not
+    /// start a capture afterwards that nothing would ever end.
+    private var captureStarting: Task<Void, Never>?
 
     /// The running transport's clock with its zero at the song's top, so a host time read against
     /// it is a song time — as the recorder reads a take. The controller's capture used the engine's
@@ -123,6 +128,8 @@ final class BoothAdapter: BoothHosting, TakesHosting {
     }
 
     func recordingEnded(endedAt: Double) {
+        captureStarting?.cancel()
+        captureStarting = nil
         SurfaceWiring.shared.midi(for: app).endCapture(endedAt: endedAt)
     }
 

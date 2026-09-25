@@ -238,8 +238,11 @@ extension AppState {
             try mashup.append(version)
         }
         progress?("Saving", 1)
-        updated.upsert(mashup)
-        try store.save(updated)
+        // Onto the library as it is now, not as it was before the render: edits autosaved while it
+        // ran used to be written over with the older copies.
+        var latest = library
+        latest.upsert(mashup)
+        try store.save(latest)
         reloadLibrary()
         open(librarySong(mashup.id) ?? mashup)
         note(.session, "Made \(mashup.title)", detail: plan.sentences.joined(separator: " "))

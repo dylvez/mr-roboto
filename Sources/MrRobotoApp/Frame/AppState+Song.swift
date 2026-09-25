@@ -152,6 +152,8 @@ extension AppState {
             note(.session, "Nowhere to keep a copy", detail: "This session has no library directory.")
             return nil
         }
+        // The open song's last edit goes into the copy too: it was a moment from keeping itself.
+        if song?.id == id { keepSurfaceWork() }
         guard let original = song?.id == id ? song : library.song(id) else {
             note(.session, "That song is not in the library")
             return nil
@@ -413,5 +415,32 @@ extension AppState {
     static func listed(_ names: [String]) -> String {
         guard names.count > 1 else { return names.first ?? "" }
         return names.dropLast().joined(separator: ", ") + " and " + names[names.count - 1]
+    }
+}
+
+extension AppState {
+    /// A version for a song that is not the one open: written into that song's own package. Work
+    /// that finishes after its song was left — stems a minute in the making, a merge rendering —
+    /// used to be recorded into whatever song was open by then, its media in the other package.
+    @discardableResult
+    func record(_ version: PartVersion, intoLibrarySong id: SongID) -> Bool {
+        if song?.id == id { return record(version) }
+        guard let store, var target = library.song(id) else {
+            note(.session, "\(PartLabel.title(of: version)) finished after its song was closed", detail: "There was nowhere to keep it.")
+            return false
+        }
+        do {
+            try target.append(version)
+            var updated = library
+            updated.upsert(target)
+            try store.save(updated)
+            library = updated
+            note(.session, "\(PartLabel.title(of: version)) is in \(target.title)",
+                 detail: "It finished after you left that song, and is there when you open it.")
+            return true
+        } catch {
+            note(.session, "Could not keep \(PartLabel.title(of: version)) in \(target.title)", detail: "\(error)")
+            return false
+        }
     }
 }

@@ -446,6 +446,10 @@ public final class AppState {
             SurfaceWiring.shared.keepAll(on: state.bench)
         }
         state.keepSurface = { item in _ = SurfaceWiring.shared.keeper(for: item)?.keepNow() }
+        state.finishRunningWork = { [weak state] keeping in
+            guard let state else { return }
+            SurfaceWiring.shared.finishRunningWork(on: state, keeping: keeping)
+        }
         state.discardSurfaceModel = { SurfaceWiring.shared.discardModel(for: $0) }
         state.showMasterTab = { [weak state] id in
             guard let state, let item = state.bench.items.first(where: { $0.id == id }) else { return }
@@ -614,10 +618,24 @@ public final class AppState {
         // What is on screen is the open song's: keep it before anything is switched.
         keepSurfaceWork()
         let song = self.song?.id == requested.id ? (self.song ?? requested) : requested
+        // What is running for the song being left ends with it — the take kept in the song it was
+        // sung in — and the transport stops: the old song used to go on playing under the new one.
+        if let current = self.song, current.id != song.id {
+            finishRunningWork(true)
+            haltTransport()
+        }
         let stillUnsaved = hasUnsavedChanges && self.song?.id == song.id
         // The song that was open keeps its work. Opening another one used to drop whatever had not
         // been saved, without a word — the one place in the frame where a click lost something.
-        if hasUnsavedChanges, self.song?.id != song.id { save() }
+        if hasUnsavedChanges, self.song?.id != song.id {
+            save()
+            // A save that failed leaves the song open rather than dropping what it could not write.
+            if store != nil, hasUnsavedChanges, let current = self.song {
+                note(.session, "\(current.title) could not be saved, so it stays open",
+                     detail: lastSaveError.map { "\($0) Save again, or close it without saving." })
+                return
+            }
+        }
         if let previous = self.song, previous.id != song.id, source != .director { band?.songChanged() }
         leaveSong()
         openSongWithoutLogging(song)
@@ -637,8 +655,20 @@ public final class AppState {
     public func closeSong(saving: Bool = true) {
         guard let current = song else { return }
         if saving { keepSurfaceWork() }
-        if saving, hasUnsavedChanges { save() }
-        if transport != .stopped { Task { await stopTransport() } }
+        finishRunningWork(saving)
+        // Thrown away: its surfaces' pending keeps go with it, rather than firing into whatever
+        // opens next.
+        if !saving { for item in bench.items { discardSurfaceModel(item.id) } }
+        if saving, hasUnsavedChanges {
+            save()
+            if store != nil, hasUnsavedChanges {
+                note(.session, "\(current.title) could not be saved, so it stays open",
+                     detail: lastSaveError.map { "\($0) Save again, or delete it." })
+                return
+            }
+        }
+        haltTransport()
+        band?.songChanged()
         leaveSong()
         song = nil
         selectedVersion = nil
@@ -653,7 +683,11 @@ public final class AppState {
     /// Everything that was about the song that was open: the bench, its bindings, the answers.
     private func leaveSong() {
         for item in bench.items { bench.close(item.id) }
+        // The last song's failed save is not the next song's: it used to sit beside its Save.
+        lastSaveError = nil
         bindings.removeAll()
+        // The Album surfaces closed with the bench; their bindings go with them.
+        albumBindings.removeAll()
         requests.removeAll()
         surfaceLevers.removeAll()
         answers.removeAll()
@@ -884,6 +918,32 @@ public final class AppState {
     /// Keeps one surface's work, before it closes.
     @ObservationIgnored var keepSurface: (BenchItem) -> Void = { _ in }
 
+    /// Finishes what is running for the song being left — a take, a controller capture, an
+    /// audition — keeping what was made when asked. The wiring installs it.
+    @ObservationIgnored var finishRunningWork: (_ keeping: Bool) -> Void = { _ in }
+
+    /// A stop handed to the engine by a song switch, which could not wait for it; the next start
+    /// waits for it instead.
+    @ObservationIgnored private var pendingStop: Task<Void, Never>?
+
+    /// The transport stopped now, the engine's own stop following: a song switch cannot wait on
+    /// it, and the song being left must not go on sounding — or being followed — under the next.
+    private func haltTransport() {
+        guard transport != .stopped else { return }
+        following?.cancel()
+        following = nil
+        transport = .stopped
+        playhead = 0
+        playbackStartBar = 0
+        countInTargetBar = nil
+        runningLoopSeconds = nil
+        let transportHost = self.transportHost, playbackHost = self.playbackHost
+        pendingStop = Task { @MainActor in
+            await transportHost.stop()
+            await playbackHost?.end()
+        }
+    }
+
     /// Lets go of a surface's model so the next draw rebuilds it from its binding.
     @ObservationIgnored var discardSurfaceModel: (SurfaceID) -> Void = { _ in }
 
@@ -1101,8 +1161,22 @@ public final class AppState {
         return clock.seconds(forBar: playbackStartBar)
     }
 
-    /// True while the transport is counting in, before the bar it was started for.
-    public var isCountingIn: Bool { transport.isPlaying && playhead < 0 }
+    /// The bar a counted-in start counts in to, while that run lasts; nil for a plain start.
+    public private(set) var countInTargetBar: Int?
+    /// Whether the running plan loops, and the length of one pass in transport seconds. Read from
+    /// the plan that was started, not from the Loop toggle, which only takes effect on the next play.
+    private var runningLoopSeconds: Double?
+
+    /// Whether the running transport comes round at the end of its form.
+    public var isRunningALoop: Bool { transport.isPlaying && runningLoopSeconds != nil }
+
+    /// True while the transport is counting in, before the bar it was started for — any section's,
+    /// not only the first: the readout used to say "In 1" only when counting in to bar 1.
+    public var isCountingIn: Bool {
+        guard transport.isPlaying else { return false }
+        guard let target = countInTargetBar else { return playhead < 0 }
+        return playhead < clock.seconds(forBar: target) - 1e-6
+    }
 
     /// Plays from a bar of the song rather than the top: the sections from there on, and the takes
     /// where they fall. Playback only ever began at bar 1, so hearing the hook meant sitting
@@ -1117,10 +1191,17 @@ public final class AppState {
     /// of playback (the Booth's Click); nil leaves it to the transport's own toggle.
     public func startTransport(fromBar bar: Int, countIn: Int, click: Bool?) async {
         guard transport != .playing, transport != .starting else { return }
+        if let pendingStop {
+            self.pendingStop = nil
+            await pendingStop.value
+        }
         // Play what is on screen: an edit a moment old is in the song before the plan is read.
         keepSurfaceWork()
         refreshPlayback()
-        var plan = playback.starting(atBar: max(0, bar), countIn: countIn)
+        // A counted-in run is a take: one pass. Looped, the count-in bars came round with every
+        // pass and a take sung on the second pass landed past the song's end.
+        let base = countIn > 0 ? playback.looping(false) : playback
+        var plan = base.starting(atBar: max(0, bar), countIn: countIn)
         if let click { plan = plan.clicking(click || isClicking) }
         guard plan.isPlayable else {
             let silence = plan.silence ?? SongPlayback.Silence(headline: "Nothing to play", detail: "")
@@ -1137,11 +1218,15 @@ public final class AppState {
             try await playbackHost.begin(plan, clock: clock)
             try await transportHost.start(clock: clock)
             playbackStartBar = plan.startsAtBar
+            countInTargetBar = countIn > 0 ? max(0, bar) : nil
+            runningLoopSeconds = plan.loops ? plan.formSeconds : nil
             transport = .playing
             playhead = playbackOffsetSeconds
             followSection(atSeconds: playhead)
             follow()
-            let from = plan.startsAtBar > 0 ? (song?.sections.first { sectionStartBar($0.id) == plan.startsAtBar }?.name ?? "bar \(plan.startsAtBar + 1)") : nil
+            // Named for the bar it plays from, not the count-in bar before it.
+            let target = max(0, bar)
+            let from = target > 0 ? (song?.sections.first { sectionStartBar($0.id) == target }?.name ?? "bar \(target + 1)") : nil
             note(.you, from.map { "Play from \($0)" } ?? "Play",
                  detail: plan.summary + String(format: " · %.0f bpm · %@",
                                                clock.tempo, clock.timeSignature.description))
@@ -1240,6 +1325,8 @@ public final class AppState {
         transport = .stopped
         playhead = 0
         playbackStartBar = 0
+        countInTargetBar = nil
+        runningLoopSeconds = nil
         note(.you, "Stop")
     }
 
@@ -1262,8 +1349,12 @@ public final class AppState {
                 guard let self, let host = self.playbackHost, self.transport.isPlaying else { return }
                 let reading = await host.reading()
                 guard !Task.isCancelled, self.transport.isPlaying else { return }
-                // The engine counts from where it started; the song counts from its top.
-                self.playhead = reading.seconds + self.playbackOffsetSeconds
+                // The engine counts from where it started; the song counts from its top. Looping, it
+                // comes round: the engine's seconds never do, so the readout used to count on past
+                // the song's end while the strip lit the Verse again.
+                var seconds = reading.seconds
+                if let cycle = self.runningLoopSeconds, cycle > 0 { seconds = seconds.truncatingRemainder(dividingBy: cycle) }
+                self.playhead = seconds + self.playbackOffsetSeconds
                 self.followSection(atSeconds: self.playhead)
                 if !reading.isRunning {
                     await self.stopTransport()
@@ -1282,7 +1373,7 @@ public final class AppState {
         // Looping, the form comes round: bar 46 of a 46-bar song is its first bar again — or,
         // started from bar 12, its twelfth: a loop from a section runs that section to the end.
         let from = min(playbackStartBar, max(0, song.lengthInBars - 1))
-        if isLooping, song.lengthInBars > from, bar >= from { bar = from + (bar - from) % (song.lengthInBars - from) }
+        if runningLoopSeconds != nil, song.lengthInBars > from, bar >= from { bar = from + (bar - from) % (song.lengthInBars - from) }
         var start = 0
         for section in song.sections {
             start += max(1, section.lengthInBars)
@@ -1305,9 +1396,10 @@ public final class AppState {
 
     /// Bar and beat, 1-based, the way a transport reads: `"12.3"`.
     public var positionText: String {
-        if playhead < 0 {
-            // Counting in: the bars left before the song, the way a drummer counts them.
-            let left = Int((-playhead / clock.secondsPerBar).rounded(.up))
+        if isCountingIn {
+            // Counting in: the bars left before the section, the way a drummer counts them.
+            let target = countInTargetBar.map { clock.seconds(forBar: $0) } ?? 0
+            let left = Int(((target - playhead) / clock.secondsPerBar).rounded(.up))
             return "In \(max(1, left))"
         }
         let position = clock.position(forSeconds: max(0, playhead))

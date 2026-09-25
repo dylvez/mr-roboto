@@ -91,11 +91,16 @@ enum SectionBounce {
             guard let segment = plan.segments.first(where: { $0.section == section }) else {
                 throw Failure.nothingToBounce("the song has no such section")
             }
-            var moved = segment
-            moved.startBar = 0
-            copy.segments = [moved]
-            copy.lengthInBars = moved.lengthInBars
-            return (copy, segment.name, moved.lengthInBars)
+            // The whole plan moved to the section's first bar — takes and the record with it, one
+            // already sounding played from that point of its file — then cut to the section. Only
+            // the section used to move, so a Hook rendered at bar 0 had the Verse's take under it
+            // and its own take outside the render.
+            var moved = plan.looping(false).starting(atBar: segment.startBar)
+            moved.segments = moved.segments.filter { $0.section == section }
+            moved.lengthInBars = segment.lengthInBars
+            let end = TransportClock(tempo: max(1, plan.tempo), timeSignature: plan.timeSignature).seconds(forBar: segment.lengthInBars)
+            moved.tracks = moved.tracks.filter { $0.startsAt < end }
+            return (moved, segment.name, segment.lengthInBars)
         }
         guard section == nil else { throw Failure.nothingToBounce("the song is not arranged") }
         let bars = max(1, plan.lengthInBars ?? 1)

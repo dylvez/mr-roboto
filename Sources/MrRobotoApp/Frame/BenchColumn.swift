@@ -66,7 +66,12 @@ struct BenchColumn: View {
                 HStack(spacing: 8) {
                     Button("Import a Record…") { MrRobotoApp.importRecord(app) }
                         .buttonStyle(.borderedProminent)
-                    Button("New Song") { app.open(Song.new(title: MrRobotoApp.untitledName())) }
+                    // As File ▸ New Song does it: the settings open, so the first thing is a name,
+                    // a tempo and a key rather than "Untitled, 120, no key" found out later.
+                    Button("New Song") {
+                        app.open(Song.new(title: MrRobotoApp.untitledName()))
+                        app.wantsSongSettings = true
+                    }
                 }
                 .font(Design.Typography.ui(12.5))
             }
@@ -76,7 +81,7 @@ struct BenchColumn: View {
     private var emptyNote: some View {
         EmptyNote(title: app.song == nil ? "Nothing open." : "The bench is empty.",
                   detail: app.song == nil
-                      ? "Open a song from the library and its record lands here. Or import a record: choose an audio file here or with File ▸ Import Record (⌘I), or drop one on the Record surface."
+                      ? "Two ways in. Flip a record: import an audio file (⌘I, or drop one on the Record surface) and the app reads its key, tempo and form, then splits it into stems to chop. Or start from nothing: New Song (⌘N) opens an Intro, a Verse and a Hook, ready for a groove on the Grid. Songs you have made are in the library on the left."
                       : "Press a surface above and it fills the bench. Pin one to keep it on screen while you work in another.")
             .padding(Design.Metric.inset)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -193,6 +198,8 @@ private struct DockChip: View {
                     Text(shortcut)
                         .font(Design.Typography.numeric(10))
                         .foregroundStyle(isActive ? Design.Palette.accent : Design.Palette.inkTertiary)
+                        .lineLimit(1)
+                        .fixedSize()
                 }
             }
             .foregroundStyle(isActive ? Design.Palette.accent : Design.Palette.ink)

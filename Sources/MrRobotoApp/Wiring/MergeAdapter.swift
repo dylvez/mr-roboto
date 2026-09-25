@@ -142,7 +142,8 @@ final class MergeAdapter: MergeHosting {
             throw Failure.notMergeable(PartLabel.title(of: version))
         }
         let derived = version.deriving(moved, by: .user, operation: Operation.merge, note: move.sentence)
-        guard app.record(derived) else { throw Failure.noSong }
+        // Rendered into this song's package: recorded into this song, even if another is open now.
+        guard app.song?.id == song.id ? app.record(derived) : app.record(derived, intoLibrarySong: song.id) else { throw Failure.noSong }
         return derived
     }
 

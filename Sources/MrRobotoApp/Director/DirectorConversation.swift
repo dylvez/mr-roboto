@@ -114,6 +114,9 @@ public actor DirectorConversation {
                      onProgress: (@Sendable (Progress) -> Void)?) async throws -> DirectorOutcome {
         // The transcript as it was. Every exit that is not a completed turn restores this.
         let committed = messages
+        // Which thread the turn belongs to: one cleared under it — the song changed — must not
+        // get the old song's transcript written back when the turn unwinds.
+        let thread = generation
         var working = messages
         working.append(first)
         /// The newest reply, kept so a turn that runs out of rounds can hand back what the model
@@ -139,15 +142,15 @@ public actor DirectorConversation {
                 case .refusal(let refusal):
                     // The transcript keeps nothing: a refused turn is not history, and replaying it
                     // would only invite the same refusal on the next request.
-                    messages = committed
+                    settle(committed, thread: thread)
                     return .refused(refusal)
                 case .maxTokens:
-                    messages = working
+                    settle(working, thread: thread)
                     return .truncated(response)
                 case .toolUse, .pauseTurn:
                     let results = await runTools(response.toolUses, onProgress: onProgress)
                     guard !results.isEmpty else {
-                        messages = working
+                        settle(working, thread: thread)
                         return .finished(response)
                     }
                     // All results in one user message: splitting them teaches the model to stop
@@ -155,14 +158,14 @@ public actor DirectorConversation {
                     working.append(ClaudeTurn(role: .user, content: results.map { .toolResult($0) }))
                     onProgress?(.roundFinished(round: round))
                 case .endTurn, .other:
-                    messages = working
+                    settle(working, thread: thread)
                     return .finished(response)
                 }
             }
-            messages = working
+            settle(working, thread: thread)
             return .stoppedAtRoundLimit(rounds: maxRounds, last: lastResponse)
         } catch {
-            messages = committed
+            settle(committed, thread: thread)
             throw error
         }
     }
@@ -215,5 +218,17 @@ public actor DirectorConversation {
     public func spend() async -> ClaudeSpend { await client.spend }
 
     /// Starts over. The ledger is the client's and is not touched.
-    public func clear() { messages = [] }
+    public func clear() {
+        messages = []
+        generation += 1
+    }
+
+    /// Bumped by `clear()`, so a turn can tell its thread was started over while it ran.
+    private var generation = 0
+
+    /// The transcript a turn leaves, unless the thread was cleared under it.
+    private func settle(_ transcript: [ClaudeTurn], thread: Int) {
+        guard generation == thread else { return }
+        messages = transcript
+    }
 }

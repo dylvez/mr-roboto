@@ -465,6 +465,15 @@ final class SurfaceWiring {
     /// song — play, save, a song switch, a Director turn, quitting — so what is on screen is what
     /// is in the song. Returns false when any keep was refused.
     @discardableResult
+    /// Everything running for the song being left, finished: a take kept or let go, the
+    /// controller's capture the same, anything auditioning stopped.
+    func finishRunningWork(on app: AppState, keeping: Bool) {
+        for model in booths.values { model.finishTake(keeping: keeping) }
+        midiControl?.finishForSongChange(keeping: keeping)
+        for sheet in takeSheets.values { sheet.stopAudition() }
+        partPlayer?.stop()
+    }
+
     func keepAll(on bench: Bench) -> Bool {
         var allKept = true
         for item in bench.items {

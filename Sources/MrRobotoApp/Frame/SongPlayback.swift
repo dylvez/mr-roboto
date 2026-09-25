@@ -525,7 +525,9 @@ public struct SongPlayback: Equatable, Sendable {
     /// The longest thing in the plan, in seconds; nil when only a groove is playing, because a
     /// groove loops until you stop it.
     public var audioDuration: Double? {
-        let ends = tracks.map { $0.startsAt + $0.duration }.filter { $0 > 0 }
+        // What is scheduled is the file after its skipped head: a take counted in plays from its
+        // own bar, and counting the head as well kept the transport running on silence.
+        let ends = tracks.map { $0.startsAt + max(0, $0.duration - $0.skip) }.filter { $0 > 0 }
         return ends.max()
     }
 

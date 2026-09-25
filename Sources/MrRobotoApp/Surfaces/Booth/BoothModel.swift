@@ -35,12 +35,16 @@ public protocol BoothHosting: AnyObject {
     func recordingStarted(section: SectionID?, startedAt: Double)
     /// The take stopped, whatever it held.
     func recordingEnded(endedAt: Double)
+    /// Whether the running transport comes round. A take is one pass, so Record over a loop
+    /// starts the song again, unlooped, from the section.
+    var isLooping: Bool { get }
     /// What the Booth's own takes lanes read the takes through, and keep a comp through. The
     /// Booth's host is usually the Takes surface's host as well, so by default it is itself.
     var takesHost: (any TakesHosting)? { get }
 }
 
 public extension BoothHosting {
+    var isLooping: Bool { false }
     func recordingStarted(section: SectionID?, startedAt: Double) {}
     func recordingEnded(endedAt: Double) {}
     /// A host with no notion of sections plays from the top.
@@ -77,7 +81,7 @@ public final class BoothModel {
     /// The song's takes, newest last.
     public private(set) var takes: [PartVersion] = []
     public private(set) var lastError: String?
-    /// Transport seconds the recorder started at, for the display.
+    /// Song seconds the recorder started at, for the display.
     public private(set) var startedAt: Double?
     /// The device and channel the next take comes from.
     public var input: InputChoice {
@@ -159,6 +163,12 @@ public final class BoothModel {
     public var playhead: Double { host.playhead }
 
     /// The bars the chosen section spans, 0-based, end exclusive.
+    /// Whether the song is playing beyond the chosen section's last bar.
+    private var isPastSection: Bool {
+        guard let bars = sectionBars else { return false }
+        return host.playhead >= host.clock.seconds(forBar: bars.upperBound) - 0.05
+    }
+
     public var sectionBars: Range<Int>? {
         guard let song = host.song, let section else { return nil }
         var start = 0
@@ -288,6 +298,10 @@ public final class BoothModel {
         // was picked, so singing the hook meant waiting through everything before it. The count-in
         // only applies when Record starts the song: joining a song already playing has nothing to
         // count in to.
+        // A song already past the section — or going round a loop — would punch the take out at
+        // once, or land it past the song's end: it used to keep a fifth of a second of the Hook as
+        // the Verse's newest take. The song starts again from the section instead, counted in.
+        if host.isPlaying, host.isLooping || isPastSection { await host.stop() }
         if !host.isPlaying {
             await host.play(from: section, countInBars: countInBars, click: click)
             if countInBars > 0 {
@@ -320,6 +334,17 @@ public final class BoothModel {
     /// Stops the recorder; the recording becomes a take. The song keeps playing unless asked.
     @discardableResult
     public func stopRecording(stopSong: Bool = false) async -> PartVersion? {
+        let version = finishTake(keeping: true)
+        if stopSong { await host.stop() }
+        return version
+    }
+
+    /// Ends the take now, without waiting on anything: Stop, or the song being left. Kept as a
+    /// take of the song it was sung in when `keeping`; let go otherwise (the song is being thrown
+    /// away). A take still running when the song changed used to go on recording under the next
+    /// song — its recorder never stopped, so the next Record crashed on the input it still held.
+    @discardableResult
+    public func finishTake(keeping: Bool) -> PartVersion? {
         watching?.cancel()
         watching = nil
         guard state == .recording, let recorder else { return nil }
@@ -336,10 +361,9 @@ public final class BoothModel {
             recording = try recorder.stop()
         } catch {
             lastError = "\(error)"
-            if stopSong { await host.stop() }
             return nil
         }
-        if stopSong { await host.stop() }
+        guard keeping else { return nil }
         // Stopped before the section began: all the recorder heard was the click. Every take
         // stays, but this was never a take, and filing it would put an empty lane in the comp.
         if let begins, endedAt < begins {

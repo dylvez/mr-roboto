@@ -113,6 +113,11 @@ extension AppState {
     /// chopping it is one gesture, not two.
     @discardableResult
     func adoptPromotedRegion(_ version: PartVersion, from song: Song) -> SurfaceID? {
+        // The import's song is not the one open any more: the work lands in its own song.
+        if let open = self.song, open.id != song.id, library.song(song.id) != nil {
+            record(version, intoLibrarySong: song.id)
+            return nil
+        }
         let landed: Bool
         if self.song?.version(version.id) != nil {
             select(version.id)

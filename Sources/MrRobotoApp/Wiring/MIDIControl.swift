@@ -265,6 +265,8 @@ public final class MIDIControl {
         lastError = nil
         let booth = BoothAdapter(app: app, service: service)
         let section = app.activeSection ?? song.sections.first?.id
+        // Played in is one pass, as a take is: over a loop the song starts again, unlooped.
+        if app.isRunningALoop { await app.stopTransport() }
         let startedHere = !app.transport.isPlaying
         if startedHere {
             await booth.play(from: section, countInBars: song.sections.isEmpty ? 0 : 1, click: true)
@@ -291,6 +293,29 @@ public final class MIDIControl {
         await app.stopTransport()
         if version == nil { app.note(.session, "Nothing was played in", detail: "Play the controller while the song runs; what you play lands when you stop.") }
         return version
+    }
+
+    /// Ends whatever the controller is doing for the song being left: a capture kept into that
+    /// song when `keeping`, held notes let go. Play in carried across a switch used to record the
+    /// old song's notes into the new one on Stop.
+    public func finishForSongChange(keeping: Bool) {
+        isPlayingIn = false
+        if isCapturing {
+            if keeping {
+                endCapture(endedAt: app.playhead)
+            } else {
+                isCapturing = false
+                captured = []
+                captureClock = nil
+            }
+        }
+        let handles = held.values.flatMap { $0 }
+        held = [:]
+        guard !handles.isEmpty else { return }
+        Task {
+            await service.stopBass(handles)
+            await service.stopInstrument(handles)
+        }
     }
 
     // MARK: The knobs (I7)
