@@ -113,7 +113,7 @@ struct TransportBar: View {
         }
     }
 
-    /// Inputs I5: the controller on the kit, the bass, or nothing, and which controller it is.
+    /// Inputs I5: the controller on the kit, the bass, the keys, or nothing, and which it is.
     private var midi: some View {
         let control = SurfaceWiring.shared.midi(for: app)
         return VStack(alignment: .leading, spacing: 4) {
@@ -127,8 +127,9 @@ struct TransportBar: View {
                 .foregroundStyle(control.mode == .off ? Design.Palette.inkTertiary : Design.Palette.inkSecondary)
                 .lineLimit(1)
         }
-        .frame(width: 150, alignment: .leading)
-        .help("A MIDI controller plays the song's kit or its bass now; while the Booth records, what you play lands as a groove or a bass line.")
+        // Four chips side by side: Off, Kit, Bass and Keys.
+        .frame(width: 170, alignment: .leading)
+        .help("A MIDI controller plays the song's kit, its bass or its keys now; while the Booth records, what you play lands as a groove, a bass line or a melody.")
     }
 
     private func midiLine(_ control: MIDIControl) -> String {

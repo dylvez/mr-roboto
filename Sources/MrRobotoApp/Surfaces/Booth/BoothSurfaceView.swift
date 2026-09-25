@@ -218,7 +218,9 @@ struct BoothSurfaceView: View {
 
     // MARK: The panes
 
-    /// The song's newest lyric, read-only: the words are written on the Lyrics surface.
+    /// The song's newest lyric, read-only: the words are written on the Lyrics surface. When a
+    /// stanza there is labelled with the chosen section's name, it is what you sing, so it comes
+    /// first and the rest of the lyric waits under it, faint.
     private var wordsPane: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -232,11 +234,31 @@ struct BoothSurfaceView: View {
                         .truncationMode(.middle)
                 }
             }
+            if let hint = model.sectionWordsHint {
+                Text(hint)
+                    .font(Design.Typography.ui(11, weight: .regular))
+                    .foregroundStyle(Design.Palette.inkTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             if model.hasWords {
                 ScrollsInside {
-                    SungWords(lines: model.lyricLines)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 8)
+                    Group {
+                        if let words = model.sectionWords {
+                            VStack(alignment: .leading, spacing: 14) {
+                                SungWords(rows: words.stanza.enumerated().map { index, line in
+                                    BoothModel.WordsLine(label: index == 0 ? words.name : nil, line: line)
+                                })
+                                if !words.rest.isEmpty {
+                                    Hairline()
+                                    SungWords(rows: words.rest, faint: true)
+                                }
+                            }
+                        } else {
+                            SungWords(rows: model.wordsLines)
+                        }
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .background(Design.Palette.panelAlt, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
@@ -324,18 +346,34 @@ struct BoothLayout: Equatable {
 
 /// A lyric's lines as the Lyrics surface reads them back — stressed syllables heavier and darker —
 /// at a size to read from a step back, with a microphone in the way. A line is one run of text, so
-/// it wraps in a narrow pane instead of running off it.
+/// it wraps in a narrow pane instead of running off it. A stanza's label sits above its first line;
+/// faint words are the ones not being sung now.
 struct SungWords: View {
-    let lines: [LyricLine]
+    let rows: [BoothModel.WordsLine]
+    var faint = false
+
+    init(rows: [BoothModel.WordsLine], faint: Bool = false) {
+        self.rows = rows
+        self.faint = faint
+    }
+
+    init(lines: [LyricLine]) { self.init(rows: lines.map { BoothModel.WordsLine(label: nil, line: $0) }) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
-                if line.syllables.isEmpty {
+            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                if let label = row.label {
+                    Text(label.uppercased())
+                        .font(Design.Typography.label)
+                        .tracking(1.1)
+                        .foregroundStyle(faint ? Design.Palette.inkTertiary : Design.Palette.accent)
+                        .accessibilityLabel("Stanza: \(label)")
+                }
+                if row.line.syllables.isEmpty {
                     // A blank line is the gap between stanzas.
                     Color.clear.frame(height: 10)
                 } else {
-                    Text(Self.sung(line))
+                    Text(Self.sung(row.line, faint: faint))
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -344,13 +382,15 @@ struct SungWords: View {
         .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
-    static func sung(_ line: LyricLine) -> AttributedString {
+    static func sung(_ line: LyricLine, faint: Bool = false) -> AttributedString {
         var sung = AttributedString()
         for (index, syllable) in line.syllables.enumerated() {
             let stressed = syllable.stress != .unstressed
             var piece = AttributedString((index > 0 && syllable.startsWord ? " " : "") + syllable.text)
-            piece.font = Design.Typography.prose(15, weight: stressed ? .semibold : .regular)
-            piece.foregroundColor = stressed ? Design.Palette.ink : Design.Palette.inkSecondary
+            piece.font = Design.Typography.prose(faint ? 13 : 15, weight: stressed ? .semibold : .regular)
+            piece.foregroundColor = faint
+                ? (stressed ? Design.Palette.inkSecondary : Design.Palette.inkTertiary)
+                : (stressed ? Design.Palette.ink : Design.Palette.inkSecondary)
             sung += piece
         }
         return sung

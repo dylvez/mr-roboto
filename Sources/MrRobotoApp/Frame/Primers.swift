@@ -62,9 +62,10 @@ public enum Primer {
                         + "every record their samples came from. Drag songs in from the library; nothing is mastered here.")
         case .lyrics:
             return ("Lyrics",
-                    "Type the words, a line each, a blank line between stanzas. Every syllable gets its stress from the dictionary, "
-                        + "every stanza its rhyme scheme, and the Lyricist reads the lines against each other and against everything "
-                        + "this house has sung. The words keep themselves as a version, like any part.")
+                    "Type the words, a line each, a blank line between stanzas, and label a stanza with its section — [Verse], "
+                        + "[Hook] — so the Booth shows it when you sing that section. Set to melody puts a syllable on each note, and "
+                        + "the Lyricist says where a stressed one lands off the beat. Every stanza gets its rhyme scheme; the words "
+                        + "keep themselves as a version, like any part.")
         case .cast:
             return ("Cast",
                     "Who is in the room for this song. Each persona owns one thing and listens for it first; take one out "
@@ -84,8 +85,8 @@ public enum Primer {
                         + "offered, and taking it is yours.")
         case .booth:
             return ("Booth",
-                    "Pick a section and a count-in, press Record: the song plays from that section under you, with the words "
-                        + "in view, and the take lands on the bar you sang it on, latency taken out. Every take stays, lane by "
+                    "Pick a section and a count-in, press Record: the song plays from that section under you, with that "
+                        + "section's words in view, and the take lands on the bar you sang it on, latency taken out. Every take stays, lane by "
                         + "lane below, where the band flags bars and you make the comp.")
         case .mashup:
             return ("Mashup",

@@ -221,6 +221,13 @@ public final class MixerModel {
 
     // MARK: The overlay
 
+    /// The first section whose stitch names both parts, or nil — the whole song — when none does.
+    nonisolated static func meetingSection(of a: PartID, _ b: PartID, in song: Song?) -> SectionID? {
+        song?.sections.first { section in
+            section.stitch.contains { $0.part == a } && section.stitch.contains { $0.part == b }
+        }?.id
+    }
+
     /// Bounces the two chosen parts each on its own and reads where they share energy.
     public func readOverlay() async {
         guard let a = overlayA, let b = overlayB, a != b else { return }
@@ -232,7 +239,10 @@ public final class MixerModel {
             soloB.strips = mix.strips.map { var s = $0; s.isSoloed = s.part == b; s.isMuted = false; return s }
             var stripA = soloA.strip(for: a, label: ""); stripA.isSoloed = true; soloA.set(stripA)
             var stripB = soloB.strip(for: b, label: ""); stripB.isSoloed = true; soloB.set(stripB)
-            let section = host.song?.sections.first?.id
+            // Where the two actually meet: the first section that plays both, else the whole song.
+            // It used to be the first section, full stop — an intro where the bass had not come in
+            // read as a bass that masked nothing.
+            let section = Self.meetingSection(of: a, b, in: host.song)
             let (audioA, rate) = try await host.bounce(mix: soloA, section: section)
             let (audioB, _) = try await host.bounce(mix: soloB, section: section)
             overlay = Self.bands.map { band in

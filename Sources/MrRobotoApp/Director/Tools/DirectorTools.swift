@@ -76,6 +76,14 @@ public enum DirectorTools {
             // From an idea, appended after the thirty-four: a song with nothing imported, a beat written.
             StartSongTool(workspace: workspace).erased(),
             WriteGrooveTool(workbench: workbench, workspace: workspace).erased(),
+            // Writing, appended after the thirty-six: a tune and words in the Melodist's and the
+            // Lyricist's names, the song's settings, an instrument, the takes comped, another song.
+            WriteMelodyTool(workspace: workspace).erased(),
+            WriteLyricsTool(workspace: workspace).erased(),
+            SetSongTool(workspace: workspace).erased(),
+            SetInstrumentTool(workspace: workspace).erased(),
+            CompTakesTool(workspace: workspace, acting: persona ?? CreatePartVersionTool.director).erased(),
+            OpenSongTool(workspace: workspace).erased(),
         ]
         if let stage {
             let pad = pad ?? DirectorStagePad()
@@ -134,6 +142,13 @@ public enum DirectorTools {
         // From an idea, appended.
         "start_song",
         "write_groove",
+        // Writing, appended: the tune and the words, the song's settings, an instrument, a comp, another song.
+        "write_melody",
+        "write_lyrics",
+        "set_song",
+        "set_instrument",
+        "comp_takes",
+        "open_song",
     ]
 
     /// The two the frame adds. Appended after `names`, never among them: a session with no frame

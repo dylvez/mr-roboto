@@ -216,14 +216,83 @@ public struct Lyric: Hashable, Codable, Sendable {
     public var lines: [LyricLine]
     /// The melody version the syllables' `noteIndex` values refer to.
     public var alignedTo: VersionID?
+    /// Which stanza is which section: "[Hook]" written above a stanza. Nil for words with no labels,
+    /// so a lyric from before labels round-trips byte for byte.
+    public var labels: [StanzaLabel]?
 
-    public init(lines: [LyricLine], alignedTo: VersionID? = nil) {
-        self.lines = lines
-        self.alignedTo = alignedTo
+    /// A section's name on the stanza that starts at `line`.
+    public struct StanzaLabel: Hashable, Codable, Sendable {
+        public var line: Int
+        public var name: String
+        public init(line: Int, name: String) {
+            self.line = line
+            self.name = name
+        }
     }
 
-    /// The lyric as plain text, one line per row.
-    public var text: String { lines.map(\.text).joined(separator: "\n") }
+    public init(lines: [LyricLine], alignedTo: VersionID? = nil, labels: [StanzaLabel]? = nil) {
+        self.lines = lines
+        self.alignedTo = alignedTo
+        self.labels = labels
+    }
+
+    /// The lyric as plain text, one line per row, each label written back above its stanza as
+    /// "[Name]" — the way it was typed.
+    public var text: String {
+        var rows: [String] = []
+        for (index, line) in lines.enumerated() {
+            if let label = labels?.first(where: { $0.line == index }) { rows.append("[\(label.name)]") }
+            rows.append(line.text)
+        }
+        return rows.joined(separator: "\n")
+    }
+
+    /// The lines of the stanza labelled `name` (case aside), or nil when no stanza is. A stanza runs
+    /// from its label to the next blank line or the next label.
+    public func stanza(named name: String) -> [LyricLine]? {
+        guard let label = labels?.first(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame }),
+              lines.indices.contains(label.line) else { return nil }
+        var out: [LyricLine] = []
+        for index in label.line..<lines.count {
+            if index > label.line, labels?.contains(where: { $0.line == index }) == true { break }
+            if lines[index].syllables.isEmpty { if out.isEmpty { continue } else { break } }
+            out.append(lines[index])
+        }
+        return out
+    }
+
+    /// The same words set to a melody's notes: one syllable per note, in order, across the sung
+    /// lines. Syllables past the last note stay unset, and a melody with more notes than syllables
+    /// leaves the rest as melisma. The version is who the indices refer to.
+    ///
+    /// The simplest honest setting: a songwriter moves syllables afterwards, and the Lyricist reads
+    /// what this gives — a stressed syllable on a weak beat — rather than guessing an intent.
+    public func aligned(to melody: Melody, version: VersionID) -> Lyric {
+        var copy = self
+        copy.alignedTo = version
+        var note = 0
+        for l in copy.lines.indices {
+            for s in copy.lines[l].syllables.indices {
+                copy.lines[l].syllables[s].noteIndex = note < melody.notes.count ? note : nil
+                note += 1
+            }
+        }
+        return copy
+    }
+
+    /// The words with no melody under them.
+    public func unaligned() -> Lyric {
+        var copy = self
+        copy.alignedTo = nil
+        for l in copy.lines.indices {
+            for s in copy.lines[l].syllables.indices { copy.lines[l].syllables[s].noteIndex = nil }
+        }
+        return copy
+    }
+
+    /// Sung syllables, and how many of them have a note.
+    public var syllableCount: Int { lines.reduce(0) { $0 + $1.syllables.count } }
+    public var setSyllableCount: Int { lines.reduce(0) { $0 + $1.syllables.count { $0.noteIndex != nil } } }
 }
 
 // MARK: - Groove

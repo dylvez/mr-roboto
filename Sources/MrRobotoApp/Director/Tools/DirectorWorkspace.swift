@@ -1,6 +1,7 @@
 import MusicTheory
 import AudioEngine
 import Foundation
+import Instrument
 import Performance
 import SongGraph
 
@@ -105,6 +106,24 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     func startSong(title: String, tempo: Double, key: Key?, machine: String) -> Song?
     /// Plays a version for the user, now. False when this workspace has nothing to play through.
     func hear(_ version: PartVersion) async -> Bool
+
+    // Writing: the song's own settings, an instrument, a comp kept, another song opened.
+
+    /// The song's settings, each through the frame's own setter. False when nothing changed: the
+    /// same value, a value the setter will not take, or no song open.
+    @discardableResult func setTitle(_ title: String) -> Bool
+    @discardableResult func setArtist(_ artist: String) -> Bool
+    @discardableResult func setTempo(_ bpm: Double) -> Bool
+    @discardableResult func setKey(_ key: Key?) -> Bool
+    @discardableResult func setTimeSignature(_ signature: TimeSignature) -> Bool
+    /// The pitched instrument a part plays on, or the song's when `part` is nil. False when the
+    /// preset is unknown, no song is open, or it already plays on that preset.
+    @discardableResult func setInstrument(_ id: String, for part: PartID?) -> Bool
+    /// Rendered audio kept in the open song's package, for a version to point at. Nil, with the
+    /// reason in the rail, when there is nowhere to keep it.
+    func keepAudio(_ planar: [[Float]], sampleRate: Double) -> MediaRef?
+    /// Opens a song from the library, the open one kept first. Nil when the library does not hold it.
+    @discardableResult func openSong(_ id: SongID) -> Song?
 }
 
 /// `AppState` seen through the six things the Director needs.
@@ -199,6 +218,32 @@ public final class AppStateWorkspace: DirectorWorkspace {
         let player = SurfaceWiring.shared.player(for: app)
         await player.play(version)
         return player.isPlaying(version)
+    }
+
+    // The Director's own moves, signed as the Director: the rail says who changed the tempo, and
+    // the ledger who picked the instrument.
+    @discardableResult public func setTitle(_ title: String) -> Bool { app.setTitle(title, by: .director) }
+    @discardableResult public func setArtist(_ artist: String) -> Bool { app.setArtist(artist, by: .director) }
+    @discardableResult public func setTempo(_ bpm: Double) -> Bool { app.setTempo(bpm, by: .director) }
+    @discardableResult public func setKey(_ key: Key?) -> Bool { app.setKey(key, by: .director) }
+    @discardableResult public func setTimeSignature(_ signature: TimeSignature) -> Bool { app.setTimeSignature(signature, by: .director) }
+    @discardableResult public func setInstrument(_ id: String, for part: PartID?) -> Bool {
+        app.setInstrument(id, for: part, by: .persona("Director"))
+    }
+
+    /// Kept in the song's package the way the Booth keeps a take — a song not yet saved is saved
+    /// first, so it has a package to keep it in.
+    public func keepAudio(_ planar: [[Float]], sampleRate: Double) -> MediaRef? {
+        app.keepAudio(planar, sampleRate: sampleRate, what: "the comp")
+    }
+
+    /// Opened as the Director's own move, so the frame does not stop the turn that asked for it.
+    @discardableResult
+    public func openSong(_ id: SongID) -> Song? {
+        if app.song?.id == id { return app.song }
+        guard app.library.song(id) != nil else { return nil }
+        app.openSong(id, by: .director)
+        return app.song?.id == id ? app.song : nil
     }
 
     public func release(album id: AlbumID) async throws -> (URL, Export.AlbumReport) {
@@ -417,6 +462,86 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
 
     public private(set) var heard: [VersionID] = []
     public func hear(_ version: PartVersion) async -> Bool { heard.append(version.id); return false }
+
+    // The song's settings, held to the frame's rules: the same range, the same meters, and false
+    // for a value that changes nothing.
+
+    @discardableResult
+    public func setTitle(_ title: String) -> Bool {
+        let name = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let current = song, !name.isEmpty, name != current.title else { return false }
+        song?.title = name
+        return true
+    }
+
+    @discardableResult
+    public func setArtist(_ artist: String) -> Bool {
+        let name = artist.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let current = song, name != current.artist else { return false }
+        song?.artist = name
+        return true
+    }
+
+    @discardableResult
+    public func setTempo(_ bpm: Double) -> Bool {
+        guard let current = song, bpm.isFinite else { return false }
+        let clamped = min(AppState.tempoRange.upperBound, max(AppState.tempoRange.lowerBound, bpm))
+        guard abs(clamped - current.tempo) > 0.001 else { return false }
+        song?.tempo = clamped
+        return true
+    }
+
+    @discardableResult
+    public func setKey(_ key: Key?) -> Bool {
+        guard let current = song, key != current.key else { return false }
+        song?.key = key
+        return true
+    }
+
+    @discardableResult
+    public func setTimeSignature(_ signature: TimeSignature) -> Bool {
+        guard let current = song, signature != current.timeSignature,
+              signature.beatsPerBar >= 1, [1, 2, 4, 8, 16].contains(signature.beatUnit) else { return false }
+        song?.timeSignature = signature
+        return true
+    }
+
+    /// As the frame does it: a `.sound` part, one pick a version of the last.
+    @discardableResult
+    public func setInstrument(_ id: String, for part: PartID?) -> Bool {
+        guard let spec = InstrumentVoiceSpec.preset(id: id), let current = song,
+              SongPlayback.instrumentID(for: part, in: current) != spec.id else { return false }
+        let kind = PartKind.sound(Sound(instrument: spec.id, forPart: part))
+        if let previous = current.versions.last(where: { version in
+            if case .sound(let sound) = version.kind, sound.forPart == part { return InstrumentVoiceSpec.preset(id: sound.instrument) != nil }
+            return false
+        }) {
+            return record(previous.deriving(kind, by: .user, operation: Operation.written, note: spec.name))
+        }
+        return record(PartVersion(partID: PartID(), kind: kind, author: .user, operation: Operation.written, note: spec.name))
+    }
+
+    /// Audio a tool kept, by the reference it was given. There is no package, so the reference is
+    /// made up and the audio is held here for a test to read.
+    public private(set) var kept: [MediaRef: [[Float]]] = [:]
+
+    public func keepAudio(_ planar: [[Float]], sampleRate: Double) -> MediaRef? {
+        guard song != nil,
+              let hash = ContentHash(hex: (UUID().uuidString + UUID().uuidString).replacingOccurrences(of: "-", with: "")) else { return nil }
+        let ref = MediaRef(hash: hash, fileExtension: "wav")
+        kept[ref] = planar
+        return ref
+    }
+
+    /// The open song goes back into the library, as a save would put it, and the other comes out.
+    @discardableResult
+    public func openSong(_ id: SongID) -> Song? {
+        if song?.id == id { return song }
+        guard let found = library.song(id) else { return nil }
+        if let song { library.upsert(song) }
+        song = found
+        return found
+    }
 
     public func export(_ what: String) async throws -> [URL] {
         guard let current = song, what == "midi" else {

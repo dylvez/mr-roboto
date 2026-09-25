@@ -274,6 +274,57 @@ struct SingingTests {
         #expect(String(SungWords.sung(model.lyricLines[1]).characters) == "and then again")
     }
 
+    @Test("the words pane sings the chosen section's stanza first, the rest faint under it; unlabelled, it says how to label one")
+    func sectionWords() throws {
+        let (defaults, suite) = try defaults()
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let host = StubBoothHost(song: song())
+        // Verse, Hook, and a second Verse.
+        host.song?.sections.append(Section(name: "Verse", stitch: [], lengthInBars: 4))
+        let model = BoothModel(host: host, defaults: defaults)
+        let ids = try #require(host.song?.sections.map(\.id))
+
+        // Words that name no stanza: the whole lyric, and how to get the Verse's.
+        try host.song?.append(PartVersion(partID: PartID(), kind: .lyric(Lyricist.lyric(from: "no labels\nat all")),
+                                          author: .user, operation: Operation.written, note: ""))
+        #expect(model.hasWords && model.sectionWords == nil)
+        #expect(model.sectionWordsHint == "Label a stanza [Verse] on the Lyrics surface to see it here.")
+
+        let text = "[Verse]\nfirst verse line\nstill the first\n\n[hook]\nthe hook line\n\n[Verse]\nsecond verse line"
+        let words = Lyricist.lyric(from: text)
+        try host.song?.append(PartVersion(partID: PartID(), kind: .lyric(words), author: .user,
+                                          operation: Operation.written, note: ""))
+
+        let verse = try #require(model.sectionWords)
+        #expect(verse.name == "Verse")
+        #expect(verse.stanza.map(\.text) == ["first verse line", "still the first"])
+        #expect(verse.stanza == words.stanza(named: "Verse"), "the stanza the lyric itself names")
+        #expect(verse.rest.map(\.line.text) == ["the hook line", "", "second verse line"], "the rest, one gap between stanzas")
+        #expect(verse.rest.map(\.label) == ["hook", nil, "Verse"])
+        #expect(model.sectionWordsHint == nil)
+
+        model.section = ids[1]
+        #expect(model.sectionWords?.name == "hook", "case aside")
+        #expect(model.sectionWords?.stanza.map(\.text) == ["the hook line"])
+        #expect(model.sectionWords?.rest.map(\.line.text) == ["first verse line", "still the first", "", "second verse line"])
+
+        model.section = ids[2]
+        #expect(model.sectionWords?.stanza.map(\.text) == ["second verse line"], "the second Verse sings the second stanza")
+
+        // Whole song: no section to find, nothing to hint, every stanza labelled in place.
+        model.section = nil
+        #expect(model.sectionWords == nil && model.sectionWordsHint == nil)
+        #expect(model.wordsLines.map(\.line.text) == ["first verse line", "still the first", "", "the hook line", "", "second verse line"])
+        #expect(model.wordsLines.compactMap(\.label) == ["Verse", "hook", "Verse"])
+        // One Verse stanza for two Verse sections: both sing it.
+        try host.song?.append(PartVersion(partID: PartID(), kind: .lyric(Lyricist.lyric(from: "[Verse]\nonly verse\nhere")),
+                                          author: .user, operation: Operation.written, note: ""))
+        model.section = ids[2]
+        #expect(model.sectionWords?.stanza.map(\.text) == ["only verse", "here"])
+        model.section = ids[1]
+        #expect(model.sectionWords == nil && model.sectionWordsHint == "Label a stanza [Hook] on the Lyrics surface to see it here.")
+    }
+
     @Test("the words and the takes share the room at every bench size, the words a readable column")
     func layout() {
         for size in SurfaceGeometry.all {
@@ -293,8 +344,9 @@ struct SingingTests {
         let host = host(recordingFromBar: 0)
         let (defaults, suite) = try defaults()
         defer { defaults.removePersistentDomain(forName: suite) }
-        let text = "Pulled the blinds on a Tuesday\nlet the kettle sing alone\nevery room I ever rented\nkept a little of my own\n\n"
-            + "So call it off, call it over\ncall it anything but gone\nI have sung this at the window\nlong enough to know the song"
+        // Labelled, so the Verse being recorded is sung first and the Hook waits under it.
+        let text = "[Verse]\nPulled the blinds on a Tuesday\nlet the kettle sing alone\nevery room I ever rented\nkept a little of my own\n\n"
+            + "[Hook]\nSo call it off, call it over\ncall it anything but gone\nI have sung this at the window\nlong enough to know the song"
         try host.song?.append(PartVersion(partID: PartID(), kind: .lyric(Lyricist.lyric(from: text)), author: .user,
                                           operation: Operation.written, note: ""))
         let model = BoothModel(host: host, defaults: defaults)

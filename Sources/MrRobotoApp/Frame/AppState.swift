@@ -27,6 +27,16 @@ public struct SessionEntry: Identifiable, Sendable, Equatable {
         case director
         case persona(String)
 
+        /// Who a version's author is, on the rail: you, the Director, or a band member by name.
+        /// The rail used to call every kept version yours, so a groove the Beatmaker wrote read
+        /// as something you had done.
+        public init(_ author: Author) {
+            switch author {
+            case .user: self = .you
+            case .persona(let name): self = name == "Director" ? .director : .persona(name)
+            }
+        }
+
         /// What the rail prints above the line. A persona is called by its name and nothing else —
         /// "Cass", not "Persona: Cass" — because that is how you would refer to them.
         public var label: String {
@@ -578,12 +588,12 @@ public final class AppState {
     }
 
     /// Opens a song from the library by id. No-op if the library does not hold it.
-    public func openSong(_ id: SongID) {
+    public func openSong(_ id: SongID, by source: SessionEntry.Source = .you) {
         guard let found = library.song(id) else {
             note(.session, "That song is not in the library")
             return
         }
-        open(found)
+        open(found, by: source)
     }
 
     /// Opens a song. Clears the bench — surfaces are bound to versions of the song that was open —
@@ -593,7 +603,11 @@ public final class AppState {
     /// song *is* something: a record with a waveform, a key, a tempo and its stems, or failing that
     /// the newest thing anyone made in it. `Guidance.opening(_:)` decides which, and a song holding
     /// nothing Gate A can show opens on nothing rather than on a surface with a shrug in it.
-    public func open(_ requested: Song) {
+    ///
+    /// - Parameter source: who opened it. A switch the Director made itself is not news to the
+    ///   band: telling it would stop the turn in flight — the one that asked for the song — and
+    ///   start its thread over before it could read what it opened.
+    public func open(_ requested: Song, by source: SessionEntry.Source = .you) {
         // Reopening the song that is open — its row in the sidebar, pressed again — is not a way
         // to throw its work away: the library's copy of it is only as new as the last save, so
         // the one in the frame is the one that opens.
@@ -604,7 +618,7 @@ public final class AppState {
         // The song that was open keeps its work. Opening another one used to drop whatever had not
         // been saved, without a word — the one place in the frame where a click lost something.
         if hasUnsavedChanges, self.song?.id != song.id { save() }
-        if let previous = self.song, previous.id != song.id { band?.songChanged() }
+        if let previous = self.song, previous.id != song.id, source != .director { band?.songChanged() }
         leaveSong()
         openSongWithoutLogging(song)
         if stillUnsaved {
@@ -613,7 +627,7 @@ public final class AppState {
         }
         defaults.set(song.id.rawValue.uuidString, forKey: Self.lastOpenedSongKey)
         restoreRail(for: song)
-        note(.you, "Opened \(song.title)", detail: provenanceSummary(of: song))
+        note(source, "Opened \(song.title)", detail: provenanceSummary(of: song))
         if let opening = Guidance.opening(song) { perform(opening) }
     }
 
@@ -792,7 +806,7 @@ public final class AppState {
                 let mix = playback.mix, section = activeSection
                 Task { await host.mixChanged(mix, section: section) }
             }
-            note(.you, "\(version.operation.capitalized) → \(version.type.rawValue)\(versionNumber(of: version.id).map { " v\($0)" } ?? "")",
+            note(SessionEntry.Source(version.author), "\(version.operation.capitalized) → \(version.type.rawValue)\(versionNumber(of: version.id).map { " v\($0)" } ?? "")",
                  detail: provenanceLine(for: version))
             if joined > 0 {
                 note(.session, "\(PartLabel.title(of: version)) plays in the song",

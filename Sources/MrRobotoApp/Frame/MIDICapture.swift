@@ -3,7 +3,7 @@ import Foundation
 import MusicTheory
 import SongGraph
 
-// Inputs I6: what was played on a controller while the song ran, as a groove or a bass line.
+// Inputs I6: what was played on a controller while the song ran, as a groove, a bass line or a tune.
 
 /// A note as the hands played it: transport seconds in, and out when the key was let go.
 public struct PlayedNote: Hashable, Sendable {
@@ -87,14 +87,29 @@ public enum MIDICapture {
     /// The bass line, unquantised: starts and lengths in beats from the section's first bar, as
     /// played, so the lag against the kick is the one the hands put there.
     public static func bassline(_ notes: [PlayedNote], clock: TransportClock, sectionStart: Double, end: Double?, key: Key?, sound: String?) -> Bassline? {
-        let events: [NoteEvent] = notes.compactMap { note in
+        let events = noteEvents(notes, clock: clock, sectionStart: sectionStart, end: end)
+        guard !events.isEmpty else { return nil }
+        return Bassline(notes: events, sound: sound ?? "finger", key: key)
+    }
+
+    /// The tune, the same way: as played, from the section's first bar, one pass as long as the
+    /// section — so a phrase whose last bar is a breath keeps the breath. Quantising is the Piano
+    /// roll's job, where it can be heard and undone.
+    public static func melody(_ notes: [PlayedNote], clock: TransportClock, sectionStart: Double, end: Double?, bars: Int?) -> Melody? {
+        let events = noteEvents(notes, clock: clock, sectionStart: sectionStart, end: end)
+        guard !events.isEmpty else { return nil }
+        return Melody(notes: events, lengthInBars: bars)
+    }
+
+    /// Played notes as note events in beats from the section's first bar. A note let go of has
+    /// the length it was held; one still held at the end runs to the end of the take.
+    static func noteEvents(_ notes: [PlayedNote], clock: TransportClock, sectionStart: Double, end: Double?) -> [NoteEvent] {
+        notes.compactMap { note in
             let start = clock.beat(forSeconds: note.start - sectionStart)
             guard start >= -0.05 else { return nil }
             let stop = note.end ?? end ?? (note.start + clock.secondsPerBeat)
             let duration = max(1.0 / 16, clock.beat(forSeconds: stop - note.start))
             return NoteEvent(pitch: Pitch(midi: note.note), start: max(0, start), duration: duration, velocity: max(1, min(127, note.velocity)))
         }
-        guard !events.isEmpty else { return nil }
-        return Bassline(notes: events, sound: sound ?? "finger", key: key)
     }
 }

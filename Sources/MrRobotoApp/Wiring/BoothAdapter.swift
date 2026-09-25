@@ -117,18 +117,7 @@ final class BoothAdapter: BoothHosting, TakesHosting {
 
     /// Media into the song's package, saving the song first when it has no package yet.
     private func store(_ url: URL, in song: Song) -> MediaRef? {
-        guard let store = app.store else {
-            app.note(.session, "There is no library to keep the take in")
-            return nil
-        }
-        do {
-            if (try? store.songStore(for: song.id)) == nil { app.save() }
-            let package = try store.songStore(for: song.id)
-            return try package.addMedia(copying: url)
-        } catch {
-            app.note(.session, "Could not keep the take", detail: "\(error)")
-            return nil
-        }
+        app.keepMedia(copying: url, what: "the take")
     }
 
     // MARK: TakesHosting
@@ -172,15 +161,8 @@ final class BoothAdapter: BoothHosting, TakesHosting {
     func stopAudition() { Task { await service.stop() } }
 
     func keepComp(_ rendered: Comp.Rendered, plan: CompPlan, takes: [PartVersion]) -> PartVersion? {
-        guard let song = app.song, let first = takes.first else { return nil }
-        let url = scratchURL()
-        do {
-            try Self.write(rendered.planar, sampleRate: rendered.sampleRate, to: url)
-        } catch {
-            app.note(.session, "Could not render the comp", detail: "\(error)")
-            return nil
-        }
-        guard let media = store(url, in: song) else { return nil }
+        guard app.song != nil, let first = takes.first else { return nil }
+        guard let media = app.keepAudio(rendered.planar, sampleRate: rendered.sampleRate, what: "the comp") else { return nil }
         let duration = Double(rendered.planar.first?.count ?? 0) / rendered.sampleRate
         let audio = Audio(media: media, role: .take, sampleRate: rendered.sampleRate, channelCount: rendered.planar.count,
                           duration: duration, alignmentOffset: rendered.alignmentSeconds, comp: plan)
@@ -191,7 +173,6 @@ final class BoothAdapter: BoothHosting, TakesHosting {
                                       return span.endBar - span.startBar == 1 ? "bar \(span.startBar + 1) \(name)" : "bars \(span.startBar + 1)–\(span.endBar) \(name)"
                                   }.joined(separator: ", "))
         guard app.record(version) else { return nil }
-        try? FileManager.default.removeItem(at: url)
         return version
     }
 

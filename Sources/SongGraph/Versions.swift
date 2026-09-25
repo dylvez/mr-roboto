@@ -85,7 +85,7 @@ public enum Operation {
     public static let mix = "mix"
     /// A stem of another record, moved to this song's key and tempo and set on its bar grid.
     public static let mashup = "mashup"
-    /// Played in on a controller while the song ran — a groove or a bass line as the hands put it.
+    /// Played in on a controller while the song ran — a groove, a bass line or a tune as the hands put it.
     public static let played = "played"
     /// Filled in by the schema 1 → 2 migration for versions that predate provenance operations.
     public static let unknown = "unknown"

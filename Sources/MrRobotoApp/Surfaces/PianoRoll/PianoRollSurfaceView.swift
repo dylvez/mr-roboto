@@ -178,6 +178,11 @@ struct PianoRollSurfaceView: View {
                       ? "Copy the line into as many bars again after it: \(model.lengthInBars) becomes \(model.lengthInBars * 2)"
                       : "The roll stops at \(PianoRollModel.longestLine) bars")
                 .accessibilityLabel("Double the line")
+            RollChip("Tighten", isOn: false) { model.tighten() }
+                .disabled(!model.canTighten)
+                .opacity(model.canTighten ? 1 : 0.4)
+                .help(tightenHelp)
+                .accessibilityLabel("Tighten the line to the grid")
             if let groove = model.groove, groove.bars != model.lengthInBars {
                 Text(model.lengthInBars > groove.bars
                      ? "The groove is \(groove.bars) bar\(groove.bars == 1 ? "" : "s"); its kick repeats under every bar of the line."
@@ -188,6 +193,15 @@ struct PianoRollSurfaceView: View {
             }
             Spacer(minLength: 0)
         }
+    }
+
+    private var tightenHelp: String {
+        if model.writesFromLevers && !model.isHandEdited {
+            return "The writer's line sits where the levers put it. Tighten is for a line you played or drew."
+        }
+        guard model.canTighten else { return "Every note is already on the sixteenth grid" }
+        let lag = model.mode == .bass && model.lagMS != 0 ? String(format: ", %+.0f ms behind it as the lever says", model.lagMS) : ""
+        return "Every note onto the nearest sixteenth\(lag); ends on the grid too. ⌘Z puts the feel back."
     }
 
     /// The choices, with a length the line arrived with shown too when it is not one of them.

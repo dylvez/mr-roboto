@@ -430,15 +430,64 @@ public struct Lyricist: Persona {
             says: observation.longestLine <= Int(Lyricist.syllableCeiling)
                 ? String(format: "%.1f syllables a line; the longest is %d.", syllables, observation.longestLine)
                 : "Line \((observation.longestLineIndex ?? 0) + 1) is \(observation.longestLine) syllables — more than one breath. Break it."))
+        // Only once the words are set to a melody: before that there is no beat to land on, which
+        // is the encoded answer to lyricist.oq.stress-without-melody.
+        if let setting = observation.setting {
+            let off = setting.offBeat
+            notes.append(PersonaReading(
+                rule: "lyricist.stressed-on-strong", feature: .offBeatStresses, value: Double(off.count),
+                holds: off.isEmpty,
+                says: off.first.map { first in
+                    let more = off.count - 1
+                    return "\"\(first.text)\" in line \(first.line + 1) lands on \(first.position), bar \(first.bar) — move the note or the word."
+                        + (more == 0 ? "" : " \(more) more stressed syllable\(more == 1 ? " lands" : "s land") off the beat.")
+                } ?? (setting.stressedOnNotes == 0 ? "No stressed syllable is on a note yet."
+                    : setting.stressedOnNotes == 1 ? "The one stressed syllable on a note lands on a beat."
+                    : "Every stressed syllable on a note lands on a beat: \(setting.stressedOnNotes) of them.")))
+        }
+        if let hook = observation.hook {
+            notes.append(PersonaReading(
+                rule: "lyricist.title-in-the-hook", feature: .titleInHook, value: hook.sings ? 1 : 0,
+                holds: hook.sings,
+                says: hook.sings
+                    ? "The \(hook.name) sings the title, \"\(hook.title)\"."
+                    : "The \(hook.name) never sings \"\(hook.title)\". Put the title in it or retitle the song; the listener names it by what it sings back."))
+        }
         return notes
     }
 
     // MARK: - Words into syllables
 
+    /// A line written "[Hook]" names the stanza under it, and is not sung: the name, or nil for a
+    /// line that is sung.
+    public static func label(in line: String) -> String? {
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        guard trimmed.hasPrefix("["), trimmed.hasSuffix("]"), trimmed.count > 2 else { return nil }
+        let name = trimmed.dropFirst().dropLast().trimmingCharacters(in: .whitespaces)
+        return name.isEmpty ? nil : name
+    }
+
+    /// The section names a stanza is the hook under. A songwriter says either, and "Chorus 2" is
+    /// still the chorus, so the first word decides.
+    public static let hookNames: Set<String> = ["hook", "chorus"]
+
+    public static func isHook(_ name: String) -> Bool {
+        name.split(separator: " ").first.map { hookNames.contains($0.lowercased()) } ?? false
+    }
+
     /// A lyric out of text, syllabified and stressed by the lexicon. Blank lines separate stanzas
-    /// and are kept as empty lines.
+    /// and are kept as empty lines; a "[Hook]" line labels the stanza under it rather than being sung.
     public static func lyric(from text: String, lexicon: StressLexicon = .shared) -> Lyric {
-        let lines = text.components(separatedBy: "\n").map { line -> LyricLine in
+        var labels: [Lyric.StanzaLabel] = []
+        var sung: [String] = []
+        for line in text.components(separatedBy: "\n") {
+            if let name = label(in: line) {
+                labels.append(Lyric.StanzaLabel(line: sung.count, name: name))
+            } else {
+                sung.append(line)
+            }
+        }
+        let lines = sung.map { line -> LyricLine in
             var syllables: [Syllable] = []
             for raw in line.split(separator: " ", omittingEmptySubsequences: true) {
                 let word = String(raw)
@@ -453,7 +502,66 @@ public struct Lyricist: Persona {
             }
             return LyricLine(syllables: syllables)
         }
-        return Lyric(lines: lines)
+        return Lyric(lines: lines, labels: labels.isEmpty ? nil : labels)
+    }
+}
+
+// The two readings that need the song around the words. Measured, not thresholded — the rules
+// they serve are categorical in the bible — so they live here rather than in the vocabulary, and
+// the bible (and the document it ships as) is unchanged.
+extension Feature {
+    /// Stressed syllables set to notes that start off the beat.
+    public static let offBeatStresses = Feature("lyric.stress.offbeat")
+    /// 1 when the stanza labelled Hook or Chorus sings the song's title, 0 when it does not.
+    public static let titleInHook = Feature("lyric.hook.title")
+}
+
+// MARK: - Where a note falls
+
+/// Where a note starts in its bar, as a player counts it: "2", "the and of 2", "the e of 3".
+public struct BeatPlace: Hashable, Sendable {
+    /// 1-based, counted from the melody's own first bar.
+    public var bar: Int
+    /// 1-based within the bar.
+    public var beat: Int
+    /// How far past the beat, 0 ..< 1.
+    public var fraction: Double
+    public var beatsPerBar: Int
+
+    /// A thirty-second of a beat. Played-in notes are a hair early or late and are still on the
+    /// beat; a sixteenth (a quarter of a beat) and a triplet (a third) are well outside it, and far
+    /// enough from each other to be told apart.
+    public static let tolerance = 1.0 / 32
+
+    public init(start: Double, beatsPerBar: Int) {
+        let perBar = max(1, beatsPerBar)
+        // A start a hair before a beat is that beat: snapping first keeps 1.99 from reading as the
+        // last sixteenth of 1.
+        var start = start
+        if abs(start - start.rounded()) < Self.tolerance { start = start.rounded() }
+        let barIndex = (start / Double(perBar)).rounded(.down)
+        let inBar = start - barIndex * Double(perBar)
+        let whole = inBar.rounded(.down)
+        self.bar = Int(barIndex) + 1
+        self.beat = Int(whole) + 1
+        self.fraction = inBar - whole
+        self.beatsPerBar = perBar
+    }
+
+    /// On a whole beat — any of them. Beats 2 and 4 count: a stress on the backbeat is how this
+    /// house's idiom sings, and flagging every one would bury the stress that really fights the
+    /// tune — the one pushed onto an "and" or a sixteenth, which no count puts a weight on.
+    public var isOnTheBeat: Bool { fraction < Self.tolerance }
+
+    public var name: String {
+        func near(_ x: Double) -> Bool { abs(fraction - x) < Self.tolerance }
+        if isOnTheBeat { return "\(beat)" }
+        if near(0.5) { return "the and of \(beat)" }
+        if near(0.25) { return "the e of \(beat)" }
+        if near(0.75) { return "the a of \(beat)" }
+        if near(1.0 / 3) { return "the second triplet of \(beat)" }
+        if near(2.0 / 3) { return "the third triplet of \(beat)" }
+        return "between \(beat) and \(beat == beatsPerBar ? 1 : beat + 1)"
     }
 }
 
@@ -490,10 +598,44 @@ public struct LyricObservation: Hashable, Sendable {
     public var corpusSongs: Int
     /// Stress marks per line: "u" and "S", one per syllable.
     public var shapes: [String]
+    /// How the words sit on the melody they are set to. Nil when they are not set, or the melody
+    /// was not given to read them against.
+    public var setting: Setting?
+    /// The stanza labelled Hook or Chorus against the song's title. Nil when no stanza is, or the
+    /// song has no title to look for.
+    public var hook: Hook?
+
+    /// A stressed syllable whose note starts off the beat.
+    public struct OffBeat: Hashable, Sendable {
+        /// Index into the lyric's lines, blank lines counted, as the other readings count them.
+        public var line: Int
+        public var syllable: Int
+        /// The syllable as a reader finds it in the word: "-lone" continues one, "win-" starts one.
+        public var text: String
+        public var bar: Int
+        /// "the and of 2".
+        public var position: String
+    }
+
+    public struct Setting: Hashable, Sendable {
+        /// Stressed syllables that have a note.
+        public var stressedOnNotes: Int
+        /// The ones that land off the beat, in the order they are sung.
+        public var offBeat: [OffBeat]
+    }
+
+    public struct Hook: Hashable, Sendable {
+        /// The label as written: "Hook", "Chorus 2".
+        public var name: String
+        public var title: String
+        /// Whether the stanza sings the title, case and punctuation aside.
+        public var sings: Bool
+    }
 
     public init(label: String, lineCount: Int, syllablesPerLine: Double, longestLine: Int, longestLineIndex: Int?,
                 patternMatch: Double, worstPair: Pair?, perfectRhymeRate: Double, schemes: [String],
-                reusedImages: [(image: String, songs: Int)], corpusSongs: Int, shapes: [String]) {
+                reusedImages: [(image: String, songs: Int)], corpusSongs: Int, shapes: [String],
+                setting: Setting? = nil, hook: Hook? = nil) {
         self.label = label
         self.lineCount = lineCount
         self.syllablesPerLine = syllablesPerLine
@@ -506,24 +648,23 @@ public struct LyricObservation: Hashable, Sendable {
         self.reusedImages = reusedImages
         self.corpusSongs = corpusSongs
         self.shapes = shapes
+        self.setting = setting
+        self.hook = hook
     }
 
     public static func == (a: LyricObservation, b: LyricObservation) -> Bool {
         a.label == b.label && a.shapes == b.shapes && a.schemes == b.schemes && a.patternMatch == b.patternMatch
+            && a.setting == b.setting && a.hook == b.hook
     }
     public func hash(into hasher: inout Hasher) { hasher.combine(label); hasher.combine(shapes) }
 
-    /// Read off a lyric, against the house corpus when there is one.
+    /// Read off a lyric, against the house corpus when there is one. With the melody the words
+    /// are aligned to, where their stresses land is read too; with the song's title, whether the
+    /// hook sings it.
     public static func of(_ lyric: Lyric, label: String = "Lyric", corpus: LyricCorpus? = nil, title: String? = nil,
+                          melody: Melody? = nil, beatsPerBar: Int = 4,
                           lexicon: StressLexicon = .shared) -> LyricObservation {
-        // Stanzas: runs of non-empty lines.
-        var stanzas: [[Int]] = []
-        var current: [Int] = []
-        for (index, line) in lyric.lines.enumerated() {
-            if line.syllables.isEmpty { if !current.isEmpty { stanzas.append(current); current = [] } }
-            else { current.append(index) }
-        }
-        if !current.isEmpty { stanzas.append(current) }
+        let stanzas = Self.stanzas(of: lyric)
         let sung = stanzas.flatMap { $0 }
 
         let shapes = lyric.lines.map { line in line.syllables.map { $0.stress == .unstressed ? "u" : "S" }.joined() }
@@ -574,12 +715,72 @@ public struct LyricObservation: Hashable, Sendable {
 
         let counts = sung.map { lyric.lines[$0].syllables.count }
         let longest = counts.enumerated().max { $0.element < $1.element }
-        let reuse = corpus?.reuse(in: lyric.text, excluding: title) ?? []
+        // The sung lines only: `lyric.text` writes the labels back, and "[Chorus]" is not an image.
+        let reuse = corpus?.reuse(in: lyric.lines.map(\.text).joined(separator: "\n"), excluding: title) ?? []
         return LyricObservation(label: label, lineCount: sung.count,
                                 syllablesPerLine: counts.isEmpty ? 0 : Double(counts.reduce(0, +)) / Double(counts.count),
                                 longestLine: longest?.element ?? 0, longestLineIndex: longest.map { sung[$0.offset] },
                                 patternMatch: patternMatch, worstPair: worst, perfectRhymeRate: perfectRate,
-                                schemes: schemes, reusedImages: reuse, corpusSongs: corpus?.lyrics.count ?? 0, shapes: shapes)
+                                schemes: schemes, reusedImages: reuse, corpusSongs: corpus?.lyrics.count ?? 0, shapes: shapes,
+                                setting: lyric.alignedTo == nil ? nil : melody.map { Self.setting(of: lyric, on: $0, beatsPerBar: beatsPerBar) },
+                                hook: title.flatMap { Self.hook(in: lyric, title: $0) })
+    }
+
+    /// The lyric's stanzas as line indices: runs of non-empty lines. A label starts one too, blank
+    /// line or not — "[Hook]" typed straight under the verse is a new stanza, and its rhymes are
+    /// its own. A scheme is written for each stanza of two lines or more, in this order.
+    public static func stanzas(of lyric: Lyric) -> [[Int]] {
+        var stanzas: [[Int]] = []
+        var current: [Int] = []
+        let labelled = Set((lyric.labels ?? []).map(\.line))
+        for (index, line) in lyric.lines.enumerated() {
+            if labelled.contains(index), !current.isEmpty { stanzas.append(current); current = [] }
+            if line.syllables.isEmpty { if !current.isEmpty { stanzas.append(current); current = [] } }
+            else { current.append(index) }
+        }
+        if !current.isEmpty { stanzas.append(current) }
+        return stanzas
+    }
+
+    /// Where the stressed syllables land on the notes they are set to.
+    ///
+    /// Primary stress only. Secondary stress is the lexicon's weaker claim — the second half of
+    /// "sunlight" — and a singer lets it fall where the tune puts it; flagging it would bury the
+    /// syllable a listener really hears pushed off the beat.
+    static func setting(of lyric: Lyric, on melody: Melody, beatsPerBar: Int) -> Setting {
+        var stressed = 0
+        var off: [OffBeat] = []
+        for (l, line) in lyric.lines.enumerated() {
+            for (s, syllable) in line.syllables.enumerated() where syllable.stress == .primary {
+                guard let n = syllable.noteIndex, melody.notes.indices.contains(n) else { continue }
+                stressed += 1
+                let place = BeatPlace(start: melody.notes[n].start, beatsPerBar: beatsPerBar)
+                guard !place.isOnTheBeat else { continue }
+                let continues = s + 1 < line.syllables.count && !line.syllables[s + 1].startsWord
+                let text = (syllable.startsWord ? "" : "-") + syllable.text + (continues ? "-" : "")
+                off.append(OffBeat(line: l, syllable: s, text: text, bar: place.bar, position: place.name))
+            }
+        }
+        return Setting(stressedOnNotes: stressed, offBeat: off)
+    }
+
+    /// The first stanza labelled Hook or Chorus, and whether it sings `title`.
+    static func hook(in lyric: Lyric, title: String) -> Hook? {
+        let wanted = words(title)
+        guard !wanted.isEmpty, let label = lyric.labels?.first(where: { Lyricist.isHook($0.name) }),
+              let stanza = lyric.stanza(named: label.name) else { return nil }
+        // Whole words only, so a song called "Run" is not sung by "running".
+        let sung = " " + words(stanza.map(\.text).joined(separator: " ")) + " "
+        return Hook(name: label.name, title: title, sings: sung.contains(" " + wanted + " "))
+    }
+
+    /// Lowercased words joined by single spaces, apostrophes dropped and other punctuation a gap:
+    /// "Don't Stop," and "dont stop" are the same line.
+    static func words(_ text: String) -> String {
+        text.lowercased()
+            .replacingOccurrences(of: "'", with: "").replacingOccurrences(of: "’", with: "")
+            .split(whereSeparator: { !$0.isLetter && !$0.isNumber })
+            .joined(separator: " ")
     }
 
     /// 1 − edit distance over the longer length: 1 is the same shape.

@@ -513,6 +513,55 @@ public final class PianoRollModel {
         refreshReadings()
     }
 
+    /// Whether Tighten would move anything. Never on the writer's own line: the writer put each
+    /// note where the levers say, and moving them would be arguing with the levers.
+    public var canTighten: Bool {
+        guard !(writesFromLevers && !isHandEdited) else { return false }
+        let target = tightened
+        return target.count != notes.count || zip(target, notes).contains { a, b in
+            a.pitch != b.pitch || abs(a.start - b.start) > 1e-6 || abs(a.duration - b.duration) > 1e-6
+        }
+    }
+
+    /// How far behind the grid Tighten leaves a bass note: the Behind-the-kick lever, in beats. A
+    /// tune has no lag to keep.
+    var tightenLagBeats: Double { mode == .bass ? lagMS / 1000 * tempo / 60 : 0 }
+
+    /// Every note onto the nearest sixteenth, start and end, at least a sixteenth long — and a bass
+    /// note the lever's lag behind its sixteenth, since a bass line dead on the kick is not the
+    /// idiom. A line played in on a controller lands as the hands played it, which is what a feel
+    /// is and not always what was meant; this is the one press that makes it read as written.
+    /// Two notes that land on the same step and pitch become the louder one. One step of ⌘Z puts
+    /// the feel back.
+    public func tighten() {
+        guard canTighten else { return }
+        willEdit("tighten")
+        defer { didEdit() }
+        notes = tightened
+        isHandEdited = true
+        selectedNote = nil
+        refreshReadings()
+    }
+
+    /// The notes as Tighten would leave them.
+    private var tightened: [NoteEvent] {
+        let end = totalBeats
+        let lag = tightenLagBeats
+        var out: [NoteEvent] = []
+        for note in notes {
+            let onGrid = max(0, min(end - 0.25, Self.snap(note.start - lag)))
+            let start = min(end - 0.125, onGrid + lag)
+            let stop = min(end, max(onGrid + 0.25, Self.snap(note.end)))
+            let snapped = NoteEvent(pitch: note.pitch, start: start, duration: max(0.125, stop - start), velocity: note.velocity)
+            if let twin = out.firstIndex(where: { $0.pitch == snapped.pitch && abs($0.start - start) < 1e-9 }) {
+                if snapped.velocity > out[twin].velocity { out[twin] = snapped }
+            } else {
+                out.append(snapped)
+            }
+        }
+        return out.sorted { ($0.start, $0.pitch.midi) < ($1.start, $1.pitch.midi) }
+    }
+
     /// Drops the notes that start at or past the end, and cuts the ones that ring over it.
     private func trimToLength() {
         let end = totalBeats

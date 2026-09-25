@@ -132,6 +132,55 @@ struct PianoRollLengthTests {
         #expect(model.lengthInBars == PianoRollModel.longestLine)
     }
 
+    @Test("Tighten puts a played line on the sixteenths, folds notes that land together, and undoes")
+    func tightenAPlayedLine() {
+        // As a controller leaves it: 20 ms late at 92, held a little short, and one note played twice.
+        let played = Melody(notes: [
+            NoteEvent(pitch: Pitch(midi: 67), start: 0.03, duration: 0.93, velocity: 90),
+            NoteEvent(pitch: Pitch(midi: 70), start: 1.97, duration: 0.4, velocity: 70),
+            NoteEvent(pitch: Pitch(midi: 70), start: 2.04, duration: 0.3, velocity: 100),
+            NoteEvent(pitch: Pitch(midi: 72), start: 3.9, duration: 0.02, velocity: 80),
+        ], lengthInBars: 1)
+        let opened = PartVersion(partID: PartID(), kind: .melody(played), author: .user, operation: Operation.played, note: "Played")
+        let model = PianoRollModel(host: RollStub(), groove: nil, key: Self.key, tempo: 92, melody: opened)
+        model.autoKeep.delay = nil
+        #expect(model.canTighten)
+
+        model.tighten()
+        #expect(model.notes.map(\.start) == [0, 2, 3.75])
+        #expect(model.notes.map(\.pitch.midi) == [67, 70, 72])
+        #expect(model.notes.map(\.duration) == [1, 0.25, 0.25], "ends on the grid too, and never shorter than a sixteenth")
+        #expect(model.notes[1].velocity == 100, "the two that landed together are the louder one")
+        #expect(!model.canTighten)
+        #expect(model.hasUnkeptChanges)
+
+        model.undo()
+        #expect(model.notes.count == 4 && model.notes[0].start == 0.03, "⌘Z puts the feel back")
+    }
+
+    @Test("Tighten leaves a played bass line the lever's lag behind the grid, and never touches the writer's line")
+    func tightenABassLine() throws {
+        let played = Bassline(notes: [
+            NoteEvent(pitch: Pitch(midi: 38), start: 0.02, duration: 0.9, velocity: 96),
+            NoteEvent(pitch: Pitch(midi: 41), start: 1.1, duration: 0.3, velocity: 90),
+        ], sound: "finger", key: Self.key, lengthInBars: 1)
+        let opened = PartVersion(partID: PartID(), kind: .bassline(played), author: .user, operation: Operation.played, note: "Played")
+        let model = PianoRollModel(host: RollStub(), groove: Self.oneBar(), key: Self.key, tempo: 92, bassline: opened)
+        model.autoKeep.delay = nil
+        let lag = model.lagMS / 1000 * 92 / 60
+        #expect(lag > 0)
+        #expect(model.canTighten)
+        model.tighten()
+        #expect(model.notes.count == 2)
+        #expect(abs(model.notes[0].start - lag) < 1e-9 && abs(model.notes[1].start - (1 + lag)) < 1e-9, "behind the sixteenth by the lever")
+        #expect(abs(model.notes[0].end - 1) < 1e-9 && abs(model.notes[1].end - 1.5) < 1e-9, "the ends on the grid")
+        #expect(!model.canTighten, "tight is tight: a second press would move nothing")
+
+        let written = PianoRollModel(host: RollStub(), groove: Self.oneBar(), key: Self.key, tempo: 92)
+        #expect(!written.notes.isEmpty && !written.isHandEdited)
+        #expect(!written.canTighten, "the writer's line sits where the levers put it")
+    }
+
     @Test("notes can be placed, moved and resized anywhere in the length, and no further")
     func editingAcrossTheLength() {
         let model = PianoRollModel(host: RollStub(), groove: Self.oneBar(), key: Self.key, tempo: 92)

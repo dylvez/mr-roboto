@@ -3,7 +3,8 @@ import Foundation
 import Instrument
 import SongGraph
 
-// Inputs I5/I6: the controller on the kit or the bass, played now, and captured while the Booth records.
+// Inputs I5/I6: the controller on the kit, the bass or the keys, played now, and captured while the
+// Booth records.
 
 /// The controller in the app: which instrument it plays, the sources here, and the notes it put
 /// down while a take ran.
@@ -12,13 +13,17 @@ import SongGraph
 public final class MIDIControl {
 
     public enum Mode: String, CaseIterable, Sendable {
-        case off, kit, bass
+        /// Keys plays the song's pitched instrument — the Rhodes until one is chosen — and a take
+        /// played on it lands as a melody. Before it, a controller could put down a beat and a
+        /// bass line but not the tune, which had to be drawn a note at a time.
+        case off, kit, bass, keys
 
         public var title: String {
             switch self {
             case .off: return "Off"
             case .kit: return "Kit"
             case .bass: return "Bass"
+            case .keys: return "Keys"
             }
         }
     }
@@ -113,6 +118,15 @@ public final class MIDIControl {
             }
         case (.bass, .noteOff(let note)):
             if let handles = held.removeValue(forKey: note) { Task { await service.stopBass(handles) } }
+        case (.keys, .noteOn(let note, let velocity)):
+            let hit = VoiceSampler.Hit(note: note, velocity: velocity, at: 0)
+            lastHit = hit
+            Task {
+                let handles = await service.playInstrument([hit])
+                held[note, default: []].append(contentsOf: handles)
+            }
+        case (.keys, .noteOff(let note)):
+            if let handles = held.removeValue(forKey: note) { Task { await service.stopInstrument(handles) } }
         default:
             break
         }
@@ -131,6 +145,8 @@ public final class MIDIControl {
                     return nil
                 }
                 try await service.prepare(bass: BassVoiceSpec.all.first { $0.id == sound } ?? .finger)
+            case .keys:
+                try await service.prepare(instrument: InstrumentVoiceSpec.preset(id: SongPlayback.instrumentID(in: song)) ?? .rhodes)
             case .off:
                 break
             }
@@ -152,8 +168,8 @@ public final class MIDIControl {
         isCapturing = true
     }
 
-    /// Stops, and what was played becomes a version: a groove in Kit, a bass line in Bass. Nil when
-    /// nothing was played, and the reason in the rail.
+    /// Stops, and what was played becomes a version: a groove in Kit, a bass line in Bass, a melody
+    /// in Keys. Nil when nothing was played.
     @discardableResult
     public func endCapture(endedAt: Double? = nil) -> PartVersion? {
         guard isCapturing, let clock = captureClock else { return nil }
@@ -183,6 +199,10 @@ public final class MIDIControl {
             guard let line = MIDICapture.bassline(notes, clock: clock, sectionStart: sectionStart, end: endedAt, key: song.key, sound: sound) else { return nil }
             kind = .bassline(line)
             what = "bass line"
+        case .keys:
+            guard let tune = MIDICapture.melody(notes, clock: clock, sectionStart: sectionStart, end: endedAt, bars: section?.lengthInBars) else { return nil }
+            kind = .melody(tune)
+            what = "melody"
         case .off:
             return nil
         }

@@ -338,28 +338,47 @@ struct AudibilityTag: View {
             .help("Heard in the song \(where_). Structure decides where each part plays.")
             .accessibilityElement(children: .combine)
         case .silent(let why, let fix):
-            HStack(spacing: 6) {
-                Image(systemName: "speaker.slash")
-                    .font(Design.Typography.ui(9.5, weight: .medium))
-                if !compact {
-                    Text("Not in the song")
-                        .font(Design.Typography.ui(11, weight: .medium))
-                        .lineLimit(1)
-                        .fixedSize()
+            if compact, let fix {
+                // Narrow, the glyph is the fix: the words would not fit, and a warning you cannot
+                // act on from where you read it is only a worry.
+                Button { apply(fix) } label: {
+                    Image(systemName: "speaker.slash")
+                        .font(Design.Typography.ui(9.5, weight: .medium))
+                        .frame(width: Design.Metric.tagHeight, height: Design.Metric.tagHeight)
+                        .contentShape(Rectangle())
                 }
-                if let fix, !compact {
-                    Button(fix.title) { apply(fix) }
-                        .buttonStyle(.plain)
-                        .font(Design.Typography.ui(11, weight: .semibold))
-                        .foregroundStyle(Design.Palette.accent)
-                        .help(fix.help)
-                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Design.Palette.warn)
+                .help("\(why) \(fix.title): \(fix.help)")
+                .accessibilityLabel("Not in the song. \(fix.title)")
+            } else {
+                silent(why: why, fix: fix)
             }
-            .foregroundStyle(Design.Palette.warn)
-            .help(why)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Not in the song. \(why)")
         }
+    }
+
+    private func silent(why: String, fix: AudibilityFix?) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "speaker.slash")
+                .font(Design.Typography.ui(9.5, weight: .medium))
+            if !compact {
+                Text("Not in the song")
+                    .font(Design.Typography.ui(11, weight: .medium))
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            if let fix, !compact {
+                Button(fix.title) { apply(fix) }
+                    .buttonStyle(.plain)
+                    .font(Design.Typography.ui(11, weight: .semibold))
+                    .foregroundStyle(Design.Palette.accent)
+                    .help(fix.help)
+            }
+        }
+        .foregroundStyle(Design.Palette.warn)
+        .help(why)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Not in the song. \(why)")
     }
 }
 

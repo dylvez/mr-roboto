@@ -27,24 +27,24 @@ extension AppState {
     /// song is found by the id inside it, not by its name). Surfaces titled for the song are
     /// retitled, so the bench does not go on calling it what it was.
     @discardableResult
-    public func setTitle(_ title: String) -> Bool {
+    public func setTitle(_ title: String, by source: SessionEntry.Source = .you) -> Bool {
         let name = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let current = song, !name.isEmpty, name != current.title else { return false }
         let was = current.title
         updateSong { $0.title = name }
         if let song { library.upsert(song) }
         for item in bench.items where item.title == was { retitleSurface(item.id, to: name) }
-        note(.you, "Renamed \(was) to \(name)")
+        note(source, "Renamed \(was) to \(name)")
         return true
     }
 
     @discardableResult
-    public func setArtist(_ artist: String) -> Bool {
+    public func setArtist(_ artist: String, by source: SessionEntry.Source = .you) -> Bool {
         let name = artist.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let current = song, name != current.artist else { return false }
         updateSong { $0.artist = name }
         if let song { library.upsert(song) }
-        note(.you, name.isEmpty ? "Cleared the artist" : "Artist: \(name)")
+        note(source, name.isEmpty ? "Cleared the artist" : "Artist: \(name)")
         return true
     }
 
@@ -52,12 +52,12 @@ extension AppState {
     /// they simply go by faster or slower. A tempo changed while the song plays lands on the next
     /// press of play, and the rail says so rather than letting the readout disagree with the ear.
     @discardableResult
-    public func setTempo(_ bpm: Double) -> Bool {
+    public func setTempo(_ bpm: Double, by source: SessionEntry.Source = .you) -> Bool {
         guard let current = song, bpm.isFinite else { return false }
         let clamped = min(Self.tempoRange.upperBound, max(Self.tempoRange.lowerBound, bpm))
         guard abs(clamped - current.tempo) > 0.001 else { return false }
         updateSong { $0.tempo = clamped }
-        note(.you, String(format: "Tempo %.0f bpm", clamped),
+        note(source, String(format: "Tempo %.0f bpm", clamped),
              detail: transport.isPlaying ? "Takes effect the next time you press play." : nil)
         return true
     }
@@ -65,10 +65,10 @@ extension AppState {
     /// Sets the key the writers and the personas read the song in, or clears it. Nothing already
     /// written moves: a key is what the next part is written to, not a transposition.
     @discardableResult
-    public func setKey(_ key: Key?) -> Bool {
+    public func setKey(_ key: Key?, by source: SessionEntry.Source = .you) -> Bool {
         guard let current = song, key != current.key else { return false }
         updateSong { $0.key = key }
-        note(.you, key.map { "Key: \($0.name)" } ?? "Cleared the key")
+        note(source, key.map { "Key: \($0.name)" } ?? "Cleared the key")
         return true
     }
 
@@ -83,11 +83,11 @@ extension AppState {
     }
 
     @discardableResult
-    public func setTimeSignature(_ signature: TimeSignature) -> Bool {
+    public func setTimeSignature(_ signature: TimeSignature, by source: SessionEntry.Source = .you) -> Bool {
         guard let current = song, signature != current.timeSignature,
               signature.beatsPerBar >= 1, [1, 2, 4, 8, 16].contains(signature.beatUnit) else { return false }
         updateSong { $0.timeSignature = signature }
-        note(.you, "Meter \(signature.description)",
+        note(source, "Meter \(signature.description)",
              detail: transport.isPlaying ? "Takes effect the next time you press play." : nil)
         return true
     }

@@ -157,3 +157,18 @@ struct MasterRedirectTests {
         #expect(turned == [id!])
     }
 }
+
+@Suite("Workflow: the masking overlay reads where two parts meet")
+struct OverlaySectionTests {
+
+    @Test("the first section that plays both, else the whole song")
+    func meeting() {
+        let a = PartID(), b = PartID()
+        var song = Song(title: "Meet", tempo: 100)
+        song.sections = [Section(name: "Intro", stitch: [Lane(part: a)], lengthInBars: 4),
+                         Section(name: "Verse", stitch: [Lane(part: a), Lane(part: b)], lengthInBars: 8)]
+        #expect(MixerModel.meetingSection(of: a, b, in: song) == song.sections[1].id)
+        song.sections[1].stitch = [Lane(part: b)]
+        #expect(MixerModel.meetingSection(of: a, b, in: song) == nil, "they never meet: read the whole song")
+    }
+}

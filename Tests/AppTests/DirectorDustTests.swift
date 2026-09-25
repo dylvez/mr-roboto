@@ -317,13 +317,14 @@ struct DirectorDustToolboxTests {
     func existingSchemasAreByteIdentical() throws {
         let full = toolbox(stage: true)
         #expect(full.names == DirectorTools.names + DirectorTools.stageNames)
-        #expect(DirectorTools.names.count == 36)
+        #expect(DirectorTools.names.count == 42)
         #expect(DirectorTools.names[14] == "degrade_part")
         #expect(Array(DirectorTools.names.prefix(14)) == Self.before.prefix(14).map(\.0),
                 "the fourteen are in their old order, with nothing inserted among them")
 
         let appended: Set<String> = ["degrade_part", "set_progression", "write_bassline", "stitch_section", "arrange",
-                                     "read_library", "adopt", "merge", "cast", "convene", "read_take", "read_mix", "set_mix", "master", "export", "read_album", "sequence", "release", "plan_mashup", "mashup", "start_song", "write_groove"]
+                                     "read_library", "adopt", "merge", "cast", "convene", "read_take", "read_mix", "set_mix", "master", "export", "read_album", "sequence", "release", "plan_mashup", "mashup", "start_song", "write_groove",
+                                     "write_melody", "write_lyrics", "set_song", "set_instrument", "comp_takes", "open_song"]
         let now = try full.tools.filter { !appended.contains($0.name) }.map { ($0.name, try Self.digest($0.definition)) }
         #expect(now.map(\.0) == Self.before.map(\.0))
         for ((name, hash), (_, old)) in zip(now, Self.before) {
@@ -332,7 +333,7 @@ struct DirectorDustToolboxTests {
         // And the frame-free list is the framed one's prefix, degrade_part included.
         let bare = toolbox(stage: false)
         #expect(Array(full.names.prefix(bare.names.count)) == bare.names)
-        #expect(bare.names.last == "write_groove")
+        #expect(bare.names.last == "open_song")
     }
 
     @Test("Its schema stays inside every limit the API enforced, and spends none of the optional budget")

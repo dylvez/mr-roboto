@@ -206,7 +206,13 @@ public struct ConveneTool: DirectorTool {
             case .lyricist:
                 if let version = song.versions.last(where: { $0.type == .lyric }), case .lyric(let lyric) = version.kind {
                     let corpus = await workspace.voice
-                    readings += Lyricist().read(LyricObservation.of(lyric, label: PartLabel.title(of: version), corpus: corpus, title: song.title)).map { (id, $0) }
+                    // Words set to a tune are read on it too: where the stressed syllables land.
+                    let tune = lyric.alignedTo.flatMap { song.version($0) }.flatMap { aligned -> Melody? in
+                        if case .melody(let melody) = aligned.kind { return melody }
+                        return nil
+                    }
+                    readings += Lyricist().read(LyricObservation.of(lyric, label: PartLabel.title(of: version), corpus: corpus, title: song.title,
+                                                                    melody: tune, beatsPerBar: song.timeSignature.beatsPerBar)).map { (id, $0) }
                 } else {
                     notes.append("No lyric yet for the Lyricist to read.")
                 }

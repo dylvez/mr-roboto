@@ -31,7 +31,7 @@ public protocol BoothHosting: AnyObject {
     /// Keeps a recording as a take version. Nil, with the reason in the rail, when it cannot be.
     func keep(_ recording: Recorder.Recording, take: Take) -> PartVersion?
     func note(_ text: String, detail: String?)
-    /// The take started: a controller in Kit or Bass mode is captured alongside it.
+    /// The take started: a controller in Kit, Bass or Keys mode is captured alongside it.
     func recordingStarted(section: SectionID?, startedAt: Double)
     /// The take stopped, whatever it held.
     func recordingEnded(endedAt: Double)
@@ -196,6 +196,90 @@ public final class BoothModel {
 
     /// Whether there is anything to sing: a lyric of only blank lines is no words.
     public var hasWords: Bool { lyricLines.contains { !$0.syllables.isEmpty } }
+
+    /// A line of the words as the Booth shows it, with the section name written above it when a
+    /// labelled stanza starts there.
+    public struct WordsLine: Equatable, Sendable {
+        public var label: String?
+        public var line: LyricLine
+    }
+
+    /// The newest lyric's lines with their labels: the whole lyric, as the pane shows it when no
+    /// stanza is the chosen section's.
+    public var wordsLines: [WordsLine] {
+        guard let lyric, case .lyric(let words) = lyric.kind else { return [] }
+        return Self.labelled(words, lines: Array(words.lines.indices))
+    }
+
+    /// The words for the chosen section: its stanza, sung first, and the rest of the lyric under it.
+    public struct SectionWords: Equatable, Sendable {
+        /// The label as the lyric writes it.
+        public var name: String
+        public var stanza: [LyricLine]
+        /// Everything else, in order, one blank line between stanzas, each with its label.
+        public var rest: [WordsLine]
+    }
+
+    /// The stanza labelled with the chosen section's name, when the lyric has one. The second
+    /// Verse of the form shows the second stanza labelled Verse, when the words have two; with
+    /// only one, every Verse sings it.
+    public var sectionWords: SectionWords? {
+        guard let lyric, case .lyric(let words) = lyric.kind, let labels = words.labels,
+              let chosen = section, let index = sections.firstIndex(where: { $0.id == chosen }) else { return nil }
+        let name = sections[index].name
+        func same(_ other: String) -> Bool { other.caseInsensitiveCompare(name) == .orderedSame }
+        let matching = labels.filter { same($0.name) }.sorted { $0.line < $1.line }
+        guard !matching.isEmpty else { return nil }
+        let occurrence = sections[..<index].filter { same($0.name) }.count
+        let label = matching[min(occurrence, matching.count - 1)]
+        // Read as `Lyric.stanza(named:)` reads one: from the label to the next blank line or the
+        // next label, blank lines before the first sung line passed over.
+        var first: Int?
+        var end = label.line
+        for line in label.line..<words.lines.count {
+            if line > label.line, labels.contains(where: { $0.line == line }) { break }
+            if words.lines[line].syllables.isEmpty { if first == nil { continue } else { break } }
+            if first == nil { first = line }
+            end = line + 1
+        }
+        guard let first else { return nil }
+        let rest = Array(words.lines.indices.filter { $0 < label.line || $0 >= end })
+        return SectionWords(name: label.name, stanza: Array(words.lines[first..<end]),
+                            rest: Self.labelled(words, lines: rest, skipping: label))
+    }
+
+    /// What the pane says when a section is chosen and no stanza carries its name — or nil when
+    /// there is no section, no words, or the stanza is found.
+    public var sectionWordsHint: String? {
+        guard hasWords, sectionWords == nil, let chosen = section,
+              let name = sections.first(where: { $0.id == chosen })?.name else { return nil }
+        return "Label a stanza [\(name)] on the Lyrics surface to see it here."
+    }
+
+    /// `lines` of a lyric with their labels, gaps between stanzas one blank line each and none at
+    /// either end — so what is left around a stanza taken out does not open a hole.
+    private static func labelled(_ words: Lyric, lines: [Int], skipping taken: Lyric.StanzaLabel? = nil) -> [WordsLine] {
+        var names: [Int: String] = [:]
+        for label in words.labels ?? [] where label != taken && names[label.line] == nil { names[label.line] = label.name }
+        var out: [WordsLine] = []
+        var pending: String?
+        for index in lines {
+            let line = words.lines[index]
+            if let name = names[index] { pending = name }
+            if line.syllables.isEmpty {
+                if let last = out.last, !last.line.syllables.isEmpty { out.append(WordsLine(label: nil, line: line)) }
+            } else {
+                // A label written on a blank line above its stanza is shown on the stanza's first line.
+                if pending != nil, let last = out.last, !last.line.syllables.isEmpty {
+                    out.append(WordsLine(label: nil, line: LyricLine(syllables: [])))
+                }
+                out.append(WordsLine(label: pending, line: line))
+                pending = nil
+            }
+        }
+        while out.last?.line.syllables.isEmpty == true { out.removeLast() }
+        return out
+    }
 
     // MARK: Recording
 

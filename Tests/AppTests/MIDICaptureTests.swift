@@ -142,4 +142,43 @@ struct MIDICaptureTests {
         #expect(line.key == app.song?.key)
         #expect(version.note?.contains("as a bass line") == true)
     }
+
+    @Test("through the control: Keys holds a note on the instrument, and a take in Keys lands as a played melody a section long")
+    func keysThroughControl() async throws {
+        let (app, control, directory, defaults, suite) = fixture()
+        defer { WiringFixture.remove(directory); defaults.removePersistentDomain(forName: suite) }
+        control.mode = .keys
+        #expect(defaults.string(forKey: MIDIControl.modeKey) == "keys", "remembered")
+        control.handle(on(67, 90, 0.1))
+        #expect(control.lastHit?.note == 67 && control.lastHit?.duration == nil, "held, not a one-shot")
+        let verse = app.song!.sections[1]
+        let verseStart = clock.seconds(forBar: 2)
+        let before = app.song!.versions.count
+        control.beginCapture(section: verse.id, clock: clock, startedAt: verseStart)
+        control.handle(on(67, 90, verseStart + 0.020))
+        control.handle(off(67, verseStart + clock.secondsPerBeat))
+        control.handle(on(70, 84, verseStart + clock.secondsPerBeat * 2))
+        let version = try #require(control.endCapture(endedAt: verseStart + clock.secondsPerBar))
+        guard case .melody(let tune) = version.kind else { Issue.record("not a melody"); return }
+        #expect(tune.notes.map(\.pitch.midi) == [67, 70])
+        #expect(abs(tune.notes[1].start - 2) < 1e-6 && abs(tune.notes[1].duration - 2) < 1e-6, "still held: runs to the end of the take")
+        #expect(tune.lengthInBars == verse.lengthInBars, "one pass is the section, breath and all")
+        #expect(version.operation == Operation.played && version.author == .user)
+        #expect(version.note?.contains("as a melody") == true)
+        #expect(app.song!.versions.count == before + 1)
+    }
+
+    @Test("pure: a melody keeps the notes as played and says how many bars one pass is")
+    func melodyCapture() throws {
+        let start = 1.0
+        let timed: [(kind: MIDIEvent.Kind, seconds: Double)] = [
+            (.noteOn(note: 72, velocity: 100), start + 0.030), (.noteOff(note: 72), start + clock.secondsPerBeat),
+            (.noteOn(note: 74, velocity: 70), start - 1.0), // before the section: not in it
+        ]
+        let tune = try #require(MIDICapture.melody(MIDICapture.notes(from: timed), clock: clock, sectionStart: start, end: nil, bars: 4))
+        #expect(tune.notes.count == 1 && tune.notes[0].pitch.midi == 72 && tune.notes[0].velocity == 100)
+        #expect(abs(tune.notes[0].start - clock.beat(forSeconds: 0.030)) < 1e-9)
+        #expect(tune.loopBars(beatsPerBar: 4) == 4)
+        #expect(MIDICapture.melody([], clock: clock, sectionStart: 0, end: nil, bars: 4) == nil)
+    }
 }

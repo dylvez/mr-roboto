@@ -554,7 +554,8 @@ extension AppState {
             }
         } else {
             if hasUnsavedChanges { save() }
-            open(Song.new(title: name.isEmpty ? "Untitled" : name, key: key, tempo: tempo))
+            // The band's own move: a switch it made must not cancel the turn that asked for it.
+            open(Song.new(title: name.isEmpty ? "Untitled" : name, key: key, tempo: tempo), by: .director)
         }
         record(PartVersion(partID: PartID(), kind: .sound(Sound(instrument: machine)), author: .persona("Director"),
                            operation: Operation.written, note: "The drum machine for this song"))
@@ -577,7 +578,7 @@ extension AppState {
     /// choice travels with the song and shows in the ledger. A preset the app does not know is
     /// ignored rather than recorded, and picking what is already playing records nothing.
     @discardableResult
-    public func setInstrument(_ id: String, for part: PartID? = nil) -> Bool {
+    public func setInstrument(_ id: String, for part: PartID? = nil, by author: Author = .user) -> Bool {
         guard let spec = InstrumentVoiceSpec.preset(id: id), let song else { return false }
         guard SongPlayback.instrumentID(for: part, in: song) != spec.id else { return false }
         let name = part.flatMap { id in song.versions.last { $0.partID == id } }.map(PartLabel.title(of:))
@@ -589,11 +590,45 @@ extension AppState {
             if case .sound(let sound) = version.kind, sound.forPart == part { return InstrumentVoiceSpec.preset(id: sound.instrument) != nil }
             return false
         }) {
-            return record(previous.deriving(.sound(Sound(instrument: spec.id, forPart: part)), by: .user,
+            return record(previous.deriving(.sound(Sound(instrument: spec.id, forPart: part)), by: author,
                                             operation: Operation.written, note: note))
         }
         return record(PartVersion(partID: PartID(),
-                                  kind: .sound(Sound(instrument: spec.id, forPart: part)), author: .user,
+                                  kind: .sound(Sound(instrument: spec.id, forPart: part)), author: author,
                                   operation: Operation.written, note: note))
+    }
+}
+
+extension AppState {
+    /// A file copied into the open song's package, for a version to point at. A song never saved
+    /// is saved first, so it has a package to keep it in. Nil, with the reason in the rail, when
+    /// there is nowhere to keep it. The Booth keeps its takes this way, and the band its comps.
+    public func keepMedia(copying url: URL, what: String = "the audio") -> MediaRef? {
+        guard let song else { return nil }
+        guard let store else {
+            note(.session, "There is no library to keep \(what) in")
+            return nil
+        }
+        do {
+            if (try? store.songStore(for: song.id)) == nil { save() }
+            return try store.songStore(for: song.id).addMedia(copying: url)
+        } catch {
+            note(.session, "Could not keep \(what)", detail: "\(error)")
+            return nil
+        }
+    }
+
+    /// Rendered audio — a comp, a bounce — written out and kept the same way.
+    public func keepAudio(_ planar: [[Float]], sampleRate: Double, what: String = "the audio") -> MediaRef? {
+        guard song != nil else { return nil }
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("MrRoboto-kept-\(UUID().uuidString).wav")
+        defer { try? FileManager.default.removeItem(at: url) }
+        do {
+            try BoothAdapter.write(planar, sampleRate: sampleRate, to: url)
+        } catch {
+            note(.session, "Could not render \(what)", detail: "\(error)")
+            return nil
+        }
+        return keepMedia(copying: url, what: what)
     }
 }
