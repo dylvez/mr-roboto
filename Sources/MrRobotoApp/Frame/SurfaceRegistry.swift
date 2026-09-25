@@ -178,8 +178,10 @@ struct SurfaceHost: View {
                 // And never more: `minWidth: 0` stops a surface whose row will not fit from asking the
                 // frame for its width. When one did, the frame's columns gave it up — the collapsed
                 // Band strip went to nothing and the rail was painted over. A row that will not fit
-                // is clipped here, and wraps in the surface itself.
-                .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                // is clipped here, and wraps in the surface itself. The same for height: a surface
+                // taller than the bench used to make the whole window taller than the screen, the
+                // header and the transport pushed off either end. It scrolls inside itself instead.
+                .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .topLeading)
                 .clipped()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)

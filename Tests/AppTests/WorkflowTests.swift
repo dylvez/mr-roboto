@@ -172,3 +172,17 @@ struct OverlaySectionTests {
         #expect(MixerModel.meetingSection(of: a, b, in: song) == nil, "they never meet: read the whole song")
     }
 }
+
+@Suite("Song settings: put back what the popover opened with")
+struct SettingsPutBackTests {
+    @Test("the line names only what Put back would change, in the words the settings use")
+    func differences() {
+        var song = Song.new(title: "Glass", key: Key(tonic: NoteName(.d), mode: .aeolian), tempo: 88)
+        let opened = SongSettingsPopover.Settings(song)
+        #expect(opened.differences(from: SongSettingsPopover.Settings(song)).isEmpty)
+        song.tempo = 92.5
+        song.key = nil
+        song.title = "Glass House"
+        #expect(opened.differences(from: SongSettingsPopover.Settings(song)) == "“Glass”, 88 bpm, D minor")
+    }
+}

@@ -16,8 +16,38 @@ struct SongSettingsPopover: View {
     @State private var keyText = ""
     @State private var meterText = ""
     @FocusState private var focus: Field?
+    /// The settings as they were when the popover opened, for Put back.
+    @State private var opened: Settings?
 
     private enum Field: Hashable { case title, artist, tempo, key, meter }
+
+    /// The five settings, together, so a change to any of them can be put back as one.
+    struct Settings: Equatable {
+        var title: String
+        var artist: String
+        var tempo: Double
+        var key: Key?
+        var meter: TimeSignature
+
+        init(_ song: Song) {
+            title = song.title
+            artist = song.artist
+            tempo = song.tempo
+            key = song.key
+            meter = song.timeSignature
+        }
+
+        /// "92 bpm, D minor, 4/4": what Put back would return to, the parts that differ from now.
+        func differences(from now: Settings) -> String {
+            var parts: [String] = []
+            if title != now.title { parts.append("“\(title)”") }
+            if artist != now.artist { parts.append(artist.isEmpty ? "no artist" : artist) }
+            if tempo != now.tempo { parts.append("\(SongSettingsPopover.tempoText(tempo)) bpm") }
+            if key != now.key { parts.append(key?.name ?? "no key") }
+            if meter != now.meter { parts.append(meter.description) }
+            return parts.joined(separator: ", ")
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -42,23 +72,48 @@ struct SongSettingsPopover: View {
                 .font(Design.Typography.ui(11.5, weight: .regular))
                 .foregroundStyle(Design.Palette.inkSecondary)
                 .fixedSize(horizontal: false, vertical: true)
+            // The song's settings are not a part, so ⌘Z — which steps back the surface in front —
+            // does not reach them. This does: everything changed since the popover opened, as one.
+            if let opened, let song = app.song, Settings(song) != opened {
+                HStack(spacing: 8) {
+                    FrameButton(title: "Put back", emphasis: .quiet) { putBack(opened) }
+                    Text(opened.differences(from: Settings(song)))
+                        .font(Design.Typography.ui(11.5, weight: .regular))
+                        .foregroundStyle(Design.Palette.inkTertiary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+                .help("The settings as they were when you opened this")
+            }
         }
         .padding(Design.Metric.inset)
         .frame(width: 360)
         .background(Design.Palette.panel)
         .foregroundStyle(Design.Palette.ink)
         .onAppear(perform: load)
-        .onChange(of: app.song?.id) { load() }
+        .onChange(of: app.song?.id) { opened = nil; load() }
     }
 
     private func load() {
         guard let song = app.song else { return }
+        if opened == nil { opened = Settings(song) }
         title = song.title
         artist = song.artist
         tempoText = Self.tempoText(song.tempo)
         keyText = song.key?.name ?? ""
         meterText = song.timeSignature.description
         focus = .title
+    }
+
+    /// Every setting back to what it was when the popover opened, each through its own setter so
+    /// the rail says what moved.
+    private func putBack(_ settings: Settings) {
+        app.setTitle(settings.title)
+        app.setArtist(settings.artist)
+        app.setTempo(settings.tempo)
+        app.setKey(settings.key)
+        app.setTimeSignature(settings.meter)
+        load()
     }
 
     /// "113", or "92.5" when the tempo is not a whole number. A readout that rounds would make

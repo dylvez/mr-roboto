@@ -8,13 +8,18 @@ struct StructureSurfaceView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Design.Metric.gutter) {
             header
-            blocks
-            if let section = model.selectedSection {
-                SectionDetail(model: model, section: section)
-            } else {
-                emptyHint
+            // The blocks and the open section scroll; the title and the keep line stay put. A long
+            // form with its section open — the parts, the words — is taller than a bench.
+            ScrollsInside {
+                VStack(alignment: .leading, spacing: Design.Metric.gutter) {
+                    blocks
+                    if let section = model.selectedSection {
+                        SectionDetail(model: model, section: section)
+                    } else {
+                        emptyHint
+                    }
+                }
             }
-            Spacer(minLength: 0)
             footer
         }
         .padding(Design.Metric.inset)

@@ -142,6 +142,24 @@ struct TakesLanes: View {
         .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
+    /// Under the comp lane's name: the one-press pick, or the way back from it.
+    @ViewBuilder
+    private var pickLink: some View {
+        if model.choicesBeforePick != nil {
+            Button("Put back my bars") { model.putBackPick() }
+                .buttonStyle(.plain)
+                .font(Design.Typography.ui(11, weight: .medium))
+                .foregroundStyle(Design.Palette.accent)
+                .help("The bars as you had them before the pick")
+        } else if model.canPickClean {
+            Button("Pick the clean bars") { model.pickCleanBars() }
+                .buttonStyle(.plain)
+                .font(Design.Typography.ui(11, weight: .medium))
+                .foregroundStyle(Design.Palette.accent)
+                .help("Each bar from the take the band flags least there; a tie goes to the later take. Nothing is made until you make the comp.")
+        }
+    }
+
     /// What the comp lane is: the version it was made as, until a bar is chosen differently.
     private var compLine: String {
         guard let comp = model.comp else { return "a take for each bar" }
@@ -179,6 +197,7 @@ struct TakesLanes: View {
                     Text(subtitle).font(Design.Typography.numeric(10.5)).foregroundStyle(Design.Palette.inkTertiary)
                         .lineLimit(1)
                         .help(subtitle)
+                    if isComp { pickLink }
                 }
                 .frame(width: titleWidth, alignment: .leading)
                 HStack(spacing: 2) {
@@ -215,7 +234,7 @@ struct TakesLanes: View {
     private func barCell(bar: Int, isComp: Bool, version: PartVersion?) -> some View {
         let chosen = model.take(forBar: bar)
         let isChosen = isComp ? chosen != nil : chosen == version?.id
-        let covers = version.map { covers($0, bar: bar) } ?? true
+        let covers = version.map { model.covers($0, bar: bar) } ?? true
         let flagged = version.flatMap { model.flags[$0.id] }?.contains { $0.locus.bar == bar } ?? false
         return Button {
             if let version { model.choose(version.id, forBar: bar) }
@@ -262,10 +281,4 @@ struct TakesLanes: View {
         return "Take bar \(bar + 1) from \(PartLabel.title(of: version))."
     }
 
-    /// Whether a take has audio under this bar.
-    private func covers(_ version: PartVersion, bar: Int) -> Bool {
-        guard let span = TakesModel.seconds(of: version, clock: model.clock) else { return false }
-        let barStart = model.clock.seconds(forBar: bar), barEnd = model.clock.seconds(forBar: bar + 1)
-        return span.end > barStart + 0.05 && span.start < barEnd - 0.05
-    }
 }

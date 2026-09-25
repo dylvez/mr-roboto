@@ -12,16 +12,34 @@ struct PianoRollSurfaceView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Design.Metric.gutter) {
             header
-            levers
-            lengthRow
-            NoteLane(model: model)
-                .frame(maxWidth: .infinity, minHeight: 220, maxHeight: .infinity)
-            readings
+            // The lane fills whatever is left when everything fits. When it does not — a bench
+            // at the window's smallest, the Bassist with a lot to say — the work scrolls under the
+            // title and the keep line stays in view; it used to push the keep line off the bench.
+            ViewThatFits(in: .vertical) {
+                work(laneFills: true)
+                ScrollsInside { work(laneFills: false) }
+            }
             footer
         }
         .padding(Design.Metric.inset)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Design.Palette.panel)
+    }
+
+    private func work(laneFills: Bool) -> some View {
+        VStack(alignment: .leading, spacing: Design.Metric.gutter) {
+            levers
+            lengthRow
+            if laneFills {
+                NoteLane(model: model)
+                    .frame(maxWidth: .infinity, minHeight: 220, maxHeight: .infinity)
+            } else {
+                NoteLane(model: model)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 240)
+            }
+            readings
+        }
     }
 
     private var header: some View {
@@ -35,7 +53,7 @@ struct PianoRollSurfaceView: View {
                 }
             }
             if model.mode == .melody {
-                Text("Drawn by hand: nothing in the band writes a tune yet.")
+                Text("Drawn here, played in on Keys, or written by the band for the Melodist.")
                     .font(Design.Typography.ui(11.5, weight: .regular))
                     .foregroundStyle(Design.Palette.inkTertiary)
             } else if model.groove == nil {

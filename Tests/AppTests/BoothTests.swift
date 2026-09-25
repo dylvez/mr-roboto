@@ -330,3 +330,37 @@ struct BoothTests {
         #expect(WorkPath.of(song) == WorkPath.of(self.song()), "a recorded take does not change which path the song is on")
     }
 }
+
+@Suite("Takes: pick the clean bars", .serialized) @MainActor
+struct PickCleanBarsTests {
+    @Test("each bar comes from the take the band flags least there, nothing is made, and Put back restores the bars as they were")
+    func picks() throws {
+        var song = CompFixture.song()
+        let part = PartID(), section = song.sections[0].id
+        let first = CompFixture.take(1, part: part, section: section, media: CompFixture.media("a"))
+        let second = CompFixture.take(2, part: part, section: section, media: CompFixture.media("b"))
+        try song.append(first)
+        try song.append(second)
+        let host = StubBoothHost(song: song)
+        host.clock = CompFixture.clock
+        host.audioByVersion[first.id] = Comp.TakeAudio(planar: CompFixture.sung(sharpInBar: 1), sampleRate: CompFixture.rate, alignmentSeconds: 0)
+        host.audioByVersion[second.id] = Comp.TakeAudio(planar: CompFixture.sung(sharpInBar: 0), sampleRate: CompFixture.rate, alignmentSeconds: 0)
+        let takes = TakesModel(host: host, takes: [first, second], song: song)
+        #expect(takes.canPickClean)
+        #expect(takes.take(forBar: 0) == second.id && takes.take(forBar: 1) == second.id, "unchosen bars come from the newest take")
+        takes.choose(first.id, forBar: 1)
+
+        takes.pickCleanBars()
+        #expect(takes.take(forBar: 0) == first.id, "the second take is sharp in bar 1")
+        #expect(takes.take(forBar: 1) == second.id, "the first take is sharp in bar 2")
+        #expect(takes.choicesBeforePick != nil && host.comps.isEmpty && takes.comp == nil, "picked, not made")
+
+        takes.putBackPick()
+        #expect(takes.take(forBar: 0) == second.id && takes.take(forBar: 1) == first.id, "the bars as they were, hand choice and all")
+        #expect(takes.choicesBeforePick == nil)
+
+        takes.pickCleanBars()
+        takes.choose(second.id, forBar: 0)
+        #expect(takes.choicesBeforePick == nil, "a bar chosen by hand after the pick ends Put back")
+    }
+}

@@ -112,8 +112,15 @@ struct FrameRenderTests {
         app.arrange([Section(name: "Intro", stitch: [built.groove].lanes, lengthInBars: 4),
                      Section(name: "Verse", stitch: [built.groove, built.bass].lanes, lengthInBars: 16),
                      Section(name: "Hook", stitch: [built.groove, built.bass].lanes, lengthInBars: 8)])
-        app.perform(SurfaceAction(surface: .structure, title: built.song.title))
+        // Words labelled for the Verse and the Hook, none for the Intro: the first section shows the
+        // way to label one, the Verse its stanza.
+        #expect(app.record(PartVersion(partID: PartID(), kind: .lyric(Lyricist.lyric(from: "[Verse]\nI put the coffee on at six\nI watched it make itself\nit made itself a morning\n\n[Hook]\nsoft machine")),
+                                       author: .user, operation: Operation.written, note: "Lyric")))
+        let id = try #require(app.perform(SurfaceAction(surface: .structure, title: built.song.title)))
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-structure")
+        let model = SurfaceWiring.shared.structureModel(for: app.bench.items.first { $0.id == id }!, app: app)
+        model.select(model.sections[1].id)
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-structure-verse")
     }
 
     @Test("the library with an idea, a sample, a record and an album; the Album surface open")

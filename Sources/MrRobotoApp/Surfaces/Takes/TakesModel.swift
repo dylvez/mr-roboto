@@ -52,6 +52,9 @@ public final class TakesModel {
     public private(set) var playing: VersionID?
     /// The comp lane is sounding, rendered but not kept.
     public private(set) var isHearingComp = false
+    /// The bar choices "Pick the clean bars" replaced, for Put back. Gone once a bar is chosen by
+    /// hand, since putting back then would undo that choice too.
+    public private(set) var choicesBeforePick: [Int: VersionID]?
     public private(set) var lastError: String?
     /// The band's findings on the takes, by version: cents and milliseconds at the bar.
     public private(set) var flags: [VersionID: [Finding]] = [:]
@@ -144,6 +147,54 @@ public final class TakesModel {
     public func choose(_ take: VersionID, forBar bar: Int) {
         guard takes.contains(where: { $0.id == take }), bars.contains(bar) else { return }
         choices[bar] = take
+        choicesBeforePick = nil
+    }
+
+    /// Whether a take has audio under this bar.
+    public func covers(_ version: PartVersion, bar: Int) -> Bool {
+        guard let span = Self.seconds(of: version, clock: host.clock) else { return false }
+        let barStart = host.clock.seconds(forBar: bar), barEnd = host.clock.seconds(forBar: bar + 1)
+        return span.end > barStart + 0.05 && span.start < barEnd - 0.05
+    }
+
+    /// Whether there is anything to pick between: two takes the band has read.
+    public var canPickClean: Bool { takes.filter { analyses[$0.id] != nil }.count >= 2 }
+
+    /// "Pick the clean bars": every bar from the take the band flags least there, a tie to the later
+    /// pass — what the Director's comp_takes does, done on the lanes, where it can be heard and
+    /// changed before anything is made. A take only competes for a bar it sang in, so a take that
+    /// went quiet cannot win a bar for having nothing to flag. Put back restores the bars as they were.
+    public func pickCleanBars() {
+        lastError = nil
+        let ordered = takes.enumerated().sorted { a, b in
+            let pa = Guidance.audio(of: a.element)?.take?.pass ?? 0, pb = Guidance.audio(of: b.element)?.take?.pass ?? 0
+            return pa != pb ? pa < pb : a.offset < b.offset
+        }.map(\.element)
+        var candidates: [CompPlanner.Candidate] = []
+        for take in ordered {
+            guard let analysis = analyses[take.id] else { continue }
+            var perBar: [Int: Int] = [:]
+            for finding in board.review(TakeReview(analysis: analysis, limit: Int.max)) {
+                if let bar = finding.locus.bar, bars.contains(bar) { perBar[bar, default: 0] += 1 }
+            }
+            candidates.append(CompPlanner.Candidate(take: take.id, flags: perBar, sung: Set(analysis.notes.map(\.bar)),
+                                                    covers: Set(bars.filter { covers(take, bar: $0) })))
+        }
+        guard candidates.count >= 2 else {
+            lastError = "Picking needs two takes the band could read."
+            return
+        }
+        let before = choices
+        let picked = CompPlanner.choose(bars: bars, from: candidates)
+        for (bar, take) in picked { choices[bar] = take }
+        choicesBeforePick = before
+    }
+
+    /// The bars as they were before the pick.
+    public func putBackPick() {
+        guard let before = choicesBeforePick else { return }
+        choices = before
+        choicesBeforePick = nil
     }
 
     public func choose(_ take: VersionID, forBars range: Range<Int>) {

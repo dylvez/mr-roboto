@@ -393,6 +393,18 @@ struct LedgerReachTests {
         var titles = Guidance.proposals(for: song).map(\.title)
         #expect(titles.contains("Sing over Arrival"))
         #expect(titles.contains("Mix Arrival"))
+        #expect(titles.firstIndex(of: "Write the words")! < titles.firstIndex(of: "Sing over Arrival")!, "the words before the microphone")
+
+        // Words, and a tune they are not set to: the setting is proposed instead.
+        var worded = song
+        let tune = PartVersion(partID: PartID(), kind: .melody(Melody(notes: [NoteEvent(pitch: Pitch(midi: 72), start: 0, duration: 1)])),
+                               author: .user, operation: Operation.written, note: "Tune")
+        try? worded.append(tune)
+        try? worded.append(PartVersion(partID: PartID(), kind: .lyric(Lyricist.lyric(from: "[Verse]\nsoft machine")),
+                                       author: .user, operation: Operation.written, note: "Lyric"))
+        let wordedTitles = Guidance.proposals(for: worded).map(\.title)
+        #expect(!wordedTitles.contains("Write the words"))
+        #expect(wordedTitles.contains("Set the words to \(PartLabel.title(of: tune))"), "\(wordedTitles)")
 
         let part = PartID()
         let take = PartVersion(partID: part, kind: .audio(Audio(media: GuidanceFixture.media("f"), role: .take, sampleRate: 48_000,
@@ -402,6 +414,7 @@ struct LedgerReachTests {
         titles = Guidance.proposals(for: song).map(\.title)
         #expect(titles.contains("Comp the 1 take"))
         #expect(!titles.contains("Sing over Arrival"))
+        #expect(!titles.contains("Write the words"), "sung without written words: not nagged")
 
         try? song.append(PartVersion(partID: PartID(), kind: .mix(Mix.unity), author: .user, operation: Operation.written))
         titles = Guidance.proposals(for: song).map(\.title)

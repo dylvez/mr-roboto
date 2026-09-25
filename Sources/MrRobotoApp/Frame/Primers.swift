@@ -42,9 +42,9 @@ public enum Primer {
                         + "is written to the key.")
         case .pianoRoll where variant == "melody":
             return ("Piano roll · melody",
-                    "A tune, drawn by hand and as many bars long as you set: click to place a note, drag it to move it. "
-                        + "Nothing in the band writes a melody, so this one is yours, and the Melodist reads it below. It keeps "
-                        + "itself as you go.")
+                    "A tune, as many bars long as you set: click to place a note, drag it to move it, or play one in on a "
+                        + "controller in Keys and Tighten it to the grid. Ask the band and the Director writes one for the "
+                        + "Melodist. The Melodist reads it below, and it keeps itself as you go.")
         case .pianoRoll:
             return ("Piano roll",
                     "A bass line, with the groove's kicks drawn under it so the lag is visible. The levers re-run the writer "
@@ -106,8 +106,9 @@ public enum Primer {
         case .takes:
             return ("Takes",
                     "Every take of one part, lane by lane against the bars, with the band's flags on the bar they belong "
-                        + "to — cents and milliseconds, never adjectives. Choose which take each bar comes from, hear the comp, "
-                        + "and make it: one version, seams crossfaded, the takes under it in the history.")
+                        + "to — cents and milliseconds, never adjectives. Choose which take each bar comes from, or Pick the "
+                        + "clean bars to take each from the take flagged least there; hear the comp, then make it: one version, "
+                        + "seams crossfaded, the takes under it in the history.")
         }
     }
 }

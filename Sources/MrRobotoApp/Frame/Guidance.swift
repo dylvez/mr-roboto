@@ -265,6 +265,25 @@ public enum Guidance {
         if song.sections.contains(where: { !$0.stitch.isEmpty }),
            song.versions.contains(where: StructureModel.plays) {
             let takes = self.takes(in: song)
+            // The words before the microphone, as the path has them: a take needs something to
+            // sing, and the Booth shows the stanza labelled for the section it records.
+            let words: Lyric? = song.versions.last { $0.type == .lyric }.flatMap { version in
+                if case .lyric(let lyric) = version.kind { return lyric }
+                return nil
+            }
+            if takes.isEmpty, words?.lines.contains(where: { !$0.syllables.isEmpty }) != true {
+                out.append(Proposal(
+                    title: "Write the words",
+                    rationale: "A stanza for each section, labelled [Verse] or [Hook] so the Booth shows the one you "
+                        + "are singing. The Lyricist reads them as you type.",
+                    action: dockAction(for: .lyrics, in: song)))
+            } else if let words, words.alignedTo == nil, let tune = melodies(in: song).last {
+                out.append(Proposal(
+                    title: "Set the words to \(PartLabel.title(of: tune))",
+                    rationale: "One syllable a note, from Set to melody on the Lyrics surface; the Lyricist then says "
+                        + "where a stressed syllable lands off the beat.",
+                    action: dockAction(for: .lyrics, in: song)))
+            }
             if takes.isEmpty {
                 out.append(Proposal(
                     title: "Sing over \(song.title)",

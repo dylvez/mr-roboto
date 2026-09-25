@@ -314,7 +314,8 @@ public final class PianoRollModel {
             refreshReadings()
         } else if let melody, case .melody(let tune) = melody.kind {
             // Opened on a tune: melody mode, its notes, its instrument, and every commit derives
-            // from it. The writer never runs — nothing in the band writes a melody.
+            // from it. The bass writer never runs on a tune: one comes from the hand, a controller
+            // in Keys, or the Director writing for the Melodist.
             base = melody
             mode = .melody
             notes = tune.notes
