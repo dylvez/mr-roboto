@@ -104,15 +104,23 @@ public final class MIDIControl {
             return
         }
         if isCapturing { captured.append(event) }
+        // The sound is read at every note, not once when the mode was picked: the song can have
+        // changed, or its instrument, or a chop's pads can have taken the shared drum sampler.
+        // Loading what is already loaded is a lookup, so a note costs nothing extra.
+        let sound = self.sound()
         switch (mode, event.kind) {
         case (.kit, .noteOn(let note, let velocity)):
             let hit = VoiceSampler.Hit(DrumMap.voice(for: note), velocity: velocity, at: 0)
             lastHit = hit
-            Task { await service.play([hit]) }
+            Task {
+                await load(sound)
+                await service.play([hit])
+            }
         case (.bass, .noteOn(let note, let velocity)):
             let hit = VoiceSampler.Hit(note: note, velocity: velocity, at: 0)
             lastHit = hit
             Task {
+                await load(sound)
                 let handles = await service.playBass([hit])
                 held[note, default: []].append(contentsOf: handles)
             }
@@ -122,6 +130,7 @@ public final class MIDIControl {
             let hit = VoiceSampler.Hit(note: note, velocity: velocity, at: 0)
             lastHit = hit
             Task {
+                await load(sound)
                 let handles = await service.playInstrument([hit])
                 held[note, default: []].append(contentsOf: handles)
             }
@@ -132,22 +141,40 @@ public final class MIDIControl {
         }
     }
 
-    /// The instrument for the mode, loaded so the first pad is not late.
-    private func prepare() async {
-        guard let song = app.song else { return }
+    /// What the mode plays, for the song as it stands. With no song open, the app's defaults — a
+    /// controller plugged in before a song exists still makes a sound.
+    enum Voice: Equatable {
+        case kit(String), bass(String), keys(String)
+    }
+
+    func sound() -> Voice? {
+        switch mode {
+        case .off:
+            return nil
+        case .kit:
+            return .kit(app.song.map { SongPlayback.machineID(in: $0) } ?? SynthMachine.tr808.id)
+        case .bass:
+            let sound = app.song.flatMap { Guidance.basslines(in: $0).last }.flatMap { version -> String? in
+                if case .bassline(let line) = version.kind { return line.sound }
+                return nil
+            }
+            return .bass(BassVoiceSpec.all.first { $0.id == sound }?.id ?? BassVoiceSpec.finger.id)
+        case .keys:
+            return .keys(app.song.map { SongPlayback.instrumentID(in: $0) } ?? InstrumentVoiceSpec.rhodes.id)
+        }
+    }
+
+    /// Loads the sound, when it is not what is loaded already.
+    private func load(_ voice: Voice?) async {
         do {
-            switch mode {
-            case .kit:
-                if let machine = SynthMachine.preset(id: SongPlayback.machineID(in: song)) { try await service.prepare(machine: machine) }
-            case .bass:
-                let sound = Guidance.basslines(in: song).last.flatMap { version -> String? in
-                    if case .bassline(let line) = version.kind { return line.sound }
-                    return nil
-                }
-                try await service.prepare(bass: BassVoiceSpec.all.first { $0.id == sound } ?? .finger)
-            case .keys:
-                try await service.prepare(instrument: InstrumentVoiceSpec.preset(id: SongPlayback.instrumentID(in: song)) ?? .rhodes)
-            case .off:
+            switch voice {
+            case .kit(let id):
+                if let machine = SynthMachine.preset(id: id) { try await service.prepare(machine: machine) }
+            case .bass(let id):
+                if let spec = BassVoiceSpec.all.first(where: { $0.id == id }) { try await service.prepare(bass: spec) }
+            case .keys(let id):
+                if let spec = InstrumentVoiceSpec.preset(id: id) { try await service.prepare(instrument: spec) }
+            case nil:
                 break
             }
             lastError = nil
@@ -155,6 +182,9 @@ public final class MIDIControl {
             lastError = "\(error)"
         }
     }
+
+    /// The instrument for the mode, loaded so the first pad is not late.
+    private func prepare() async { await load(sound()) }
 
     // MARK: Capture, with the Booth
 

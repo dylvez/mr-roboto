@@ -224,28 +224,12 @@ public final class BoothModel {
     /// Verse of the form shows the second stanza labelled Verse, when the words have two; with
     /// only one, every Verse sings it.
     public var sectionWords: SectionWords? {
-        guard let lyric, case .lyric(let words) = lyric.kind, let labels = words.labels,
-              let chosen = section, let index = sections.firstIndex(where: { $0.id == chosen }) else { return nil }
-        let name = sections[index].name
-        func same(_ other: String) -> Bool { other.caseInsensitiveCompare(name) == .orderedSame }
-        let matching = labels.filter { same($0.name) }.sorted { $0.line < $1.line }
-        guard !matching.isEmpty else { return nil }
-        let occurrence = sections[..<index].filter { same($0.name) }.count
-        let label = matching[min(occurrence, matching.count - 1)]
-        // Read as `Lyric.stanza(named:)` reads one: from the label to the next blank line or the
-        // next label, blank lines before the first sung line passed over.
-        var first: Int?
-        var end = label.line
-        for line in label.line..<words.lines.count {
-            if line > label.line, labels.contains(where: { $0.line == line }) { break }
-            if words.lines[line].syllables.isEmpty { if first == nil { continue } else { break } }
-            if first == nil { first = line }
-            end = line + 1
-        }
-        guard let first else { return nil }
-        let rest = Array(words.lines.indices.filter { $0 < label.line || $0 >= end })
-        return SectionWords(name: label.name, stanza: Array(words.lines[first..<end]),
-                            rest: Self.labelled(words, lines: rest, skipping: label))
+        guard let lyric, case .lyric(let words) = lyric.kind,
+              let chosen = section, let index = sections.firstIndex(where: { $0.id == chosen }),
+              let found = words.stanza(forSectionAt: index, in: sections) else { return nil }
+        let rest = Array(words.lines.indices.filter { $0 < found.label.line || $0 >= found.lines.upperBound })
+        return SectionWords(name: found.label.name, stanza: Array(words.lines[found.lines]),
+                            rest: Self.labelled(words, lines: rest, skipping: found.label))
     }
 
     /// What the pane says when a section is chosen and no stanza carries its name — or nil when

@@ -130,6 +130,50 @@ struct MasterExportTests {
         #expect(!result.isError && result.content.contains("Arrival.mid"), "\(result.content)")
         let refused = await box.run(ClaudeToolUse(id: "m", name: "export", input: .object([.init("what", .string("master"))])))
         #expect(refused.isError)
+        let wordless = await box.run(ClaudeToolUse(id: "l", name: "export", input: .object([.init("what", .string("lyrics"))])))
+        #expect(wordless.isError && wordless.content.contains("no words"), "\(wordless.content)")
+    }
+}
+
+@Suite("Interop: the words leave as a lyric sheet") @MainActor
+struct LyricSheetTests {
+
+    static let words = "[Verse]\nI put the coffee on at six\nI watched it make itself\n\n[Hook]\nsoft machine"
+
+    @Test("the sheet is the title, the artist and the newest words with their labels; a blank lyric is no sheet")
+    func sheet() throws {
+        var song = Song(title: "Arrival", tempo: 92)
+        song.artist = "Vessel"
+        #expect(Export.lyricSheet(for: song) == nil)
+        let blank = PartVersion(partID: PartID(), kind: .lyric(Lyric(lines: [])), author: .user, operation: Operation.written, note: "Lyric")
+        try song.append(blank)
+        #expect(Export.lyricSheet(for: song) == nil, "nothing to sing is nothing to print")
+        try song.append(blank.deriving(.lyric(Lyricist.lyric(from: Self.words)), by: .user, operation: Operation.written, note: "Lyric"))
+        let sheet = try #require(Export.lyricSheet(for: song))
+        #expect(sheet.hasPrefix("Arrival\nVessel\n\n[Verse]\nI put the coffee on at six\n"), "\(sheet)")
+        #expect(sheet.contains("\n\n[Hook]\nsoft machine\n"), "\(sheet)")
+    }
+
+    @Test("File ▸ Export ▸ Lyrics writes a text file beside the others, never over one, and the tool writes it too")
+    func file() async throws {
+        let directory = WiringFixture.temporaryDirectory("lyric-sheet")
+        defer { WiringFixture.remove(directory) }
+        var song = Song(title: "Arrival", tempo: 92)
+        try song.append(PartVersion(partID: PartID(), kind: .lyric(Lyricist.lyric(from: Self.words)), author: .user,
+                                    operation: Operation.written, note: "Lyric"))
+        let app = AppState(library: Library(), song: nil, store: LibraryStore(directoryURL: directory),
+                           status: .empty(directory), transportHost: StubTransportHost())
+        app.open(song)
+        let out = directory.appendingPathComponent("out", isDirectory: true)
+        let first = try Export.lyrics(app, to: out)
+        #expect(first.lastPathComponent == "Arrival — lyrics.txt")
+        #expect(try String(contentsOf: first, encoding: .utf8) == Export.lyricSheet(for: song))
+        let second = try Export.lyrics(app, to: out)
+        #expect(second.lastPathComponent == "Arrival — lyrics 2.txt", "the first sheet is not replaced")
+
+        let box = DirectorTools.toolbox(workbench: DirectorWorkbench(engines: DirectorTestEngines.make()), workspace: DirectorScratchWorkspace(song: song))
+        let result = await box.run(ClaudeToolUse(id: "e", name: "export", input: .object([.init("what", .string("lyrics"))])))
+        #expect(!result.isError && result.content.contains("lyrics.txt"), "\(result.content)")
     }
 }
 

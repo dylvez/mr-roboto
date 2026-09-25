@@ -287,6 +287,7 @@ struct BoothSurfaceView: View {
                 }
                 Spacer(minLength: 4)
                 if let lanes = model.lanes, !lanes.takes.isEmpty {
+                    HearCompButton(model: lanes)
                     MakeCompButton(model: lanes)
                 }
             }

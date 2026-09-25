@@ -35,6 +35,7 @@ struct TakesSurfaceView: View {
                 .font(Design.Typography.numeric(12))
                 .foregroundStyle(Design.Palette.inkSecondary)
             Spacer()
+            HearCompButton(model: model)
             MakeCompButton(model: model)
         }
     }
@@ -70,6 +71,24 @@ struct ScrollsInside<Content: View>: View {
             ScrollView(.vertical) { content }
                 .scrollBounceBehavior(.basedOnSize)
         }
+    }
+}
+
+/// "Hear the comp": the comp lane as it stands, rendered and played, nothing kept. Pressed again
+/// while it sounds, it stops.
+struct HearCompButton: View {
+    var model: TakesModel
+
+    var body: some View {
+        Button {
+            Task { model.isHearingComp ? model.stopAudition() : await model.hearComp() }
+        } label: {
+            Label(model.isHearingComp ? "Stop" : "Hear the comp", systemImage: model.isHearingComp ? "stop.fill" : "play.fill")
+                .labelStyle(.titleAndIcon)
+        }
+        .font(Design.Typography.ui(12.5))
+        .disabled(model.takes.isEmpty)
+        .help(model.isHearingComp ? "Stop the comp" : "Play the comp lane as chosen, bar by bar, without keeping it")
     }
 }
 
@@ -231,13 +250,12 @@ struct TakesLanes: View {
     }
 
     /// Why a cell does what it does — and, for the ones that do nothing, why not. The comp lane is
-    /// read-only because it is the result of the choices on the take lanes, and there is no way to
-    /// hear it before making it: the host plays takes, not a plan.
+    /// read-only because it is the result of the choices on the take lanes.
     private func cellHelp(bar: Int, isComp: Bool, version: PartVersion?, covers: Bool) -> String {
         if isComp {
             let from = model.take(forBar: bar).flatMap { id in model.takes.first { $0.id == id } }.map(PartLabel.title(of:))
             return (from.map { "Bar \(bar + 1) comes from \($0). " } ?? "")
-                + "The comp lane shows the choice; press a bar on a take's lane to change it. Make the comp to hear it."
+                + "The comp lane shows the choice; press a bar on a take's lane to change it. Hear the comp plays it."
         }
         guard let version else { return "" }
         guard covers else { return "\(PartLabel.title(of: version)) has no audio under bar \(bar + 1)." }

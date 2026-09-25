@@ -86,7 +86,7 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     func mixObservation(section: SectionID?) async throws -> MixObservation?
     /// A mix version. Nil, with the reason in the rail, when it cannot be.
     func recordMix(_ mix: Mix, note: String) -> PartVersion?
-    /// M6: "master", "stems" or "midi" written to the song's export folder; the files.
+    /// M6: "master", "stems", "midi" or "lyrics" written to the song's export folder; the files.
     func export(_ what: String) async throws -> [URL]
 
     // M7: the record.
@@ -265,8 +265,10 @@ public final class AppStateWorkspace: DirectorWorkspace {
             return try await Export.stems(app, to: directory)
         case "midi":
             return [try Export.midi(app, to: directory)]
+        case "lyrics":
+            return [try Export.lyrics(app, to: directory)]
         default:
-            throw DirectorToolFailure(tool: "export", reason: "\"\(what)\" is not master, stems or midi.")
+            throw DirectorToolFailure(tool: "export", reason: "\"\(what)\" is not master, stems, midi or lyrics.")
         }
     }
 }
@@ -544,11 +546,17 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
     }
 
     public func export(_ what: String) async throws -> [URL] {
-        guard let current = song, what == "midi" else {
-            throw DirectorToolFailure(tool: "export", reason: "This workspace has nowhere to render audio into; it writes MIDI only.")
+        guard let current = song, what == "midi" || what == "lyrics" else {
+            throw DirectorToolFailure(tool: "export", reason: "This workspace has nowhere to render audio into; it writes MIDI and lyrics only.")
         }
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("roboto-export-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        if what == "lyrics" {
+            guard let sheet = Export.lyricSheet(for: current) else { throw Export.Failure.noWords }
+            let url = directory.appendingPathComponent("\(current.title) — lyrics.txt")
+            try Data(sheet.utf8).write(to: url)
+            return [url]
+        }
         let url = directory.appendingPathComponent("\(current.title).mid")
         try MIDIExport.file(for: current).write(to: url)
         return [url]

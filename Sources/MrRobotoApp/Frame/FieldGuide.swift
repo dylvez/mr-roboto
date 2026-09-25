@@ -41,7 +41,7 @@ enum FieldGuide {
         Entry(word: "Director", meaning: "Reads what you ask for, hands it to the right band member, and answers by opening a surface on real parts."),
         Entry(word: "Band", meaning: "The cast for this song: the Beatmaker for grooves and feels, the Sampler for chops, machines and sources, the Bassist for the low end, the Harmonist for the chords, the Melodist for the tune, the Lyricist for the words, the Producer for the whole, the Engineer for the mix and the master, and the Peer, who listens like a friend. Who is in the room is set on the Cast surface."),
         Entry(word: "Take", meaning: "What you sang or played in the Booth, on the bar you started it. Every take stays; the Takes surface flags them, bar by bar, and comps the best bars into one. Takes play in the song, where they were sung."),
-        Entry(word: "Comp", meaning: "One version made from the best bar of each take, seams crossfaded. It stands in for its takes when the song plays."),
+        Entry(word: "Comp", meaning: "One version made from the best bar of each take, seams crossfaded. Hear the comp plays your choice before you make it; made, it stands in for its takes when the song plays."),
         Entry(word: "Mix", meaning: "A strip per part — level, pan, EQ, compressor, send — and a master with a target loudness and a ceiling. Every move you let go of is a version."),
         Entry(word: "Key", meaning: "Your Anthropic API key, kept in the keychain: what the band runs on. Set it from the rail, under the field you ask the band from."),
         Entry(word: "Voice", meaning: "The lyrics this house has written, imported once (File ▸ Import Voice…). The Lyricist reads new words against them and names the images that repeat."),

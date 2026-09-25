@@ -261,6 +261,34 @@ public struct Lyric: Hashable, Codable, Sendable {
         return out
     }
 
+    /// The stanza the section at `index` of `sections` sings: the one labelled with its name, case
+    /// aside. The second Verse of the form sings the second stanza labelled Verse when the words
+    /// have two; with only one, every Verse sings it. `lines` runs from the stanza's first sung
+    /// line to the next blank line or label, blank lines under the label passed over. Nil when no
+    /// stanza carries the name, or the one that does has nothing sung under it.
+    ///
+    /// The Booth shows this stanza while that section records, and Structure shows it under the
+    /// section, so the two cannot disagree about which words a section has.
+    public func stanza(forSectionAt index: Int, in sections: [Section]) -> (label: StanzaLabel, lines: Range<Int>)? {
+        guard let labels, sections.indices.contains(index) else { return nil }
+        let name = sections[index].name
+        func same(_ other: String) -> Bool { other.caseInsensitiveCompare(name) == .orderedSame }
+        let matching = labels.filter { same($0.name) }.sorted { $0.line < $1.line }
+        guard !matching.isEmpty else { return nil }
+        let occurrence = sections[..<index].filter { same($0.name) }.count
+        let label = matching[min(occurrence, matching.count - 1)]
+        var first: Int?
+        var end = label.line
+        for line in label.line..<lines.count {
+            if line > label.line, labels.contains(where: { $0.line == line }) { break }
+            if lines[line].syllables.isEmpty { if first == nil { continue } else { break } }
+            if first == nil { first = line }
+            end = line + 1
+        }
+        guard let first else { return nil }
+        return (label, first..<end)
+    }
+
     /// The same words set to a melody's notes: one syllable per note, in order, across the sung
     /// lines. Syllables past the last note stay unset, and a melody with more notes than syllables
     /// leaves the rest as melisma. The version is who the indices refer to.

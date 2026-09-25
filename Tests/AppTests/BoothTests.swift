@@ -71,6 +71,8 @@ final class StubBoothHost: BoothHosting, TakesHosting {
     func openCheck(_ finding: Finding, on take: PartVersion) { checks.append((finding, take)) }
     func audio(of version: PartVersion) -> Comp.TakeAudio? { audioByVersion[version.id] }
     func audition(_ version: PartVersion) async {}
+    var heard: [Comp.Rendered] = []
+    func audition(_ rendered: Comp.Rendered) async { heard.append(rendered) }
     func stopAudition() {}
     func keepComp(_ rendered: Comp.Rendered, plan: CompPlan, takes: [PartVersion]) -> PartVersion? {
         comps.append((rendered, plan))
@@ -211,8 +213,8 @@ struct BoothTests {
         #expect(model.state == .idle && model.lastError != nil)
     }
 
-    @Test("the Takes surface chooses bars from takes and keeps a comp with the takes as parents")
-    func comping() throws {
+    @Test("the Takes surface chooses bars from takes, plays the comp lane without keeping it, and keeps a comp with the takes as parents")
+    func comping() async throws {
         let host = StubBoothHost(song: song())
         let model0 = booth(host)
         // Two takes of the verse (bars 0–4 at 120 = 8 s), placed at 0 by hand.
@@ -234,6 +236,15 @@ struct BoothTests {
         let plan = takes.plan
         #expect(plan.spans.map { ($0.startBar, $0.endBar) }.map { "\($0.0)-\($0.1)" } == ["0-2", "2-3", "3-4"])
         #expect(plan.takes == [one.id, two.id])
+
+        // Heard first: the same render, played, and nothing kept.
+        await takes.hearComp()
+        #expect(takes.isHearingComp && takes.playing == nil)
+        #expect(host.heard.count == 1 && host.heard[0].seams.count == 2 && host.comps.isEmpty, "played, not kept")
+        #expect(takes.comp == nil && !takes.compIsCurrent)
+        takes.stopAudition()
+        #expect(!takes.isHearingComp)
+
         #expect(takes.keepComp(), "\(takes.lastError ?? "")")
         let comp = try #require(takes.comp)
         #expect(comp.operation == Operation.comped && comp.parents == [one.id, two.id] && comp.partID == one.partID)

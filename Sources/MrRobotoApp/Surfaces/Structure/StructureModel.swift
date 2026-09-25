@@ -30,6 +30,13 @@ public protocol StructureHosting: AnyObject {
     /// nothing was stitched, with the host saying why.
     @discardableResult
     func receive(_ payload: LibraryDragPayload, into section: SectionID) async -> Bool
+    /// Opens the Lyrics surface, where a stanza is labelled for a section. A host with no frame
+    /// does nothing.
+    func openLyrics()
+}
+
+public extension StructureHosting {
+    func openLyrics() {}
 }
 
 /// The Structure surface's model: the sections as a working copy, edited in place and kept as
@@ -114,6 +121,8 @@ public final class StructureModel {
     public private(set) var selected: SectionID?
     public private(set) var layers: [Layer]
     public private(set) var lastError: String?
+    /// The song's newest lyric, for the words each section sings.
+    public private(set) var lyric: Lyric?
 
     private let host: any StructureHosting
 
@@ -126,6 +135,7 @@ public final class StructureModel {
         let current = song?.sections ?? []
         let built = song.map(Self.layers(in:)) ?? []
         layers = built
+        lyric = Self.lyric(in: song)
         // The working copy is tidied; `committed` is the song's own, so a form that named two of a
         // kind shows as dirty and Keep writes back the one that was sounding.
         sections = current.map { Self.normalised($0) }
@@ -137,6 +147,7 @@ public final class StructureModel {
     /// Director's `arrange` — shows up here. A working copy with unkept edits is left alone.
     public func sync(with song: Song?) {
         layers = song.map(Self.layers(in:)) ?? []
+        lyric = Self.lyric(in: song)
         let current = song?.sections ?? []
         guard current != committed else { return }
         let wasClean = !isDirty
@@ -153,6 +164,32 @@ public final class StructureModel {
         if isDirty { guard keep() else { return false } }
         return await host.receive(payload, into: section)
     }
+
+    // MARK: The words
+
+    static func lyric(in song: Song?) -> Lyric? {
+        guard let version = song?.versions.last(where: { $0.type == .lyric }), case .lyric(let words) = version.kind else { return nil }
+        return words
+    }
+
+    /// What a section sings, as its detail shows it.
+    public enum Words: Equatable, Sendable {
+        /// The stanza labelled for it, as text, line by line.
+        case sings(label: String, lines: [String])
+        /// The song has words, and none of them are labelled with this section's name.
+        case unlabelled(name: String)
+    }
+
+    /// The words the section sings in the working form — the same stanza the Booth shows while it
+    /// records the section. Nil when the song has no words to sing.
+    public func words(for section: SectionID) -> Words? {
+        guard let lyric, lyric.lines.contains(where: { !$0.syllables.isEmpty }),
+              let index = sections.firstIndex(where: { $0.id == section }) else { return nil }
+        guard let found = lyric.stanza(forSectionAt: index, in: sections) else { return .unlabelled(name: sections[index].name) }
+        return .sings(label: found.label.name, lines: lyric.lines[found.lines].map(\.text))
+    }
+
+    public func openLyrics() { host.openLyrics() }
 
     // MARK: Reading
 

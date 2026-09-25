@@ -97,6 +97,7 @@ struct FrameCommands: Commands {
                 Button("Master…") { MrRobotoApp.export(app, what: "Exporting the master…") { try await Export.master(app, to: $0).wav } }
                 Button("Stems…") { MrRobotoApp.export(app, what: "Exporting the stems…") { try await Export.stems(app, to: $0).first } }
                 Button("MIDI…") { MrRobotoApp.export(app, what: "Exporting MIDI…") { try Export.midi(app, to: $0) } }
+                Button("Lyrics…") { MrRobotoApp.export(app, what: "Exporting the lyrics…") { try Export.lyrics(app, to: $0) } }
             }
             .disabled(app.song == nil)
             Button("Import Voice…") {

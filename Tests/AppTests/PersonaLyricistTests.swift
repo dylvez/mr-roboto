@@ -33,6 +33,11 @@ struct PersonaLyricistTests {
         #expect(StressLexicon.chunks(of: "central", count: 2) == ["cen", "tral"])
         #expect(StressLexicon.chunks(of: "window", count: 2) == ["win", "dow"])
         #expect(StressLexicon.chunks(of: "six", count: 1) == ["six"])
+        #expect(StressLexicon.chunks(of: "machine", count: 2) == ["ma", "chine"], "not through the ch")
+        #expect(StressLexicon.chunks(of: "machine,", count: 2) == ["ma", "chine,"], "a comma does not hide the silent e")
+        #expect(StressLexicon.chunks(of: "father", count: 2) == ["fa", "ther"])
+        #expect(StressLexicon.chunks(of: "singer", count: 2) == ["sing", "er"])
+        #expect(StressLexicon.chunks(of: "rocket", count: 2) == ["rock", "et"])
     }
 
     @Test("a verse reads back with its stresses and its scheme, and the lines share their shape")

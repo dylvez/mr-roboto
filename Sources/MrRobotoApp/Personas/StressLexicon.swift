@@ -91,6 +91,11 @@ public final class StressLexicon: @unchecked Sendable {
     /// Splits a word's spelling into as many chunks as it has syllables: at vowel-group boundaries
     /// when the count matches (the consonants between two groups split down the middle, a single
     /// one going to the syllable after it — me·lo·dy, win·dow, cen·tral), evenly when it does not.
+    /// Consonant pairs that sound as one: those that begin the next syllable, and those that end
+    /// the one before.
+    static let digraphsThatStart: Set<String> = ["ch", "sh", "th", "ph", "wh"]
+    static let digraphsThatEnd: Set<String> = ["ck", "ng"]
+
     public static func chunks(of word: String, count: Int) -> [String] {
         guard count > 1 else { return [word] }
         let lower = Array(word.lowercased())
@@ -103,7 +108,11 @@ public final class StressLexicon: @unchecked Sendable {
             if !isVowel, let s = start { groups.append((s, i)); start = nil }
         }
         if let s = start { groups.append((s, lower.count)) }
-        if groups.count > 1, lower.last == "e", groups.last?.start == lower.count - 1 { groups.removeLast() }
+        // A final silent e, looked for on the last letter rather than the last character: a comma
+        // after "machine" used to hide it, so "machine," split in even halves while "machine"
+        // split on its vowels, and the same word read two ways in one stanza.
+        if groups.count > 1, let lastLetter = lower.lastIndex(where: \.isLetter), lower[lastLetter] == "e",
+           groups.last?.start == lastLetter { groups.removeLast() }
         guard groups.count == count else {
             let length = letters.count
             return (0..<count).map { i in String(letters[(i * length / count)..<((i + 1) * length / count)]) }
@@ -111,7 +120,14 @@ public final class StressLexicon: @unchecked Sendable {
         var cuts: [Int] = []
         for (previous, next) in zip(groups, groups.dropFirst()) {
             let run = next.start - previous.end
-            cuts.append(previous.end + run / 2)
+            var cut = previous.end + run / 2
+            // Never through a digraph: "ma·chine", "fa·ther", not "mac·hine"; "sing·er", "rock·et".
+            if cut > previous.end, cut < next.start {
+                let pair = String(lower[(cut - 1)...cut])
+                if Self.digraphsThatStart.contains(pair) { cut -= 1 }
+                else if Self.digraphsThatEnd.contains(pair) { cut += 1 }
+            }
+            cuts.append(cut)
         }
         var out: [String] = []
         var last = 0

@@ -106,8 +106,8 @@ public enum Primer {
         case .takes:
             return ("Takes",
                     "Every take of one part, lane by lane against the bars, with the band's flags on the bar they belong "
-                        + "to — cents and milliseconds, never adjectives. Choose which take each bar comes from and make the "
-                        + "comp: one version, seams crossfaded, the takes under it in the history.")
+                        + "to — cents and milliseconds, never adjectives. Choose which take each bar comes from, hear the comp, "
+                        + "and make it: one version, seams crossfaded, the takes under it in the history.")
         }
     }
 }

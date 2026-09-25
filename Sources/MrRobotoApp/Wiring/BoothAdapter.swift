@@ -160,6 +160,10 @@ final class BoothAdapter: BoothHosting, TakesHosting {
 
     func stopAudition() { Task { await service.stop() } }
 
+    func audition(_ rendered: Comp.Rendered) async {
+        await service.play(planar: rendered.planar, sampleRate: rendered.sampleRate)
+    }
+
     func keepComp(_ rendered: Comp.Rendered, plan: CompPlan, takes: [PartVersion]) -> PartVersion? {
         guard app.song != nil, let first = takes.first else { return nil }
         guard let media = app.keepAudio(rendered.planar, sampleRate: rendered.sampleRate, what: "the comp") else { return nil }

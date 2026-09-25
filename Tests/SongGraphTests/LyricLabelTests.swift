@@ -18,6 +18,21 @@ import Testing
               labels: [Lyric.StanzaLabel(line: 0, name: "Verse"), Lyric.StanzaLabel(line: 3, name: "Hook")])
     }
 
+    @Test func aSectionSingsTheStanzaLabelledForIt() {
+        // Verse, Verse, Hook stanzas; a form of Intro, Verse, Hook, Verse, Verse.
+        let lyric = Lyric(lines: [line("down by the"), line("water"), LyricLine(syllables: []),
+                                  line("second verse"), LyricLine(syllables: []), line("home again")],
+                          labels: [Lyric.StanzaLabel(line: 0, name: "Verse"), Lyric.StanzaLabel(line: 3, name: "verse"),
+                                   Lyric.StanzaLabel(line: 5, name: "Hook")])
+        let form = ["Intro", "Verse", "Hook", "Verse", "Verse"].map { Section(name: $0, stitch: [], lengthInBars: 4) }
+        #expect(lyric.stanza(forSectionAt: 0, in: form) == nil, "no stanza is labelled Intro")
+        #expect(lyric.stanza(forSectionAt: 1, in: form)?.lines == 0..<2)
+        #expect(lyric.stanza(forSectionAt: 2, in: form)?.lines == 5..<6)
+        #expect(lyric.stanza(forSectionAt: 3, in: form)?.lines == 3..<4, "the second Verse sings the second stanza, case aside")
+        #expect(lyric.stanza(forSectionAt: 4, in: form)?.lines == 3..<4, "a third Verse with two stanzas sings the last")
+        #expect(lyric.stanza(forSectionAt: 9, in: form) == nil)
+    }
+
     @Test func labelsAreWrittenBackAboveTheirStanzas() {
         #expect(labelled.text == "[Verse]\ndown by the\nwater\n\n[Hook]\nhome again")
         var unlabelled = labelled

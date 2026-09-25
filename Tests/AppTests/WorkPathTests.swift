@@ -50,7 +50,7 @@ struct WorkPathTests {
     func afterImport() throws {
         let built = GuidanceFixture.imported()
         let steps = WorkPath.steps(for: built.song, active: nil, canPerform: PathFixture.always).steps
-        #expect(steps.map(\.kind) == [.record, .stems, .chop, .groove, .chords, .bass, .dust, .arrange, .sing, .mix])
+        #expect(steps.map(\.kind) == [.record, .stems, .chop, .groove, .chords, .bass, .dust, .arrange, .words, .sing, .mix])
         #expect(PathFixture.step(.record, steps)?.isDone == true)
         let stems = try #require(PathFixture.step(.stems, steps))
         #expect(stems.isNext)
@@ -141,7 +141,7 @@ struct WorkPathTests {
         let beat = try PathFixture.beat()
         #expect(lit(.sound, [], in: beat) == [.kit])
         #expect(WorkPath.steps(for: beat, active: nil, canPerform: PathFixture.always).steps.map(\.kind)
-                == [.groove, .chords, .bass, .kit, .dust, .arrange, .sing, .mix])
+                == [.groove, .chords, .bass, .kit, .dust, .arrange, .words, .sing, .mix])
     }
 
     @Test("a step the frame could not carry out offers nothing and is not next")
@@ -276,5 +276,23 @@ struct PrimerTests {
         store.resetAll()
         #expect(store.isShowing(.chopLane))
         #expect(PrimerStore(defaults: defaults).isShowing(.chopLane))
+    }
+
+    @Test("Words comes before Sing, opens the Lyrics surface, and is done only when the lyric has something to sing")
+    func wordsStep() throws {
+        var song = Song.new(title: "Glass", tempo: 88)
+        func words() -> PathStep? {
+            WorkPath.steps(for: song, active: nil, canPerform: PathFixture.always).steps.first { $0.kind == .words }
+        }
+        #expect(WorkPath.beat.steps.firstIndex(of: .words)! + 1 == WorkPath.beat.steps.firstIndex(of: .sing)!)
+        #expect(words()?.action?.surface == .lyrics && words()?.isDone == false)
+        let blank = PartVersion(partID: PartID(), kind: .lyric(Lyric(lines: [])), author: .user, operation: Operation.written, note: "Lyric")
+        try song.append(blank)
+        #expect(words()?.isDone == false, "a lyric of nothing is not words yet")
+        try song.append(blank.deriving(.lyric(Lyricist.lyric(from: "[Verse]\nI put the coffee on at six")), by: .user,
+                                       operation: Operation.written, note: "Lyric"))
+        #expect(words()?.count == 1)
+        #expect(words()?.action?.bound == [song.versions.last!.id], "pressed, it opens the words")
+        #expect(WorkPath.stepKind(for: .lyrics, bound: [], in: song, path: .beat) == .words)
     }
 }

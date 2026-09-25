@@ -21,4 +21,6 @@ final class StructureAdapter: StructureHosting {
     func receive(_ payload: LibraryDragPayload, into section: SectionID) async -> Bool {
         app.receive(payload, at: .section(section))
     }
+
+    func openLyrics() { app.perform(Guidance.dockAction(for: .lyrics, in: app.song)) }
 }

@@ -22,10 +22,14 @@ public protocol TakesHosting: AnyObject {
     func note(_ text: String, detail: String?)
     /// Opens the Booth, where takes come from. A host with no frame does nothing.
     func openBooth()
+    /// Plays rendered audio now: the comp lane, heard before it is made. A host with no audio
+    /// does nothing.
+    func audition(_ rendered: Comp.Rendered) async
 }
 
 public extension TakesHosting {
     func openBooth() {}
+    func audition(_ rendered: Comp.Rendered) async {}
 }
 
 /// The Takes surface: lanes of takes against the bars, a comp chosen bar by bar, and the band's
@@ -46,6 +50,8 @@ public final class TakesModel {
     /// choices have moved on from.
     private var compPlan: CompPlan?
     public private(set) var playing: VersionID?
+    /// The comp lane is sounding, rendered but not kept.
+    public private(set) var isHearingComp = false
     public private(set) var lastError: String?
     /// The band's findings on the takes, by version: cents and milliseconds at the bar.
     public private(set) var flags: [VersionID: [Finding]] = [:]
@@ -173,30 +179,55 @@ public final class TakesModel {
     public func keepComp() -> Bool {
         lastError = nil
         let plan = self.plan
-        guard !plan.spans.isEmpty else { lastError = "No bars to comp."; return false }
+        guard let rendered = render(plan) else { return false }
+        guard let version = host.keepComp(rendered, plan: plan, takes: takes.filter { plan.takes.contains($0.id) }) else {
+            lastError = "The comp could not be kept."
+            return false
+        }
+        comp = version
+        compPlan = plan
+        // The comp's choices, pinned: a take sung after it must not quietly become every
+        // unchosen bar of the comp lane, which would read as the comp changing by itself.
+        for span in plan.spans { for bar in span.startBar..<span.endBar { choices[bar] = span.take } }
+        return true
+    }
+
+    /// The comp lane as audio: each bar from its take, the seams crossfaded. Nil, with the reason
+    /// in `lastError`, when a take's audio is missing or there are no bars.
+    private func render(_ plan: CompPlan) -> Comp.Rendered? {
+        guard !plan.spans.isEmpty else { lastError = "No bars to comp."; return nil }
         var audio: [VersionID: Comp.TakeAudio] = [:]
         for id in plan.takes {
             guard let version = takes.first(where: { $0.id == id }), let take = host.audio(of: version) else {
                 lastError = "A take's audio is missing."
-                return false
+                return nil
             }
             audio[id] = take
         }
         do {
-            let rendered = try Comp.render(plan, takes: audio, clock: host.clock)
-            guard let version = host.keepComp(rendered, plan: plan, takes: takes.filter { plan.takes.contains($0.id) }) else {
-                lastError = "The comp could not be kept."
-                return false
-            }
-            comp = version
-            compPlan = plan
-            // The comp's choices, pinned: a take sung after it must not quietly become every
-            // unchosen bar of the comp lane, which would read as the comp changing by itself.
-            for span in plan.spans { for bar in span.startBar..<span.endBar { choices[bar] = span.take } }
-            return true
+            return try Comp.render(plan, takes: audio, clock: host.clock)
         } catch {
             lastError = "\(error)"
-            return false
+            return nil
+        }
+    }
+
+    /// "Hear the comp": the comp lane rendered and played, nothing kept. Choosing bars used to be
+    /// blind — the only way to hear a choice was to make it a version, so trying three comps left
+    /// three comps in the ledger.
+    public func hearComp() async {
+        lastError = nil
+        guard let rendered = render(plan) else { return }
+        playingUntilEnd?.cancel()
+        playing = nil
+        isHearingComp = true
+        await host.audition(rendered)
+        guard isHearingComp else { return }
+        let seconds = rendered.sampleRate > 0 ? Double(rendered.planar.first?.count ?? 0) / rendered.sampleRate : 0
+        playingUntilEnd = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(seconds))
+            guard !Task.isCancelled, let self else { return }
+            self.isHearingComp = false
         }
     }
 
@@ -208,6 +239,7 @@ public final class TakesModel {
     /// reads as playing until you press Stop on silence.
     public func audition(_ version: PartVersion) async {
         playingUntilEnd?.cancel()
+        isHearingComp = false
         playing = version.id
         await host.audition(version)
         guard playing == version.id else { return }
@@ -223,6 +255,7 @@ public final class TakesModel {
         playingUntilEnd?.cancel()
         playingUntilEnd = nil
         playing = nil
+        isHearingComp = false
         host.stopAudition()
     }
 

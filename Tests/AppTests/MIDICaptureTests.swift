@@ -168,6 +168,23 @@ struct MIDICaptureTests {
         #expect(app.song!.versions.count == before + 1)
     }
 
+    @Test("the sound a mode plays is the song's as it stands: a new instrument is heard on the next key, and no song plays the defaults")
+    func soundFollowsTheSong() throws {
+        let (app, control, directory, defaults, suite) = fixture()
+        defer { WiringFixture.remove(directory); defaults.removePersistentDomain(forName: suite) }
+        #expect(control.sound() == nil, "Off plays nothing")
+        control.mode = .keys
+        #expect(control.sound() == .keys(InstrumentVoiceSpec.rhodes.id))
+        #expect(app.setInstrument("juno"))
+        #expect(control.sound() == .keys("juno"), "picked after the mode was: still what the next key plays")
+        control.mode = .kit
+        #expect(control.sound() == .kit(SongPlayback.machineID(in: app.song!)))
+        app.closeSong(saving: false)
+        #expect(control.sound() == .kit(SynthMachine.tr808.id), "no song: the 808")
+        control.mode = .bass
+        #expect(control.sound() == .bass(BassVoiceSpec.finger.id))
+    }
+
     @Test("pure: a melody keeps the notes as played and says how many bars one pass is")
     func melodyCapture() throws {
         let start = 1.0

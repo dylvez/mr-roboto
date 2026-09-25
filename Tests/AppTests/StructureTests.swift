@@ -71,6 +71,27 @@ private final class StubStructureHost: StructureHosting {
     func play() async { played += 1 }
     func stop() async {}
     func receive(_ payload: LibraryDragPayload, into section: SectionID) async -> Bool { false }
+    var lyricsOpened = 0
+    func openLyrics() { lyricsOpened += 1 }
+}
+
+@Suite("Structure: each section says what it sings") @MainActor
+struct StructureWordsTests {
+    @Test("a section shows its labelled stanza, one with none says so and opens Lyrics, and a song with no words shows nothing")
+    func words() throws {
+        var song = Song.new(title: "Glass", tempo: 88)
+        let host = StubStructureHost()
+        #expect(StructureModel(host: host, song: song).words(for: song.sections[0].id) == nil, "no words, no row")
+        try song.append(PartVersion(partID: PartID(), kind: .lyric(Lyricist.lyric(from: "[Verse]\nI put the coffee on at six\nI watched it make itself\nit made itself\n\n[Hook]\nsoft machine")),
+                                    author: .user, operation: Operation.written, note: "Lyric"))
+        let model = StructureModel(host: host, song: song)
+        let intro = song.sections[0], verse = song.sections[1], hook = song.sections[2]
+        #expect(model.words(for: intro.id) == .unlabelled(name: intro.name))
+        #expect(model.words(for: verse.id) == .sings(label: "Verse", lines: ["I put the coffee on at six", "I watched it make itself", "it made itself"]))
+        #expect(model.words(for: hook.id) == .sings(label: "Hook", lines: ["soft machine"]))
+        model.openLyrics()
+        #expect(host.lyricsOpened == 1)
+    }
 }
 
 @Suite("Structure: the sections, edited and kept") @MainActor

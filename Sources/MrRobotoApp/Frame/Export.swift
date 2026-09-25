@@ -4,7 +4,7 @@ import Performance
 import SongGraph
 
 // M6 X10: the door out. A master (24-bit WAV and a report), the stems (one WAV per strip, through
-// its strip, dry of the master), and the written parts as MIDI.
+// its strip, dry of the master), the written parts as MIDI, and the words as a lyric sheet.
 
 public enum Export {
 
@@ -32,12 +32,13 @@ public enum Export {
     }
 
     public enum Failure: Error, CustomStringConvertible {
-        case noSong, nothingToBounce, noWrittenParts
+        case noSong, nothingToBounce, noWrittenParts, noWords
         public var description: String {
             switch self {
             case .noSong: return "No song is open."
             case .nothingToBounce: return "The song plays nothing, so there is nothing to bounce."
             case .noWrittenParts: return "The song has no written parts to put in a MIDI file."
+            case .noWords: return "The song has no words to write out. Write them on the Lyrics surface."
             }
         }
     }
@@ -142,6 +143,30 @@ public enum Export {
         let url = unique(directory.appendingPathComponent("\(safe(song.title)).mid"))
         try file.write(to: url)
         app.note(.session, "Exported \(file.tracks.count) track\(file.tracks.count == 1 ? "" : "s") of MIDI", detail: url.path)
+        return url
+    }
+
+    /// The song's words as a lyric sheet: the title, the artist when there is one, and the newest
+    /// lyric with its stanza labels — "[Verse]", "[Hook]" — as they were written. Nil when the song
+    /// has no lyric with anything to sing in it.
+    public static func lyricSheet(for song: Song) -> String? {
+        guard let version = song.versions.last(where: { $0.type == .lyric }), case .lyric(let lyric) = version.kind,
+              lyric.lines.contains(where: { !$0.syllables.isEmpty }) else { return nil }
+        var head = [song.title]
+        if !song.artist.trimmingCharacters(in: .whitespaces).isEmpty { head.append(song.artist) }
+        let words = lyric.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return head.joined(separator: "\n") + "\n\n" + words + "\n"
+    }
+
+    /// The lyric sheet as a UTF-8 text file beside the other exports.
+    @MainActor
+    public static func lyrics(_ app: AppState, to directory: URL) throws -> URL {
+        guard let song = app.song else { throw Failure.noSong }
+        guard let sheet = lyricSheet(for: song) else { throw Failure.noWords }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let url = unique(directory.appendingPathComponent("\(safe(song.title)) — lyrics.txt"))
+        try Data(sheet.utf8).write(to: url, options: .withoutOverwriting)
+        app.note(.session, "Exported the lyrics", detail: url.path)
         return url
     }
 

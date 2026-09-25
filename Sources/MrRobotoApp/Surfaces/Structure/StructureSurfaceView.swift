@@ -287,6 +287,9 @@ private struct SectionDetail: View {
                         .foregroundStyle(Design.Palette.warn)
                 }
             }
+            if let words = model.words(for: section.id) {
+                wordsRow(words)
+            }
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -294,6 +297,37 @@ private struct SectionDetail: View {
         .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.line, lineWidth: Design.Metric.hairline))
         .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
         .onChange(of: section.id) { disarm() }
+    }
+
+    /// What the section sings: its stanza's first lines, the way the Booth will show them, or how
+    /// to give it one. The words and the form meet here and in the Booth, and nowhere else.
+    private func wordsRow(_ words: StructureModel.Words) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            FormLabel("Sings")
+            switch words {
+            case .sings(let label, let lines):
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(label.uppercased())
+                        .font(Design.Typography.label)
+                        .tracking(1.1)
+                        .foregroundStyle(Design.Palette.accent)
+                    Text(lines.prefix(2).joined(separator: " / ") + (lines.count > 2 ? " …" : ""))
+                        .font(Design.Typography.prose(12.5))
+                        .foregroundStyle(Design.Palette.inkSecondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .help(lines.joined(separator: "\n"))
+                }
+            case .unlabelled(let name):
+                HStack(spacing: 8) {
+                    Text("No stanza is labelled \(name), so the Booth shows the whole lyric here.")
+                        .font(Design.Typography.ui(11.5, weight: .regular))
+                        .foregroundStyle(Design.Palette.inkSecondary)
+                    FormChip("Label one", isOn: false) { disarm(); model.openLyrics() }
+                        .help("Open the Lyrics surface and put [\(name)] above the stanza this section sings")
+                }
+            }
+        }
     }
 
     private var removeChip: some View {

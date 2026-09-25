@@ -41,8 +41,11 @@ public enum WorkPath: String, Sendable, Equatable {
 
     public var steps: [PathStep.Kind] {
         switch self {
-        case .flip: return [.record, .stems, .chop, .groove, .chords, .bass, .dust, .arrange, .sing, .mix]
-        case .beat: return [.groove, .chords, .bass, .kit, .dust, .arrange, .sing, .mix]
+        // Words before Sing: a take needs something to sing, and the Booth shows the stanza
+        // labelled for the section it records. Before this step the path went from arranging
+        // straight to the microphone, and the Lyrics surface was only in the dock.
+        case .flip: return [.record, .stems, .chop, .groove, .chords, .bass, .dust, .arrange, .words, .sing, .mix]
+        case .beat: return [.groove, .chords, .bass, .kit, .dust, .arrange, .words, .sing, .mix]
         }
     }
 
@@ -60,7 +63,7 @@ public enum WorkPath: String, Sendable, Equatable {
 public struct PathStep: Identifiable, Sendable, Equatable {
 
     public enum Kind: String, Sendable, Equatable, CaseIterable {
-        case record, stems, chop, groove, chords, bass, kit, dust, arrange, sing, mix
+        case record, stems, chop, groove, chords, bass, kit, dust, arrange, words, sing, mix
 
         /// A step the path passes through without insisting on: it is never "next". The chords are
         /// this — the bass writes to the key when none are stated — so the path does not stall on
@@ -79,6 +82,7 @@ public struct PathStep: Identifiable, Sendable, Equatable {
             case .kit: return "Kit"
             case .dust: return "Dust"
             case .arrange: return "Arrange"
+            case .words: return "Words"
             case .sing: return "Sing"
             case .mix: return "Mix"
             }
@@ -96,6 +100,7 @@ public struct PathStep: Identifiable, Sendable, Equatable {
             case .kit: return "sound"
             case .dust: return "dust"
             case .arrange: return "section"
+            case .words: return "lyrics"
             case .sing: return "booth"
             case .mix: return "mixer"
             }
@@ -113,6 +118,7 @@ public struct PathStep: Identifiable, Sendable, Equatable {
             case .kit: return "dial.medium"
             case .dust: return "waveform.path.badge.minus"
             case .arrange: return "rectangle.split.3x1"
+            case .words: return "text.quote"
             case .sing: return "mic"
             case .mix: return "slider.vertical.3"
             }
@@ -130,6 +136,7 @@ public struct PathStep: Identifiable, Sendable, Equatable {
             case .kit: return "The drum sounds a groove plays: synthesized 808, 909 and Linn voices."
             case .dust: return "A chop or groove played through a machine (SP-1200, MPC60, tape, vinyl, radio)."
             case .arrange: return "Parts stitched into sections, and sections into a song."
+            case .words: return "The lyric, a stanza labelled for each section it is sung in, set to the tune when there is one; read by the Lyricist."
             case .sing: return "A take sung against the song as it plays, on the bar you sang it; takes comped into one."
             case .mix: return "A strip per part and a master: level, pan, EQ, compression, the limiter's ceiling and the loudness target."
             }
@@ -197,7 +204,8 @@ extension WorkPath {
         case .chords: return .chords
         case .pianoRoll: return .bass
         case .structure: return .arrange
-        case .album, .merge, .cast, .lyrics, .mashup: return nil
+        case .lyrics: return .words
+        case .album, .merge, .cast, .mashup: return nil
         case .booth, .takes: return .sing
         case .mixer, .master: return .mix
         case .sound:
@@ -224,6 +232,14 @@ extension WorkPath {
         // Sections that play something: a new song's empty Intro, Verse and Hook are a shape
         // waiting for parts, not an arrangement.
         case .arrange: return song.sections.filter { !$0.stitch.isEmpty }.count
+        case .words:
+            // A lyric of blank lines is not words yet — the Booth says "No words yet" over one —
+            // so the step counts a lyric only when its newest version has a syllable to sing.
+            let lyrics = song.versions.filter { $0.type == .lyric }
+            return Set(lyrics.map(\.partID)).filter { part in
+                guard let newest = lyrics.last(where: { $0.partID == part }), case .lyric(let words) = newest.kind else { return false }
+                return words.lines.contains { !$0.syllables.isEmpty }
+            }.count
         case .sing: return Guidance.takes(in: song).count
         case .mix: return Guidance.mixes(in: song).count
         }
@@ -236,6 +252,8 @@ extension WorkPath {
             // The Master once the song is arranged and mixed; the Mixer until then.
             if !song.sections.isEmpty, !Guidance.mixes(in: song).isEmpty { return Guidance.dockAction(for: .master, in: song) }
             return Guidance.dockAction(for: .mixer, in: song)
+        case .words:
+            return Guidance.dockAction(for: .lyrics, in: song)
         case .sing:
             // The takes, when there are any; otherwise the Booth, which opens on nothing.
             if !Guidance.takes(in: song).isEmpty { return Guidance.dockAction(for: .takes, in: song) }

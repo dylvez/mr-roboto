@@ -14,7 +14,9 @@ struct TransportBar: View {
     @State private var isShowingSettings = false
 
     var body: some View {
-        HStack(spacing: 36) {
+        // 28 between groups, not 36: at the narrowest window the groups' own widths nearly fill
+        // the bar, and the key was what gave — "D major" broke into "D maj or".
+        HStack(spacing: 28) {
             controls
             keyAndTempo
             position
@@ -39,7 +41,8 @@ struct TransportBar: View {
                 .foregroundStyle(Design.Palette.inkTertiary)
                 .lineLimit(1)
         }
-        .frame(width: 150, alignment: .leading)
+        // The one group that may give a little: its second line is a single truncating line.
+        .frame(minWidth: 120, idealWidth: 150, maxWidth: 150, alignment: .leading)
         .help(app.transport.silence?.detail ?? "Bar and beat, and what the transport is playing")
     }
 
@@ -156,6 +159,8 @@ struct TransportBar: View {
                     .font(Design.Typography.numeric(12))
                     .foregroundStyle(Design.Palette.inkTertiary)
             }
+            .lineLimit(1)
+            .fixedSize()
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
