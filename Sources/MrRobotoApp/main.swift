@@ -175,6 +175,15 @@ struct FrameCommands: Commands {
                 .keyboardShortcut("l", modifiers: .command)
             Toggle("Click", isOn: Binding(get: { app.isClicking }, set: { _ in app.toggleClick() }))
                 .keyboardShortcut("k", modifiers: .command)
+
+            Divider()
+            // Play in: the controller recorded against the song, no microphone needed.
+            let midi = SurfaceWiring.shared.midi(for: app)
+            Button(midi.isPlayingIn ? "Stop Playing In" : "Play In from the Controller") {
+                Task { if midi.isPlayingIn { await midi.stopPlayIn() } else { await midi.playIn() } }
+            }
+            .keyboardShortcut("r", modifiers: [.command, .option])
+            .disabled(midi.mode == .off || app.song == nil)
         }
 
         // The three visual directions, live. Switching repaints every body that reads a token and

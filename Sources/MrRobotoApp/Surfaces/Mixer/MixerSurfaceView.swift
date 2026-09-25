@@ -123,10 +123,10 @@ struct MixerSurfaceView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 MixLabel("Strip").frame(width: 120, alignment: .leading)
-                MixLabel("Level").frame(width: 200, alignment: .leading)
+                MixLabel("Level").frame(width: 160, alignment: .leading)
                 MixLabel("Pan").frame(width: 90, alignment: .leading)
                 MixLabel("Send").frame(width: 90, alignment: .leading)
-                MixLabel("EQ low · peak · high").frame(width: 250, alignment: .leading)
+                MixLabel("EQ low · peak · high").frame(width: 230, alignment: .leading)
                 MixLabel("Comp").frame(width: 60, alignment: .leading)
                 MixLabel("Meter").fixedSize().frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -165,19 +165,22 @@ struct MixerSurfaceView: View {
                 }
             }
             .frame(width: 120, alignment: .leading)
-            fader(value: strip.gainDB, range: -60...12, format: "%+.1f dB", width: 200, name: "\(row.label) level") { model.setGain($0, for: row.part) }
+            // 160 and 230, not 200 and 250: the row used to be 926 points, a little wider than the
+            // bench at a 1440 window, so the meters were one sideways scroll away on the most
+            // common size there is.
+            fader(value: strip.gainDB, range: -60...12, format: "%+.1f dB", width: 160, name: "\(row.label) level") { model.setGain($0, for: row.part) }
             fader(value: strip.pan, range: -1...1, format: "%+.2f", width: 90, name: "\(row.label) pan") { model.setPan($0, for: row.part) }
             fader(value: strip.sendDB ?? MixerModel.sendOffDB, range: MixerModel.sendOffDB...0, format: "%.0f dB", width: 90,
                   name: "\(row.label) send", readout: MixerModel.sendReadout(strip.sendDB)) { model.setSend(MixerModel.send(fromFader: $0), for: row.part) }
             HStack(spacing: 4) {
                 ForEach(0..<3, id: \.self) { band in
                     if strip.eq.indices.contains(band) {
-                        fader(value: strip.eq[band].gainDB, range: -18...18, format: "%+.0f", width: 78,
+                        fader(value: strip.eq[band].gainDB, range: -18...18, format: "%+.0f", width: 72,
                               name: "\(row.label) EQ band \(band + 1)") { model.setEQ(band: band, gainDB: $0, for: row.part) }
                     }
                 }
             }
-            .frame(width: 250, alignment: .leading)
+            .frame(width: 230, alignment: .leading)
             MixToggle(strip.compressor == nil ? "off" : "on", isOn: strip.compressor != nil, tint: Design.Palette.accent,
                       help: strip.compressor == nil ? "Put a compressor on \(row.label)" : "Take the compressor off \(row.label)",
                       label: "\(row.label) compressor \(strip.compressor == nil ? "off" : "on")") {
@@ -215,7 +218,7 @@ struct MixerSurfaceView: View {
                 learnChip(.master)
             }
             .frame(width: 120, alignment: .leading)
-            fader(value: model.mix.master.gainDB, range: -24...24, format: "%+.1f dB", width: 200, name: "Master gain") { model.setMaster(gainDB: $0) }
+            fader(value: model.mix.master.gainDB, range: -24...24, format: "%+.1f dB", width: 160, name: "Master gain") { model.setMaster(gainDB: $0) }
             fader(value: model.mix.master.ceilingDBTP, range: -12...0, format: "ceiling %.1f dBTP", width: 140, name: "Master ceiling") { model.setMaster(ceilingDBTP: $0) }
             fader(value: model.mix.master.targetLUFS, range: -30 ... -6, format: "target %.0f LUFS", width: 140, name: "Master target") { model.setMaster(targetLUFS: $0) }
             if let master { lastReading(master) }

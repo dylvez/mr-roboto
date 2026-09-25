@@ -186,3 +186,23 @@ struct SettingsPutBackTests {
         #expect(opened.differences(from: SongSettingsPopover.Settings(song)) == "“Glass”, 88 bpm, D minor")
     }
 }
+
+@Suite("Song settings: tap tempo")
+struct TapTempoTests {
+    @Test("taps a beat apart make the tempo, the last few are what count, and a long pause starts over")
+    func taps() {
+        var taps = TapTempo()
+        let start = Date(timeIntervalSinceReferenceDate: 0)
+        #expect(taps.tap(at: start) == nil, "one tap is not a tempo")
+        #expect(abs(taps.tap(at: start + 0.5)! - 120) < 1e-9)
+        for i in 2...6 { _ = taps.tap(at: start + 0.5 * Double(i)) }
+        #expect(taps.times.count == TapTempo.window + 1, "only the last four intervals")
+        // Slower now: two taps at 0.75 s pull the average towards 80 without jumping there.
+        var bpm = taps.tap(at: start + 3.75)!
+        bpm = taps.tap(at: start + 4.5)!
+        #expect(bpm > 80 && bpm < 120)
+        // A pause: the next taps are their own count.
+        #expect(taps.tap(at: start + 10) == nil)
+        #expect(abs(taps.tap(at: start + 10.6)! - 100) < 1e-9)
+    }
+}

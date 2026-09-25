@@ -106,9 +106,20 @@ final class BoothAdapter: BoothHosting, TakesHosting {
         let midi = SurfaceWiring.shared.midi(for: app)
         guard midi.mode != .off else { return }
         Task {
-            guard let engine = try? await app.engine(), let clock = await engine.transport?.clock else { return }
+            guard let clock = await songClock() else { return }
             midi.beginCapture(section: section, clock: clock, startedAt: startedAt)
         }
+    }
+
+    /// The running transport's clock with its zero at the song's top, so a host time read against
+    /// it is a song time — as the recorder reads a take. The controller's capture used the engine's
+    /// own clock, whose zero is wherever playback started; since the Booth plays from the section
+    /// it records, every note played into the Verse was measured from the Verse and then placed as
+    /// if from the top, and a counted-in take lost its notes before the section altogether.
+    func songClock() async -> TransportClock? {
+        guard let engine = try? await app.engine(), let transport = await engine.transport else { return nil }
+        let offset = app.playbackStartBar != 0 ? app.clock.seconds(forBar: app.playbackStartBar) : 0
+        return Self.shifted(transport, by: offset).clock
     }
 
     func recordingEnded(endedAt: Double) {

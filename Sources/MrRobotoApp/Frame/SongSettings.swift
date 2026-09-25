@@ -18,6 +18,9 @@ struct SongSettingsPopover: View {
     @FocusState private var focus: Field?
     /// The settings as they were when the popover opened, for Put back.
     @State private var opened: Settings?
+    @State private var taps = TapTempo()
+    /// Applies the tapped tempo once the tapping stops, so the rail gets one line, not one a tap.
+    @State private var tapSettles: Task<Void, Never>?
 
     private enum Field: Hashable { case title, artist, tempo, key, meter }
 
@@ -56,7 +59,11 @@ struct SongSettingsPopover: View {
             field("Artist", text: $artist, focus: .artist, prompt: "Who it is by") { app.setArtist(artist) }
             HStack(alignment: .top, spacing: 14) {
                 VStack(alignment: .leading, spacing: 4) {
-                    field("Tempo", text: $tempoText, focus: .tempo, prompt: "bpm", width: 90) { applyTempo() }
+                    HStack(alignment: .bottom, spacing: 6) {
+                        field("Tempo", text: $tempoText, focus: .tempo, prompt: "bpm", width: 90) { applyTempo() }
+                        FrameButton(title: "Tap", emphasis: .quiet) { tap() }
+                            .help("Tap the beat, four times or more; the tempo is set when you stop")
+                    }
                     problem(tempoProblem)
                 }
                 VStack(alignment: .leading, spacing: 4) {
@@ -103,6 +110,20 @@ struct SongSettingsPopover: View {
         keyText = song.key?.name ?? ""
         meterText = song.timeSignature.description
         focus = .title
+    }
+
+    /// One tap: the field shows the tempo the taps make, and a moment after the last one it is the
+    /// song's.
+    private func tap() {
+        guard let bpm = taps.tap(at: Date()) else { return }
+        let clamped = min(AppState.tempoRange.upperBound, max(AppState.tempoRange.lowerBound, bpm))
+        tempoText = Self.tempoText(clamped.rounded())
+        tapSettles?.cancel()
+        tapSettles = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(TapTempo.forgetAfter))
+            guard !Task.isCancelled else { return }
+            applyTempo()
+        }
     }
 
     /// Every setting back to what it was when the popover opened, each through its own setter so
@@ -182,5 +203,24 @@ struct SongSettingsPopover: View {
                 .onChange(of: focus) { _, now in if now != which { commit() } }
                 .frame(width: width)
         }
+    }
+}
+
+/// Tap tempo: the beat as tapped, averaged over the last few taps. A pause longer than
+/// `forgetAfter` starts a new count, so a stray tap from a minute ago does not drag the tempo.
+struct TapTempo: Equatable {
+    static let forgetAfter: Double = 2
+    /// How many intervals are averaged: enough to steady a hand, few enough to follow a change.
+    static let window = 4
+    private(set) var times: [Date] = []
+
+    /// Records a tap. The tempo the taps make, from the second tap on; nil for the first.
+    mutating func tap(at time: Date) -> Double? {
+        if let last = times.last, time.timeIntervalSince(last) > Self.forgetAfter { times = [] }
+        times.append(time)
+        if times.count > Self.window + 1 { times.removeFirst(times.count - Self.window - 1) }
+        guard times.count >= 2, let first = times.first, let last = times.last else { return nil }
+        let interval = last.timeIntervalSince(first) / Double(times.count - 1)
+        return interval > 0 ? 60 / interval : nil
     }
 }

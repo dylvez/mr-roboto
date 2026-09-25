@@ -26,6 +26,16 @@ public final class MIDIControl {
             case .keys: return "Keys"
             }
         }
+
+        /// What a take played in this mode lands as.
+        public var capturedKind: String {
+            switch self {
+            case .off: return "nothing"
+            case .kit: return "groove"
+            case .bass: return "bass line"
+            case .keys: return "melody"
+            }
+        }
     }
 
     public var mode: Mode = .off {
@@ -43,6 +53,8 @@ public final class MIDIControl {
     public private(set) var lastError: String?
     /// Whether a take is being captured.
     public private(set) var isCapturing = false
+    /// Whether the capture is the controller's own — Play in — rather than the Booth's.
+    public private(set) var isPlayingIn = false
 
     // Gate C: the knobs on the faders.
 
@@ -239,6 +251,45 @@ public final class MIDIControl {
         let version = PartVersion(partID: PartID(), kind: kind, author: .user, operation: Operation.played,
                                   note: "Played on \(source)\(section.map { " into \($0.name)" } ?? "") — \(notes.count) notes as a \(what)")
         guard app.record(version) else { return nil }
+        return version
+    }
+
+    // MARK: Play in, with no microphone
+
+    /// "Play in": the song from the active section, a bar counted in, and what the controller plays
+    /// kept when it stops — a groove, a bass line or a melody, as the mode says. Capture used to
+    /// happen only while the Booth recorded audio, so a pad controller with no microphone behind it
+    /// could play along and keep nothing.
+    public func playIn() async {
+        guard mode != .off, !isCapturing, let song = app.song else { return }
+        lastError = nil
+        let booth = BoothAdapter(app: app, service: service)
+        let section = app.activeSection ?? song.sections.first?.id
+        let startedHere = !app.transport.isPlaying
+        if startedHere {
+            await booth.play(from: section, countInBars: song.sections.isEmpty ? 0 : 1, click: true)
+        }
+        guard app.transport.isPlaying else {
+            lastError = "The song did not start, so there is nothing to play to."
+            return
+        }
+        guard let clock = await booth.songClock() else {
+            lastError = "No running engine to time the notes against."
+            if startedHere { await app.stopTransport() }
+            return
+        }
+        beginCapture(section: section, clock: clock, startedAt: app.playhead)
+        isPlayingIn = isCapturing
+    }
+
+    /// Stops Play in: what was played becomes a version, and the song stops.
+    @discardableResult
+    public func stopPlayIn() async -> PartVersion? {
+        guard isPlayingIn else { return nil }
+        isPlayingIn = false
+        let version = endCapture(endedAt: app.playhead)
+        await app.stopTransport()
+        if version == nil { app.note(.session, "Nothing was played in", detail: "Play the controller while the song runs; what you play lands when you stop.") }
         return version
     }
 

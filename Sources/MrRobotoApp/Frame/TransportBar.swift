@@ -125,14 +125,34 @@ struct TransportBar: View {
                     BoothChip(mode.title, isOn: control.mode == mode) { control.mode = mode }
                 }
             }
-            Text(midiLine(control))
-                .font(Design.Typography.ui(11, weight: .regular))
-                .foregroundStyle(control.mode == .off ? Design.Palette.inkTertiary : Design.Palette.inkSecondary)
-                .lineLimit(1)
+            HStack(spacing: 6) {
+                if control.mode != .off, app.song != nil {
+                    // Play in: record the controller against the song, no microphone needed.
+                    Button {
+                        Task {
+                            if control.isPlayingIn { await control.stopPlayIn() } else { await control.playIn() }
+                        }
+                    } label: {
+                        Image(systemName: control.isPlayingIn ? "stop.circle.fill" : "record.circle")
+                            .font(.system(size: 13))
+                            .foregroundStyle(Design.Palette.warn)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(control.isCapturing && !control.isPlayingIn)
+                    .help(control.isPlayingIn
+                          ? "Stop, and keep what you played as a \(control.mode.capturedKind)"
+                          : "Play in: the song from its section, a bar counted in, and what you play kept as a \(control.mode.capturedKind)")
+                    .accessibilityLabel(control.isPlayingIn ? "Stop playing in" : "Play in")
+                }
+                Text(midiLine(control))
+                    .font(Design.Typography.ui(11, weight: .regular))
+                    .foregroundStyle(control.mode == .off ? Design.Palette.inkTertiary : Design.Palette.inkSecondary)
+                    .lineLimit(1)
+            }
         }
         // Four chips side by side: Off, Kit, Bass and Keys.
         .frame(width: 170, alignment: .leading)
-        .help("A MIDI controller plays the song's kit, its bass or its keys now; while the Booth records, what you play lands as a groove, a bass line or a melody.")
+        .help("A MIDI controller plays the song's kit, its bass or its keys now. Play in, or the Booth recording, keeps what you play as a groove, a bass line or a melody.")
     }
 
     private func midiLine(_ control: MIDIControl) -> String {

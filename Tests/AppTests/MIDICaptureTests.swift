@@ -185,6 +185,49 @@ struct MIDICaptureTests {
         #expect(control.sound() == .bass(BassVoiceSpec.finger.id))
     }
 
+    @Test("played from a section, counted in: the capture reads the song's clock, so a note on the Verse's downbeat is on the Verse's downbeat")
+    func capturedFromASection() throws {
+        let (app, control, directory, defaults, suite) = fixture()
+        defer { WiringFixture.remove(directory); defaults.removePersistentDomain(forName: suite) }
+        control.mode = .keys
+        let verse = app.song!.sections[1]
+        #expect(MIDIControl.startBar(of: verse.id, in: app.song!) == 2)
+        // The engine's clock starts where playback did: bar 2 of the song, a bar before the Verse.
+        let engine = TransportClock(tempo: 92, timeSignature: .fourFour, sampleRate: 48_000, startHostTime: 10_000_000_000)
+        let transport = Transport(clock: engine, mode: .realtime, originSampleTime: 0)
+        let song = BoothAdapter.shifted(transport, by: engine.seconds(forBar: 1)).clock
+        func event(_ kind: MIDIEvent.Kind, _ seconds: Double) -> MIDIEvent {
+            MIDIEvent(kind: kind, channel: 0, hostTime: engine.hostTime(forSeconds: seconds)!, source: "Launchkey")
+        }
+        // One bar in, on the engine's clock, is the Verse's first beat.
+        let down = engine.secondsPerBar
+        control.beginCapture(section: verse.id, clock: song, startedAt: 0)
+        control.handle(event(.noteOn(note: 67, velocity: 90), down))
+        control.handle(event(.noteOff(note: 67), down + engine.secondsPerBeat))
+        let version = try #require(control.endCapture(endedAt: engine.seconds(forBar: 4)))
+        guard case .melody(let tune) = version.kind else { Issue.record("not a melody"); return }
+        #expect(tune.notes.count == 1 && abs(tune.notes[0].start) < 1e-6 && abs(tune.notes[0].duration - 1) < 1e-6, "\(tune.notes)")
+
+        // Read against the engine's own clock, as it was, the same note was a bar before the Verse, and lost.
+        control.beginCapture(section: verse.id, clock: engine, startedAt: 0)
+        control.handle(event(.noteOn(note: 67, velocity: 90), down))
+        control.handle(event(.noteOff(note: 67), down + engine.secondsPerBeat))
+        #expect(control.endCapture(endedAt: engine.seconds(forBar: 3)) == nil)
+    }
+
+    @Test("Play in: nothing with the controller off; with no engine to time notes it says so and leaves the song stopped")
+    func playInRefusals() async throws {
+        let (app, control, directory, defaults, suite) = fixture()
+        defer { WiringFixture.remove(directory); defaults.removePersistentDomain(forName: suite) }
+        await control.playIn()
+        #expect(!control.isPlayingIn && control.lastError == nil && !app.transport.isPlaying, "Off plays nothing in")
+        control.mode = .kit
+        await control.playIn()
+        #expect(!control.isPlayingIn && !control.isCapturing)
+        #expect(control.lastError != nil && !app.transport.isPlaying, "\(control.lastError ?? "")")
+        #expect(await control.stopPlayIn() == nil)
+    }
+
     @Test("pure: a melody keeps the notes as played and says how many bars one pass is")
     func melodyCapture() throws {
         let start = 1.0
