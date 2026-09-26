@@ -205,8 +205,10 @@ struct DustTests {
         // One pass at 96 bpm plus the tail.
         #expect(abs(dry.durationSeconds - (DustFixture.barLength + Dust.tail)) < 0.01)
 
+        // Picking the machine keeps it: a choice is a version, as on every surface.
         surface.apply(.vinyl)
-        let version = try #require(surface.commit())
+        let version = try #require(surface.lastKept)
+        #expect(!surface.isDirty)
         #expect(version.parents == [built.groove.id])
         #expect(version.partID == built.groove.partID)
         #expect(version.kind.degradation.map(\.preset) == ["vinyl"])
@@ -239,8 +241,8 @@ struct DustTests {
         let (surface, _, _) = DustFixture.sound(on: built.dry, in: built, kits: kits)
         await surface.waitForDry()
         surface.apply(.sp1200)
-        #expect(surface.isDirty)
-        let dusty = try #require(surface.commit())
+        #expect(!surface.isDirty, "a machine picked is kept at once")
+        let dusty = try #require(surface.lastKept)
 
         #expect(built.app.versions.count == before + 1)
         #expect(dusty.parents == [built.dry.id], "the dusty chop does not name the dry one as its parent")
@@ -496,7 +498,7 @@ struct DustTests {
         let (surface, _, _) = DustFixture.sound(on: built.dry, in: built, kits: kits)
         await surface.waitForDry()
         surface.apply(.sp1200)
-        let dusty = try #require(surface.commit())
+        let dusty = try #require(surface.lastKept)
 
         // At full, the lever is exactly what pressing sp1200 on the Sound surface committed.
         #expect(CompareAdapter.passes(for: built.dry, levers: [.degradeMix: 1]) == dusty.kind.degradation)
@@ -573,7 +575,7 @@ struct DustTests {
         await first.waitForDry()
         first.apply(.sp1200)
         #expect(first.chainFindings.filter { $0.measurement.feature == .bitDepth }.isEmpty)
-        let dusty = try #require(first.commit())
+        let dusty = try #require(first.lastKept)
         #expect(Dust.findings(for: dusty).isEmpty)
 
         // The second, stacked on top: the critic flags it on the draft, before anything is written…
@@ -590,7 +592,7 @@ struct DustTests {
         #expect(flagged.fixes.count == 2)
 
         // …it is allowed, not refused — stacking is a real thing people do — and it is a real version…
-        let stacked = try #require(second.commit())
+        let stacked = try #require(second.lastKept)
         #expect(stacked.parents == [dusty.id])
         #expect(stacked.kind.degradation == [DustFixture.sp1200, DustFixture.mpc60])
 

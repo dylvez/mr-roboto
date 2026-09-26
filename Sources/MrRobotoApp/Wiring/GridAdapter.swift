@@ -47,6 +47,14 @@ final class GridAdapter: GridHosting {
         await live.setPattern(groove, options: options, tempo: tempo, timeSignature: timeSignature)
     }
 
+    @MainActor func newest(of part: PartID) -> PartVersion? {
+        app.song?.versions.last { $0.partID == part }
+    }
+
+    @MainActor func machineChosen(_ machine: SynthMachine, for part: PartID?) {
+        app.setMachine(machine.id, for: part)
+    }
+
     func loadMachine(_ newMachine: SynthMachine) async throws {
         machine.withLock { $0 = newMachine }
         // The audible path first: if this fails the surface should say so, because it is what a

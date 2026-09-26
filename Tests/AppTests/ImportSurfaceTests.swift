@@ -1,3 +1,4 @@
+import AVFAudio
 import Analysis
 import Foundation
 import MusicTheory
@@ -367,5 +368,74 @@ struct ImportSurfaceTests {
         #expect(stemVersions.count == 2)
         #expect(stemVersions.allSatisfy { $0.operation == Operation.separate })
         #expect(stemVersions.allSatisfy { $0.parents == [take.id] })
+    }
+}
+
+/// A two-second tone at 48 kHz, written where the test says: enough file for an import to read.
+private func writeTone(named name: String, in directory: URL) throws -> URL {
+    let url = directory.appendingPathComponent(name)
+    let format = AVAudioFormat(standardFormatWithSampleRate: 48_000, channels: 1)!
+    let frames = AVAudioFrameCount(96_000)
+    let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames)!
+    buffer.frameLength = frames
+    for i in 0..<Int(frames) { buffer.floatChannelData![0][i] = Float(0.3 * sin(2 * .pi * 220 * Double(i) / 48_000)) }
+    let file = try AVAudioFile(forWriting: url, settings: format.settings)
+    try file.write(from: buffer)
+    return url
+}
+
+@Suite("Import: what used to strand the record", .serialized) @MainActor
+struct ImportStrandTests {
+
+    @Test("stems that cannot be made leave the record imported, saying why in words; the next file is its own record")
+    func stemsFailButTheImportStands() async throws {
+        let libraryURL = makeTemporaryLibrary()
+        defer { try? FileManager.default.removeItem(at: libraryURL) }
+        let first = try writeTone(named: "First Record.wav", in: libraryURL)
+        var host = StubImportHost(library: LibraryStore(directoryURL: libraryURL), report: makeReport(path: first.path, duration: 2))
+        host.separationFailure = "weightsDownloadFailed(model: htdemucs, file: weights, reason: offline)"
+        let model = ImportModel(host: host)
+        model.separatesStems = true
+        await model.run(first)
+        #expect(model.state.phase == .ready, "\(model.state)")
+        #expect(model.packageURL != nil)
+        #expect(model.lastError?.contains("Imported without its stems") == true, "\(model.lastError ?? "")")
+        #expect(model.lastError?.contains("could not be downloaded") == true, "in words, not an enum")
+        let reloaded = try LibraryStore(directoryURL: libraryURL).load()
+        #expect(reloaded.songs.count == 1 && reloaded.records.count == 1)
+        #expect(host.log.finished == reloaded.songs.map(\.id), "the frame is told, and opens it")
+
+        // A promoted bar is the region selected, span and all.
+        let range = SongGraph.TimeRange(start: 0.25, end: 1.5)
+        let chop = try model.promote(range)
+        guard case .sample(let sample) = chop.kind else { Issue.record("not a sample"); return }
+        #expect(sample.span == range)
+
+        // The next file is its own record, not the last one's title.
+        host.separationFailure = nil
+        let second = try writeTone(named: "Second Record.wav", in: libraryURL)
+        await model.run(second)
+        #expect(model.provenance.title == "Second Record")
+        #expect(model.selection == nil)
+    }
+
+    @Test("promoting before the record is written is refused; a surface closed mid-import opens nothing")
+    func notBeforeItIsWritten() async throws {
+        let libraryURL = makeTemporaryLibrary()
+        defer { try? FileManager.default.removeItem(at: libraryURL) }
+        let url = try writeTone(named: "Slow.wav", in: libraryURL)
+        var host = StubImportHost(library: LibraryStore(directoryURL: libraryURL), report: makeReport(path: url.path, duration: 2))
+        host.separationHold = .seconds(30)
+        let model = ImportModel(host: host)
+        model.separatesStems = true
+        model.drop(url)
+        for _ in 0..<10_000 where model.state.phase != .separating { try await Task.sleep(for: .milliseconds(1)) }
+        #expect(model.state.phase == .separating)
+        #expect(throws: ImportModelError.self) { try model.promote(SongGraph.TimeRange(start: 0, end: 1)) }
+
+        model.abandon()
+        await model.waitForCompletion()
+        #expect(model.state == .cancelled)
+        #expect(host.log.finished.isEmpty, "nothing pulls the frame into a song whose surface is gone")
     }
 }

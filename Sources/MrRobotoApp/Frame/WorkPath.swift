@@ -228,7 +228,9 @@ extension WorkPath {
         case .kit: return parts(Guidance.sounds(in: song))
         case .chords: return parts(Guidance.progressions(in: song))
         case .bass: return parts(Guidance.basslines(in: song))
-        case .dust: return parts(song.versions.filter { !$0.kind.degradation.isEmpty })
+        // Parts whose newest version is dusty: what plays, not what ever was. A part made dusty and
+        // then kept clean again is not dust.
+        case .dust: return newestVersions(in: song).filter { !$0.kind.degradation.isEmpty }.count
         // Sections that play something: a new song's empty Intro, Verse and Hook are a shape
         // waiting for parts, not an arrangement.
         case .arrange: return song.sections.filter { !$0.stitch.isEmpty }.count
@@ -243,6 +245,17 @@ extension WorkPath {
         case .sing: return Guidance.takes(in: song).count
         case .mix: return Guidance.mixes(in: song).count
         }
+    }
+
+    /// Each part's newest version, in the order the parts were started.
+    static func newestVersions(in song: Song) -> [PartVersion] {
+        var newest: [PartID: PartVersion] = [:]
+        var order: [PartID] = []
+        for version in song.versions {
+            if newest[version.partID] == nil { order.append(version.partID) }
+            newest[version.partID] = version
+        }
+        return order.compactMap { newest[$0] }
     }
 
     /// What pressing a step opens: its newest part if it has one, otherwise the way to make one.
@@ -286,6 +299,11 @@ extension WorkPath {
                                          prepare: .chopBar(of: stem.id))
                 }
             }
+            // No stems: a bar of the record itself.
+            if stems.isEmpty, let take = Guidance.take(in: song), let bar = Guidance.barToChop(of: take, in: song) {
+                return SurfaceAction(surface: .chopLane, title: "Bar \(bar.number) of \(song.title)",
+                                     prepare: .chopBar(of: take.id))
+            }
             return nil
 
         case .groove:
@@ -323,7 +341,7 @@ extension WorkPath {
         case .dust:
             // The newest dusty part if there is one, else the newest thing that could carry dust —
             // a groove before a chop, since a groove is further along.
-            if let dusty = song.versions.last(where: { !$0.kind.degradation.isEmpty }) {
+            if let dusty = newestVersions(in: song).last(where: { !$0.kind.degradation.isEmpty }) {
                 return SurfaceAction(surface: .sound, title: PartLabel.title(of: dusty), bound: [dusty.id])
             }
             if let target = Guidance.grooves(in: song).last ?? Guidance.samples(in: song).last {

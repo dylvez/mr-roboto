@@ -83,8 +83,15 @@ struct HearCompButton: View {
         Button {
             Task { model.isHearingComp ? model.stopAudition() : await model.hearComp() }
         } label: {
-            Label(model.isHearingComp ? "Stop" : "Hear the comp", systemImage: model.isHearingComp ? "stop.fill" : "play.fill")
-                .labelStyle(.titleAndIcon)
+            // "Hear" when the Booth's takes pane is narrow, rather than "Hear the co…".
+            ViewThatFits(in: .horizontal) {
+                Label(model.isHearingComp ? "Stop" : "Hear the comp", systemImage: model.isHearingComp ? "stop.fill" : "play.fill")
+                    .labelStyle(.titleAndIcon)
+                    .fixedSize()
+                Label(model.isHearingComp ? "Stop" : "Hear", systemImage: model.isHearingComp ? "stop.fill" : "play.fill")
+                    .labelStyle(.titleAndIcon)
+                    .fixedSize()
+            }
         }
         .font(Design.Typography.ui(12.5))
         .disabled(model.takes.isEmpty)

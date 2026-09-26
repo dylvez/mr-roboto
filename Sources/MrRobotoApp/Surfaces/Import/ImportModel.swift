@@ -623,6 +623,8 @@ public final class ImportModel {
     /// The whole import, start to finish. Every long call is `await`ed off this actor; nothing here
     /// does work on the main actor except assigning what the view reads.
     public func run(_ url: URL) async {
+        // Whether this surface has imported before: its form and selection are that record's.
+        let followsAnotherImport = !phaseLog.isEmpty || draft != nil
         startedAt = ContinuousClock.now
         lastError = nil
         promoted = []
@@ -630,6 +632,15 @@ public final class ImportModel {
         packageURL = nil
         draft = nil
         phaseLog = []
+        // A new file is a new record: the last one's form and selection go with it. The next file
+        // used to be imported under the previous record's title. A form filled in before the first
+        // import is this record's, and stays.
+        if followsAnotherImport {
+            provenance = ImportProvenance()
+            keptProvenance = ImportProvenance()
+        }
+        selection = nil
+        var stemsFailure: String?
 
         do {
             // 1. The file itself: header, then the waveform, both off the main actor.
@@ -662,7 +673,18 @@ public final class ImportModel {
             //    library, so a cancelled separation leaves the library untouched.
             if separatesStems {
                 transition(to: .separating(url), detail: "separating")
-                try await separate(url)
+                // Stems that cannot be made — offline, the separator's model missing — are stems
+                // the record does not have yet, not a failed import: the analysis is kept and the
+                // record imported. The whole import used to be thrown away, every time it was tried.
+                do {
+                    try await separate(url)
+                } catch is CancellationError {
+                    throw CancellationError()
+                } catch {
+                    try Task.checkCancellation()
+                    stemsFailure = Self.plain(separationError: error)
+                    stems = []
+                }
                 try Task.checkCancellation()
             }
 
@@ -670,6 +692,12 @@ public final class ImportModel {
             transition(to: .writing(url), detail: "writing the package", fraction: 0.95)
             let songID = try await commitDraft()
             transition(to: .ready(songID), detail: "ready", fraction: 1)
+            if let stemsFailure {
+                lastError = "Imported without its stems: \(stemsFailure). Separate them from the Record surface when you can."
+            }
+            // Cancelled on its way out — the surface closed, the song changed — it is in the library,
+            // and nothing pulls you into it.
+            guard !Task.isCancelled, !abandoned else { return }
             await host.didFinishImport(songID)
         } catch is CancellationError {
             cancelled()
@@ -689,6 +717,16 @@ public final class ImportModel {
         guard state.isCancellable else { return }
         runTask?.cancel()
     }
+
+    /// The surface is gone — closed, or the song changed under it. What is running stops where it
+    /// can; a write already under way finishes into the library, but nothing opens the song. An
+    /// import used to outlive its surface and, when it landed, switch the frame into its song.
+    public func abandon() {
+        abandoned = true
+        cancel()
+    }
+
+    @ObservationIgnored private var abandoned = false
 
     /// Back to the drop target, forgetting the draft. The package, if one was written, stays on disk
     /// — this clears the surface, not the library.
@@ -719,6 +757,9 @@ public final class ImportModel {
     @discardableResult
     public func promote(_ range: SongGraph.TimeRange, named name: String? = nil) throws -> PartVersion {
         guard var draft else { throw ImportModelError.nothingToPromote }
+        // Not until the record is written: a bar promoted while stems were separating went into
+        // whichever song was open, pointing at audio that was not in the library yet.
+        guard case .ready = state else { throw ImportModelError.stillImporting }
         let analysis = draft.analysis
 
         // Slices at every downbeat inside the region, so the Chop lane opens on a grid rather than
@@ -732,7 +773,10 @@ public final class ImportModel {
                             rootPitch: nil,
                             detectedTempo: analysis.dominantTempo,
                             sourceRecord: draft.record.id,
-                            key: analysis.key(at: range.start))
+                            key: analysis.key(at: range.start),
+                            // The region itself: the Chop lane plays what was selected, not a span
+                            // rebuilt from the downbeats inside it.
+                            span: range)
 
         let label = name ?? defaultRegionName(for: range)
         let citation = provenance.citation
@@ -1077,6 +1121,18 @@ public final class ImportModel {
         }
     }
 
+    /// A separator's failure in words a person can act on.
+    static func plain(separationError error: Error) -> String {
+        let text = "\(error)"
+        if text.contains("weightsDownloadFailed") {
+            return "the stem separator's model could not be downloaded — check the connection"
+        }
+        if text.lowercased().contains("unavailable") || text.lowercased().contains("no separator") {
+            return "stem separation is not available on this Mac"
+        }
+        return text
+    }
+
     /// Rewrites every audio payload that referred to the placeholder so it points at the hashed media.
     private static func replacing(_ old: MediaRef, with new: MediaRef, in song: Song) -> Song {
         var rebuilt = Song(id: song.id, title: song.title, artist: song.artist, key: song.key,
@@ -1116,9 +1172,11 @@ public enum ImportModelError: Error, CustomStringConvertible, Sendable {
     case noSelection
     case noSuchBar(Int)
     case nothingToWrite
+    case stillImporting
 
     public var description: String {
         switch self {
+        case .stillImporting: return "the record is still being imported; promote a bar once it is in the library"
         case .nothingToPromote: return "there is no analysed record to promote a region of"
         case .noSelection: return "nothing is selected on the waveform"
         case .noSuchBar(let index): return "the analysis has no bar \(index)"

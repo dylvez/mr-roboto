@@ -67,7 +67,10 @@ struct BoothSurfaceView: View {
         switch model.state {
         case .idle: return "Idle · next is take \(model.nextPass)"
         case .armed: return "Armed · next is take \(model.nextPass)"
-        case .recording: return model.countInLine != nil ? "Counting in · take \(model.nextPass)" : "Recording take \(model.nextPass)"
+        case .recording:
+            let now = model.countInLine != nil ? "Counting in · take \(model.nextPass)" : "Recording take \(model.nextPass)"
+            // Keep going: how many passes this run has kept so far.
+            return model.passesInRun > 0 ? now + " · \(model.passesInRun) kept this run" : now
         }
     }
 
@@ -166,6 +169,12 @@ struct BoothSurfaceView: View {
                 .font(Design.Typography.ui(12))
                 .frame(height: Design.Metric.chipHeight)
                 .help("Stops the take by itself on the section's last bar.")
+            Toggle("Keep going", isOn: $model.keepsGoing)
+                .toggleStyle(.checkbox)
+                .tint(Design.Palette.accent)
+                .font(Design.Typography.ui(12))
+                .frame(height: Design.Metric.chipHeight)
+                .help("At the section's end the take is kept and the song starts again from the section, counted in: every pass is a take, to comp from. Stop ends it.")
             inputPicker
                 .frame(height: Design.Metric.chipHeight)
             if model.input.isFallingBack(in: model.inputs) {

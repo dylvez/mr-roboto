@@ -74,6 +74,26 @@ struct TimeBaseTests {
         #expect(model.state == .idle && host.kept.isEmpty, "let go, not kept")
     }
 
+    @Test("Keep going: at the section's end the pass is kept and the song starts again from the section; Stop ends the run")
+    func keepGoing() async throws {
+        let host = StubBoothHost(song: song())
+        host.transport = Transport(clock: host.clock, mode: .offline(sampleRate: 48_000, maximumFrames: 4_096), originSampleTime: 0)
+        host.buffers = (0..<4).map { i in (tone(frames: 2_048), AVAudioTime(sampleTime: AVAudioFramePosition(i * 2_048), atRate: 48_000)) }
+        let model = booth(host)
+        model.keepsGoing = true
+        await model.record()
+        #expect(model.state == .recording && host.plays.count == 1)
+        // The Verse is bars 1–4: the playhead reaches its end.
+        host.playhead = host.clock.seconds(forBar: 4)
+        await waitFor { host.plays.count == 2 }
+        #expect(host.kept.count == 1, "the first pass is a take")
+        #expect(host.plays.count == 2 && host.plays[1].section == model.section, "and the song starts again from the section")
+        #expect(model.state == .recording && model.passesInRun == 1)
+        let last = await model.stopRecording()
+        #expect(last != nil && host.kept.count == 2, "Stop keeps the pass it was in")
+        #expect(model.state == .idle && model.passesInRun == 0)
+    }
+
     @Test("A section rendered on its own takes the takes with it: the Hook's take at 0, the Verse's gone")
     func sectionRenderMovesTheTakes() throws {
         let groove = TransportFixture.grooveVersion()

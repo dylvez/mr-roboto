@@ -97,6 +97,10 @@ final class SoundAdapter: SoundSurfaceHost {
     }
 
     @discardableResult
+    func newest(of part: PartID) -> PartVersion? {
+        app.song?.versions.last { $0.partID == part }
+    }
+
     func record(_ version: PartVersion) -> Bool {
         guard app.record(version) else { return false }
         for finding in Dust.findings(for: version) {

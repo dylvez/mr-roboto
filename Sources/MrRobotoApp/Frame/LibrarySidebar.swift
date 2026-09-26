@@ -206,7 +206,7 @@ struct LibrarySidebar: View {
         VStack(alignment: .leading, spacing: 10) {
             ArtImage("empty-library", width: 150, height: 100)
             EmptyNote(title: "Nothing in the library yet.",
-                      detail: "Import a record with File ▸ Import Record…, or drop audio and .roboto song packages into the library folder.")
+                      detail: "Import a record with File ▸ Import Record…, or start one from nothing with File ▸ New Song. Audio dropped into the Mr. Roboto Inbox folder — in iCloud Drive, or in Music — arrives here as an idea.")
             if let directory = app.libraryStatus.directory {
                 Text(directory.path)
                     .font(Design.Typography.numeric(10.5))

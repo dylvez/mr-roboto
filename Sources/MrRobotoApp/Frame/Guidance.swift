@@ -226,6 +226,17 @@ public enum Guidance {
                                       prepare: .separateStems(of: take.id))))
         }
 
+        // 1b. No stems — separation not run, or not possible here — and nothing chopped: a bar of the
+        //     record itself. Without it the only way on was a drag and a Promote nobody suggested.
+        if let take, stems.isEmpty, samples(in: song).isEmpty, let bar = barToChop(of: take, in: song) {
+            out.append(Proposal(
+                title: "Chop a bar of the record",
+                rationale: "Bar \(bar.number), straight from the record without separating it. The lane slices it "
+                    + "on its transients; stems can come later.",
+                action: SurfaceAction(surface: .chopLane, title: "Bar \(bar.number) of \(song.title)",
+                                      prepare: .chopBar(of: take.id))))
+        }
+
         // 2. Drums, uncut. The one action the whole milestone is built around.
         if let drums = stems.first(where: { audio(of: $0).flatMap(PartLabel.instrument(of:)) == .drums }),
            chop(of: drums.id, in: song) == nil,
@@ -240,7 +251,11 @@ public enum Guidance {
         }
 
         // 3. A chop with no groove off it yet: re-grooving is what the lane is for.
-        if let sample = samples(in: song).last(where: { groove(from: $0.id, in: song) == nil }) {
+        // By part: a chop whose any version has made a groove has been re-grooved. By version, every
+        // keep of the chop and every dusty version brought the suggestion back.
+        let regrooved = Set(song.versions.filter { $0.type == .groove }.flatMap(\.parents)
+            .compactMap { song.version($0)?.partID })
+        if let sample = samples(in: song).last(where: { !regrooved.contains($0.partID) }) {
             out.append(Proposal(
                 title: "Re-groove \(PartLabel.title(of: sample))",
                 rationale: "The lane re-slices this bar on its transients; its re-groove lever puts the "

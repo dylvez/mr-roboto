@@ -530,6 +530,9 @@ public final class GridModel {
     public func setMachine(_ newMachine: SynthMachine) {
         machine = newMachine
         lastError = nil
+        // What the grid plays on is what the song plays this groove on. The picker used to change
+        // only the grid's own audition, so a groove built on the 909 played on the 808.
+        host.machineChosen(newMachine, for: (versions.last ?? base)?.partID)
         Task { @MainActor [host, weak self] in
             do {
                 try await host.loadMachine(newMachine)
@@ -617,10 +620,15 @@ public final class GridModel {
     /// derives when the grid was opened against one and roots a new part when it was not.
     @discardableResult
     public func commit(note: String? = nil) -> PartVersion {
+        // On the part's newest version, not the one this grid last saw: dust added in Sound since
+        // is carried, not wiped. The grid owns the steps and the swing; the chain is Sound's.
+        let known = versions.last ?? base
+        let newest = known.flatMap { host.newest(of: $0.partID) } ?? known
+        if case .groove(let current)? = newest?.kind { degradation = current.degradation }
         let payload = PartKind.groove(groove)
         let text = note ?? defaultNote
         let version: PartVersion
-        if let previous = versions.last ?? base {
+        if let previous = newest {
             version = previous.deriving(payload, by: .user, operation: Operation.edit, note: text)
         } else {
             version = PartVersion(partID: PartID(), kind: payload, author: .user,

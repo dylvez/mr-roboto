@@ -585,6 +585,24 @@ extension AppState {
     /// melodies sound through. Recorded as a `.sound` part, the same way the drum machine is, so the
     /// choice travels with the song and shows in the ledger. A preset the app does not know is
     /// ignored rather than recorded, and picking what is already playing records nothing.
+    /// The drum machine a groove part plays on, or the song's when no part is named — the way
+    /// `setInstrument` does it for chords and tunes, as one `.sound` part a pick at a time.
+    @discardableResult
+    public func setMachine(_ id: String, for part: PartID? = nil, by author: Author = .user) -> Bool {
+        guard let machine = SynthMachine.preset(id: id), let song else { return false }
+        guard SongPlayback.machineID(for: part, in: song) != machine.id else { return false }
+        let kind = PartKind.sound(Sound(instrument: machine.id, forPart: part))
+        let name = part.flatMap { id in song.versions.last { $0.partID == id } }.map(PartLabel.title(of:))
+        let note = name.map { "\(machine.name) for \($0)" } ?? "\(machine.name) for the drums"
+        if let previous = song.versions.last(where: { version in
+            if case .sound(let sound) = version.kind, sound.forPart == part { return SynthMachine.preset(id: sound.instrument) != nil }
+            return false
+        }) {
+            return record(previous.deriving(kind, by: author, operation: Operation.written, note: note))
+        }
+        return record(PartVersion(partID: PartID(), kind: kind, author: author, operation: Operation.written, note: note))
+    }
+
     @discardableResult
     public func setInstrument(_ id: String, for part: PartID? = nil, by author: Author = .user) -> Bool {
         guard let spec = InstrumentVoiceSpec.preset(id: id), let song else { return false }

@@ -35,6 +35,10 @@ public protocol SoundSurfaceHost: AnyObject {
     @discardableResult
     func record(_ version: PartVersion) -> Bool
 
+    /// The newest version of a part in the song, so a new chain goes on what the Grid or the lane
+    /// kept since this surface opened, not under it.
+    func newest(of part: PartID) -> PartVersion?
+
     /// The dry sound of a sample or a groove — the part with **no chain on it at all**, whatever
     /// the version carries — for the surface to put through the chain it is editing. A chop is its
     /// bar of the record; a groove is one pass bounced on the song's machine.
@@ -50,6 +54,7 @@ public protocol SoundSurfaceHost: AnyObject {
 }
 
 public extension SoundSurfaceHost {
+    public func newest(of part: PartID) -> PartVersion? { nil }
     func dryAudio(of version: PartVersion) async throws -> SoundAudition {
         throw SoundSurfaceUnavailable(what: "this host cannot render a \(version.type.rawValue) to put through the chain")
     }

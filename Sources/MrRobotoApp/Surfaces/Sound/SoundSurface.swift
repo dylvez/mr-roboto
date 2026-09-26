@@ -316,6 +316,9 @@ public final class SoundSurface {
         draft.chainBase = preset
         chainFailure = nil
         audition()
+        // A machine picked is a choice, kept at once. It used to wait for a knob to be let go,
+        // so clicking SP-1200 — or Clean, to go back — kept nothing.
+        commit()
     }
 
     /// Switches voice within the same machine. The chain is unchanged — it is a chain, not part of
@@ -495,8 +498,10 @@ public final class SoundSurface {
     /// touched, so the dry chop is one parent away and still plays clean. The seed goes in as the
     /// `UInt64` the draft holds; nothing here passes it through a `Double`.
     private func commitPart(note: String?) -> PartVersion? {
-        guard let bound = boundVersion,
-              let version = Dust.version(dirtying: bound, through: chainPasses, by: .user, note: note)
+        // On the part's newest version: steps kept on the Grid since this surface opened stay kept.
+        guard let opened = boundVersion else { return nil }
+        let bound = host?.newest(of: opened.partID) ?? opened
+        guard let version = Dust.version(dirtying: bound, through: chainPasses, by: .user, note: note)
         else { return nil }
         guard host?.record(version) == true else {
             lastCommitWasRefused = true

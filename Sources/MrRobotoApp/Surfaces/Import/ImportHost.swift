@@ -200,27 +200,37 @@ public struct LiveImportHost: ImportHosting {
             try Task.checkCancellation()
             let (capability, label) = step
             var provider: (any AnalysisProvider)?
-            switch capability {
-            case .key:
-                if let p = try? providers.keyEstimator() { provider = p; report.key = try await p.estimateKey(url: url) }
-            case .beats:
-                if let p = try? providers.beatTracker() { provider = p; report.beats = try await p.trackBeats(url: url) }
-            case .structure:
-                if let p = try? providers.structureAnalyzer() { provider = p; report.structure = try await p.analyzeStructure(url: url) }
-            case .loudness:
-                if let p = try? providers.loudnessMeter() { provider = p; report.loudness = try await p.measureLoudness(url: url) }
-            case .instrumentActivity:
-                if let p = try? providers.instrumentActivityAnalyzer() {
-                    provider = p
-                    report.instruments = try await p.analyzeInstrumentActivity(url: url)
+            // Each reading on its own: one that finds nothing — no key in a drum break, no form in a
+            // two-bar loop — is a reading the record lacks, not a failed import. A single missing
+            // reading used to throw away the other four and fail the import every time it was tried.
+            do {
+                switch capability {
+                case .key:
+                    if let p = try? providers.keyEstimator() { report.key = try await p.estimateKey(url: url); provider = p }
+                case .beats:
+                    if let p = try? providers.beatTracker() { report.beats = try await p.trackBeats(url: url); provider = p }
+                case .structure:
+                    if let p = try? providers.structureAnalyzer() { report.structure = try await p.analyzeStructure(url: url); provider = p }
+                case .loudness:
+                    if let p = try? providers.loudnessMeter() { report.loudness = try await p.measureLoudness(url: url); provider = p }
+                case .instrumentActivity:
+                    if let p = try? providers.instrumentActivityAnalyzer() {
+                        report.instruments = try await p.analyzeInstrumentActivity(url: url)
+                        provider = p
+                    }
+                default:
+                    break
                 }
-            default:
-                break
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                try Task.checkCancellation()
+                report.notes.append("no \(label) found: \(error)")
             }
             if let provider {
                 report.capabilities.insert(capability)
                 report.provenance[capability] = provider.providerName
-            } else {
+            } else if !report.notes.contains(where: { $0.hasPrefix("no \(label) found") }) {
                 report.notes.append("no provider for \(capability.rawValue)")
             }
             // Only now is a fraction honest: a capability is either done or it is not.

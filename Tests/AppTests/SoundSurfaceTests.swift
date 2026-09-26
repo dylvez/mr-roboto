@@ -353,7 +353,7 @@ struct SoundSurfaceTests {
         let host2 = SoundHostStub(selectedPart: written)
         let reopened = SoundSurface(host: host2, sampleRate: SoundFixture.sampleRate)
         #expect(reopened.rendered(.chain) == surface.rendered(.chain))
-        #expect(host.recorded.count == 1)
+        #expect(host.recorded.count == 2, "picking the cassette is a version of its own; the knobs after it are the second")
     }
 
     @Test("a refused version leaves the edit as a draft rather than pretending it was kept")

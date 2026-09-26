@@ -240,4 +240,26 @@ struct ChopLaneKeepTests {
         #expect(ChopLaneReadout.stretch(1.5) == "×1.50")
         #expect(ChopLaneReadout.stretch(0.25) == "×0.25")
     }
+
+    @Test("reopened on a kept chop, the lane has the cut that was kept — a marker added by hand, a class set by hand — and no change")
+    func reopensOnTheKeptCut() throws {
+        let (lane, host) = ChopLaneFixtures.cleanLane()
+        let detected = lane.sliceMarkers.count
+        // A marker in the middle of the widest slice, where nothing is too close to it.
+        let starts = lane.sliceMarkers.map { $0.position - lane.source.sourceOffset } + [lane.source.duration]
+        let widest = zip(starts, starts.dropFirst()).max { $0.1 - $0.0 < $1.1 - $1.0 }!
+        lane.addMarker(at: (widest.0 + widest.1) / 2)
+        lane.override(slice: 0, as: .hat)
+        let kept = try lane.commitChop(note: "Cut by hand")
+        guard case .sample(let sample) = kept.kind else { Issue.record("not a sample"); return }
+        #expect(sample.slices.count == detected + 1)
+
+        let reopened = ChopLaneSurface(source: lane.source, host: host, version: kept.id)
+        #expect(reopened.sliceMarkers.count == detected, "opening detects afresh")
+        reopened.restore(sample.slices)
+        #expect(reopened.sliceMarkers.map(\.position) == sample.slices.map(\.position), "the kept cut, marker for marker")
+        #expect(ChopLaneSurface.overrides(from: reopened.sliceMarkers) == ChopLaneSurface.overrides(from: sample.slices),
+                "and class for class")
+        #expect(!reopened.hasUnkeptChanges, "and not an edit")
+    }
 }

@@ -74,6 +74,14 @@ public final class BoothModel {
     }
     /// Stop on the section's last bar by itself.
     public var punchesOut = true
+    /// Keep going: at the section's end the take is kept and the song starts again from the
+    /// section, counted in — every pass a take — until Stop. Singing a verse five times used to be
+    /// five presses of Record. Remembered, like the count-in.
+    public var keepsGoing: Bool {
+        didSet { defaults.set(keepsGoing, forKey: Self.keepGoingKey) }
+    }
+    /// Takes kept in the run Keep going is on; 0 outside one.
+    public private(set) var passesInRun = 0
     /// Whether the input is heard through the engine while recording.
     public var monitors = false
     /// The last buffer's peak, 0…1, while recording.
@@ -94,6 +102,7 @@ public final class BoothModel {
     public static let countInChoices = [0, 1, 2]
     static let countInKey = "booth.countInBars"
     static let clickKey = "booth.click"
+    static let keepGoingKey = "booth.keepGoing"
 
     /// Bars of click before the section's first bar when Record starts the song. Remembered, since
     /// a singer who wants two bars wants them every take.
@@ -121,6 +130,8 @@ public final class BoothModel {
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var recorder: Recorder?
     @ObservationIgnored private var watching: Task<Void, Never>?
+    /// Keep going's next pass, starting: Stop cancels it.
+    @ObservationIgnored private var continuing: Task<Void, Never>?
     /// Song seconds the count-in ends at — the section's first bar — for the take being recorded,
     /// when Record started the song with a count-in. The take begins there, whatever the recorder
     /// caught before it.
@@ -140,6 +151,7 @@ public final class BoothModel {
         self.input = host.input
         self.countInBars = Self.bounded((defaults.object(forKey: Self.countInKey) as? Int) ?? 1)
         self.click = defaults.bool(forKey: Self.clickKey)
+        self.keepsGoing = defaults.bool(forKey: Self.keepGoingKey)
         showLanes()
     }
 
@@ -304,6 +316,8 @@ public final class BoothModel {
         if host.isPlaying, host.isLooping || isPastSection { await host.stop() }
         if !host.isPlaying {
             await host.play(from: section, countInBars: countInBars, click: click)
+            // Stop pressed while Keep going was starting the next pass.
+            if Task.isCancelled { await host.stop(); return }
             if countInBars > 0 {
                 countInEnds = host.clock.seconds(forBar: sectionBars?.lowerBound ?? 0)
                 countedIn = countInBars
@@ -334,7 +348,10 @@ public final class BoothModel {
     /// Stops the recorder; the recording becomes a take. The song keeps playing unless asked.
     @discardableResult
     public func stopRecording(stopSong: Bool = false) async -> PartVersion? {
+        continuing?.cancel()
+        continuing = nil
         let version = finishTake(keeping: true)
+        passesInRun = 0
         if stopSong { await host.stop() }
         return version
     }
@@ -423,9 +440,21 @@ public final class BoothModel {
                 }
                 // Never during the count-in: those bars are before the take, and the section's
                 // end is measured from where the take begins.
-                if self.countInBarsLeft == nil, self.punchesOut, let bars = self.sectionBars,
+                if self.countInBarsLeft == nil, self.punchesOut || self.keepsGoing, let bars = self.sectionBars,
                    playhead >= self.host.clock.seconds(forBar: bars.upperBound) {
-                    await self.stopRecording()
+                    guard self.keepsGoing else {
+                        await self.stopRecording()
+                        return
+                    }
+                    // The pass is a take; the song goes back to the section and counts in again. From
+                    // a task of its own: ending the take ends this watch.
+                    if self.finishTake(keeping: true) != nil { self.passesInRun += 1 }
+                    self.continuing = Task { @MainActor [weak self] in
+                        guard let self else { return }
+                        await self.host.stop()
+                        guard !Task.isCancelled, self.keepsGoing else { return }
+                        await self.record()
+                    }
                     return
                 }
                 try? await Task.sleep(for: .milliseconds(50))

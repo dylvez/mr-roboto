@@ -148,3 +148,44 @@ struct ExportMatchesPlaybackTests {
         #expect(boundaries[0].frame == 48_000 * 8, "the Hook starts at bar 5: eight seconds in")
     }
 }
+
+@Suite("Surfaces keep on what the song holds, not on what they opened on", .serialized) @MainActor
+struct NewestBaseTests {
+    @Test("dust added while the Grid was open survives the Grid's next keep; a machine picked there is the song's")
+    func gridKeepsTheDust() throws {
+        let (app, directory, _) = CompletenessFixture.app("newest-grid")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        app.open(CompletenessFixture.song("Arrival"))
+        let groove = try #require(Guidance.grooves(in: app.song!).last)
+        let id = try #require(app.perform(SurfaceAction(surface: .grid, title: "Grid", bound: [groove.id])))
+        let item = try #require(app.bench.items.first { $0.id == id })
+        let grid = SurfaceWiring.shared.gridModel(for: item, app: app)
+        grid.autoKeep.delay = nil
+
+        // Sound, meanwhile, puts the groove through an SP-1200.
+        let chain = [DegradeSettings(preset: .sp1200).degradation(from: .sp1200)]
+        let dusty = try #require(Dust.version(dirtying: groove, through: chain, by: .user))
+        #expect(app.record(dusty))
+
+        grid.toggle(.closedHat, step: 3)
+        let kept = grid.commit()
+        #expect(kept.parents == [dusty.id], "built on the dusty version, not on the one the grid opened")
+        #expect(kept.kind.degradation == chain, "and the dust is still on it")
+
+        grid.setMachine(SynthMachine.preset(id: "tr909")!)
+        #expect(SongPlayback.machineID(for: groove.partID, in: app.song!) == "tr909", "the song plays the groove on it")
+    }
+}
+
+@Suite("With no stems, a bar of the record is the way on") @MainActor
+struct RecordChopTests {
+    @Test("an imported record with no stems is offered a chop of its own bar, and the path's Chop step has somewhere to go")
+    func chopTheRecord() throws {
+        let song = GuidanceFixture.imported().song
+        let titles = Guidance.proposals(for: song).map(\.title)
+        #expect(titles.contains("Separate the stems"))
+        #expect(titles.contains("Chop a bar of the record"), "\(titles)")
+        let chop = WorkPath.action(.chop, in: song)
+        guard case .chopBar? = chop?.prepare else { Issue.record("the Chop step goes nowhere: \(String(describing: chop))"); return }
+    }
+}

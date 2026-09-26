@@ -299,6 +299,25 @@ public final class ChopLaneSurface: Surface {
         keptChop = version == nil ? nil : sliceMarkers
     }
 
+    /// Opens on the cut a version kept: its markers and the classes they record, rather than a
+    /// fresh detection. Reopening a chop used to detect its slices again and treat that as kept,
+    /// so a marker moved by hand or a slice called a snare was gone, and the next edit saved over
+    /// the kept cut. Not an edit: the lane holds what the song holds.
+    public func restore(_ kept: [SliceMarker]) {
+        guard source.isWellFormed, !kept.isEmpty else { return }
+        let restored = kept.map { $0.position - source.sourceOffset }
+            .filter { $0 >= 0 && $0 < source.duration }
+            .sorted()
+        guard !restored.isEmpty else { return }
+        markers = restored
+        overrides = Self.overrides(from: kept)
+        edits = [:]
+        selectedSlice = nil
+        rebuildChop()
+        handEdited = sliceMarkers.map(\.position) != detectedOnsets.map { $0 + source.sourceOffset }
+        keptChop = sliceMarkers
+    }
+
     /// Point the lane at a host after the fact — the frame builds the surface, then adopts it.
     public func adopt(_ host: any ChopLaneHost) {
         self.host = host
@@ -823,10 +842,11 @@ public final class ChopLaneSurface: Surface {
         return version
     }
 
-    /// The version this lane's next commit derives from, when the host's song still has it.
+    /// The version this lane's next commit derives from: the part's newest in the song, so dust
+    /// Sound put on the chop since the lane opened goes with the next cut rather than being lost.
     private var parent: PartVersion? {
-        guard let id = versions.last else { return nil }
-        return host?.song?.version(id)
+        guard let id = versions.last, let known = host?.song?.version(id) else { return nil }
+        return host?.song?.versions.last { $0.partID == known.partID } ?? known
     }
 
     // MARK: Keeping

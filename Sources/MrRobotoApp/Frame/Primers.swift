@@ -86,7 +86,8 @@ public enum Primer {
         case .booth:
             return ("Booth",
                     "Pick a section and a count-in, press Record: the song plays from that section under you, with that "
-                        + "section's words in view, and the take lands on the bar you sang it on, latency taken out. Every take stays, lane by "
+                        + "section's words in view, and the take lands on the bar you sang it on, latency taken out. Keep going "
+                        + "sings the section pass after pass, each a take. Every take stays, lane by "
                         + "lane below, where the band flags bars and you make the comp.")
         case .mashup:
             return ("Mashup",

@@ -177,14 +177,17 @@ final class SurfaceWiring {
     func gridModel(for item: BenchItem, app: AppState) -> GridModel {
         prune(app)
         if let existing = grids[item.id] { return existing }
-        let adapter = GridAdapter(app: app, service: service(for: app))
         let tempo = app.song?.tempo ?? 120
         let signature = app.song?.timeSignature ?? .fourFour
+        let bound = boundGroove(for: item, app: app)
+        // The machine the song plays this groove on — the grid always opened on the 808.
+        let machine = app.song.flatMap { SynthMachine.preset(id: SongPlayback.machineID(for: bound?.partID, in: $0)) } ?? .tr808
+        let adapter = GridAdapter(app: app, service: service(for: app), machine: machine)
         let model: GridModel
-        if let version = boundGroove(for: item, app: app) {
-            model = GridModel(host: adapter, version: version, tempo: tempo, timeSignature: signature)
+        if let version = bound {
+            model = GridModel(host: adapter, version: version, tempo: tempo, timeSignature: signature, machine: machine)
         } else {
-            model = GridModel(host: adapter, tempo: tempo, timeSignature: signature)
+            model = GridModel(host: adapter, tempo: tempo, timeSignature: signature, machine: machine)
         }
         gridAdapters[item.id] = adapter
         grids[item.id] = model
@@ -381,6 +384,7 @@ final class SurfaceWiring {
     /// Lets go of a surface's model, so the next draw builds it again from its binding — after
     /// the frame changed what the surface is bound to (a version restored from Parts).
     func discardModel(for id: SurfaceID) {
+        imports[id]?.abandon()
         imports[id] = nil; importAdapters[id] = nil
         grids[id] = nil; gridAdapters[id] = nil
         sounds[id] = nil; soundAdapters[id] = nil
@@ -397,6 +401,7 @@ final class SurfaceWiring {
 
     func prune(_ app: AppState) {
         let open = Set(app.bench.items.map(\.id))
+        for (id, model) in imports where !open.contains(id) { model.abandon() }
         imports = imports.filter { open.contains($0.key) }
         importAdapters = importAdapters.filter { open.contains($0.key) }
         grids = grids.filter { open.contains($0.key) }
@@ -457,6 +462,7 @@ final class SurfaceWiring {
         switch item.kind {
         case .importRecord: return imports[item.id]?.hasUnkeptChanges ?? false
         case .booth: return booths[item.id]?.state == .recording
+        case .sound: return sounds[item.id]?.isDirty ?? false
         default: return keeper(for: item)?.hasUnkeptChanges ?? false
         }
     }
@@ -469,6 +475,7 @@ final class SurfaceWiring {
     /// controller's capture the same, anything auditioning stopped.
     func finishRunningWork(on app: AppState, keeping: Bool) {
         for model in booths.values { model.finishTake(keeping: keeping) }
+        for model in imports.values { model.abandon() }
         midiControl?.finishForSongChange(keeping: keeping)
         for sheet in takeSheets.values { sheet.stopAudition() }
         partPlayer?.stop()
@@ -478,6 +485,9 @@ final class SurfaceWiring {
         var allKept = true
         for item in bench.items {
             if let keeper = keeper(for: item), keeper.hasUnkeptChanges, !keeper.keepNow() { allKept = false }
+            // Sound keeps on a knob's release, and a draft it holds — a machine clicked, a knob
+            // not yet let go — is kept here with the rest, before play, a save, a switch or quit.
+            if item.kind == .sound, let sound = sounds[item.id], sound.isDirty, sound.commit() == nil { allKept = false }
         }
         return allKept
     }

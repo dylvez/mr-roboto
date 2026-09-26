@@ -34,10 +34,19 @@ public protocol GridHosting: Sendable {
     /// asks for before it plays must be in the song before the transport reads it.
     @MainActor @discardableResult
     func commit(_ version: PartVersion) -> Bool
+
+    /// The newest version of a part in the song, so a keep builds on it — and on what another
+    /// surface kept in the meantime — rather than on the version this grid last saw.
+    @MainActor func newest(of part: PartID) -> PartVersion?
+
+    /// The machine picked on the grid, for the song to play this groove on.
+    @MainActor func machineChosen(_ machine: SynthMachine, for part: PartID?)
 }
 
 extension GridHosting {
     @MainActor public func commit(_ version: PartVersion) -> Bool { true }
+    @MainActor public func newest(of part: PartID) -> PartVersion? { nil }
+    @MainActor public func machineChosen(_ machine: SynthMachine, for part: PartID?) {}
 }
 
 // MARK: - The live host
