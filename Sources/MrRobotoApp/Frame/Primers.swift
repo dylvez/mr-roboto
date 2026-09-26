@@ -92,8 +92,8 @@ public enum Primer {
         case .mashup:
             return ("Mashup",
                     "Two songs from the library on one grid. One keeps its tempo and key — usually the instrumental — and the "
-                        + "other is shifted and stretched to meet it, first downbeat on a bar line. Choose up to four stems between "
-                        + "them, preview eight bars, then make the song: it lands in the library with its stems in place.")
+                        + "other is shifted and stretched to meet it, first downbeat on a bar line. Choose stems from each — or "
+                        + "a song's full record — preview eight bars, then make the song: it lands in the library with its stems in place.")
         case .mixer:
             return ("Mixer",
                     "A strip per part: fader, pan, send, mute and solo, three bands of EQ and a compressor, with meters while "

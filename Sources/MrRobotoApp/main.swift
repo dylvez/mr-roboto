@@ -140,6 +140,10 @@ struct FrameCommands: Commands {
         }
 
         CommandGroup(replacing: .saveItem) {
+            // Replacing the save group took the system's Close with it: ⌘W did nothing, even in the
+            // Field Guide's window.
+            Button("Close Window") { NSApp.keyWindow?.performClose(nil) }
+                .keyboardShortcut("w", modifiers: .command)
             Button("Save") { app.save() }
                 .keyboardShortcut("s", modifiers: .command)
                 .disabled(app.song == nil || app.store == nil)

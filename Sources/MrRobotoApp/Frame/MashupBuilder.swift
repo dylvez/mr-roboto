@@ -39,6 +39,7 @@ public enum MashupError: Error, CustomStringConvertible, Equatable {
     case notAnalysed(String)
     case nothingChosen
     case tooManyStems(Int)
+    case fullWithStems(String)
     case noStem(String, String)
     case missingMedia(String)
 
@@ -49,7 +50,8 @@ public enum MashupError: Error, CustomStringConvertible, Equatable {
         case .sameSong: return "A mashup needs two different songs."
         case .notAnalysed(let title): return "\(title) has no analysis — import it as a record first, so its bars and key are known."
         case .nothingChosen: return "No stems were chosen."
-        case .tooManyStems(let count): return "\(count) stems were chosen; the transport plays \(Mashups.maximumStems) audio files at once."
+        case .tooManyStems(let count): return "\(count) stems were chosen; a mashup holds \(Mashups.maximumStems) at most."
+        case .fullWithStems(let title): return "\(title)'s full record and its stems are the same sound twice — take the record or its stems."
         case .noStem(let stem, let title): return "\(title) has no \(stem) stem — separate its stems on the Record surface, or take the full record."
         case .missingMedia(let what): return "The audio for \(what) is not on disk."
         }
@@ -68,17 +70,41 @@ struct MashupPick: Sendable {
 }
 
 public enum Mashups {
-    /// The engine has four player nodes for audio files.
-    public static let maximumStems = 4
+    /// Four stems a side, the most a record separates into. The transport has room for them:
+    /// it used to be four audio files in all, and the limit and its reason stayed after it grew.
+    public static let maximumStems = 8
     public static let full = "full"
 
     /// What a song says about itself for the plan. Nil when it has never been analysed.
-    public static func source(for song: Song) -> MashupSource? {
-        guard let analysis = Guidance.analysis(in: song) else { return nil }
+    ///
+    /// Read from the record the chosen stems came from (`anchor`): a song can hold two records,
+    /// and a vocal from the first moved by the second's tempo, key and downbeat lands nowhere.
+    public static func source(for song: Song, anchor: PartVersion? = nil) -> MashupSource? {
+        let anchor = anchor ?? Guidance.take(in: song) ?? Guidance.stems(in: song).last
+        guard let analysis = anchor.flatMap({ Guidance.analysis(for: $0, in: song) }) ?? Guidance.analysis(in: song) else { return nil }
         let downbeat = analysis.beats.first { $0.isDownbeat }?.time ?? analysis.bars.first?.start ?? 0
-        let duration = analysis.duration > 0 ? analysis.duration : (Guidance.take(in: song).flatMap { Guidance.audio(of: $0)?.duration } ?? 0)
+        let duration = analysis.duration > 0 ? analysis.duration : (anchor.flatMap { Guidance.audio(of: $0)?.duration } ?? 0)
         return MashupSource(label: song.title, key: analysis.dominantKey ?? song.key, tempo: analysis.dominantTempo ?? song.tempo,
                             firstDownbeat: downbeat, duration: duration)
+    }
+
+    /// The audio a stem name stands for in a song: the record for `full`, else its newest stem by
+    /// that name — from the same record as `alongside` when the song holds that one's too.
+    static func version(named name: String, in song: Song, alongside: PartVersion? = nil) -> PartVersion? {
+        if name == full { return Guidance.take(in: song) }
+        let named = Guidance.stems(in: song).filter { Guidance.audio(of: $0)?.stem == name }
+        guard let alongside else { return named.last }
+        let seed = Self.seed(of: alongside, in: song)
+        return named.last { Self.seed(of: $0, in: song) == seed } ?? named.last
+    }
+
+    /// The first chosen stem a side has: the one the side's plan is read from.
+    static func anchor(in song: Song, stems names: [String]) -> PartVersion? {
+        names.lazy.compactMap { version(named: $0, in: song) }.first
+    }
+
+    private static func seed(of version: PartVersion, in song: Song) -> SeedID? {
+        version.origin ?? version.parents.compactMap { song.version($0)?.origin }.first
     }
 
     /// The stems a song can give: the separated ones by name, and always the full record.
@@ -94,8 +120,8 @@ public enum Mashups {
     }
 
     public static func plan(_ request: MashupRequest, a: Song, b: Song) throws -> MashupPlan {
-        guard let sourceA = source(for: a) else { throw MashupError.notAnalysed(a.title) }
-        guard let sourceB = source(for: b) else { throw MashupError.notAnalysed(b.title) }
+        guard let sourceA = source(for: a, anchor: anchor(in: a, stems: request.stemsA)) else { throw MashupError.notAnalysed(a.title) }
+        guard let sourceB = source(for: b, anchor: anchor(in: b, stems: request.stemsB)) else { throw MashupError.notAnalysed(b.title) }
         let beats = (request.backbone == .a ? a : b).timeSignature.beatsPerBar
         return Mashup.plan(a: sourceA, b: sourceB, backbone: request.backbone, barShift: request.barShift,
                            semitonesA: request.semitonesA, semitonesB: request.semitonesB, beatsPerBar: beats)
@@ -175,21 +201,32 @@ extension AppState {
         guard let store else { throw MashupError.noLibrary }
         guard request.a != request.b else { throw MashupError.sameSong }
         guard let songA = librarySong(request.a), let songB = librarySong(request.b) else { throw MashupError.noSuchSong }
+        // A name asked for twice is one stem: the Director could ask for the vocal twice and get it
+        // 6 dB hot. The record with its own stems is the same sound twice, and is refused.
+        var request = request
+        request.stemsA = request.stemsA.reduce(into: []) { if !$0.contains($1) { $0.append($1) } }
+        request.stemsB = request.stemsB.reduce(into: []) { if !$0.contains($1) { $0.append($1) } }
+        for (names, song) in [(request.stemsA, songA), (request.stemsB, songB)] where names.contains(Mashups.full) && names.count > 1 {
+            throw MashupError.fullWithStems(song.title)
+        }
         let chosen = request.stemsA.count + request.stemsB.count
         guard chosen > 0 else { throw MashupError.nothingChosen }
         guard chosen <= Mashups.maximumStems else { throw MashupError.tooManyStems(chosen) }
         let plan = try Mashups.plan(request, a: songA, b: songB)
         var picks: [MashupPick] = []
         for (side, source, names) in [(MashupPlan.Side.a, songA, request.stemsA), (.b, songB, request.stemsB)] {
-            let record = Guidance.take(in: source).flatMap { Guidance.audio(of: $0) }.flatMap { library.record(forMedia: $0.media)?.id }
+            let anchor = Mashups.anchor(in: source, stems: names)
+            // Credited to the record each stem came from, not to whichever record the song holds
+            // last: the one to clear is the one that is heard.
+            let fallback = Guidance.take(in: source).flatMap { Guidance.audio(of: $0) }.flatMap { library.record(forMedia: $0.media)?.id }
             for name in names {
-                let version = name == Mashups.full
-                    ? Guidance.take(in: source)
-                    : Guidance.stems(in: source).last { Guidance.audio(of: $0)?.stem == name }
-                guard let version, let audio = Guidance.audio(of: version) else { throw MashupError.noStem(name, source.title) }
+                guard let version = Mashups.version(named: name, in: source, alongside: anchor), let audio = Guidance.audio(of: version) else {
+                    throw MashupError.noStem(name, source.title)
+                }
                 guard let url = try? store.mediaURL(for: audio.media, song: source.id) else { throw MashupError.missingMedia("\(name) of \(source.title)") }
                 picks.append(MashupPick(side: side, stem: name, url: url, move: name == "drums" ? plan.drumMove(side) : plan.move(side),
-                                        offset: plan.offset(side), songTitle: source.title, record: record))
+                                        offset: plan.offset(side), songTitle: source.title,
+                                        record: audio.sourceRecord ?? Guidance.sourceRecord(of: version, in: source) ?? fallback))
             }
         }
         return (picks, plan, songA, songB)
@@ -226,8 +263,9 @@ extension AppState {
         let package = try store.songStore(for: mashup.id)
 
         let scratch = FileManager.default.temporaryDirectory.appendingPathComponent("MrRoboto/mashup-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: scratch, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: scratch) }
+        do {
+        try FileManager.default.createDirectory(at: scratch, withIntermediateDirectories: true)
         for (index, pick) in picks.enumerated() {
             progress?("\(pick.stem == Mashups.full ? "The record" : pick.stem.capitalized) of \(pick.songTitle)", Double(index) / Double(picks.count))
             let out = scratch.appendingPathComponent("\(index).wav")
@@ -239,6 +277,14 @@ extension AppState {
             let version = PartVersion(partID: PartID(), kind: .audio(audio), author: .user, operation: Operation.mashup,
                                       note: "\(what) of \(pick.songTitle). \(pick.move.sentence)")
             try mashup.append(version)
+        }
+        } catch {
+            // Nothing half-made is left behind. The song was written before the render so its
+            // package could take media; a render that failed used to leave it in the library,
+            // empty, one more for every try.
+            _ = try? store.trashSong(mashup.id) { url in try FileManager.default.removeItem(at: url); return nil }
+            reloadLibrary()
+            throw error
         }
         progress?("Saving", 1)
         // Onto the library as it is now, not as it was before the render: edits autosaved while it

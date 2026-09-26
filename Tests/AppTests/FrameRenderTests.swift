@@ -69,6 +69,20 @@ struct FrameRenderTests {
         try write(FrameView(app: app), size: CGSize(width: width, height: FrameLayout.minimumWindowHeight), name: "frame-minimum-all-open")
     }
 
+    @Test("an eight-section form: the section strip fits the bar at 1440 and at the window's minimum")
+    func longForm() throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        var song = FormFixture.build(tempo: 92).song
+        let lanes = [Guidance.grooves(in: song).last!].lanes
+        song.sections = ["Intro", "Verse", "Pre-chorus", "Chorus", "Verse", "Pre-chorus", "Chorus", "Bridge", "Chorus", "Outro"]
+            .map { Section(name: $0, stitch: lanes, lengthInBars: $0 == "Intro" || $0 == "Outro" ? 4 : 8) }
+        let app = app(song)
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-long-form")
+        try write(FrameView(app: app), size: CGSize(width: FrameLayout.minimumWindowWidth(collapsed: app.regions.collapsed),
+                                                    height: FrameLayout.minimumWindowHeight), name: "frame-long-form-minimum")
+    }
+
     @Test("the app icon, at 1024 and at Dock sizes")
     func icon() throws {
         try write(AppIconArt(), size: CGSize(width: 512, height: 512), name: "app-icon-1024")

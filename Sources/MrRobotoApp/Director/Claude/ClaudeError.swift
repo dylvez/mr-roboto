@@ -49,9 +49,32 @@ public enum ClaudeError: Error, Equatable, Sendable, CustomStringConvertible {
         }
     }
 
-    /// What a person should be told. The same as `description` for everything but a key, which
-    /// deserves a sentence rather than a diagnostic.
-    public var sentence: String { description }
+    /// What a person should be told: what happened and what to do, in the app's own words. It used
+    /// to be `description` for all of them, so a missing key said to set an environment variable,
+    /// and a mistyped one said "HTTP 401 authentication_error".
+    public var sentence: String {
+        switch self {
+        case .missingAPIKey:
+            "The band needs an Anthropic API key. Press Set the key… under the band's field and paste one."
+        case .http(401, _, _, _, _):
+            Self.keyRefused
+        case .http(403, _, let message, _, _):
+            "The key is not allowed to do that: \(message)"
+        case .http(let status, _, _, _, _) where status == 429:
+            "The band is being rate limited. Wait a moment and send again."
+        case .http(let status, _, _, _, _) where status == 529 || status >= 500:
+            "Anthropic's servers are busy right now (\(status)). Try again in a minute."
+        case .rateLimited:
+            "The band is being rate limited. Wait a minute and send again."
+        case .transport:
+            "The band could not reach Anthropic. Check the connection and send again."
+        default:
+            description
+        }
+    }
+
+    /// The sentence for a key the API refused, which the band's field shows until a key is set.
+    public static let keyRefused = "Anthropic refused the key: it may be mistyped or revoked. Press Key… under the band's field and set it again."
 
     /// The wait the server asked for, in seconds, when it named one.
     public var retryAfter: TimeInterval? {

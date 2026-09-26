@@ -138,7 +138,14 @@ public final class ChordsModel {
 
     /// The part these chords belong to, once they have been kept.
     public var part: PartID? { (versions.last ?? base)?.partID }
-    public let beatsPerBar: Int
+    public private(set) var beatsPerBar: Int
+
+    /// The song's meter now. A sheet left open across a meter change kept writing bars of the old
+    /// one, across the new bar lines. What is kept is not re-barred; the next edit is in the new.
+    public func follow(beatsPerBar value: Int) {
+        guard value > 0, value != beatsPerBar else { return }
+        beatsPerBar = value
+    }
 
     private let host: any ChordsHosting
 

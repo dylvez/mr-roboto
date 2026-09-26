@@ -103,12 +103,11 @@ public final class TakesModel {
     /// which is measured from the audio's own alignment: a counted-in take's audio starts in the
     /// count-in, before the take does.
     static func seconds(of version: PartVersion, clock: TransportClock, song: Song? = nil) -> (start: Double, end: Double)? {
-        guard let audio = Guidance.audio(of: version), let take = audio.take else { return nil }
-        // Moved with its section, and at the song's tempo, as the song plays it.
-        let moved = song.map { Double(audio.barsMoved(in: $0)) * clock.secondsPerBar } ?? 0
-        let start = clock.seconds(forBar: take.startBar) + take.startBeat * clock.secondsPerBeat + moved
-        let aligned = audio.alignmentOffset != nil ? TakePlacement.alignment(of: audio, in: song, clock: clock) : start
-        return (start, aligned + TakePlacement.duration(of: audio, in: song))
+        guard let audio = Guidance.audio(of: version), audio.take != nil else { return nil }
+        // Moved with its section, at the song's tempo and in its meter, as the song plays it.
+        let placed = TakePlacement.placement(of: audio, in: song, clock: clock)
+        let start = placed.take ?? placed.audio
+        return (start, placed.audio + TakePlacement.duration(of: audio, in: song))
     }
 
     /// Takes the lanes' takes again: a take just stopped in the Booth, or a section's takes read

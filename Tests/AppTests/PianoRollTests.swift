@@ -476,16 +476,60 @@ struct PianoRollMelodyTests {
         #expect(melody.notes.count == 3 && version.note?.contains("Melody, 3 notes on the Rhodes") == true)
     }
 
-    @Test("the instrument is the song's: choosing one tells the host, and an unknown preset is ignored")
+    @Test("a tune's instrument is the tune's: picked before it is kept, it waits for the keep rather than moving the song's")
     func theInstrument() async {
         let (model, stub) = roll()
         model.setMode(.melody)
         model.setInstrument(InstrumentVoiceSpec.warmPad.id)
-        #expect(model.instrument == "pad" && stub.instrument == "pad")
+        #expect(model.instrument == "pad" && stub.instrument == InstrumentVoiceSpec.rhodes.id, "the song's instrument stays where it was")
         model.setInstrument("no-such-instrument")
         #expect(model.instrument == "pad", "an unknown preset changes nothing")
         let version = model.commit()
         #expect(version.note?.contains("Warm Pad") == true, "\(version.note ?? "")")
+        #expect(stub.instrument == "pad" && stub.instrumentParts.last == version.partID, "the tune's own pick, once it is a part")
+    }
+
+    @Test("back to bass from a tune shows the bass line, and a moment later keeps nothing over it")
+    func eachModeHasItsLine() {
+        let (model, stub) = roll()
+        model.autoKeep.delay = nil
+        model.addNote(pitch: 38, at: 0)
+        model.addNote(pitch: 43, at: 2)
+        let bass = model.commit()
+        model.setMode(.melody)
+        model.deleteNote(at: 1)
+        model.addNote(pitch: 76, at: 1)
+        let tune = model.commit()
+        #expect(tune.type == .melody)
+        model.setMode(.bass)
+        #expect(model.notes.map(\.pitch.midi) == [38, 43], "the bass line's own notes")
+        #expect(!model.hasUnkeptChanges)
+        #expect(stub.committed.filter { $0.partID == bass.partID }.count == 1, "the tune was not kept over the bass line")
+        model.setMode(.melody)
+        #expect(model.notes.map(\.pitch.midi).contains(76), "and the tune comes back with melody mode")
+    }
+
+    @Test("unkept bass edits are kept before the mode switches away from them")
+    func keptBeforeSwitching() {
+        let (model, stub) = roll()
+        model.autoKeep.delay = nil
+        model.addNote(pitch: 38, at: 0)
+        model.setMode(.melody)
+        #expect(stub.committed.last?.type == .bassline)
+    }
+
+    @Test("a tune is drawn in a tune's register, and a note dragged later is kept in the order it sounds")
+    func tuneRegisterAndOrder() {
+        let (model, _) = roll()
+        model.setMode(.melody)
+        #expect(model.register.contains(60) && model.register.contains(84))
+        for (i, pitch) in [72, 74, 76, 77].enumerated() { model.addNote(pitch: pitch, at: Double(i)) }
+        let first = model.notes.firstIndex { $0.pitch.midi == 72 }!
+        model.moveNote(at: first, toStart: 3.5, pitch: 72)
+        let kept = model.commit()
+        guard case .melody(let tune) = kept.kind else { Issue.record("not a tune"); return }
+        #expect(tune.notes.map(\.start) == tune.notes.map(\.start).sorted(), "\(tune.notes.map(\.start))")
+        #expect(tune.notes.last?.pitch.midi == 72)
     }
 
     @Test("back to bass: it commits a bass line again and the Bassist reads it")

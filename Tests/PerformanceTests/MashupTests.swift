@@ -43,6 +43,21 @@ struct MashupTests {
         #expect(byEar.b.semitones == 3 && byEar.b.preservesFormants)
     }
 
+    @Test("a nudge of the backbone moves the key they meet in, and the other side follows it")
+    func backboneNudge() {
+        // Arrival in D; the acapella in E moves down two to meet it. Nudge Arrival up two, to E:
+        // the acapella now stays where it is.
+        let nudged = Mashup.plan(a: instrumental, b: acapella, backbone: .a, semitonesA: 2)
+        #expect(nudged.a.semitones == 2 && nudged.target.key == Key(tonic: NoteName(.e)))
+        #expect(nudged.b.semitones == 0 && nudged.b.key == nudged.a.key, "\(String(describing: nudged.b.key)) against \(String(describing: nudged.a.key))")
+    }
+
+    @Test("with a lead-in, the plan says the bar in the mashup's count too")
+    func mashupBars() {
+        let later = Mashup.plan(a: instrumental, b: acapella, backbone: .a, barShift: 4)
+        #expect(later.leadBars == 1 && later.sentences[2].contains("meets bar 5 of Arrival (bar 6 of the mashup)"), "\(later.sentences[2])")
+    }
+
     @Test("a double-time record is halved before it is stretched; no downbeat pickup means no lead-in")
     func doubleTime() {
         let fast = MashupSource(label: "Fluorescent", key: nil, tempo: 174, firstDownbeat: 0, duration: 60)

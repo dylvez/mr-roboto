@@ -59,7 +59,9 @@ public final class MashupModel {
     }
 
     public func song(_ side: Side) -> Song? { (side == .a ? a : b).flatMap { app.librarySong($0) } }
-    public func source(_ side: Side) -> MashupSource? { song(side).flatMap(Mashups.source(for:)) }
+    public func source(_ side: Side) -> MashupSource? {
+        song(side).flatMap { Mashups.source(for: $0, anchor: Mashups.anchor(in: $0, stems: stems(side))) }
+    }
     public func available(_ side: Side) -> [String] { song(side).map(Mashups.stems(of:)) ?? [] }
     public func stems(_ side: Side) -> [String] { side == .a ? stemsA : stemsB }
     public func semitones(_ side: Side) -> Int? { side == .a ? semitonesA : semitonesB }

@@ -579,8 +579,12 @@ public struct SetSongTool: DirectorTool {
                     + (far > 0.15 ? String(format: " — up to %.0f%% from the tempo they were sung at, so listen before keeping more.", far * 100) : "."))
             }
             if !unknown.isEmpty {
-                sentences.append(unknown.count == 1 ? "One take was sung before tempos were kept and plays as it was sung."
-                    : "\(unknown.count) takes were sung before tempos were kept and play as they were sung.")
+                sentences.append(unknown.count == 1 ? "One take was sung before tempos were kept and is not stretched: it may not sit on the new beat."
+                    : "\(unknown.count) takes were sung before tempos were kept and are not stretched: they may not sit on the new beat.")
+            }
+            if let record = (Guidance.stems(in: after).first ?? Guidance.take(in: after)),
+               SongPlayback.recordStretch(of: record, in: after) != 1 {
+                sentences.append("The record plays stretched to it too, as its chops do.")
             }
         }
         return Output(changed: changed, unchanged: unchanged, refused: refused, title: after.title,

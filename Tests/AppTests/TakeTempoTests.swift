@@ -203,8 +203,65 @@ struct TakeTempoTests {
         let result = await WritingFixture.run(rig.box, "set_song", #"{"title":"","artist":"","tempo":100,"key":"","time_signature":""}"#)
         let detail = WritingFixture.json(result)["detail"] as? String ?? ""
         #expect(detail.contains("The sung take plays stretched to 100 bpm, pitch kept — up to 20%"), "\(detail)")
-        #expect(detail.contains("One take was sung before tempos were kept"), "\(detail)")
-        #expect(rig.app.log.contains { $0.detail?.contains("Sung takes follow it") == true })
+        #expect(detail.contains("One take was sung before tempos were kept and is not stretched"), "\(detail)")
+        #expect(rig.app.log.contains { $0.detail?.contains("sung takes follow it") == true })
+    }
+
+    @Test("in 3/4 now, a take sung in 4/4 to the Hook starts on the Hook's first bar, its count-in before it")
+    func meterChanged() throws {
+        var song = Song(title: "Glass", artist: "Tests", tempo: 120)
+        song.sections = [Section(name: "Verse", stitch: [], lengthInBars: 20), Section(name: "Hook", stitch: [], lengthInBars: 4)]
+        let recorded = TransportFixture.audioVersion(role: .take, duration: 12)
+        guard case .audio(var audio) = recorded.kind else { return }
+        // Counted in from bar 19 of 4/4 at 120: the audio starts at 38 s, the take at 40 s.
+        audio.take = Take(section: song.sections[1].id, startBar: 20, sectionStartBar: 20, tempo: 120, meter: .fourFour)
+        audio.alignmentOffset = 38
+        try song.append(PartVersion(partID: PartID(), kind: .audio(audio), author: .user, operation: Operation.recorded))
+        song.timeSignature = TimeSignature(beatsPerBar: 3)
+        let track = try #require(SongPlayback.plan(for: song, mediaURL: TransportFixture.resolver(URL(fileURLWithPath: "/dev/null"))).tracks.first)
+        // The Hook is at bar 20 of 3/4 now: 30 s. The take's two seconds of count-in come before it.
+        #expect(abs(track.startsAt - 29.95) < 1e-6, "\(track.startsAt)")
+        #expect(abs(track.skip - 1.95) < 1e-6, "\(track.skip)")
+        #expect(track.stretch == 1)
+    }
+
+    @Test("the record and its stems play at the song's tempo, as its chops do; a half-time reading is left alone")
+    func recordFollows() throws {
+        func song(analysed bpm: Double, now: Double) throws -> Song {
+            var song = Song(title: "Flip", artist: "Tests", tempo: now)
+            try song.append(PartVersion(partID: PartID(), kind: .analysis(MusicAnalysis(duration: 180, tempo: [TempoRange(start: 0, end: 180, bpm: bpm)])),
+                                        author: .user, operation: Operation.imported))
+            try song.append(TransportFixture.audioVersion(role: .take, duration: 180, offset: 0.5))
+            return song
+        }
+        let resolver = TransportFixture.resolver(URL(fileURLWithPath: "/dev/null"))
+        let followed = try #require(SongPlayback.plan(for: try song(analysed: 92, now: 100), mediaURL: resolver).tracks.first)
+        #expect(abs(followed.stretch - 0.92) < 1e-9 && abs(followed.duration - 180 * 0.92) < 1e-6 && abs(followed.startsAt - 0.46) < 1e-9)
+        #expect(SongPlayback.plan(for: try song(analysed: 92, now: 92), mediaURL: resolver).tracks.first?.stretch == 1)
+        #expect(SongPlayback.plan(for: try song(analysed: 92, now: 184), mediaURL: resolver).tracks.first?.stretch == 1,
+                "double time is a reading, not a request")
+    }
+
+    @Test("a tempo set while the song plays is heard next play: the fade and the readout keep to what is playing")
+    @MainActor
+    func tempoWhilePlaying() async throws {
+        let (app, _, _) = CompletenessFixture.app("tempo-live")
+        let host = StubPlaybackHost()
+        app.attach(playback: host)
+        let groove = TransportFixture.grooveVersion()
+        var song = TransportFixture.song([groove])
+        song.sections = [Section(name: "Verse", stitch: [Lane(part: groove.partID)], lengthInBars: 32)]
+        var mix = Mix.unity
+        mix.master.fadeOutBars = 4
+        try song.append(PartVersion(partID: PartID(), kind: .mix(mix), author: .user, operation: Operation.mix, note: "Fade"))
+        app.open(song)
+        await app.startTransport()
+        #expect(app.fadeSpan == 56...64)
+        #expect(app.setTempo(160))
+        #expect(app.fadeSpan == 56...64, "the running song is still at 120")
+        #expect(app.soundingClock.tempo == 120 && app.clock.tempo == 160)
+        await app.stopTransport()
+        #expect(app.soundingClock.tempo == 160)
     }
 
     @Test("a take kept before the tempo was, reads with none")

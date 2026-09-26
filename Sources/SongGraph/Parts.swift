@@ -298,10 +298,14 @@ public struct Lyric: Hashable, Codable, Sendable {
     public func aligned(to melody: Melody, version: VersionID) -> Lyric {
         var copy = self
         copy.alignedTo = version
+        // The notes in the order they sound: a note dragged later in the roll stays where it was
+        // in the list, and the words used to be set in list order — a syllable on a note after
+        // the next one's.
+        let order = melody.notes.indices.sorted { (melody.notes[$0].start, $0) < (melody.notes[$1].start, $1) }
         var note = 0
         for l in copy.lines.indices {
             for s in copy.lines[l].syllables.indices {
-                copy.lines[l].syllables[s].noteIndex = note < melody.notes.count ? note : nil
+                copy.lines[l].syllables[s].noteIndex = note < order.count ? order[note] : nil
                 note += 1
             }
         }
@@ -617,9 +621,13 @@ public struct Take: Hashable, Codable, Sendable {
     /// stretched to the tempo it has now, its pitch kept (`Audio.stretch(in:)`). Nil for a take from
     /// before this was kept, which plays as it was sung.
     public var tempo: Double?
+    /// The song's meter when the take was sung: its bars are bars of this. A meter changed since
+    /// places the take by beats from its section's start, not by the seconds of the old bars.
+    public var meter: TimeSignature?
 
     public init(section: SectionID? = nil, startBar: Int, startBeat: Double = 0, input: String? = nil,
-                latencyCompensation: Double = 0, pass: Int = 1, sectionStartBar: Int? = nil, tempo: Double? = nil) {
+                latencyCompensation: Double = 0, pass: Int = 1, sectionStartBar: Int? = nil, tempo: Double? = nil,
+                meter: TimeSignature? = nil) {
         self.section = section
         self.startBar = startBar
         self.startBeat = startBeat
@@ -628,6 +636,7 @@ public struct Take: Hashable, Codable, Sendable {
         self.pass = pass
         self.sectionStartBar = sectionStartBar
         self.tempo = tempo
+        self.meter = meter
     }
 }
 
@@ -655,14 +664,17 @@ public struct CompPlan: Hashable, Codable, Sendable {
     /// The song's tempo when the comp was rendered: a comp follows a tempo change as a take does
     /// (`Take.tempo`).
     public var tempo: Double?
+    /// The song's meter when the comp was rendered (`Take.meter`).
+    public var meter: TimeSignature?
 
     public init(spans: [Span], crossfade: Double = 0.01, section: SectionID? = nil, sectionStartBar: Int? = nil,
-                tempo: Double? = nil) {
+                tempo: Double? = nil, meter: TimeSignature? = nil) {
         self.spans = spans.sorted { $0.startBar < $1.startBar }
         self.crossfade = crossfade
         self.section = section
         self.sectionStartBar = sectionStartBar
         self.tempo = tempo
+        self.meter = meter
     }
 
     public var takes: [VersionID] {

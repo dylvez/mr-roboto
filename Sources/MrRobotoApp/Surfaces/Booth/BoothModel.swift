@@ -404,7 +404,8 @@ public final class BoothModel {
         let position = host.clock.position(forSeconds: max(0, placed))
         let take = Take(section: section, startBar: position.bar, startBeat: position.beat, input: recording.input,
                         latencyCompensation: recording.latencySeconds, pass: nextPass,
-                        sectionStartBar: sectionBars?.lowerBound, tempo: host.clock.tempo)
+                        sectionStartBar: sectionBars?.lowerBound, tempo: host.clock.tempo,
+                        meter: host.clock.timeSignature)
         guard let version = host.keep(recording, take: take) else {
             lastError = "The take could not be kept."
             return nil

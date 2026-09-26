@@ -143,6 +143,7 @@ public final class DirectorSession {
     /// went wrong, or nil; the key itself is never held here and never logged.
     public func storeKey(_ text: String) async -> String? {
         if let problem = await director.storeKey(text) { return problem }
+        keyWasRefused = false
         await refreshKeyStatus()
         app?.note(.session, "The band has a key", detail: keyStatus.sentence)
         return nil
@@ -160,8 +161,17 @@ public final class DirectorSession {
     public var footnote: String {
         if isWorking { return activity ?? "Working…" }
         if !keyStatus.hasKey { return ClaudeError.missingAPIKey.sentence }
+        // The key is there, and the API said no to it: "Signed in" would be the one wrong thing.
+        if keyWasRefused { return ClaudeError.keyRefused }
         return spendLine ?? keyStatus.sentence
     }
+
+    /// The API refused the key on the last turn. Set again by a key being kept.
+    public private(set) var keyWasRefused = false
+    /// What was sent from the field, until the turn lands: put back in the box when the turn fails
+    /// before the band did anything, so a refused key or a dropped connection loses no words.
+    private var sentFromTheField: String?
+    private var toolsRan = false
 
     /// Whether the field can be sent from.
     public var canSend: Bool {
@@ -187,6 +197,7 @@ public final class DirectorSession {
         }
 
         composing = ""
+        sentFromTheField = text
         let room = self.room
         let ids = Self.addressees(in: text, chips: addressed, room: room)
         let names = ids.compactMap { id in room.first { $0.id == id }?.name }
@@ -211,6 +222,7 @@ public final class DirectorSession {
         streaming = ""
         activity = "Thinking…"
         stumbles = []
+        toolsRan = false
 
         let buffer = DirectorReplyBuffer()
         // Declared outside the turn's task so the only capture of `self` anywhere here is weak: a
@@ -254,6 +266,7 @@ public final class DirectorSession {
             // Only ever longer: a hop that arrives out of order must not make the reply shrink.
             if snapshot.count > streaming.count { streaming = snapshot }
         case .toolStarted(let name):
+            toolsRan = true
             activity = DirectorSession.activity(for: name)
         case .toolFinished(let name, let isError, let message):
             app?.recordTool(name, failed: isError, message: message)
@@ -276,7 +289,15 @@ public final class DirectorSession {
         turn = nil
         spendLine = result.spend.turnCount == 0 ? nil : result.spend.line
 
-        app?.note(result.ending.voice, result.say, detail: result.detail)
+        if case .failed(let why) = result.ending {
+            keyWasRefused = why == ClaudeError.keyRefused
+            if !toolsRan, composing.isEmpty, let sent = sentFromTheField { composing = sent }
+        } else if result.ending.spoke {
+            keyWasRefused = false
+        }
+        sentFromTheField = nil
+        app?.note(result.ending.voice, result.say,
+                  detail: result.detail ?? (keyWasRefused || composing.isEmpty ? nil : "What you typed is back in the box."))
         // What the band made is kept as soon as the turn lands, not when you remember to save.
         app?.saveIfNeeded()
 

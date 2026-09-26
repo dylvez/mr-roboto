@@ -916,6 +916,9 @@ extension AppState {
         }
     }
 
+    /// The surfaces whose work is a part of the song, so they need one open to keep it in.
+    static let makesParts: Set<SurfaceKind> = [.grid, .chords, .pianoRoll, .sound, .structure, .lyrics, .booth, .mixer]
+
     /// Opens what a proposal asks for, doing any preparation first, and returns the surface.
     ///
     /// Reuses an open surface of the same kind bound to the same versions rather than opening a
@@ -932,6 +935,14 @@ extension AppState {
             let id = perform(mixer)
             if let id { showMasterTab(id) }
             return id
+        }
+        // A surface that makes parts, opened with no song, writes into a new one. A beat painted
+        // on first launch used to be kept nowhere — its version had no song to go in, and the one
+        // line saying so went to the folded band column — and the next New Song closed it unasked.
+        if song == nil, Self.makesParts.contains(action.surface) {
+            open(Song.new(title: MrRobotoApp.untitledName()))
+            note(.session, "Started \(song?.title ?? "a song") to keep what you make",
+                 detail: "Name it and set its tempo in Song Settings (⇧⌘,).")
         }
         guard canPerform(action) else {
             note(.session, "That is not something this song can do right now", detail: action.title)

@@ -644,7 +644,11 @@ public struct SongPlayback: Equatable, Sendable {
             // of its own for the whole form, and the click takes one more; the rest are for these.
             // This used to assume two, so a form with three chops and six takes would not start.
             let bounced = Set(plan.segments.flatMap { $0.voices.filter(\.isBounced).map { $0.part } }).count
-            plan.tracks = Array(takeTracks(in: song, mediaURL: mediaURL, missingMedia: &missingMedia)
+            // A mashup's stems are the song itself, laid on its grid when it was made: they play
+            // under the form as takes do. A part added to a mashup used to arrange it, and the
+            // arranged plan silenced every stem — the vocal and the backing it was made from.
+            plan.tracks = Array((mashupTracks(in: song, mediaURL: mediaURL, missingMedia: &missingMedia)
+                                 + takeTracks(in: song, mediaURL: mediaURL, missingMedia: &missingMedia))
                                     .prefix(max(0, maximumTracks - bounced - 1)))
             if !plan.isPlayable {
                 plan.silence = missingMedia
@@ -694,12 +698,17 @@ public struct SongPlayback: Equatable, Sendable {
         for version in audioVersions.prefix(max(0, maximumTracks - plan.dustyPlayers)) {
             guard let audio = Guidance.audio(of: version) else { continue }
             guard let url = mediaURL(audio.media) else { missingMedia = true; continue }
+            // At the song's tempo, as its chops are: a tempo set since the import used to leave the
+            // record and its stems at their own while the chops, grooves and bass moved, and eight
+            // bars in they were two beats apart.
+            let stretch = recordStretch(of: version, in: song)
             plan.tracks.append(Track(version: version.id,
                                      name: PartLabel.title(of: version),
                                      url: url,
-                                     startsAt: audio.alignmentOffset ?? 0,
-                                     duration: audio.duration,
-                                     part: version.partID))
+                                     startsAt: (audio.alignmentOffset ?? 0) * stretch,
+                                     duration: audio.duration * stretch,
+                                     part: version.partID,
+                                     stretch: stretch))
         }
         // Then what was sung, on the nodes the record left.
         let room = max(0, maximumTracks - plan.dustyPlayers - plan.tracks.count)
@@ -738,15 +747,36 @@ public struct SongPlayback: Equatable, Sendable {
             // Moved with its section: a take sung to the Hook plays in the Hook wherever the form has
             // put it since, not at the seconds it was sung at. And at the song's tempo: sung at 92
             // and played at 100, it is stretched to 0.92 of its length, its pitch kept.
-            let moved = audio.barsMoved(in: song)
-            let takeStart = audio.take.map { clock.seconds(forBar: $0.startBar + moved, beat: $0.startBeat) }
-            let aligned = audio.alignmentOffset != nil ? TakePlacement.alignment(of: audio, in: song, clock: clock) : takeStart ?? 0
-            let begins = max(0, aligned, takeStart.map { $0 - 0.05 } ?? aligned)
+            // And in its meter: a take sung in 4/4 to the Hook starts on the Hook's first bar in 3/4.
+            let placed = TakePlacement.placement(of: audio, in: song, clock: clock)
+            let aligned = placed.audio
+            let begins = max(0, aligned, placed.take.map { $0 - 0.05 } ?? aligned)
             out.append(Track(version: version.id, name: PartLabel.title(of: version), url: url,
                              startsAt: begins, duration: TakePlacement.duration(of: audio, in: song), part: partID,
                              skip: max(0, begins - aligned), stretch: audio.stretch(in: song)))
         }
         return out
+    }
+
+    /// The stems a mashup was made of, each where it was laid.
+    static func mashupTracks(in song: Song, mediaURL: (MediaRef) -> URL?, missingMedia: inout Bool) -> [Track] {
+        Guidance.stems(in: song).filter { $0.operation == Operation.mashup }.compactMap { version in
+            guard let audio = Guidance.audio(of: version) else { return nil }
+            guard let url = mediaURL(audio.media) else { missingMedia = true; return nil }
+            return Track(version: version.id, name: PartLabel.title(of: version), url: url,
+                         startsAt: audio.alignmentOffset ?? 0, duration: audio.duration, part: version.partID)
+        }
+    }
+
+    /// How much longer the record (or a stem of it) plays in the song than it is: the tempo it was
+    /// read at over the song's. 1 when its tempo was never read, and when the fit would more than
+    /// halve or double it — a tempo read at half or double time is a misreading, not a request, the
+    /// rule a chop of the same record follows (`ChopTrack.loopSeconds`, `LiveSongPlayer.fitted`).
+    static func recordStretch(of version: PartVersion, in song: Song) -> Double {
+        guard let read = Guidance.analysis(for: version, in: song)?.dominantTempo, read > 0, song.tempo > 0 else { return 1 }
+        let ratio = read / song.tempo
+        guard abs(ratio - 1) > 0.001, ratio > 0.5, ratio < 2 else { return 1 }
+        return ratio
     }
 
     /// The version of a sung part that plays: its newest, except that a take recorded after a comp

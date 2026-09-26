@@ -20,7 +20,8 @@ final class BoothAdapter: BoothHosting, TakesHosting {
     // MARK: BoothHosting
 
     var song: Song? { app.song }
-    var clock: TransportClock { app.clock }
+    /// The clock the take is sung against: what is sounding, which is the tempo it is kept with.
+    var clock: TransportClock { app.soundingClock }
     var isPlaying: Bool { app.transport.isPlaying }
     var playhead: Double { app.playhead }
     var isLooping: Bool { app.isRunningALoop }
@@ -114,6 +115,7 @@ final class BoothAdapter: BoothHosting, TakesHosting {
     nonisolated static func placed(_ plan: CompPlan, takes: [PartVersion], in song: Song) -> CompPlan {
         var plan = plan
         plan.tempo = song.tempo
+        plan.meter = song.timeSignature
         guard let section = takes.lazy.compactMap({ Guidance.audio(of: $0)?.take?.section }).first else { return plan }
         plan.section = section
         plan.sectionStartBar = song.startBar(of: section)

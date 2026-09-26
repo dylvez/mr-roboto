@@ -147,7 +147,7 @@ struct DirectorClientTests {
             _ = try await client.send(DirectorTestClient.request(), role: .judgment)
         }
         #expect(await transport.requestCount == 0)
-        #expect(ClaudeError.missingAPIKey.sentence.contains("needs a key"))
+        #expect(ClaudeError.missingAPIKey.sentence.contains("needs an Anthropic API key"))
     }
 
     @Test("The environment is read before the keychain, and neither means absent")

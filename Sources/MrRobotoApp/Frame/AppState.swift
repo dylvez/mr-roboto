@@ -972,6 +972,7 @@ public final class AppState {
         countInTargetBar = nil
         runningLoopSeconds = nil
         runningForm = nil
+        runningClock = nil
         let transportHost = self.transportHost, playbackHost = self.playbackHost
         pendingStop = Task { @MainActor in
             await transportHost.stop()
@@ -1169,6 +1170,15 @@ public final class AppState {
         TransportClock(tempo: song?.tempo ?? 120, timeSignature: song?.timeSignature ?? .fourFour)
     }
 
+    /// The clock of what is sounding: the one the running transport was started at, else the
+    /// song's. A tempo or meter set while the song plays is heard on the next play; until then the
+    /// readout, the section strip, the section levels, the fade and a take sung now are measured
+    /// against what is playing. They used to read the new tempo at once, and a song sped up
+    /// mid-play faded out 16 seconds early and silent to its end.
+    public var soundingClock: TransportClock {
+        (transport.isPlaying ? runningClock : nil) ?? clock
+    }
+
     /// Space, and the transport's play/stop control.
     public func toggleTransport() async {
         switch transport {
@@ -1217,7 +1227,7 @@ public final class AppState {
     /// Seconds from the song's top to where the transport started.
     private var playbackOffsetSeconds: Double {
         guard playbackStartBar != 0 else { return 0 }
-        return clock.seconds(forBar: playbackStartBar)
+        return soundingClock.seconds(forBar: playbackStartBar)
     }
 
     /// The bar a counted-in start counts in to, while that run lasts; nil for a plain start.
@@ -1229,6 +1239,8 @@ public final class AppState {
     /// the section strip, per-section gains and the fade follow it rather than an edit made
     /// since, which would light the Verse while the Intro plays and fade the wrong bars.
     @ObservationIgnored private var runningForm: [Section]?
+    /// The clock the running transport was started at (`soundingClock`).
+    @ObservationIgnored private var runningClock: TransportClock?
 
     /// The sections that are sounding: the running form while the transport plays, else the song's.
     private var soundingForm: [Section] {
@@ -1240,7 +1252,7 @@ public final class AppState {
     public var fadeSpan: ClosedRange<Double>? {
         guard runningLoopSeconds == nil, song != nil, playback.isArranged else { return nil }
         let bars = soundingForm.reduce(0) { $0 + max(1, $1.lengthInBars) }
-        return FadeOut.span(bars: playback.mix?.master.fadeOutBars, songBars: bars, clock: clock)
+        return FadeOut.span(bars: playback.mix?.master.fadeOutBars, songBars: bars, clock: soundingClock)
     }
 
     /// The fade gain last handed to the player, so it is told only when it moves.
@@ -1254,7 +1266,7 @@ public final class AppState {
     public var isCountingIn: Bool {
         guard transport.isPlaying else { return false }
         guard let target = countInTargetBar else { return playhead < 0 }
-        return playhead < clock.seconds(forBar: target) - 1e-6
+        return playhead < soundingClock.seconds(forBar: target) - 1e-6
     }
 
     /// Plays from a bar of the song rather than the top: the sections from there on, and the takes
@@ -1306,6 +1318,7 @@ public final class AppState {
             try await transportHost.start(clock: clock)
             playbackStartBar = plan.startsAtBar
             runningForm = song?.sections
+            runningClock = clock
             countInTargetBar = countIn > 0 ? max(0, bar) : nil
             runningLoopSeconds = plan.loops ? plan.formSeconds : nil
             transport = .playing
@@ -1446,6 +1459,7 @@ public final class AppState {
         countInTargetBar = nil
         runningLoopSeconds = nil
         runningForm = nil
+        runningClock = nil
         note(.you, "Stop")
     }
 
@@ -1496,6 +1510,7 @@ public final class AppState {
         let sections = soundingForm
         guard !sections.isEmpty else { return nil }
         let length = sections.reduce(0) { $0 + max(1, $1.lengthInBars) }
+        let clock = soundingClock
         let beatsPerBar = Double(max(1, clock.timeSignature.beatsPerBar))
         var bar = Int((clock.beat(forSeconds: max(0, seconds)) / beatsPerBar).rounded(.down))
         // Looping, the form comes round: bar 46 of a 46-bar song is its first bar again — or,
@@ -1524,6 +1539,7 @@ public final class AppState {
 
     /// Bar and beat, 1-based, the way a transport reads: `"12.3"`.
     public var positionText: String {
+        let clock = soundingClock
         if isCountingIn {
             // Counting in: the bars left before the section, the way a drummer counts them.
             let target = countInTargetBar.map { clock.seconds(forBar: $0) } ?? 0

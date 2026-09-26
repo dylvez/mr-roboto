@@ -65,7 +65,10 @@ public struct MashupPlan: Hashable, Sendable {
     public var sentences: [String] {
         let other: Side = backbone == .a ? .b : .a
         var out = [a.sentence, b.sentence]
-        let meets = barShift == 0 ? "bar 1 meets bar 1" : "its bar 1 meets bar \(barShift + 1) of \(move(backbone).label)"
+        // In the backbone's bars, and — with a lead-in before them — in the mashup's, which is what
+        // the preview and the new song count.
+        var meets = barShift == 0 ? "bar 1 meets bar 1" : "its bar 1 meets bar \(barShift + 1) of \(move(backbone).label)"
+        if leadBars > 0, barShift > 0 { meets += " (bar \(barShift + leadBars + 1) of the mashup)" }
         out.append("\(move(other).label) rides \(move(backbone).label)'s grid: \(meets).")
         if leadBars > 0 { out.append("\(leadBars) bar\(leadBars == 1 ? "" : "s") of lead-in, so the pickup before the first downbeat is kept.") }
         return out
@@ -86,7 +89,13 @@ public enum Mashup {
                             beatsPerBar: Int = 4) -> MashupPlan {
         let spine = backbone == .a ? a : b
         let other = backbone == .a ? b : a
-        let settled = MergeTarget(key: target.key ?? spine.key ?? other.key, tempo: target.tempo ?? spine.tempo ?? other.tempo)
+        // A nudge of the backbone moves the key both sides meet in, so the other side follows it:
+        // it used to stay in the backbone's key from before the nudge, a whole tone off.
+        var key = target.key ?? spine.key ?? other.key
+        if target.key == nil, let nudge = backbone == .a ? semitonesA : semitonesB, let from = spine.key {
+            key = Key(tonicPitchClass: from.tonic.pitchClass.transposed(by: nudge), mode: from.mode)
+        }
+        let settled = MergeTarget(key: key, tempo: target.tempo ?? spine.tempo ?? other.tempo)
         let moveA = Merge.move(MergeFragment(label: a.label, kind: .sample, key: a.key, tempo: a.tempo), to: settled, semitones: semitonesA)
         let moveB = Merge.move(MergeFragment(label: b.label, kind: .sample, key: b.key, tempo: b.tempo), to: settled, semitones: semitonesB)
 

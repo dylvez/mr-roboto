@@ -204,19 +204,30 @@ struct TransportBar: View {
                 .foregroundStyle(Design.Palette.inkTertiary)
                 .frame(maxWidth: .infinity, alignment: .leading)
         } else {
-            HStack(alignment: .bottom, spacing: 6) {
-                ForEach(sections) { section in
-                    // A click lights the section; a double-click plays from it. Not a Button: a
-                    // button's own tap would take the first click and the double never arrives.
-                    VStack(spacing: 6) {
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(app.activeSection == section.id ? Design.Palette.accent : Design.Palette.ink)
-                            .frame(width: TransportBar.blockWidth(bars: section.lengthInBars), height: 10)
-                        Text(section.name.uppercased())
-                            .font(Design.Typography.label)
-                            .tracking(1.1)
-                            .foregroundStyle(app.activeSection == section.id ? Design.Palette.accent : Design.Palette.inkSecondary)
-                    }
+            // The strip takes the room the bar has left and no more: each block at its own width
+            // while they fit, all of them scaled down together when they do not, names cut to their
+            // block. Blocks of a fixed width with whole names under them used to make the bar wider
+            // than the window — an eight-section form pushed Play and Save off both edges at 1440.
+            GeometryReader { geometry in
+                let strip = TransportBar.strip(names: sections.map(\.name), bars: sections.map(\.lengthInBars),
+                                               room: geometry.size.width)
+                HStack(alignment: .bottom, spacing: 6) {
+                    ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
+                        let width = strip.blocks[index]
+                        // A click lights the section; a double-click plays from it. Not a Button: a
+                        // button's own tap would take the first click and the double never arrives.
+                        VStack(spacing: 6) {
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(app.activeSection == section.id ? Design.Palette.accent : Design.Palette.ink)
+                                .frame(width: width, height: 10)
+                            Text(section.name.uppercased())
+                                .font(Design.Typography.label)
+                                .tracking(1.1)
+                                .foregroundStyle(app.activeSection == section.id ? Design.Palette.accent : Design.Palette.inkSecondary)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                                .frame(width: strip.names[index], alignment: .leading)
+                        }
                     .contentShape(Rectangle())
                     .onTapGesture(count: 2) {
                         app.setActiveSection(section.id)
@@ -227,10 +238,12 @@ struct TransportBar: View {
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel("\(section.name), \(section.lengthInBars) bars\(app.activeSection == section.id ? ", lit" : "")")
                     .accessibilityAddTraits(.isButton)
+                    }
+                    Spacer(minLength: 0)
                 }
-                Spacer(minLength: 0)
+                .frame(maxHeight: .infinity, alignment: .center)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(minWidth: 0, maxWidth: .infinity)
         }
     }
 
@@ -238,5 +251,23 @@ struct TransportBar: View {
     /// thirty-two-bar section does not push the strip off the window.
     nonisolated static func blockWidth(bars: Int) -> CGFloat {
         min(120, max(24, CGFloat(bars) * 5))
+    }
+
+    /// The strip laid into `room`: each block's width and the width its name gets. While every
+    /// block and whole name fits, a name may run past its short block — "HOOK" under two bars.
+    /// When they do not, names are held to their blocks, and the blocks shrink together if even
+    /// they do not fit.
+    nonisolated static func strip(names: [String], bars: [Int], room: CGFloat) -> (blocks: [CGFloat], names: [CGFloat]) {
+        let spacing = CGFloat(max(0, bars.count - 1)) * 6
+        let blocks = bars.map(blockWidth(bars:))
+        // The label face: capitals with 1.1 of tracking, about eight points a letter.
+        let whole = names.map { CGFloat($0.count) * 8 + 2 }
+        if zip(blocks, whole).map(max).reduce(0, +) + spacing <= room {
+            return (blocks, zip(blocks, whole).map(max))
+        }
+        let total = blocks.reduce(0, +)
+        let scale = total > 0 ? max(0, min(1, (room - spacing) / total)) : 1
+        let scaled = blocks.map { $0 * scale }
+        return (scaled, scaled)
     }
 }

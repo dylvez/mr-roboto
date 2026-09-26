@@ -255,7 +255,10 @@ struct LiveComposer: View {
                     // Stop is the only control while a turn is in flight, and it is always safe:
                     // the song graph is append-only, so whatever landed is real and the rest is
                     // simply dropped.
+                    // Escape from anywhere in the window: the field is disabled while the band works,
+                    // so the column's own Escape handler had nothing focused to hear it.
                     ChipButton(systemImage: "stop.fill", help: "Stop this turn (⎋)") { band.cancel() }
+                        .keyboardShortcut(.cancelAction)
                 } else {
                     ChipButton(systemImage: "arrow.right",
                                help: band.canSend ? "Send (⏎)" : "Type something to send",

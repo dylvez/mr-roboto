@@ -133,14 +133,16 @@ public final class PianoRollModel {
     /// opened on. The keep control follows this, so pressing it twice cannot file the same line
     /// twice; a fresh roll with notes on it has everything to keep.
     public var hasUnkeptChanges: Bool {
-        guard let kept = lastKeptOfThisKind else { return isTouched && !notes.isEmpty }
+        // A first tune carried over from the bass line is the bass line's notes until they change:
+        // an edit undone back to them is nothing to keep.
+        guard let kept = lastKeptOfThisKind else { return isTouched && !notes.isEmpty && notes != carriedInto[mode] }
         switch kept.kind {
         case .bassline(let line):
-            if line.notes != notes { return true }
+            if line.notes != sounding { return true }
             if let keptSound = line.sound, keptSound != sound { return true }
             return (line.lengthInBars ?? openedLength) != lengthInBars
         case .melody(let tune):
-            return tune.notes != notes || (tune.lengthInBars ?? openedLength) != lengthInBars
+            return tune.notes != sounding || (tune.lengthInBars ?? openedLength) != lengthInBars
         default:
             return true
         }
@@ -149,10 +151,27 @@ public final class PianoRollModel {
     /// The newest version this roll kept or was opened on that is the same kind of part as the
     /// mode says it is writing. A roll opened on a bass line and switched to melody is writing a
     /// new part, not a new version of the bass line — a part does not change what it is.
-    private var lastKeptOfThisKind: PartVersion? {
+    private var lastKeptOfThisKind: PartVersion? { lastKept(as: mode) }
+
+    private func lastKept(as mode: Mode) -> PartVersion? {
         let type: PartType = mode == .melody ? .melody : .bassline
-        return versions.last { $0.type == type } ?? (base?.type == type ? base : nil)
+        return versions.last { $0.type == type } ?? [base, other].compactMap { $0 }.first { $0.type == type }
     }
+
+    /// The part of the other kind the roll was opened with: the bass line under a tune it opened
+    /// on, or the tune over the bass line. Its own line when the mode comes back to it.
+    private var other: PartVersion?
+
+    /// Each mode's line while the other is on screen. The bass line and the tune are two parts, and
+    /// one list of notes used to serve both: switching back to Bass showed the tune, and kept it
+    /// over the bass line a moment later.
+    private var parked: [Mode: (notes: [NoteEvent], lengthInBars: Int)] = [:]
+    /// The notes a mode with no line of its own started from: the other mode's.
+    private var carriedInto: [Mode: [NoteEvent]] = [:]
+
+    /// An instrument picked for a tune before it is kept: the tune's, once it is. It used to be set
+    /// on the song, and the chords moved to the lead with it.
+    private var instrumentForTheTune: String?
 
     /// The length the roll gave a bound line that did not state one. That line is "as long as its
     /// notes", and opening it is not an edit: only a length the person sets differs from it.
@@ -243,27 +262,58 @@ public final class PianoRollModel {
     /// and a lever that silently did would be the Bassist writing melodies.
     public var writesFromLevers: Bool { mode == .bass }
 
-    public var melody: Melody { Melody(notes: notes, lengthInBars: lengthInBars) }
+    public var melody: Melody { Melody(notes: sounding, lengthInBars: lengthInBars) }
+
+    /// The notes in the order they sound. A drag leaves a moved note where it was in the list —
+    /// its index is what the drag holds — so the order is put right when the line is kept.
+    private var sounding: [NoteEvent] {
+        notes.enumerated().sorted { ($0.element.start, $0.offset) < ($1.element.start, $1.offset) }.map(\.element)
+    }
 
     /// Who reads what this roll is writing.
     public var readingPersona: String { mode == .bass ? "Bassist" : "Melodist" }
 
     public func setMode(_ value: Mode) {
         guard value != mode else { return }
+        // What this mode has not kept yet is kept before it goes off screen.
+        if isTouched, hasUnkeptChanges { _ = keepNow() }
         willEdit("mode")
+        parked[mode] = (notes, lengthInBars)
         mode = value
+        selectedNote = nil
         defer { settle() }
-        // A bass line dragged into melody mode keeps its notes; they just sound an octave up on a
-        // different instrument, which is usually what you wanted when you switched.
+        if let back = parked[value] {
+            notes = back.notes
+            lengthInBars = back.lengthInBars
+        } else if let kept = lastKept(as: value) {
+            switch kept.kind {
+            case .bassline(let line):
+                notes = line.notes
+                lengthInBars = line.lengthInBars ?? lengthInBars
+            case .melody(let tune):
+                notes = tune.notes
+                lengthInBars = tune.lengthInBars ?? lengthInBars
+            default: break
+            }
+        }
+        else {
+            // A first tune starts from the bass line's notes: they sound an octave up on a
+            // different instrument, which is usually what you wanted when you switched.
+            carriedInto[value] = notes
+        }
         refreshReadings()
     }
 
     public func setInstrument(_ id: String) {
         guard InstrumentVoiceSpec.preset(id: id) != nil else { return }
         instrument = id
-        // For *this* part, so a tune can be a lead over chords on a pad. A roll opened on nothing
-        // has no part to name yet and sets the song's, which is what it always did.
-        host.setInstrument(id, for: part)
+        // For *this* part, so a tune can be a lead over chords on a pad. A tune not kept yet has
+        // no part to name: the pick waits for its first keep rather than moving the song's.
+        if mode == .melody, part == nil {
+            instrumentForTheTune = id
+        } else {
+            host.setInstrument(id, for: part)
+        }
         if let first = notes.first { audition(first) }
     }
 
@@ -273,7 +323,10 @@ public final class PianoRollModel {
     public var part: PartID? { lastKeptOfThisKind?.partID }
 
     public var register: ClosedRange<Int> {
-        var low = lineage.register.lowerBound, high = lineage.register.upperBound
+        // A tune is drawn where a tune sits — C4 to C6 — not in the bass player's two octaves, where
+        // every note drawn used to land two octaves low.
+        let drawn = mode == .melody ? 60...84 : lineage.register
+        var low = drawn.lowerBound, high = drawn.upperBound
         for note in notes { low = min(low, note.pitch.midi); high = max(high, note.pitch.midi) }
         return low...high
     }
@@ -291,6 +344,7 @@ public final class PianoRollModel {
                 kickDecaySeconds: Double = 0,
                 bassline: PartVersion? = nil,
                 melody: PartVersion? = nil,
+                opensOnMelody: Bool = false,
                 instrument: String? = nil,
                 lineage: BassLineage = .palladino, seed: UInt64 = 0xBA55_0001,
                 surfaceID: SurfaceID = SurfaceID()) {
@@ -315,8 +369,11 @@ public final class PianoRollModel {
         self.lengthInBars = max(1, groove?.bars ?? 1)
         if let instrument, InstrumentVoiceSpec.preset(id: instrument) != nil { self.instrument = instrument }
         let beatsPerBar = max(1, timeSignature.beatsPerBar)
-        if let bassline, case .bassline(let line) = bassline.kind {
+        // Bound to both, the roll opens on the one it was writing last (`opensOnMelody`) and
+        // remembers the other for when the mode comes back to it.
+        if let bassline, case .bassline(let line) = bassline.kind, !(opensOnMelody && melody != nil) {
             base = bassline
+            other = melody
             notes = line.notes
             sound = line.sound ?? lineage.defaultSound
             lengthInBars = Self.openingLength(stated: line.lengthInBars, notes: line.notes, groove: groove,
@@ -329,6 +386,7 @@ public final class PianoRollModel {
             // from it. The bass writer never runs on a tune: one comes from the hand, a controller
             // in Keys, or the Director writing for the Melodist.
             base = melody
+            other = bassline
             mode = .melody
             notes = tune.notes
             lengthInBars = Self.openingLength(stated: tune.lengthInBars, notes: tune.notes, groove: groove,
@@ -374,7 +432,7 @@ public final class PianoRollModel {
 
     // MARK: Reading
 
-    public var bassline: Bassline { Bassline(notes: notes, sound: sound, key: key, lengthInBars: lengthInBars) }
+    public var bassline: Bassline { Bassline(notes: sounding, sound: sound, key: key, lengthInBars: lengthInBars) }
 
     public var beatsPerBar: Int { max(1, timeSignature.beatsPerBar) }
     /// The line's bars: its own length, which may be longer (or shorter) than the groove's.
@@ -746,6 +804,10 @@ public final class PianoRollModel {
         versions.append(version)
         lastKept = version
         lastError = nil
+        if version.type == .melody, let picked = instrumentForTheTune {
+            instrumentForTheTune = nil
+            host.setInstrument(picked, for: version.partID)
+        }
         return version
     }
 

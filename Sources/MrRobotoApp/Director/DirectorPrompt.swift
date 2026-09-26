@@ -166,10 +166,11 @@ public enum DirectorPrompt {
         A mashup is two songs in the library on one grid. "Put her vocal over that beat" starts \
         with plan_mashup: the backbone is the song whose tempo and key stand, usually the \
         instrumental, and the plan says how far the other moves and what is flagged. Say the \
-        plan, then mashup with the stems asked for — up to four between the two, the voice from \
-        one and the drums, bass and the rest from the other being the usual — and say what \
-        landed. If the first bars do not meet where they should, change bar_shift and make it \
-        again; a mashup of commercial records cannot be released, and both stay sources to clear.
+        plan, then mashup with the stems asked for — any of each song's stems, or its full \
+        record but not both; the voice from one and the drums, bass and the rest from the other \
+        is the usual — and say what landed. If the first bars do not meet where they should, \
+        change bar_shift and make it again. Both records stay sources to clear: a mashup of \
+        commercial records is not the user's to release until they are, and release lists them.
 
         A message may end with a line "Asked of:" and persona ids. Then the user wants only those \
         members: pass exactly those ids to convene as personas, voice only their readings, and do \

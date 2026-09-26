@@ -113,8 +113,10 @@ public final class StructureModel {
     public let surfaceID: SurfaceID
     public var surface: StructureSurface { StructureSurface(id: surfaceID, title: title) }
     public let title: String
-    public let tempo: Double
-    public let timeSignature: TimeSignature
+    /// The song's, followed: the length line reads "1:04 at 120 bpm", and kept the tempo and meter
+    /// Structure was opened at after either changed.
+    public private(set) var tempo: Double
+    public private(set) var timeSignature: TimeSignature
 
     public private(set) var sections: [Section]
     public private(set) var committed: [Section]
@@ -153,6 +155,10 @@ public final class StructureModel {
     public func sync(with song: Song?) {
         layers = song.map(Self.layers(in:)) ?? []
         lyric = Self.lyric(in: song)
+        if let song {
+            tempo = song.tempo
+            timeSignature = song.timeSignature
+        }
         let current = song?.sections ?? []
         guard current != committed else { return }
         let wasClean = !isDirty

@@ -95,7 +95,8 @@ extension AppState {
         let existing = Guidance.takes(in: song).filter { Guidance.audio(of: $0)?.take?.section == section?.id }
         let pass = name.pass ?? ((existing.compactMap { Guidance.audio(of: $0)?.take?.pass }.max() ?? 0) + 1)
         let take = Take(section: section?.id, startBar: startBar, input: "Roboto Capture", pass: pass,
-                        sectionStartBar: section.map { _ in startBar }, tempo: clock.tempo)
+                        sectionStartBar: section.map { _ in startBar }, tempo: clock.tempo,
+                        meter: clock.timeSignature)
         let audio = Audio(media: media, role: .take, sampleRate: info.sampleRate, channelCount: info.channelCount,
                           duration: info.duration, alignmentOffset: clock.seconds(forBar: startBar), take: take)
         let partID = existing.last?.partID ?? PartID()

@@ -40,13 +40,37 @@ enum TakePlacement {
     /// Song seconds at which the audio's first frame sounds now: where it was sung, at the tempo
     /// the song has now, moved with its section.
     static func alignment(of audio: Audio, in song: Song?, clock: TransportClock) -> Double {
+        placement(of: audio, in: song, clock: clock).audio
+    }
+
+    /// Where the audio's first frame sounds now, and where the take itself begins — the bar the
+    /// Booth recorded for, after the count-in the audio starts in — in song seconds.
+    ///
+    /// Both are measured from the section the take was sung to, in the take's own frame — the
+    /// tempo and meter it was sung at — and laid from where that section starts now, a beat of
+    /// then to a beat of now. So a section moved, a tempo changed and a meter changed are one rule.
+    /// The seconds it was aligned at were counted in bars of the meter it was sung in; read in bars
+    /// of another, a Hook take landed seven bars late, or lost its first ten seconds.
+    static func placement(of audio: Audio, in song: Song?, clock: TransportClock) -> (audio: Double, take: Double?) {
+        let sung = self.sung(audio, in: song, clock: clock)
         let stretch = song.map(audio.stretch(in:)) ?? 1
-        let moved = song.map { Double(audio.barsMoved(in: $0)) * clock.secondsPerBar } ?? 0
-        // The alignment is in the song's seconds when it was sung; at another tempo the same bar
-        // and beat are that many seconds times the stretch.
-        let aligned = audio.alignmentOffset.map { $0 * stretch }
-            ?? audio.take.map { clock.seconds(forBar: $0.startBar, beat: $0.startBeat) } ?? 0
-        return aligned + moved
+        var then = 0.0, now = 0.0
+        if let song, let section = audio.take?.section ?? audio.comp?.section,
+           let startedOn = audio.take?.sectionStartBar ?? audio.comp?.sectionStartBar,
+           let startsOn = song.startBar(of: section) {
+            then = sung.seconds(forBar: startedOn)
+            now = clock.seconds(forBar: startsOn)
+        }
+        let take = audio.take.map { now + (sung.seconds(forBar: $0.startBar, beat: $0.startBeat) - then) * stretch }
+        let first = audio.alignmentOffset.map { now + ($0 - then) * stretch } ?? take ?? now
+        return (first, take)
+    }
+
+    /// The clock the audio was sung against: the tempo and meter its take or comp says, else the
+    /// song's now — a take from before either was kept is read as if nothing has changed.
+    static func sung(_ audio: Audio, in song: Song?, clock: TransportClock) -> TransportClock {
+        TransportClock(tempo: audio.take?.tempo ?? audio.comp?.tempo ?? song?.tempo ?? clock.tempo,
+                       timeSignature: audio.take?.meter ?? audio.comp?.meter ?? song?.timeSignature ?? clock.timeSignature)
     }
 
     /// How long the audio plays in the song now.

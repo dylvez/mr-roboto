@@ -18,6 +18,13 @@ import Testing
               labels: [Lyric.StanzaLabel(line: 0, name: "Verse"), Lyric.StanzaLabel(line: 3, name: "Hook")])
     }
 
+    @Test func syllablesAreSetToTheNotesInTheOrderTheySound() {
+        // Listed 3, 0, 1, 2 by start: the first syllable goes on the note at beat 0.
+        let notes = [3.0, 0, 1, 2].map { NoteEvent(pitch: Pitch(midi: 60), start: $0, duration: 0.5) }
+        let set = Lyric(lines: [line("one two three four")]).aligned(to: Melody(notes: notes), version: VersionID())
+        #expect(set.lines[0].syllables.map(\.noteIndex) == [1, 2, 3, 0])
+    }
+
     @Test func aSectionSingsTheStanzaLabelledForIt() {
         // Verse, Verse, Hook stanzas; a form of Intro, Verse, Hook, Verse, Verse.
         let lyric = Lyric(lines: [line("down by the"), line("water"), LyricLine(syllables: []),

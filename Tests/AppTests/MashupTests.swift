@@ -123,11 +123,34 @@ struct MashupBuildTests {
         #expect(app.playback.tracks.count == 2 && app.playback.lengthInBars == 8)
         #expect(app.playback.tracks.map(\.startsAt).sorted() == [other.alignmentOffset!, drums.alignmentOffset!].sorted())
 
+        // A groove added to it arranges it, and its stems still play under the form.
+        let groove = TransportFixture.grooveVersion()
+        #expect(app.record(groove))
+        #expect(app.song!.sections.contains { $0.stitch.contains(part: groove.partID) }, "the groove joined the form")
+        #expect(app.playback.isArranged)
+        #expect(Set(app.playback.tracks.map(\.version)) == Set(stems.map(\.id)), "\(app.playback.tracks.map(\.name))")
+
         // On an album, both records are sources to clear.
         let album = try #require(app.createAlbum(title: "Mashups"))
         #expect(app.addSong(mashup.id, to: album))
         let sources = app.sources(of: try #require(app.library.album(album))).map(\.source)
         #expect(sources == ["Vessel – Arrival", "Exit Interview"], "\(sources)")
+    }
+
+    @Test("a make that fails leaves no song behind")
+    func failedMakeLeavesNothing() async throws {
+        let directory = WiringFixture.temporaryDirectory("mashup-fail")
+        defer { WiringFixture.remove(directory) }
+        let (app, a, b) = try MashupFixture.app(in: directory)
+        let before = app.library.songs.count
+        // B's audio, unreadable: the render of its drums throws after the song was written.
+        let store = try #require(app.store)
+        let version = Guidance.stems(in: b).first { Guidance.audio(of: $0)?.stem == "drums" }
+        let drums = try #require(version.flatMap { Guidance.audio(of: $0) })
+        try Data("not audio".utf8).write(to: try store.mediaURL(for: drums.media, song: b.id))
+        await #expect(throws: (any Error).self) { try await app.makeMashup(MashupRequest(a: a.id, b: b.id, stemsA: ["other"], stemsB: ["drums"])) }
+        #expect(app.library.songs.count == before, "\(app.library.songs.map(\.title))")
+        #expect(try store.load().songs.count == before, "and none on disk")
     }
 
     @Test("what it refuses, and why")
@@ -137,7 +160,7 @@ struct MashupBuildTests {
         let (app, a, b) = try MashupFixture.app(in: directory)
         await #expect(throws: MashupError.sameSong) { try await app.makeMashup(MashupRequest(a: a.id, b: a.id, stemsA: ["other"], stemsB: [])) }
         await #expect(throws: MashupError.nothingChosen) { try await app.makeMashup(MashupRequest(a: a.id, b: b.id, stemsA: [], stemsB: [])) }
-        await #expect(throws: MashupError.tooManyStems(5)) { try await app.makeMashup(MashupRequest(a: a.id, b: b.id, stemsA: ["other", "bass", "full"], stemsB: ["drums", "vocals"])) }
+        await #expect(throws: MashupError.fullWithStems(a.title)) { try await app.makeMashup(MashupRequest(a: a.id, b: b.id, stemsA: ["other", "bass", "full"], stemsB: ["drums", "vocals"])) }
         await #expect(throws: MashupError.noStem("vocals", "Arrival")) { try await app.makeMashup(MashupRequest(a: a.id, b: b.id, stemsA: ["vocals"], stemsB: ["drums"])) }
         let bare = Song(title: "Bare")
         var library = app.library

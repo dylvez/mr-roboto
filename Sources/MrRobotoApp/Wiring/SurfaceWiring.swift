@@ -263,11 +263,15 @@ final class SurfaceWiring {
         var basslineVersion: PartVersion?
         var melodyVersion: PartVersion?
         var grooveVersion: PartVersion?
+        // Which of the two was bound last: the one the roll was writing. A tune kept from a roll
+        // opened on a bass line is bound after it, and the roll rebuilt used to open on the bass
+        // line and lose the tune from view.
+        var writingMelody = false
         for id in app.bound(for: item.id) {
             guard let version = app.version(id) else { continue }
             switch version.kind {
-            case .bassline: basslineVersion = basslineVersion ?? version
-            case .melody: melodyVersion = melodyVersion ?? version
+            case .bassline: basslineVersion = basslineVersion ?? version; writingMelody = false
+            case .melody: melodyVersion = melodyVersion ?? version; writingMelody = true
             case .groove: grooveVersion = grooveVersion ?? version
             default: break
             }
@@ -284,7 +288,7 @@ final class SurfaceWiring {
         let model = PianoRollModel(host: adapter, groove: groove, grooveVersion: grooveVersion?.id,
                                    chords: chords, key: key, tempo: tempo, timeSignature: signature,
                                    kickDecaySeconds: Self.kickDecay(in: song), bassline: basslineVersion,
-                                   melody: melodyVersion, instrument: melodyInstrument,
+                                   melody: melodyVersion, opensOnMelody: writingMelody, instrument: melodyInstrument,
                                    surfaceID: item.id)
         let levers = app.levers(for: item.id)
         model.adoptLevers(lag: levers.first { $0.quantity == .lag }?.value,
@@ -311,7 +315,10 @@ final class SurfaceWiring {
     /// A lead sheet: on a bound progression, editing it; otherwise a new one in the song's key.
     func chordsModel(for item: BenchItem, app: AppState) -> ChordsModel {
         prune(app)
-        if let existing = chordSheets[item.id] { return existing }
+        if let existing = chordSheets[item.id] {
+            existing.follow(beatsPerBar: app.song?.timeSignature.beatsPerBar ?? existing.beatsPerBar)
+            return existing
+        }
         let adapter = ChordsAdapter(app: app, service: service(for: app), surface: item.id)
         let song = app.song
         let key = Self.key(of: song)
