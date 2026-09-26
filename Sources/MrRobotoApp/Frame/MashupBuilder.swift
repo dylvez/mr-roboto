@@ -209,7 +209,7 @@ extension AppState {
     /// first, so nothing is lost to the switch.
     @discardableResult
     public func makeMashup(_ request: MashupRequest, progress: (@MainActor (String, Double) -> Void)? = nil) async throws -> Song {
-        guard let store else { throw MashupError.noLibrary }
+        guard let store, libraryIsWritable else { throw MashupError.noLibrary }
         let (picks, plan, songA, songB) = try mashupPicks(request)
 
         if hasUnsavedChanges { save() }

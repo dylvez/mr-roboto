@@ -72,6 +72,9 @@ final class ImportHostLog: @unchecked Sendable {
     private var _auditions: [(url: URL, start: Double, end: Double)] = []
     private var _committed: [PartVersion] = []
     private var _steps: [ImportStep] = []
+    private var _finished: [SongID] = []
+    var finished: [SongID] { lock.withLock { _finished } }
+    func finish(_ song: SongID) { lock.withLock { _finished.append(song) } }
 
     var auditions: [(url: URL, start: Double, end: Double)] { lock.withLock { _auditions } }
     var committed: [PartVersion] { lock.withLock { _committed } }
@@ -125,6 +128,10 @@ struct StubImportHost: ImportHosting {
 
     func didCommit(_ version: PartVersion, in song: Song) async {
         log.commit(version)
+    }
+
+    func didFinishImport(_ song: SongID) async {
+        log.finish(song)
     }
 }
 
@@ -185,6 +192,7 @@ struct ImportSurfaceTests {
         #expect(song.versions.contains { $0.type == .audio })
         #expect(song.seeds.count == 1)
         #expect(model.packageURL != nil)
+        #expect(host.log.finished == [song.id], "the frame is told, so it reads the library again and opens the song")
     }
 
     @Test("progress is honest: the analysis pass admits it cannot say how far along it is",

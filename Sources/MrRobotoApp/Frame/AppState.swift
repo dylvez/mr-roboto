@@ -519,9 +519,15 @@ public final class AppState {
             return
         }
         do {
-            let loaded = try store.load()
+            let (loaded, unreadable) = try store.loadReporting()
             library = loaded
             libraryStatus = loaded.isEmpty ? .empty(directory) : .loaded(directory)
+            // Said, and left as they are on disk: a song this build cannot read is not deleted, and
+            // no longer stops every other song from opening.
+            if !unreadable.isEmpty {
+                note(.session, "\(unreadable.count) song\(unreadable.count == 1 ? "" : "s") could not be read, and \(unreadable.count == 1 ? "was" : "were") left as \(unreadable.count == 1 ? "it was" : "they were")",
+                     detail: unreadable.map { "\($0.package): \($0.reason)" }.joined(separator: "\n"))
+            }
         } catch {
             libraryStatus = .failed(directory, "\(error)")
             note(.session, "Could not read the library", detail: "\(error)")
@@ -697,6 +703,14 @@ public final class AppState {
         director.removeAll()
     }
 
+    /// Whether the library may be written: not while `library.json` could not be read, when what is
+    /// in memory is an empty stand-in and writing it would erase every album, idea, record and
+    /// sample the file holds.
+    public var libraryIsWritable: Bool {
+        if case .failed = libraryStatus { return false }
+        return true
+    }
+
     /// The song the last launch was in, when the library still holds it.
     public var lastOpenedSong: Song? {
         guard let raw = defaults.string(forKey: Self.lastOpenedSongKey), let uuid = UUID(uuidString: raw) else { return nil }
@@ -763,6 +777,20 @@ public final class AppState {
         }
         guard let song else {
             note(.session, "No song open to save")
+            return
+        }
+        // A library whose `library.json` could not be read is not written over from the empty copy
+        // it left in memory: the open song goes into its own package, and nothing else is touched.
+        guard libraryIsWritable else {
+            do {
+                try store.songStore(for: song.id).save(song)
+                hasUnsavedChanges = false
+                lastSaveError = nil
+                if !quietly { note(.you, "Saved \(song.title)", detail: "Its own package only: the library could not be read.") }
+            } catch {
+                lastSaveError = "\(error)"
+                note(.session, "Save failed", detail: "The library could not be read, so nothing is written to it. \(error)")
+            }
             return
         }
         do {

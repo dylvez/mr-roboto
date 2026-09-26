@@ -61,6 +61,19 @@ struct ImportAdapter: ImportHosting {
         await app.adoptPromotedRegion(version, from: song)
     }
 
+    /// The library read again, so the record and the song are in the frame's copy of it, and the
+    /// song opened — the song you imported is the one you want to work in.
+    func didFinishImport(_ song: SongID) async {
+        await MainActor.run {
+            app.reloadLibrary()
+            if app.song?.id != song { app.openSong(song) }
+        }
+    }
+
+    func isOpen(_ song: SongID) async -> Bool {
+        await MainActor.run { app.song?.id == song }
+    }
+
     /// The provenance form was kept. The record row is library-level and goes to `library.json`
     /// whichever song is open. The seed lives in the song: when that song is the one the frame has
     /// open, the frame's copy is the truth — it may hold versions the package does not yet — so

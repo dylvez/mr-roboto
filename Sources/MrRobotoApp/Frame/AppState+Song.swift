@@ -148,6 +148,10 @@ extension AppState {
     /// copied into the new package, and the copy opened. The original is untouched.
     @discardableResult
     public func duplicateSong(_ id: SongID) -> SongID? {
+        guard libraryIsWritable else {
+            note(.session, "The library could not be read, so nothing is added to it")
+            return nil
+        }
         guard let store else {
             note(.session, "Nowhere to keep a copy", detail: "This session has no library directory.")
             return nil
@@ -197,14 +201,20 @@ extension AppState {
             note(.session, "That song is not in the library")
             return false
         }
-        if song?.id == id { closeSong(saving: false) }
+        guard libraryIsWritable else {
+            note(.session, "The library could not be read, so nothing is deleted from it")
+            return false
+        }
         let destination: URL?
         do {
             destination = try store.trashSong(id, using: trash)
         } catch {
+            // Still open, and still holding what it held: it used to be closed without saving first,
+            // so a Trash that refused lost the unsaved work as well.
             note(.session, "Could not move \(existing.title) to the Trash", detail: "\(error)")
             return false
         }
+        if song?.id == id { closeSong(saving: false) }
         var updated = library
         updated.songs.removeAll { $0.id == id }
         for index in updated.albums.indices {
@@ -438,16 +448,16 @@ extension AppState {
     @discardableResult
     func record(_ version: PartVersion, intoLibrarySong id: SongID) -> Bool {
         if song?.id == id { return record(version) }
-        guard let store, var target = library.song(id) else {
+        guard libraryIsWritable, let store, var target = library.song(id) else {
             note(.session, "\(PartLabel.title(of: version)) finished after its song was closed", detail: "There was nowhere to keep it.")
             return false
         }
         do {
             try target.append(version)
-            var updated = library
-            updated.upsert(target)
-            try store.save(updated)
-            library = updated
+            // That song's package and the list, and no other song's: the rest of the library in
+            // memory may be older than what the frame has saved since.
+            try store.saveSong(target)
+            library.upsert(target)
             note(.session, "\(PartLabel.title(of: version)) is in \(target.title)",
                  detail: "It finished after you left that song, and is there when you open it.")
             return true

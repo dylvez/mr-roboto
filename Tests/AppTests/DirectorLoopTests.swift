@@ -90,7 +90,7 @@ struct DirectorLoopTests {
         #expect(first["messages"]?.arrayValue?.count == 1)
     }
 
-    @Test("Two calls in one turn run together and come back in one user message, in order")
+    @Test("Two calls in one turn run in the order asked and come back in one user message")
     func parallelCalls() async throws {
         let body = DirectorSSE.start()
             + toolTurn("p1", "echo_a", #"{"value":"first"}"#, index: 0)

@@ -679,6 +679,41 @@ struct DirectorOpenSongTests {
         #expect(app.log.contains { $0.source == .director && $0.text.contains("Glass is open") })
     }
 
+    @Test("in one round, start_song then write_groove: the groove lands in the song just started, not the one left")
+    func oneRoundInOrder() async throws {
+        let directory = WiringFixture.temporaryDirectory("round-order")
+        defer { WiringFixture.remove(directory) }
+        let app = Self.library(in: directory)
+        let tune = Melody(notes: [NoteEvent(pitch: Pitch(midi: 72), start: 0, duration: 1)])
+        #expect(app.record(PartVersion(partID: PartID(), kind: .melody(tune), author: .user, operation: Operation.written, note: "Tune")))
+        let left = try #require(app.song)
+        let stage = AppStateStage(app)
+        let pad = DirectorStagePad()
+        let toolbox = DirectorTools.toolbox(workbench: DirectorWorkbench(engines: DirectorTestEngines.make()),
+                                            workspace: AppStateWorkspace(app), audition: DirectorSilentAudition(),
+                                            stage: stage, pad: pad)
+        let transport = DirectorScriptedTransport([
+            .events(DirectorSSE.start()
+                    + DirectorSSE.toolUse(id: "t1", name: "start_song", jsonPieces: [#"{"title":"Glass","tempo":88,"key":"","machine":"tr808"}"#], index: 0)
+                    + DirectorSSE.toolUse(id: "t2", name: "write_groove",
+                                          jsonPieces: [#"{"feel":"son clave 3-2","bars":2,"swing_percent":55,"rows":[],"note":"Clave"}"#], index: 1)
+                    + DirectorSSE.end(stopReason: "tool_use")),
+            .events(DirectorSSE.reply("Glass has a clave.")),
+        ])
+        let client = ClaudeClient(keySource: DirectorTestClient.key, transport: transport,
+                                  sleeper: DirectorRecordingSleeper(), retry: .none)
+        let session = DirectorSession(director: Director(client: client, toolbox: toolbox, stage: stage, pad: pad), app: app)
+        app.attach(band: session)
+        await session.refreshKeyStatus()
+        session.composing = "start a new song with a clave"
+        session.send()
+        while session.isWorking { await Task.yield() }
+
+        #expect(app.song?.title == "Glass")
+        #expect(app.song.map { Guidance.grooves(in: $0).count } == 1, "the groove is in the new song")
+        #expect(app.library.song(left.id).map { Guidance.grooves(in: $0).isEmpty } == true, "and not in the one left")
+    }
+
     @Test("the Director's own moves are signed as the Director: on the rail, and on the instrument it picked")
     func signedAsTheDirector() async throws {
         let rig = WritingFixture.rig(Song.new(title: "Untitled", tempo: 120))

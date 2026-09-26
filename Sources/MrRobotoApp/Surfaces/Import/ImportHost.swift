@@ -56,6 +56,15 @@ public protocol ImportHosting: Sendable {
     /// A new part version left the surface. The frame's parts ledger wants to know.
     func didCommit(_ version: PartVersion, in song: Song) async
 
+    /// The import is on disk: the record in the library, its song in a package. The frame reads
+    /// the library again and opens the song. It used to learn of neither — the song was not in the
+    /// sidebar until Reload Library, and the next save of the open song dropped the record.
+    func didFinishImport(_ song: SongID) async
+
+    /// Whether the frame has this song open, and so owns its package: the surface then leaves the
+    /// saving to the frame rather than writing an older copy over it.
+    func isOpen(_ song: SongID) async -> Bool
+
     /// The provenance form was kept. `record` is the library row with its title and artist as the
     /// form has them; `seed` is the song's seed with the whole form in its note; `song` is the
     /// draft's song holding that seed. The host writes them where the library keeps them.
@@ -65,6 +74,8 @@ public protocol ImportHosting: Sendable {
 extension ImportHosting {
     public func stopAudition() async {}
     public func didCommit(_ version: PartVersion, in song: Song) async {}
+    public func didFinishImport(_ song: SongID) async {}
+    public func isOpen(_ song: SongID) async -> Bool { false }
 
     /// Straight to `library`: the row into `library.json`, the seed into the song's package. The
     /// app's host does the second half through the frame instead, because the frame may hold the
@@ -88,7 +99,9 @@ public enum ProvenanceWriter {
     /// - Parameter savingPackage: false when the song is open in the frame, which then owns the
     ///   package and saves the seed itself.
     public static func write(_ record: Record, seed: Seed, in song: Song, savingPackage: Bool, to library: LibraryStore) throws {
-        var document = library.exists ? try library.load() : Library()
+        // The document alone, not every song: a song this build cannot read must not stop a form
+        // from being kept, and nothing here writes a song but the one named.
+        var document = library.exists ? try library.loadDocumentOnly() : Library()
         if let index = document.records.firstIndex(where: { $0.id == record.id }) {
             document.records[index] = record
         } else {

@@ -146,9 +146,18 @@ public struct SongStore: Sendable {
         self.init(packageURL: directory.appendingPathComponent(SongStore.packageName(for: title)))
     }
 
-    /// `<Title>.roboto`, with path separators replaced.
+    /// `<Title>.roboto`, with path separators replaced, and short enough for the disk: a title of
+    /// a few hundred characters used to make a package that could never be saved.
     public static func packageName(for title: String) -> String {
-        "\(Files.safeName(title)).\(packageExtension)"
+        let safe = Files.safeName(title)
+        let name = safe.count > 120 ? String(safe.prefix(120)).trimmingCharacters(in: .whitespaces) : safe
+        return "\(name).\(packageExtension)"
+    }
+
+    /// A package name as the disk compares it: without case, and in one Unicode form. "Demo" and
+    /// "demo" are the same folder on a Mac.
+    public static func diskKey(_ name: String) -> String {
+        name.precomposedStringWithCanonicalMapping.lowercased()
     }
 
     public var documentURL: URL { packageURL.appendingPathComponent(SongStore.documentName) }
@@ -318,6 +327,14 @@ public struct LibraryStore: Sendable {
     /// Reads `library.json` and every `.roboto` package in the directory. Packages the document does not list
     /// are appended; listed packages that are gone are dropped.
     public func load() throws -> Library {
+        try loadReporting().library
+    }
+
+    /// The library, and the song packages that could not be read — left on disk untouched rather
+    /// than failing the whole library. One unreadable package (saved by a newer build, or half
+    /// written by a crash) used to leave the library empty, and the next write of `library.json`
+    /// from that empty copy erased every album, idea, record and sample.
+    public func loadReporting() throws -> (library: Library, unreadable: [(package: String, reason: String)]) {
         let document: Document = try FileCoordination.read(documentURL) { url in
             guard Files.exists(url) else { throw SongGraphError.missingDocument(path: url.path) }
             do {
@@ -330,21 +347,67 @@ public struct LibraryStore: Sendable {
         }
         var songs: [Song] = []
         var seen = Set<SongID>()
+        var unreadable: [(package: String, reason: String)] = []
+        var tried = Set<String>()
         var byPackage: [String: SongStore] = [:]
         for store in try songStores() { byPackage[store.packageURL.lastPathComponent] = store }
+        func take(_ store: SongStore) {
+            let name = store.packageURL.lastPathComponent
+            guard tried.insert(name).inserted else { return }
+            do {
+                let song = try store.load()
+                if seen.insert(song.id).inserted { songs.append(song) }
+            } catch {
+                unreadable.append((name, "\(error)"))
+            }
+        }
         for entry in document.songs {
             guard let store = byPackage[entry.package] else { continue }
-            let song = try store.load()
-            if seen.insert(song.id).inserted { songs.append(song) }
+            take(store)
         }
-        for store in try songStores() where byPackage[store.packageURL.lastPathComponent] != nil {
-            let song = try store.load()
-            if seen.insert(song.id).inserted { songs.append(song) }
-        }
+        for store in try songStores() { take(store) }
         var library = Library(songs: songs, albums: document.albums, ideas: document.ideas,
                               records: document.records, samples: document.samples, voice: document.voice)
         library.songs = songs
-        return library
+        return (library, unreadable)
+    }
+
+    /// Albums, ideas, records, samples and the voice, without reading a single song: what a write
+    /// of `library.json` alone needs.
+    public func loadDocumentOnly() throws -> Library {
+        let document: Document = try FileCoordination.read(documentURL) { url in
+            guard Files.exists(url) else { throw SongGraphError.missingDocument(path: url.path) }
+            return try SongGraphCodec.decode(Document.self, from: try Data(contentsOf: url), migrating: .library)
+        }
+        return Library(songs: [], albums: document.albums, ideas: document.ideas,
+                       records: document.records, samples: document.samples, voice: document.voice)
+    }
+
+    /// One song into its package — a new one given a name no folder here has — and listed in
+    /// `library.json`, touching no other song. For work done away from the frame (an import) that
+    /// must not write every other package from a copy older than what the frame has saved since.
+    @discardableResult
+    public func saveSong(_ song: Song) throws -> SongStore {
+        let store: SongStore
+        if let found = try? songStore(for: song.id) {
+            store = found
+        } else {
+            var taken = Set(try songStores().map { SongStore.diskKey($0.packageURL.lastPathComponent) })
+            store = SongStore(packageURL: directoryURL.appendingPathComponent(freeName(for: song, taken: &taken)))
+        }
+        try store.save(song)
+        try saveDocument(exists ? try loadDocumentOnly() : Library())
+        return store
+    }
+
+    /// A package name for a new song that no folder here has, as the disk compares names.
+    private func freeName(for song: Song, taken: inout Set<String>) -> String {
+        var name = SongStore.packageName(for: song.title)
+        if taken.contains(SongStore.diskKey(name)) {
+            name = SongStore.packageName(for: "\(Files.safeName(song.title)) \(String(song.id.rawValue.uuidString.prefix(8)))")
+        }
+        taken.insert(SongStore.diskKey(name))
+        return name
     }
 
     /// Writes every song into its package and `library.json` alongside. A song keeps the package it already has,
@@ -357,23 +420,24 @@ public struct LibraryStore: Sendable {
             try Files.ensureDirectory(url.appendingPathComponent(LibraryStore.ideasDirectoryName))
         }
         var existing: [SongID: SongStore] = [:]
-        for store in try songStores() {
-            if let header = try? headerOf(store) { existing[header.id] = store }
+        let stores = try songStores()
+        for store in stores {
+            // The first package holding a song is the one it is saved into — the same one
+            // `songStore(for:)` finds — so a copy made in Finder cannot split a song in two.
+            if let header = try? headerOf(store), existing[header.id] == nil { existing[header.id] = store }
         }
-        var taken = Set(existing.values.map { $0.packageURL.lastPathComponent })
+        // Every folder here, readable or not, as the disk compares names: a new song called "demo"
+        // used to be written into "Demo.roboto" — the same folder on a Mac — over the song in it.
+        var taken = Set(stores.map { SongStore.diskKey($0.packageURL.lastPathComponent) })
         var entries: [Document.SongEntry] = []
         for song in library.songs {
             let store: SongStore
             if let found = existing[song.id] {
                 store = found
             } else {
-                var name = SongStore.packageName(for: song.title)
-                if taken.contains(name) {
-                    name = SongStore.packageName(for: "\(Files.safeName(song.title)) \(String(song.id.rawValue.uuidString.prefix(8)))")
-                }
-                store = SongStore(packageURL: directoryURL.appendingPathComponent(name))
+                store = SongStore(packageURL: directoryURL.appendingPathComponent(freeName(for: song, taken: &taken)))
             }
-            taken.insert(store.packageURL.lastPathComponent)
+            taken.insert(SongStore.diskKey(store.packageURL.lastPathComponent))
             try store.save(song)
             entries.append(.init(id: song.id, title: song.title, package: store.packageURL.lastPathComponent))
         }

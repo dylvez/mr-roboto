@@ -670,6 +670,7 @@ public final class ImportModel {
             transition(to: .writing(url), detail: "writing the package", fraction: 0.95)
             let songID = try await commitDraft()
             transition(to: .ready(songID), detail: "ready", fraction: 1)
+            await host.didFinishImport(songID)
         } catch is CancellationError {
             cancelled()
         } catch {
@@ -1020,16 +1021,18 @@ public final class ImportModel {
         draft.takeVersion = draft.song.version(draft.takeVersion.id) ?? draft.takeVersion
         draft.record.analysis = draft.analysisVersion
 
-        var libraryValue = try await offMainActor { () -> Library in
-            library.exists ? try library.load() : Library()
+        // The record into the list and the song into its own package — no other song is written.
+        // Every package used to be saved from a copy read before this, which could put an older
+        // copy of the song open in the frame over what it had just autosaved.
+        let record = draft.record
+        let song = draft.song
+        let store = try await offMainActor { () -> SongStore in
+            var document = library.exists ? try library.loadDocumentOnly() : Library()
+            document.records.append(record)
+            try library.saveDocument(document)
+            return try library.saveSong(song)
         }
-        libraryValue.records.append(draft.record)
-        libraryValue.upsert(draft.song)
-        let saved = libraryValue
-        try await offMainActor { try library.save(saved) }
-
         let songID = draft.song.id
-        let store = try await offMainActor { try library.songStore(for: songID) }
         packageURL = store.packageURL
 
         // Stems go into the song's own package, derived from the take.
@@ -1049,10 +1052,8 @@ public final class ImportModel {
                                                 origin: draft.seed.id))
             }
             try draft.song.append(contentsOf: stemVersions)
-            var updated = libraryValue
-            updated.upsert(draft.song)
-            let toSave = updated
-            try await offMainActor { try library.save(toSave) }
+            let withStems = draft.song
+            try await offMainActor { _ = try library.saveSong(withStems) }
         }
 
         self.draft = draft
@@ -1064,15 +1065,13 @@ public final class ImportModel {
     private func resaveDraft() async {
         guard let draft else { return }
         let library = host.library
+        // The frame has it open, so the frame saves it; this copy is older than the frame's.
+        guard !(await host.isOpen(draft.song.id)) else { return }
         pendingWrites += 1
         defer { pendingWrites -= 1 }
+        let song = draft.song
         do {
-            var libraryValue = try await offMainActor { () -> Library in
-                library.exists ? try library.load() : Library()
-            }
-            libraryValue.upsert(draft.song)
-            let toSave = libraryValue
-            try await offMainActor { try library.save(toSave) }
+            try await offMainActor { _ = try library.saveSong(song) }
         } catch {
             lastError = "\(error)"
         }

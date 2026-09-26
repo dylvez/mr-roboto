@@ -170,25 +170,22 @@ public actor DirectorConversation {
         }
     }
 
-    /// Runs every call in a turn at once, and puts the results back in the order they were asked.
+    /// Runs every call in a turn, in the order they were asked, and hands the results back together.
     private func runTools(_ uses: [ClaudeToolUse],
                           onProgress: (@Sendable (Progress) -> Void)?) async -> [ClaudeToolResult] {
         guard !uses.isEmpty else { return [] }
-        let toolbox = self.toolbox
-        return await withTaskGroup(of: (Int, ClaudeToolResult).self) { group in
-            for (index, use) in uses.enumerated() {
-                group.addTask {
-                    onProgress?(.toolStarted(name: use.name, arguments: use.input))
-                    let result = await toolbox.run(use)
-                    onProgress?(.toolFinished(name: use.name, isError: result.isError,
-                                              message: result.content))
-                    return (index, result)
-                }
-            }
-            var collected: [(Int, ClaudeToolResult)] = []
-            for await item in group { collected.append(item) }
-            return collected.sorted { $0.0 < $1.0 }.map(\.1)
+        // One after another, in the order the model asked for them. They used to run at once, so
+        // "start_song, then write_groove" in one round could write the groove into the song being
+        // left, and two writes to the same part raced. The frame is on one actor anyway: running
+        // them together bought little but the race.
+        var results: [ClaudeToolResult] = []
+        for use in uses {
+            onProgress?(.toolStarted(name: use.name, arguments: use.input))
+            let result = await toolbox.run(use)
+            onProgress?(.toolFinished(name: use.name, isError: result.isError, message: result.content))
+            results.append(result)
         }
+        return results
     }
 
     /// Puts the moving cache breakpoint on the last block of the newest turn.

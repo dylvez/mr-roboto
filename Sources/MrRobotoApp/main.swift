@@ -24,7 +24,13 @@ struct MrRobotoApp: App {
             FrameView(app: app)
                 .onAppear {
                     activation.opener = { [app] url in app.openPackage(at: url) }
-                    activation.onQuit = { [app] in app.keepSurfaceWork(); app.saveIfNeeded(); app.sessions?.flush() }
+                    // A take or a controller's Play in still running is kept, then everything saved.
+                    activation.onQuit = { [app] in
+                        app.finishRunningWork(true)
+                        app.keepSurfaceWork()
+                        app.saveIfNeeded()
+                        app.sessions?.flush()
+                    }
                 }
                 // The floor: every region folded away, one surface at the size it needs. `FrameView`
                 // raises it to whatever the regions you have open actually require, so asking for a

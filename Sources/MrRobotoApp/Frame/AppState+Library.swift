@@ -496,6 +496,11 @@ extension AppState {
             note(.session, "Nowhere to save the library", detail: "This session has no library directory.")
             return false
         }
+        guard libraryIsWritable else {
+            note(.session, "The library could not be read, so nothing is written to it",
+                 detail: "Move aside what it names, then Reload Library.")
+            return false
+        }
         do {
             try store.saveDocument(updated)
             library = updated
