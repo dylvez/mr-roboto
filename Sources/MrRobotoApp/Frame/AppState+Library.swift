@@ -290,7 +290,8 @@ extension AppState {
 
     /// The order and the gaps in one move, with a note in the rail.
     @discardableResult
-    public func sequence(_ order: [SongID], gaps: [SongID: Double]? = nil, in id: AlbumID, because: String? = nil) -> Bool {
+    public func sequence(_ order: [SongID], gaps: [SongID: Double]? = nil, in id: AlbumID, because: String? = nil,
+                         by source: SessionEntry.Source = .you) -> Bool {
         guard let album = library.album(id), Set(order) == Set(album.songs), order.count == album.songs.count else {
             note(.session, "That order does not name every song on the album once")
             return false
@@ -299,7 +300,7 @@ extension AppState {
             album.songs = order
             if let gaps { for (song, gap) in gaps { album.gaps[song] = max(0, min(30, gap)) } }
         }
-        if done { note(.you, "Sequenced \(album.title)", detail: because ?? order.compactMap { library.song($0)?.title }.joined(separator: " → ")) }
+        if done { note(source, "Sequenced \(album.title)", detail: because ?? order.compactMap { library.song($0)?.title }.joined(separator: " → ")) }
         return done
     }
 
@@ -456,7 +457,7 @@ extension AppState {
     /// Sets the song's cast. An empty list is "everyone". Not a version: the cast is the song's
     /// setting, like its sections.
     @discardableResult
-    public func setCast(_ ids: [PersonaID]) -> Bool {
+    public func setCast(_ ids: [PersonaID], by source: SessionEntry.Source = .you) -> Bool {
         guard let song else {
             note(.session, "No song open to cast")
             return false
@@ -465,7 +466,7 @@ extension AppState {
         guard cleaned != (song.cast ?? []) else { return true }
         updateSong { $0.cast = cleaned.isEmpty ? nil : cleaned }
         let names = cleaned.compactMap { Cast.standard.persona(PersonaID($0))?.bible.name }
-        note(.you, cleaned.isEmpty ? "Everyone is in the room" : "Cast: \(names.joined(separator: ", "))")
+        note(source, cleaned.isEmpty ? "Everyone is in the room" : "Cast: \(names.joined(separator: ", "))")
         return true
     }
 
@@ -542,8 +543,10 @@ extension AppState {
     /// otherwise the open one is saved and a new one opened. The drum machine is a sound part, so
     /// the transport, the Grid and a controller all play the beat on it.
     @discardableResult
-    public func startSong(title: String, tempo: Double, key: Key?, machine: String) -> Song? {
+    public func startSong(title: String, tempo requested: Double, key: Key?, machine: String) -> Song? {
         let name = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        // The frame's range, as the settings hold a tempo to: a thousand bpm used to be accepted.
+        let tempo = requested.isFinite ? min(Self.tempoRange.upperBound, max(Self.tempoRange.lowerBound, requested)) : 120
         // A song that holds only a drum machine is still a blank sketch: changing your mind about
         // the tempo should not leave a trail of empty songs behind.
         if let open = song, open.versions.allSatisfy({ $0.type == .sound }) {

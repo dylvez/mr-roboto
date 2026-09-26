@@ -854,6 +854,11 @@ public struct CompTakesTool: DirectorTool {
             throw DirectorToolFailure(tool: name, reason: "The comp could not be rendered: \(error)",
                                       suggestion: "Nothing was comped; the takes are as they were.")
         }
+        // Seconds of work have passed: a comp of this song's takes is not kept into another song.
+        guard await workspace.song?.id == song.id else {
+            throw DirectorToolFailure(tool: name, reason: "The song changed while the comp was being made.",
+                                      suggestion: "Nothing was comped. Open \(song.title) and comp again.")
+        }
         guard let media = await workspace.keepAudio(rendered.planar, sampleRate: rendered.sampleRate) else {
             throw DirectorToolFailure(tool: name, reason: "There is nowhere to keep the comp's audio.",
                                       suggestion: "Nothing was comped. Save the song into a library first.")

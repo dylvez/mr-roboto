@@ -52,7 +52,7 @@ enum SectionBounce {
     @AudioActor
     static func render(_ plan: SongPlayback, section: SectionID? = nil, kitsDirectory: URL,
                        sampleRate: Double = 48_000, tailSeconds: Double = 0.5,
-                       onlyTheMix: Bool = false) async throws -> Stems {
+                       onlyTheMix: Bool = false, mastered: Bool = true) async throws -> Stems {
         let clock = TransportClock(tempo: plan.tempo, timeSignature: plan.timeSignature, sampleRate: sampleRate)
         let (base, label, bars) = try isolate(plan, section: section)
         let seconds = clock.seconds(forBeat: Double(bars * plan.timeSignature.beatsPerBar)) + tailSeconds
@@ -61,7 +61,11 @@ enum SectionBounce {
         var stems = Stems(label: label, sampleRate: sampleRate, mix: [], drums: [], bass: [],
                           chainCornerHz: corner(of: base))
         stems.mix = try await renderOne(base, part: .mix, clock: clock, frames: frames, kitsDirectory: kitsDirectory, sampleRate: sampleRate)
-        if let master = base.mix?.master {
+        // A song never mixed has the default master, ceiling and all: it used to go out with no
+        // ceiling, over 0 dBFS and hard-clipped, while the Master tab read a limited mix. A stem
+        // (`mastered` false) goes out as its strip made it.
+        if mastered {
+            let master = base.mix?.master ?? Master()
             // The ceiling is not on the live chain (a lookahead limiter has latency): it is here.
             stems.mix = Limiter.apply(stems.mix, sampleRate: sampleRate, ceilingDBTP: master.ceilingDBTP)
             // The whole song ends as it plays: its fade, after the limiter, so it only ever lowers.
@@ -78,6 +82,28 @@ enum SectionBounce {
             stems.bass = try await renderOne(base, part: .bass, clock: clock, frames: frames, kitsDirectory: kitsDirectory, sampleRate: sampleRate)
         }
         return stems
+    }
+
+    /// How long a song with no form runs: its stated length, its audio to the end, and one pass of
+    /// its longest loop. It used to be its stated length or one bar, and a song with no sections
+    /// has none — so an imported record exported as one bar and half a second.
+    static func naturalBars(of plan: SongPlayback) -> Int {
+        let clock = TransportClock(tempo: max(1, plan.tempo), timeSignature: plan.timeSignature)
+        let beatsPerBar = max(1, plan.timeSignature.beatsPerBar)
+        var bars = plan.lengthInBars ?? 0
+        if let seconds = plan.audioDuration, clock.secondsPerBar > 0 {
+            bars = max(bars, Int((seconds / clock.secondsPerBar - 1e-9).rounded(.up)))
+        }
+        for voice in plan.voices {
+            switch voice.play {
+            case .groove(let groove): bars = max(bars, groove.bars)
+            case .bassline(let line): bars = max(bars, line.loopBars(beatsPerBar: beatsPerBar))
+            case .melody(let tune): bars = max(bars, tune.loopBars(beatsPerBar: beatsPerBar))
+            case .progression(let progression): bars = max(bars, progression.bars.count)
+            default: break
+            }
+        }
+        return max(1, bars)
     }
 
     // MARK: - The plan, cut down
@@ -108,7 +134,7 @@ enum SectionBounce {
             return (moved, segment.name, segment.lengthInBars)
         }
         guard section == nil else { throw Failure.nothingToBounce("the song is not arranged") }
-        let bars = max(1, plan.lengthInBars ?? 1)
+        let bars = naturalBars(of: plan)
         copy.lengthInBars = bars
         return (copy, "Song", bars)
     }
@@ -158,12 +184,41 @@ enum SectionBounce {
             engine.stopTransport()
             engine.stop()
         }
-        try await player.begin(only(part, of: plan), clock: clock)
+        let rendering = only(part, of: plan)
+        try await player.begin(rendering, clock: clock)
         _ = try engine.startTransport(clock: clock)
-        let out = try OfflineRenderer.renderBuffer(engine: engine, frames: frames)
+        // Section by section when the mix changes by section, as the transport moves the strips
+        // when the playhead crosses into one: a whole-song render used to keep the first section's
+        // overrides to the end.
+        var planar: [[Float]] = []
+        var rendered: AVAudioFramePosition = 0
+        for boundary in sectionBoundaries(of: rendering, clock: clock, sampleRate: sampleRate) where boundary.frame < frames {
+            if boundary.frame > rendered {
+                append(AuditionService.planar(try OfflineRenderer.renderBuffer(engine: engine, frames: boundary.frame - rendered)), to: &planar)
+                rendered = boundary.frame
+            }
+            await player.mixChanged(rendering.mix, section: boundary.section)
+        }
+        if frames > rendered {
+            append(AuditionService.planar(try OfflineRenderer.renderBuffer(engine: engine, frames: frames - rendered)), to: &planar)
+        }
         await player.end()
         await service.shutdown()
-        return AuditionService.planar(out)
+        return planar
+    }
+
+    /// Where each section after the first begins, in frames — only when the mix sets gains by
+    /// section; otherwise nothing changes along the way and the render is one piece.
+    static func sectionBoundaries(of plan: SongPlayback, clock: TransportClock, sampleRate: Double) -> [(frame: AVAudioFramePosition, section: SectionID)] {
+        guard let mix = plan.mix, !mix.sectionGains.isEmpty else { return [] }
+        return plan.segments.dropFirst().map { segment in
+            (AVAudioFramePosition((clock.seconds(forBar: segment.startBar) * sampleRate).rounded()), segment.section)
+        }
+    }
+
+    private static func append(_ piece: [[Float]], to planar: inout [[Float]]) {
+        if planar.isEmpty { planar = piece; return }
+        for channel in planar.indices where channel < piece.count { planar[channel] += piece[channel] }
     }
 
     enum Failure: Error, CustomStringConvertible {

@@ -387,14 +387,14 @@ struct AudibilityTag: View {
 extension AudibilityFix {
     var title: String {
         switch self {
-        case .addToEverySection: return "Add to every section"
+        case .addToEverySection: return "Use in every section"
         case .openStructure: return "Open Structure"
         }
     }
 
     var help: String {
         switch self {
-        case .addToEverySection: return "Stitch this part into every section of the form. Structure takes it out of any you did not mean."
+        case .addToEverySection: return "Play this part in every section, in place of the one of its kind each plays now. Structure puts the other back, or plays both."
         case .openStructure: return "Arrange the song so each section says what it plays."
         }
     }

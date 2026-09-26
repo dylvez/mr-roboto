@@ -73,8 +73,13 @@ public enum Export {
     /// The whole song through the mix, limited at the ceiling, as a 24-bit WAV beside a JSON report.
     @MainActor
     public static func master(_ app: AppState, to directory: URL) async throws -> (wav: URL, report: URL, summary: MasterReport) {
+        // What is on screen is in the song before it leaves, as it is before the transport plays.
+        app.keepSurfaceWork()
         guard let song = app.song else { throw Failure.noSong }
-        let plan = app.playback.looping(false)
+        var plan = app.playback.looping(false)
+        // A song never mixed goes out on the mix the Master tab reads it on — the album's target
+        // and ceiling — not on none.
+        if plan.mix == nil { plan.mix = MasterModel.startingMix(host: MixAdapter(app: app), base: nil) }
         guard plan.isPlayable else { throw Failure.nothingToBounce }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let stems = try await SectionBounce.render(plan, section: nil, kitsDirectory: AuditionService.defaultKitsDirectory,
@@ -106,38 +111,56 @@ public enum Export {
     /// ceiling, so they sum to the mix before mastering.
     @MainActor
     public static func stems(_ app: AppState, to directory: URL) async throws -> [URL] {
+        app.keepSurfaceWork()
         guard let song = app.song else { throw Failure.noSong }
         let plan = app.playback.looping(false)
         guard plan.isPlayable else { throw Failure.nothingToBounce }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         var out: [URL] = []
-        for strip in MixReader.strips(of: plan, song: song) {
+        let base = plan.mix ?? .unity
+        for strip in heardStrips(of: plan, song: song) {
             var solo = plan
-            var mix = plan.mix ?? .unity
+            var mix = base
             mix.strips = mix.strips.map { var s = $0; s.isSoloed = s.part == strip.part; s.isMuted = false; return s }
             var own = mix.strip(for: strip.part, label: strip.label)
             own.isSoloed = true
             mix.set(own)
             mix.master.gainDB = 0
-            solo.mix = mix
-            // No ceiling on a stem: `renderOne` reads the plan's master for the limiter, so the
-            // master is at unity and the ceiling is lifted to 0 with its head room.
-            solo.mix?.master.ceilingDBTP = 0
             // Nor a fade: a stem is the strip, and the ending is the master's.
-            solo.mix?.master.fadeOutBars = nil
+            mix.master.fadeOutBars = nil
+            solo.mix = mix
+            // Not mastered — no limiter at all — and written as floats, so a strip hotter than full
+            // scale is kept as it is and the stems still add up to the mix before the master. They
+            // used to be limited just under 0 and then clamped.
             let stems = try await SectionBounce.render(solo, section: nil, kitsDirectory: AuditionService.defaultKitsDirectory,
-                                                       onlyTheMix: true)
+                                                       onlyTheMix: true, mastered: false)
             let url = unique(directory.appendingPathComponent("\(safe(song.title)) — \(safe(strip.label)).wav"))
-            try writeWAV24(stems.mix, sampleRate: stems.sampleRate, to: url)
+            try writeWAVFloat(stems.mix, sampleRate: stems.sampleRate, to: url)
             out.append(url)
         }
         app.note(.session, "Exported \(out.count) stem\(out.count == 1 ? "" : "s")", detail: directory.path)
         return out
     }
 
+    /// The strips a stem is written for: the ones the mix is heard with. A muted strip is not in
+    /// the mix, and with any soloed only the soloed are; a strip for a part the song no longer
+    /// plays would be a silent file. Stems used to clear mutes and solos and write every strip.
+    @MainActor
+    static func heardStrips(of plan: SongPlayback, song: Song) -> [(part: PartID, label: String)] {
+        let base = plan.mix ?? .unity
+        let playing = Set(plan.parts + plan.tracks.compactMap(\.part))
+        let soloing = base.strips.contains { $0.isSoloed }
+        return MixReader.strips(of: plan, song: song).filter { strip in
+            guard playing.contains(strip.part) else { return false }
+            guard let set = base.strip(for: strip.part) else { return !soloing }
+            return !set.isMuted && (!soloing || set.isSoloed)
+        }
+    }
+
     /// The written parts as one Standard MIDI File.
     @MainActor
     public static func midi(_ app: AppState, to directory: URL) throws -> URL {
+        app.keepSurfaceWork()
         guard let song = app.song else { throw Failure.noSong }
         let file = MIDIExport.file(for: song)
         guard !file.tracks.isEmpty else { throw Failure.noWrittenParts }
@@ -163,6 +186,7 @@ public enum Export {
     /// The lyric sheet as a UTF-8 text file beside the other exports.
     @MainActor
     public static func lyrics(_ app: AppState, to directory: URL) throws -> URL {
+        app.keepSurfaceWork()
         guard let song = app.song else { throw Failure.noSong }
         guard let sheet = lyricSheet(for: song) else { throw Failure.noWords }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -170,6 +194,30 @@ public enum Export {
         try Data(sheet.utf8).write(to: url, options: .withoutOverwriting)
         app.note(.session, "Exported the lyrics", detail: url.path)
         return url
+    }
+
+    /// 32-bit float PCM: a stem, which is not mastered and may run past full scale.
+    public static func writeWAVFloat(_ planar: [[Float]], sampleRate: Double, to url: URL) throws {
+        let channels = AVAudioChannelCount(max(1, planar.count))
+        let format = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: channels)!
+        let frames = planar.first?.count ?? 0
+        let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(max(1, frames)))!
+        buffer.frameLength = AVAudioFrameCount(frames)
+        for channel in 0..<Int(channels) {
+            let lane = planar[min(channel, planar.count - 1)]
+            for i in 0..<frames { buffer.floatChannelData![channel][i] = lane[i] }
+        }
+        let settings: [String: Any] = [
+            AVFormatIDKey: Int(kAudioFormatLinearPCM),
+            AVSampleRateKey: sampleRate,
+            AVNumberOfChannelsKey: Int(channels),
+            AVLinearPCMBitDepthKey: 32,
+            AVLinearPCMIsFloatKey: true,
+            AVLinearPCMIsBigEndianKey: false,
+            AVLinearPCMIsNonInterleaved: false,
+        ]
+        let file = try AVAudioFile(forWriting: url, settings: settings, commonFormat: .pcmFormatFloat32, interleaved: false)
+        try file.write(from: buffer)
     }
 
     /// 24-bit linear PCM, the sample rate as rendered.

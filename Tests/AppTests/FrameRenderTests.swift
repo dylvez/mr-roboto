@@ -286,6 +286,8 @@ extension FrameRenderTests {
         }
         await mixer.readOverlay()
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-mixer")
+        // At the window's narrowest the EQ moves under each strip rather than off the side.
+        try write(FrameView(app: app), size: CGSize(width: 1100, height: 900), name: "frame-mixer-narrow")
         let masterID = try #require(app.perform(Guidance.dockAction(for: .master, in: app.song)))
         let master = SurfaceWiring.shared.masterModel(for: app.bench.items.first { $0.id == masterID }!, app: app)
         await master.read()

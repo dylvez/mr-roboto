@@ -256,8 +256,9 @@ private struct SectionDetail: View {
                         .foregroundStyle(Design.Palette.inkSecondary)
                 } else {
                     // One row per kind, because a version title is a sentence about the part and
-                    // says nothing about which part it is. A row is a choice, not a set: the
-                    // transport plays one of each kind, and `toggle` enforces it.
+                    // says nothing about which part it is. A section can play two of a kind — a
+                    // groove layered on a groove — so each chip toggles on its own; a new part
+                    // joins only the sections that have none of its kind.
                     ForEach(model.choices(for: section), id: \.type) { choice in
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
                             Text(StructureModel.name(of: choice.type))

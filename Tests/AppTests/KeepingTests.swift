@@ -253,16 +253,19 @@ struct CountInFrameTests {
         #expect(app.playbackStartBar == 0)
     }
 
-    @Test("the transport's Click is a toggle carried into every plan")
-    func toggle() {
+    @Test("the transport's Click is a toggle carried into what the transport plays, and into no export")
+    func toggle() async {
         let (app, directory, _) = CompletenessFixture.app("click")
         defer { try? FileManager.default.removeItem(at: directory) }
+        let host = StubPlaybackHost()
+        app.attach(playback: host)
         app.open(CompletenessFixture.song("Click"))
         app.toggleClick()
         #expect(app.isClicking)
-        #expect(app.playback.click)
-        app.refreshPlayback()
-        #expect(app.playback.click, "a plan read again keeps the click")
+        #expect(!app.playback.click, "the song's plan, which exports render, has no click in it")
+        await app.startTransport()
+        #expect(await host.began.last?.click == true, "the run the transport plays does")
+        await app.stopTransport()
     }
 }
 

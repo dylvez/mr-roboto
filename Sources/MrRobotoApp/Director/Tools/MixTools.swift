@@ -5,11 +5,22 @@ import SongGraph
 
 // M6's three, appended after `read_take`: the mix read, one strip moved, the master set.
 
-/// The strip a tool names: by label (case-insensitive) or by part id.
-private func findStrip(_ named: String, in strips: [(part: PartID, label: String)]) -> (part: PartID, label: String)? {
-    if let byLabel = strips.first(where: { $0.label.caseInsensitiveCompare(named) == .orderedSame }) { return byLabel }
-    if let byPrefix = strips.first(where: { $0.label.lowercased().hasPrefix(named.lowercased()) }) { return byPrefix }
-    return strips.first { $0.part.description == named }
+/// The strip a tool names: by part id, or by a label (case-insensitive, then as a prefix) that only
+/// one strip has. Two bass lines written to compare share a label; the first used to be moved
+/// without a word, so a name two strips answer to is refused with their ids.
+private enum StripMatch {
+    case one((part: PartID, label: String))
+    case several([(part: PartID, label: String)])
+    case none
+}
+
+private func findStrip(_ named: String, in strips: [(part: PartID, label: String)]) -> StripMatch {
+    if let byID = strips.first(where: { $0.part.description == named }) { return .one(byID) }
+    for matches in [strips.filter { $0.label.caseInsensitiveCompare(named) == .orderedSame },
+                    strips.filter { $0.label.lowercased().hasPrefix(named.lowercased()) }] where !matches.isEmpty {
+        return matches.count == 1 ? .one(matches[0]) : .several(matches)
+    }
+    return .none
 }
 
 // MARK: - read_mix
@@ -183,7 +194,14 @@ public struct SetMixTool: DirectorTool {
         }
         let plan = await workspace.playback
         let strips = await MixReader.strips(of: plan, song: song)
-        guard let strip = findStrip(input.part, in: strips) else {
+        let strip: (part: PartID, label: String)
+        switch findStrip(input.part, in: strips) {
+        case .one(let found):
+            strip = found
+        case .several(let matches):
+            throw DirectorToolFailure(tool: name, reason: "\(matches.count) strips answer to \"\(input.part)\".",
+                                      suggestion: "Name one by its part id: " + matches.map { "\($0.label) \($0.part)" }.joined(separator: ", ") + ".")
+        case .none:
             throw DirectorToolFailure(tool: name, reason: "\"\(input.part)\" is not a strip in this song.",
                                       suggestion: "One of: \(strips.map(\.label).joined(separator: ", ")). Read the mix first.")
         }

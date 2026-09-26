@@ -126,6 +126,10 @@ final class MergeAdapter: MergeHosting {
     }
 
     func render(_ version: PartVersion, move: MergeMove) async throws -> PartVersion {
+        try await render(version, move: move, by: .user)
+    }
+
+    func render(_ version: PartVersion, move: MergeMove, by author: Author) async throws -> PartVersion {
         guard let song = app.song else { throw Failure.noSong }
         guard move.movesPitch || move.movesTime else { return version }
         let moved: PartKind
@@ -141,7 +145,7 @@ final class MergeAdapter: MergeHosting {
         default:
             throw Failure.notMergeable(PartLabel.title(of: version))
         }
-        let derived = version.deriving(moved, by: .user, operation: Operation.merge, note: move.sentence)
+        let derived = version.deriving(moved, by: author, operation: Operation.merge, note: move.sentence)
         // Rendered into this song's package: recorded into this song, even if another is open now.
         guard app.song?.id == song.id ? app.record(derived) : app.record(derived, intoLibrarySong: song.id) else { throw Failure.noSong }
         return derived

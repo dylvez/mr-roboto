@@ -329,6 +329,12 @@ extension AppState {
 
     /// Rebinds every open surface showing this part to its new version, so the surface draws what
     /// the song now plays instead of the draft it was holding.
+    /// Surfaces of these kinds rebuilt from the song as it is now: the Mixer reads the newest mix
+    /// whatever it is bound to.
+    func refreshSurfaces(of kinds: Set<SurfaceKind>) {
+        for item in bench.items where kinds.contains(item.kind) { discardSurfaceModel(item.id) }
+    }
+
     func refreshSurfaces(showing part: PartID, now version: VersionID) {
         guard let song else { return }
         for item in bench.items {
@@ -399,9 +405,16 @@ extension AppState {
     public func apply(_ fix: AudibilityFix) {
         switch fix {
         case .addToEverySection(let part):
-            guard let song, !song.sections.isEmpty else { return }
+            // In every section, in place of the part of its kind each one plays now: a second bass
+            // line is chosen instead of the first, not stacked on it. Structure layers two when
+            // that is what is wanted.
+            guard let song, !song.sections.isEmpty,
+                  let kind = song.versions.last(where: { $0.partID == part })?.type else { return }
             let sections = song.sections.map { section -> Section in
                 var section = section
+                section.stitch.removeAll { lane in
+                    lane.part != part && song.versions.last { $0.partID == lane.part }?.type == kind
+                }
                 if !section.stitch.contains(where: { $0.part == part }) { section.stitch.append(Lane(part: part)) }
                 return section
             }

@@ -144,17 +144,31 @@ public final class AppStateWorkspace: DirectorWorkspace {
 
     public func version(_ id: VersionID) -> PartVersion? { app.version(id) }
 
+    /// A version the band wrote. What the surfaces hold is kept first — an edit made while the
+    /// turn ran lands before this, not over it — and a surface open on the part moves to what was
+    /// written. Surfaces used to keep editing from the version they opened on, so the next keystroke
+    /// on the Lyrics surface put the old words back over the Director's.
     @discardableResult
-    public func record(_ version: PartVersion) -> Bool { app.record(version) }
+    public func record(_ version: PartVersion) -> Bool {
+        app.keepSurfaceWork()
+        guard app.record(version) else { return false }
+        app.refreshSurfaces(showing: version.partID, now: version.id)
+        return true
+    }
 
+    /// The form, the same way: Structure's unkept edit is kept first, then the band's form is
+    /// what it shows.
     @discardableResult
-    public func arrange(_ sections: [Section]) -> Bool { app.arrange(sections) }
+    public func arrange(_ sections: [Section]) -> Bool {
+        app.keepSurfaceWork()
+        return app.arrange(sections, by: .director)
+    }
 
     @discardableResult
     public func adopt(_ payload: LibraryDragPayload) -> VersionID? { app.adopt(payload) }
 
     public func merge(_ version: PartVersion, move: MergeMove) async throws -> PartVersion {
-        try await MergeAdapter(app: app, service: SurfaceWiring.shared.service(for: app)).render(version, move: move)
+        try await MergeAdapter(app: app, service: SurfaceWiring.shared.service(for: app)).render(version, move: move, by: .persona("Director"))
     }
 
     public func note(_ text: String, detail: String?) { app.note(.session, text, detail: detail) }
@@ -162,7 +176,7 @@ public final class AppStateWorkspace: DirectorWorkspace {
     public var castIDs: [PersonaID] { (app.song?.cast ?? []).map { PersonaID($0) } }
 
     @discardableResult
-    public func setCast(_ ids: [PersonaID]) -> Bool { app.setCast(ids) }
+    public func setCast(_ ids: [PersonaID]) -> Bool { app.setCast(ids, by: .director) }
 
     public var voice: LyricCorpus { app.voice }
 
@@ -195,8 +209,14 @@ public final class AppStateWorkspace: DirectorWorkspace {
                                            kitsDirectory: AuditionService.defaultKitsDirectory)
     }
 
+    /// Signed as the Director, and the Mixer moves to it: an open Mixer committing its own older
+    /// mix on the next fader move used to undo the Director's cut.
     public func recordMix(_ mix: Mix, note: String) -> PartVersion? {
-        MixAdapter(app: app).commit(mix, base: Guidance.mixes(in: app.song ?? Song(title: "")).last, note: note)
+        app.keepSurfaceWork()
+        guard let version = MixAdapter(app: app, author: .persona("Director"))
+            .commit(mix, base: Guidance.mixes(in: app.song ?? Song(title: "")).last, note: note) else { return nil }
+        app.refreshSurfaces(of: [.mixer, .master])
+        return version
     }
 
     public func observe(album: Album) -> AlbumObservation { app.observe(album: album) }
@@ -205,7 +225,7 @@ public final class AppStateWorkspace: DirectorWorkspace {
 
     @discardableResult
     public func sequence(_ order: [SongID], gaps: [SongID: Double]?, in album: AlbumID, because: String) -> Bool {
-        app.sequence(order, gaps: gaps, in: album, because: because)
+        app.sequence(order, gaps: gaps, in: album, because: because, by: .director)
     }
 
     public func makeMashup(_ request: MashupRequest) async throws -> Song { try await app.makeMashup(request) }
@@ -338,6 +358,10 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
         guard var current = song else { return false }
         do {
             try current.append(version)
+            // As the frame does: a new part joins the sections that have none of its kind. The
+            // scratch workspace used to skip this, so a test passed on a song the app would have
+            // stacked three bass lines in.
+            _ = AppState.joinForm(with: version, in: &current)
             song = current
             return true
         } catch {
@@ -453,9 +477,12 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
     }
 
     public func startSong(title: String, tempo: Double, key: Key?, machine: String) -> Song? {
-        var fresh = song.flatMap { $0.versions.allSatisfy { $0.type == .sound } ? $0 : nil } ?? Song(title: title.isEmpty ? "Untitled" : title)
+        // The frame's new song, form and all, at the frame's tempo range.
+        let clamped = tempo.isFinite ? min(AppState.tempoRange.upperBound, max(AppState.tempoRange.lowerBound, tempo)) : 120
+        var fresh = song.flatMap { $0.versions.allSatisfy { $0.type == .sound } ? $0 : nil }
+            ?? Song.new(title: title.isEmpty ? "Untitled" : title, key: key, tempo: clamped)
         if !title.isEmpty { fresh.title = title }
-        fresh.tempo = tempo
+        fresh.tempo = clamped
         fresh.key = key
         try? fresh.append(PartVersion(partID: PartID(), kind: .sound(Sound(instrument: machine)), author: .persona("Director"), operation: Operation.written, note: "The drum machine"))
         song = fresh
@@ -518,9 +545,9 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
             if case .sound(let sound) = version.kind, sound.forPart == part { return InstrumentVoiceSpec.preset(id: sound.instrument) != nil }
             return false
         }) {
-            return record(previous.deriving(kind, by: .user, operation: Operation.written, note: spec.name))
+            return record(previous.deriving(kind, by: .persona("Director"), operation: Operation.written, note: spec.name))
         }
-        return record(PartVersion(partID: PartID(), kind: kind, author: .user, operation: Operation.written, note: spec.name))
+        return record(PartVersion(partID: PartID(), kind: kind, author: .persona("Director"), operation: Operation.written, note: spec.name))
     }
 
     /// Audio a tool kept, by the reference it was given. There is no package, so the reference is

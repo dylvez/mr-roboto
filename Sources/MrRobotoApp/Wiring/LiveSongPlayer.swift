@@ -211,8 +211,17 @@ final class LiveSongPlayer: SongPlaybackHost {
         // per kind, `sectionGrooves.isEmpty` answered it; with one per part it would silently say
         // no to the first player of the second part's sampler, which never then advances.
         var driving = Set<AuditionService.SamplerKey>()
-        var bounces: [(AVAudioPCMBuffer, Double)] = []
-        var chops: [(AVAudioPCMBuffer, Double)] = []
+        // Audio laid end to end, one node per part: each dusty groove and each chop through its
+        // own part's strip. They used to share two nodes — every dusty groove on the first dusty
+        // part's strip, every chop on the first chop's — and only a section's first chop played.
+        var laid: [(part: PartID?, events: [(AVAudioPCMBuffer, Double)])] = []
+        func lay(_ buffer: AVAudioPCMBuffer, at seconds: Double, on part: PartID?) {
+            if let index = laid.firstIndex(where: { $0.part == part }) {
+                laid[index].events.append((buffer, seconds))
+            } else {
+                laid.append((part, [(buffer, seconds)]))
+            }
+        }
 
         for segment in plan.segments {
             let timeline = GrooveTimeline.tempo(clock.tempo, timeSignature: clock.timeSignature,
@@ -220,13 +229,22 @@ final class LiveSongPlayer: SongPlaybackHost {
             for voice in segment.voices {
                 // A dusty groove and a chop are audio through a chain; they are bounced onto player
                 // nodes below rather than played on a sampler.
-                if voice.chop != nil { continue }
+                if let chop = voice.chop {
+                    let buffer: AVAudioPCMBuffer
+                    do {
+                        buffer = try Self.dustyChop(chop, format: engine.format, repeatedTo: seconds(segment))
+                    } catch {
+                        throw Failure.unreadable(chop.name, "\(error)")
+                    }
+                    lay(buffer, at: start(segment), on: chop.part)
+                    continue
+                }
                 if voice.groove != nil, !voice.chain.isEmpty {
                     let bounce = try await Self.dustyGroove(voice.groove!, chain: voice.chain,
                                                             machine: voice.sound,
                                                             bars: segment.lengthInBars, seconds: seconds(segment),
                                                             clock: clock, service: service, format: engine.format)
-                    bounces.append((bounce.buffer, start(segment)))
+                    lay(bounce.buffer, at: start(segment), on: voice.part)
                     bouncedHits += bounce.hits
                     continue
                 }
@@ -237,21 +255,10 @@ final class LiveSongPlayer: SongPlaybackHost {
                 engine.add(player.source)
                 keep(player)
             }
-            if let chop = segment.chop {
-                let buffer: AVAudioPCMBuffer
-                do {
-                    buffer = try Self.dustyChop(chop, format: engine.format, repeatedTo: seconds(segment))
-                } catch {
-                    throw Failure.unreadable(chop.name, "\(error)")
-                }
-                chops.append((buffer, start(segment)))
-            }
         }
 
         var next = 0
-        let bouncePart = plan.segments.first { $0.groove != nil && !$0.grooveChain.isEmpty }?.groovePart
-        let chopPart = plan.segments.first { $0.chop != nil }?.chop?.part
-        for (events, part) in [(bounces, bouncePart), (chops, chopPart)] where !events.isEmpty {
+        for (part, events) in laid {
             guard next < engine.players.count else { throw Failure.unreadable("The dusty sections", "no player node is free") }
             let node = try engine.player(next)
             try Self.route(node, part: part, on: graph)

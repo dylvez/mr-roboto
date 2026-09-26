@@ -73,8 +73,14 @@ public struct SetProgressionTool: DirectorTool {
             throw DirectorToolFailure(tool: name, reason: error.description,
                                       suggestion: "Symbols like Dm7, G7, Cmaj7, F#m7b5, Bbmaj7, C/E; bars separated by |.")
         }
-        let version = PartVersion(partID: PartID(), kind: .progression(progression), author: .persona(acting),
-                                  operation: Operation.written, note: "\(progression.symbols()) in \(key)")
+        // The song's harmony is one part: new chords are its next version, heard wherever the old
+        // ones played. A new part each time sat in no section once the form had chords, or — before
+        // that — played on top of them.
+        let existing = await workspace.song.flatMap { song in song.versions.last { $0.type == .progression } }
+        let note = "\(progression.symbols()) in \(key)"
+        let version = existing.map { $0.deriving(.progression(progression), by: .persona(acting), operation: Operation.written, note: note) }
+            ?? PartVersion(partID: PartID(), kind: .progression(progression), author: .persona(acting),
+                           operation: Operation.written, note: note)
         let recorded = await workspace.record(version)
         return Output(version: version.id.description, part: version.partID.description, key: "\(key)",
                       chords: progression.symbols(),

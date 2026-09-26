@@ -868,7 +868,7 @@ public final class AppState {
     /// rather than versioned: they are an ordering of versions, not a version, and the versions
     /// they name are never touched. Returns false with nothing open.
     @discardableResult
-    public func arrange(_ sections: [Section]) -> Bool {
+    public func arrange(_ sections: [Section], by source: SessionEntry.Source = .you) -> Bool {
         guard var current = song else {
             note(.session, "No song open; nothing to arrange")
             return false
@@ -891,7 +891,7 @@ public final class AppState {
         refreshPlayback()
         scheduleAutosave()
         let bars = cleaned.reduce(0) { $0 + $1.lengthInBars }
-        note(.you, cleaned.isEmpty ? "Cleared the arrangement" : "Arranged \(cleaned.count) section\(cleaned.count == 1 ? "" : "s")",
+        note(source, cleaned.isEmpty ? "Cleared the arrangement" : "Arranged \(cleaned.count) section\(cleaned.count == 1 ? "" : "s")",
              detail: cleaned.isEmpty ? nil : cleaned.map { "\($0.name) \($0.lengthInBars)" }.joined(separator: " · ") + " · \(bars) bars")
         return true
     }
@@ -1132,7 +1132,7 @@ public final class AppState {
         playback = SongPlayback.plan(for: song) { [store, song] ref in
             guard let store else { return nil }
             return try? store.mediaURL(for: ref, song: song?.id)
-        }.looping(isLooping).clicking(isClicking)
+        }.looping(isLooping)
     }
 
     /// Play what the song actually has.
@@ -1170,7 +1170,7 @@ public final class AppState {
     /// The song's fade-out, in song seconds, when the song has one and plays to its end: a loop
     /// never ends, so it never fades.
     public var fadeSpan: ClosedRange<Double>? {
-        guard runningLoopSeconds == nil, let song, !song.sections.isEmpty else { return nil }
+        guard runningLoopSeconds == nil, let song, playback.isArranged else { return nil }
         return FadeOut.span(bars: playback.mix?.master.fadeOutBars, songBars: song.lengthInBars, clock: clock)
     }
 
@@ -1212,7 +1212,10 @@ public final class AppState {
         // pass and a take sung on the second pass landed past the song's end.
         let base = countIn > 0 ? playback.looping(false) : playback
         var plan = base.starting(atBar: max(0, bar), countIn: countIn)
-        if let click { plan = plan.clicking(click || isClicking) }
+        // The click is the transport's, added to the run it plays and to nothing else. It used to
+        // live on the song's plan, which every export and reading renders, so a song exported with
+        // Click on had the metronome in the master and in every stem.
+        plan = plan.clicking((click ?? false) || isClicking)
         guard plan.isPlayable else {
             let silence = plan.silence ?? SongPlayback.Silence(headline: "Nothing to play", detail: "")
             transport = .nothingToPlay(silence)
@@ -1265,7 +1268,6 @@ public final class AppState {
     /// The transport's Click, on or off. Like the loop, it takes effect the next time you press play.
     public func toggleClick() {
         isClicking.toggle()
-        playback = playback.clicking(isClicking)
         note(.you, isClicking ? "Click on" : "Click off",
              detail: transport.isPlaying ? "Takes effect the next time you press play." : nil)
     }
@@ -1297,10 +1299,21 @@ public final class AppState {
     static func joinForm(with version: PartVersion, in song: inout Song) -> Int {
         guard !song.sections.isEmpty, StructureModel.plays(version) else { return 0 }
         guard !song.sections.contains(where: { $0.stitch.contains(part: version.partID) }) else { return 0 }
-        for index in song.sections.indices {
+        // Into the sections that have none of its kind: a new groove fills a section with no drums,
+        // but does not start playing on top of the groove a section already has. It used to join
+        // every section, so three bass lines written to compare all played at once. Where every
+        // section already has one, the part's own surface offers to use it instead.
+        var joined = 0
+        for index in song.sections.indices where !plays(kind: version.type, in: song.sections[index], of: song) {
             song.sections[index].stitch.append(Lane(part: version.partID))
+            joined += 1
         }
-        return song.sections.count
+        return joined
+    }
+
+    /// Whether a section already plays a part of this kind.
+    static func plays(kind: PartType, in section: Section, of song: Song) -> Bool {
+        section.stitch.contains { lane in song.versions.last { $0.partID == lane.part }?.type == kind }
     }
 
     /// Says so when the graph ran out of strips. Those parts are audible — they play straight into

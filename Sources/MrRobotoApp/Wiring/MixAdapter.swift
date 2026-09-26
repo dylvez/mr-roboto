@@ -27,7 +27,13 @@ public protocol MixHosting: AnyObject {
 final class MixAdapter: MixHosting {
     private let app: AppState
 
-    init(app: AppState) { self.app = app }
+    /// Who a kept move is signed by: you, from the Mixer; the Director, from its tools.
+    private let author: Author
+
+    init(app: AppState, author: Author = .user) {
+        self.app = app
+        self.author = author
+    }
 
     var song: Song? { app.song }
     var playback: SongPlayback { app.playback }
@@ -46,7 +52,7 @@ final class MixAdapter: MixHosting {
             return nil
         }
         let partID = base?.partID ?? Guidance.mixes(in: song).last?.partID ?? PartID()
-        let version = PartVersion(partID: partID, kind: .mix(mix), author: .user, parents: base.map { [$0.id] } ?? [],
+        let version = PartVersion(partID: partID, kind: .mix(mix), author: author, parents: base.map { [$0.id] } ?? [],
                                   operation: Operation.mix, note: note)
         return app.record(version) ? version : nil
     }

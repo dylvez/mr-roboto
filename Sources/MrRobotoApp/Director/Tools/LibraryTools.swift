@@ -336,6 +336,11 @@ public struct MergeTool: DirectorTool {
 
         let movedA = try await workspace.merge(a, move: plan.a)
         let movedB = try await workspace.merge(b, move: plan.b)
+        // The renders kept themselves in their own song; the section goes nowhere else.
+        guard await workspace.song?.id == song.id else {
+            throw DirectorToolFailure(tool: name, reason: "The song changed while the merge was rendering.",
+                                      suggestion: "The moved parts are in \(song.title); open it and stitch them into a section there.")
+        }
         let bars = input.bars > 0 ? input.bars : MergeModel.defaultBars(a, b, in: song)
         let section = Section(name: sectionName, stitch: [movedA, movedB].lanes, lengthInBars: bars)
         let current = await workspace.song?.sections ?? song.sections

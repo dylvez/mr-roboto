@@ -14,7 +14,7 @@ import Testing
 // the tool meets; the comp is also planned apart from any audio, and rendered once in memory.
 
 @MainActor
-private enum WritingFixture {
+enum WritingFixture {
     struct Rig {
         var app: AppState
         var box: DirectorToolbox

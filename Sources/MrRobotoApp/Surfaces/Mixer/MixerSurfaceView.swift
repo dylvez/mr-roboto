@@ -99,13 +99,22 @@ struct MixerSurfaceView: View {
     /// points, and the bench's minimum is 640.
     private var stripsTab: some View {
         VStack(alignment: .leading, spacing: Design.Metric.gutter) {
-            fitting {
-                VStack(alignment: .leading, spacing: Design.Metric.gutter) {
-                    strips
-                    masterRow
-                }
+            // The full table when the bench is wide enough for it; each strip's EQ on a line of its
+            // own when it is not; and only past even that, a sideways scroll. At the bench's
+            // smaller widths the meters used to be a scroll away from every strip.
+            ViewThatFits(in: .horizontal) {
+                table(compact: false)
+                table(compact: true)
+                MixScroll(.horizontal) { table(compact: true).padding(.bottom, 8) }
             }
             fitting { overlay }
+        }
+    }
+
+    private func table(compact: Bool) -> some View {
+        VStack(alignment: .leading, spacing: Design.Metric.gutter) {
+            strips(compact: compact)
+            masterRow(compact: compact)
         }
     }
 
@@ -119,19 +128,19 @@ struct MixerSurfaceView: View {
         }
     }
 
-    private var strips: some View {
+    private func strips(compact: Bool) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 MixLabel("Strip").frame(width: 120, alignment: .leading)
                 MixLabel("Level").frame(width: 160, alignment: .leading)
                 MixLabel("Pan").frame(width: 90, alignment: .leading)
                 MixLabel("Send").frame(width: 90, alignment: .leading)
-                MixLabel("EQ low · peak · high").frame(width: 230, alignment: .leading)
+                if !compact { MixLabel("EQ low · peak · high").frame(width: 230, alignment: .leading) }
                 MixLabel("Comp").frame(width: 60, alignment: .leading)
                 MixLabel("Meter").fixedSize().frame(maxWidth: .infinity, alignment: .leading)
             }
             ForEach(Array(model.rows.enumerated()), id: \.element.id) { index, row in
-                stripRow(row, index: index)
+                stripRow(row, index: index, compact: compact)
             }
         }
     }
@@ -149,9 +158,34 @@ struct MixerSurfaceView: View {
         }
     }
 
-    private func stripRow(_ row: MixerModel.Row, index: Int) -> some View {
+    private func stripRow(_ row: MixerModel.Row, index: Int, compact: Bool) -> some View {
         let strip = model.strip(row.part)
-        return HStack(spacing: 8) {
+        return VStack(alignment: .leading, spacing: 2) {
+            stripLine(row, strip: strip, index: index, compact: compact)
+            if compact {
+                // The EQ under the level, pan and send, so the row fits the bench and the meter
+                // stays beside its strip.
+                HStack(spacing: 8) {
+                    MixLabel("EQ").frame(width: 120, alignment: .trailing)
+                    eqFaders(row, strip: strip)
+                }
+            }
+        }
+    }
+
+    private func eqFaders(_ row: MixerModel.Row, strip: Strip) -> some View {
+        HStack(spacing: 4) {
+            ForEach(0..<3, id: \.self) { band in
+                if strip.eq.indices.contains(band) {
+                    fader(value: strip.eq[band].gainDB, range: -18...18, format: "%+.0f", width: 72,
+                          name: "\(row.label) EQ band \(band + 1)") { model.setEQ(band: band, gainDB: $0, for: row.part) }
+                }
+            }
+        }
+    }
+
+    private func stripLine(_ row: MixerModel.Row, strip: Strip, index: Int, compact: Bool) -> some View {
+        HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(row.label).font(Design.Typography.ui(13, weight: .medium)).lineLimit(1)
                 HStack(spacing: 4) {
@@ -172,15 +206,10 @@ struct MixerSurfaceView: View {
             fader(value: strip.pan, range: -1...1, format: "%+.2f", width: 90, name: "\(row.label) pan") { model.setPan($0, for: row.part) }
             fader(value: strip.sendDB ?? MixerModel.sendOffDB, range: MixerModel.sendOffDB...0, format: "%.0f dB", width: 90,
                   name: "\(row.label) send", readout: MixerModel.sendReadout(strip.sendDB)) { model.setSend(MixerModel.send(fromFader: $0), for: row.part) }
-            HStack(spacing: 4) {
-                ForEach(0..<3, id: \.self) { band in
-                    if strip.eq.indices.contains(band) {
-                        fader(value: strip.eq[band].gainDB, range: -18...18, format: "%+.0f", width: 72,
-                              name: "\(row.label) EQ band \(band + 1)") { model.setEQ(band: band, gainDB: $0, for: row.part) }
-                    }
-                }
+            if !compact {
+                eqFaders(row, strip: strip)
+                    .frame(width: 230, alignment: .leading)
             }
-            .frame(width: 230, alignment: .leading)
             MixToggle(strip.compressor == nil ? "off" : "on", isOn: strip.compressor != nil, tint: Design.Palette.accent,
                       help: strip.compressor == nil ? "Put a compressor on \(row.label)" : "Take the compressor off \(row.label)",
                       label: "\(row.label) compressor \(strip.compressor == nil ? "off" : "on")") {
@@ -211,16 +240,16 @@ struct MixerSurfaceView: View {
         .frame(width: width)
     }
 
-    private var masterRow: some View {
-        HStack(spacing: 12) {
+    private func masterRow(compact: Bool) -> some View {
+        HStack(spacing: compact ? 8 : 12) {
             HStack(spacing: 6) {
                 Text("Master").font(Design.Typography.ui(13, weight: .medium))
                 learnChip(.master)
             }
             .frame(width: 120, alignment: .leading)
             fader(value: model.mix.master.gainDB, range: -24...24, format: "%+.1f dB", width: 160, name: "Master gain") { model.setMaster(gainDB: $0) }
-            fader(value: model.mix.master.ceilingDBTP, range: -12...0, format: "ceiling %.1f dBTP", width: 140, name: "Master ceiling") { model.setMaster(ceilingDBTP: $0) }
-            fader(value: model.mix.master.targetLUFS, range: -30 ... -6, format: "target %.0f LUFS", width: 140, name: "Master target") { model.setMaster(targetLUFS: $0) }
+            fader(value: model.mix.master.ceilingDBTP, range: -12...0, format: "ceiling %.1f dBTP", width: compact ? 110 : 140, name: "Master ceiling") { model.setMaster(ceilingDBTP: $0) }
+            fader(value: model.mix.master.targetLUFS, range: -30 ... -6, format: "target %.0f LUFS", width: compact ? 110 : 140, name: "Master target") { model.setMaster(targetLUFS: $0) }
             if let master { lastReading(master) }
             Spacer(minLength: 0)
         }
