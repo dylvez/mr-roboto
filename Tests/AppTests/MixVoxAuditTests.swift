@@ -208,6 +208,8 @@ struct VoxAuditTests {
         for _ in 0..<500 where model.state == .recording { try await Task.sleep(for: .milliseconds(2)) }
         #expect(model.state == .idle)
         #expect(host.kept.count == 1, "\(model.lastError ?? "")")
+        // Kept with the tempo it was sung at, so a tempo changed later stretches it to the song's.
+        #expect(host.kept.first.flatMap(Guidance.audio(of:))?.take?.tempo == 120)
     }
 
     @Test("a take moves with its section: the Verse lengthened, the Hook's vocal still plays in the Hook")

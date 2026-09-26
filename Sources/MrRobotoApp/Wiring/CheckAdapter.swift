@@ -171,8 +171,20 @@ final class CheckAdapter: CheckHosting {
               let source = try? BoothAdapter.planar(url) else {
             return .refused("The take's audio could not be read, so nothing was changed.")
         }
-        let alignment = audio.alignmentOffset ?? audio.take.map { app.clock.seconds(forBar: $0.startBar) + $0.startBeat * app.clock.secondsPerBeat } ?? 0
-        let before = TakeAnalysis.of(source.planar, sampleRate: source.sampleRate, alignmentSeconds: alignment, key: song.key, clock: app.clock)
+        // The take as the song plays it — moved with its section, at the song's tempo — is what the
+        // finding was read from, so its notes are found there; the fix is made to the take's own
+        // audio, at the same note's place in it. A take sung at 92 and played at 100 has each
+        // second of the song at 1 ÷ 0.92 of its own.
+        let placed = TakePlacement.audio(of: version, in: song) ?? audio
+        let stretch = placed.stretch(in: song)
+        let alignment = TakePlacement.alignment(of: placed, in: song, clock: app.clock)
+        let heard: [[Float]]
+        do {
+            heard = try TakePlacement.stretched(source.planar, sampleRate: source.sampleRate, by: stretch)
+        } catch {
+            return .refused("The take could not be read at the song's tempo: \(error). Nothing was changed.")
+        }
+        let before = TakeAnalysis.of(heard, sampleRate: source.sampleRate, alignmentSeconds: alignment, key: song.key, clock: app.clock)
         let rendered: [[Float]]
         let index: Int
         do {
@@ -181,13 +193,14 @@ final class CheckAdapter: CheckHosting {
                 guard before.notes.indices.contains(i) else { return .refused("The take no longer reads that note.") }
                 let note = before.notes[i]
                 rendered = try TakeCorrection.shifting(source.planar, sampleRate: source.sampleRate,
-                                                       start: note.start - alignment, end: note.end - alignment, cents: cents)
+                                                       start: (note.start - alignment) / stretch, end: (note.end - alignment) / stretch, cents: cents)
                 index = i
             case .nudgeNote(let i, let ms):
                 guard before.notes.indices.contains(i) else { return .refused("The take no longer reads that note.") }
                 let note = before.notes[i]
                 rendered = TakeCorrection.nudging(source.planar, sampleRate: source.sampleRate,
-                                                  start: note.start - alignment, end: note.end - alignment, milliseconds: ms)
+                                                  start: (note.start - alignment) / stretch, end: (note.end - alignment) / stretch,
+                                                  milliseconds: ms / stretch)
                 index = i
             default:
                 return .refused("Nothing was changed.")
@@ -210,8 +223,9 @@ final class CheckAdapter: CheckHosting {
         } catch {
             return .refused("The corrected take could not be kept: \(error). Nothing was changed.")
         }
-        // Re-read the corrected audio: the number after is measured, not assumed.
-        let after = TakeAnalysis.of(rendered, sampleRate: source.sampleRate, alignmentSeconds: alignment, key: song.key, clock: app.clock)
+        // Re-read the corrected audio as the song plays it: the number after is measured, not assumed.
+        let after = TakeAnalysis.of((try? TakePlacement.stretched(rendered, sampleRate: source.sampleRate, by: stretch)) ?? rendered,
+                                    sampleRate: source.sampleRate, alignmentSeconds: alignment, key: song.key, clock: app.clock)
         var measurement = finding.measurement
         if after.notes.indices.contains(index) {
             measurement.measured = measurement.feature == .takePitchCents ? after.notes[index].centsFromKey : after.notes[index].timingMS

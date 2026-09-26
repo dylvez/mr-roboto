@@ -466,7 +466,7 @@ public struct SetSongTool: DirectorTool {
     public var purpose: String {
         "Set the open song's title, artist, tempo, key or meter — any of them, the rest left as they are. Nothing already "
         + "written moves: a key or a meter is what the next part is written to, and a tempo only changes how fast the beats "
-        + "go by. Says what changed and what was refused."
+        + "go by — sung takes follow it, stretched with their pitch kept. Says what changed and what was refused."
     }
     public var schema: DirectorJSON {
         Schema.object([
@@ -565,6 +565,23 @@ public struct SetSongTool: DirectorTool {
         if changed.isEmpty, refused.isEmpty { sentences.append("Nothing moved: the song already was that.") }
         if changed.contains(where: { $0.hasPrefix("key") || $0.hasPrefix("meter") }) {
             sentences.append("Nothing already written moved; the next part is written to it.")
+        }
+        if changed.contains(where: { $0.hasPrefix("tempo") }) {
+            // What was sung is audio: it follows the tempo stretched, and says so, since a stretch
+            // far from where it was sung is something to hear before keeping.
+            let sung = (Guidance.takes(in: after) + Guidance.comps(in: after)).compactMap(Guidance.audio(of:))
+            let stretched = sung.filter { $0.stretch(in: after) != 1 }
+            let unknown = sung.filter { ($0.take?.tempo ?? $0.comp?.tempo) == nil }
+            if !stretched.isEmpty {
+                let far = stretched.map { abs($0.stretch(in: after) - 1) }.max() ?? 0
+                let what = stretched.count == 1 ? "The sung take plays" : "The \(stretched.count) sung takes and comps play"
+                sentences.append(what + " stretched to \(Schema.figure(after.tempo)) bpm, pitch kept"
+                    + (far > 0.15 ? String(format: " — up to %.0f%% from the tempo they were sung at, so listen before keeping more.", far * 100) : "."))
+            }
+            if !unknown.isEmpty {
+                sentences.append(unknown.count == 1 ? "One take was sung before tempos were kept and plays as it was sung."
+                    : "\(unknown.count) takes were sung before tempos were kept and play as they were sung.")
+            }
         }
         return Output(changed: changed, unchanged: unchanged, refused: refused, title: after.title,
                       artist: after.artist.isEmpty ? nil : after.artist, tempo: after.tempo, key: after.key?.name,

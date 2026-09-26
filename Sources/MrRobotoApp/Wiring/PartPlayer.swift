@@ -179,9 +179,12 @@ public final class PartPlayer {
             return await play(progression, in: song, for: version.partID, clock: clock)
         case .audio(let audio):
             let url = try mediaURL(audio.media, song: song)
-            let (planar, rate) = try await Task.detached { try BoothAdapter.planar(url) }.value
+            // A sung take at the song's tempo, as every other part alone plays at it; the record
+            // and its stems, as they are.
+            let stretch = TakePlacement.audio(of: version, in: song)?.stretch(in: song) ?? 1
+            let (planar, rate) = try await Task.detached { try TakePlacement.planar(url, stretch: stretch) }.value
             await service.play(planar: planar, sampleRate: rate)
-            return audio.duration
+            return audio.duration * stretch
         case .sample(let sample):
             let url = try mediaURL(sample.media, song: song)
             let region = ChopLaneBinding.region(of: sample, bars: Guidance.analysis(in: song)?.bars ?? [], tempo: sample.detectedTempo ?? song.tempo)

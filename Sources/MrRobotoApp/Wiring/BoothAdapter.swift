@@ -110,8 +110,10 @@ final class BoothAdapter: BoothHosting, TakesHosting {
 
     /// A comp's plan with the section its takes were sung to, and where that section starts now:
     /// the comp was rendered in the song's bars as they are, and moves with the section from here.
+    /// And at the song's tempo as it is: the takes were stretched to it before they were comped.
     nonisolated static func placed(_ plan: CompPlan, takes: [PartVersion], in song: Song) -> CompPlan {
         var plan = plan
+        plan.tempo = song.tempo
         guard let section = takes.lazy.compactMap({ Guidance.audio(of: $0)?.take?.section }).first else { return plan }
         plan.section = section
         plan.sectionStartBar = song.startBar(of: section)
@@ -164,29 +166,38 @@ final class BoothAdapter: BoothHosting, TakesHosting {
                  detail: "\(finding.why) \(finding.measurement.description)")
     }
 
+    /// A take's audio as the song has it now: moved with its section, and stretched to the song's
+    /// tempo when it was sung at another — so the lanes, the flags and a comp all read the take
+    /// the transport plays.
     func audio(of version: PartVersion) -> Comp.TakeAudio? {
-        guard let audio = Guidance.audio(of: version), let store = app.store,
-              let url = try? store.mediaURL(for: audio.media, song: app.song?.id),
-              let planar = try? Self.planar(url) else { return nil }
+        guard let song = app.song, let audio = TakePlacement.audio(of: version, in: song) ?? Guidance.audio(of: version),
+              let store = app.store, let url = try? store.mediaURL(for: audio.media, song: song.id),
+              let planar = try? TakePlacement.planar(url, stretch: audio.stretch(in: song)) else { return nil }
         return Comp.TakeAudio(planar: planar.planar, sampleRate: planar.sampleRate,
-                              alignmentSeconds: Self.alignment(of: audio, in: app.song, clock: clock))
+                              alignmentSeconds: TakePlacement.alignment(of: audio, in: song, clock: clock))
     }
 
-    /// Where a sung take's audio begins in the song now: its first frame, moved with its section.
-    nonisolated static func alignment(of audio: Audio, in song: Song?, clock: TransportClock) -> Double {
-        let moved = song.map { Double(audio.barsMoved(in: $0)) * clock.secondsPerBar } ?? 0
-        let aligned = audio.alignmentOffset ?? audio.take.map { clock.seconds(forBar: $0.startBar) + $0.startBeat * clock.secondsPerBeat } ?? 0
-        return aligned + moved
-    }
-
+    /// The whole file as planar floats. Read in chunks until the file is done: one `read(into:)`
+    /// can stop on a block boundary without throwing (the measurement is in `SampleCache`), and a
+    /// single read here lost a take's last 27 ms in four seconds — the tail of every take the
+    /// lanes, a comp, a Check and a mashup read.
     nonisolated static func planar(_ url: URL) throws -> (planar: [[Float]], sampleRate: Double) {
         let file = try AVAudioFile(forReading: url)
         let format = AVAudioFormat(standardFormatWithSampleRate: file.processingFormat.sampleRate, channels: file.processingFormat.channelCount)!
-        let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(file.length))!
-        try file.read(into: buffer)
-        guard let data = buffer.floatChannelData else { return ([], format.sampleRate) }
-        let frames = Int(buffer.frameLength)
-        let planar = (0..<Int(format.channelCount)).map { channel in Array(UnsafeBufferPointer(start: data[channel], count: frames)) }
+        let total = Int(file.length)
+        let channels = Int(format.channelCount)
+        guard channels > 0, total > 0,
+              let chunk = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(min(total, 1 << 16))) else {
+            return (Array(repeating: [], count: channels), format.sampleRate)
+        }
+        var planar = [[Float]](repeating: [], count: channels)
+        for channel in 0..<channels { planar[channel].reserveCapacity(total) }
+        while planar[0].count < total {
+            try file.read(into: chunk, frameCount: min(AVAudioFrameCount(total - planar[0].count), chunk.frameCapacity))
+            let read = Int(chunk.frameLength)
+            guard read > 0, let data = chunk.floatChannelData else { break }
+            for channel in 0..<channels { planar[channel].append(contentsOf: UnsafeBufferPointer(start: data[channel], count: read)) }
+        }
         return (planar, format.sampleRate)
     }
 

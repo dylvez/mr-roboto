@@ -57,9 +57,29 @@ extension AppState {
         let clamped = min(Self.tempoRange.upperBound, max(Self.tempoRange.lowerBound, bpm))
         guard abs(clamped - current.tempo) > 0.001 else { return false }
         updateSong { $0.tempo = clamped }
-        note(source, String(format: "Tempo %.0f bpm", clamped),
-             detail: transport.isPlaying ? "Takes effect the next time you press play." : nil)
+        // Sung takes follow the tempo, stretched: said once here, since a voice at another speed
+        // is the one change to the song that is heard rather than seen.
+        let sung = song.map { !Guidance.takes(in: $0).isEmpty || !Guidance.comps(in: $0).isEmpty } ?? false
+        let details = [transport.isPlaying ? "Takes effect the next time you press play." : nil,
+                       sung ? "Sung takes follow it, stretched with their pitch kept." : nil].compactMap { $0 }
+        note(source, String(format: "Tempo %.0f bpm", clamped), detail: details.isEmpty ? nil : details.joined(separator: " "))
+        if sung { stretchSungParts() }
         return true
+    }
+
+    /// The sung parts stretched to the tempo just set, in the background: a minute of take takes a
+    /// third of a second, and the first play after a tempo change would otherwise wait on every
+    /// one. It waits for the tempo to settle, so a drag through twenty tempos stretches for the last.
+    func stretchSungParts() {
+        stretching?.cancel()
+        let tracks = playback.tracks.filter { $0.stretch != 1 }
+        guard !tracks.isEmpty else { return }
+        stretching = Task.detached(priority: .utility) {
+            try? await Task.sleep(for: .milliseconds(600))
+            for track in tracks where !Task.isCancelled {
+                _ = try? TakePlacement.url(track.url, stretch: track.stretch)
+            }
+        }
     }
 
     /// Sets the key the writers and the personas read the song in, or clears it. Nothing already

@@ -135,7 +135,8 @@ final class LiveSongPlayer: SongPlaybackHost {
             guard index < engine.players.count else { break }
             let buffer: AVAudioPCMBuffer
             do {
-                buffer = Self.skipping(try Self.read(track.url, in: engine.format), seconds: track.skip)
+                buffer = Self.skipping(try Self.read(TakePlacement.url(track.url, stretch: track.stretch), in: engine.format),
+                                       seconds: track.skip)
             } catch {
                 throw Failure.unreadable(track.name, "\(error)")
             }
@@ -282,7 +283,8 @@ final class LiveSongPlayer: SongPlaybackHost {
             guard next < engine.players.count else { throw Failure.unreadable(track.name, "no player node is free") }
             let buffer: AVAudioPCMBuffer
             do {
-                buffer = Self.skipping(try Self.read(track.url, in: engine.format), seconds: track.skip)
+                buffer = Self.skipping(try Self.read(TakePlacement.url(track.url, stretch: track.stretch), in: engine.format),
+                                       seconds: track.skip)
             } catch {
                 throw Failure.unreadable(track.name, "\(error)")
             }

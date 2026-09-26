@@ -613,9 +613,13 @@ public struct Take: Hashable, Codable, Sendable {
     /// as it was then; a section moved since — a verse before it lengthened, an intro added — moves
     /// the take with it (`Audio.barsMoved`). Nil for a take from before this was kept.
     public var sectionStartBar: Int?
+    /// The song's tempo when the take was sung. A song whose tempo has changed since plays the take
+    /// stretched to the tempo it has now, its pitch kept (`Audio.stretch(in:)`). Nil for a take from
+    /// before this was kept, which plays as it was sung.
+    public var tempo: Double?
 
     public init(section: SectionID? = nil, startBar: Int, startBeat: Double = 0, input: String? = nil,
-                latencyCompensation: Double = 0, pass: Int = 1, sectionStartBar: Int? = nil) {
+                latencyCompensation: Double = 0, pass: Int = 1, sectionStartBar: Int? = nil, tempo: Double? = nil) {
         self.section = section
         self.startBar = startBar
         self.startBeat = startBeat
@@ -623,6 +627,7 @@ public struct Take: Hashable, Codable, Sendable {
         self.latencyCompensation = latencyCompensation
         self.pass = pass
         self.sectionStartBar = sectionStartBar
+        self.tempo = tempo
     }
 }
 
@@ -647,12 +652,17 @@ public struct CompPlan: Hashable, Codable, Sendable {
     /// comp moves with its section, as a take does (`Take.sectionStartBar`).
     public var section: SectionID?
     public var sectionStartBar: Int?
+    /// The song's tempo when the comp was rendered: a comp follows a tempo change as a take does
+    /// (`Take.tempo`).
+    public var tempo: Double?
 
-    public init(spans: [Span], crossfade: Double = 0.01, section: SectionID? = nil, sectionStartBar: Int? = nil) {
+    public init(spans: [Span], crossfade: Double = 0.01, section: SectionID? = nil, sectionStartBar: Int? = nil,
+                tempo: Double? = nil) {
         self.spans = spans.sorted { $0.startBar < $1.startBar }
         self.crossfade = crossfade
         self.section = section
         self.sectionStartBar = sectionStartBar
+        self.tempo = tempo
     }
 
     public var takes: [VersionID] {
@@ -670,6 +680,15 @@ extension Audio {
         let then = take?.sectionStartBar ?? comp?.sectionStartBar
         guard let section, let then, let now = song.startBar(of: section) else { return 0 }
         return now - then
+    }
+
+    /// How much longer the audio plays in `song` than it was sung: the tempo it was sung at over
+    /// the song's tempo now — 100 bpm after 92 plays it at 0.92 of its length. 1 when the tempo
+    /// has not changed, or when the audio does not say what it was sung at.
+    public func stretch(in song: Song) -> Double {
+        guard let sung = take?.tempo ?? comp?.tempo, sung > 0, song.tempo > 0 else { return 1 }
+        let ratio = sung / song.tempo
+        return abs(ratio - 1) < 0.0001 ? 1 : ratio
     }
 }
 

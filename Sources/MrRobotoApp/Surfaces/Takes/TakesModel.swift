@@ -104,10 +104,11 @@ public final class TakesModel {
     /// count-in, before the take does.
     static func seconds(of version: PartVersion, clock: TransportClock, song: Song? = nil) -> (start: Double, end: Double)? {
         guard let audio = Guidance.audio(of: version), let take = audio.take else { return nil }
-        // Moved with its section, as the song plays it.
+        // Moved with its section, and at the song's tempo, as the song plays it.
         let moved = song.map { Double(audio.barsMoved(in: $0)) * clock.secondsPerBar } ?? 0
         let start = clock.seconds(forBar: take.startBar) + take.startBeat * clock.secondsPerBeat + moved
-        return (start, (audio.alignmentOffset.map { $0 + moved } ?? start) + audio.duration)
+        let aligned = audio.alignmentOffset != nil ? TakePlacement.alignment(of: audio, in: song, clock: clock) : start
+        return (start, aligned + TakePlacement.duration(of: audio, in: song))
     }
 
     /// Takes the lanes' takes again: a take just stopped in the Booth, or a section's takes read
@@ -329,10 +330,10 @@ public final class TakesModel {
         host.stopAudition()
     }
 
-    /// How long a take plays for: the version's own record of its length, else the audio's, else
-    /// nothing — a take with no audio plays nothing and stops at once.
+    /// How long a take plays for: the version's own record of its length at the song's tempo, else
+    /// the audio's, else nothing — a take with no audio plays nothing and stops at once.
     private static func duration(of version: PartVersion, in host: any TakesHosting) -> Double {
-        if let duration = Guidance.audio(of: version)?.duration, duration > 0 { return duration }
+        if let audio = Guidance.audio(of: version), audio.duration > 0 { return TakePlacement.duration(of: audio, in: host.song) }
         guard let audio = host.audio(of: version), audio.sampleRate > 0 else { return 0 }
         return Double(audio.planar.first?.count ?? 0) / audio.sampleRate
     }

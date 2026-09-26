@@ -241,6 +241,8 @@ public final class AppState {
     /// wants the write now sets this short; one that wants to assert on "unsaved" leaves it long.
     @ObservationIgnored public var autosaveDelay: Duration? = .seconds(4)
     @ObservationIgnored private var autosave: Task<Void, Never>?
+    /// The sung parts being stretched to a new tempo ahead of the next play (`stretchSungParts`).
+    @ObservationIgnored var stretching: Task<Void, Never>?
 
     /// Where the frame remembers the little it remembers between launches: the last song opened.
     @ObservationIgnored let defaults: UserDefaults

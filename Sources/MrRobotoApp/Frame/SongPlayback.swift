@@ -52,11 +52,14 @@ public struct SongPlayback: Equatable, Sendable {
         /// transport was started from (`starting(atBar:)`). The file's frame at `skip` is what
         /// sounds at `startsAt`.
         public var skip: Double
+        /// How much longer the file plays than it is: a take sung at another tempo, played at the
+        /// song's (`Audio.stretch(in:)`). `duration` and `skip` are in the stretched file's seconds.
+        public var stretch: Double
 
         public var id: VersionID { version }
 
         public init(version: VersionID, name: String, url: URL,
-                    startsAt: Double = 0, duration: Double = 0, part: PartID? = nil, skip: Double = 0) {
+                    startsAt: Double = 0, duration: Double = 0, part: PartID? = nil, skip: Double = 0, stretch: Double = 1) {
             self.version = version
             self.name = name
             self.url = url
@@ -64,6 +67,7 @@ public struct SongPlayback: Equatable, Sendable {
             self.duration = duration
             self.part = part
             self.skip = max(0, skip)
+            self.stretch = stretch
         }
     }
 
@@ -723,21 +727,24 @@ public struct SongPlayback: Equatable, Sendable {
             // Graph order, not `latestVersion`: two versions made in the same millisecond — a
             // comp kept straight after its takes — are ordered by id there, and the ledger already
             // counts the graph for the same reason.
-            guard let version = sungVersion(of: partID, in: song), let audio = Guidance.audio(of: version),
-                  audio.take != nil || audio.comp != nil else { continue }
+            // Placed by its own take or comp, or by the take a corrected version was corrected from:
+            // a take with a Check's fix applied used to have neither, and fell silent in the song.
+            guard let version = sungVersion(of: partID, in: song),
+                  let audio = TakePlacement.audio(of: version, in: song) else { continue }
             guard let url = mediaURL(audio.media) else { missingMedia = true; continue }
             // Where the audio's first frame sits, and where the take itself begins: the bar the
             // Booth was recording for. They differ by a count-in — the audio starts in it, bars
             // before the section — and what plays is the take, not the breath before it.
             // Moved with its section: a take sung to the Hook plays in the Hook wherever the form has
-            // put it since, not at the seconds it was sung at.
+            // put it since, not at the seconds it was sung at. And at the song's tempo: sung at 92
+            // and played at 100, it is stretched to 0.92 of its length, its pitch kept.
             let moved = audio.barsMoved(in: song)
             let takeStart = audio.take.map { clock.seconds(forBar: $0.startBar + moved, beat: $0.startBeat) }
-            let aligned = audio.alignmentOffset.map { $0 + Double(moved) * clock.secondsPerBar } ?? takeStart ?? 0
+            let aligned = audio.alignmentOffset != nil ? TakePlacement.alignment(of: audio, in: song, clock: clock) : takeStart ?? 0
             let begins = max(0, aligned, takeStart.map { $0 - 0.05 } ?? aligned)
             out.append(Track(version: version.id, name: PartLabel.title(of: version), url: url,
-                             startsAt: begins, duration: audio.duration, part: partID,
-                             skip: max(0, begins - aligned)))
+                             startsAt: begins, duration: TakePlacement.duration(of: audio, in: song), part: partID,
+                             skip: max(0, begins - aligned), stretch: audio.stretch(in: song)))
         }
         return out
     }

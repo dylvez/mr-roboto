@@ -545,9 +545,15 @@ public enum Guidance {
         take(in: song) != nil && analysisVersion(in: song) != nil
     }
 
-    /// The record as imported: the one `.audio` version whose role is `.take`.
+    /// The record as imported: the one `.audio` version whose role is `.take` and that was never
+    /// sung here. A take corrected from a Check keeps no `Take` of its own, so it is not counted as
+    /// another pass, and it used to pass for the record: played at the second it was sung from,
+    /// in place of the record it pushed out.
     public static func take(in song: Song) -> PartVersion? {
-        song.versions.last { audio(of: $0)?.role == .take && audio(of: $0)?.take == nil && audio(of: $0)?.comp == nil }
+        song.versions.last { version in
+            guard let audio = audio(of: version), audio.role == .take, audio.take == nil, audio.comp == nil else { return false }
+            return TakePlacement.audio(of: version, in: song) == nil
+        }
     }
 
     /// Takes recorded here (M5): audio versions that carry a `Take`, in graph order. Comps are not
