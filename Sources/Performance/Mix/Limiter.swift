@@ -27,20 +27,31 @@ public enum Limiter {
             for lane in planar { peak = max(peak, abs(lane[i])) }
             if peak > ceiling { needed[i] = ceiling / peak }
         }
-        // Lookahead: the gain at i is the minimum needed over the next `look` frames, so it is
-        // down when the peak lands; then a one-pole release back up.
+        // Lookahead: the gain at i is the minimum needed over needed[i ... i + look], so it is down
+        // when the peak lands; then a one-pole release back up.
+        //
+        // The minimum slides with the window on a ring of candidate indices, each needing less
+        // than the ones after it, so every frame goes in and comes out once. It used to be scanned
+        // afresh at every frame — `look` is 240 at 48 kHz — and a three-minute master spent over a
+        // minute here before it was written.
         var gain = [Float](repeating: 1, count: frames)
-        var window = [Float](repeating: 1, count: look + 1)
+        let capacity = look + 2
+        var ring = [Int](repeating: 0, count: capacity)
+        var head = 0, count = 0
+        func push(_ index: Int) {
+            while count > 0, needed[ring[(head + count - 1) % capacity]] >= needed[index] { count -= 1 }
+            ring[(head + count) % capacity] = index
+            count += 1
+        }
+        for index in 0..<min(look, frames) { push(index) }
         var envelope: Float = 1
         for i in 0..<frames {
-            // Minimum of needed[i ..< i + look], computed with a small ring.
-            var minimum: Float = 1
-            for k in 0...look where i + k < frames { minimum = min(minimum, needed[i + k]) }
+            if i + look < frames { push(i + look) }
+            while count > 0, ring[head] < i { head = (head + 1) % capacity; count -= 1 }
+            let minimum = count > 0 ? min(1, needed[ring[head]]) : 1
             if minimum < envelope { envelope = minimum } else { envelope = minimum + (envelope - minimum) * releaseCoefficient }
             gain[i] = envelope
-            _ = window
         }
-        window = []
         var out = planar
         for c in 0..<out.count {
             for i in 0..<frames { out[c][i] = planar[c][i] * gain[i] }

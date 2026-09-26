@@ -1,3 +1,4 @@
+import Accelerate
 import Analysis
 import Foundation
 
@@ -57,6 +58,27 @@ public enum MixMeter {
     /// The two K-weighting stages for a sample rate (BS.1770-4, Annex 1). The shelf is the
     /// standard's own analogue prototype, bilinear-transformed — not an RBJ shelf, which lands a
     /// few thousandths off the published 48 kHz table.
+    /// A channel through the K-weighting — the shelf, then the high-pass — and squared: the two
+    /// sections cascaded in Accelerate, with the coefficients and the sign convention `Biquad`
+    /// uses. The scalar filters stand in if Accelerate will not set up.
+    static func weightedSquares(_ lane: [Float], shelf: Biquad, highPass: Biquad) -> [Double] {
+        let n = lane.count
+        guard n > 0 else { return [] }
+        let coefficients = [shelf.b0, shelf.b1, shelf.b2, shelf.a1, shelf.a2,
+                            highPass.b0, highPass.b1, highPass.b2, highPass.a1, highPass.a2]
+        guard let setup = vDSP_biquad_CreateSetupD(coefficients, 2) else {
+            return highPass.filter(shelf.filter(lane)).map { Double($0) * Double($0) }
+        }
+        defer { vDSP_biquad_DestroySetupD(setup) }
+        var input = [Double](repeating: 0, count: n)
+        vDSP_vspdp(lane, 1, &input, 1, vDSP_Length(n))
+        var delay = [Double](repeating: 0, count: 2 * 2 + 2)
+        var output = [Double](repeating: 0, count: n)
+        vDSP_biquadD(setup, &delay, input, 1, &output, 1, vDSP_Length(n))
+        vDSP_vsqD(output, 1, &output, 1, vDSP_Length(n))
+        return output
+    }
+
     static func kWeighting(sampleRate: Double) -> (shelf: Biquad, highPass: Biquad) {
         let f0 = 1681.974450955533, q = 0.7071752369554196, gainDB = 3.999843853973347
         let k = tan(Double.pi * f0 / sampleRate)
@@ -75,25 +97,31 @@ public enum MixMeter {
     public static func integratedLoudness(_ planar: [[Float]], sampleRate: Double) -> Double {
         guard let frames = planar.first?.count, frames > 0, sampleRate > 0 else { return -.infinity }
         let (shelf, highPass) = kWeighting(sampleRate: sampleRate)
-        let weighted = planar.map { highPass.filter(shelf.filter($0)) }
         let block = Int(0.4 * sampleRate), hop = Int(0.1 * sampleRate)
         guard block > 0, hop > 0 else { return -.infinity }
+        // Each channel K-weighted and squared, then summed as it goes, so a block's mean square is
+        // a difference of two running totals rather than 0.4 s summed again every 0.1 s.
+        let totals = planar.map { lane -> [Double] in
+            let squares = weightedSquares(lane, shelf: shelf, highPass: highPass)
+            var running = [Double](repeating: 0, count: squares.count + 1)
+            var sum = 0.0
+            for i in 0..<squares.count { sum += squares[i]; running[i + 1] = sum }
+            return running
+        }
         // Mean square per block, summed over channels (weights of 1 for L/R/mono).
         var blocks: [Double] = []
         var start = 0
         while start + block <= frames {
             var sum = 0.0
-            for channel in weighted {
-                var acc = 0.0
-                for i in start..<(start + block) { let v = Double(channel[i]); acc += v * v }
-                sum += acc / Double(block)
+            for running in totals where running.count > start + block {
+                sum += (running[start + block] - running[start]) / Double(block)
             }
             blocks.append(sum)
             start += hop
         }
         if blocks.isEmpty {
             var sum = 0.0
-            for channel in weighted { sum += channel.reduce(0.0) { $0 + Double($1) * Double($1) } / Double(frames) }
+            for running in totals { sum += (running.last ?? 0) / Double(frames) }
             blocks = [sum]
         }
         func lkfs(_ ms: Double) -> Double { ms > 0 ? -0.691 + 10 * log10(ms) : -.infinity }
@@ -134,24 +162,44 @@ public enum MixMeter {
         }
         guard let frames = planar.first?.count, frames > 0 else { return [] }
         var envelope = [Float](repeating: 0, count: frames)
+        // Each phase of the interpolator is a 12-tap filter over the input, run as a convolution
+        // (Accelerate): the same kernel and the same sums the scalar loop took, and a master's
+        // true peak read in a fraction of the time.
+        let length = taps / factor
+        // The interpolator's group delay is (taps − 1) / 2 input frames: place the peak where it
+        // belongs, so the limiter's lookahead lines up with the audio.
+        let delay = (taps - 1) / (2 * factor)
         for lane in planar {
-            for n in 0..<min(frames, lane.count) {
-                var peak: Float = 0
-                for phase in 0..<factor {
-                    var acc: Float = 0
-                    var j = phase
-                    var m = n
-                    while j < taps, m >= 0 {
-                        acc += kernel[j] * lane[m]
-                        j += factor
-                        m -= 1
+            let n = min(frames, lane.count)
+            guard n > 0 else { continue }
+            // Zeros before the first frame, as the scalar filter read nothing before it.
+            var padded = [Float](repeating: 0, count: n + length - 1)
+            padded.replaceSubrange((length - 1)..<(length - 1 + n), with: lane[0..<n])
+            var peaks = [Float](repeating: 0, count: n)
+            var filtered = [Float](repeating: 0, count: n)
+            for phase in 0..<factor {
+                let sub = stride(from: phase, to: taps, by: factor).map { kernel[$0] }
+                padded.withUnsafeBufferPointer { input in
+                    sub.withUnsafeBufferPointer { filter in
+                        // A reversed filter makes vDSP's correlation a convolution:
+                        // filtered[i] = Σ sub[k] · lane[i − k].
+                        vDSP_conv(input.baseAddress!, 1, filter.baseAddress! + (sub.count - 1), -1,
+                                  &filtered, 1, vDSP_Length(n), vDSP_Length(sub.count))
                     }
-                    peak = max(peak, abs(acc))
                 }
-                // The interpolator's group delay is (taps − 1) / 2 input frames: place the peak
-                // where it belongs, so the limiter's lookahead lines up with the audio.
-                let at = max(0, n - (taps - 1) / (2 * factor))
-                envelope[at] = max(envelope[at], peak)
+                vDSP_vabs(filtered, 1, &filtered, 1, vDSP_Length(n))
+                vDSP_vmax(peaks, 1, filtered, 1, &peaks, 1, vDSP_Length(n))
+            }
+            // envelope[i − delay] takes peaks[i]; the first `delay` land on frame 0.
+            for i in 0..<min(delay, n) { envelope[0] = max(envelope[0], peaks[i]) }
+            if n > delay {
+                let shifted = n - delay
+                peaks.withUnsafeBufferPointer { source in
+                    envelope.withUnsafeMutableBufferPointer { target in
+                        vDSP_vmax(target.baseAddress!, 1, source.baseAddress! + delay, 1,
+                                  target.baseAddress!, 1, vDSP_Length(shifted))
+                    }
+                }
             }
         }
         return envelope
