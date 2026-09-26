@@ -236,6 +236,20 @@ struct DirectorDustCriticTests {
                 == [Dust.pass(.sp1200, mix: 0.6), Dust.pass(.cassette, mix: 1)])
     }
 
+    @Test("A groove playing a chop's slices is measured by its chop: a corner above the chop's rolloff is flagged")
+    func grooveOnAChopIsMeasured() async throws {
+        let built = try DustFixture.build("director-dust-chop-groove")
+        defer { WiringFixture.remove(built.directory) }
+        #expect(built.app.setChop(built.dry.partID, for: built.groove.partID))
+
+        let result = await toolbox(built).run(call(built.groove, "sp1200", 0.6))
+        #expect(!result.isError, "\(result.content)")
+        let value = try DirectorJSON.parse(Data(result.content.utf8))
+        let findings = value["findings"]?.arrayValue?.compactMap(\.stringValue) ?? []
+        #expect(findings.first?.hasPrefix("Chain check: There is nothing above the corner left to remove") == true,
+                "\(findings)")
+    }
+
     @Test("A corner above the source's own rolloff is written, flagged to the model, and said on the rail")
     func cornerAboveRolloffIsFlagged() async throws {
         let built = try DustFixture.build("director-dust-corner")

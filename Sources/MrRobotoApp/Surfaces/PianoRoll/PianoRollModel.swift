@@ -696,18 +696,6 @@ public final class PianoRollModel {
         }
     }
 
-    public func playLine() {
-        let line = bassline, tempo = self.tempo, signature = timeSignature
-        let notes = self.notes, instrument = self.instrument, mode = self.mode
-        Task { [host] in
-            if mode == .melody {
-                await host.playMelody(notes, tempo: tempo, timeSignature: signature, instrument: instrument)
-            } else {
-                await host.play(line, tempo: tempo, timeSignature: signature)
-            }
-        }
-    }
-
     public func stop() {
         Task { [host] in await host.stop() }
     }

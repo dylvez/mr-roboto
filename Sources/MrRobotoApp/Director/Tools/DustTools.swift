@@ -233,12 +233,19 @@ public struct DegradePartTool: DirectorTool {
     // MARK: The source's own top end
 
     /// The chop's 95% rolloff over the region it covers, when its audio can be reached: from the
-    /// workbench when this session imported it, from the library otherwise. Nil for a groove —
+    /// workbench when this session imported it, from the library otherwise. A groove playing a
+    /// chop's slices is measured by that chop, which is its sound. Nil for a groove on a machine —
     /// whose sound is a machine bounce, not a source — and whenever the audio is not reachable, in
     /// which case the corner check has nothing to measure against and correctly says nothing.
     private func sourceBandwidth(of version: PartVersion) async -> Double? {
-        guard case .sample(let sample) = version.kind else { return nil }
         let song = await workspace.song
+        var source = version
+        if case .groove = version.kind, let song,
+           let chop = ChopSound.part(of: SongPlayback.drumSoundID(for: version.partID, in: song)),
+           let cut = song.versions.last(where: { $0.partID == chop }) {
+            source = cut
+        }
+        guard case .sample(let sample) = source.kind else { return nil }
         let region = ChopLaneBinding.region(of: sample,
                                             bars: Guidance.analysis(in: song)?.bars ?? [],
                                             tempo: sample.detectedTempo ?? song?.tempo)

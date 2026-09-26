@@ -31,27 +31,11 @@ final class BassAdapter: PianoRollHosting {
         await service.playBass([VoiceSampler.Hit(note: note, velocity: velocity, at: 0, duration: duration)])
     }
 
-    func play(_ bassline: Bassline, tempo: Double, timeSignature: TimeSignature) async {
-        await prepare(bassline.sound ?? "finger")
-        let timeline = GrooveTimeline.tempo(tempo, timeSignature: timeSignature)
-        let hits = BasslinePlayer.hits(for: bassline, on: timeline, offsetBeats: 0)
-        await service.playBass(hits)
-    }
-
     func stop() async { await service.stop() }
 
     func auditionMelody(note: Int, velocity: Int, duration: Double, instrument: String) async {
         guard await prepareInstrument(instrument) else { return }
         await service.playInstrument([VoiceSampler.Hit(note: note, velocity: velocity, at: 0, duration: duration)])
-    }
-
-    func playMelody(_ notes: [NoteEvent], tempo: Double, timeSignature: TimeSignature, instrument: String) async {
-        guard !notes.isEmpty, await prepareInstrument(instrument) else { return }
-        let secondsPerBeat = 60 / max(1, tempo)
-        await service.playInstrument(notes.map { note in
-            VoiceSampler.Hit(note: note.pitch.midi, velocity: note.velocity,
-                             at: note.start * secondsPerBeat, duration: note.duration * secondsPerBeat)
-        })
     }
 
     func setInstrument(_ id: String, for part: PartID?) { app.setInstrument(id, for: part) }

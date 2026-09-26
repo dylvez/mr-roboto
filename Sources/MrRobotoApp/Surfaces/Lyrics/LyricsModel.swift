@@ -34,6 +34,13 @@ public protocol LyricsHosting: AnyObject {
     var sectionNames: [String] { get }
     /// Beats in one of the song's bars, for where a note falls.
     var beatsPerBar: Int { get }
+    /// The newest version of a part in the song, so a keep builds on it — the Lyricist's rewrite,
+    /// or a restore — rather than on the version this page last kept.
+    func newest(of part: PartID) -> PartVersion?
+}
+
+extension LyricsHosting {
+    public func newest(of part: PartID) -> PartVersion? { nil }
 }
 
 /// A host with no song around the words: nothing to set them to, no sections to name, 4/4.
@@ -343,7 +350,8 @@ public final class LyricsModel {
         var note = "\(observation?.lineCount ?? 0) lines · \(observation?.schemes.joined(separator: " / ") ?? "")"
         if let setting { note += " · set to \(setting.melody)" }
         let version: PartVersion
-        if let previous = versions.last ?? base {
+        if let kept = versions.last ?? base {
+            let previous = host.newest(of: kept.partID) ?? kept
             version = previous.deriving(payload, by: .user, operation: Operation.edit, note: note)
         } else {
             version = PartVersion(partID: PartID(), kind: payload, author: .user, operation: Operation.written, note: note)
@@ -388,13 +396,23 @@ extension LyricsModel: KeepsAsItGoes {
 @MainActor
 final class LyricsAdapter: LyricsHosting {
     private let app: AppState
-    init(app: AppState) { self.app = app }
+    /// The page's bench item, whose binding follows what it keeps.
+    private let surface: SurfaceID?
+    init(app: AppState, surface: SurfaceID? = nil) {
+        self.app = app
+        self.surface = surface
+    }
+
+    func newest(of part: PartID) -> PartVersion? {
+        app.song?.versions.last { $0.partID == part }
+    }
 
     /// What the Lyricist said last, so words kept as you type do not repeat it in the rail.
     private var lastSaid: String?
 
     func commit(_ version: PartVersion) -> Bool {
         guard app.record(version) else { return false }
+        if let surface { app.surfaceKept(version, on: surface) }
         if case .lyric(let lyric) = version.kind {
             let set = lyric.alignedTo.flatMap { melody($0)?.melody }
             let readings = Lyricist().read(LyricObservation.of(lyric, label: PartLabel.title(of: version), corpus: app.voice,

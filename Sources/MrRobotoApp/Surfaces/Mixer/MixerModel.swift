@@ -25,7 +25,7 @@ public final class MixerModel {
     public var tab: Tab = .strips
 
     /// One strip on the surface.
-    public struct Row: Identifiable, Sendable {
+    public struct Row: Identifiable, Equatable, Sendable {
         public var part: PartID
         public var label: String
         public var id: PartID { part }
@@ -78,6 +78,16 @@ public final class MixerModel {
         self.rows = rows
         overlayA = rows.first?.part
         overlayB = rows.dropFirst().first?.part
+    }
+
+    /// The strips follow the song: a part written while the Mixer is open gets its fader, and a
+    /// renamed one its name. The rows used to be read once, when the Mixer opened.
+    public func syncRows() {
+        let fresh = Self.rows(of: host.playback, song: host.song, mix: mix)
+        guard fresh != rows else { return }
+        rows = fresh
+        if let overlayA, !rows.contains(where: { $0.part == overlayA }) { self.overlayA = rows.first?.part }
+        if let overlayB, !rows.contains(where: { $0.part == overlayB }) { self.overlayB = rows.dropFirst().first?.part }
     }
 
     /// Every part the plan plays, in transport order, plus any the mix already names.

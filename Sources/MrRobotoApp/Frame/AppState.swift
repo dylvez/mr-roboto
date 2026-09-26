@@ -156,7 +156,7 @@ public final class LiveTransportHost: TransportHost {
         // at once, where before the plan could name one dusty groove and one chop in the whole
         // song. Running out is not silent but it is fatal to the part: `LiveSongPlayer` throws
         // rather than dropping it.
-        let engine = try await Engine(playerCount: 8)
+        let engine = try await Engine(playerCount: SongPlayback.playerNodes)
         // The remembered input device, before the engine runs: the input node's device is best set while it is stopped.
         let uid = InputSettings().choice.deviceUID
         if uid != nil { try? await engine.setInputDevice(uid: uid) }
@@ -919,8 +919,12 @@ public final class AppState {
         refreshPlayback()
         scheduleAutosave()
         let bars = cleaned.reduce(0) { $0 + $1.lengthInBars }
+        var detail = cleaned.isEmpty ? nil : cleaned.map { "\($0.name) \($0.lengthInBars)" }.joined(separator: " · ") + " · \(bars) bars"
+        // What is playing was scheduled from the form as it was; the new one is heard from the
+        // next play, and the strip and the fade follow the one that is sounding until then.
+        if transport.isPlaying { detail = (detail.map { $0 + ". " } ?? "") + "Heard the next time you press play." }
         note(source, cleaned.isEmpty ? "Cleared the arrangement" : "Arranged \(cleaned.count) section\(cleaned.count == 1 ? "" : "s")",
-             detail: cleaned.isEmpty ? nil : cleaned.map { "\($0.name) \($0.lengthInBars)" }.joined(separator: " · ") + " · \(bars) bars")
+             detail: detail)
         return true
     }
 
@@ -965,6 +969,7 @@ public final class AppState {
         playbackStartBar = 0
         countInTargetBar = nil
         runningLoopSeconds = nil
+        runningForm = nil
         let transportHost = self.transportHost, playbackHost = self.playbackHost
         pendingStop = Task { @MainActor in
             await transportHost.stop()
@@ -1218,12 +1223,22 @@ public final class AppState {
     /// Whether the running plan loops, and the length of one pass in transport seconds. Read from
     /// the plan that was started, not from the Loop toggle, which only takes effect on the next play.
     private var runningLoopSeconds: Double?
+    /// The form the running transport was started on. The engine plays that one until it stops;
+    /// the section strip, per-section gains and the fade follow it rather than an edit made
+    /// since, which would light the Verse while the Intro plays and fade the wrong bars.
+    @ObservationIgnored private var runningForm: [Section]?
+
+    /// The sections that are sounding: the running form while the transport plays, else the song's.
+    private var soundingForm: [Section] {
+        (transport.isPlaying ? runningForm : nil) ?? song?.sections ?? []
+    }
 
     /// The song's fade-out, in song seconds, when the song has one and plays to its end: a loop
     /// never ends, so it never fades.
     public var fadeSpan: ClosedRange<Double>? {
-        guard runningLoopSeconds == nil, let song, playback.isArranged else { return nil }
-        return FadeOut.span(bars: playback.mix?.master.fadeOutBars, songBars: song.lengthInBars, clock: clock)
+        guard runningLoopSeconds == nil, song != nil, playback.isArranged else { return nil }
+        let bars = soundingForm.reduce(0) { $0 + max(1, $1.lengthInBars) }
+        return FadeOut.span(bars: playback.mix?.master.fadeOutBars, songBars: bars, clock: clock)
     }
 
     /// The fade gain last handed to the player, so it is told only when it moves.
@@ -1251,7 +1266,7 @@ public final class AppState {
 
     /// From `bar`, after `countIn` bars of click. `click` true keeps the click going for the whole
     /// of playback (the Booth's Click); nil leaves it to the transport's own toggle.
-    public func startTransport(fromBar bar: Int, countIn: Int, click: Bool?) async {
+    public func startTransport(fromBar bar: Int, countIn: Int, click: Bool?, leavingOut silenced: PartID? = nil) async {
         guard transport != .playing, transport != .starting else { return }
         if let pendingStop {
             self.pendingStop = nil
@@ -1268,6 +1283,8 @@ public final class AppState {
         // live on the song's plan, which every export and reading renders, so a song exported with
         // Click on had the metronome in the master and in every stem.
         plan = plan.clicking((click ?? false) || isClicking)
+        // The Booth's own section, while it records: the take being replaced is not sung over.
+        if let silenced { plan.tracks.removeAll { $0.part == silenced } }
         guard plan.isPlayable else {
             let silence = plan.silence ?? SongPlayback.Silence(headline: "Nothing to play", detail: "")
             transport = .nothingToPlay(silence)
@@ -1286,6 +1303,7 @@ public final class AppState {
             await playbackHost.fade(1)
             try await transportHost.start(clock: clock)
             playbackStartBar = plan.startsAtBar
+            runningForm = song?.sections
             countInTargetBar = countIn > 0 ? max(0, bar) : nil
             runningLoopSeconds = plan.loops ? plan.formSeconds : nil
             transport = .playing
@@ -1317,9 +1335,14 @@ public final class AppState {
     }
 
     /// The Booth's Record: from the section's first bar, after a count-in, with or without a click.
-    public func startTransport(fromSection id: SectionID?, countInBars: Int, click: Bool?) async {
+    public func startTransport(fromSection id: SectionID?, countInBars: Int, click: Bool?,
+                               leavingOut silenced: PartID? = nil) async {
         if transport == .playing || transport == .starting { await stopTransport() }
-        await startTransport(fromBar: id.flatMap(sectionStartBar) ?? 0, countIn: countInBars, click: click)
+        // The form on screen, before its bars are counted: a section resized a moment ago in
+        // Structure is kept first, or the section would start where it used to.
+        keepSurfaceWork()
+        await startTransport(fromBar: id.flatMap(sectionStartBar) ?? 0, countIn: countInBars, click: click,
+                             leavingOut: silenced)
     }
 
     /// The transport's Click, on or off. Like the loop, it takes effect the next time you press play.
@@ -1415,6 +1438,7 @@ public final class AppState {
         playbackStartBar = 0
         countInTargetBar = nil
         runningLoopSeconds = nil
+        runningForm = nil
         note(.you, "Stop")
     }
 
@@ -1462,19 +1486,21 @@ public final class AppState {
 
     /// Which section the playhead is in, from the sections' own bar lengths laid end to end.
     public func section(atSeconds seconds: Double) -> SectionID? {
-        guard let song, !song.sections.isEmpty else { return nil }
+        let sections = soundingForm
+        guard !sections.isEmpty else { return nil }
+        let length = sections.reduce(0) { $0 + max(1, $1.lengthInBars) }
         let beatsPerBar = Double(max(1, clock.timeSignature.beatsPerBar))
         var bar = Int((clock.beat(forSeconds: max(0, seconds)) / beatsPerBar).rounded(.down))
         // Looping, the form comes round: bar 46 of a 46-bar song is its first bar again — or,
         // started from bar 12, its twelfth: a loop from a section runs that section to the end.
-        let from = min(playbackStartBar, max(0, song.lengthInBars - 1))
-        if runningLoopSeconds != nil, song.lengthInBars > from, bar >= from { bar = from + (bar - from) % (song.lengthInBars - from) }
+        let from = min(playbackStartBar, max(0, length - 1))
+        if runningLoopSeconds != nil, length > from, bar >= from { bar = from + (bar - from) % (length - from) }
         var start = 0
-        for section in song.sections {
+        for section in sections {
             start += max(1, section.lengthInBars)
             if bar < start { return section.id }
         }
-        return song.sections.last?.id
+        return sections.last?.id
     }
 
     /// Lights the section the playhead is in. Deliberately not `setActiveSection`: following

@@ -144,18 +144,49 @@ public final class StructureModel {
     }
 
     /// Follows the song: a part adopted or a section stitched from outside this surface — a drop, the
-    /// Director's `arrange` — shows up here. A working copy with unkept edits is left alone.
+    /// Director's `arrange`, chords joining the form as they are written — shows up here.
+    ///
+    /// A working copy with an edit waiting to keep takes the outside change too (`merge`). It used
+    /// to be left alone, and its keep a moment later wrote the change away. The undo history is
+    /// started again, because its snapshots predate the change, and ⌘Z would take the change out
+    /// along with the edit it was for.
     public func sync(with song: Song?) {
         layers = song.map(Self.layers(in:)) ?? []
         lyric = Self.lyric(in: song)
         let current = song?.sections ?? []
         guard current != committed else { return }
         let wasClean = !isDirty
+        let before = committed
         committed = current
-        if wasClean {
-            sections = normalised(current)
-            if selected.map({ id in sections.contains { $0.id == id } }) != true { selected = sections.first?.id }
+        history = EditHistory()
+        lastEdit = nil
+        sections = wasClean ? normalised(current) : normalised(Self.merge(working: sections, was: before, now: current))
+        if selected.map({ id in sections.contains { $0.id == id } }) != true { selected = sections.first?.id }
+    }
+
+    /// The working copy with what changed outside it, from `was` to `now`, laid over it: parts
+    /// stitched into or out of a section, and sections added or removed. The edit's own changes
+    /// stand where the two touch different things.
+    static func merge(working: [Section], was: [Section], now: [Section]) -> [Section] {
+        let old = Dictionary(was.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let new = Dictionary(now.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        var out: [Section] = []
+        for var section in working {
+            if old[section.id] != nil, new[section.id] == nil { continue }
+            if let before = old[section.id], let after = new[section.id] {
+                let beforeParts = Set(before.stitch.map(\.part)), afterParts = Set(after.stitch.map(\.part))
+                section.stitch.removeAll { beforeParts.contains($0.part) && !afterParts.contains($0.part) }
+                for lane in after.stitch where !beforeParts.contains(lane.part)
+                    && !section.stitch.contains(where: { $0.part == lane.part }) {
+                    section.stitch.append(lane)
+                }
+            }
+            out.append(section)
         }
+        for section in now where old[section.id] == nil && !out.contains(where: { $0.id == section.id }) {
+            out.append(section)
+        }
+        return out
     }
 
     /// A library row dropped on a section.
@@ -406,10 +437,15 @@ public final class StructureModel {
     /// leaves out, which is the case that actually bites: a part written after the form was
     /// arranged belongs to no section at all, and every section's line says the same thing, so the
     /// one you happen to have selected looks like a local problem rather than the whole form's.
+    ///
+    /// Only a kind no section plays at all. A second groove kept to compare, beside the one every
+    /// section plays, is not missing from the song: its own surface offers to use it instead. It
+    /// used to be named here, over a button that fills only what is missing and so did nothing.
     public var orphanedText: String? {
         let named = Set(sections.flatMap(\.stitch).map(\.part))
+        let played = Set(layers.filter { named.contains($0.id) }.map(\.type))
         let kinds = Self.playableTypes.filter { type in
-            layers.contains { $0.type == type && $0.plays && !named.contains($0.id) }
+            !played.contains(type) && layers.contains { $0.type == type && $0.plays }
         }
         guard !kinds.isEmpty, !sections.isEmpty else { return nil }
         let names = kinds.map { Self.name(of: $0).lowercased() }

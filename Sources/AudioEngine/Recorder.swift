@@ -265,6 +265,14 @@ public final class Recorder: @unchecked Sendable {
         return nil
     }
 
+    /// A recorder let go while it was still recording — its surface closed mid-take — ends its
+    /// source. The input's tap stayed installed otherwise, and the next take's tap on the same bus
+    /// was refused.
+    deinit {
+        let running = lock.withLock { file != nil }
+        if running { source.end() }
+    }
+
     /// Stops, closes the file and says what was recorded.
     @discardableResult
     public func stop() throws -> Recording {

@@ -89,6 +89,22 @@ struct FrameRenderTests {
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-sound")
     }
 
+    @Test("the Chop lane on a real bar: slices, pads, the feel and Make the groove")
+    func chopLaneLoaded() throws {
+        FontRegistration.registerBundledFonts()
+        // The lane holds its host weakly: keep the stub alive, or Play has nothing to play through.
+        // The pad grid is lazy, which `ImageRenderer` does not draw; the space it takes is blank here.
+        let (lane, host) = ChopLaneFixtures.cleanLane()
+        try withExtendedLifetime(host) {
+            lane.feelName = "Boom-Bap Pocket"
+            lane.playRegroove()
+            try write(ChopLaneView(surface: lane).background(Design.Palette.panel), size: CGSize(width: 1240, height: 820),
+                      name: "chop-lane")
+            try write(ChopLaneView(surface: lane).background(Design.Palette.panel), size: CGSize(width: 900, height: 820),
+                      name: "chop-lane-900")
+        }
+    }
+
     @Test("a groove made from a chop in the Grid: its kit is the chop's slices, wide and narrow")
     func gridOnAChop() throws {
         FontRegistration.registerBundledFonts()

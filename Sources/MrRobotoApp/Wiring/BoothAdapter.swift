@@ -27,8 +27,13 @@ final class BoothAdapter: BoothHosting, TakesHosting {
 
     func play() async { await app.startTransport() }
     func play(from section: SectionID?) async { await app.startTransport(fromSection: section) }
+    /// The Booth's Record. The section's own takes are left out of what plays: the take before
+    /// used to sound under the one being sung, in the headphones or back into the mic.
     func play(from section: SectionID?, countInBars: Int, click: Bool) async {
-        await app.startTransport(fromSection: section, countInBars: countInBars, click: click)
+        let sung = app.song.flatMap { song in
+            Guidance.takes(in: song).last { Guidance.audio(of: $0)?.take?.section == section }?.partID
+        }
+        await app.startTransport(fromSection: section, countInBars: countInBars, click: click, leavingOut: sung)
     }
     func stop() async { await app.stopTransport() }
 
@@ -103,6 +108,16 @@ final class BoothAdapter: BoothHosting, TakesHosting {
 
     func note(_ text: String, detail: String?) { app.note(.session, text, detail: detail) }
 
+    /// A comp's plan with the section its takes were sung to, and where that section starts now:
+    /// the comp was rendered in the song's bars as they are, and moves with the section from here.
+    nonisolated static func placed(_ plan: CompPlan, takes: [PartVersion], in song: Song) -> CompPlan {
+        var plan = plan
+        guard let section = takes.lazy.compactMap({ Guidance.audio(of: $0)?.take?.section }).first else { return plan }
+        plan.section = section
+        plan.sectionStartBar = song.startBar(of: section)
+        return plan
+    }
+
     func recordingStarted(section: SectionID?, startedAt: Double) {
         let midi = SurfaceWiring.shared.midi(for: app)
         guard midi.mode != .off else { return }
@@ -153,8 +168,15 @@ final class BoothAdapter: BoothHosting, TakesHosting {
         guard let audio = Guidance.audio(of: version), let store = app.store,
               let url = try? store.mediaURL(for: audio.media, song: app.song?.id),
               let planar = try? Self.planar(url) else { return nil }
+        return Comp.TakeAudio(planar: planar.planar, sampleRate: planar.sampleRate,
+                              alignmentSeconds: Self.alignment(of: audio, in: app.song, clock: clock))
+    }
+
+    /// Where a sung take's audio begins in the song now: its first frame, moved with its section.
+    nonisolated static func alignment(of audio: Audio, in song: Song?, clock: TransportClock) -> Double {
+        let moved = song.map { Double(audio.barsMoved(in: $0)) * clock.secondsPerBar } ?? 0
         let aligned = audio.alignmentOffset ?? audio.take.map { clock.seconds(forBar: $0.startBar) + $0.startBeat * clock.secondsPerBeat } ?? 0
-        return Comp.TakeAudio(planar: planar.planar, sampleRate: planar.sampleRate, alignmentSeconds: aligned)
+        return aligned + moved
     }
 
     nonisolated static func planar(_ url: URL) throws -> (planar: [[Float]], sampleRate: Double) {
@@ -183,7 +205,8 @@ final class BoothAdapter: BoothHosting, TakesHosting {
     }
 
     func keepComp(_ rendered: Comp.Rendered, plan: CompPlan, takes: [PartVersion]) -> PartVersion? {
-        guard app.song != nil, let first = takes.first else { return nil }
+        guard let song = app.song, let first = takes.first else { return nil }
+        let plan = Self.placed(plan, takes: takes, in: song)
         guard let media = app.keepAudio(rendered.planar, sampleRate: rendered.sampleRate, what: "the comp") else { return nil }
         let duration = Double(rendered.planar.first?.count ?? 0) / rendered.sampleRate
         let audio = Audio(media: media, role: .take, sampleRate: rendered.sampleRate, channelCount: rendered.planar.count,

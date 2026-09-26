@@ -315,6 +315,9 @@ extension AppState {
         note(.you, "Back to \(PartLabel.title(of: target))\(number.map { " (v\($0))" } ?? "")",
              detail: "A new version with v\(number ?? 0)'s music; nothing was removed.")
         refreshSurfaces(showing: target.partID, now: restored.id)
+        // The Mixer and the Master work on the song's newest mix whatever they are bound to, so a
+        // restored mix reaches them only by rebuilding them.
+        if target.type == .mix { refreshSurfaces(of: [.mixer, .master]) }
         return true
     }
 

@@ -580,6 +580,10 @@ public struct SongPlayback: Equatable, Sendable {
 
     // MARK: Deciding what to play
 
+    /// The player nodes the transport's engine has, and a bounce's: one per strip the mix graph
+    /// can seat (`MixGraph.slotCount`), so a form never has a part it can mix and not play.
+    public static let playerNodes = 16
+
     /// Reads the song graph and says what the transport would play.
     ///
     /// - Parameters:
@@ -591,7 +595,7 @@ public struct SongPlayback: Equatable, Sendable {
     ///     missing from the package is *not* playable, and saying so is better than scheduling
     ///     silence.
     public static func plan(for song: Song?,
-                            maximumTracks: Int = 8,
+                            maximumTracks: Int = SongPlayback.playerNodes,
                             mediaURL: (MediaRef) -> URL?) -> SongPlayback {
         guard let song else {
             return SongPlayback(silence: Silence(headline: "No song open",
@@ -615,9 +619,12 @@ public struct SongPlayback: Equatable, Sendable {
             plan.segments = segments(of: song, mediaURL: mediaURL, missingMedia: &missingMedia)
             // What was sung, where it was sung. The record does not run to the form, but a take
             // was recorded *against* the form, on a bar of it, and it plays there. The arranged
-            // player lays its dusty sections on at most two nodes; the rest are for these.
+            // player lays each bounced part — a chop, a dusty groove, a groove on a chop — on a node
+            // of its own for the whole form, and the click takes one more; the rest are for these.
+            // This used to assume two, so a form with three chops and six takes would not start.
+            let bounced = Set(plan.segments.flatMap { $0.voices.filter(\.isBounced).map { $0.part } }).count
             plan.tracks = Array(takeTracks(in: song, mediaURL: mediaURL, missingMedia: &missingMedia)
-                                    .prefix(max(0, maximumTracks - 2)))
+                                    .prefix(max(0, maximumTracks - bounced - 1)))
             if !plan.isPlayable {
                 plan.silence = missingMedia
                     ? silence(for: song, audioVersions: [], missingMedia: true)
@@ -695,20 +702,35 @@ public struct SongPlayback: Equatable, Sendable {
             // Graph order, not `latestVersion`: two versions made in the same millisecond — a
             // comp kept straight after its takes — are ordered by id there, and the ledger already
             // counts the graph for the same reason.
-            guard let version = song.versions.last(where: { $0.partID == partID }), let audio = Guidance.audio(of: version),
+            guard let version = sungVersion(of: partID, in: song), let audio = Guidance.audio(of: version),
                   audio.take != nil || audio.comp != nil else { continue }
             guard let url = mediaURL(audio.media) else { missingMedia = true; continue }
             // Where the audio's first frame sits, and where the take itself begins: the bar the
             // Booth was recording for. They differ by a count-in — the audio starts in it, bars
             // before the section — and what plays is the take, not the breath before it.
-            let takeStart = audio.take.map { clock.seconds(forBar: $0.startBar, beat: $0.startBeat) }
-            let aligned = audio.alignmentOffset ?? takeStart ?? 0
+            // Moved with its section: a take sung to the Hook plays in the Hook wherever the form has
+            // put it since, not at the seconds it was sung at.
+            let moved = audio.barsMoved(in: song)
+            let takeStart = audio.take.map { clock.seconds(forBar: $0.startBar + moved, beat: $0.startBeat) }
+            let aligned = audio.alignmentOffset.map { $0 + Double(moved) * clock.secondsPerBar } ?? takeStart ?? 0
             let begins = max(0, aligned, takeStart.map { $0 - 0.05 } ?? aligned)
             out.append(Track(version: version.id, name: PartLabel.title(of: version), url: url,
                              startsAt: begins, duration: audio.duration, part: partID,
                              skip: max(0, begins - aligned)))
         }
         return out
+    }
+
+    /// The version of a sung part that plays: its newest, except that a take recorded after a comp
+    /// is a new candidate for the comp, not a replacement for it. It used to take the comp's place
+    /// in the song while the Takes surface still said the comp was current. A restore, or a new
+    /// comp, is chosen and plays.
+    static func sungVersion(of part: PartID, in song: Song) -> PartVersion? {
+        let history = song.versions.filter { $0.partID == part }
+        guard let newest = history.last else { return nil }
+        guard let comp = history.lastIndex(where: { Guidance.audio(of: $0)?.comp != nil }) else { return newest }
+        let since = history[(comp + 1)...]
+        return since.allSatisfy({ $0.operation == Operation.recorded }) ? history[comp] : newest
     }
 
     /// A dirtied chop on the transport, or nil when its media is not in the package.

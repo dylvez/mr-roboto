@@ -304,6 +304,7 @@ public final class BoothModel {
     public func record() async {
         guard state != .recording else { return }
         lastError = nil
+        lastHeard = nil
         countInEnds = nil
         countedIn = 0
         // From the section the take is for. The song used to start from bar 1 whatever section
@@ -366,7 +367,11 @@ public final class BoothModel {
         watching = nil
         guard state == .recording, let recorder else { return nil }
         let begins = countInEnds
-        let endedAt = host.playhead
+        // Where the song was when it stopped. A stop from outside the Booth — the space bar, the
+        // transport's Stop, the song's own end — puts the playhead back to 0 before the watch
+        // notices, and a take ending at 0 read as one stopped during its count-in and was dropped.
+        let endedAt = host.isPlaying ? host.playhead : max(host.playhead, lastHeard ?? 0)
+        lastHeard = nil
         self.recorder = nil
         state = .idle
         level = 0
@@ -398,7 +403,8 @@ public final class BoothModel {
         if let begins, placed < begins { placed = begins }
         let position = host.clock.position(forSeconds: max(0, placed))
         let take = Take(section: section, startBar: position.bar, startBeat: position.beat, input: recording.input,
-                        latencyCompensation: recording.latencySeconds, pass: nextPass)
+                        latencyCompensation: recording.latencySeconds, pass: nextPass,
+                        sectionStartBar: sectionBars?.lowerBound)
         guard let version = host.keep(recording, take: take) else {
             lastError = "The take could not be kept."
             return nil
@@ -425,6 +431,9 @@ public final class BoothModel {
     }
 
     /// Follows the level and the count-in, and punches out at the section's end.
+    /// The last song time the watch saw while the song played. See `finishTake`.
+    private var lastHeard: Double?
+
     private func watch() {
         watching?.cancel()
         watching = Task { @MainActor [weak self] in
@@ -432,6 +441,7 @@ public final class BoothModel {
                 guard let self, let recorder = self.recorder else { return }
                 self.level = recorder.peak
                 let playhead = self.host.playhead
+                if self.host.isPlaying { self.lastHeard = playhead }
                 let left = self.barsLeftToCount(at: playhead)
                 if left != self.countInBarsLeft { self.countInBarsLeft = left }
                 if !self.host.isPlaying {

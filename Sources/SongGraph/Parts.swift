@@ -609,15 +609,20 @@ public struct Take: Hashable, Codable, Sendable {
     public var latencyCompensation: Double
     /// Which pass of the section this was: 1 for the first take, 2 for the second…
     public var pass: Int
+    /// The bar `section` started on when the take was sung. The take is placed in bars of the song
+    /// as it was then; a section moved since — a verse before it lengthened, an intro added — moves
+    /// the take with it (`Audio.barsMoved`). Nil for a take from before this was kept.
+    public var sectionStartBar: Int?
 
     public init(section: SectionID? = nil, startBar: Int, startBeat: Double = 0, input: String? = nil,
-                latencyCompensation: Double = 0, pass: Int = 1) {
+                latencyCompensation: Double = 0, pass: Int = 1, sectionStartBar: Int? = nil) {
         self.section = section
         self.startBar = startBar
         self.startBeat = startBeat
         self.input = input
         self.latencyCompensation = latencyCompensation
         self.pass = pass
+        self.sectionStartBar = sectionStartBar
     }
 }
 
@@ -638,16 +643,45 @@ public struct CompPlan: Hashable, Codable, Sendable {
     public var spans: [Span]
     /// Seconds of equal-power crossfade at every seam.
     public var crossfade: Double
+    /// The section the takes were sung to, and the bar it started on when the comp was made: a
+    /// comp moves with its section, as a take does (`Take.sectionStartBar`).
+    public var section: SectionID?
+    public var sectionStartBar: Int?
 
-    public init(spans: [Span], crossfade: Double = 0.01) {
+    public init(spans: [Span], crossfade: Double = 0.01, section: SectionID? = nil, sectionStartBar: Int? = nil) {
         self.spans = spans.sorted { $0.startBar < $1.startBar }
         self.crossfade = crossfade
+        self.section = section
+        self.sectionStartBar = sectionStartBar
     }
 
     public var takes: [VersionID] {
         var seen: [VersionID] = []
         for span in spans where !seen.contains(span.take) { seen.append(span.take) }
         return seen
+    }
+}
+
+extension Audio {
+    /// How many bars the section this was sung to has moved since it was sung: where the section
+    /// starts in `song` now, less where it started then. 0 when either is not known.
+    public func barsMoved(in song: Song) -> Int {
+        let section = take?.section ?? comp?.section
+        let then = take?.sectionStartBar ?? comp?.sectionStartBar
+        guard let section, let then, let now = song.startBar(of: section) else { return 0 }
+        return now - then
+    }
+}
+
+extension Song {
+    /// The bar a section starts on, 0-based: the sections before it laid end to end.
+    public func startBar(of section: SectionID) -> Int? {
+        var bar = 0
+        for candidate in sections {
+            if candidate.id == section { return bar }
+            bar += max(1, candidate.lengthInBars)
+        }
+        return nil
     }
 }
 

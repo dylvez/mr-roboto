@@ -15,22 +15,16 @@ import Testing
 @MainActor
 final class RollStub: PianoRollHosting {
     var auditioned: [(note: Int, duration: Double, sound: String)] = []
-    var played: [Bassline] = []
     var committed: [PartVersion] = []
     var refuses = false
 
     func audition(note: Int, velocity: Int, duration: Double, sound: String) async {
         auditioned.append((note, duration, sound))
     }
-    func play(_ bassline: Bassline, tempo: Double, timeSignature: TimeSignature) async { played.append(bassline) }
     var melodyAuditioned: [(note: Int, instrument: String)] = []
-    var melodiesPlayed: [(notes: [NoteEvent], instrument: String)] = []
     var instrument = InstrumentVoiceSpec.rhodes.id
     func auditionMelody(note: Int, velocity: Int, duration: Double, instrument: String) async {
         melodyAuditioned.append((note, instrument))
-    }
-    func playMelody(_ notes: [NoteEvent], tempo: Double, timeSignature: TimeSignature, instrument: String) async {
-        melodiesPlayed.append((notes, instrument))
     }
     var instrumentParts: [PartID?] = []
     func setInstrument(_ id: String, for part: PartID?) { instrument = id; instrumentParts.append(part) }
@@ -181,15 +175,6 @@ struct PianoRollTests {
         #expect(model.notes.isEmpty)
         #expect(model.readings.isEmpty)
         #expect(model.observation == nil)
-    }
-
-    @Test("play line hands the whole line to the host")
-    func play() async throws {
-        let stub = RollStub()
-        let model = PianoRollModel(host: stub, groove: Self.kicking(), key: Self.key, tempo: 92)
-        model.playLine()
-        try await Task.sleep(for: .milliseconds(20))
-        #expect(stub.played.first == model.bassline)
     }
 
     @Test("a hand-edited line holds the levers: they move, the notes stay, until the explicit rewrite")
@@ -482,10 +467,6 @@ struct PianoRollMelodyTests {
         await Task.yield()
         #expect(stub.melodyAuditioned.last?.note == 79, "a melody note goes to the instrument")
         #expect(stub.melodyAuditioned.last?.instrument == InstrumentVoiceSpec.rhodes.id)
-
-        model.playLine()
-        await Task.yield()
-        #expect(stub.melodiesPlayed.count == 1 && stub.melodiesPlayed[0].notes.count == 3)
 
         let version = model.commit()
         guard case .melody(let melody) = version.kind else {

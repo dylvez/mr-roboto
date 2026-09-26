@@ -4,20 +4,15 @@ import SongGraph
 
 /// What the Piano roll needs from whatever is hosting it.
 ///
-/// Four things: sound one note now, play the line once, stop, and take a version. The transport
-/// — the line under the groove, looping — is the frame's (`SongPlayback`), not the surface's: a
-/// bass line is only ever heard against its drums from the space bar, which is where the drums are.
+/// A note sounded now, an instrument picked, stop, and a version taken. Playing the whole line is
+/// the frame's: the surface's header and ⌥Space play it once through `PartPlayer`, on the bass or,
+/// in melody mode, on its instrument; and the transport plays it under the groove, looping.
 @MainActor
 public protocol PianoRollHosting: AnyObject {
     /// One note, now, through `sound`'s voice.
     func audition(note: Int, velocity: Int, duration: Double, sound: String) async
-    /// The whole line once, on its own, from its first beat.
-    func play(_ bassline: Bassline, tempo: Double, timeSignature: TimeSignature) async
     /// One note of a melody, on the pitched instrument rather than the bass.
     func auditionMelody(note: Int, velocity: Int, duration: Double, instrument: String) async
-    /// A whole melody, at its written beats.
-    func playMelody(_ notes: [NoteEvent], tempo: Double, timeSignature: TimeSignature, instrument: String) async
-    /// The song's pitched instrument becomes this one, for everything that plays through it.
     /// The instrument this surface's part plays on. Nil is the song's own pick, which is what a
     /// surface working on nothing yet sets.
     func setInstrument(_ id: String, for part: PartID?)

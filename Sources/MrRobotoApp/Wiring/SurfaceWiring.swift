@@ -369,6 +369,10 @@ final class SurfaceWiring {
         let bound = app.bound(for: item.id).compactMap { app.version($0) }
         let model = TakesModel(host: BoothAdapter(app: app, service: service(for: app)), takes: bound,
                                song: app.song, surfaceID: item.id)
+        if let song = app.song, let part = bound.first?.partID,
+           let comp = Guidance.comps(in: song).last(where: { $0.partID == part }) {
+            model.adoptComp(comp, song: song)
+        }
         takeSheets[item.id] = model
         return model
     }
@@ -382,22 +386,31 @@ final class SurfaceWiring {
         return model
     }
 
-    /// The Mixer on the bound mix version, or on unity.
+    /// The mix the Mixer and the Master work on: the song's newest, the one that plays — never the
+    /// version the surface happened to open on. Rebuilt on a restore or a mix the band kept, the
+    /// Mixer used to come back on its old binding, and the next fader move kept that old mix over
+    /// everything since.
+    private static func workingMix(in app: AppState) -> PartVersion? {
+        app.song.flatMap { Guidance.mixes(in: $0).last }
+    }
+
+    /// The Mixer on the song's newest mix, or on unity.
     func mixerModel(for item: BenchItem, app: AppState) -> MixerModel {
         prune(app)
-        if let existing = mixers[item.id] { return existing }
-        let bound = app.bound(for: item.id).compactMap { app.version($0) }.first { $0.type == .mix }
-        let model = MixerModel(host: MixAdapter(app: app), base: bound, surfaceID: item.id)
+        if let existing = mixers[item.id] {
+            existing.syncRows()
+            return existing
+        }
+        let model = MixerModel(host: MixAdapter(app: app), base: Self.workingMix(in: app), surfaceID: item.id)
         mixers[item.id] = model
         return model
     }
 
-    /// The Master on the bound mix version, or on unity.
+    /// The Master on the song's newest mix, or on unity.
     func masterModel(for item: BenchItem, app: AppState) -> MasterModel {
         prune(app)
         if let existing = masters[item.id] { return existing }
-        let bound = app.bound(for: item.id).compactMap { app.version($0) }.first { $0.type == .mix }
-        let model = MasterModel(host: MixAdapter(app: app), base: bound, surfaceID: item.id)
+        let model = MasterModel(host: MixAdapter(app: app), base: Self.workingMix(in: app), surfaceID: item.id)
         masters[item.id] = model
         return model
     }
@@ -407,7 +420,7 @@ final class SurfaceWiring {
         prune(app)
         if let existing = lyricSheets[item.id] { return existing }
         let bound = app.bound(for: item.id).compactMap { app.version($0) }.first { $0.type == .lyric }
-        let model = LyricsModel(host: LyricsAdapter(app: app), lyric: bound, corpus: app.voice,
+        let model = LyricsModel(host: LyricsAdapter(app: app, surface: item.id), lyric: bound, corpus: app.voice,
                                 title: app.song?.title, surfaceID: item.id)
         lyricSheets[item.id] = model
         return model
@@ -464,6 +477,9 @@ final class SurfaceWiring {
         structures = structures.filter { open.contains($0.key) }
         merges = merges.filter { open.contains($0.key) }
         lyricSheets = lyricSheets.filter { open.contains($0.key) }
+        // A Booth closed mid-take keeps the take, as Stop would: the take is the singer's, and
+        // letting the model go took the recording with it and left the input tapped.
+        for (id, booth) in booths where !open.contains(id) { booth.finishTake(keeping: true) }
         booths = booths.filter { open.contains($0.key) }
         takeSheets = takeSheets.filter { open.contains($0.key) }
         mixers = mixers.filter { open.contains($0.key) }

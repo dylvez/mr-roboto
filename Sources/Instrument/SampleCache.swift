@@ -374,6 +374,22 @@ public final class SampleCache: @unchecked Sendable {
         return AVAudioFrameCount(n)
     }
 
+    /// Planar Float32 at one rate, at another: the same converter a kit's samples go through.
+    public static func resample(_ planar: [[Float]], from sourceRate: Double, to targetRate: Double) throws -> [[Float]] {
+        guard sourceRate != targetRate, let first = planar.first, !first.isEmpty else { return planar }
+        guard let format = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: sourceRate,
+                                         channels: AVAudioChannelCount(planar.count), interleaved: false),
+              let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(first.count)),
+              let data = buffer.floatChannelData else {
+            throw KitError.decodeFailed(path: "resample", reason: "could not hold \(planar.count) channels at \(sourceRate) Hz")
+        }
+        buffer.frameLength = AVAudioFrameCount(first.count)
+        for (channel, samples) in planar.enumerated() {
+            samples.withUnsafeBufferPointer { data[channel].update(from: $0.baseAddress!, count: min(samples.count, first.count)) }
+        }
+        return try convert(buffer, to: targetRate, path: "resample")
+    }
+
     /// Converts a buffer to deinterleaved Float32 at `targetRate`, one array per channel.
     static func convert(_ input: AVAudioPCMBuffer, to targetRate: Double, path: String) throws -> [[Float]] {
         let source = input.format

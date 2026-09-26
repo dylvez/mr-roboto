@@ -865,7 +865,8 @@ public struct CompTakesTool: DirectorTool {
         }
         let duration = Double(rendered.planar.first?.count ?? 0) / rendered.sampleRate
         let comp = Audio(media: media, role: .take, sampleRate: rendered.sampleRate, channelCount: rendered.planar.count,
-                         duration: duration, alignmentOffset: rendered.alignmentSeconds, comp: plan)
+                         duration: duration, alignmentOffset: rendered.alignmentSeconds,
+                         comp: BoothAdapter.placed(plan, takes: used, in: song))
         let note = "Comp of \(used.count) take\(used.count == 1 ? "" : "s"): " + lines.joined(separator: ", ")
         let version = PartVersion(partID: takes[0].partID, kind: .audio(comp), author: .persona(acting),
                                   parents: used.map(\.id), operation: Operation.comped, note: note)

@@ -1,4 +1,5 @@
 import AudioEngine
+import Instrument
 import Foundation
 import SongGraph
 
@@ -49,8 +50,14 @@ public enum Comp {
                               snapWindow: Double = 0.04) throws -> Rendered {
         guard let first = plan.spans.first, let last = plan.spans.last else { throw Failure.emptyPlan }
         for span in plan.spans where takes[span.take] == nil { throw Failure.missingTake(span.take) }
-        let rates = Set(takes.values.map(\.sampleRate))
-        guard rates.count == 1, let rate = rates.first else { throw Failure.mixedRates }
+        // Takes sung through different inputs can be at different rates: each is brought to the
+        // highest, rather than the comp being refused.
+        guard let rate = takes.values.map(\.sampleRate).max() else { throw Failure.mixedRates }
+        var takes = takes
+        for (id, take) in takes where take.sampleRate != rate {
+            takes[id] = TakeAudio(planar: try SampleCache.resample(take.planar, from: take.sampleRate, to: rate),
+                                  sampleRate: rate, alignmentSeconds: take.alignmentSeconds)
+        }
         let channels = takes.values.map { $0.planar.count }.max() ?? 1
 
         let start = clock.seconds(forBar: first.startBar)

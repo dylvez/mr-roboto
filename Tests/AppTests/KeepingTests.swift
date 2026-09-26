@@ -286,9 +286,7 @@ private final class AppRollHost: PianoRollHosting {
     let app: AppState
     init(app: AppState) { self.app = app }
     func audition(note: Int, velocity: Int, duration: Double, sound: String) async {}
-    func play(_ bassline: Bassline, tempo: Double, timeSignature: TimeSignature) async {}
     func auditionMelody(note: Int, velocity: Int, duration: Double, instrument: String) async {}
-    func playMelody(_ notes: [NoteEvent], tempo: Double, timeSignature: TimeSignature, instrument: String) async {}
     func setInstrument(_ id: String, for part: PartID?) {}
     func stop() async {}
     func commit(_ version: PartVersion) -> Bool { app.record(version) }

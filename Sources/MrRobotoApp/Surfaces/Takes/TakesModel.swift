@@ -12,6 +12,8 @@ public protocol TakesHosting: AnyObject {
     var key: Key? { get }
     /// A take's audio, placed in the song. Nil when the file is missing.
     func audio(of version: PartVersion) -> Comp.TakeAudio?
+    /// The song the takes are in, so a take is drawn where its section is now.
+    var song: Song? { get }
     /// Opens a Check on one finding about one take.
     func openCheck(_ finding: Finding, on take: PartVersion)
     func audition(_ version: PartVersion) async
@@ -28,6 +30,7 @@ public protocol TakesHosting: AnyObject {
 }
 
 public extension TakesHosting {
+    var song: Song? { nil }
     func openBooth() {}
     func audition(_ rendered: Comp.Rendered) async {}
 }
@@ -89,7 +92,7 @@ public final class TakesModel {
             let start = song.sections.prefix(index).map(\.lengthInBars).reduce(0, +)
             return (song.sections[index].name, start..<(start + song.sections[index].lengthInBars))
         }
-        let spans = takes.compactMap { seconds(of: $0, clock: clock) }
+        let spans = takes.compactMap { seconds(of: $0, clock: clock, song: song) }
         let first = spans.map { clock.position(forSeconds: max(0, $0.start)).bar }.min() ?? 0
         let last = spans.map { Int(($0.end / clock.secondsPerBar).rounded(.up)) }.max() ?? first + 1
         return (nil, first..<max(first + 1, last))
@@ -99,10 +102,12 @@ public final class TakesModel {
     /// the section's first bar, for a take that was counted in — and ends where its audio ends,
     /// which is measured from the audio's own alignment: a counted-in take's audio starts in the
     /// count-in, before the take does.
-    static func seconds(of version: PartVersion, clock: TransportClock) -> (start: Double, end: Double)? {
+    static func seconds(of version: PartVersion, clock: TransportClock, song: Song? = nil) -> (start: Double, end: Double)? {
         guard let audio = Guidance.audio(of: version), let take = audio.take else { return nil }
-        let start = clock.seconds(forBar: take.startBar) + take.startBeat * clock.secondsPerBeat
-        return (start, (audio.alignmentOffset ?? start) + audio.duration)
+        // Moved with its section, as the song plays it.
+        let moved = song.map { Double(audio.barsMoved(in: $0)) * clock.secondsPerBar } ?? 0
+        let start = clock.seconds(forBar: take.startBar) + take.startBeat * clock.secondsPerBeat + moved
+        return (start, (audio.alignmentOffset.map { $0 + moved } ?? start) + audio.duration)
     }
 
     /// Takes the lanes' takes again: a take just stopped in the Booth, or a section's takes read
@@ -152,7 +157,7 @@ public final class TakesModel {
 
     /// Whether a take has audio under this bar.
     public func covers(_ version: PartVersion, bar: Int) -> Bool {
-        guard let span = Self.seconds(of: version, clock: host.clock) else { return false }
+        guard let span = Self.seconds(of: version, clock: host.clock, song: host.song) else { return false }
         let barStart = host.clock.seconds(forBar: bar), barEnd = host.clock.seconds(forBar: bar + 1)
         return span.end > barStart + 0.05 && span.start < barEnd - 0.05
     }
@@ -218,6 +223,20 @@ public final class TakesModel {
 
     /// The Booth, from the empty state: where a first take comes from.
     public func openBooth() { host.openBooth() }
+
+    /// The part's comp, as the lanes open: what the song plays, pinned as the lanes' choices. A
+    /// surface reopened on a comped part used to start with no comp, its lane showing the newest
+    /// take rather than what plays.
+    public func adoptComp(_ version: PartVersion, song: Song?) {
+        guard let audio = Guidance.audio(of: version), let kept = audio.comp else { return }
+        let moved = song.map { audio.barsMoved(in: $0) } ?? 0
+        let here = Set(takes.map(\.id))
+        for span in kept.spans where here.contains(span.take) {
+            for bar in (span.startBar + moved)..<(span.endBar + moved) where bars.contains(bar) { choices[bar] = span.take }
+        }
+        comp = version
+        compPlan = plan
+    }
 
     /// Whether the comp lane is the comp last made: false before one is made, and false again once
     /// a bar is chosen differently. Making the same comp twice would file the same audio twice.
