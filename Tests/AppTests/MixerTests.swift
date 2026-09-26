@@ -419,3 +419,110 @@ struct MixerRenderTests {
         try png.write(to: directory.appendingPathComponent("\(name).png"))
     }
 }
+
+@Suite("The ending: a fade over the song's last bars") @MainActor
+struct FadeOutTests {
+    private let clock = TransportClock(tempo: 120, timeSignature: .fourFour, sampleRate: 48_000)
+
+    @Test("the curve: whole before, silent after, a quarter cosine between; the span is the form's last bars")
+    func curve() throws {
+        let span = try #require(FadeOut.span(bars: 2, songBars: 8, clock: clock))
+        #expect(span == 12...16, "bars 7 and 8 at two seconds a bar")
+        #expect(FadeOut.gain(at: 11.9, span: span) == 1)
+        #expect(abs(FadeOut.gain(at: 14, span: span) - cos(.pi / 4)) < 1e-12)
+        #expect(FadeOut.gain(at: 16, span: span) == 0 && FadeOut.gain(at: 30, span: span) == 0)
+        #expect(FadeOut.span(bars: nil, songBars: 8, clock: clock) == nil && FadeOut.span(bars: 2, songBars: 0, clock: clock) == nil)
+        #expect(FadeOut.span(bars: 16, songBars: 8, clock: clock) == 0...16, "longer than the song: the whole song fades")
+
+        var planar: [[Float]] = [[Float](repeating: 1, count: 48_000 * 17), [Float](repeating: -1, count: 48_000 * 17)]
+        FadeOut.apply(&planar, sampleRate: 48_000, span: span)
+        #expect(planar[0][48_000 * 11] == 1, "before the fade, untouched")
+        #expect(abs(planar[1][48_000 * 14] + Float(cos(Double.pi / 4))) < 1e-4, "every channel")
+        #expect(planar[0][48_000 * 16 + 100] == 0, "the ring-out after the last bar stays down")
+    }
+
+    @Test("kept with the mix, and a document without one reads as no fade")
+    func stored() throws {
+        #expect(Master().fadeOutBars == nil && Master(fadeOutBars: 0).fadeOutBars == 1)
+        let plain = try SongGraphCodec.encode(Master())
+        #expect(!String(decoding: plain, as: UTF8.self).contains("fadeOutBars"), "nothing written when there is no fade")
+        let faded = Master(fadeOutBars: 4)
+        #expect(try SongGraphCodec.decode(Master.self, from: SongGraphCodec.encode(faded)) == faded)
+        let old = Data(#"{"gainDB":-2,"ceilingDBTP":-1,"targetLUFS":-14}"#.utf8)
+        #expect(try SongGraphCodec.decode(Master.self, from: old) == Master(gainDB: -2))
+    }
+
+    @Test("choosing a fade is one mix version, its note the ending")
+    func chosen() throws {
+        let (song, plan) = MixerFadeFixture.fixture()
+        let host = MixerFadeFixture.Host(song: song, playback: plan)
+        let model = MixerModel(host: host)
+        model.setFadeOut(bars: 4)
+        #expect(host.committed.count == 1 && host.committed[0].0.master.fadeOutBars == 4)
+        #expect(host.committed[0].2 == "fade out over 4 bars")
+        model.setFadeOut(bars: 4)
+        #expect(host.committed.count == 1, "the same choice again keeps nothing")
+        model.setFadeOut(bars: nil)
+        #expect(host.committed.last?.2 == "no fade")
+    }
+
+    @Test("playing to the end, the transport fades the master on the same curve; looping, it never does")
+    func heardAsItPlays() async throws {
+        let (app, _, _) = CompletenessFixture.app("fade-live")
+        let host = StubPlaybackHost()
+        app.attach(playback: host)
+        let groove = TransportFixture.grooveVersion()
+        var song = TransportFixture.song([groove])
+        song.sections = [Section(name: "Verse", stitch: [Lane(part: groove.partID)], lengthInBars: 8)]
+        var mix = Mix.unity
+        mix.master.fadeOutBars = 2
+        try song.append(PartVersion(partID: PartID(), kind: .mix(mix), author: .user, operation: Operation.mix, note: "Fade"))
+        app.open(song)
+        #expect(app.playback.mix?.master.fadeOutBars == 2)
+        await app.startTransport()
+        #expect(await host.fades.first == 1, "each play starts whole")
+        // Seven bars in: halfway through the last two, at 2 s a bar.
+        await host.report(PlaybackReading(isRunning: true, seconds: 14))
+        for _ in 0..<500 {
+            if let last = await host.fades.last, last < 1 { break }
+            try? await Task.sleep(for: .milliseconds(4))
+        }
+        let heard = try #require(await host.fades.last)
+        #expect(abs(heard - cos(.pi / 4)) < 1e-6, "\(heard)")
+        await app.stopTransport()
+
+        app.toggleLoop()
+        await app.startTransport()
+        #expect(app.fadeSpan == nil, "a loop never ends, so it never fades")
+        await app.stopTransport()
+    }
+}
+
+/// The Mixer's fixture, for the fade: a song with parts and a plan of it.
+@MainActor
+enum MixerFadeFixture {
+    static func fixture() -> (Song, SongPlayback) {
+        let built = FormFixture.build(tempo: 120)
+        var song = built.song
+        song.sections = [Section(name: "Verse", stitch: [built.groove, built.bass].lanes, lengthInBars: 4)]
+        let plan = SongPlayback.plan(for: song, mediaURL: TransportFixture.resolver(URL(fileURLWithPath: "/dev/null")))
+        return (song, plan)
+    }
+
+    final class Host: MixHosting {
+        var song: Song?
+        var playback: SongPlayback
+        var isPlaying = false
+        var targets = Master()
+        var committed: [(Mix, PartVersion?, String)] = []
+        init(song: Song, playback: SongPlayback) { self.song = song; self.playback = playback }
+        func preview(_ mix: Mix) {}
+        func commit(_ mix: Mix, base: PartVersion?, note: String) -> PartVersion? {
+            committed.append((mix, base, note))
+            return PartVersion(partID: base?.partID ?? PartID(), kind: .mix(mix), author: .user, operation: Operation.mix, note: note)
+        }
+        func meters(for parts: [PartID]) async -> [PartID: (peak: Float, rms: Float)] { [:] }
+        func bounce(mix: Mix, section: SectionID?) async throws -> (planar: [[Float]], sampleRate: Double) { ([[0]], 48_000) }
+        func note(_ text: String, detail: String?) {}
+    }
+}

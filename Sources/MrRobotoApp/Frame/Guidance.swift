@@ -157,10 +157,30 @@ enum PartLabel {
     /// The part's own note, cut to something that fits a 230-point column.
     private static func note(of version: PartVersion) -> String? {
         guard let note = version.note, !note.isEmpty else { return nil }
-        // Notes read "Bar 12 of Arrival — Vessel – Arrival (1974)"; the citation is provenance, not
-        // a name, and the ledger already shows provenance on its second line.
-        let head = note.split(separator: "—", maxSplits: 1).first.map(String.init) ?? note
-        return head.trimmingCharacters(in: .whitespaces)
+        return name(from: note)
+    }
+
+    /// The longest a name runs before it is cut at a word.
+    static let longestName = 44
+
+    /// A note as a name. Notes read "Bar 12 of Arrival — Vessel – Arrival (1974)": the citation is
+    /// provenance, not a name, and the ledger shows provenance on its second line. And notes the
+    /// band writes are descriptions — "Brushes under the C loop: kick on 1, brushed accent on 3,
+    /// ghost snare sweeping between…" — whose name is what comes before the colon or the first full
+    /// stop. The whole sentence used to be the name, in a rail suggestion, a header, a chip.
+    static func name(from note: String) -> String {
+        var head = note.split(separator: "—", maxSplits: 1).first.map(String.init) ?? note
+        for mark in [": ", ". "] {
+            if let range = head.range(of: mark), head.distance(from: head.startIndex, to: range.lowerBound) >= 3 {
+                head = String(head[..<range.lowerBound])
+            }
+        }
+        head = head.trimmingCharacters(in: .whitespaces)
+        if head.hasSuffix("."), !head.hasSuffix("..") { head.removeLast() }
+        guard head.count > longestName else { return head }
+        let cut = head.prefix(longestName)
+        let word = cut.lastIndex(of: " ").map { cut[..<$0] } ?? cut
+        return word.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters)) + "…"
     }
 
     /// The instrument class a stem belongs to, when its name is one the analysis reports activity for.

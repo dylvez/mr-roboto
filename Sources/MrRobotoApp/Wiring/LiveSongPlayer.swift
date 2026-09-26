@@ -352,6 +352,11 @@ final class LiveSongPlayer: SongPlaybackHost {
     /// The mix as last applied, so a section change is a move and not a re-apply.
     private var lastMix: Mix?
 
+    func fade(_ gain: Double) async {
+        guard let engine, let graph = try? engine.mixGraph() else { return }
+        graph.setFade(gain)
+    }
+
     func mixChanged(_ mix: Mix?, section: SectionID?) async {
         guard let engine, let graph = try? engine.mixGraph() else { return }
         if mix == lastMix {

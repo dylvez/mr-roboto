@@ -231,6 +231,18 @@ public final class MasterModel {
     public func setCeiling(_ dBTP: Double) { move { $0.master.ceilingDBTP = max(-12, min(0, dBTP)) } }
     public func setGain(_ dB: Double) { move { $0.master.gainDB = max(-24, min(24, dB)) } }
 
+    /// How the song ends, kept at once: a fade over its last `bars`, or none.
+    public func setFadeOut(bars: Int?) {
+        if let mixer {
+            mixer.setFadeOut(bars: bars)
+            return
+        }
+        guard ownMix.master.fadeOutBars != bars else { return }
+        ownMix.master.fadeOutBars = bars
+        host.preview(ownMix)
+        endGesture()
+    }
+
     private func move(_ change: (inout Mix) -> Void) {
         if let mixer {
             // Through the Mixer's own lever, so its preview, its clamps and its next version's note

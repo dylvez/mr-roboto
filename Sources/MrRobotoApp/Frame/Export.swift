@@ -123,6 +123,8 @@ public enum Export {
             // No ceiling on a stem: `renderOne` reads the plan's master for the limiter, so the
             // master is at unity and the ceiling is lifted to 0 with its head room.
             solo.mix?.master.ceilingDBTP = 0
+            // Nor a fade: a stem is the strip, and the ending is the master's.
+            solo.mix?.master.fadeOutBars = nil
             let stems = try await SectionBounce.render(solo, section: nil, kitsDirectory: AuditionService.defaultKitsDirectory,
                                                        onlyTheMix: true)
             let url = unique(directory.appendingPathComponent("\(safe(song.title)) — \(safe(strip.label)).wav"))

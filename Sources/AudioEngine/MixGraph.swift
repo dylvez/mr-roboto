@@ -282,7 +282,19 @@ public final class MixGraph {
 
     /// The master's gain, on the trim. The ceiling is not a live setting: see `init`.
     private func applyMaster(_ master: Master) {
-        trim.outputVolume = Self.linear(master.gainDB)
+        masterGainDB = master.gainDB
+        trim.outputVolume = Self.linear(master.gainDB) * fade
+    }
+
+    private var masterGainDB: Double = 0
+    /// The song's ending, as it plays: 1 until the fade, 0 at the end. On the trim with the
+    /// master's gain, so a mix move during the fade keeps the fade.
+    private var fade: Float = 1
+
+    /// Sets how far into its fade-out the song is: 1 is untouched, 0 is silent.
+    public func setFade(_ gain: Double) {
+        fade = Float(max(0, min(1, gain)))
+        trim.outputVolume = Self.linear(masterGainDB) * fade
     }
 
     /// The compressor's gain reduction on a strip right now, dB (a reading, not a setting).

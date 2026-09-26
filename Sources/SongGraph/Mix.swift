@@ -84,11 +84,16 @@ public struct Master: Hashable, Codable, Sendable {
     public var gainDB: Double
     public var ceilingDBTP: Double
     public var targetLUFS: Double
+    /// How the song ends: its last this-many bars fade to silence. Nil is no fade — the song stops
+    /// where its form does, as every song did before this was carried. Synthesized coding omits it
+    /// when nil, so older documents round-trip byte for byte.
+    public var fadeOutBars: Int?
 
-    public init(gainDB: Double = 0, ceilingDBTP: Double = -1, targetLUFS: Double = -14) {
+    public init(gainDB: Double = 0, ceilingDBTP: Double = -1, targetLUFS: Double = -14, fadeOutBars: Int? = nil) {
         self.gainDB = gainDB
         self.ceilingDBTP = ceilingDBTP
         self.targetLUFS = targetLUFS
+        self.fadeOutBars = fadeOutBars.map { max(1, $0) }
     }
 }
 

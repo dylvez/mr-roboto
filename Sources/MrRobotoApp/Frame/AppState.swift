@@ -1167,6 +1167,16 @@ public final class AppState {
     /// the plan that was started, not from the Loop toggle, which only takes effect on the next play.
     private var runningLoopSeconds: Double?
 
+    /// The song's fade-out, in song seconds, when the song has one and plays to its end: a loop
+    /// never ends, so it never fades.
+    public var fadeSpan: ClosedRange<Double>? {
+        guard runningLoopSeconds == nil, let song, !song.sections.isEmpty else { return nil }
+        return FadeOut.span(bars: playback.mix?.master.fadeOutBars, songBars: song.lengthInBars, clock: clock)
+    }
+
+    /// The fade gain last handed to the player, so it is told only when it moves.
+    @ObservationIgnored private var lastFadeGain: Double = 1
+
     /// Whether the running transport comes round at the end of its form.
     public var isRunningALoop: Bool { transport.isPlaying && runningLoopSeconds != nil }
 
@@ -1216,6 +1226,9 @@ public final class AppState {
             // hands each of them its `Transport` and schedules the first look-ahead window before a
             // single frame is rendered.
             try await playbackHost.begin(plan, clock: clock)
+            // A fade the last play left the master in is not this play's.
+            lastFadeGain = 1
+            await playbackHost.fade(1)
             try await transportHost.start(clock: clock)
             playbackStartBar = plan.startsAtBar
             countInTargetBar = countIn > 0 ? max(0, bar) : nil
@@ -1356,6 +1369,13 @@ public final class AppState {
                 if let cycle = self.runningLoopSeconds, cycle > 0 { seconds = seconds.truncatingRemainder(dividingBy: cycle) }
                 self.playhead = seconds + self.playbackOffsetSeconds
                 self.followSection(atSeconds: self.playhead)
+                // The ending, as it plays: the same curve the master exports with. Read every
+                // tick, so a fade chosen while the song plays is heard on this pass.
+                let fade = self.fadeSpan.map { FadeOut.gain(at: self.playhead, span: $0) } ?? 1
+                if abs(fade - self.lastFadeGain) > 0.002 || (fade == 0) != (self.lastFadeGain == 0) {
+                    self.lastFadeGain = fade
+                    await host.fade(fade)
+                }
                 if !reading.isRunning {
                     await self.stopTransport()
                     return

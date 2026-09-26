@@ -37,7 +37,9 @@ public struct ReadMixTool: DirectorTool {
             public var gainDB: Double
             public var ceilingDBTP: Double
             public var targetLUFS: Double
-            enum CodingKeys: String, CodingKey { case gainDB = "gain_db"; case ceilingDBTP = "ceiling_dbtp"; case targetLUFS = "target_lufs" }
+            /// How the song ends: a fade over its last this-many bars, or nil — it stops on its last bar.
+            public var fadeOutBars: Int? = nil
+            enum CodingKeys: String, CodingKey { case gainDB = "gain_db"; case ceilingDBTP = "ceiling_dbtp"; case targetLUFS = "target_lufs"; case fadeOutBars = "fade_out_bars" }
         }
         public struct Reading: Encodable, Sendable {
             public var integratedLUFS: Double
@@ -124,7 +126,7 @@ public struct ReadMixTool: DirectorTool {
                                      eq: s.eq.map { ["hz": $0.frequency, "db": $0.gainDB] }, sendDB: s.sendDB)
         }
         return Output(mixVersion: plan.mixVersion?.description, strips: entries,
-                      master: Output.MasterEntry(gainDB: mix.master.gainDB, ceilingDBTP: mix.master.ceilingDBTP, targetLUFS: mix.master.targetLUFS),
+                      master: Output.MasterEntry(gainDB: mix.master.gainDB, ceilingDBTP: mix.master.ceilingDBTP, targetLUFS: mix.master.targetLUFS, fadeOutBars: mix.master.fadeOutBars),
                       reading: reading, masking: pairs, flags: flags, engineer: engineer, detail: detail)
     }
 }
@@ -221,7 +223,10 @@ public struct MasterTool: DirectorTool {
         /// Gain change before the limiter, dB; 0 for none. Use the gap read_mix reported.
         public var gainDB: Double
         public var reason: String
-        enum CodingKeys: String, CodingKey { case reason; case targetLUFS = "target_lufs"; case ceilingDBTP = "ceiling_dbtp"; case gainDB = "gain_db" }
+        /// How the song ends: -1 (or absent) keeps the ending it has, 0 stops on the last bar, N
+        /// fades over the last N bars.
+        public var fadeOutBars: Int?
+        enum CodingKeys: String, CodingKey { case reason; case targetLUFS = "target_lufs"; case ceilingDBTP = "ceiling_dbtp"; case gainDB = "gain_db"; case fadeOutBars = "fade_out_bars" }
     }
 
     public struct Output: Encodable, Sendable {
@@ -240,7 +245,9 @@ public struct MasterTool: DirectorTool {
     public var purpose: String {
         "Set the master: the loudness target in LUFS, the limiter's ceiling in dBTP, and a gain change before the limiter. "
         + "The Engineer checks it (ceiling at or under −0.5, target inside −20…−8) and refuses with a counter; a setting that "
-        + "passes is a mix version. The ceiling is applied over every bounce and export. Read the mix after to see it land."
+        + "passes is a mix version. The ceiling is applied over every bounce and export. The ending too: fade_out_bars fades "
+        + "the form's last bars to silence, as the song plays to its end and in the master; 0 stops on the last bar, -1 "
+        + "keeps the ending it has. Read the mix after to see it land."
     }
     public var schema: DirectorJSON {
         Schema.object([
@@ -248,7 +255,8 @@ public struct MasterTool: DirectorTool {
             ("ceiling_dbtp", Schema.number("The limiter's ceiling, dBTP.", minimum: -12, maximum: 0)),
             ("gain_db", Schema.number("Gain change before the limiter, dB; 0 for none.", minimum: -24, maximum: 24)),
             ("reason", Schema.string("The reading that asked for it.")),
-        ], required: ["target_lufs", "ceiling_dbtp", "gain_db", "reason"])
+            ("fade_out_bars", Schema.integer("The ending: bars to fade over, 0 to stop on the last bar, -1 to keep it as it is.", minimum: -1, maximum: 16)),
+        ], required: ["target_lufs", "ceiling_dbtp", "gain_db", "reason", "fade_out_bars"])
     }
 
     public func run(_ input: Input) async throws -> Output {
@@ -265,6 +273,7 @@ public struct MasterTool: DirectorTool {
         mix.master.targetLUFS = input.targetLUFS
         mix.master.ceilingDBTP = input.ceilingDBTP
         if input.gainDB != 0 { mix.master.gainDB = max(-24, min(24, mix.master.gainDB + input.gainDB)) }
+        if let fade = input.fadeOutBars, fade >= 0 { mix.master.fadeOutBars = fade == 0 ? nil : min(16, fade) }
         let move = MixerModel.describe(from: before, to: mix, labels: [:])
         let note = mix == before ? "Master confirmed at \(Int(input.targetLUFS)) LUFS / \(input.ceilingDBTP) dBTP (\(input.reason))" : "\(move) (\(input.reason))"
         guard let version = await workspace.recordMix(mix, note: note) else {

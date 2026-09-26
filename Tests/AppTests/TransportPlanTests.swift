@@ -134,6 +134,10 @@ actor StubPlaybackHost: SongPlaybackHost {
     func reading() async -> PlaybackReading { next }
 
     func report(_ reading: PlaybackReading) { next = reading }
+
+    /// Every fade gain the frame handed over, in order.
+    private(set) var fades: [Double] = []
+    func fade(_ gain: Double) async { fades.append(gain) }
 }
 
 // MARK: - The plan

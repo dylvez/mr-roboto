@@ -852,9 +852,13 @@ public protocol SongPlaybackHost: AnyObject, Sendable {
     /// the main mixer — but unmixed, unmetered and un-soloable, which is worth saying out loud
     /// rather than leaving as a fader that does nothing. A host with no strips has none.
     func unmixedParts() async -> [PartID]
+    /// How far into the song's fade-out the playhead is: 1 untouched, 0 silent. A host with no
+    /// master ignores it.
+    func fade(_ gain: Double) async
 }
 
 extension SongPlaybackHost {
+    public func fade(_ gain: Double) async {}
     public func mixChanged(_ mix: Mix?, section: SectionID?) async {}
     public func unmixedParts() async -> [PartID] { [] }
 }

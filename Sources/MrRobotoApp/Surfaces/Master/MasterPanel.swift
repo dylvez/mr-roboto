@@ -173,6 +173,23 @@ struct MasterPanel: View {
                 lever("Ceiling", value: model.mix.master.ceilingDBTP, range: -12...0, format: "%.1f dBTP") { model.setCeiling($0) }
                 lever("Gain", value: model.mix.master.gainDB, range: -24...24, format: "%+.1f dB") { model.setGain($0) }
             }
+            ending
+        }
+    }
+
+    /// How the song ends. Songs used to stop dead on the last bar's downbeat, in the transport and
+    /// in the export alike; a fade is the ending most songs reach for.
+    private var ending: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text("Ending").font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.inkSecondary)
+            HStack(spacing: 4) {
+                BoothChip("Stop", isOn: model.mix.master.fadeOutBars == nil) { model.setFadeOut(bars: nil) }
+                    .help("The song stops on its last bar")
+                ForEach(FadeOut.choices, id: \.self) { bars in
+                    BoothChip("Fade \(bars) bars", isOn: model.mix.master.fadeOutBars == bars) { model.setFadeOut(bars: bars) }
+                        .help("The last \(bars) bars of the form fade to silence, as it plays to its end and in the master. A loop never ends, so it never fades.")
+                }
+            }
         }
     }
 

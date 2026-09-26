@@ -131,4 +131,28 @@ struct DirectorMixProofTests {
         let read = await box.run(ClaudeToolUse(id: "r", name: "read_mix", input: .object([.init("section", .string(""))])))
         #expect(!read.isError && read.content.contains("no reading") && read.content.contains("\"gain_db\":-3"), "\(read.content)")
     }
+
+    @Test("the master tool sets the ending: a fade over the last bars, kept as a mix version, read back; 0 stops, -1 keeps")
+    func ending() async throws {
+        let workspace = await MainActor.run { DirectorScratchWorkspace(song: FormFixture.build(tempo: 92).song) }
+        let box = await MainActor.run { DirectorTools.toolbox(workbench: DirectorWorkbench(engines: DirectorTestEngines.make(bars: 4)), workspace: workspace) }
+        func master(_ fade: Int) async -> ClaudeToolResult {
+            await box.run(ClaudeToolUse(id: "m\(fade)", name: "master", input: .object([
+                .init("target_lufs", .double(-14)), .init("ceiling_dbtp", .double(-1)), .init("gain_db", .double(0)),
+                .init("reason", .string("an ending")), .init("fade_out_bars", .int(fade))])))
+        }
+        let faded = await master(4)
+        #expect(!faded.isError && faded.content.contains("fade out over 4 bars"), "\(faded.content)")
+        var last = await MainActor.run { Guidance.mixes(in: workspace.song!).last }
+        guard case .mix(let mix)? = last?.kind else { Issue.record("no mix"); return }
+        #expect(mix.master.fadeOutBars == 4)
+        let read = await box.run(ClaudeToolUse(id: "r", name: "read_mix", input: .object([.init("section", .string(""))])))
+        #expect(read.content.contains("\"fade_out_bars\":4"), "\(read.content)")
+        _ = await master(-1)
+        last = await MainActor.run { Guidance.mixes(in: workspace.song!).last }
+        guard case .mix(let kept)? = last?.kind else { Issue.record("no mix"); return }
+        #expect(kept.master.fadeOutBars == 4, "-1 keeps the ending it has")
+        let stopped = await master(0)
+        #expect(stopped.content.contains("no fade"), "\(stopped.content)")
+    }
 }

@@ -64,6 +64,11 @@ enum SectionBounce {
         if let master = base.mix?.master {
             // The ceiling is not on the live chain (a lookahead limiter has latency): it is here.
             stems.mix = Limiter.apply(stems.mix, sampleRate: sampleRate, ceilingDBTP: master.ceilingDBTP)
+            // The whole song ends as it plays: its fade, after the limiter, so it only ever lowers.
+            if section == nil, base.isArranged,
+               let span = FadeOut.span(bars: master.fadeOutBars, songBars: bars, clock: clock) {
+                FadeOut.apply(&stems.mix, sampleRate: sampleRate, span: span)
+            }
         }
         if onlyTheMix { return stems }
         if has(base, .drums) {

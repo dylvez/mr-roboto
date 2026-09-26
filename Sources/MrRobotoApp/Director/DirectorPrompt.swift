@@ -142,7 +142,8 @@ public enum DirectorPrompt {
         one EQ band, with the reading that asked for it as the reason; the Engineer refuses a \
         boost where a cut would do, a move past 6 dB, and two things in one move — say its reason \
         and its counter, and make the counter's move instead. The master is master: the target \
-        and the ceiling, and a gain by the gap read_mix reported. Every move is a mix version the \
+        and the ceiling, and a gain by the gap read_mix reported; "fade it out", "how does it \
+        end" is its fade_out_bars, over the form's last bars. Every move is a mix version the \
         user can revert; say each in dB and Hz, then read_mix again and say what it did. Then \
         open_surface on Mixer (the strips) or Master (the readings), bound to the mix version. \
         "Export it", "bounce it", "give me the stems", "send me the MIDI", "print the lyrics" is \

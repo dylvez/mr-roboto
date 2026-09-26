@@ -206,3 +206,17 @@ struct TapTempoTests {
         #expect(abs(taps.tap(at: start + 10.6)! - 100) < 1e-9)
     }
 }
+
+@Suite("A part's name is its note's first clause, not the whole description")
+struct PartNameTests {
+    @Test("before the colon or the first full stop, never past the column, and a citation is not a name")
+    func names() {
+        #expect(PartLabel.name(from: "Brushes under the C loop: kick on 1, brushed accent on 3, ghost snare sweeping between, a whisper of hats on the eighths.") == "Brushes under the C loop")
+        #expect(PartLabel.name(from: "Swung brushes, kick pushing the and-of-3") == "Swung brushes, kick pushing the and-of-3")
+        #expect(PartLabel.name(from: "Bar 12 of Arrival — Vessel – Arrival (1974)") == "Bar 12 of Arrival")
+        #expect(PartLabel.name(from: "Palladino line. Forty behind the kick.") == "Palladino line")
+        #expect(PartLabel.name(from: "Hook at 0:42") == "Hook at 0:42", "a time is not a colon that ends a name")
+        let long = PartLabel.name(from: "A very long and winding description of a bass line that never once stops for breath or punctuation")
+        #expect(long.count <= PartLabel.longestName + 1 && long.hasSuffix("…") && !long.contains("  "), "\(long)")
+    }
+}

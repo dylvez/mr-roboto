@@ -290,6 +290,15 @@ extension FrameRenderTests {
         let master = SurfaceWiring.shared.masterModel(for: app.bench.items.first { $0.id == masterID }!, app: app)
         await master.read()
         #expect(master.reading != nil, "\(master.lastError ?? "")")
+        // The Master is the Mixer's tab; the frame's hook that turns it is the app's, not this test's.
+        if let item = app.bench.items.first(where: { $0.id == masterID }) {
+            let mixer = SurfaceWiring.shared.mixerModel(for: item, app: app)
+            mixer.tab = .master
+            // As the tab does when it is first drawn: one working mix under both.
+            master.follow(mixer)
+        }
+        master.setFadeOut(bars: 4)
+        #expect(master.mix.master.fadeOutBars == 4)
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-master")
     }
 }

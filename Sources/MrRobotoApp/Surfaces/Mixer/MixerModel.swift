@@ -154,6 +154,15 @@ public final class MixerModel {
         host.preview(mix)
     }
 
+    /// How the song ends: a fade over its last bars, or none. A choice, not a drag, so it is kept
+    /// at once.
+    public func setFadeOut(bars: Int?) {
+        guard mix.master.fadeOutBars != bars else { return }
+        mix.master.fadeOutBars = bars
+        host.preview(mix)
+        endGesture()
+    }
+
     /// The gesture is over: what moved becomes a version, its note the move.
     @discardableResult
     public func endGesture() -> PartVersion? {
@@ -193,6 +202,9 @@ public final class MixerModel {
         if b.master.gainDB != a.master.gainDB { moves.append(String(format: "master %+.1f dB", b.master.gainDB)) }
         if b.master.ceilingDBTP != a.master.ceilingDBTP { moves.append(String(format: "master ceiling %.1f dBTP", b.master.ceilingDBTP)) }
         if b.master.targetLUFS != a.master.targetLUFS { moves.append(String(format: "target %.0f LUFS", b.master.targetLUFS)) }
+        if b.master.fadeOutBars != a.master.fadeOutBars {
+            moves.append(b.master.fadeOutBars.map { "fade out over \($0) bar\($0 == 1 ? "" : "s")" } ?? "no fade")
+        }
         if b.sectionGains != a.sectionGains { moves.append("section gains") }
         return moves.isEmpty ? "Mix" : moves.joined(separator: "; ")
     }
