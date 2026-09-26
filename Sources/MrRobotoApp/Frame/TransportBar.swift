@@ -199,10 +199,14 @@ struct TransportBar: View {
     private var sectionStrip: some View {
         let sections = app.song?.sections ?? []
         if sections.isEmpty {
-            Text(app.song == nil ? "No song open" : "No sections arranged yet")
+            Text(app.song == nil ? "No song open" : "No sections yet")
                 .font(Design.Typography.ui(12, weight: .regular))
                 .foregroundStyle(Design.Palette.inkTertiary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                // One line, cut at its end: squeezed at the window's minimum it used to wrap a
+                // letter at a time down the bar.
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
         } else {
             // The strip takes the room the bar has left and no more: each block at its own width
             // while they fit, all of them scaled down together when they do not, names cut to their

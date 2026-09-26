@@ -348,6 +348,16 @@ public final class AppState {
     /// `[Proposal]`, so when the Director starts answering, its replies land in this array and the
     /// rail does not change. Until then `proposals` derives the same shape from the song graph.
     public var director: [Proposal] = []
+    /// Options waved away with "Not this", for the song that is open: "stage|kind".
+    public internal(set) var nextDismissed: Set<String> = []
+    @ObservationIgnored private var storedNextPreferences: NextPreferences?
+    /// What you choose when the band asks what next, remembered across launches.
+    public var nextPreferences: NextPreferences {
+        if let stored = storedNextPreferences { return stored }
+        let made = NextPreferences(defaults: defaults)
+        storedNextPreferences = made
+        return made
+    }
 
     /// The band, when this session has one.
     ///
@@ -703,6 +713,7 @@ public final class AppState {
         // part the new song does not hold; `canPerform` would filter them, but silently, and a
         // Director's answer that vanishes without a word is worse than one that is cleared.
         director.removeAll()
+        nextDismissed.removeAll()
     }
 
     /// Whether the library may be written: not while `library.json` could not be read, when what is

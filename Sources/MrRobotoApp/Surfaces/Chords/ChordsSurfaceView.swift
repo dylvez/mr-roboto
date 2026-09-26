@@ -15,10 +15,16 @@ struct ChordsSurfaceView: View {
             }
             VStack(alignment: .leading, spacing: 4) {
                 Text("CHORDS").font(Design.Typography.label).tracking(1.1).foregroundStyle(Design.Palette.inkTertiary)
-                TextField("Dm7 G7 | Cmaj7 | Am7 | Fmaj7", text: $model.text)
-                    .textFieldStyle(.roundedBorder)
-                    .font(Design.Typography.ui(14))
-                    .frame(maxWidth: 520)
+                Group {
+                    if Design.isOffscreenRender {
+                        RenderedField(text: model.text, placeholder: "Dm7 G7 | Cmaj7 | Am7 | Fmaj7", font: Design.Typography.ui(14))
+                    } else {
+                        TextField("Dm7 G7 | Cmaj7 | Am7 | Fmaj7", text: $model.text)
+                            .textFieldStyle(.roundedBorder)
+                            .font(Design.Typography.ui(14))
+                    }
+                }
+                .frame(maxWidth: 520)
                 // The typo, if there is one, with its mark; the way the line reads otherwise.
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     if model.problem != nil {
@@ -127,9 +133,15 @@ private struct KeyField: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Text("KEY").font(Design.Typography.label).tracking(1.1).foregroundStyle(Design.Palette.inkTertiary)
-            TextField("D major", text: $text)
-                .textFieldStyle(.roundedBorder)
-                .font(Design.Typography.ui(12.5))
+            Group {
+                if Design.isOffscreenRender {
+                    RenderedField(text: text.isEmpty ? model.key.name : text, placeholder: "D major")
+                } else {
+                    TextField("D major", text: $text)
+                        .textFieldStyle(.roundedBorder)
+                        .font(Design.Typography.ui(12.5))
+                }
+            }
                 .frame(width: 130)
                 .focused($isFocused)
                 .onSubmit { read() }

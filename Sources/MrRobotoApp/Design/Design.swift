@@ -467,7 +467,9 @@ public enum Design {
         /// window's minimum — every one of them collapses to `collapsedRegionWidth` — so these are
         /// what a region costs when you have asked for it, not what the frame costs you always.
         public static let librarySidebarWidth: CGFloat = 220
-        public static let conversationRailWidth: CGFloat = 380
+        /// Open from the first launch, so it is what the bench pays most for: 340 holds the band's
+        /// question, the log and the field, and leaves the bench 824 at the 1440 default.
+        public static let conversationRailWidth: CGFloat = 340
         public static let partsLedgerWidth: CGFloat = 230
         public static let headerHeight: CGFloat = 56
         public static let transportHeight: CGFloat = 84
@@ -524,5 +526,45 @@ extension Color {
                            blue: Double(value & 0xff) / 255,
                            alpha: 1)
         })
+    }
+}
+
+// MARK: - Controls, as an offscreen render draws them
+
+/// A text field in an offscreen render. The native field is AppKit-backed and `ImageRenderer`
+/// draws it as a block, so a render shows the text it holds in a field's border instead, where the
+/// field is. Only renders use it; the app always has the real field.
+struct RenderedField: View {
+    let text: String
+    let placeholder: String
+    var font: Font = Design.Typography.ui(12.5)
+    var alignment: Alignment = .leading
+
+    var body: some View {
+        Text(text.isEmpty ? placeholder : text)
+            .font(font)
+            .foregroundStyle(text.isEmpty ? Design.Palette.inkTertiary : Design.Palette.ink)
+            .lineLimit(1)
+            .padding(.horizontal, 7)
+            .frame(maxWidth: .infinity, minHeight: 22, alignment: alignment)
+            .background(Design.Palette.panel, in: RoundedRectangle(cornerRadius: 5))
+            .overlay(RoundedRectangle(cornerRadius: 5).stroke(Design.Palette.lineStrong, lineWidth: Design.Metric.hairline))
+    }
+}
+
+/// A stepper in an offscreen render: its label, and the pair of arrows beside it.
+struct RenderedStepper<Label: View>: View {
+    @ViewBuilder let label: Label
+
+    var body: some View {
+        HStack(spacing: 6) {
+            label
+            Image(systemName: "chevron.up.chevron.down")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(Design.Palette.inkSecondary)
+                .frame(width: 16, height: 20)
+                .background(Design.Palette.panel, in: RoundedRectangle(cornerRadius: 4))
+                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Design.Palette.lineStrong, lineWidth: Design.Metric.hairline))
+        }
     }
 }

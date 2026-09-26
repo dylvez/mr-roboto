@@ -131,6 +131,12 @@ struct MashupSurfaceView: View {
     private var meeting: some View {
         HStack(spacing: 12) {
             BoothLabel("They meet")
+            if Design.isOffscreenRender {
+                RenderedStepper { Text(meetLine).font(Design.Typography.ui(12.5)) }
+                    .fixedSize()
+                RenderedField(text: "\(model.barShift)", placeholder: "bars", font: Design.Typography.numeric(11.5), alignment: .trailing)
+                    .frame(width: 56)
+            } else {
             Stepper(value: barShift, in: MashupModel.barShiftRange) {
                 Text(meetLine).font(Design.Typography.ui(12.5))
             }
@@ -144,6 +150,7 @@ struct MashupSurfaceView: View {
                 .frame(width: 56)
                 .help("The shift in bars, typed: \(MashupModel.barShiftRange.lowerBound) to \(MashupModel.barShiftRange.upperBound). Return keeps it.")
                 .accessibilityLabel("Bar shift")
+            }
             Text("bars").font(Design.Typography.ui(11, weight: .regular)).foregroundStyle(Design.Palette.inkTertiary)
             Spacer()
         }
@@ -179,6 +186,12 @@ struct MashupSurfaceView: View {
     private var footer: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
+                if Design.isOffscreenRender {
+                    RenderedField(text: model.title, placeholder: "\(model.song(.a)?.title ?? "A") × \(model.song(.b)?.title ?? "B")")
+                        .frame(width: 260)
+                    RenderedStepper { Text("from bar \(model.previewBar)").font(Design.Typography.numeric(11.5)) }
+                        .fixedSize()
+                } else {
                 TextField("\(model.song(.a)?.title ?? "A") × \(model.song(.b)?.title ?? "B")", text: $model.title)
                     .textFieldStyle(.roundedBorder)
                     .font(Design.Typography.ui(12.5))
@@ -189,6 +202,7 @@ struct MashupSurfaceView: View {
                 }
                 .fixedSize()
                 .help("Where the preview starts")
+                }
                 Button(model.isPreviewing ? "Rendering…" : "Preview 8 Bars") { Task { await model.preview() } }
                     .disabled(model.blocker != nil || model.isPreviewing || model.isMaking)
                     .help("Eight bars from there, through the plan, played now")

@@ -1,4 +1,5 @@
 import Foundation
+import Instrument
 import SongGraph
 
 // MARK: - What a proposal asks the frame to do
@@ -135,6 +136,15 @@ enum PartLabel {
         case .sound(let sound):
             // A groove on a chop names the chop by part, which is not a name anybody reads.
             if ChopSound.part(of: sound.instrument) != nil { return note(of: version) ?? "Chop kit" }
+            // "drum.tr808.kick" is the Sound surface's key, not a name: the machine's name and the
+            // voice, and the dust only when there is some.
+            let pieces = sound.instrument.split(separator: ".").map(String.init)
+            if pieces.count == 3, pieces[0] == "drum" {
+                let machine = SynthMachine.preset(id: pieces[1])?.name ?? pieces[1].uppercased()
+                let voice = pieces[2].replacingOccurrences(of: "([a-z])([A-Z])", with: "$1 $2", options: .regularExpression).lowercased()
+                let dust = sound.preset.flatMap { $0 == "clean" ? nil : $0 }
+                return "\(machine) \(voice)" + (dust.map { ", \($0)" } ?? "")
+            }
             return sound.preset.map { "\(sound.instrument) · \($0)" } ?? sound.instrument
         case .bassline:
             return note(of: version) ?? "Bass line"
@@ -210,6 +220,12 @@ public enum Guidance {
 
     /// What you can do next, given the song. Empty for no song and for an empty song.
     public static func proposals(for song: Song?) -> [Proposal] {
+        Array(allProposals(for: song).prefix(maximumProposals))
+    }
+
+    /// Every proposal the song supports, in the path's order, before the rail's cut to four: the
+    /// band's question ranks these against what you tend to choose (`NextAdvisor`).
+    public static func allProposals(for song: Song?) -> [Proposal] {
         guard let song, !song.versions.isEmpty else { return [] }
         var out: [Proposal] = []
 
@@ -371,7 +387,7 @@ public enum Guidance {
                                       bound: boundRecord(in: song))))
         }
 
-        return Array(out.prefix(maximumProposals))
+        return out
     }
 
     /// The one thing opening a song should put on the bench, or nothing when the song holds nothing

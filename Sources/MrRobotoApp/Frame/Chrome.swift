@@ -152,6 +152,68 @@ struct ProposalButton: View {
     }
 }
 
+/// One answer to the band's question: what it does and why, "Your usual" when your history put it
+/// there, and "Not this" to wave it away.
+struct NextOptionButton: View {
+    let option: NextOption
+    var isLeading: Bool = false
+    let take: () -> Void
+    let decline: () -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 0) {
+            Button(action: take) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(option.title)
+                            .font(Design.Typography.prose(15, weight: isLeading ? .medium : .regular))
+                            .foregroundStyle(isLeading ? Design.Palette.accent : Design.Palette.ink)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .multilineTextAlignment(.leading)
+                        if option.isYourUsual {
+                            Text("YOUR USUAL")
+                                .font(Design.Typography.label)
+                                .tracking(1.1)
+                                .foregroundStyle(Design.Palette.accent)
+                                .help("You have chosen this at this point before, so it is offered first")
+                        }
+                        Spacer(minLength: 4)
+                    }
+                    Text(option.rationale)
+                        .font(Design.Typography.ui(11.5, weight: .regular))
+                        .foregroundStyle(Design.Palette.inkSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .multilineTextAlignment(.leading)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, 12)
+                .padding(.vertical, 12)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(option.rationale)
+            Button(action: decline) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(Design.Palette.inkTertiary)
+                    .frame(width: 26, height: 26)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 6)
+            .padding(.trailing, 4)
+            .help("Not this: offered less here from now on")
+            .accessibilityLabel("Not this: \(option.title)")
+        }
+        .background(isLeading ? Design.Palette.accentSoft : Design.Palette.panel)
+        .overlay(
+            RoundedRectangle(cornerRadius: Design.Metric.corner)
+                .stroke(isLeading ? Design.Palette.accent : Design.Palette.line, lineWidth: Design.Metric.hairline)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+    }
+}
+
 /// A one-pixel rule in the frame's line colour. `Divider()` picks its own grey, which is not ours.
 struct Hairline: View {
     var axis: Axis = .horizontal

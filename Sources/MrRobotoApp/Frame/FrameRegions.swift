@@ -51,18 +51,20 @@ public enum FrameRegion: String, CaseIterable, Sendable, Identifiable {
     /// What a first launch opens with, and the reasoning is the same in all three cases: does this
     /// region earn its width while you are working?
     ///
-    /// - The **library** does, at the start: with nothing open it is the only way in, and its rows
-    ///   are what a first launch is for. It is one keystroke from gone once a song is open.
-    /// - The **rail** does not. In Gate A it is a session log and an inert composer; the one part of
-    ///   it that is worth interrupting you — the next step — follows you into the bench dock when it
-    ///   is collapsed, so nothing is lost by starting it closed.
-    /// - The **ledger** does: it is the song's parts, each row a verb, and it is how you move between
-    ///   them while the work is happening.
+    /// - The **library** does not, any more. It is how you get in and how you switch songs, and the
+    ///   Director's first question now does the getting in — pick up the last song, start one,
+    ///   flip a record, or open another, which unfolds it. Its strip is one click from the list.
+    /// - The **rail** does: the band asks what next at its top, and the band is the app's idea. It
+    ///   used to start folded, from when it was a session log and an inert composer.
+    /// - The **ledger** folds to its strip, with its count, to pay for the band: with the band open
+    ///   and the ledger too, the surface got 55% of the default window, under the 60% it is owed.
+    ///   The band's question and the path across the top do the getting around; the parts and
+    ///   their versions are one click away.
     public var isCollapsedByDefault: Bool {
         switch self {
-        case .library: return false
-        case .rail: return true
-        case .ledger: return false
+        case .library: return true
+        case .rail: return false
+        case .ledger: return true
         }
     }
 }
@@ -78,8 +80,17 @@ public final class RegionVisibility {
 
     @ObservationIgnored private let defaults: UserDefaults
 
+    /// The layout the defaults are for. A layout remembered from before a change of defaults is
+    /// put back to them once, so the change is seen; after that what you fold stays folded.
+    static let layoutVersion = 2
+    static let layoutVersionKey = "frame.regions.layoutVersion"
+
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        if defaults.integer(forKey: Self.layoutVersionKey) < Self.layoutVersion {
+            for region in FrameRegion.allCases { defaults.removeObject(forKey: region.defaultsKey) }
+            defaults.set(Self.layoutVersion, forKey: Self.layoutVersionKey)
+        }
         var restored: Set<FrameRegion> = []
         for region in FrameRegion.allCases {
             let value = defaults.object(forKey: region.defaultsKey) as? Bool ?? region.isCollapsedByDefault

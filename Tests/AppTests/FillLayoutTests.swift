@@ -33,7 +33,7 @@ struct FillGeometryTests {
     @Test("They are the frame's own numbers, not a copy of them")
     func geometriesComeFromTheFrame() {
         #expect(Geometry.minimum == CGSize(width: 640, height: 460))
-        #expect(Geometry.standard == CGSize(width: 907, height: 665))
+        #expect(Geometry.standard == CGSize(width: 973, height: 665))
         #expect(Geometry.wide == CGSize(width: 1269, height: 665))
 
         // And they are derived, so a change to `Design.Metric` or to the regions moves them.
@@ -85,10 +85,10 @@ struct FillChopLaneTests {
         }
     }
 
-    @Test("The pad grid's columns come from the real width: 5, 8, 11")
+    @Test("The pad grid's columns come from the real width: 5, 9, 11")
     func padColumnsFollowWidth() {
         #expect(layout(Geometry.minimum).padColumns == 5)
-        #expect(layout(Geometry.standard).padColumns == 8)
+        #expect(layout(Geometry.standard).padColumns == 9)
         #expect(layout(Geometry.wide).padColumns == 11)
 
         // Strictly increasing, which is the property a fixed column count cannot have.

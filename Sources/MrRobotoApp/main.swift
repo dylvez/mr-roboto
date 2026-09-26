@@ -235,11 +235,18 @@ struct FrameCommands: Commands {
             Divider()
             // The path's next step, from anywhere: what the rail's What next and the dock's Next
             // chip offer, without reaching for either.
-            Button(app.proposals.first.map { "Next: \($0.title)" } ?? "Next Step") {
-                if let next = app.proposals.first { app.perform(next.action) }
+            // The band's question's best answer, from anywhere.
+            let asked = app.nextQuestion
+            Button(asked.options.first.map { "Next: \($0.title)" } ?? "Next Step") {
+                if let next = asked.options.first { app.take(next, from: asked) }
             }
             .keyboardShortcut("]", modifiers: .command)
-            .disabled(app.proposals.isEmpty)
+            .disabled(asked.options.isEmpty)
+            Button("Forget My Usual Choices") {
+                app.nextPreferences.forget()
+                app.nextDismissed.removeAll()
+            }
+            .help("The band's question goes back to the order the work goes in, with nothing learned from what you chose")
             Divider()
             Button("Cast…") { app.openSurface(.cast, title: app.song?.title ?? "Cast") }
                 .keyboardShortcut("8", modifiers: .command)

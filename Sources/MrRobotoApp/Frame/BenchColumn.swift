@@ -57,23 +57,21 @@ struct BenchColumn: View {
             if app.song == nil {
                 VStack(spacing: 6) {
                     Wordmark(size: 30)
-                    ArtImage("empty-first-launch", width: 420, height: 280)
+                    ArtImage("empty-first-launch", width: 300, height: 200)
                 }
                 .frame(maxWidth: .infinity)
             }
-            emptyNote
-            if app.song == nil {
-                HStack(spacing: 8) {
-                    Button("Import a Record…") { MrRobotoApp.importRecord(app) }
-                        .buttonStyle(.borderedProminent)
-                    // As File ▸ New Song does it: the settings open, so the first thing is a name,
-                    // a tempo and a key rather than "Untitled, 120, no key" found out later.
-                    Button("New Song") {
-                        app.open(Song.new(title: MrRobotoApp.untitledName()))
-                        app.wantsSongSettings = true
-                    }
-                }
-                .font(Design.Typography.ui(12.5))
+            if app.regions.isCollapsed(.rail) {
+                // The band's question, in the room the bench has while nothing is on it: at launch
+                // the Director asks where to start, and after Close all whoever's step it is asks.
+                NextQuestionCard(app: app, question: app.nextQuestion, showsAsker: true)
+                    .padding(Design.Metric.inset)
+                    .background(Design.Palette.panelAlt)
+                    .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.line, lineWidth: Design.Metric.hairline))
+                    .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+                    .frame(maxWidth: 620, alignment: .leading)
+            } else {
+                emptyNote
             }
         }
     }
@@ -81,8 +79,8 @@ struct BenchColumn: View {
     private var emptyNote: some View {
         EmptyNote(title: app.song == nil ? "Nothing open." : "The bench is empty.",
                   detail: app.song == nil
-                      ? "Two ways in. Flip a record: import an audio file (⌘I, or drop one on the Record surface) and the app reads its key, tempo and form, then splits it into stems to chop. Or start from nothing: New Song (⌘N) opens an Intro, a Verse and a Hook, ready for a groove on the Grid. Songs you have made are in the library on the left."
-                      : "Press a surface above and it fills the bench. Pin one to keep it on screen while you work in another.")
+                      ? "The Director is asking where to start, in the Band column: pick up a song, start a new one, or flip a record. Every song you have made is in the library, in the strip on the left."
+                      : "Answer the band's question on the right, or press a surface above and it fills the bench. Pin one to keep it on screen while you work in another.")
             .padding(Design.Metric.inset)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Design.Palette.panelAlt)
@@ -115,14 +113,19 @@ struct SurfaceDock: View {
             // The next step folds before the names do: its title goes into its tooltip, "Next →"
             // stays. At the default window the names used to go first, and the dock was a row of
             // unlabelled glyphs beside a sentence.
-            let proposal = app.dockProposal
+            // The band's question, when its column is folded away: its best answer, one press.
+            let asked = app.dockQuestion
+            // The question is kept before the surfaces' names are: it is what is being asked of you,
+            // and every chip's name is in its tooltip.
             ViewThatFits(in: .horizontal) {
-                dockRow(.full, next: proposal, short: false)
-                dockRow(.compact, next: proposal, short: false)
-                dockRow(.compact, next: proposal, short: true)
-                dockRow(.current, next: proposal, short: false)
-                dockRow(.current, next: proposal, short: true)
-                dockRow(.glyphs, next: proposal, short: true)
+                dockRow(.full, next: asked, room: .both)
+                dockRow(.compact, next: asked, room: .both)
+                dockRow(.current, next: asked, room: .both)
+                dockRow(.compact, next: asked, room: .question)
+                dockRow(.current, next: asked, room: .question)
+                dockRow(.glyphs, next: asked, room: .question)
+                dockRow(.glyphs, next: asked, room: .answer)
+                dockRow(.glyphs, next: asked, room: .button)
             }
             if !app.bench.items.isEmpty {
                 FrameButton(title: "Close all", emphasis: .quiet) {
@@ -151,12 +154,13 @@ struct SurfaceDock: View {
     @State private var isConfirmingCloseAll = false
 
     /// The chips, then the next step, as one row the fit is tried against.
-    private func dockRow(_ style: DockChip.Style, next proposal: Proposal?, short: Bool) -> some View {
+    private func dockRow(_ style: DockChip.Style, next asked: (question: NextQuestion, option: NextOption)?,
+                         room: DockQuestion.Room) -> some View {
         HStack(spacing: 8) {
             chips(style)
             Spacer(minLength: 8)
-            if let proposal {
-                NextStepChip(proposal: proposal, short: short) { app.perform(proposal.action) }
+            if let asked {
+                DockQuestion(app: app, question: asked.question, option: asked.option, room: room)
                     .fixedSize()
             }
         }
@@ -238,43 +242,5 @@ private struct DockChip: View {
         if isActive { return "\(kind.rawValue) is filling the bench (\(shortcut))" }
         if isOpen { return "Bring \(kind.rawValue) forward (\(shortcut))" }
         return "Open \(kind.rawValue) (\(shortcut))"
-    }
-}
-
-/// The leading proposal, in the dock, shown only while the rail is collapsed. One line, the accent,
-/// and the same `perform` the rail's own control calls — there is no second way to take a step.
-private struct NextStepChip: View {
-    let proposal: Proposal
-    /// Just "Next →", the step in the tooltip: what the chip becomes when the dock is tight.
-    var short = false
-    let perform: () -> Void
-
-    var body: some View {
-        Button(action: perform) {
-            HStack(spacing: 8) {
-                SmallLabel(short ? "Next →" : "Next", color: Design.Palette.accent)
-                if !short {
-                    Text(proposal.title)
-                        .font(Design.Typography.ui(12.5, weight: .medium))
-                        .foregroundStyle(Design.Palette.accent)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        // Capped so the next step cannot push the surface chips off a narrow dock:
-                        // the chips are the navigation and they win.
-                        .frame(maxWidth: 200, alignment: .leading)
-                }
-            }
-            .padding(.horizontal, 10)
-            .frame(height: Design.Metric.controlHeight)
-            .background(Design.Palette.accentSoft)
-            .overlay(
-                RoundedRectangle(cornerRadius: Design.Metric.corner)
-                    .stroke(Design.Palette.accent, lineWidth: Design.Metric.hairline)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .help("\(proposal.title) — \(proposal.rationale) (⌘])")
     }
 }

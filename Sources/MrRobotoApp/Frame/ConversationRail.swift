@@ -21,7 +21,8 @@ struct ConversationRail: View {
     /// The suggestions above the conversation fold away and take only the height you give them:
     /// the conversation is the point of this column, and nothing above it may crowd it out.
     @AppStorage("rail.next.collapsed") private var nextIsCollapsed = false
-    @AppStorage("rail.next.height") private var nextHeight = 170.0
+    // A question and three options: the old height was for a list, and would scroll the question.
+    @AppStorage("rail.next.height.v3") private var nextHeight = 410.0
     @State private var dragStartHeight: Double?
 
     var body: some View {
@@ -39,7 +40,7 @@ struct ConversationRail: View {
 
             Hairline()
             nextBlock
-            if !nextIsCollapsed, !app.proposals.isEmpty { nextResizer } else { Hairline() }
+            if !nextIsCollapsed { nextResizer } else { Hairline() }
             history
             Hairline()
             composer
@@ -49,8 +50,11 @@ struct ConversationRail: View {
 
     // MARK: What next
 
+    /// The band's question: a member asks what you want to do next, with the few things most
+    /// worth doing. Always something, from launch on — it used to be a list that was empty with
+    /// no song open and folded away on first launch.
     private var nextBlock: some View {
-        let proposals = app.proposals
+        let question = app.nextQuestion
         return VStack(alignment: .leading, spacing: 10) {
             Button {
                 nextIsCollapsed.toggle()
@@ -60,38 +64,21 @@ struct ConversationRail: View {
                         .font(.system(size: 9, weight: .semibold))
                         .foregroundStyle(Design.Palette.inkTertiary)
                         .frame(width: 10)
-                    if let emblem = proposals.first.flatMap({ Art.emblem(for: $0.source) }) { ArtImage(emblem, width: 22) }
-                    SmallLabel(proposals.first?.source.label ?? Proposal.Source.session.label)
+                    if let emblem = Art.emblem(for: question.asker) { ArtImage(emblem, width: 22) }
+                    SmallLabel("\(question.asker.label) asks")
                     Spacer()
-                    if !proposals.isEmpty {
-                        Text("\(proposals.count)").font(Design.Typography.numeric(10.5)).foregroundStyle(Design.Palette.inkTertiary)
-                    }
                 }
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help(nextIsCollapsed ? "Show the suggestions" : "Fold the suggestions away, so the conversation has the column")
+            .help(nextIsCollapsed ? "Show the question" : "Fold the question away, so the conversation has the column")
 
             if nextIsCollapsed {
-                // One line, so folding it away does not hide that there is something to do.
-                if let first = proposals.first {
-                    Text(first.title).font(Design.Typography.ui(12)).foregroundStyle(Design.Palette.inkSecondary).lineLimit(1)
-                }
-            } else if proposals.isEmpty {
-                Text(emptyLine)
-                    .font(Design.Typography.ui(12, weight: .regular))
-                    .foregroundStyle(Design.Palette.inkSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                // One line, so folding it away does not hide that something is being asked.
+                Text(question.question).font(Design.Typography.ui(12)).foregroundStyle(Design.Palette.inkSecondary).lineLimit(1)
             } else {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 10) {
-                        ForEach(Array(proposals.enumerated()), id: \.element.id) { index, proposal in
-                            ProposalButton(proposal: proposal, isLeading: index == 0) {
-                                app.perform(proposal.action)
-                            }
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                ScrollsInside {
+                    NextQuestionCard(app: app, question: question)
                 }
                 .frame(height: CGFloat(min(max(nextHeight, 64), 480)))
             }
@@ -119,19 +106,6 @@ struct ConversationRail: View {
             }
             .onEnded { _ in dragStartHeight = nil })
         .help("Drag to resize the suggestions")
-    }
-
-    /// The honest version of an empty list. A song with nothing in it gets no invented work.
-    private var emptyLine: String {
-        guard let song = app.song else {
-            return "No song open. Pick one from the library on the left, or press Record in the dock "
-                + "above the bench and drop an audio file on it."
-        }
-        if song.versions.isEmpty {
-            return "\(song.title) is empty — nothing has been imported or made in it yet, so there is "
-                + "nothing to suggest. Press Record in the dock above the bench and drop a file on it."
-        }
-        return "Nothing obvious left. Every surface is a press away in the dock above the bench."
     }
 
     // MARK: The session log
@@ -430,7 +404,7 @@ struct InertComposer: View {
             )
 
             Text("This session has no band attached, so the field cannot send. "
-                 + "What next is still the song telling you what it is missing.")
+                 + "The question above is still worked out from the song, and its answers still work.")
                 .font(Design.Typography.ui(11.5, weight: .regular))
                 .foregroundStyle(Design.Palette.inkSecondary)
                 .fixedSize(horizontal: false, vertical: true)
