@@ -56,6 +56,8 @@ public struct CompareReading: Hashable, Sendable {
 
     /// What the cell shows: the number, then the unit.
     public var text: String {
+        // A whole number is said whole: "2 parts", not "2.00 parts".
+        if value == value.rounded() { return String(format: "%.0f %@", value, unit) }
         let magnitude = abs(value)
         let digits = magnitude >= 100 ? 0 : (magnitude >= 10 ? 1 : 2)
         return String(format: "%.\(digits)f %@", value, unit)

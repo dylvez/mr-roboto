@@ -557,6 +557,15 @@ final class SurfaceWiring {
         return allKept
     }
 
+    /// A title the surface keeps up to date itself, for the card's header, when its bench title can
+    /// go stale: a Piano roll opened on a bass line and switched to melody mode is writing a tune.
+    func liveTitle(for item: BenchItem) -> String? {
+        switch item.kind {
+        case .pianoRoll: return rolls[item.id]?.title
+        default: return nil
+        }
+    }
+
     /// The part a surface is working on, when it has one: what its header's "heard" tag is about.
     /// The binding alone is not enough — a Piano roll opened under a groove is bound to the groove,
     /// and a new groove has no part until its first keep — so the models answer where they can.

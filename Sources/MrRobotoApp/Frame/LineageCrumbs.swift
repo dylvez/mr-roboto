@@ -71,32 +71,59 @@ struct LineageCrumbs: View {
     let crumbs: [PartLineage.Crumb]
     let app: AppState
 
+    /// Whole crumbs or none: every one; then the first and the last with "…" for the ones between;
+    /// then the last alone; then nothing. They used to truncate letter by letter, down to
+    /// "…s stem › …s stem", which named nothing.
     var body: some View {
+        ViewThatFits(in: .horizontal) {
+            row(Array(crumbs.indices))
+            if crumbs.count > 2 { row([0, nil, crumbs.count - 1]) }
+            if let last = crumbs.indices.last { row([last]) }
+            Color.clear.frame(width: 0, height: 0)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Made from: " + crumbs.map(\.title).joined(separator: ", "))
+    }
+
+    /// Crumbs by index, nil standing for the ones left out.
+    private func row(_ shown: [Int?]) -> some View {
         HStack(spacing: 4) {
-            ForEach(Array(crumbs.enumerated()), id: \.offset) { index, crumb in
-                if index > 0 {
+            ForEach(Array(shown.enumerated()), id: \.offset) { position, index in
+                if position > 0 {
                     Text("›")
                         .font(Design.Typography.ui(12, weight: .regular))
                         .foregroundStyle(Design.Palette.inkTertiary)
                 }
-                let isLast = index == crumbs.count - 1
-                if let action = crumb.action {
-                    Button(crumb.title) { app.perform(action) }
-                        .buttonStyle(.plain)
-                        .font(Design.Typography.ui(12, weight: .regular))
-                        .foregroundStyle(Design.Palette.inkSecondary)
-                        .lineLimit(1)
-                        .help("Open \(crumb.title) in \(action.surface.rawValue)")
+                if let index {
+                    crumb(index)
                 } else {
-                    Text(crumb.title)
-                        .font(Design.Typography.ui(12, weight: isLast ? .medium : .regular))
-                        .foregroundStyle(isLast ? Design.Palette.accent : Design.Palette.inkSecondary)
-                        .lineLimit(1)
+                    let hidden = crumbs.dropFirst().dropLast().map(\.title)
+                    Text("…")
+                        .font(Design.Typography.ui(12, weight: .regular))
+                        .foregroundStyle(Design.Palette.inkTertiary)
+                        .help(hidden.joined(separator: " › "))
                 }
             }
         }
-        .truncationMode(.head)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Made from: " + crumbs.map(\.title).joined(separator: ", "))
+        .fixedSize()
+    }
+
+    @ViewBuilder
+    private func crumb(_ index: Int) -> some View {
+        let crumb = crumbs[index]
+        let isLast = index == crumbs.count - 1
+        if let action = crumb.action {
+            Button(crumb.title) { app.perform(action) }
+                .buttonStyle(.plain)
+                .font(Design.Typography.ui(12, weight: .regular))
+                .foregroundStyle(Design.Palette.inkSecondary)
+                .lineLimit(1)
+                .help("Open \(crumb.title) in \(action.surface.rawValue)")
+        } else {
+            Text(crumb.title)
+                .font(Design.Typography.ui(12, weight: isLast ? .medium : .regular))
+                .foregroundStyle(isLast ? Design.Palette.accent : Design.Palette.inkSecondary)
+                .lineLimit(1)
+        }
     }
 }

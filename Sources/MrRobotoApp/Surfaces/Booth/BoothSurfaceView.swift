@@ -459,15 +459,12 @@ struct BoothLabel: View {
 struct KeyHint: View {
     let key: String
     init(_ key: String) { self.key = key }
+    // Plain text, not a keycap: a bordered "R" beside the Record button read as a second button.
     var body: some View {
-        Text(key)
-            .font(Design.Typography.numeric(10.5, weight: .medium))
-            .foregroundStyle(Design.Palette.inkSecondary)
-            .frame(minWidth: Design.Metric.tagHeight, minHeight: Design.Metric.tagHeight)
-            .padding(.horizontal, 4)
-            .background(Design.Palette.panelAlt, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-            .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
-                .stroke(Design.Palette.lineStrong, lineWidth: Design.Metric.hairline))
+        Text("or press \(key)")
+            .font(Design.Typography.ui(11))
+            .foregroundStyle(Design.Palette.inkTertiary)
+            .fixedSize()
             .help("Press \(key) to record.")
             .accessibilityHidden(true)
     }

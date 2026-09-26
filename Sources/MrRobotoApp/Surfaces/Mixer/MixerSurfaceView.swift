@@ -58,7 +58,6 @@ struct MixerSurfaceView: View {
 
     private var header: some View {
         HStack(alignment: .center, spacing: 10) {
-            Text("Mixer").font(Design.Typography.prose(16, weight: .medium))
             Text("\(model.rows.count) strip\(model.rows.count == 1 ? "" : "s") · \(model.base.map { "on \(PartLabel.title(of: $0))" } ?? "at unity")")
                 .font(Design.Typography.numeric(12))
                 .foregroundStyle(Design.Palette.inkSecondary)
@@ -392,7 +391,10 @@ struct MixScroll<Content: View>: View {
                 .frame(minHeight: 0, maxHeight: axes.contains(.vertical) ? .infinity : nil, alignment: .topLeading)
                 .clipped()
         } else {
+            // Shown while still: a strip row or a master panel cut off at the edge says there is
+            // more rather than looking finished.
             ScrollView(axes) { content }
+                .scrollIndicators(.visible)
         }
     }
 }

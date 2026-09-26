@@ -42,10 +42,6 @@ public struct CheckSurfaceView: View {
 
     private func header(_ layout: CheckLayout) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
-            Text(SurfaceKind.check.rawValue.uppercased())
-                .font(Design.Typography.label)
-                .tracking(1.1)
-                .foregroundStyle(Design.Palette.inkTertiary)
             Text(model.attribution)
                 .font(Design.Typography.ui(12))
                 .foregroundStyle(Design.Palette.inkSecondary)

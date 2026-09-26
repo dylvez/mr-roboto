@@ -40,13 +40,8 @@ public struct CompareSurfaceView: View {
     // MARK: Header
 
     private var header: some View {
+        // The card above carries the question; this row is what to do about it.
         HStack(alignment: .firstTextBaseline, spacing: 10) {
-            Text(SurfaceKind.compare.rawValue.uppercased())
-                .font(Design.Typography.label)
-                .tracking(1.1)
-                .foregroundStyle(Design.Palette.inkTertiary)
-            Text(model.title)
-                .font(Design.Typography.prose(16, weight: .medium))
             Spacer()
             if model.findingCount > 0 {
                 Text("\(model.findingCount) finding\(model.findingCount == 1 ? "" : "s")")
@@ -182,16 +177,20 @@ private struct ColumnHeadings: View {
             Text("")
                 .frame(width: layout.titleWidth, alignment: .leading)
             ForEach(Array(model.features.prefix(layout.visibleFeatureCount)), id: \.self) { feature in
+                // Two lines and a gutter, rather than one line each running into the next:
+                // "MIX LUFS INTEGRAT…SONG PARTS".
                 Text(CompareSurfaceView.shortName(of: feature, in: model.vocabulary).uppercased())
                     .font(Design.Typography.label)
                     .tracking(1.0)
                     .foregroundStyle(Design.Palette.inkTertiary)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.trailing, 10)
                     .frame(width: layout.columnWidth, alignment: .leading)
             }
             Spacer(minLength: 0)
         }
-        .frame(height: 20)
+        .frame(minHeight: 20)
     }
 }
 
@@ -398,7 +397,7 @@ extension CompareSurfaceView {
         let parts = feature.rawValue.split(separator: ".").map(String.init)
         guard parts.count > 1 else { return feature.rawValue }
         // Drop a trailing unit segment — ms, db, hz, percent, bpm — since the cell carries the unit.
-        let units: Set<String> = ["ms", "db", "hz", "percent", "bpm", "ratio", "count"]
+        let units: Set<String> = ["ms", "db", "hz", "percent", "bpm", "ratio", "count", "lufs"]
         let named = units.contains(parts[parts.count - 1].lowercased()) ? parts.dropLast() : parts[...]
         return named.isEmpty ? parts[0] : named.joined(separator: " ")
     }

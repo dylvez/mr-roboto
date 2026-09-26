@@ -202,7 +202,10 @@ struct SurfaceHost: View {
                 .font(Design.Typography.label)
                 .tracking(1.1)
                 .foregroundStyle(Design.Palette.inkSecondary)
-            Text(item.title)
+                // One line, always: at the bench's narrowest it broke mid-word, "GR / ID".
+                .lineLimit(1)
+                .fixedSize()
+            Text(SurfaceWiring.shared.liveTitle(for: item) ?? item.title)
                 .font(Design.Typography.ui(16, weight: .medium))
                 .foregroundStyle(Design.Palette.ink)
                 .lineLimit(1)
@@ -275,10 +278,16 @@ struct SurfaceHost: View {
     /// bound to the groove, and the tag is about the line.
     private var boundPart: PartID? { SurfaceWiring.shared.part(for: item, app: app) }
 
-    /// The lineage of the first bound part, when there is one.
+    /// The lineage of the part the surface is working on — its newest version — else of the first
+    /// bound one. A Piano roll switched to melody mode showed the bass line's lineage over the tune.
     private var crumbs: [PartLineage.Crumb] {
-        guard let song = app.song, let first = app.bound(for: item.id).first else { return [] }
-        return PartLineage.crumbs(for: first, in: song)
+        guard let song = app.song else { return [] }
+        // A surface writing a part it has not kept yet — a roll's tune, a line under a groove — has
+        // no lineage of its own, and the binding's is someone else's.
+        if boundPart == nil, [.pianoRoll, .chords, .grid].contains(item.kind) { return [] }
+        let working = boundPart.flatMap { part in song.versions.last { $0.partID == part }?.id }
+        guard let id = working ?? app.bound(for: item.id).first else { return [] }
+        return PartLineage.crumbs(for: id, in: song)
     }
 
     @ViewBuilder

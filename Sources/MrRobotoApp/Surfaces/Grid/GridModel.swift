@@ -614,7 +614,9 @@ public final class GridModel {
     /// named the feel it was.
     public func recognise(_ version: PartVersion) {
         guard feelName == nil, let note = version.note,
-              let feel = feelLibrary.feels.first(where: { note.hasPrefix($0.name) }) else { return }
+              // The longest name that fits: "Boom-Bap Pocket" rather than "Boom-Bap".
+              let feel = feelLibrary.feels.filter({ note.hasPrefix($0.name) }).max(by: { $0.name.count < $1.name.count })
+        else { return }
         feelName = feel.name
         provenance = feel.provenance
     }

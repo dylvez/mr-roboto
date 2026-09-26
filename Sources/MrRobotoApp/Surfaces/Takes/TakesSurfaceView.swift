@@ -70,6 +70,10 @@ struct ScrollsInside<Content: View>: View {
         } else {
             ScrollView(.vertical) { content }
                 .scrollBounceBehavior(.basedOnSize)
+                // Shown whether or not you are scrolling: with the system's overlay scrollers a
+                // panel cut off at its bottom edge — Structure's Chop row, a critic's findings —
+                // gave no sign there was more below.
+                .scrollIndicators(.visible)
         }
     }
 }
@@ -201,8 +205,11 @@ struct TakesLanes: View {
                         }
                         Text(title).font(Design.Typography.ui(13, weight: isComp ? .semibold : .medium)).lineLimit(1)
                     }
+                    // Two lines before an ellipsis: the flag count is what a take's line is read for,
+                    // and it is last, so one line cut it to "2 fla…".
                     Text(subtitle).font(Design.Typography.numeric(10.5)).foregroundStyle(Design.Palette.inkTertiary)
-                        .lineLimit(1)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                         .help(subtitle)
                     if isComp { pickLink }
                 }

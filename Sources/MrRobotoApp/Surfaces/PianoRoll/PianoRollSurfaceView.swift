@@ -43,9 +43,8 @@ struct PianoRollSurfaceView: View {
     }
 
     private var header: some View {
+        // The card above carries the roll's title, and follows it; this row is what it writes.
         HStack(alignment: .firstTextBaseline, spacing: 10) {
-            Text(model.title)
-                .font(Design.Typography.prose(16, weight: .medium))
             // What this roll is writing. The same grid either way.
             HStack(spacing: 4) {
                 ForEach(PianoRollModel.Mode.allCases, id: \.self) { mode in

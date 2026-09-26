@@ -89,7 +89,8 @@ struct CastSurfaceView: View {
                     .foregroundStyle(Design.Palette.inkTertiary)
             }
             Spacer()
-            CastChip(present ? "In the room" : "Out", isOn: present) { toggle(bible.id) }
+            // Lit and "In the room" when they are; unlit, the chip says what pressing it does.
+            CastChip(present ? "In the room" : "Bring in", isOn: present) { toggle(bible.id) }
                 .disabled(app.song == nil)
                 .help(chipHelp(bible.name, present: present))
         }

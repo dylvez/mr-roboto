@@ -48,14 +48,9 @@ public struct ChopLaneView: View {
     // MARK: Header
 
     private var header: some View {
+        // The card above names the lane and the bar, and the sensitivity row counts the slices: this
+        // row is the lane's own controls, not a second title.
         HStack(alignment: .firstTextBaseline, spacing: 10) {
-            Text(ChopLaneSurface.kind.rawValue.uppercased())
-                .font(Design.Typography.label)
-                .tracking(0.8)
-                .foregroundStyle(Design.Palette.inkTertiary)
-            Text(surface.headline)
-                .font(Design.Typography.prose(15.5))
-                .foregroundStyle(Design.Palette.ink)
             Spacer()
             Button("Play bar") { surface.auditionBar() }
                 .buttonStyle(.plain)

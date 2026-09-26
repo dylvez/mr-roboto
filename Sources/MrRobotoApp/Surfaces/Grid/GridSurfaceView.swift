@@ -42,15 +42,13 @@ public struct GridSurfaceView: View {
 
     private var header: some View {
         HStack(alignment: .center, spacing: 10) {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text(SurfaceKind.grid.rawValue.uppercased())
-                    .font(Design.Typography.label)
-                    .tracking(1.1)
-                    .foregroundStyle(Design.Palette.inkTertiary)
-                Text(model.title)
-                    .font(Design.Typography.prose(16, weight: .medium))
-                    .lineLimit(1)
-            }
+            // The card above names the surface and the groove; this says what it plays: the feel it
+            // was made in, or that the steps are your own. It used to repeat "GRID" and a second
+            // title — "Grid, 120" under "Boom-Bap Pocket".
+            Text(model.feelName.map { "\($0) feel" } ?? "Your own steps")
+                .font(Design.Typography.ui(13, weight: .medium))
+                .foregroundStyle(Design.Palette.inkSecondary)
+                .lineLimit(1)
             // The loop's length sits by its name: "Motown, 104 · 2 bars" is what the groove is.
             LengthMenu(model: model)
             Spacer(minLength: 8)

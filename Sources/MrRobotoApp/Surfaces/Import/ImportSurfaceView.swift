@@ -40,13 +40,7 @@ public struct ImportSurfaceView: View {
 
     private var header: some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
-            Text(SurfaceKind.importRecord.rawValue.uppercased())
-                .font(Design.Typography.label)
-                .tracking(1.1)
-                .foregroundStyle(Design.Palette.inkTertiary)
-            Text(model.title)
-                .font(Design.Typography.prose(16, weight: .medium))
-                .foregroundStyle(Design.Palette.ink)
+            // The card above names the surface and the record.
             Spacer()
             if model.state.isBusy {
                 ImportProgressStrip(progress: model.progress,

@@ -23,12 +23,33 @@ struct InstrumentPicker: View {
                 }
             }
             if let spec = InstrumentVoiceSpec.preset(id: selected) {
-                Text(Self.describe(spec))
+                // What it sounds like, as a player would say it; how it is made is in the tooltip.
+                Text(Self.character(spec))
                     .font(Design.Typography.ui(11))
                     .foregroundStyle(Design.Palette.inkTertiary)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
+                    .help(Self.describe(spec))
             }
+        }
+    }
+
+    /// What the preset sounds like, in a player's words. "FM, two pairs, modulated at 1 and 14" was
+    /// true and told nobody whether to reach for it.
+    static func character(_ spec: InstrumentVoiceSpec) -> String {
+        switch spec.id {
+        case "rhodes": return "Electric piano, warm and bell-toned; brighter the harder you play."
+        case "wurlitzer": return "Reedy electric piano, with more bite than the Rhodes."
+        case "bell": return "Clear, ringing bells, for a tune that should cut through."
+        case "marimba": return "Wooden mallets: short, round and soft-edged."
+        case "juno": return "Bright stacked saws, for chords that fill the room."
+        case "pad": return "A soft pad that swells in slowly behind everything."
+        case "choir": return "An airy, voice-like pad."
+        case "pluck": return "A short plucked synth, for riffs and arpeggios."
+        case "organ": return "A sustained organ: the chord holds as long as the key does."
+        case "lead": return "A hollow square lead, for a tune on top."
+        case "brass": return "Synth brass that opens up as the note plays."
+        default: return describe(spec)
         }
     }
 
