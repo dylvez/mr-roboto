@@ -83,23 +83,24 @@ public enum Comp {
 
         let half = max(0, plan.crossfade) / 2
         var out = [[Float]](repeating: [Float](repeating: 0, count: frames), count: channels)
+        // Each span's take, looked up once rather than at every frame.
+        let spanTakes = plan.spans.map { takes[$0.take]! }
+        // Which span, by seams: the i-th span runs from seam[i-1] to seam[i]. Time only moves on,
+        // so the index carries from frame to frame instead of being counted up from 0 at each.
+        var index = 0
         for frame in 0..<frames {
             let t = start + Double(frame) / rate
-            // Which span, by seams: the i-th span runs from seam[i-1] to seam[i].
-            var index = 0
             while index < seams.count, t >= seams[index] { index += 1 }
             let span = plan.spans[index]
-            let take = takes[span.take]!
+            let take = spanTakes[index]
             // Near a seam: blend outgoing and incoming.
             var blend: (from: TakeAudio, to: TakeAudio, gainFrom: Float, gainTo: Float)?
             if index < seams.count, seams[index] - t < half, half > 0, plan.spans[index + 1].take != span.take {
                 let x = (t - (seams[index] - half)) / (2 * half)   // 0 → 0.5 up to the seam
-                let toTake = takes[plan.spans[index + 1].take]!
-                blend = (take, toTake, Float(cos(x * .pi / 2)), Float(sin(x * .pi / 2)))
+                blend = (take, spanTakes[index + 1], Float(cos(x * .pi / 2)), Float(sin(x * .pi / 2)))
             } else if index > 0, t - seams[index - 1] < half, half > 0, plan.spans[index - 1].take != span.take {
                 let x = (t - (seams[index - 1] - half)) / (2 * half)   // 0.5 → 1 after the seam
-                let fromTake = takes[plan.spans[index - 1].take]!
-                blend = (fromTake, take, Float(cos(x * .pi / 2)), Float(sin(x * .pi / 2)))
+                blend = (spanTakes[index - 1], take, Float(cos(x * .pi / 2)), Float(sin(x * .pi / 2)))
             }
             for channel in 0..<channels {
                 if let blend {

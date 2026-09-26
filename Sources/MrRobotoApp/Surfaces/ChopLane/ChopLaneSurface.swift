@@ -960,7 +960,7 @@ public final class ChopLaneSurface: Surface {
     public var whyRegrooveCannotBeKept: String? {
         guard let current = currentRegroove else { return "Pick a feel first." }
         if current != playedRegroove {
-            return "Play the re-groove first, so what is made is what was heard."
+            return "Play it in this feel first, so what is made is what was heard."
         }
         if current == keptRegroove { return "This groove is already made." }
         return nil

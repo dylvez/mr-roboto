@@ -221,6 +221,8 @@ struct FrameRenderTests {
         app.open(song)
         app.perform(Guidance.dockAction(for: .lyrics, in: app.song))
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-lyrics")
+        try write(FrameView(app: app), size: CGSize(width: FrameLayout.minimumWindowWidth(collapsed: app.regions.collapsed),
+                                                    height: FrameLayout.minimumWindowHeight), name: "frame-lyrics-minimum")
     }
 
     @Test("first launch: nothing open")
@@ -373,6 +375,8 @@ extension FrameRenderTests {
         app.recordReleases([ids[0]: TrackRelease(mixVersion: nil, integratedLUFS: -14.1, truePeakDBTP: -1.2, durationSeconds: 62, trimDB: 2)], for: album)
         _ = app.openAlbum(album)
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-album")
+        try write(FrameView(app: app), size: CGSize(width: FrameLayout.minimumWindowWidth(collapsed: app.regions.collapsed),
+                                                    height: FrameLayout.minimumWindowHeight), name: "frame-album-minimum")
     }
 }
 

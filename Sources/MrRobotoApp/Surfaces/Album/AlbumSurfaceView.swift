@@ -188,22 +188,40 @@ private struct AlbumBody: View {
                         .foregroundStyle(Design.Palette.inkTertiary)
                         .frame(width: 18, alignment: .trailing)
                     if let song = song(for: id) {
-                        Button { app.openSong(id) } label: {
-                            Text(song.title).font(Design.Typography.ui(13.5, weight: .medium)).foregroundStyle(Design.Palette.ink)
+                        // The title over its readings, so the row's controls take room from
+                        // neither: side by side, both were cut to "h…" and "-14.1…".
+                        VStack(alignment: .leading, spacing: 1) {
+                            Button { app.openSong(id) } label: {
+                                Text(song.title).font(Design.Typography.ui(13.5, weight: .medium)).foregroundStyle(Design.Palette.ink)
+                                    .lineLimit(1).truncationMode(.middle)
+                            }
+                            .buttonStyle(.plain)
+                            .help("Open \(song.title)")
+                            // Wrapped between readings, never inside one: a line that began "· 1:03"
+                            // or broke "hook at / 0:27" read as two half-facts.
+                            let pieces = Self.detailPieces(of: song) + trackReadingPieces(id)
+                            FlowRow(spacing: 5, lineSpacing: 1) {
+                                ForEach(Array(pieces.enumerated()), id: \.offset) { index, piece in
+                                    Text(index < pieces.count - 1 ? piece + " ·" : piece)
+                                        .font(Design.Typography.numeric(11))
+                                        .foregroundStyle(Design.Palette.inkSecondary)
+                                        .fixedSize()
+                                }
+                            }
+                            // The gap is the track's own — the silence before it — and under the
+                            // readings it leaves the title the row's width.
+                            if index > 0 {
+                                GapField(seconds: album.gap(before: id)) { app.setGap($0, before: id, in: album.id) }
+                                    .fixedSize()
+                                    .padding(.top, 3)
+                            }
                         }
-                        .buttonStyle(.plain)
-                        .help("Open \(song.title)")
-                        Text(Self.detail(of: song) + trackReading(id))
-                            .font(Design.Typography.numeric(11))
-                            .foregroundStyle(Design.Palette.inkSecondary)
+                        .layoutPriority(1)
                     } else {
                         Text("A song the library no longer holds")
                             .font(Design.Typography.ui(12)).foregroundStyle(Design.Palette.warn)
                     }
                     Spacer()
-                    if index > 0 {
-                        GapField(seconds: album.gap(before: id)) { app.setGap($0, before: id, in: album.id) }
-                    }
                     // A vertical list moves up and down. It used to say ◀ ▶.
                     ChipButton(systemImage: "chevron.up", help: "Move \(title) up one place", isEnabled: index > 0) {
                         app.moveSong(id, in: album.id, to: index - 1)
@@ -248,13 +266,13 @@ private struct AlbumBody: View {
         }
     }
 
-    /// " · hook at 0:41 · −14.2 LUFS" for a track the album has read or released.
-    private func trackReading(_ id: SongID) -> String {
-        guard let track = observation.tracks.first(where: { $0.id == id }) else { return "" }
+    /// "hook at 0:41", "−14.2 LUFS" for a track the album has read or released.
+    private func trackReadingPieces(_ id: SongID) -> [String] {
+        guard let track = observation.tracks.first(where: { $0.id == id }) else { return [] }
         var pieces: [String] = []
         if let hook = track.hookSeconds { pieces.append("hook at \(StructureModel.clock(hook))") }
         if let lufs = track.releasedLUFS { pieces.append(String(format: "%.1f LUFS", lufs)) }
-        return pieces.isEmpty ? "" : " · " + pieces.joined(separator: " · ")
+        return pieces
     }
 
     /// The liner notes. `setNotes` had no caller: the notes went out in album.json and nothing
@@ -347,15 +365,17 @@ private struct AlbumBody: View {
         .frame(width: 220, alignment: .topLeading)
     }
 
-    static func detail(of song: Song) -> String {
+    /// The key, the tempo, and the length in bars and minutes, each a piece a row wraps between.
+    static func detailPieces(of song: Song) -> [String] {
         var pieces: [String] = []
         if let key = song.key { pieces.append(key.name) }
         pieces.append("\(Int(song.tempo.rounded())) bpm")
         if song.lengthInBars > 0 {
             let seconds = Double(song.lengthInBars * song.timeSignature.beatsPerBar) * 60 / max(1, song.tempo)
-            pieces.append("\(song.lengthInBars) bars · \(StructureModel.clock(seconds))")
+            pieces.append("\(song.lengthInBars) bars")
+            pieces.append(StructureModel.clock(seconds))
         }
-        return pieces.joined(separator: " · ")
+        return pieces
     }
 
     private var clearances: some View {
@@ -430,7 +450,7 @@ private struct GapField: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Text("gap")
+            Text("gap before")
                 .font(Design.Typography.ui(11, weight: .regular))
                 .foregroundStyle(Design.Palette.inkTertiary)
             TextField("", text: $text)

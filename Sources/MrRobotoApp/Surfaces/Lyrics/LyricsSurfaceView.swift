@@ -121,13 +121,31 @@ struct LyricsSurfaceView: View {
     /// The setting on top, and under it the lines and the readings, scrolling inside the column: a
     /// verse, a hook and five readings are taller than the bench's minimum, and a column that grew
     /// past it pushed the header and the keep line out of the surface.
+    ///
+    /// The Lyricist's first two findings that do not hold sit above the scroll: at the smallest
+    /// window the one line worth acting on ("'put' lands on the and of 1") was below the fold,
+    /// under every line of the lyric.
     private var reading: some View {
         VStack(alignment: .leading, spacing: 12) {
             setting
+            if !pinned.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    LyricLabel("The Lyricist")
+                    ForEach(Array(pinned.enumerated()), id: \.offset) { _, reading in
+                        Text(reading.says)
+                            .font(Design.Typography.ui(11.5, weight: .regular))
+                            .foregroundStyle(Design.Palette.warn)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
             ScrollsInside { lines.frame(maxWidth: .infinity, alignment: .topLeading) }
         }
         .frame(minWidth: 280, maxWidth: 420, maxHeight: .infinity, alignment: .topLeading)
     }
+
+    /// The findings pinned above the scroll: the first two that do not hold.
+    private var pinned: [PersonaReading] { Array(model.readings.filter { !$0.holds }.prefix(2)) }
 
     private var lines: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -165,9 +183,12 @@ struct LyricsSurfaceView: View {
                     }
                 }
             }
-            if !model.readings.isEmpty {
-                LyricLabel("The Lyricist").padding(.top, 8)
-                ForEach(Array(model.readings.enumerated()), id: \.offset) { _, reading in
+            // The rest of the readings, under the lines; the pinned ones are said once, above.
+            let pinnedCount = pinned.count
+            let rest = Array(model.readings.filter { !$0.holds }.dropFirst(pinnedCount)) + model.readings.filter(\.holds)
+            if !rest.isEmpty {
+                LyricLabel(pinnedCount > 0 ? "More from the Lyricist" : "The Lyricist").padding(.top, 8)
+                ForEach(Array(rest.enumerated()), id: \.offset) { _, reading in
                     Text(reading.says)
                         .font(Design.Typography.ui(11.5, weight: .regular))
                         .foregroundStyle(reading.holds ? Design.Palette.inkSecondary : Design.Palette.warn)

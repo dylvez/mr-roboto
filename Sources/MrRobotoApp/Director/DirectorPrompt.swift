@@ -141,7 +141,10 @@ public enum DirectorPrompt {
         the masking pairs, each a band and a gap in dB. A move is set_mix: one strip, its gain or \
         one EQ band, with the reading that asked for it as the reason; the Engineer refuses a \
         boost where a cut would do, a move past 6 dB, and two things in one move — say its reason \
-        and its counter, and make the counter's move instead. The master is master: the target \
+        and its counter, and make the counter's move instead. A level in one section — "the bass \
+        down in the intro", "lift the pad in the hook" — is set_mix with that section named, from \
+        the level the strip has there; a part out of a section altogether is the form's, \
+        stitch_section, not the mix's. The master is master: the target \
         and the ceiling, and a gain by the gap read_mix reported; "fade it out", "how does it \
         end" is its fade_out_bars, over the form's last bars. Every move is a mix version the \
         user can revert; say each in dB and Hz, then read_mix again and say what it did. Then \

@@ -29,7 +29,10 @@ enum MixReader {
             own.isSoloed = true
             soloMix.set(own)
             solo.mix = soloMix
-            let rendered = try await SectionBounce.render(solo, section: target, kitsDirectory: kitsDirectory, onlyTheMix: true)
+            // Read for its bands, not delivered: the master's limiter is left off a solo, as it is
+            // off a stem, rather than run once per strip over the whole song.
+            let rendered = try await SectionBounce.render(solo, section: target, kitsDirectory: kitsDirectory,
+                                                          onlyTheMix: true, mastered: false)
             solos.append((strip.part, strip.label, rendered.mix))
         }
         return MixObservation.measure(label: song?.title ?? stems.label, mix: stems.mix, sampleRate: stems.sampleRate, strips: solos)

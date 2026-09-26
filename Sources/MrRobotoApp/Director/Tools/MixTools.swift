@@ -74,15 +74,23 @@ public struct ReadMixTool: DirectorTool {
             public var offered: String
             public var otherwise: String
         }
+        public struct SectionLevel: Encodable, Sendable {
+            public var section: String
+            public var strip: String
+            public var gainDB: Double
+            enum CodingKeys: String, CodingKey { case section, strip; case gainDB = "gain_db" }
+        }
         public var mixVersion: String?
         public var strips: [StripEntry]
+        /// A strip's level in one section, where it is not the strip's own.
+        public var sectionLevels: [SectionLevel]
         public var master: MasterEntry
         public var reading: Reading?
         public var masking: [Pair]
         public var flags: [Flag]
         public var engineer: [String]
         public var detail: String
-        enum CodingKeys: String, CodingKey { case strips, master, reading, masking, flags, engineer, detail; case mixVersion = "mix_version" }
+        enum CodingKeys: String, CodingKey { case strips, master, reading, masking, flags, engineer, detail; case mixVersion = "mix_version"; case sectionLevels = "section_levels" }
     }
 
     let workspace: any DirectorWorkspace
@@ -95,7 +103,8 @@ public struct ReadMixTool: DirectorTool {
 
     public let name = "read_mix"
     public var purpose: String {
-        "Read the mix: every strip's level, pan, EQ and send, the master's gain, ceiling and target, and the song bounced "
+        "Read the mix: every strip's level, pan, EQ and send, its level in any section where it differs, the master's gain, "
+        + "ceiling and target, and the song bounced "
         + "through it — integrated LUFS, true peak, crest, tilt — with every strip bounced apart for the masking pairs and the "
         + "Engineer's flags. Nothing is changed. Read before a move; read again after."
     }
@@ -136,7 +145,12 @@ public struct ReadMixTool: DirectorTool {
             return Output.StripEntry(part: strip.part.description, label: strip.label, gainDB: s.gainDB, pan: s.pan, muted: s.isMuted, soloed: s.isSoloed,
                                      eq: s.eq.map { ["hz": $0.frequency, "db": $0.gainDB] }, sendDB: s.sendDB)
         }
-        return Output(mixVersion: plan.mixVersion?.description, strips: entries,
+        let labels = Dictionary(strips.map { ($0.part, $0.label) }, uniquingKeysWith: { a, _ in a })
+        let levels = mix.sectionGains.compactMap { gain -> Output.SectionLevel? in
+            guard let name = song.sections.first(where: { $0.id == gain.section })?.name else { return nil }
+            return Output.SectionLevel(section: name, strip: labels[gain.part] ?? gain.part.description, gainDB: gain.gainDB)
+        }
+        return Output(mixVersion: plan.mixVersion?.description, strips: entries, sectionLevels: levels,
                       master: Output.MasterEntry(gainDB: mix.master.gainDB, ceilingDBTP: mix.master.ceilingDBTP, targetLUFS: mix.master.targetLUFS, fadeOutBars: mix.master.fadeOutBars),
                       reading: reading, masking: pairs, flags: flags, engineer: engineer, detail: detail)
     }
@@ -157,7 +171,10 @@ public struct SetMixTool: DirectorTool {
         public var bandDB: Double
         /// Why, in the Engineer's numbers: the reading that asked for it.
         public var reason: String
-        enum CodingKeys: String, CodingKey { case part, reason; case gainDB = "gain_db"; case bandHz = "band_hz"; case bandDB = "band_db" }
+        /// A section by name: the gain is then the strip's level in that section only, as the
+        /// Mixer's section picker sets it. Empty, or absent, for the strip in every section.
+        public var section: String?
+        enum CodingKeys: String, CodingKey { case part, reason, section; case gainDB = "gain_db"; case bandHz = "band_hz"; case bandDB = "band_db" }
     }
 
     public struct Output: Encodable, Sendable {
@@ -174,9 +191,11 @@ public struct SetMixTool: DirectorTool {
 
     public let name = "set_mix"
     public var purpose: String {
-        "Move one strip: its gain by gain_db, or its peak band to band_hz by band_db — one thing per call. The Engineer "
-        + "checks the move first (cut before boost, at most 6 dB, one move at a time) and refuses with a counter; a move that "
-        + "passes is a mix version whose note carries the move and your reason. Read the mix again after."
+        "Move one strip: its gain by gain_db, or its peak band to band_hz by band_db — one thing per call. With a section "
+        + "named, the gain moves the strip's level in that section only (\"the bass down in the intro\"), from where it is "
+        + "there; a move that lands back on the strip's own level lets the section go. EQ is the strip's in every section. "
+        + "The Engineer checks the move first (cut before boost, at most 6 dB, one move at a time) and refuses with a "
+        + "counter; a move that passes is a mix version whose note carries the move and your reason. Read the mix again after."
     }
     public var schema: DirectorJSON {
         Schema.object([
@@ -185,7 +204,8 @@ public struct SetMixTool: DirectorTool {
             ("band_hz", Schema.number("The peak band's frequency in Hz; 0 for no EQ move.", minimum: 0, maximum: 20_000)),
             ("band_db", Schema.number("The EQ change in dB at that band; 0 for none. A cut is negative.", minimum: -18, maximum: 18)),
             ("reason", Schema.string("The reading that asked for the move, in dB and Hz.")),
-        ], required: ["part", "gain_db", "band_hz", "band_db", "reason"])
+            ("section", Schema.string("A section by name to move the strip's level in that section only; empty for every section.")),
+        ], required: ["part", "gain_db", "band_hz", "band_db", "reason", "section"])
     }
 
     public func run(_ input: Input) async throws -> Output {
@@ -205,23 +225,49 @@ public struct SetMixTool: DirectorTool {
             throw DirectorToolFailure(tool: name, reason: "\"\(input.part)\" is not a strip in this song.",
                                       suggestion: "One of: \(strips.map(\.label).joined(separator: ", ")). Read the mix first.")
         }
+        let named = (input.section ?? "").trimmingCharacters(in: .whitespaces)
+        var section: Section?
+        if !named.isEmpty {
+            guard let found = song.sections.first(where: { $0.name.caseInsensitiveCompare(named) == .orderedSame }) else {
+                throw DirectorToolFailure(tool: name, reason: "\"\(named)\" is not a section of this song.",
+                                          suggestion: song.sections.isEmpty ? "The song has no form yet: leave section empty to move the strip everywhere."
+                                              : "One of: \(song.sections.map(\.name).joined(separator: ", ")), or empty for every section.")
+            }
+            if input.bandDB != 0 {
+                throw DirectorToolFailure(tool: name, reason: "EQ is the strip's in every section; a section takes only a level.",
+                                          suggestion: "Move the band with section empty, or the level in \(found.name) with band_db 0.")
+            }
+            section = found
+        }
         let verdict = engineer.consider(.moveStrip(part: strip.label, gainDB: input.gainDB, bandHz: input.bandHz, bandDB: input.bandDB))
         if case .refuse(let rule, let because, let counter) = verdict {
             throw DirectorToolFailure(tool: name, reason: "The Engineer refuses (\(rule)): \(because)", suggestion: counter)
         }
         var mix = plan.mix ?? .unity
-        var moved = mix.strip(for: strip.part, label: strip.label)
-        if input.gainDB != 0 { moved.gainDB = max(-60, min(12, moved.gainDB + input.gainDB)) }
-        if input.bandHz > 0, input.bandDB != 0, moved.eq.indices.contains(1) {
-            moved.eq[1].frequency = input.bandHz
-            moved.eq[1].gainDB = max(-18, min(18, moved.eq[1].gainDB + input.bandDB))
-        }
         let before = mix
-        mix.set(moved)
+        if let section {
+            // From the level it has there, as the Mixer's fader in that section starts from it; a
+            // move that lands on the strip's own level is no section level at all.
+            let own = mix.strip(for: strip.part)?.gainDB ?? 0
+            let level = max(-60, min(12, mix.gainDB(for: strip.part, in: section.id) + input.gainDB))
+            mix.sectionGains.removeAll { $0.section == section.id && $0.part == strip.part }
+            if input.gainDB != 0, abs(level - own) > 0.05 {
+                mix.sectionGains.append(SectionGain(section: section.id, part: strip.part, gainDB: level))
+            }
+        } else {
+            var moved = mix.strip(for: strip.part, label: strip.label)
+            if input.gainDB != 0 { moved.gainDB = max(-60, min(12, moved.gainDB + input.gainDB)) }
+            if input.bandHz > 0, input.bandDB != 0, moved.eq.indices.contains(1) {
+                moved.eq[1].frequency = input.bandHz
+                moved.eq[1].gainDB = max(-18, min(18, moved.eq[1].gainDB + input.bandDB))
+            }
+            mix.set(moved)
+        }
         guard mix != before else {
             throw DirectorToolFailure(tool: name, reason: "Nothing moved: gain_db and band_db are both 0.")
         }
-        let move = MixerModel.describe(from: before, to: mix, labels: Dictionary(strips.map { ($0.part, $0.label) }, uniquingKeysWith: { a, _ in a }))
+        let move = MixerModel.describe(from: before, to: mix, labels: Dictionary(strips.map { ($0.part, $0.label) }, uniquingKeysWith: { a, _ in a }),
+                                       sections: Dictionary(song.sections.map { ($0.id, $0.name) }, uniquingKeysWith: { a, _ in a }))
         let note = "\(move) (\(input.reason))"
         guard let version = await workspace.recordMix(mix, note: note) else {
             throw DirectorToolFailure(tool: name, reason: "The move could not be kept.")

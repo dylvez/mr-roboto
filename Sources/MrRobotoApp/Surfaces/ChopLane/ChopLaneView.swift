@@ -49,19 +49,16 @@ public struct ChopLaneView: View {
 
     private var header: some View {
         // The card above names the lane and the bar, and the sensitivity row counts the slices: this
-        // row is the lane's own controls, not a second title.
+        // row is the lane's own controls, not a second title. The bar as cut plays from the card's
+        // "Play this bar, chopped"; a second button here that did the same under another name was
+        // one of three play buttons with three names.
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             Spacer()
-            Button("Play bar") { surface.auditionBar() }
-                .buttonStyle(.plain)
-                .font(Design.Typography.ui(12))
-                .foregroundStyle(Design.Palette.accent)
-                .help("Play the bar as it is cut, every slice where the record put it")
             Button("Stop") { surface.stop() }
                 .buttonStyle(.plain)
                 .font(Design.Typography.ui(12))
                 .foregroundStyle(Design.Palette.inkSecondary)
-                .help("Stop whatever this lane is playing")
+                .help("Stop whatever this lane is playing: the bar, a pad, or the re-groove")
             // The chop keeps itself a moment after the last edit, like every surface.
             surface.statusBar
                 .fixedSize()
@@ -144,7 +141,7 @@ public struct ChopLaneView: View {
                 .font(Design.Typography.ui(12))
                 .help("Whose rhythm the chop is played in. As cut plays the bar as it was.")
                 .accessibilityLabel("Feel")
-                Button("Play") { surface.playRegroove() }
+                Button("Play in this feel") { surface.playRegroove() }
                     .buttonStyle(.plain)
                     .font(Design.Typography.ui(12))
                     .foregroundStyle(surface.feel == nil
@@ -153,7 +150,7 @@ public struct ChopLaneView: View {
                     .help(surface.feel == nil
                           ? "Pick a feel first"
                           : "Hear the chop in this feel at this tempo")
-                // Making a groove sits beside Play on purpose: what is made is what was just heard.
+                // Making a groove sits beside Play in this feel on purpose: what is made is what was just heard.
                 // It is a button because it is a new part, not an edit to this one.
                 Button("Make the groove") { surface.keepRegroove() }
                     .buttonStyle(.plain)
@@ -171,7 +168,7 @@ public struct ChopLaneView: View {
                 Slider(value: $surface.tempo, in: 60...180, step: 1)
                     .controlSize(.small)
                     .tint(Design.Palette.accent)
-                    .help("The tempo Play hears the re-groove at. The song plays the groove at its own tempo.")
+                    .help("The tempo Play in this feel plays at. The song plays the groove at its own tempo.")
                     .accessibilityLabel("Preview tempo")
             }
         }

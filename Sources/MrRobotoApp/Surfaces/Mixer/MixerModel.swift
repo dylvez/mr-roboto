@@ -311,10 +311,13 @@ public final class MixerModel {
             let section = Self.meetingSection(of: a, b, in: host.song)
             let (audioA, rate) = try await host.bounce(mix: soloA, section: section)
             let (audioB, _) = try await host.bounce(mix: soloB, section: section)
+            // One spectrum of each, every band read from it.
+            let spectrumA = MixMeter.powerSpectrum(audioA, sampleRate: rate)
+            let spectrumB = MixMeter.powerSpectrum(audioB, sampleRate: rate)
             overlay = Self.bands.map { band in
                 OverlayBand(name: band.name, lowHz: band.low, highHz: band.high,
-                            aDB: MixMeter.bandEnergyDB(audioA, sampleRate: rate, lowHz: band.low, highHz: band.high),
-                            bDB: MixMeter.bandEnergyDB(audioB, sampleRate: rate, lowHz: band.low, highHz: band.high))
+                            aDB: MixMeter.bandEnergyDB(spectrum: spectrumA, sampleRate: rate, lowHz: band.low, highHz: band.high),
+                            bDB: MixMeter.bandEnergyDB(spectrum: spectrumB, sampleRate: rate, lowHz: band.low, highHz: band.high))
             }
             lastError = nil
         } catch {

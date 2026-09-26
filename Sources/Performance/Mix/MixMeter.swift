@@ -227,7 +227,12 @@ public enum MixMeter {
 
     /// Energy in dB inside a band, from an STFT of the mono sum. `-.infinity` for nothing there.
     public static func bandEnergyDB(_ planar: [[Float]], sampleRate: Double, lowHz: Double, highHz: Double) -> Double {
-        let spectrum = powerSpectrum(planar, sampleRate: sampleRate)
+        bandEnergyDB(spectrum: powerSpectrum(planar, sampleRate: sampleRate), sampleRate: sampleRate, lowHz: lowHz, highHz: highHz)
+    }
+
+    /// The same, from a spectrum already taken: several bands of one buffer read from one STFT.
+    /// A mix reading used to take a whole-song STFT per band — eighteen for a song of three parts.
+    public static func bandEnergyDB(spectrum: [Double], sampleRate: Double, lowHz: Double, highHz: Double) -> Double {
         guard !spectrum.isEmpty else { return -.infinity }
         let binHz = sampleRate / Double(2 * (spectrum.count - 1))
         var sum = 0.0
@@ -240,14 +245,21 @@ public enum MixMeter {
 
     /// High band over low band: positive is bright, negative is dark. Bands: under 200, over 2 kHz.
     public static func tiltDB(_ planar: [[Float]], sampleRate: Double) -> Double {
-        let low = bandEnergyDB(planar, sampleRate: sampleRate, lowHz: 20, highHz: 200)
-        let high = bandEnergyDB(planar, sampleRate: sampleRate, lowHz: 2_000, highHz: min(20_000, sampleRate / 2))
+        tiltDB(spectrum: powerSpectrum(planar, sampleRate: sampleRate), sampleRate: sampleRate)
+    }
+
+    public static func tiltDB(spectrum: [Double], sampleRate: Double) -> Double {
+        let low = bandEnergyDB(spectrum: spectrum, sampleRate: sampleRate, lowHz: 20, highHz: 200)
+        let high = bandEnergyDB(spectrum: spectrum, sampleRate: sampleRate, lowHz: 2_000, highHz: min(20_000, sampleRate / 2))
         return low.isFinite && high.isFinite ? high - low : 0
     }
 
     /// The frequency below which 99% of the energy sits: where the top end stops.
     public static func bandwidthHz(_ planar: [[Float]], sampleRate: Double) -> Double {
-        let spectrum = powerSpectrum(planar, sampleRate: sampleRate)
+        bandwidthHz(spectrum: powerSpectrum(planar, sampleRate: sampleRate), sampleRate: sampleRate)
+    }
+
+    public static func bandwidthHz(spectrum: [Double], sampleRate: Double) -> Double {
         let total = spectrum.reduce(0, +)
         guard total > 0 else { return 0 }
         let binHz = sampleRate / Double(2 * (spectrum.count - 1))
@@ -262,17 +274,27 @@ public enum MixMeter {
     /// Mean power per bin over the whole buffer, mono-summed.
     public static func powerSpectrum(_ planar: [[Float]], sampleRate: Double) -> [Double] {
         guard let frames = planar.first?.count, frames > 0 else { return [] }
+        // The mono sum and the mean over frames in Accelerate, as the STFT between them already is.
         var mono = [Float](repeating: 0, count: frames)
-        for channel in planar { for i in 0..<min(frames, channel.count) { mono[i] += channel[i] / Float(planar.count) } }
+        var share = 1 / Float(planar.count)
+        for channel in planar {
+            let n = vDSP_Length(min(frames, channel.count))
+            vDSP_vsma(channel, 1, &share, mono, 1, &mono, 1, n)
+        }
         let nFFT = 4096
         let stft = STFT(nFFT: nFFT, hop: nFFT / 2)
         let padded = mono.count < nFFT ? mono + [Float](repeating: 0, count: nFFT - mono.count) : mono
         let power = stft.forward(padded).power()
         guard power.frameCount > 0 else { return [] }
+        // Frames are rows of `binCount`: each bin's mean is a strided mean down one column.
         var out = [Double](repeating: 0, count: power.binCount)
-        for frame in 0..<power.frameCount {
-            for bin in 0..<power.binCount { out[bin] += Double(power[frame, bin]) }
+        power.values.withUnsafeBufferPointer { values in
+            for bin in 0..<power.binCount {
+                var mean: Float = 0
+                vDSP_meanv(values.baseAddress! + bin, vDSP_Stride(power.binCount), &mean, vDSP_Length(power.frameCount))
+                out[bin] = Double(mean)
+            }
         }
-        return out.map { $0 / Double(power.frameCount) }
+        return out
     }
 }

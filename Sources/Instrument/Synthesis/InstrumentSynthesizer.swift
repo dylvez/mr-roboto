@@ -50,11 +50,12 @@ public enum InstrumentSynthesizer {
         var seeded = SeededRandom(seed: UInt64(midi &* 2_654_435_761 &+ 1))
 
         let total = max(0.0001, spec.oscillators.reduce(0) { $0 + $1.level } + spec.subLevel + spec.noiseLevel)
+        // Each oscillator's pitch is fixed for the note: worked out once, not at every sample.
+        let pitches = spec.oscillators.map { frequency * pow(2, Double($0.octave) + $0.cents / 1_200) }
         for index in 0..<frames {
             var value = 0.0
             for (which, oscillator) in spec.oscillators.enumerated() {
-                let ratio = pow(2, Double(oscillator.octave) + oscillator.cents / 1_200)
-                let hz = frequency * ratio
+                let hz = pitches[which]
                 value += oscillator.level * waveform(oscillator.waveform, phase: phases[which],
                                                      frequency: hz, sampleRate: sampleRate,
                                                      pulseWidth: oscillator.pulseWidth)
@@ -74,6 +75,10 @@ public enum InstrumentSynthesizer {
     }
 
     /// A band-limited waveform: harmonics summed only while they stay under Nyquist.
+    ///
+    /// Each harmonic's sine comes from the two before it — sin((n+1)θ) = 2·cos θ·sin(nθ) − sin((n−1)θ)
+    /// — so a sample costs one sine and one cosine rather than one per harmonic. A pad's kit is 19
+    /// notes of six seconds, and summed a sine at a time it took most of a minute to build.
     static func waveform(_ shape: InstrumentVoiceSpec.Waveform, phase: Double, frequency: Double,
                          sampleRate: Double, pulseWidth: Double) -> Double {
         let angle = 2 * Double.pi * phase
@@ -83,26 +88,46 @@ public enum InstrumentSynthesizer {
         case .triangle, .saw, .square, .pulse:
             let limit = max(1, Int((sampleRate / 2) / max(1, frequency)))
             var sum = 0.0
+            // sin(h·θ) for h = 1, 2, 3…, one step at a time: `now` is this harmonic's, `before`
+            // the last one's. Written out rather than behind a helper, so a debug build is not
+            // slowed by the calls.
+            var before = 0.0, now = sin(angle)
+            let twiceCosine = 2 * cos(angle)
             switch shape {
             case .saw:
-                for harmonic in 1...min(limit, 64) { sum += sin(angle * Double(harmonic)) / Double(harmonic) }
+                for harmonic in 1...min(limit, 64) {
+                    sum += now / Double(harmonic)
+                    (before, now) = (now, twiceCosine * now - before)
+                }
                 return sum * (2 / Double.pi)
             case .square:
-                for harmonic in stride(from: 1, through: min(limit, 63), by: 2) { sum += sin(angle * Double(harmonic)) / Double(harmonic) }
+                let top = min(limit, 63)
+                for harmonic in 1...max(1, top) {
+                    if harmonic % 2 == 1 { sum += now / Double(harmonic) }
+                    (before, now) = (now, twiceCosine * now - before)
+                }
                 return sum * (4 / Double.pi)
             case .triangle:
+                let top = min(limit, 63)
                 var sign = 1.0
-                for harmonic in stride(from: 1, through: min(limit, 63), by: 2) {
-                    sum += sign * sin(angle * Double(harmonic)) / Double(harmonic * harmonic)
-                    sign = -sign
+                for harmonic in 1...max(1, top) {
+                    if harmonic % 2 == 1 {
+                        sum += sign * now / Double(harmonic * harmonic)
+                        sign = -sign
+                    }
+                    (before, now) = (now, twiceCosine * now - before)
                 }
                 return sum * (8 / (Double.pi * Double.pi))
             default:
                 // A pulse is the difference of two saws a width apart, which stays band-limited.
                 let width = max(0.05, min(0.95, pulseWidth))
+                let shiftedAngle = angle + 2 * .pi * width
+                var shiftedBefore = 0.0, shiftedNow = sin(shiftedAngle)
+                let shiftedTwiceCosine = 2 * cos(shiftedAngle)
                 for harmonic in 1...min(limit, 64) {
-                    let h = Double(harmonic)
-                    sum += (sin(angle * h) - sin((angle + 2 * .pi * width) * h)) / h
+                    sum += (now - shiftedNow) / Double(harmonic)
+                    (before, now) = (now, twiceCosine * now - before)
+                    (shiftedBefore, shiftedNow) = (shiftedNow, shiftedTwiceCosine * shiftedNow - shiftedBefore)
                 }
                 return sum * (1 / Double.pi)
             }

@@ -132,6 +132,53 @@ struct DirectorMixProofTests {
         #expect(!read.isError && read.content.contains("no reading") && read.content.contains("\"gain_db\":-3"), "\(read.content)")
     }
 
+    @Test("set_mix moves a strip's level in one section from where it is there, read_mix reads it back, and a move back lets the section go")
+    func sectionLevels() async throws {
+        let built = await MainActor.run { FormFixture.build(tempo: 92) }
+        let workspace = await MainActor.run { () -> DirectorScratchWorkspace in
+            var song = built.song
+            song.sections = [Section(name: "Intro", stitch: [built.groove, built.bass].lanes, lengthInBars: 2),
+                             Section(name: "Verse", stitch: [built.groove, built.bass].lanes, lengthInBars: 2)]
+            return DirectorScratchWorkspace(song: song)
+        }
+        let box = await MainActor.run { DirectorTools.toolbox(workbench: DirectorWorkbench(engines: DirectorTestEngines.make(bars: 4)), workspace: workspace) }
+        func move(_ gain: Double, band: Double = 0, in section: String) async -> ClaudeToolResult {
+            await box.run(ClaudeToolUse(id: "s\(gain)\(section)", name: "set_mix", input: .object([
+                .init("part", .string("Palladino line")), .init("gain_db", .double(gain)), .init("band_hz", .double(band == 0 ? 0 : 80)),
+                .init("band_db", .double(band)), .init("reason", .string("the intro is the drums'")), .init("section", .string(section))])))
+        }
+        func mix() async -> Mix? {
+            await MainActor.run {
+                guard case .mix(let mix)? = Guidance.mixes(in: workspace.song!).last?.kind else { return nil }
+                return mix
+            }
+        }
+        let intro = await MainActor.run { workspace.song!.sections[0].id }
+
+        let down = await move(-6, in: "intro")
+        #expect(!down.isError && down.content.contains("Palladino line -6.0 dB in Intro"), "\(down.content)")
+        #expect(await mix()?.gainDB(for: built.bass, in: intro) == -6)
+        #expect(await mix()?.strip(for: built.bass)?.gainDB ?? 0 == 0, "the strip's own level is untouched")
+        // From where it is in the intro, not from the strip's own level.
+        _ = await move(-3, in: "Intro")
+        #expect(await mix()?.gainDB(for: built.bass, in: intro) == -9)
+        let read = await box.run(ClaudeToolUse(id: "r", name: "read_mix", input: .object([.init("section", .string(""))])))
+        #expect(read.content.contains("\"section_levels\":[{") && read.content.contains("\"section\":\"Intro\"") && read.content.contains("\"gain_db\":-9"), "\(read.content)")
+
+        // A move that lands on the strip's own level lets the section go.
+        _ = await move(6, in: "Intro")
+        let back = await move(3, in: "Intro")
+        #expect(!back.isError && back.content.contains("back to its level in Intro"), "\(back.content)")
+        #expect(await mix()?.sectionGains.isEmpty == true)
+
+        let eq = await move(0, band: -3, in: "Intro")
+        #expect(eq.isError && eq.content.contains("a section takes only a level"), "\(eq.content)")
+        let unknown = await move(-3, in: "Bridge")
+        #expect(unknown.isError && unknown.content.contains("Intro, Verse"), "\(unknown.content)")
+        let big = await move(-12, in: "Intro")
+        #expect(big.isError && big.content.contains("small-moves"), "\(big.content)")
+    }
+
     @Test("the master tool sets the ending: a fade over the last bars, kept as a mix version, read back; 0 stops, -1 keeps")
     func ending() async throws {
         let workspace = await MainActor.run { DirectorScratchWorkspace(song: FormFixture.build(tempo: 92).song) }

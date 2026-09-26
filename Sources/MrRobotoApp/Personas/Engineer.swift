@@ -603,12 +603,14 @@ public struct MixObservation: Hashable, Sendable {
     /// Metered off planar audio: the mix, and the drums and the bass apart when given.
     public static func measure(label: String, mix: [[Float]], sampleRate: Double, drums: [[Float]]? = nil, bass: [[Float]]? = nil,
                                chainCornerHz: Double? = nil) -> MixObservation {
+        // One spectrum of the mix for both of the readings taken from it.
+        let spectrum = MixMeter.powerSpectrum(mix, sampleRate: sampleRate)
         var observation = MixObservation(label: label,
                                          integratedLUFS: MixMeter.integratedLoudness(mix, sampleRate: sampleRate),
                                          peakDBFS: MixMeter.samplePeakDB(mix),
                                          crestDB: MixMeter.crestDB(mix),
-                                         tiltDB: MixMeter.tiltDB(mix, sampleRate: sampleRate),
-                                         bandwidthHz: MixMeter.bandwidthHz(mix, sampleRate: sampleRate),
+                                         tiltDB: MixMeter.tiltDB(spectrum: spectrum, sampleRate: sampleRate),
+                                         bandwidthHz: MixMeter.bandwidthHz(spectrum: spectrum, sampleRate: sampleRate),
                                          chainCornerHz: chainCornerHz)
         if let drums, drums.first?.isEmpty == false {
             observation.drumsCrestDB = MixMeter.crestDB(drums)
@@ -630,8 +632,10 @@ public struct MixObservation: Hashable, Sendable {
         var observation = measure(label: label, mix: mix, sampleRate: sampleRate)
         observation.truePeakDBTP = MixMeter.truePeakDB(mix, sampleRate: sampleRate)
         observation.strips = strips.map { strip in
-            StripReading(part: strip.part, label: strip.label, bandsDB: bands.map { band in
-                MixMeter.bandEnergyDB(strip.planar, sampleRate: sampleRate, lowHz: band.low, highHz: band.high)
+            // One spectrum per strip, every band read from it.
+            let spectrum = MixMeter.powerSpectrum(strip.planar, sampleRate: sampleRate)
+            return StripReading(part: strip.part, label: strip.label, bandsDB: bands.map { band in
+                MixMeter.bandEnergyDB(spectrum: spectrum, sampleRate: sampleRate, lowHz: band.low, highHz: band.high)
             })
         }
         observation.masking = masking(observation.strips, noticeable: noticeable)
