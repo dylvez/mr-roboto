@@ -1082,6 +1082,22 @@ public final class AppState {
         bindings[id] = versions
     }
 
+    /// A surface kept a version, so its binding follows it: the kept version replaces the one of
+    /// its part the surface was bound to, or joins the binding when it was bound to none. A Chords
+    /// surface opened on nothing, or a Piano roll opened on a groove, was bound to nothing of the
+    /// part it made. A restore of that part, or the band's next version of it, then never reached
+    /// the surface, and its next keep put the old music back.
+    public func surfaceKept(_ version: PartVersion, on surface: SurfaceID) {
+        guard let song, bench.items.contains(where: { $0.id == surface }) else { return }
+        var bound = self.bound(for: surface)
+        if let at = bound.firstIndex(where: { song.version($0)?.partID == version.partID }) {
+            bound[at] = version.id
+        } else {
+            bound.append(version.id)
+        }
+        bindings[surface] = bound
+    }
+
     // MARK: Rail
 
     /// Adds a line to the conversation rail. Surfaces use this to say what they did, in your voice.
@@ -1283,6 +1299,11 @@ public final class AppState {
                  detail: plan.summary + String(format: " · %.0f bpm · %@",
                                                clock.tempo, clock.timeSignature.description))
             await noteUnmixedParts(in: plan)
+            let failures = await playbackHost.chopFailures()
+            if !failures.isEmpty {
+                note(.session, "A groove played on the 808 instead of its chop",
+                     detail: failures.joined(separator: " · "))
+            }
         } catch {
             await playbackHost?.end()
             transport = .unavailable("\(error)")
@@ -1335,6 +1356,11 @@ public final class AppState {
     static func joinForm(with version: PartVersion, in song: inout Song) -> Int {
         guard !song.sections.isEmpty, StructureModel.plays(version) else { return 0 }
         guard !song.sections.contains(where: { $0.stitch.contains(part: version.partID) }) else { return 0 }
+        // Only the first version of the part that sounds. A part that sounded before and is in no
+        // section now was taken out, or was offered instead of another and not used; its next edit
+        // is not an invitation back. An empty groove painted in, or a chop cut, still joins here.
+        guard !song.versions.contains(where: { $0.partID == version.partID && $0.id != version.id
+                                                && StructureModel.plays($0) }) else { return 0 }
         // Into the sections that have none of its kind: a new groove fills a section with no drums,
         // but does not start playing on top of the groove a section already has. It used to join
         // every section, so three bass lines written to compare all played at once. Where every

@@ -34,14 +34,21 @@ final class GridAdapter: GridHosting {
     /// The chop's pads, cut once per version of it: reading and classifying the bar is not a thing
     /// to do on every touch.
     private let pads = Mutex<(version: VersionID, kit: ChopKit)?>(nil)
+    /// What the sampler calls this grid's pads.
+    private let padsID = "grid-chop-\(UUID().uuidString)"
+
+    /// The grid's bench item, whose binding follows what it keeps.
+    private let surface: SurfaceID?
 
     init(app: AppState, service: AuditionService,
-         live: LiveGridHost = LiveGridHost(), machine: SynthMachine = .tr808, chop: PartID? = nil) {
+         live: LiveGridHost = LiveGridHost(), machine: SynthMachine = .tr808, chop: PartID? = nil,
+         surface: SurfaceID? = nil) {
         self.app = app
         self.service = service
         self.live = live
         self.machine = Mutex(machine)
         self.chop = Mutex(chop)
+        self.surface = surface
     }
 
     func audition(_ voice: DrumVoice, velocity: Int) async {
@@ -86,7 +93,9 @@ final class GridAdapter: GridHosting {
     /// Whether the song took it. `record` says no when there is no song to take it, and the
     /// surface shows that rather than a version that went nowhere.
     @MainActor func commit(_ version: PartVersion) -> Bool {
-        app.record(version)
+        guard app.record(version) else { return false }
+        if let surface { app.surfaceKept(version, on: surface) }
+        return true
     }
 
     /// Loads the grid's machine if the shared sampler is not already holding it. Another surface
@@ -114,17 +123,19 @@ final class GridAdapter: GridHosting {
                            detail: "The steps cannot play its slices until it is.")
             return
         }
-        let id = "grid-\(track.version.rawValue.uuidString)"
-        guard await service.currentKitID != id else { return }
+        // One id for this grid, whatever cut it holds: each new cut replaces the last in the
+        // sampler and the cache (`AuditionService.prepare(chop:id:)`), rather than piling up.
+        let cached = pads.withLock { $0 }
+        guard await service.currentKitID != padsID || cached?.version != track.version else { return }
         do {
             let kit: ChopKit
-            if let cut = pads.withLock({ $0 }), cut.version == track.version {
-                kit = cut.kit
+            if let cached, cached.version == track.version {
+                kit = cached.kit
             } else {
                 kit = try ChopGroove.padKit(ChopGroove.prepare(track))
                 pads.withLock { $0 = (track.version, kit) }
             }
-            try await service.prepare(chop: kit, id: id)
+            try await service.prepare(chop: kit, id: padsID)
         } catch {
             await app.note(.session, "Could not load \(track.name)'s slices", detail: "\(error)")
         }

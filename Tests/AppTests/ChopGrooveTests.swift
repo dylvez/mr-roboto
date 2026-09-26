@@ -67,6 +67,25 @@ struct ChopGrooveTests {
         #expect(prepared.map.voices == lane.chopMap.voices, "the same pad is the kick")
     }
 
+    @Test("the song plays the pads with the lane's trims, each staying with its marker")
+    func trimsReachTheSong() throws {
+        let directory = TransportFixture.temporaryDirectory("chop-trims")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let (sample, _, url) = try ChopGrooveFixture.keptChop(in: directory)
+        var track = ChopGrooveFixture.track(sample, url: url)
+        track.pads = [PadTrim(slice: 0, tuneCents: -1200, reverse: true)]
+        let prepared = try ChopGroove.prepare(track)
+        let pad = try #require(prepared.map.mapping(forSlice: 0))
+        #expect(pad.tuneCents == -1200 && pad.reverse)
+        #expect(prepared.map.mapping(forSlice: 1)?.reverse == false)
+
+        // A marker ahead of the bar is dropped; slice 0's trim stays on the slice at its marker.
+        track.slices.insert(SliceMarker(position: track.region.start - 1, label: "onset kick"), at: 0)
+        track.pads = [PadTrim(slice: 1, tuneCents: -1200, reverse: true)]
+        let shifted = try ChopGroove.prepare(track)
+        #expect(shifted.map.mapping(forSlice: 0)?.reverse == true && shifted.map.mapping(forSlice: 1)?.reverse == false)
+    }
+
     @Test("each step lands on a slice of its own class, pass after pass, at the song's tempo")
     func stepsLandOnTheirClass() throws {
         let directory = TransportFixture.temporaryDirectory("chop-steps")

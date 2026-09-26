@@ -87,20 +87,35 @@ public struct SongPlayback: Equatable, Sendable {
         public var slices: [SliceMarker]
         /// The tempo the chop was cut at, when it was detected.
         public var tempo: Double?
+        /// The pads' trims, by slice in `slices` order. A groove on this chop plays them.
+        public var pads: [PadTrim]
 
         public var id: VersionID { version }
 
-        /// The whole bars the chop covers at its own tempo: what a loop of it is fitted to at the
-        /// song's. One when its tempo is unknown.
+        /// The bars the chop covers at its own tempo, rounded up. One when its tempo is unknown.
         public func bars(beatsPerBar: Int) -> Int {
             guard let tempo, tempo > 0, beatsPerBar > 0 else { return 1 }
             let bar = Double(beatsPerBar) * 60 / tempo
-            return max(1, Int((region.duration / bar).rounded()))
+            return max(1, Int((region.duration / bar - 1e-6).rounded(.up)))
+        }
+
+        /// How long a loop of the chop lasts at `songTempo`. A chop that covers whole bars at its
+        /// own tempo, near enough — a tracker's bar is never exact — lasts as many of the song's
+        /// bars, so the loop lands on the song's downbeats. Any other span keeps its length in
+        /// beats. Nil when its tempo is unknown: it plays as it was cut.
+        public func loopSeconds(songTempo: Double, beatsPerBar: Int) -> Double? {
+            guard let tempo, tempo > 0, songTempo > 0, beatsPerBar > 0 else { return nil }
+            let exact = region.duration / (Double(beatsPerBar) * 60 / tempo)
+            let whole = exact.rounded()
+            if whole >= 1, abs(exact - whole) <= 0.1 * whole {
+                return whole * Double(beatsPerBar) * 60 / songTempo
+            }
+            return region.duration * tempo / songTempo
         }
 
         public init(version: VersionID, name: String, url: URL, region: SongGraph.TimeRange,
                     passes: [Degradation], part: PartID? = nil, slices: [SliceMarker] = [],
-                    tempo: Double? = nil) {
+                    tempo: Double? = nil, pads: [PadTrim] = []) {
             self.version = version
             self.name = name
             self.url = url
@@ -109,6 +124,7 @@ public struct SongPlayback: Equatable, Sendable {
             self.part = part
             self.slices = slices
             self.tempo = tempo
+            self.pads = pads
         }
     }
 
@@ -631,7 +647,11 @@ public struct SongPlayback: Equatable, Sendable {
         // and a loop of one of its bars together would be the drums twice, for the same reason the
         // stems stand in for the take.
         if let version = Guidance.samples(in: song).last, case .sample(let sample) = version.kind {
-            if let voice = voice(for: version, in: song, mediaURL: mediaURL, missingMedia: &missingMedia) {
+            if plan.voices.contains(where: { $0.kit?.part == version.partID }) {
+                // A groove plays this chop's slices: the chop, re-grooved. Its loop under the
+                // groove would be the same drums twice, as it would be in a section.
+                shadowed = sample.media
+            } else if let voice = voice(for: version, in: song, mediaURL: mediaURL, missingMedia: &missingMedia) {
                 plan.voices.append(voice)
                 shadowed = sample.media
             }
@@ -699,7 +719,7 @@ public struct SongPlayback: Equatable, Sendable {
                                             tempo: sample.detectedTempo ?? song.tempo)
         return ChopTrack(version: version.id, name: PartLabel.title(of: version), url: url,
                          region: region, passes: sample.degradation, part: version.partID,
-                         slices: sample.slices, tempo: sample.detectedTempo)
+                         slices: sample.slices, tempo: sample.detectedTempo, pads: sample.pads)
     }
 
     /// The chop a groove part plays on, resolved to what the transport can read: the chop part's
@@ -915,6 +935,9 @@ public protocol SongPlaybackHost: AnyObject, Sendable {
     /// the main mixer — but unmixed, unmetered and un-soloable, which is worth saying out loud
     /// rather than leaving as a fader that does nothing. A host with no strips has none.
     func unmixedParts() async -> [PartID]
+    /// Grooves that could not be played on their chop's slices this run, and why, known once
+    /// `begin` has run. They played on a machine instead.
+    func chopFailures() async -> [String]
     /// How far into the song's fade-out the playhead is: 1 untouched, 0 silent. A host with no
     /// master ignores it.
     func fade(_ gain: Double) async
@@ -924,4 +947,5 @@ extension SongPlaybackHost {
     public func fade(_ gain: Double) async {}
     public func mixChanged(_ mix: Mix?, section: SectionID?) async {}
     public func unmixedParts() async -> [PartID] { [] }
+    public func chopFailures() async -> [String] { [] }
 }

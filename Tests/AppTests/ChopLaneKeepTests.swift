@@ -67,15 +67,28 @@ struct ChopLaneKeepTests {
         #expect(!lane.hasUnkeptChanges)
     }
 
-    @Test("a trim is heard, not kept, so it does not enable Keep")
-    func trimsDoNotEnableKeep() {
-        let (lane, _) = versionedLane()
+    @Test("a trim is kept with the chop, and comes back when the lane is opened on it")
+    func trimsAreKept() throws {
+        let (lane, host) = versionedLane()
+        lane.autoKeep.delay = nil
         lane.setGain(-6, slice: 1)
         lane.setTune(-1200, slice: 2)
-        #expect(!lane.edits.isEmpty)
-        // The version holds markers and classes; a Keep enabled by a trim would keep nothing.
+        lane.setReverse(true, slice: 2)
+        #expect(lane.hasUnkeptChopEdits && lane.canKeepChop, "a trim is work the ledger does not have yet")
+        let kept = try lane.commitChop()
         #expect(!lane.hasUnkeptChopEdits)
-        #expect(!lane.canKeepChop)
+        guard case .sample(let sample) = kept.kind else { Issue.record("not a sample"); return }
+        #expect(sample.pads == [PadTrim(slice: 1, gainDB: -6), PadTrim(slice: 2, tuneCents: -1200, reverse: true)])
+
+        // Reopened on that version: the same trims, and nothing unkept.
+        let reopened = ChopLaneSurface(source: ChopLaneFixtures.source(ChopLaneFixtures.cleanBar(), label: "Bar 1 of Fixture"),
+                                       host: host, version: kept.id)
+        reopened.restore(sample.slices, pads: sample.pads)
+        #expect(reopened.edits == lane.edits)
+        #expect(!reopened.hasUnkeptChanges)
+        // Putting a trim back to neutral is a change too.
+        reopened.setGain(0, slice: 1)
+        #expect(reopened.hasUnkeptChopEdits)
     }
 
     @Test("turning the dial back to the kept cut is not a change either")

@@ -112,7 +112,7 @@ final class ChopLaneBinding {
                                            host: self.adapter, version: version.id)
                 // The cut the version kept, not a fresh detection of it. A bar just promoted from
                 // the record holds no cut yet — one marker at its start — and is detected as before.
-                if sample.slices.count > 1 { lane.restore(sample.slices) }
+                if sample.slices.count > 1 { lane.restore(sample.slices, pads: sample.pads) }
                 self.state = .ready(lane)
                 self.app.retitleSurface(self.item.id, to: lane.headline)
             }

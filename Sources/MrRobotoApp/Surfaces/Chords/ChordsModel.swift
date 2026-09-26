@@ -127,8 +127,9 @@ public final class ChordsModel {
     /// True while the line has a typo: the bars still show the last line that read, and the view
     /// says so rather than letting them pass for what is typed.
     public var barsAreStale: Bool { problem != nil }
-    /// The instrument these chords are voiced on, by preset id.
-    public var instrument: String { host.instrument }
+    /// The instrument these chords are voiced on, by preset id: their part's pick once they are a
+    /// part, else the song's.
+    public var instrument: String { host.instrument(for: part) }
 
     public func setInstrument(_ id: String) {
         host.setInstrument(id, for: part)
@@ -151,11 +152,18 @@ public final class ChordsModel {
             base = progression
             self.key = stored.key
             text = stored.symbols()
+            opened = (text, stored)
         } else {
             text = ""
         }
         parse()
     }
+
+    /// The chords the surface opened on, and the line they were written out as. The line reads
+    /// back as bars split evenly, so chords that split a bar unevenly — three beats and one, as a
+    /// MIDI import writes them — would be rewritten just by opening them. While the line is the one
+    /// they were written as, it means them exactly.
+    private var opened: (text: String, progression: Progression)?
 
     /// Reads `text` as the key's I–IV–V–I when it is empty, so an open surface is never blank.
     private func parse() {
@@ -163,6 +171,11 @@ public final class ChordsModel {
         let trimmed = text.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else {
             progression = Progression(key: key, bars: Self.defaultBars(in: key, beatsPerBar: beatsPerBar))
+            problem = nil
+            return
+        }
+        if let opened, trimmed == opened.text.trimmingCharacters(in: .whitespaces), key == opened.progression.key {
+            progression = opened.progression
             problem = nil
             return
         }
@@ -239,7 +252,8 @@ public final class ChordsModel {
     public func audition(_ chord: Chord) {
         let root = 48 + chord.root.rawValue
         let pitches = chord.pitches(root: Pitch(midi: root)).map(\.midi)
-        Task { [host] in await host.audition(pitches: pitches, duration: 0.9) }
+        let part = self.part
+        Task { [host] in await host.audition(pitches: pitches, duration: 0.9, for: part) }
     }
 
     // MARK: Versions
@@ -250,7 +264,8 @@ public final class ChordsModel {
         let payload = PartKind.progression(progression)
         let text = note ?? "\(progression.symbols()) in \(progression.key)"
         let version: PartVersion
-        if let previous = versions.last ?? base {
+        if let kept = versions.last ?? base {
+            let previous = host.newest(of: kept.partID) ?? kept
             version = previous.deriving(payload, by: .user, operation: Operation.edit, note: text)
         } else {
             version = PartVersion(partID: PartID(), kind: payload, author: .user, operation: Operation.written, note: text)

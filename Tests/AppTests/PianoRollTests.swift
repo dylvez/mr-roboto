@@ -282,12 +282,17 @@ struct PianoRollTests {
         #expect(!model.hasUnkeptChanges)
         #expect(model.lastKept?.id == second.id)
 
-        // Opened on a line: nothing to keep until it is touched, and a mode switch is a touch.
+        // Opened on a line: nothing to keep until it is touched. A mode switch is not a touch —
+        // the notes are the bass line's until something is done to them — but an edit there is,
+        // and what it makes is a tune: a different part from the bass line it was opened on.
         let editor = PianoRollModel(host: stub, groove: Self.kicking(), key: Self.key, tempo: 92, bassline: first)
         editor.autoKeep.delay = nil
         #expect(!editor.hasUnkeptChanges)
         editor.setMode(.melody)
+        #expect(!editor.hasUnkeptChanges, "switching is not writing a tune")
+        editor.addNote(pitch: 62, at: 2)
         #expect(editor.hasUnkeptChanges, "a melody is a different part from the bass line it was opened on")
+        editor.undo()
         editor.setMode(.bass)
         #expect(!editor.hasUnkeptChanges)
 

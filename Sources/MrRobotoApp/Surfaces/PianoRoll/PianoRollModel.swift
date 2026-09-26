@@ -161,7 +161,12 @@ public final class PianoRollModel {
     /// Whether the person has done anything to the line. The line the writer drafts when the roll
     /// opens under a groove is a proposal until then — played, not kept — so opening the Piano
     /// roll to look is not writing a part into the song. `useThisLine()` accepts it untouched.
-    public private(set) var isTouched = false
+    ///
+    /// Asked of the mode the roll is in. Switching a bass line to melody mode is not writing a
+    /// tune: the notes are the bass line's until something is done to them there. It used to count,
+    /// and a moment in melody mode kept a copy of the bass line as a tune in every section.
+    public var isTouched: Bool { touchedModes.contains(mode) }
+    private var touchedModes: Set<Mode> = []
 
     // MARK: Keeping as it goes
 
@@ -217,14 +222,19 @@ public final class PianoRollModel {
 
     /// After an edit: the line is the person's now, and it keeps itself once they stop.
     private func didEdit() {
-        isTouched = true
+        touchedModes.insert(mode)
+        settle()
+    }
+
+    /// Keeps a moment from now when there is something to keep, and not otherwise.
+    private func settle() {
         guard hasUnkeptChanges else { autoKeep.cancel(); return }
         autoKeep.schedule { [weak self] in self?.keepNow() }
     }
 
     /// Accepts the line the writer drafted, untouched, as a part of the song.
     public func useThisLine() {
-        isTouched = true
+        touchedModes.insert(mode)
         keepNow()
     }
 
@@ -242,7 +252,7 @@ public final class PianoRollModel {
         guard value != mode else { return }
         willEdit("mode")
         mode = value
-        defer { didEdit() }
+        defer { settle() }
         // A bass line dragged into melody mode keeps its notes; they just sound an octave up on a
         // different instrument, which is usually what you wanted when you switched.
         refreshReadings()
@@ -257,8 +267,10 @@ public final class PianoRollModel {
         if let first = notes.first { audition(first) }
     }
 
-    /// The part this roll is working on, once it has one.
-    public var part: PartID? { (versions.last ?? base)?.partID }
+    /// The part this roll is working on, once it has one: the bass line in bass mode, the tune in
+    /// melody mode. A roll switched from a kept bass line to melody has no tune yet, so an
+    /// instrument picked there is the song's rather than the bass line's.
+    public var part: PartID? { lastKeptOfThisKind?.partID }
 
     public var register: ClosedRange<Int> {
         var low = lineage.register.lowerBound, high = lineage.register.upperBound
@@ -329,13 +341,35 @@ public final class PianoRollModel {
         }
     }
 
-    /// A bound line's length: the one it states, else the larger of the groove's bars and the
-    /// bars its notes reach — so a line from before lengths were kept opens no shorter than the
-    /// groove it sits under, and never cuts a note off.
+    /// The song around the roll moved on: new chords, a groove kept in the Grid, another tempo or
+    /// key. The line on screen is left alone, because a line is the user's until they ask. But the
+    /// readings, the kick lane and the next Rewrite read the song as it is now. A draft nobody has
+    /// touched or kept is written again against it, since nothing of the user's is in it.
+    public func follow(groove: Groove?, grooveVersion: VersionID?, chords: [ChordSpan], key: Key,
+                       tempo: Double, timeSignature: TimeSignature, kickDecaySeconds: Double) {
+        guard groove != self.groove || grooveVersion != self.grooveVersion || chords != self.chords
+                || key != self.key || tempo != self.tempo || timeSignature != self.timeSignature
+                || kickDecaySeconds != self.kickDecaySeconds else { return }
+        self.groove = groove
+        self.grooveVersion = grooveVersion
+        self.chords = chords
+        self.key = key
+        self.tempo = tempo
+        self.timeSignature = timeSignature
+        self.kickDecaySeconds = kickDecaySeconds
+        if mode == .bass, base == nil, versions.isEmpty, !isTouched, !isHandEdited {
+            write()
+        } else {
+            refreshReadings()
+        }
+    }
+
+    /// A bound line's length: the one it states, else the bars its notes reach — the length the
+    /// song loops it at (`loopBars`). It used to open no shorter than the groove, so a one-bar line
+    /// under a two-bar groove opened as two, and the first nudge kept a silent second bar.
     static func openingLength(stated: Int?, notes: [NoteEvent], groove: Groove?, beatsPerBar: Int) -> Int {
         if let stated { return max(1, stated) }
-        let reach = Int(((notes.map(\.end).max() ?? 0) / Double(max(1, beatsPerBar))).rounded(.up))
-        return max(1, groove?.bars ?? 1, reach)
+        return max(1, Int(((notes.map(\.end).max() ?? 0) / Double(max(1, beatsPerBar))).rounded(.up)))
     }
 
     // MARK: Reading
@@ -579,8 +613,11 @@ public final class PianoRollModel {
     public func addNote(pitch: Int, at beat: Double, duration: Double = 0.5) {
         willEdit("add")
         defer { didEdit() }
-        let start = max(0, min(totalBeats - 0.125, Self.snap(beat)))
-        let note = NoteEvent(pitch: Pitch(midi: pitch), start: start, duration: max(0.125, duration), velocity: 100)
+        // On the grid, inside the loop: a click in the last sixteenth snaps to that sixteenth, not a
+        // thirty-second before the loop point, and the note is cut to end there.
+        let start = max(0, min(totalBeats - 0.25, Self.snap(beat)))
+        let note = NoteEvent(pitch: Pitch(midi: pitch), start: start,
+                             duration: max(0.125, min(duration, totalBeats - start)), velocity: 100)
         notes.append(note)
         notes.sort { ($0.start, $0.pitch.midi) < ($1.start, $1.pitch.midi) }
         isHandEdited = true
@@ -703,7 +740,8 @@ public final class PianoRollModel {
         let payload: PartKind = mode == .melody ? .melody(melody) : .bassline(bassline)
         let text = note ?? defaultNote
         let version: PartVersion
-        if let previous = lastKeptOfThisKind {
+        if let kept = lastKeptOfThisKind {
+            let previous = host.newest(of: kept.partID) ?? kept
             version = previous.deriving(payload, by: .user, operation: isHandEdited ? Operation.edit : Operation.written,
                                         note: text)
         } else {

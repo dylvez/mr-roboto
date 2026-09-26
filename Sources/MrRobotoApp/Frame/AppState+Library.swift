@@ -626,18 +626,35 @@ extension AppState {
     }
 
     /// A groove made from a chop, heard where the chop was: played on the chop's slices, and put in
-    /// the chop's place in every section that played it. The looped bar stays out, since under its
-    /// own re-groove it would play the same drums twice. Any other groove in those sections goes
-    /// too, the way a second part of a kind is used instead of the first rather than stacked on it.
+    /// the chop's place in every section that played it (`sections(of:playing:inPlaceOf:)`).
     ///
     /// - Returns: the names of the sections the groove took over.
     @discardableResult
-    public func playGroove(_ groove: PartID, onChop chop: PartID, by author: Author = .user) -> [String] {
+    public func playGroove(_ groove: PartID, onChop chop: PartID, by author: Author = .user,
+                           source: SessionEntry.Source = .you) -> [String] {
         setChop(chop, for: groove, by: author)
         guard let song, !song.sections.isEmpty else { return [] }
+        let swapped = Self.sections(of: song, playing: groove, inPlaceOf: chop)
+        if !swapped.took.isEmpty { arrange(swapped.sections, by: source) }
+        return swapped.took
+    }
+
+    /// The form with `groove` in the chop's place in every section that played the chop. The looped
+    /// bar stays out, since under its own re-groove it would play the same drums twice. Any other
+    /// groove in those sections goes too, the way a second part of a kind is used instead of the
+    /// first rather than stacked on it.
+    nonisolated static func sections(of song: Song, playing groove: PartID,
+                                     inPlaceOf chop: PartID) -> (sections: [Section], took: [String]) {
         var took: [String] = []
+        let onChop = ChopSound.id(for: chop)
+        // The chop's place: its loop, or a groove made from it before this one — a second feel tried
+        // on the same bar replaces the first, as a second groove from the Grid would.
+        func holdsChop(_ lane: Lane) -> Bool {
+            lane.part == chop || (lane.part != groove && SongPlayback.drumSoundID(for: lane.part, in: song) == onChop
+                                  && song.versions.last { $0.partID == lane.part }?.type == .groove)
+        }
         let sections = song.sections.map { section -> Section in
-            guard let at = section.stitch.firstIndex(where: { $0.part == chop }) else { return section }
+            guard let at = section.stitch.firstIndex(where: holdsChop) else { return section }
             var section = section
             section.stitch[at] = Lane(part: groove)
             section.stitch.removeAll { lane in
@@ -654,8 +671,7 @@ extension AppState {
             took.append(section.name)
             return section
         }
-        if !took.isEmpty { arrange(sections) }
-        return took
+        return (sections, took)
     }
 
     @discardableResult

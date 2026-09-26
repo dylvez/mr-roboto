@@ -260,6 +260,11 @@ public struct CreatePartVersionTool: DirectorTool {
         let recorded = await workspace.record(version)
         if recorded {
             await workspace.note(input.note, detail: "\(operation) · \(author.description)")
+            // A groove re-grooved from a chop the song holds plays that chop's slices, where the
+            // chop played: what the Chop lane's Make the groove does.
+            if case .groove = kind, let parentVersion, parentVersion.type == .sample {
+                await workspace.playGroove(version.partID, onChop: parentVersion.partID)
+            }
         }
         return Output(version: version.id.description,
                       part: version.partID.description,

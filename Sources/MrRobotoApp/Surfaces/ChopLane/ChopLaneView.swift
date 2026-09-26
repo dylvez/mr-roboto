@@ -168,7 +168,7 @@ public struct ChopLaneView: View {
                                      ? Design.Palette.accent : Design.Palette.inkTertiary)
                     .disabled(!surface.canKeepRegroove)
                     .help(surface.whyRegrooveCannotBeKept
-                          ?? "Make a new groove from the chop in this feel; the Grid opens on it")
+                          ?? "Make a groove that plays these slices in this feel, at the song's tempo, in place of the looped bar. The Grid opens on it.")
             }
             Slider(value: $surface.tempo, in: 60...180, step: 1)
                 .controlSize(.small)

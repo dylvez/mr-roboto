@@ -565,6 +565,23 @@ struct DirectorToolTests {
         #expect(second.part != first.part, "the band's take is a new part, not a revision")
     }
 
+    @Test("a groove the band records from a chop in the song plays that chop's slices, where the chop played")
+    func grooveFromAChopPlaysIt() async throws {
+        let session = try makeSession()
+        defer { tearDown(session) }
+        let chop = try await classified(session)
+        let groove = try await grooved(session)
+        let tool = CreatePartVersionTool(workbench: session.workbench, workspace: session.workspace)
+        let sample = try await tool.run(.init(from: chop, note: "Bar 1, eight pieces.", persona: nil, parent: nil))
+        session.workspace.arrange([Section(name: "Verse", stitch: [PartID(uuidString: sample.part)!].lanes, lengthInBars: 4)])
+
+        let made = try await tool.run(.init(from: groove, note: "Bar 1 on a pocket.", persona: "Nyx", parent: sample.version))
+        let song = try #require(session.workspace.song)
+        let groovePart = try #require(PartID(uuidString: made.part))
+        #expect(SongPlayback.drumSoundID(for: groovePart, in: song) == ChopSound.id(for: PartID(uuidString: sample.part)!))
+        #expect(song.sections[0].stitch.map(\.part) == [groovePart], "in the chop's place")
+    }
+
     @Test("create_part_version with no song open says nothing was recorded")
     func createWithNoSong() async throws {
         let session = try makeSession()

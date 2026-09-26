@@ -164,3 +164,18 @@ let schema2SongFixture = """
         #expect(decoded["d"]?.intValue == nil)
     }
 }
+
+@Suite("A chop's pad trims")
+struct PadTrimTests {
+    @Test("trims round-trip, and a chop with none writes what it always wrote")
+    func roundTrip() throws {
+        var sample = Fixtures.sample
+        let plain = try JSONEncoder().encode(sample)
+        #expect(!String(decoding: plain, as: UTF8.self).contains("pads"), "no key for a chop with no trims")
+        #expect(try JSONDecoder().decode(Sample.self, from: plain).pads.isEmpty)
+
+        sample.pads = [PadTrim(slice: 1, tuneCents: -1200, gainDB: -3, reverse: true, stretchRatio: 1.5)]
+        let trimmed = try JSONDecoder().decode(Sample.self, from: JSONEncoder().encode(sample))
+        #expect(trimmed == sample)
+    }
+}

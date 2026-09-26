@@ -72,6 +72,10 @@ final class LiveSongPlayer: SongPlaybackHost {
     private var metronome: Metronome?
     /// Chops that grooves play on, each read and cut once per run however many sections use it.
     private var chopKits: [VersionID: ChopGroove.Prepared] = [:]
+    /// Chops a groove could not be played on this run, and why: those grooves played on a machine.
+    private var failedChops: [String] = []
+
+    func chopFailures() async -> [String] { failedChops }
 
     nonisolated init(service: AuditionService) {
         self.service = service
@@ -329,6 +333,7 @@ final class LiveSongPlayer: SongPlaybackHost {
         }
         metronome = nil
         chopKits = [:]
+        failedChops = []
         if let engine {
             (try? engine.mixGraph())?.releaseSlots()
             for track in tracks { engine.remove(track) }
@@ -537,8 +542,10 @@ final class LiveSongPlayer: SongPlaybackHost {
 
     // MARK: The dusty sources
 
-    /// The chop a groove plays on, read and cut. Nil for a groove on a machine.
-    private func preparedKit(for voice: SongPlayback.Voice) throws -> ChopGroove.Prepared? {
+    /// The chop a groove plays on, read and cut. Nil for a groove on a machine — and for one whose
+    /// chop cannot be played on (its audio gone, no slices in it), which then plays on the 808
+    /// rather than keeping the whole song from starting. `chopFailures()` says which.
+    private func preparedKit(for voice: SongPlayback.Voice) -> ChopGroove.Prepared? {
         guard let kit = voice.kit else { return nil }
         if let known = chopKits[kit.version] { return known }
         do {
@@ -546,7 +553,8 @@ final class LiveSongPlayer: SongPlaybackHost {
             chopKits[kit.version] = prepared
             return prepared
         } catch {
-            throw Failure.unreadable(kit.name, "\(error)")
+            failedChops.append("\(kit.name): \(error)")
+            return nil
         }
     }
 
@@ -645,15 +653,15 @@ final class LiveSongPlayer: SongPlaybackHost {
         return buffer
     }
 
-    /// A chop's bar stretched to the song's: the whole bars it covers at its own tempo, played in
-    /// as many of the song's, with its pitch kept. Stretched dry, before its dust, so the stretcher
-    /// does not smear the grit. Left as it is when its tempo is unknown, when it already fits, or
-    /// when the fit would more than halve or double it — a tempo read at half or double time is a
-    /// misreading, not a request.
+    /// A chop's bar stretched to the song's tempo (`ChopTrack.loopSeconds`), with its pitch kept.
+    /// Stretched dry, before its dust, so the stretcher does not smear the grit. Left as it is when
+    /// its tempo is unknown, when it already fits, or when the fit would more than halve or double
+    /// it — a tempo read at half or double time is a misreading, not a request.
     nonisolated static func fitted(_ planar: [[Float]], sampleRate: Double, of chop: SongPlayback.ChopTrack,
-                       to clock: TransportClock) throws -> [[Float]] {
-        guard chop.tempo != nil, let frames = planar.first?.count, frames > 0, sampleRate > 0 else { return planar }
-        let target = Double(chop.bars(beatsPerBar: clock.timeSignature.beatsPerBar)) * clock.secondsPerBar
+                                   to clock: TransportClock) throws -> [[Float]] {
+        guard let frames = planar.first?.count, frames > 0, sampleRate > 0,
+              let target = chop.loopSeconds(songTempo: clock.tempo, beatsPerBar: clock.timeSignature.beatsPerBar)
+        else { return planar }
         let ratio = target / (Double(frames) / sampleRate)
         guard abs(ratio - 1) > 0.001, (0.5...2).contains(ratio) else { return planar }
         return try SignalsmithTimeStretcher(preset: .percussive)

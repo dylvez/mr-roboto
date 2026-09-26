@@ -77,7 +77,10 @@ public struct AlbumObservation: Hashable, Sendable {
             var sources: [String] = []
             for version in song.versions {
                 switch version.kind {
-                case .sound(let sound): palette.append(sound.preset.map { "\(sound.instrument) · \($0)" } ?? sound.instrument)
+                case .sound(let sound):
+                    // A groove on a chop is the record's own drums, not a sound from the palette.
+                    if ChopSound.part(of: sound.instrument) != nil { palette.append("chopped drums"); continue }
+                    palette.append(sound.preset.map { "\(sound.instrument) · \($0)" } ?? sound.instrument)
                 case .groove(let groove):
                     if let machine = groove.degradation.last?.preset { palette.append("dust · \(machine)") }
                 case .sample(let sample):

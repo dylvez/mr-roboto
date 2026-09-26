@@ -163,13 +163,20 @@ public final class PartPlayer {
     private func sound(_ version: PartVersion, in song: Song, clock: TransportClock) async throws -> Double {
         switch version.kind {
         case .groove(let groove):
-            return await play(groove, machine: SynthMachine.preset(id: SongPlayback.machineID(in: song)) ?? .tr808, clock: clock)
+            // On what the song plays this part on: its chop's slices, or its own machine.
+            if let chop = ChopSound.part(of: SongPlayback.drumSoundID(for: version.partID, in: song)),
+               let track = app.chopTrack(chop),
+               let seconds = await play(groove, on: track, clock: clock) {
+                return seconds
+            }
+            return await play(groove, machine: SynthMachine.preset(id: SongPlayback.machineID(for: version.partID, in: song)) ?? .tr808,
+                              clock: clock)
         case .bassline(let line):
             return await play(line.notes, sound: line.sound, clock: clock)
         case .melody(let melody):
-            return await playOnInstrument(melody.notes, in: song, clock: clock)
+            return await playOnInstrument(melody.notes, in: song, for: version.partID, clock: clock)
         case .progression(let progression):
-            return await play(progression, in: song, clock: clock)
+            return await play(progression, in: song, for: version.partID, clock: clock)
         case .audio(let audio):
             let url = try mediaURL(audio.media, song: song)
             let (planar, rate) = try await Task.detached { try BoothAdapter.planar(url) }.value
@@ -206,18 +213,50 @@ public final class PartPlayer {
         return clock.seconds(forBeat: notes.map { $0.start + $0.duration }.max() ?? 0) + 0.5
     }
 
-    /// The song's pitched instrument, loaded.
+    /// A groove on its chop's slices, once, through its own dust. Nil when the chop cannot be read,
+    /// and the caller plays it on a machine instead.
+    func play(_ groove: Groove, on chop: SongPlayback.ChopTrack, clock: TransportClock) async -> Double? {
+        do {
+            let prepared = try await Task.detached { try ChopGroove.prepare(chop) }.value
+            let played = try ChopGroove.perform(groove, on: prepared, tempo: clock.tempo,
+                                                timeSignature: clock.timeSignature, passes: 1)
+            let seconds = Dust.duration(of: groove, tempo: clock.tempo, timeSignature: clock.timeSignature) + Dust.tail
+            let dry = try await service.bounce(played.hits, chop: played.kit, seconds: seconds)
+            await service.play(planar: dry.planar, sampleRate: dry.sampleRate, through: groove.degradation)
+            return seconds
+        } catch {
+            return nil
+        }
+    }
+
+    /// A part's pitched instrument — its own pick, else the song's — loaded.
     @discardableResult
-    func prepareInstrument(in song: Song?) async -> InstrumentVoiceSpec {
-        let spec = song.map { InstrumentVoiceSpec.preset(id: SongPlayback.instrumentID(in: $0)) ?? .rhodes } ?? .rhodes
+    func prepareInstrument(in song: Song?, for part: PartID? = nil) async -> InstrumentVoiceSpec {
+        let spec = song.map { InstrumentVoiceSpec.preset(id: SongPlayback.instrumentID(for: part, in: $0)) ?? .rhodes } ?? .rhodes
+        return await prepare(spec)
+    }
+
+    private func prepare(_ spec: InstrumentVoiceSpec) async -> InstrumentVoiceSpec {
         if await service.currentInstrumentID != spec.id { try? await service.prepare(instrument: spec) }
         return spec
     }
 
-    /// A melody on the song's instrument, at its written beats.
+    /// A melody on a named instrument, at its written beats: what a Piano roll in melody mode plays.
     @discardableResult
-    public func playOnInstrument(_ notes: [NoteEvent], in song: Song?, clock: TransportClock) async -> Double {
-        _ = await prepareInstrument(in: song)
+    public func playOnInstrument(_ notes: [NoteEvent], instrument: String, clock: TransportClock) async -> Double {
+        _ = await prepare(InstrumentVoiceSpec.preset(id: instrument) ?? .rhodes)
+        return await playHeld(notes, clock: clock)
+    }
+
+    /// A melody on its part's instrument, at its written beats.
+    @discardableResult
+    public func playOnInstrument(_ notes: [NoteEvent], in song: Song?, for part: PartID? = nil,
+                                 clock: TransportClock) async -> Double {
+        _ = await prepareInstrument(in: song, for: part)
+        return await playHeld(notes, clock: clock)
+    }
+
+    private func playHeld(_ notes: [NoteEvent], clock: TransportClock) async -> Double {
         let hits = notes.map { note in
             VoiceSampler.Hit(note: note.pitch.midi, velocity: note.velocity,
                              at: clock.seconds(forBeat: note.start),
@@ -228,8 +267,9 @@ public final class PartPlayer {
     }
 
     @discardableResult
-    public func play(_ progression: Progression, in song: Song?, clock: TransportClock) async -> Double {
-        _ = await prepareInstrument(in: song)
+    public func play(_ progression: Progression, in song: Song?, for part: PartID? = nil,
+                     clock: TransportClock) async -> Double {
+        _ = await prepareInstrument(in: song, for: part)
         await service.playInstrument(Self.hits(for: progression, clock: clock))
         return clock.seconds(forBeat: progression.bars.reduce(0) { $0 + $1.beats }) + 0.5
     }

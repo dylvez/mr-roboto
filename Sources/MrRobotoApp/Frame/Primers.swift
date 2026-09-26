@@ -26,7 +26,7 @@ public enum Primer {
             return ("Chop lane",
                     "A chop is one bar cut from a stem, and it plays in the song as cut. Its slices play on the pads, and "
                         + "onset sensitivity sets how many there are; your edits keep themselves. Re-groove puts the slices on a "
-                        + "feel, and Make the groove turns that into a groove for the Grid.")
+                        + "feel, and Make the groove keeps it: a groove that plays these slices in the song, in place of the loop.")
         case .grid:
             return ("Grid",
                     "A groove is steps, swing and ghost notes for each drum voice, one bar or several. Paint steps, choose "

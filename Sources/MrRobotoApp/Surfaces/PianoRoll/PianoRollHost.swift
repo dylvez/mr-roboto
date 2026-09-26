@@ -26,6 +26,13 @@ public protocol PianoRollHosting: AnyObject {
     /// keep the frame asks for before it plays is in the song before the transport reads it.
     @MainActor @discardableResult
     func commit(_ version: PartVersion) -> Bool
+    /// The newest version of a part in the song, so a keep builds on it — a restore, or what the
+    /// band wrote since — rather than on the version this roll last kept.
+    func newest(of part: PartID) -> PartVersion?
+}
+
+extension PianoRollHosting {
+    public func newest(of part: PartID) -> PartVersion? { nil }
 }
 
 /// What the Chords surface needs: a chord sounded on touch, and a version taken.
@@ -42,8 +49,19 @@ public protocol ChordsHosting: AnyObject {
     /// The song's newest bass line, for the Harmonist to ask whether it agrees with the chords.
     /// Nil when there is none, and then nothing is said about the bass.
     var bassline: Bassline? { get }
+    /// The newest version of a part in the song, so a keep builds on it.
+    func newest(of part: PartID) -> PartVersion?
+    /// The instrument a part's chords play on: its own pick, else the song's. Nil is the song's.
+    func instrument(for part: PartID?) -> String
+    /// A chord, on the instrument `part` plays on.
+    func audition(pitches: [Int], duration: Double, for part: PartID?) async
 }
 
 extension ChordsHosting {
     public var bassline: Bassline? { nil }
+    public func newest(of part: PartID) -> PartVersion? { nil }
+    public func instrument(for part: PartID?) -> String { instrument }
+    public func audition(pitches: [Int], duration: Double, for part: PartID?) async {
+        await audition(pitches: pitches, duration: duration)
+    }
 }

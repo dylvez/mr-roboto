@@ -102,17 +102,12 @@ public enum MIDIExport {
                 file.tracks.append(.init(name: name, notes: tiled(melody.notes, over: placed, beatsPerBar: beatsPerBar, file: file, channel: 1,
                                                             lengthInBars: melody.lengthInBars), program: 0))
             case .progression(let progression):
-                var events: [NoteEvent] = []
-                var beat = 0.0
-                for bar in progression.bars {
-                    for span in bar.chords {
-                        for pitch in Self.pitches(of: span.chord) {
-                            events.append(NoteEvent(pitch: Pitch(midi: pitch), start: beat, duration: span.beats, velocity: 80))
-                        }
-                        beat += span.beats
-                    }
-                }
-                file.tracks.append(.init(name: name, notes: tiled(events, over: placed, beatsPerBar: beatsPerBar, file: file, channel: 2), program: 4))
+                // The voicing the song plays (`Voicing`, as `KeysPlayer` and the Chords audition use),
+                // so the file's chords are the ones heard: inversions and register included.
+                let events = Voicing.notes(for: progression)
+                let bars = Int((Voicing.lengthInBeats(of: progression) / Double(beatsPerBar)).rounded(.up))
+                file.tracks.append(.init(name: name, notes: tiled(events, over: placed, beatsPerBar: beatsPerBar, file: file, channel: 2,
+                                                                lengthInBars: max(1, bars)), program: 4))
             default:
                 continue
             }
@@ -153,12 +148,6 @@ public enum MIDIExport {
             }
         }
         return out
-    }
-
-    /// The chord's pitches around C4.
-    static func pitches(of chord: Chord) -> [Int] {
-        let root = 60 + chord.root.rawValue
-        return chord.quality.intervals.map { root + $0 }
     }
 }
 
@@ -223,13 +212,13 @@ public enum MIDIImport {
         var spans: [ChordSpan] = []
         var barBeats = 0.0
         for (index, (tick, notes)) in byStart.enumerated() {
-            let pitches = notes.map(\.pitch).sorted()
-            guard let lowest = pitches.first else { continue }
-            let intervals = Array(Set(pitches.map { ($0 - lowest) % 12 })).sorted()
-            let quality = ChordQuality(intervals: intervals) ?? (intervals.contains(3) ? .minor : .major)
-            let next = index + 1 < byStart.count ? byStart[index + 1].key : tick + (notes.map(\.length).max() ?? file.ticksPerBeat)
-            let beats = max(0.25, file.beats(ticks: next - tick))
-            spans.append(ChordSpan(chord: Chord(PitchClass(wrapping: lowest), quality), beats: beats))
+            guard let chord = chord(of: notes.map(\.pitch)) else { continue }
+            let next = index + 1 < byStart.count ? byStart[index + 1].key : nil
+            // The last chord has no next one to end on, only its notes, which are played a touch
+            // short of the beat (`Voicing.hold`): its length is theirs rounded up to the quarter.
+            let beats = next.map { max(0.25, file.beats(ticks: $0 - tick)) }
+                ?? max(0.25, (file.beats(ticks: notes.map(\.length).max() ?? file.ticksPerBeat) / 0.25).rounded(.up) * 0.25)
+            spans.append(ChordSpan(chord: chord, beats: beats))
             barBeats += beats
             if barBeats >= Double(beatsPerBar) - 0.001 {
                 bars.append(ProgressionBar(chords: spans)); spans = []; barBeats = 0
@@ -237,5 +226,24 @@ public enum MIDIImport {
         }
         if !spans.isEmpty { bars.append(ProgressionBar(chords: spans)) }
         return Progression(key: key ?? Key(tonic: NoteName(.c)), bars: bars)
+    }
+
+    /// The chord a stack of pitches spells: the first of its notes, from the bottom, that the
+    /// others name a quality from, and how far the voicing is inverted from it. The file carries
+    /// the voicing the song plays, so a C over E comes back as C in first inversion rather than as
+    /// a chord built on E.
+    static func chord(of pitches: [Int]) -> Chord? {
+        let sorted = pitches.sorted()
+        guard let lowest = sorted.first else { return nil }
+        var candidates: [Int] = []
+        for pitch in sorted where !candidates.contains(pitch % 12) { candidates.append(pitch % 12) }
+        for root in candidates {
+            let intervals = Array(Set(sorted.map { (($0 - root) % 12 + 12) % 12 })).sorted()
+            guard let quality = ChordQuality(intervals: intervals) else { continue }
+            let inversion = quality.intervals.firstIndex { (root + $0) % 12 == lowest % 12 } ?? 0
+            return Chord(root: PitchClass(wrapping: root), quality: quality, inversion: inversion)
+        }
+        let intervals = Array(Set(sorted.map { ($0 - lowest) % 12 })).sorted()
+        return Chord(PitchClass(wrapping: lowest), intervals.contains(3) ? .minor : .major)
     }
 }

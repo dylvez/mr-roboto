@@ -133,9 +133,20 @@ public final class BasslinePlayer: ScheduledSource {
         }.sorted { $0.time < $1.time }
     }
 
+    /// The hits that start before `clip`, each let go by it: a note tied over a section's end
+    /// stops there, as the MIDI file has it, rather than ringing into the next section.
+    nonisolated public static func clipped(_ hits: [VoiceSampler.Hit], at clip: Double) -> [VoiceSampler.Hit] {
+        hits.compactMap { hit in
+            guard hit.time < clip else { return nil }
+            var cut = hit
+            if let duration = hit.duration { cut.duration = max(0.02, min(duration, clip - hit.time)) }
+            return cut
+        }
+    }
+
     private func queueLoop(_ index: Int) {
         var hits = Self.hits(for: bassline, on: timeline, offsetBeats: startBeat(ofLoop: index))
-        if let clip = clipTime(ofLoop: index) { hits = hits.filter { $0.time < clip } }
+        if let clip = clipTime(ofLoop: index) { hits = Self.clipped(hits, at: clip) }
         scheduledLoopCount += 1
         guard !hits.isEmpty else { return }
         sampler.enqueue(hits)

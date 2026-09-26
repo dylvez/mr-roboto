@@ -238,7 +238,8 @@ public final class MIDIControl {
                 if case .bassline(let line) = version.kind { return line.sound }
                 return nil
             }
-            guard let line = MIDICapture.bassline(notes, clock: clock, sectionStart: sectionStart, end: endedAt, key: song.key, sound: sound) else { return nil }
+            guard let line = MIDICapture.bassline(notes, clock: clock, sectionStart: sectionStart, end: endedAt, key: song.key,
+                                                  sound: sound, bars: section?.lengthInBars) else { return nil }
             kind = .bassline(line)
             what = "bass line"
         case .keys:

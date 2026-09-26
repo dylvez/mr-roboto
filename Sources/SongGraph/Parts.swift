@@ -461,6 +461,27 @@ public struct SliceMarker: Hashable, Codable, Sendable {
     }
 }
 
+/// How one pad of a chop plays its slice: tuned, louder or quieter, reversed, stretched. Keyed by
+/// the slice's index in marker order, the same way a marker's label carries its class.
+public struct PadTrim: Hashable, Codable, Sendable {
+    public var slice: Int
+    /// Pitch offset in cents.
+    public var tuneCents: Double
+    public var gainDB: Double
+    public var reverse: Bool
+    /// Output duration over input duration. Nil plays the slice at its natural length.
+    public var stretchRatio: Double?
+
+    public init(slice: Int, tuneCents: Double = 0, gainDB: Double = 0, reverse: Bool = false,
+                stretchRatio: Double? = nil) {
+        self.slice = slice
+        self.tuneCents = tuneCents
+        self.gainDB = gainDB
+        self.reverse = reverse
+        self.stretchRatio = stretchRatio
+    }
+}
+
 /// A chopped sample: media by hash, slice markers, root pitch and detected tempo.
 public struct Sample: Hashable, Sendable {
     public var media: MediaRef
@@ -480,9 +501,13 @@ public struct Sample: Hashable, Sendable {
     /// bar of an analysed record — a merged render, which *is* the bar. Nil means "find the bar
     /// from the slices and the analysis", as every chop cut from a record does.
     public var span: TimeRange?
+    /// The pads' trims, one per slice that has any, in slice order. Empty plays every slice as it
+    /// was cut.
+    public var pads: [PadTrim]
 
     public init(media: MediaRef, slices: [SliceMarker] = [], rootPitch: Pitch? = nil, detectedTempo: Double? = nil,
-                sourceRecord: RecordID? = nil, degradation: [Degradation] = [], key: Key? = nil, span: TimeRange? = nil) {
+                sourceRecord: RecordID? = nil, degradation: [Degradation] = [], key: Key? = nil, span: TimeRange? = nil,
+                pads: [PadTrim] = []) {
         self.media = media
         self.slices = slices
         self.rootPitch = rootPitch
@@ -491,11 +516,12 @@ public struct Sample: Hashable, Sendable {
         self.degradation = degradation
         self.key = key
         self.span = span
+        self.pads = pads
     }
 }
 
 extension Sample: Codable {
-    private enum CodingKeys: String, CodingKey { case media, slices, rootPitch, detectedTempo, sourceRecord, degradation, key, span }
+    private enum CodingKeys: String, CodingKey { case media, slices, rootPitch, detectedTempo, sourceRecord, degradation, key, span, pads }
 
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -506,11 +532,12 @@ extension Sample: Codable {
                   sourceRecord: try c.decodeIfPresent(RecordID.self, forKey: .sourceRecord),
                   degradation: try c.decodeIfPresent([Degradation].self, forKey: .degradation) ?? [],
                   key: try c.decodeIfPresent(Key.self, forKey: .key),
-                  span: try c.decodeIfPresent(TimeRange.self, forKey: .span))
+                  span: try c.decodeIfPresent(TimeRange.self, forKey: .span),
+                  pads: try c.decodeIfPresent([PadTrim].self, forKey: .pads) ?? [])
     }
 
     /// A dry sample writes exactly what it always wrote; see `Groove.encode(to:)`. `key` and
-    /// `span` are omitted when nil for the same reason.
+    /// `span` are omitted when nil for the same reason, and `pads` when there are none.
     public func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(media, forKey: .media)
@@ -521,6 +548,7 @@ extension Sample: Codable {
         if !degradation.isEmpty { try c.encode(degradation, forKey: .degradation) }
         try c.encodeIfPresent(key, forKey: .key)
         try c.encodeIfPresent(span, forKey: .span)
+        if !pads.isEmpty { try c.encode(pads, forKey: .pads) }
     }
 }
 

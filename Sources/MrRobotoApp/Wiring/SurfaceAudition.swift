@@ -59,18 +59,30 @@ extension SurfaceWiring {
                 await player.play(id: id, label: item.title, seconds: seconds) { await player.play(groove, machine: machine, clock: clock) }
             }
         case .pianoRoll:
-            let line = pianoRollModel(for: item, app: app).bassline
+            let model = pianoRollModel(for: item, app: app)
+            let line = model.bassline
             guard !line.notes.isEmpty else { return nil }
+            let seconds = clock.seconds(forBeat: line.notes.map { $0.start + $0.duration }.max() ?? 0) + 0.5
+            // A tune plays on its instrument, as the roll's own touch does, not on the bass.
+            if model.mode == .melody {
+                let notes = line.notes, instrument = model.instrument
+                return SurfaceAudition(id: id, label: "this tune") { player in
+                    await player.play(id: id, label: item.title, seconds: seconds) {
+                        await player.playOnInstrument(notes, instrument: instrument, clock: clock)
+                    }
+                }
+            }
             return SurfaceAudition(id: id, label: "this line") { player in
-                let seconds = clock.seconds(forBeat: line.notes.map { $0.start + $0.duration }.max() ?? 0) + 0.5
                 await player.play(id: id, label: item.title, seconds: seconds) { await player.play(line.notes, sound: line.sound, clock: clock) }
             }
         case .chords:
-            guard let progression = chordsModel(for: item, app: app).progression, !progression.chords.isEmpty else { return nil }
+            let model = chordsModel(for: item, app: app)
+            guard let progression = model.progression, !progression.chords.isEmpty else { return nil }
+            let part = model.part
             return SurfaceAudition(id: id, label: "these chords") { player in
                 let seconds = clock.seconds(forBeat: progression.bars.reduce(0) { $0 + $1.beats }) + 0.5
                 let song = app.song
-                await player.play(id: id, label: item.title, seconds: seconds) { await player.play(progression, in: song, clock: clock) }
+                await player.play(id: id, label: item.title, seconds: seconds) { await player.play(progression, in: song, for: part, clock: clock) }
             }
         case .chopLane:
             guard case .ready(let surface) = chopBinding(for: item, app: app).state else { return version(bound.first, "this chop") }

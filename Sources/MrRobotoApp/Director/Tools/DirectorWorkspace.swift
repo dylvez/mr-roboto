@@ -119,6 +119,9 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     /// The pitched instrument a part plays on, or the song's when `part` is nil. False when the
     /// preset is unknown, no song is open, or it already plays on that preset.
     @discardableResult func setInstrument(_ id: String, for part: PartID?) -> Bool
+    /// A groove made from a chop, put on the chop's slices and in its place in the form, as the
+    /// Chop lane's Make the groove does. The names of the sections it took over.
+    @discardableResult func playGroove(_ groove: PartID, onChop chop: PartID) -> [String]
     /// Rendered audio kept in the open song's package, for a version to point at. Nil, with the
     /// reason in the rail, when there is nowhere to keep it.
     func keepAudio(_ planar: [[Float]], sampleRate: Double) -> MediaRef?
@@ -249,6 +252,10 @@ public final class AppStateWorkspace: DirectorWorkspace {
     @discardableResult public func setTimeSignature(_ signature: TimeSignature) -> Bool { app.setTimeSignature(signature, by: .director) }
     @discardableResult public func setInstrument(_ id: String, for part: PartID?) -> Bool {
         app.setInstrument(id, for: part, by: .persona("Director"))
+    }
+    @discardableResult public func playGroove(_ groove: PartID, onChop chop: PartID) -> [String] {
+        app.keepSurfaceWork()
+        return app.playGroove(groove, onChop: chop, by: .persona("Director"), source: .director)
     }
 
     /// Kept in the song's package the way the Booth keeps a take — a song not yet saved is saved
@@ -533,6 +540,24 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
               signature.beatsPerBar >= 1, [1, 2, 4, 8, 16].contains(signature.beatUnit) else { return false }
         song?.timeSignature = signature
         return true
+    }
+
+    /// As the frame does it: the pick, then the chop's place in the form.
+    @discardableResult
+    public func playGroove(_ groove: PartID, onChop chop: PartID) -> [String] {
+        guard var current = song, current.versions.contains(where: { $0.partID == chop && $0.type == .sample }) else {
+            return []
+        }
+        let chopName = current.versions.last { $0.partID == chop }.map(PartLabel.title(of:)) ?? "the chop"
+        let name = current.versions.last { $0.partID == groove }.map(PartLabel.title(of:)) ?? "the groove"
+        let pick = PartVersion(partID: PartID(), kind: .sound(Sound(instrument: ChopSound.id(for: chop), forPart: groove)),
+                               author: .persona("Director"), operation: Operation.written,
+                               note: "\(chopName)'s slices for \(name)")
+        guard (try? current.append(pick)) != nil else { return [] }
+        let swapped = AppState.sections(of: current, playing: groove, inPlaceOf: chop)
+        current.sections = swapped.sections
+        song = current
+        return swapped.took
     }
 
     /// As the frame does it: a `.sound` part, one pick a version of the last.

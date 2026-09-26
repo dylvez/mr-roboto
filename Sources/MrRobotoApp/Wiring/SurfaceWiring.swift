@@ -188,7 +188,8 @@ final class SurfaceWiring {
             bound.flatMap { ChopSound.part(of: SongPlayback.drumSoundID(for: $0.partID, in: song)) }
         }
         let offered = playing ?? app.song.flatMap { song in bound.flatMap { Self.chop(bound: $0, in: song) } }
-        let adapter = GridAdapter(app: app, service: service(for: app), machine: machine, chop: playing)
+        let adapter = GridAdapter(app: app, service: service(for: app), machine: machine, chop: playing,
+                                  surface: item.id)
         let model: GridModel
         if let version = bound {
             model = GridModel(host: adapter, version: version, tempo: tempo, timeSignature: signature, machine: machine)
@@ -237,12 +238,27 @@ final class SurfaceWiring {
     /// either way, and its newest kit sound says how long the kick rings.
     func pianoRollModel(for item: BenchItem, app: AppState) -> PianoRollModel {
         prune(app)
-        if let existing = rolls[item.id] { return existing }
-        let adapter = BassAdapter(app: app, service: service(for: app))
+        if let existing = rolls[item.id] {
+            // The song it writes against, as it is now: the roll used to keep the chords, groove,
+            // tempo and key it opened with for as long as it stayed open.
+            let song = app.song
+            let grooveVersion = existing.grooveVersion
+                .flatMap { app.version($0)?.partID }
+                .flatMap { part in song?.versions.last { $0.partID == part } }
+                ?? song.flatMap { Guidance.grooves(in: $0).last }
+            var groove: Groove?
+            if let grooveVersion, case .groove(let g) = grooveVersion.kind { groove = g }
+            existing.follow(groove: groove, grooveVersion: grooveVersion?.id, chords: Self.chords(in: song),
+                            key: Self.key(of: song), tempo: song?.tempo ?? existing.tempo,
+                            timeSignature: song?.timeSignature ?? existing.timeSignature,
+                            kickDecaySeconds: Self.kickDecay(in: song))
+            return existing
+        }
+        let adapter = BassAdapter(app: app, service: service(for: app), surface: item.id)
         let song = app.song
         let tempo = song?.tempo ?? 90
         let signature = song?.timeSignature ?? .fourFour
-        let key = Guidance.analysis(in: song)?.dominantKey ?? song?.key ?? Key(tonic: NoteName(.c))
+        let key = Self.key(of: song)
         var basslineVersion: PartVersion?
         var melodyVersion: PartVersion?
         var grooveVersion: PartVersion?
@@ -257,14 +273,13 @@ final class SurfaceWiring {
         }
         // A tune plays on its own instrument — its newest pick, else the song's — and the roll
         // opens in melody mode on it, so the ledger row that is a melody opens as one.
-        let melodyInstrument = melodyVersion.flatMap { version in song.map { SongPlayback.instrumentID(for: version.partID, in: $0) } }
+        // A roll opened on no tune starts on the song's instrument, which is what a tune kept from it
+        // will play on.
+        let melodyInstrument = song.map { SongPlayback.instrumentID(for: melodyVersion?.partID, in: $0) }
         if grooveVersion == nil, let song { grooveVersion = Guidance.grooves(in: song).last }
         var groove: Groove?
         if let grooveVersion, case .groove(let g) = grooveVersion.kind { groove = g }
-        let chords = song.flatMap { Guidance.progressions(in: $0).last }.flatMap { version -> [ChordSpan]? in
-            if case .progression(let p) = version.kind { return p.spans }
-            return nil
-        } ?? []
+        let chords = Self.chords(in: song)
         let model = PianoRollModel(host: adapter, groove: groove, grooveVersion: grooveVersion?.id,
                                    chords: chords, key: key, tempo: tempo, timeSignature: signature,
                                    kickDecaySeconds: Self.kickDecay(in: song), bassline: basslineVersion,
@@ -278,13 +293,27 @@ final class SurfaceWiring {
         return model
     }
 
+    /// The song's harmony as the roll writes to it: its newest progression's spans.
+    static func chords(in song: Song?) -> [ChordSpan] {
+        song.flatMap { Guidance.progressions(in: $0).last }.flatMap { version -> [ChordSpan]? in
+            if case .progression(let p) = version.kind { return p.spans }
+            return nil
+        } ?? []
+    }
+
+    /// The key a roll or a lead sheet writes in: the one set in Song settings, else what the
+    /// record's analysis heard, else C. Settings first, because setting the key is saying it.
+    static func key(of song: Song?) -> Key {
+        song?.key ?? Guidance.analysis(in: song)?.dominantKey ?? Key(tonic: NoteName(.c))
+    }
+
     /// A lead sheet: on a bound progression, editing it; otherwise a new one in the song's key.
     func chordsModel(for item: BenchItem, app: AppState) -> ChordsModel {
         prune(app)
         if let existing = chordSheets[item.id] { return existing }
-        let adapter = ChordsAdapter(app: app, service: service(for: app))
+        let adapter = ChordsAdapter(app: app, service: service(for: app), surface: item.id)
         let song = app.song
-        let key = Guidance.analysis(in: song)?.dominantKey ?? song?.key ?? Key(tonic: NoteName(.c))
+        let key = Self.key(of: song)
         let bound = app.bound(for: item.id).compactMap { app.version($0) }.first { $0.type == .progression }
         let model = ChordsModel(host: adapter, key: key, beatsPerBar: song?.timeSignature.beatsPerBar ?? 4,
                                 progression: bound, surfaceID: item.id)

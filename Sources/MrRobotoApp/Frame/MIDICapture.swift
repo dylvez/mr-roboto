@@ -86,10 +86,13 @@ public enum MIDICapture {
 
     /// The bass line, unquantised: starts and lengths in beats from the section's first bar, as
     /// played, so the lag against the kick is the one the hands put there.
-    public static func bassline(_ notes: [PlayedNote], clock: TransportClock, sectionStart: Double, end: Double?, key: Key?, sound: String?) -> Bassline? {
+    /// One pass as long as the section, as a tune is: three bars played into a four-bar section
+    /// loop every four, not every three.
+    public static func bassline(_ notes: [PlayedNote], clock: TransportClock, sectionStart: Double, end: Double?, key: Key?,
+                                sound: String?, bars: Int? = nil) -> Bassline? {
         let events = noteEvents(notes, clock: clock, sectionStart: sectionStart, end: end)
         guard !events.isEmpty else { return nil }
-        return Bassline(notes: events, sound: sound ?? "finger", key: key)
+        return Bassline(notes: events, sound: sound ?? "finger", key: key, lengthInBars: bars)
     }
 
     /// The tune, the same way: as played, from the section's first bar, one pass as long as the

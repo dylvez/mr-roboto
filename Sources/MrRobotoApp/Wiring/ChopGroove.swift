@@ -13,8 +13,7 @@ import SongGraph
 /// by the lane's own `ChopLaneSurface.map`, so the slice the lane called the kick is the one the
 /// song plays.
 ///
-/// Pad trims are not included, because `Sample` does not hold them (see
-/// `ChopLaneSurface.commitChop`).
+/// The pads play with the trims the lane kept: tuned, reversed, louder or quieter, stretched.
 enum ChopGroove {
 
     /// A chop ready to be played on. It is rebuilt once per transport start, and each section's
@@ -51,30 +50,28 @@ enum ChopGroove {
         let mono = ChopAudio.mono(dry)
         guard !mono.isEmpty, sampleRate > 0 else { throw Failure.empty(track.name) }
         let duration = Double(mono.count) / sampleRate
-        // The markers inside the bar, in the bar's own time. The overrides are read from this
-        // filtered list, so each class stays with its marker even if one is dropped.
-        let kept = track.slices
-            .filter { $0.position >= track.region.start && $0.position - track.region.start < duration }
-            .sorted { $0.position < $1.position }
-        let cut: [Double]
-        let overrides: [Int: SliceClass]
-        if kept.count > 1 {
-            cut = kept.map { $0.position - track.region.start }
-            overrides = ChopLaneSurface.overrides(from: kept)
+        // The markers inside the bar, in the bar's own time, cut again exactly where the lane kept
+        // them. Classes and trims go back on by position (`ChopLaneSurface.carried`).
+        let inside = track.slices.map { $0.position - track.region.start }.filter { $0 >= 0 && $0 < duration }
+        let chop: Chop
+        var overrides: [Int: SliceClass] = [:]
+        var edits: [Int: ChopLaneSurface.SliceEdit] = [:]
+        if inside.count > 1 {
+            chop = ChopLaneSurface.recut(at: inside.sorted(), signal: mono, sampleRate: sampleRate,
+                                         sourceOffset: track.region.start, detectedTempo: track.tempo)
+            (overrides, edits) = ChopLaneSurface.carried(track.slices, pads: track.pads, onto: chop)
         } else {
-            // A bar that was promoted and never cut. The lane would open it on a fresh detection
-            // at its default sensitivity, so the song cuts it the same way.
+            // A bar that was promoted and never cut. The lane would open it on a fresh detection at
+            // its default sensitivity, and making a groove keeps that cut first, so this is only
+            // for a chop made elsewhere.
             var detector = SpectralFluxOnsetDetector()
             detector.threshold = ChopLaneSurface.threshold(forSensitivity: ChopLaneSurface.defaultSensitivity)
-            cut = detector.onsets(in: mono, sampleRate: sampleRate)
-            overrides = [:]
+            chop = Chopper().slice(atOnsets: detector.onsets(in: mono, sampleRate: sampleRate), signal: mono,
+                                   sampleRate: sampleRate, sourceOffset: track.region.start, detectedTempo: track.tempo)
         }
-        // No grid: the kept markers already sit where the lane snapped them.
-        let chop = Chopper().slice(atOnsets: cut, signal: mono, sampleRate: sampleRate,
-                                   sourceOffset: track.region.start, detectedTempo: track.tempo)
         guard chop.count > 0 else { throw Failure.noSlices(track.name) }
         let classifications = SliceClassifier().classify(chop, in: mono, overrides: overrides)
-        let map = ChopLaneSurface.map(of: chop, classifications: classifications, name: track.name)
+        let map = ChopLaneSurface.map(of: chop, classifications: classifications, name: track.name, edits: edits)
         let playing = try Dust.render(dry, sampleRate: sampleRate, passes: track.passes)
         return Prepared(map: map, classifications: classifications, overrides: overrides,
                         playing: playing, sampleRate: sampleRate)

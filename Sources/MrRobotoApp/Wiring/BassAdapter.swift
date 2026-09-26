@@ -13,10 +13,17 @@ import SongGraph
 final class BassAdapter: PianoRollHosting {
     private let app: AppState
     private let service: AuditionService
+    /// The roll's bench item, whose binding follows what it keeps.
+    private let surface: SurfaceID?
 
-    init(app: AppState, service: AuditionService) {
+    init(app: AppState, service: AuditionService, surface: SurfaceID? = nil) {
         self.app = app
         self.service = service
+        self.surface = surface
+    }
+
+    func newest(of part: PartID) -> PartVersion? {
+        app.song?.versions.last { $0.partID == part }
     }
 
     func audition(note: Int, velocity: Int, duration: Double, sound: String) async {
@@ -68,6 +75,7 @@ final class BassAdapter: PianoRollHosting {
 
     func commit(_ version: PartVersion) -> Bool {
         guard app.record(version) else { return false }
+        if let surface { app.surfaceKept(version, on: surface) }
         // What the Bassist says about what was kept, in the rail, in its name.
         if let song = app.song, case .bassline(let line) = version.kind,
            let grooveVersion = Guidance.grooves(in: song).last, case .groove(let groove) = grooveVersion.kind {
@@ -107,20 +115,36 @@ final class BassAdapter: PianoRollHosting {
 final class ChordsAdapter: ChordsHosting {
     private let app: AppState
     private let service: AuditionService
+    /// The sheet's bench item, whose binding follows what it keeps.
+    private let surface: SurfaceID?
 
-    init(app: AppState, service: AuditionService) {
+    init(app: AppState, service: AuditionService, surface: SurfaceID? = nil) {
         self.app = app
         self.service = service
+        self.surface = surface
     }
 
-    var instrument: String { app.song.map { SongPlayback.instrumentID(in: $0) } ?? InstrumentVoiceSpec.rhodes.id }
+    func newest(of part: PartID) -> PartVersion? {
+        app.song?.versions.last { $0.partID == part }
+    }
+
+    var instrument: String { instrument(for: nil) }
+
+    func instrument(for part: PartID?) -> String {
+        app.song.map { SongPlayback.instrumentID(for: part, in: $0) } ?? InstrumentVoiceSpec.rhodes.id
+    }
 
     func setInstrument(_ id: String, for part: PartID?) { app.setInstrument(id, for: part) }
 
     func audition(pitches: [Int], duration: Double) async {
-        // Chords play on the song's pitched instrument. They used to go through the bass sampler,
-        // which put a four-note voicing through a monophonic sub an octave below where it was written.
-        let spec = app.song.map { InstrumentVoiceSpec.preset(id: SongPlayback.instrumentID(in: $0)) ?? .rhodes } ?? .rhodes
+        await audition(pitches: pitches, duration: duration, for: nil)
+    }
+
+    func audition(pitches: [Int], duration: Double, for part: PartID?) async {
+        // Chords play on their part's pitched instrument, as the song plays them. They used to go
+        // through the bass sampler, which put a four-note voicing through a monophonic sub an
+        // octave below where it was written; then on the song's, whatever the part had picked.
+        let spec = InstrumentVoiceSpec.preset(id: instrument(for: part)) ?? .rhodes
         if await service.currentInstrumentID != spec.id {
             do { try await service.prepare(instrument: spec) } catch {
                 app.note(.session, "Could not load the \(spec.name)", detail: "\(error)")
@@ -130,7 +154,11 @@ final class ChordsAdapter: ChordsHosting {
         await service.playInstrument(pitches.map { VoiceSampler.Hit(note: $0, velocity: 92, at: 0, duration: duration) })
     }
 
-    func commit(_ version: PartVersion) -> Bool { app.record(version) }
+    func commit(_ version: PartVersion) -> Bool {
+        guard app.record(version) else { return false }
+        if let surface { app.surfaceKept(version, on: surface) }
+        return true
+    }
 
     /// The bass line the chords are played over, so the Harmonist's reading on the surface can say
     /// whether the bass agrees — the same newest line the rail's reading uses.

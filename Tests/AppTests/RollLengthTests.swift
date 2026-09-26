@@ -233,7 +233,7 @@ struct PianoRollLengthTests {
         #expect(model.lengthInBars == 16)
     }
 
-    @Test("a bound line opens at the length it states, else the groove's or its notes', and is not an edit")
+    @Test("a bound line opens at the length it states, else its notes' — the length the song loops it at — and is not an edit")
     func openingLengths() throws {
         let stub = RollStub()
         let stated = PartVersion(partID: PartID(), kind: .bassline(Bassline(notes: [NoteEvent(pitch: Pitch(midi: 38), start: 0, duration: 1)],
@@ -253,7 +253,8 @@ struct PianoRollLengthTests {
         #expect(!underOne.hasUnkeptChanges, "a line with no stated length is not changed by being opened")
         let fourBarGroove = Self.oneBar().tiled(toBars: 4)
         let underFour = PianoRollModel(host: stub, groove: fourBarGroove, key: Self.key, tempo: 92, bassline: untold)
-        #expect(underFour.lengthInBars == 4, "no shorter than the groove it sits under")
+        #expect(underFour.lengthInBars == reaching.loopBars(beatsPerBar: 4) && underFour.lengthInBars == 2,
+                "what the song loops it at, not the groove's four: a nudge must not keep two silent bars")
 
         // Setting it is an edit, and what is kept states it.
         underOne.setLength(4)

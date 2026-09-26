@@ -170,7 +170,16 @@ public final class ChopLaneSurface: Surface {
     /// Opening is not a change: a lane opened on a version takes the fingerprint of its own fresh
     /// detection, so an untouched lane never claims to hold unkept work and the bench can close it
     /// without a word. Only what the user does after that counts.
-    private var keptChop: [SliceMarker]?
+    private var keptChop: KeptCut?
+
+    /// What `commitChop` writes, as one comparable value: the markers with their classes, and the
+    /// pads' trims.
+    struct KeptCut: Equatable {
+        var markers: [SliceMarker]
+        var pads: [PadTrim]
+    }
+
+    private var cut: KeptCut { KeptCut(markers: sliceMarkers, pads: padTrims) }
     /// The re-groove last heard through `playRegroove`. A re-groove has been made when it has been
     /// played, and not before: a feel picked and never played is a setting, not a thing to keep.
     private var playedRegroove: RegrooveSetting?
@@ -215,8 +224,7 @@ public final class ChopLaneSurface: Surface {
         history.record(state)
     }
 
-    /// After an edit: the chop keeps itself once the edits settle. Trims are not in the version,
-    /// so a trim alone is undoable but has nothing to keep.
+    /// After an edit: the chop keeps itself once the edits settle, a trim as much as a marker.
     private func didEdit() {
         guard hasUnkeptChopEdits else { autoKeep.cancel(); return }
         autoKeep.schedule { [weak self] in self?.keepNow() }
@@ -296,26 +304,63 @@ public final class ChopLaneSurface: Surface {
             feelName = suggested.name
             tempo = source.tempo ?? suggested.suggestedTempo
         }
-        keptChop = version == nil ? nil : sliceMarkers
+        keptChop = version == nil ? nil : cut
     }
 
     /// Opens on the cut a version kept: its markers and the classes they record, rather than a
     /// fresh detection. Reopening a chop used to detect its slices again and treat that as kept,
     /// so a marker moved by hand or a slice called a snare was gone, and the next edit saved over
     /// the kept cut. Not an edit: the lane holds what the song holds.
-    public func restore(_ kept: [SliceMarker]) {
+    public func restore(_ kept: [SliceMarker], pads: [PadTrim] = []) {
         guard source.isWellFormed, !kept.isEmpty else { return }
         let restored = kept.map { $0.position - source.sourceOffset }
             .filter { $0 >= 0 && $0 < source.duration }
             .sorted()
         guard !restored.isEmpty else { return }
         markers = restored
-        overrides = Self.overrides(from: kept)
+        overrides = [:]
         edits = [:]
         selectedSlice = nil
-        rebuildChop()
+        rebuildChop(exact: true)
+        let carried = Self.carried(kept, pads: pads, onto: chop)
+        overrides = carried.overrides
+        edits = carried.edits
+        classifications = SliceClassifier().classify(chop, in: source.mono, overrides: overrides)
         handEdited = sliceMarkers.map(\.position) != detectedOnsets.map { $0 + source.sourceOffset }
-        keptChop = sliceMarkers
+        keptChop = cut
+        needsAuditionRefresh = true
+    }
+
+    /// Kept markers cut again exactly where they were kept. The lane's own chopper backs each start
+    /// up to a quiet frame and merges slices closer than 15 ms. That has already been done to a kept
+    /// cut, and doing it again can merge two markers the backing-up brought closer, and drop a slice.
+    public nonisolated static func recut(at positions: [Double], signal: [Float], sampleRate: Double,
+                                         sourceOffset: Double, detectedTempo: Double?) -> Chop {
+        Chopper(minimumSliceDuration: 0.001, includeLeadIn: false, zeroCrossingWindow: 0)
+            .slice(atOnsets: positions, signal: signal, sampleRate: sampleRate,
+                   sourceOffset: sourceOffset, detectedTempo: detectedTempo)
+    }
+
+    /// The classes and trims a kept cut recorded, put back on the slices that start where their
+    /// markers are: by position, not by place in the list, so a slice lost or gained between the
+    /// two moves nothing onto its neighbour. A trim's `slice` counts in `kept` as given.
+    public nonisolated static func carried(_ kept: [SliceMarker], pads: [PadTrim],
+                                           onto chop: Chop) -> (overrides: [Int: SliceClass], edits: [Int: SliceEdit]) {
+        let classes = overrides(from: kept)
+        let trims = Dictionary(pads.map { ($0.slice, $0) }, uniquingKeysWith: { first, _ in first })
+        var outClasses: [Int: SliceClass] = [:]
+        var outEdits: [Int: SliceEdit] = [:]
+        for slice in chop.slices {
+            let at = chop.sourceOffset + slice.startSeconds
+            guard let nearest = kept.indices.min(by: { abs(kept[$0].position - at) < abs(kept[$1].position - at) }),
+                  abs(kept[nearest].position - at) <= 0.005 else { continue }
+            if let kind = classes[nearest] { outClasses[slice.index] = kind }
+            if let pad = trims[nearest] {
+                outEdits[slice.index] = SliceEdit(tuneCents: Float(pad.tuneCents), gainDB: Float(pad.gainDB),
+                                                  reverse: pad.reverse, stretchRatio: pad.stretchRatio)
+            }
+        }
+        return (outClasses, outEdits)
     }
 
     /// Point the lane at a host after the fact — the frame builds the surface, then adopts it.
@@ -374,12 +419,17 @@ public final class ChopLaneSurface: Surface {
 
     /// Rebuild the chop from the current markers, keeping the hand classifications and pad trims
     /// that still refer to a slice that exists.
-    private func rebuildChop() {
-        var chopper = Chopper()
-        chopper.snapTolerance = snapTolerance
-        chop = chopper.slice(atOnsets: markers, signal: source.mono, sampleRate: source.sampleRate,
-                             snappingTo: source.grid, division: gridDivision,
-                             sourceOffset: source.sourceOffset, detectedTempo: source.tempo)
+    private func rebuildChop(exact: Bool = false) {
+        if exact {
+            chop = Self.recut(at: markers, signal: source.mono, sampleRate: source.sampleRate,
+                              sourceOffset: source.sourceOffset, detectedTempo: source.tempo)
+        } else {
+            var chopper = Chopper()
+            chopper.snapTolerance = snapTolerance
+            chop = chopper.slice(atOnsets: markers, signal: source.mono, sampleRate: source.sampleRate,
+                                 snappingTo: source.grid, division: gridDivision,
+                                 sourceOffset: source.sourceOffset, detectedTempo: source.tempo)
+        }
         let live = Set(chop.slices.map(\.index))
         overrides = overrides.filter { live.contains($0.key) }
         edits = edits.filter { live.contains($0.key) }
@@ -607,6 +657,14 @@ public final class ChopLaneSurface: Surface {
 
     public func edit(forSlice index: Int) -> SliceEdit { edits[index] ?? SliceEdit() }
 
+    /// The trims as the version holds them: one per pad that has any, in slice order.
+    public var padTrims: [PadTrim] {
+        edits.filter { !$0.value.isNeutral }.sorted { $0.key < $1.key }.map { slice, edit in
+            PadTrim(slice: slice, tuneCents: Double(edit.tuneCents), gainDB: Double(edit.gainDB),
+                    reverse: edit.reverse, stretchRatio: edit.stretchRatio)
+        }
+    }
+
     public func setTune(_ cents: Float, slice index: Int) {
         update(slice: index) { $0.tuneCents = min(Self.tuneRange.upperBound,
                                                   max(Self.tuneRange.lowerBound, cents)) }
@@ -803,9 +861,8 @@ public final class ChopLaneSurface: Surface {
 
     /// The chop as a new `sample` part version.
     ///
-    /// The per-pad trims are **not** in this payload: `Sample` models markers, and a pad's tuning,
-    /// gain, reverse and stretch belong to a rendered kit rather than to the sample the kit was
-    /// cut from. They reach the graph when a chop is bounced into a kit, which Gate A does not do.
+    /// The pads' trims go with it (`padTrims`), so a groove played on this chop in the song
+    /// sounds the pads the way the lane does.
     @discardableResult
     public func commitChop(note: String? = nil) throws -> PartVersion {
         guard let host else { throw ChopLaneError.noHost }
@@ -817,7 +874,7 @@ public final class ChopLaneSurface: Surface {
         if case .sample(let previous)? = parent?.kind { chain = previous.degradation; key = previous.key; span = previous.span }
         let sample = Sample(media: source.media, slices: sliceMarkers,
                             detectedTempo: chop.detectedTempo, sourceRecord: source.record,
-                            degradation: chain, key: key, span: span)
+                            degradation: chain, key: key, span: span, pads: padTrims)
         let version = parent.map {
             $0.deriving(.sample(sample), by: .user, operation: Operation.chop, note: note)
         } ?? PartVersion(partID: partID, kind: .sample(sample), author: .user,
@@ -825,7 +882,7 @@ public final class ChopLaneSurface: Surface {
         autoKeep.cancel()
         guard host.record(version) else { throw ChopLaneError.versionRefused }
         versions = [version.id]
-        keptChop = sliceMarkers
+        keptChop = cut
         return version
     }
 
@@ -865,16 +922,12 @@ public final class ChopLaneSurface: Surface {
     // view presses: each one says beforehand whether it can be pressed and why not, and afterwards
     // routes whatever went wrong into `lastError`, where the footer already looks.
 
-    /// True when the chop the lane would write differs from the one it last wrote.
-    ///
-    /// The comparison is on `sliceMarkers`, which is what `commitChop` writes: the markers and
-    /// the class each slice was called. Pad trims are deliberately not in it. They are not in the
-    /// version either, so a Keep enabled by a trim would keep nothing, and the button would be
-    /// promising what the ledger cannot hold.
+    /// True when the chop the lane would write differs from the one it last wrote: the markers,
+    /// the class each slice was called, and the pads' trims.
     public var hasUnkeptChopEdits: Bool {
         guard sliceCount > 0 else { return false }
         guard let keptChop else { return true }
-        return sliceMarkers != keptChop
+        return cut != keptChop
     }
 
     /// True when a re-groove has been heard that the ledger does not have.
@@ -934,8 +987,13 @@ public final class ChopLaneSurface: Surface {
             lastError = whyRegrooveCannotBeKept
             return
         }
-        // The chop first, so the groove's lineage names the cut it was played from.
+        // The chop first, so the groove's lineage names the cut it was played from. A bar promoted
+        // and never cut holds no cut to play the groove on: the one the lane heard is kept, rather
+        // than the song cutting the bar again its own way, without the record's grid to snap to.
         guard keepNow() else { return }
+        if sliceCount > 1, case .sample(let kept)? = parent?.kind, kept.slices.count <= 1 {
+            do { try commitChop() } catch { lastError = "\(error)"; return }
+        }
         do {
             try commitRegroove()
             lastError = nil
