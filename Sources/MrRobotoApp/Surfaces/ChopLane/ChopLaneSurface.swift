@@ -657,7 +657,14 @@ public final class ChopLaneSurface: Surface {
     /// This is what `Performance` is handed — `ChopMap.render`, `Regroove.perform` — so it is the
     /// surface's actual output, not a view model.
     public var chopMap: ChopMap {
-        var map = ChopMap.pads(chop, name: source.label)
+        Self.map(of: chop, classifications: classifications, name: source.label, edits: edits)
+    }
+
+    /// The map for any chop, as the lane builds it. The song builds a groove-on-a-chop's pads with
+    /// this too (`ChopGroove`), so the slice the lane called the kick is the one the song plays.
+    public nonisolated static func map(of chop: Chop, classifications: [SliceClassification],
+                                       name: String, edits: [Int: SliceEdit] = [:]) -> ChopMap {
+        var map = ChopMap.pads(chop, name: name)
         for position in map.mappings.indices {
             let index = map.mappings[position].sliceIndex
             let edit = edits[index] ?? SliceEdit()
@@ -665,7 +672,7 @@ public final class ChopLaneSurface: Surface {
             map.mappings[position].gainDB = edit.gainDB
             map.mappings[position].reverse = edit.reverse
             map.mappings[position].stretchRatio = edit.stretchRatio
-            let kind = classification(forSlice: index)?.kind
+            let kind = classifications.first { $0.sliceIndex == index }?.kind
             map.mappings[position].label = kind.map { "slice \(index) (\($0.rawValue))" }
                 ?? "slice \(index)"
         }
@@ -839,6 +846,9 @@ public final class ChopLaneSurface: Surface {
                          parents: versions, operation: Operation.regroove, note: summary)
         guard host.record(version) else { throw ChopLaneError.versionRefused }
         keptRegroove = currentRegroove
+        // The song plays the groove on the chop as it holds it: `keepRegroove` keeps the cut first
+        // so the two agree. A groove from a chop the song never kept has nothing to play on.
+        if let chop = parent?.partID { host.madeGroove(version, fromChop: chop) }
         return version
     }
 

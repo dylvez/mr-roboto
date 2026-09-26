@@ -182,16 +182,35 @@ final class SurfaceWiring {
         let bound = boundGroove(for: item, app: app)
         // The machine the song plays this groove on — the grid always opened on the 808.
         let machine = app.song.flatMap { SynthMachine.preset(id: SongPlayback.machineID(for: bound?.partID, in: $0)) } ?? .tr808
-        let adapter = GridAdapter(app: app, service: service(for: app), machine: machine)
+        // A groove on a chop opens on the chop's slices. One made from a chop and since put on a
+        // machine is still offered its chop, one pick away.
+        let playing = app.song.flatMap { song in
+            bound.flatMap { ChopSound.part(of: SongPlayback.drumSoundID(for: $0.partID, in: song)) }
+        }
+        let offered = playing ?? app.song.flatMap { song in bound.flatMap { Self.chop(bound: $0, in: song) } }
+        let adapter = GridAdapter(app: app, service: service(for: app), machine: machine, chop: playing)
         let model: GridModel
         if let version = bound {
             model = GridModel(host: adapter, version: version, tempo: tempo, timeSignature: signature, machine: machine)
         } else {
             model = GridModel(host: adapter, tempo: tempo, timeSignature: signature, machine: machine)
         }
+        if let offered, let cut = app.song?.versions.last(where: { $0.partID == offered }) {
+            model.offer(GridModel.ChopKit(part: offered, name: PartLabel.title(of: cut)), playing: playing != nil)
+        }
         gridAdapters[item.id] = adapter
         grids[item.id] = model
         return model
+    }
+
+    /// The chop a groove was made from: the sample its lineage starts at, found by walking its
+    /// part's versions back to their first parent.
+    static func chop(bound groove: PartVersion, in song: Song) -> PartID? {
+        let first = song.versions.first { $0.partID == groove.partID } ?? groove
+        for parent in first.parents {
+            if let version = song.version(parent), version.type == .sample { return version.partID }
+        }
+        return nil
     }
 
     func soundSurface(for item: BenchItem, app: AppState) -> (SoundSurface, SoundAdapter) {
@@ -551,7 +570,7 @@ struct SoundSurfacePanel: View {
 
     private var offers: [Proposal] {
         guard !hasSelection, let song = app.song else { return [] }
-        return Guidance.sounds(in: song).reversed()
+        return Guidance.shapeableSounds(in: song).reversed()
             .compactMap { PartActions.primary(for: $0, in: song) }
             .filter { app.canPerform($0.action) }
     }

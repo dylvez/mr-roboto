@@ -196,6 +196,8 @@ final class ChopLaneHostStub: ChopLaneHost {
     private(set) var auditionedHits: [[VoiceSampler.Hit]] = []
     private(set) var stopCount = 0
     private(set) var madeVersions: [PartVersion] = []
+    /// Each groove the lane said it made from its chop, with that chop's part.
+    private(set) var madeGrooves: [(groove: PartID, chop: PartID)] = []
 
     /// Set to make `prepareAudition` throw, so the surface's error path is testable.
     var prepareFailure: (any Error)?
@@ -220,5 +222,9 @@ final class ChopLaneHostStub: ChopLaneHost {
         madeVersions.append(version)
         try? song?.append(version)
         return true
+    }
+
+    func madeGroove(_ groove: PartVersion, fromChop chop: PartID) {
+        madeGrooves.append((groove.partID, chop))
     }
 }

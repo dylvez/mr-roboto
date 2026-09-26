@@ -81,17 +81,34 @@ public struct SongPlayback: Equatable, Sendable {
         public var passes: [Degradation]
         /// The part the chop belongs to: which strip it plays through (M6).
         public var part: PartID?
+        /// The cut the Chop lane kept, in the media's own seconds, each labelled with the class its
+        /// slice was called. What a groove played on this chop is played on; a looped chop ignores
+        /// it. One marker, or none, is a bar that was never cut.
+        public var slices: [SliceMarker]
+        /// The tempo the chop was cut at, when it was detected.
+        public var tempo: Double?
 
         public var id: VersionID { version }
 
+        /// The whole bars the chop covers at its own tempo: what a loop of it is fitted to at the
+        /// song's. One when its tempo is unknown.
+        public func bars(beatsPerBar: Int) -> Int {
+            guard let tempo, tempo > 0, beatsPerBar > 0 else { return 1 }
+            let bar = Double(beatsPerBar) * 60 / tempo
+            return max(1, Int((region.duration / bar).rounded()))
+        }
+
         public init(version: VersionID, name: String, url: URL, region: SongGraph.TimeRange,
-                    passes: [Degradation], part: PartID? = nil) {
+                    passes: [Degradation], part: PartID? = nil, slices: [SliceMarker] = [],
+                    tempo: Double? = nil) {
             self.version = version
             self.name = name
             self.url = url
             self.region = region
             self.passes = passes
             self.part = part
+            self.slices = slices
+            self.tempo = tempo
         }
     }
 
@@ -129,17 +146,29 @@ public struct SongPlayback: Equatable, Sendable {
         public var sound: String
         /// The dust it plays through: a groove's chain, a chop's passes. Empty is dry.
         public var chain: [Degradation]
+        /// The chop a groove plays on instead of a machine: its steps land on the chop's own
+        /// slices, the way the Chop lane re-grooved them. `sound` is then `ChopSound.id` of it.
+        public var kit: ChopTrack?
 
         public var id: VersionID { version }
 
         public init(play: Play, version: VersionID = VersionID(), part: PartID? = nil,
-                    name: String = "", sound: String = "", chain: [Degradation] = []) {
+                    name: String = "", sound: String = "", chain: [Degradation] = [],
+                    kit: ChopTrack? = nil) {
             self.play = play
             self.version = version
             self.part = part
             self.name = name
             self.sound = sound
             self.chain = chain
+            self.kit = kit
+        }
+
+        /// Whether this is played as audio on a player node rather than live on a sampler: a chop,
+        /// a groove through dust — the chain is applied to audio — and a groove on a chop, whose
+        /// slices are a kit of its own rendered for the pass.
+        public var isBounced: Bool {
+            chop != nil || (groove != nil && (!chain.isEmpty || kit != nil))
         }
 
         // Readers that only ask "is there one of these" — the transport bar's summary, the stem
@@ -156,9 +185,11 @@ public struct SongPlayback: Equatable, Sendable {
         // MARK: Building one
 
         public static func groove(_ groove: Groove, version: VersionID = VersionID(), part: PartID? = nil,
-                                  name: String = "Groove", sound: String = SynthMachine.tr808.id) -> Voice {
-            Voice(play: .groove(groove), version: version, part: part, name: name, sound: sound,
-                  chain: groove.degradation)
+                                  name: String = "Groove", sound: String = SynthMachine.tr808.id,
+                                  kit: ChopTrack? = nil) -> Voice {
+            Voice(play: .groove(groove), version: version, part: part, name: name,
+                  sound: kit.flatMap { $0.part.map(ChopSound.id(for:)) } ?? sound,
+                  chain: groove.degradation, kit: kit)
         }
 
         public static func bassline(_ line: Bassline, version: VersionID = VersionID(), part: PartID? = nil,
@@ -458,7 +489,7 @@ public struct SongPlayback: Equatable, Sendable {
         // needs one node per kind across them — but a *single* section holding two dusty grooves
         // needs two, and counting kinds would quietly hand it one and drop the other.
         func dusty(_ voices: [Voice]) -> Int {
-            voices.count { $0.chop != nil || ($0.groove != nil && !$0.chain.isEmpty) }
+            voices.count(where: \.isBounced)
         }
         if isArranged { return segments.map { dusty($0.voices) }.max() ?? 0 }
         return dusty(voices)
@@ -667,7 +698,24 @@ public struct SongPlayback: Equatable, Sendable {
         let region = ChopLaneBinding.region(of: sample, bars: Guidance.analysis(in: song)?.bars ?? [],
                                             tempo: sample.detectedTempo ?? song.tempo)
         return ChopTrack(version: version.id, name: PartLabel.title(of: version), url: url,
-                         region: region, passes: sample.degradation, part: version.partID)
+                         region: region, passes: sample.degradation, part: version.partID,
+                         slices: sample.slices, tempo: sample.detectedTempo)
+    }
+
+    /// The chop a groove part plays on, resolved to what the transport can read: the chop part's
+    /// newest version, when its part's newest drum pick is `ChopSound.id` of it. Nil plays the
+    /// groove on its machine — no pick, a machine picked since, or a chop the song no longer holds.
+    static func kit(for part: PartID?, in song: Song, mediaURL: (MediaRef) -> URL?) -> ChopTrack? {
+        guard let part, let chop = ChopSound.part(of: drumSoundID(for: part, in: song)) else { return nil }
+        return chopTrack(of: chop, in: song, mediaURL: mediaURL)
+    }
+
+    /// A chop part's newest version, as the transport reads it. Nil when the part is not a chop or
+    /// its media is not on disk.
+    static func chopTrack(of chop: PartID, in song: Song, mediaURL: (MediaRef) -> URL?) -> ChopTrack? {
+        guard let version = song.versions.last(where: { $0.partID == chop }),
+              case .sample(let sample) = version.kind else { return nil }
+        return chopTrack(version, sample, in: song, mediaURL: mediaURL)
     }
 
     /// The sections as segments. Each section's stitch is read for the grooves, bass lines,
@@ -711,7 +759,8 @@ public struct SongPlayback: Equatable, Sendable {
         case .groove(let groove) where groove.patterns.contains(where: { $0.steps.contains { $0 != .rest } }):
             return .groove(groove, version: version.id, part: version.partID,
                            name: PartLabel.title(of: version),
-                           sound: machineID(for: version.partID, in: song))
+                           sound: machineID(for: version.partID, in: song),
+                           kit: kit(for: version.partID, in: song, mediaURL: mediaURL))
         case .bassline(let line) where !line.notes.isEmpty:
             return .bassline(line, version: version.id, part: version.partID,
                              name: PartLabel.title(of: version), sound: line.sound)
@@ -744,6 +793,20 @@ public struct SongPlayback: Equatable, Sendable {
     static func machineID(for part: PartID?, in song: Song) -> String {
         sound(in: song, for: part, recognisedBy: { SynthMachine.preset(id: $0) != nil })
             ?? machineID(in: song)
+    }
+
+    /// What a groove part's drums are, by its newest pick: a machine's id, or `ChopSound.id` of a
+    /// chop when it plays on one. A part that has never chosen gets the song's machine.
+    ///
+    /// `machineID(for:in:)` stays machines only, because it answers what a Grid auditions on; this
+    /// is what the part is heard on, and the newest pick of either kind wins.
+    static func drumSoundID(for part: PartID?, in song: Song) -> String {
+        sound(in: song, for: part, recognisedBy: isDrumSound) ?? machineID(in: song)
+    }
+
+    /// A `.sound` that picks a groove's drums: a machine, or a chop.
+    static func isDrumSound(_ id: String) -> Bool {
+        SynthMachine.preset(id: id) != nil || ChopSound.part(of: id) != nil
     }
 
     /// The song's pitched instrument, from its newest `.sound` part that names one. A song that

@@ -41,12 +41,17 @@ public protocol GridHosting: Sendable {
 
     /// The machine picked on the grid, for the song to play this groove on.
     @MainActor func machineChosen(_ machine: SynthMachine, for part: PartID?)
+
+    /// The chop picked on the grid instead of a machine: the groove plays the chop's slices, in the
+    /// song and under a step touch.
+    @MainActor func chopChosen(_ chop: PartID, for part: PartID?)
 }
 
 extension GridHosting {
     @MainActor public func commit(_ version: PartVersion) -> Bool { true }
     @MainActor public func newest(of part: PartID) -> PartVersion? { nil }
     @MainActor public func machineChosen(_ machine: SynthMachine, for part: PartID?) {}
+    @MainActor public func chopChosen(_ chop: PartID, for part: PartID?) {}
 }
 
 // MARK: - The live host

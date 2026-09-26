@@ -1154,6 +1154,14 @@ public final class AppState {
         }
     }
 
+    /// A chop part as the transport would read it, its media resolved in this song's package.
+    func chopTrack(_ chop: PartID) -> SongPlayback.ChopTrack? {
+        guard let song else { return nil }
+        return SongPlayback.chopTrack(of: chop, in: song) { [store] ref in
+            try? store?.mediaURL(for: ref, song: song.id)
+        }
+    }
+
     /// Re-reads what the song has that can be played. Cheap, but it resolves media on disk, so it
     /// is called when the song changes rather than from a view body.
     public func refreshPlayback() {

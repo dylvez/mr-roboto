@@ -81,6 +81,9 @@ public final class AuditionService {
     }
 
     private var samplers: [SamplerKey: Loaded] = [:]
+    /// The last render of each chop kit, by the id it was prepared under, so the next render can
+    /// let it go.
+    private var chopRenders: [String: LoadedKit] = [:]
 
     /// Which kit the surface's drum sampler is holding. Surfaces share it, so a Grid step and a
     /// chop pad can take it from each other; each adapter checks this and re-prepares its own kit
@@ -208,8 +211,6 @@ public final class AuditionService {
     public func bounce(_ hits: [VoiceSampler.Hit], machine: SynthMachine, seconds: Double,
                        sampleRate: Double? = nil, channels: Int = 2) async throws -> Bounce {
         let rate = sampleRate ?? engine?.format.sampleRate ?? 48_000
-        let offline = try Engine(playerCount: 1, sampleRate: rate, channels: AVAudioChannelCount(channels))
-        try offline.prepare(offlineSampleRate: rate, maximumFrames: 4_096)
         let folder = kitsDirectory.appendingPathComponent(machine.id, isDirectory: true)
         let kit: LoadedKit
         if let existing = try? KitStore.load(from: folder) {
@@ -217,6 +218,28 @@ public final class AuditionService {
         } else {
             kit = try SynthesizedKit.build(machine, in: folder, sampleRate: rate)
         }
+        return try bounce(hits, on: kit, cache: cache, seconds: seconds, sampleRate: rate, channels: channels)
+    }
+
+    /// Hits on a rendered chop, bounced the same way: what a groove played on a chop sounds like.
+    ///
+    /// The kit gets a folder and a cache of its own, and both are thrown away after the bounce. A
+    /// chop's kit is rendered again whenever its cut or its groove changes, and the shared cache
+    /// keys buffers by file. A kit rewritten in place would be heard as the one before it.
+    public func bounce(_ hits: [VoiceSampler.Hit], chop: ChopKit, seconds: Double,
+                       sampleRate: Double? = nil, channels: Int = 2) async throws -> Bounce {
+        let rate = sampleRate ?? engine?.format.sampleRate ?? 48_000
+        let folder = FileManager.default.temporaryDirectory
+            .appendingPathComponent("mr-roboto-chop-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let kit = try chop.write(to: folder)
+        return try bounce(hits, on: kit, cache: SampleCache(), seconds: seconds, sampleRate: rate, channels: channels)
+    }
+
+    private func bounce(_ hits: [VoiceSampler.Hit], on kit: LoadedKit, cache: SampleCache, seconds: Double,
+                        sampleRate rate: Double, channels: Int) throws -> Bounce {
+        let offline = try Engine(playerCount: 1, sampleRate: rate, channels: AVAudioChannelCount(channels))
+        try offline.prepare(offlineSampleRate: rate, maximumFrames: 4_096)
         let sampler = VoiceSampler(cache: cache)
         try sampler.prepare(kit, sampleRate: offline.format.sampleRate, channels: Int(offline.format.channelCount))
         guard let node = sampler.node else {
@@ -271,11 +294,24 @@ public final class AuditionService {
 
     /// Make a rendered chop playable. `id` names the kit so a surface can tell whether the sampler
     /// is still holding its own.
+    ///
+    /// Every call installs what it is handed, even under an id the sampler already holds: a lane
+    /// renders its kit again after every cut, class and trim, under the one id. Each render is
+    /// written to a folder of its own because the cache keys buffers by file. A kit rewritten in
+    /// place would come back as the one before it. The render before is dropped from the cache
+    /// and the disk once this one is in. The sampler keeps its own hold on the old buffers until
+    /// the swap is acknowledged, so a voice still ringing on them is not cut off.
     public func prepare(chop: ChopKit, id: String) async throws {
         let engine = try await liveEngine()
-        let folder = kitsDirectory.appendingPathComponent("chops/\(Self.safe(id))", isDirectory: true)
+        let root = kitsDirectory.appendingPathComponent("chops/\(Self.safe(id))", isDirectory: true)
+        let folder = root.appendingPathComponent(UUID().uuidString, isDirectory: true)
         let loaded = try chop.write(to: folder)
-        try install(loaded, id: id, for: SamplerKey(.drums), on: engine)
+        try install(loaded, id: id, for: SamplerKey(.drums), on: engine, replacing: true)
+        if let previous = chopRenders[id] {
+            for url in previous.sampleURLs { cache.remove(url: url, sampleRate: engine.format.sampleRate) }
+            try? FileManager.default.removeItem(at: previous.folder)
+        }
+        chopRenders[id] = loaded
     }
 
     /// Play hits against whatever kit is loaded, now. `Hit.time` is seconds from this instant.
@@ -500,11 +536,12 @@ public final class AuditionService {
     /// old zones by epoch and keeps the node. There are N samplers now rather than three, which is
     /// more chances to get this wrong, not fewer.
     @discardableResult
-    private func install(_ kit: LoadedKit, id: String, for key: SamplerKey, on engine: Engine) throws -> VoiceSampler {
+    private func install(_ kit: LoadedKit, id: String, for key: SamplerKey, on engine: Engine,
+                         replacing: Bool = false) throws -> VoiceSampler {
         let format = engine.format
         let entry = samplers[key] ?? Loaded(VoiceSampler(cache: cache))
         samplers[key] = entry
-        guard entry.kitID != id else { return entry.sampler }
+        guard replacing || entry.kitID != id else { return entry.sampler }
         // The sampler's format is locked by its first `prepare`, so it is the graph's from the
         // start — a sampler rendering at another rate would put every hit on the wrong frame.
         try entry.sampler.prepare(kit, sampleRate: format.sampleRate, channels: Int(format.channelCount))

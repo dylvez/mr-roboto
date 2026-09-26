@@ -333,7 +333,7 @@ extension WorkPath {
             return nil
 
         case .kit:
-            if let sound = Guidance.sounds(in: song).last {
+            if let sound = Guidance.shapeableSounds(in: song).last {
                 return SurfaceAction(surface: .sound, title: PartLabel.title(of: sound), bound: [sound.id])
             }
             return SurfaceAction(surface: .sound, title: "Kit")

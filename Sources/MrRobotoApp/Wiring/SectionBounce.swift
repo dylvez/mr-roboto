@@ -100,6 +100,7 @@ enum SectionBounce {
             case .bassline(let line): bars = max(bars, line.loopBars(beatsPerBar: beatsPerBar))
             case .melody(let tune): bars = max(bars, tune.loopBars(beatsPerBar: beatsPerBar))
             case .progression(let progression): bars = max(bars, progression.bars.count)
+            case .chop(let chop): bars = max(bars, chop.bars(beatsPerBar: beatsPerBar))
             default: break
             }
         }

@@ -89,6 +89,22 @@ struct FrameRenderTests {
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-sound")
     }
 
+    @Test("a groove made from a chop in the Grid: its kit is the chop's slices, wide and narrow")
+    func gridOnAChop() throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        let built = GuidanceFixture.chopped()
+        let sample = try #require(built.sample)
+        let app = app(built.song)
+        let groove = sample.spawning(.groove(TransportFixture.groove()), by: .user, operation: Operation.regroove,
+                                     note: "Boom-Bap Pocket at 92 bpm")
+        #expect(app.record(groove))
+        app.playGroove(groove.partID, onChop: sample.partID)
+        app.perform(SurfaceAction(surface: .grid, title: "Boom-Bap Pocket at 92 bpm", bound: [groove.id]))
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-grid-chop")
+        try write(FrameView(app: app), size: CGSize(width: 1100, height: 800), name: "frame-grid-chop-1100")
+    }
+
     @Test("the Piano roll and the Chords surfaces on the bench")
     func m2Surfaces() throws {
         FontRegistration.registerBundledFonts()

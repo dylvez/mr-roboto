@@ -28,13 +28,20 @@ final class GridAdapter: GridHosting {
     /// The machine the grid last asked for. A grid opens on one before anything is loaded, so the
     /// first step touch prepares it rather than being silent.
     private let machine: Mutex<SynthMachine>
+    /// The chop the steps play on instead, when they do. A step touch then plays the pad the song
+    /// would play for that voice.
+    private let chop: Mutex<PartID?>
+    /// The chop's pads, cut once per version of it: reading and classifying the bar is not a thing
+    /// to do on every touch.
+    private let pads = Mutex<(version: VersionID, kit: ChopKit)?>(nil)
 
     init(app: AppState, service: AuditionService,
-         live: LiveGridHost = LiveGridHost(), machine: SynthMachine = .tr808) {
+         live: LiveGridHost = LiveGridHost(), machine: SynthMachine = .tr808, chop: PartID? = nil) {
         self.app = app
         self.service = service
         self.live = live
         self.machine = Mutex(machine)
+        self.chop = Mutex(chop)
     }
 
     func audition(_ voice: DrumVoice, velocity: Int) async {
@@ -52,7 +59,13 @@ final class GridAdapter: GridHosting {
     }
 
     @MainActor func machineChosen(_ machine: SynthMachine, for part: PartID?) {
+        chop.withLock { $0 = nil }
         app.setMachine(machine.id, for: part)
+    }
+
+    @MainActor func chopChosen(_ chopPart: PartID, for part: PartID?) {
+        chop.withLock { $0 = chopPart }
+        if let part { app.setChop(chopPart, for: part) }
     }
 
     func loadMachine(_ newMachine: SynthMachine) async throws {
@@ -80,12 +93,40 @@ final class GridAdapter: GridHosting {
     /// (a chop pad) can have taken the sampler since the last touch; one prepare is cheaper than a
     /// wrong sound.
     private func ensureMachine() async {
+        if let part = chop.withLock({ $0 }) {
+            await ensureChop(part)
+            return
+        }
         let wanted = machine.withLock { $0 }
         guard await service.currentKitID != wanted.id else { return }
         do {
             try await service.prepare(machine: wanted)
         } catch {
             await app.note(.session, "Could not load \(wanted.name)", detail: "\(error)")
+        }
+    }
+
+    /// Loads the chop's pads if the shared sampler is not holding them: its newest cut, each voice
+    /// on the slice the song plays for it.
+    private func ensureChop(_ part: PartID) async {
+        guard let track = await app.chopTrack(part) else {
+            await app.note(.session, "The chop's audio is not in the song's package",
+                           detail: "The steps cannot play its slices until it is.")
+            return
+        }
+        let id = "grid-\(track.version.rawValue.uuidString)"
+        guard await service.currentKitID != id else { return }
+        do {
+            let kit: ChopKit
+            if let cut = pads.withLock({ $0 }), cut.version == track.version {
+                kit = cut.kit
+            } else {
+                kit = try ChopGroove.padKit(ChopGroove.prepare(track))
+                pads.withLock { $0 = (track.version, kit) }
+            }
+            try await service.prepare(chop: kit, id: id)
+        } catch {
+            await app.note(.session, "Could not load \(track.name)'s slices", detail: "\(error)")
         }
     }
 }

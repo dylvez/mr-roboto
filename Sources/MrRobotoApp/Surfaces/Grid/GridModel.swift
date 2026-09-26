@@ -96,6 +96,38 @@ public final class GridModel {
     /// Every machine `Instrument` can synthesize: 808, 909, LinnDrum.
     public var machines: [SynthMachine] { SynthMachine.all }
 
+    /// A chop this groove can play on instead of a machine: the one it plays on, or the one it
+    /// was made from. Nil offers machines only.
+    public struct ChopKit: Equatable, Sendable {
+        public var part: PartID
+        /// What the ledger calls the chop: "Bar 9".
+        public var name: String
+
+        public init(part: PartID, name: String) {
+            self.part = part
+            self.name = name
+        }
+    }
+
+    public private(set) var chopKit: ChopKit?
+    /// True when the steps play the chop's slices rather than `machine`.
+    public private(set) var playsOnChop = false
+
+    /// Offer a chop as this groove's kit. `playing` says whether the song already plays it there.
+    public func offer(_ chop: ChopKit, playing: Bool) {
+        chopKit = chop
+        playsOnChop = playing
+    }
+
+    /// Put the steps on the offered chop's slices, and play a kick on them.
+    public func playOnChop() {
+        guard let chopKit, !playsOnChop else { return }
+        playsOnChop = true
+        lastError = nil
+        host.chopChosen(chopKit.part, for: (versions.last ?? base)?.partID)
+        Task { @MainActor [host] in await host.audition(.kick, velocity: 110) }
+    }
+
     public private(set) var feelName: String?
     /// Where the loaded feel came from. Kept because a persona will cite it out loud.
     public private(set) var provenance: Provenance?
@@ -418,7 +450,14 @@ public final class GridModel {
     /// Whether the current machine has a sound for this voice. A row it has none for still paints
     /// and keeps — another kit may play it — but on this machine it is silent, and the grid says so.
     public func machineSounds(_ voice: DrumVoice) -> Bool {
-        machine.voices.contains { $0.kind.drumVoice == voice }
+        // A chop has a slice for every voice: the class that voice asks for, or the closest.
+        playsOnChop || machine.voices.contains { $0.kind.drumVoice == voice }
+    }
+
+    /// What the steps play on, as the grid names it.
+    public var kitName: String {
+        if playsOnChop, let chopKit { return "\(chopKit.name)'s slices" }
+        return machine.name
     }
 
     /// A voice as a person says it: "closed hat", not "closedHat".
@@ -529,6 +568,7 @@ public final class GridModel {
     /// Switches machine and plays a kick, because a kit you cannot hear you have not chosen.
     public func setMachine(_ newMachine: SynthMachine) {
         machine = newMachine
+        playsOnChop = false
         lastError = nil
         // What the grid plays on is what the song plays this groove on. The picker used to change
         // only the grid's own audition, so a groove built on the 909 played on the 808.
@@ -654,7 +694,7 @@ public final class GridModel {
         if let feelName { parts.append(feelName) }
         parts.append(String(format: "%.0f bpm", tempo))
         parts.append(String(format: "swing %.4g%%", swing.percent))
-        parts.append(machine.name)
+        parts.append(playsOnChop ? "on \(kitName)" : machine.name)
         if let provenance {
             parts.append("from \(provenance.origin.rawValue): \(provenance.summary)")
         }

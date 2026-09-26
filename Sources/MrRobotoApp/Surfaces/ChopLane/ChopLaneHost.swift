@@ -52,6 +52,14 @@ public protocol ChopLaneHost: AnyObject {
     ///   pretending it was kept.
     @discardableResult
     func record(_ version: PartVersion) -> Bool
+
+    /// A groove this lane made from its chop has been recorded. The host puts the groove on the
+    /// chop's own slices, so the song plays what the lane played.
+    func madeGroove(_ groove: PartVersion, fromChop chop: PartID)
+}
+
+extension ChopLaneHost {
+    public func madeGroove(_ groove: PartVersion, fromChop chop: PartID) {}
 }
 
 /// The bar the Chop lane opens against: the audio, where it came from, and the grid it sits on.

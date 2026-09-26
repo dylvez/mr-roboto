@@ -133,6 +133,8 @@ enum PartLabel {
         case .groove:
             return note(of: version) ?? "Groove"
         case .sound(let sound):
+            // A groove on a chop names the chop by part, which is not a name anybody reads.
+            if ChopSound.part(of: sound.instrument) != nil { return note(of: version) ?? "Chop kit" }
             return sound.preset.map { "\(sound.instrument) · \($0)" } ?? sound.instrument
         case .bassline:
             return note(of: version) ?? "Bass line"
@@ -348,7 +350,7 @@ public enum Guidance {
         }
 
         // 8. A sound to shape.
-        if let sound = sounds(in: song).last {
+        if let sound = shapeableSounds(in: song).last {
             out.append(Proposal(
                 title: "Shape \(PartLabel.title(of: sound)) in Sound",
                 rationale: "The synthesis and the degradation chain, auditioned on every knob.",
@@ -382,7 +384,7 @@ public enum Guidance {
         if let sample = samples(in: song).last {
             return SurfaceAction(surface: .chopLane, title: PartLabel.title(of: sample), bound: [sample.id])
         }
-        if let sound = sounds(in: song).last {
+        if let sound = shapeableSounds(in: song).last {
             return SurfaceAction(surface: .sound, title: PartLabel.title(of: sound), bound: [sound.id])
         }
         return nil
@@ -409,7 +411,7 @@ public enum Guidance {
             guard let groove = grooves(in: song).last else { return fallback }
             return SurfaceAction(surface: kind, title: PartLabel.title(of: groove), bound: [groove.id])
         case .sound:
-            guard let sound = sounds(in: song).last else { return fallback }
+            guard let sound = shapeableSounds(in: song).last else { return fallback }
             return SurfaceAction(surface: kind, title: PartLabel.title(of: sound), bound: [sound.id])
         case .chords:
             guard let progression = progressions(in: song).last else { return fallback }
@@ -577,6 +579,15 @@ public enum Guidance {
 
     public static func sounds(in song: Song) -> [PartVersion] {
         song.versions.filter { $0.type == .sound }
+    }
+
+    /// The sounds the Sound surface can shape: every pick but a groove's chop kit, which is the
+    /// chop's slices and is shaped in the Chop lane.
+    public static func shapeableSounds(in song: Song) -> [PartVersion] {
+        sounds(in: song).filter { version in
+            guard case .sound(let sound) = version.kind else { return false }
+            return ChopSound.part(of: sound.instrument) == nil
+        }
     }
 
     /// Mix versions, in graph order. The newest is the one the transport plays.
@@ -777,7 +788,15 @@ public enum PartActions {
                             action: SurfaceAction(surface: .grid, title: PartLabel.title(of: version),
                                                   bound: [version.id]))
 
-        case .sound:
+        case .sound(let sound):
+            // A groove's chop kit is shaped where the chop is cut.
+            if let chop = ChopSound.part(of: sound.instrument),
+               let cut = song.versions.last(where: { $0.partID == chop }) {
+                return Proposal(title: "Open the chop",
+                                rationale: "The groove plays these slices. Re-cut them and the groove follows.",
+                                action: SurfaceAction(surface: .chopLane, title: PartLabel.title(of: cut),
+                                                      bound: [cut.id]))
+            }
             return Proposal(title: "Open in Sound",
                             rationale: "Synthesis and the degradation chain, auditioned on every knob.",
                             action: SurfaceAction(surface: .sound, title: PartLabel.title(of: version),

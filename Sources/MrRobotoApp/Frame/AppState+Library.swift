@@ -590,17 +590,72 @@ extension AppState {
     @discardableResult
     public func setMachine(_ id: String, for part: PartID? = nil, by author: Author = .user) -> Bool {
         guard let machine = SynthMachine.preset(id: id), let song else { return false }
-        guard SongPlayback.machineID(for: part, in: song) != machine.id else { return false }
-        let kind = PartKind.sound(Sound(instrument: machine.id, forPart: part))
+        // Against what the part is heard on, not the machine it last picked: a groove playing on a
+        // chop is moved back to its old machine by picking that machine again.
+        guard SongPlayback.drumSoundID(for: part, in: song) != machine.id else { return false }
         let name = part.flatMap { id in song.versions.last { $0.partID == id } }.map(PartLabel.title(of:))
         let note = name.map { "\(machine.name) for \($0)" } ?? "\(machine.name) for the drums"
+        return recordDrumSound(machine.id, for: part, note: note, by: author)
+    }
+
+    /// Puts a groove part's steps on a chop's own slices, the way the Chop lane re-grooved them,
+    /// instead of on a machine. Recorded as a pick, the same as a machine, so picking a machine
+    /// afterwards takes it back off.
+    @discardableResult
+    public func setChop(_ chop: PartID, for part: PartID, by author: Author = .user) -> Bool {
+        guard let song, song.versions.contains(where: { $0.partID == chop && $0.type == .sample }) else { return false }
+        let id = ChopSound.id(for: chop)
+        guard SongPlayback.drumSoundID(for: part, in: song) != id else { return false }
+        let chopName = song.versions.last { $0.partID == chop }.map(PartLabel.title(of:)) ?? "the chop"
+        let name = song.versions.last { $0.partID == part }.map(PartLabel.title(of:)) ?? "the groove"
+        return recordDrumSound(id, for: part, note: "\(chopName)'s slices for \(name)", by: author)
+    }
+
+    /// One pick is one part: a groove's next choice of drums, machine or chop, is a version of its
+    /// last one.
+    private func recordDrumSound(_ id: String, for part: PartID?, note: String, by author: Author) -> Bool {
+        guard let song else { return false }
+        let kind = PartKind.sound(Sound(instrument: id, forPart: part))
         if let previous = song.versions.last(where: { version in
-            if case .sound(let sound) = version.kind, sound.forPart == part { return SynthMachine.preset(id: sound.instrument) != nil }
+            if case .sound(let sound) = version.kind, sound.forPart == part { return SongPlayback.isDrumSound(sound.instrument) }
             return false
         }) {
             return record(previous.deriving(kind, by: author, operation: Operation.written, note: note))
         }
         return record(PartVersion(partID: PartID(), kind: kind, author: author, operation: Operation.written, note: note))
+    }
+
+    /// A groove made from a chop, heard where the chop was: played on the chop's slices, and put in
+    /// the chop's place in every section that played it. The looped bar stays out, since under its
+    /// own re-groove it would play the same drums twice. Any other groove in those sections goes
+    /// too, the way a second part of a kind is used instead of the first rather than stacked on it.
+    ///
+    /// - Returns: the names of the sections the groove took over.
+    @discardableResult
+    public func playGroove(_ groove: PartID, onChop chop: PartID, by author: Author = .user) -> [String] {
+        setChop(chop, for: groove, by: author)
+        guard let song, !song.sections.isEmpty else { return [] }
+        var took: [String] = []
+        let sections = song.sections.map { section -> Section in
+            guard let at = section.stitch.firstIndex(where: { $0.part == chop }) else { return section }
+            var section = section
+            section.stitch[at] = Lane(part: groove)
+            section.stitch.removeAll { lane in
+                lane.part == chop
+                    || (lane.part != groove && song.versions.last { $0.partID == lane.part }?.type == .groove)
+            }
+            // The groove may already have been in the stitch, joined when it was recorded.
+            var seen = false
+            section.stitch.removeAll { lane in
+                guard lane.part == groove else { return false }
+                defer { seen = true }
+                return seen
+            }
+            took.append(section.name)
+            return section
+        }
+        if !took.isEmpty { arrange(sections) }
+        return took
     }
 
     @discardableResult

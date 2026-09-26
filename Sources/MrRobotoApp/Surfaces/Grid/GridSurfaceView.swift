@@ -119,22 +119,35 @@ public struct GridSurfaceView: View {
         }
     }
 
+    /// The picker's tag for the chop, which is not a machine id.
+    private static let chopTag = "chop"
+
     private var machine: some View {
         VStack(alignment: .leading, spacing: 3) {
-            GridLabel("Machine")
-            Picker("", selection: Binding(get: { model.machine.id },
+            GridLabel(model.chopKit == nil ? "Machine" : "Kit")
+            Picker("", selection: Binding(get: { model.playsOnChop ? Self.chopTag : model.machine.id },
                                           set: { id in
-                                              if let m = SynthMachine.preset(id: id) { model.setMachine(m) }
+                                              if id == Self.chopTag {
+                                                  model.playOnChop()
+                                              } else if let m = SynthMachine.preset(id: id) {
+                                                  model.setMachine(m)
+                                              }
                                           })) {
+                if let chop = model.chopKit {
+                    // "Chop" first: a long bar name is cut at the end, and the kind is what matters.
+                    Text("Chop · \(chop.name)").tag(Self.chopTag)
+                    Divider()
+                }
                 ForEach(model.machines) { machine in
                     Text(machine.name).tag(machine.id)
                 }
             }
             .labelsHidden()
-            .frame(width: 120)
+            .frame(width: model.chopKit == nil ? 120 : 160)
             .font(Design.Typography.ui(12))
-            .help("The kit every step plays on")
-            .accessibilityLabel("Drum machine")
+            .help(model.chopKit.map { "The kit every step plays on: \($0.name)'s own slices, or a machine" }
+                  ?? "The kit every step plays on")
+            .accessibilityLabel("Drum kit")
         }
     }
 }
