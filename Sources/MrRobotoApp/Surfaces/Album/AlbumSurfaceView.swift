@@ -376,7 +376,7 @@ private struct AlbumBody: View {
                     Spacer()
                     ForEach(ClearanceStatus.allCases, id: \.self) { status in
                         AlbumChip(AlbumSurfaceView.label(status), isOn: clearance.status == status) {
-                            app.setClearance(status, forSource: clearance.source, record: clearance.record, in: album.id)
+                            app.setClearance(status, forSource: clearance.source, record: clearance.record, media: clearance.media, in: album.id)
                         }
                         .help(AlbumSurfaceView.help(status))
                     }

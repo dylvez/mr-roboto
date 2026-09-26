@@ -45,7 +45,7 @@ struct MashupSurfaceView: View {
             HStack(spacing: 8) {
                 BoothLabel(side == .a ? "Song A" : "Song B")
                 if model.backbone == side {
-                    Text("THE GRID").font(Design.Typography.label).tracking(1.1).foregroundStyle(Design.Palette.accent)
+                    Text("SETS THE TEMPO").font(Design.Typography.label).tracking(1.1).foregroundStyle(Design.Palette.accent)
                         .help("Both songs meet on this one's tempo and bars")
                 }
             }
@@ -92,7 +92,7 @@ struct MashupSurfaceView: View {
                     }
                     Spacer()
                     if model.backbone != side {
-                        Button("Make this the grid") { model.setBackbone(side) }
+                        Button("Use this song's tempo") { model.setBackbone(side) }
                             .help("Put both songs on \(song.title)'s tempo and bars. The stem picks, the nudges and the bar shift start over for the new grid.")
                     }
                 }
@@ -151,7 +151,7 @@ struct MashupSurfaceView: View {
 
     private var meetLine: String {
         let other = model.song(model.backbone == .a ? .b : .a)?.title ?? "the other song"
-        let spine = model.song(model.backbone)?.title ?? "the grid"
+        let spine = model.song(model.backbone)?.title ?? "the other song"
         if model.barShift == 0 { return "\(other)'s first bar on \(spine)'s first bar" }
         if model.barShift > 0 { return "\(other)'s first bar on bar \(model.barShift + 1) of \(spine)" }
         return "\(other) starts \(-model.barShift) bar\(model.barShift == -1 ? "" : "s") before \(spine)"

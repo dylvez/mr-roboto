@@ -67,8 +67,10 @@ public struct PathStep: Identifiable, Sendable, Equatable {
 
         /// A step the path passes through without insisting on: it is never "next". The chords are
         /// this — the bass writes to the key when none are stated — so the path does not stall on
-        /// a lead sheet nobody needs yet.
-        public var isOptional: Bool { self == .chords }
+        /// a lead sheet nobody needs yet. So are a kit and dust: they are choices about a sound, and
+        /// a song that never takes them is finished, not stuck. The path used to say "Dust →"
+        /// through arranging, singing and mixing.
+        public var isOptional: Bool { self == .chords || self == .kit || self == .dust }
 
         /// The idiom's own word, as the ledger groups and the field guide use it.
         public var title: String {
@@ -95,7 +97,7 @@ public struct PathStep: Identifiable, Sendable, Equatable {
             case .stems: return "stems"
             case .chop: return "chop"
             case .groove: return "groove"
-            case .chords: return "section"
+            case .chords: return "chords"
             case .bass: return "stem-bass"
             case .kit: return "sound"
             case .dust: return "dust"

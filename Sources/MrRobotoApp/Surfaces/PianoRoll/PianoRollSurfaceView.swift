@@ -277,10 +277,10 @@ struct PianoRollSurfaceView: View {
             model.statusBar
             if !model.isTouched, model.base == nil, !model.notes.isEmpty {
                 // The writer's draft is a proposal: play it, change it, or take it as it is.
-                Text("A proposal until you touch it.")
+                Text("Not in the song until you touch it.")
                     .font(Design.Typography.ui(11.5))
                     .foregroundStyle(Design.Palette.inkTertiary)
-                FrameButton(title: "Use this line", emphasis: .accent) { model.useThisLine() }
+                FrameButton(title: "Add to song", emphasis: .accent) { model.useThisLine() }
                     .help("Put the line as written into the song. Any edit or lever does the same.")
             } else {
                 Text(model.isHandEdited ? "Edited by hand" : "As written")

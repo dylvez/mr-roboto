@@ -111,17 +111,18 @@ struct SurfaceDock: View {
             // not fit — the names and the shortcuts are in the tooltips and the Surfaces menu
             // either way. A dock that cannot fit its chips is what made the bench overflow its
             // column and paint over the rail.
+            //
+            // The next step folds before the names do: its title goes into its tooltip, "Next →"
+            // stays. At the default window the names used to go first, and the dock was a row of
+            // unlabelled glyphs beside a sentence.
+            let proposal = app.dockProposal
             ViewThatFits(in: .horizontal) {
-                chips(.full)
-                chips(.compact)
-                chips(.glyphs)
-            }
-            Spacer(minLength: 8)
-            if let proposal = app.dockProposal {
-                // Never squeezed: with seven chips and the shortcuts on, the fit fails here and
-                // the dock drops to its compact chips rather than folding this one.
-                NextStepChip(proposal: proposal) { app.perform(proposal.action) }
-                    .fixedSize()
+                dockRow(.full, next: proposal, short: false)
+                dockRow(.compact, next: proposal, short: false)
+                dockRow(.compact, next: proposal, short: true)
+                dockRow(.current, next: proposal, short: false)
+                dockRow(.current, next: proposal, short: true)
+                dockRow(.glyphs, next: proposal, short: true)
             }
             if !app.bench.items.isEmpty {
                 FrameButton(title: "Close all", emphasis: .quiet) {
@@ -149,6 +150,18 @@ struct SurfaceDock: View {
 
     @State private var isConfirmingCloseAll = false
 
+    /// The chips, then the next step, as one row the fit is tried against.
+    private func dockRow(_ style: DockChip.Style, next proposal: Proposal?, short: Bool) -> some View {
+        HStack(spacing: 8) {
+            chips(style)
+            Spacer(minLength: 8)
+            if let proposal {
+                NextStepChip(proposal: proposal, short: short) { app.perform(proposal.action) }
+                    .fixedSize()
+            }
+        }
+    }
+
     /// "Grid: Boom-bap pocket, Chords: Dm7 G7" — what would go.
     private var unkeptNames: String {
         app.bench.items.filter { app.closingWouldLoseWork($0.id) }
@@ -175,7 +188,9 @@ struct SurfaceDock: View {
 
 private struct DockChip: View {
     /// How much of the chip there is room for, widest first.
-    enum Style { case full, compact, glyphs }
+    /// `.current` is the glyphs with the one filling the bench named: where you are, in words,
+    /// when there is no room for every name.
+    enum Style { case full, compact, current, glyphs }
 
     let kind: SurfaceKind
     let shortcut: String
@@ -188,7 +203,7 @@ private struct DockChip: View {
         Button(action: action) {
             HStack(spacing: 6) {
                 Glyph(name: kind.glyph.name, symbol: kind.glyph.symbol, size: 13)
-                if style != .glyphs {
+                if style == .full || style == .compact || (style == .current && isActive) {
                     Text(kind.rawValue)
                         .font(Design.Typography.ui(12.5, weight: isActive ? .semibold : .medium))
                         .lineLimit(1)
@@ -230,20 +245,24 @@ private struct DockChip: View {
 /// and the same `perform` the rail's own control calls — there is no second way to take a step.
 private struct NextStepChip: View {
     let proposal: Proposal
+    /// Just "Next →", the step in the tooltip: what the chip becomes when the dock is tight.
+    var short = false
     let perform: () -> Void
 
     var body: some View {
         Button(action: perform) {
             HStack(spacing: 8) {
-                SmallLabel("Next", color: Design.Palette.accent)
-                Text(proposal.title)
-                    .font(Design.Typography.ui(12.5, weight: .medium))
-                    .foregroundStyle(Design.Palette.accent)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    // Capped so the next step cannot push the four surface chips off a narrow dock:
-                    // the chips are the navigation and they win.
-                    .frame(maxWidth: 200, alignment: .leading)
+                SmallLabel(short ? "Next →" : "Next", color: Design.Palette.accent)
+                if !short {
+                    Text(proposal.title)
+                        .font(Design.Typography.ui(12.5, weight: .medium))
+                        .foregroundStyle(Design.Palette.accent)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        // Capped so the next step cannot push the surface chips off a narrow dock:
+                        // the chips are the navigation and they win.
+                        .frame(maxWidth: 200, alignment: .leading)
+                }
             }
             .padding(.horizontal, 10)
             .frame(height: Design.Metric.controlHeight)

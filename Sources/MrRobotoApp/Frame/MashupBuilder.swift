@@ -214,7 +214,10 @@ extension AppState {
 
         if hasUnsavedChanges { save() }
         let backbone = request.backbone == .a ? songA : songB
-        var mashup = Song(title: request.title ?? "\(songA.title) × \(songB.title)", key: plan.target.key, tempo: plan.target.tempo ?? backbone.tempo,
+        // In the key the backbone was moved to: both sides are rendered there, and a part written
+        // into the mashup later is written to it. `target.key` is the key before any nudge.
+        var mashup = Song(title: request.title ?? "\(songA.title) × \(songB.title)",
+                          key: plan.move(request.backbone).key ?? plan.target.key, tempo: plan.target.tempo ?? backbone.tempo,
                           timeSignature: backbone.timeSignature, sections: Mashups.sections(plan: plan, backbone: backbone))
         // The package has to exist before media can go in it.
         var updated = library

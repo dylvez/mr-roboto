@@ -66,10 +66,10 @@ struct ChordsSurfaceView: View {
             HStack(spacing: 10) {
                 model.statusBar
                 if !model.isTouched, model.base == nil, model.isDefault {
-                    Text("A suggestion until you type.")
+                    Text("Not in the song until you type.")
                         .font(Design.Typography.ui(11.5))
                         .foregroundStyle(Design.Palette.inkTertiary)
-                    FrameButton(title: "Use these chords", emphasis: .accent) { model.useTheseChords() }
+                    FrameButton(title: "Add to song", emphasis: .accent) { model.useTheseChords() }
                         .help("Put the key's I–IV–V–I into the song as its chords. Typing does the same.")
                 }
             }

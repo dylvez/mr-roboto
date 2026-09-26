@@ -106,9 +106,8 @@ public struct ChopLaneView: View {
                 Text("\(surface.sliceCount) slices")
                     .font(Design.Typography.numeric(12))
                     .foregroundStyle(Design.Palette.accent)
-                Text("δ \(surface.onsetThreshold, format: .number.precision(.fractionLength(1)))")
-                    .font(Design.Typography.numeric(11))
-                    .foregroundStyle(Design.Palette.inkTertiary)
+                // The detector's threshold is a number to repeat, not to read: it is in the tooltip.
+                    .help("Onset threshold δ \(String(format: "%.1f", surface.onsetThreshold)): lower finds more slices")
             }
             Slider(value: $surface.sensitivity, in: 0...1)
                 .controlSize(.small)
@@ -170,11 +169,16 @@ public struct ChopLaneView: View {
                     .help(surface.whyRegrooveCannotBeKept
                           ?? "Make a groove that plays these slices in this feel, at the song's tempo, in place of the looped bar. The Grid opens on it.")
             }
-            Slider(value: $surface.tempo, in: 60...180, step: 1)
-                .controlSize(.small)
-                .tint(Design.Palette.accent)
-                .help("The re-groove's tempo, in beats per minute")
-                .accessibilityLabel("Re-groove tempo")
+            HStack(spacing: 8) {
+                Text("Preview tempo")
+                    .font(Design.Typography.ui(11))
+                    .foregroundStyle(Design.Palette.inkTertiary)
+                Slider(value: $surface.tempo, in: 60...180, step: 1)
+                    .controlSize(.small)
+                    .tint(Design.Palette.accent)
+                    .help("The tempo Play hears the re-groove at. The song plays the groove at its own tempo.")
+                    .accessibilityLabel("Preview tempo")
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -297,7 +301,8 @@ struct ChopLanePlate: View {
             context.stroke(Path { $0.move(to: CGPoint(x: x, y: 0))
                                   $0.addLine(to: CGPoint(x: x, y: size.height)) },
                            with: .color(colour), lineWidth: selected ? 2 : 1)
-            context.draw(Text("\(slice.index)")
+            // Counted from 1, as a person counts pads; the index stays 0-based underneath.
+            context.draw(Text("\(slice.index + 1)")
                             .font(Design.Typography.numeric(9))
                             .foregroundColor(colour),
                          at: CGPoint(x: x + 7, y: 9), anchor: .leading)
@@ -401,7 +406,7 @@ struct ChopLanePads: View {
         let edit = surface.edit(forSlice: index)
         return VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 4) {
-                Text("\(index)")
+                Text("\(index + 1)")
                     .font(Design.Typography.numeric(10))
                     .foregroundStyle(Design.Palette.inkTertiary)
                 Spacer()
@@ -433,7 +438,7 @@ struct ChopLanePads: View {
         .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
         .contentShape(Rectangle())
         .onTapGesture { surface.audition(slice: index) }
-        .help("Play slice \(index). Right-click to call it something else or to delete its marker.")
+        .help("Play slice \(index + 1). Right-click to call it something else or to delete its marker.")
         .contextMenu { padMenuItems(for: index) }
     }
 
@@ -452,8 +457,8 @@ struct ChopLanePads: View {
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
         .fixedSize()
-        .help("Call slice \(index) something else, give it back to the classifier, or delete its marker")
-        .accessibilityLabel("Slice \(index) options")
+        .help("Call slice \(index + 1) something else, give it back to the classifier, or delete its marker")
+        .accessibilityLabel("Slice \(index + 1) options")
     }
 
     /// The override and the marker's deletion. One list, reached two ways.
@@ -463,16 +468,16 @@ struct ChopLanePads: View {
         // gesture away from the thing being corrected.
         ForEach(SliceClass.allCases, id: \.rawValue) { kind in
             Button(kind.rawValue) { surface.override(slice: index, as: kind) }
-                .help("Call slice \(index) a \(kind.rawValue), whatever the classifier heard")
+                .help("Call slice \(index + 1) a \(kind.rawValue), whatever the classifier heard")
         }
         if surface.overrides[index] != nil {
             Divider()
             Button("Back to the classifier") { surface.clearOverride(slice: index) }
-                .help("Drop the override and let the classifier name slice \(index) again")
+                .help("Drop the override and let the classifier name slice \(index + 1) again")
         }
         Divider()
         Button("Delete marker") { surface.removeMarker(slice: index) }
-            .help("Remove the marker that starts slice \(index); its audio joins the slice before it")
+            .help("Remove the marker that starts slice \(index + 1); its audio joins the slice before it")
     }
 
     private func trimSummary(_ edit: ChopLaneSurface.SliceEdit) -> String {

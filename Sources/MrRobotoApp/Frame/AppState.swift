@@ -1424,7 +1424,12 @@ public final class AppState {
     public func previewMix(_ mix: Mix) {
         guard transport.isPlaying, let host = playbackHost else { return }
         let section = activeSection
-        Task { await host.mixChanged(mix, section: section) }
+        // By the rule the plan's own mix follows: a solo on a part nothing plays silences nothing.
+        var heard = playback
+        heard.mix = mix
+        heard.settingAsideSilentSolos()
+        let applied = heard.mix ?? mix
+        Task { await host.mixChanged(applied, section: section) }
     }
 
     public func stopTransport() async {

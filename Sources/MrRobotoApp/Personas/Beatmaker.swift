@@ -851,7 +851,7 @@ public struct Beatmaker: Persona {
         return .agreeWithCaveat(
             String(format: "%.4g%% at %.0f BPM — that is %.0f ms on every offbeat.",
                    percent, tempo, SourceSwing.displacementMS(percent: percent, tempo: tempo)),
-            caveat: String(format: "Outside the 54–58%% zone the corpus sits in. Heavier is a choice, not a "
+            caveat: String(format: "Outside the 54–58%% most of the records it learned from sit in. Heavier is a choice, not a "
                                  + "default; only three of thirty measured breaks got past 1.6:1."))
     }
 
@@ -990,7 +990,7 @@ public struct Beatmaker: Persona {
         notes.append(PersonaReading(
             rule: "beatmaker.swing-default", feature: .swingPercent, value: observation.swingPercent,
             holds: Beatmaker.defaultSwingZone.contains(observation.swingPercent),
-            says: String(format: "Swing %.4g%% — %@ the 54–58%% the corpus sits in.",
+            says: String(format: "Swing %.4g%% — %@ the 54–58%% most records sit in.",
                          observation.swingPercent,
                          Beatmaker.defaultSwingZone.contains(observation.swingPercent) ? "inside" : "outside")))
 

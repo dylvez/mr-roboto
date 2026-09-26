@@ -322,6 +322,9 @@ extension AppState {
             note(.session, "That song is not in the library")
             return false
         }
+        // The open song, never saved, is saved as it joins: an album of songs the library does not
+        // hold loses the track the moment another song is opened, and cannot release it.
+        if song?.id == songID, library.song(songID) == nil, store != nil { save() }
         return updateAlbum(albumID) { album in
             guard !album.songs.contains(songID) else { return }
             album.songs.append(songID)
@@ -345,12 +348,14 @@ extension AppState {
 
     /// Records a clearance state for one source in an album.
     @discardableResult
-    public func setClearance(_ status: ClearanceStatus, forSource source: String, record: RecordID?, in albumID: AlbumID) -> Bool {
+    public func setClearance(_ status: ClearanceStatus, forSource source: String, record: RecordID?,
+                             media: MediaRef? = nil, in albumID: AlbumID) -> Bool {
         updateAlbum(albumID) { album in
-            if let index = album.clearances.firstIndex(where: { $0.record == record && $0.source == source }) {
+            if let index = album.clearances.firstIndex(where: { $0.matches(source: source, record: record, media: media) }) {
                 album.clearances[index].status = status
+                if album.clearances[index].media == nil { album.clearances[index].media = media }
             } else {
-                album.clearances.append(SampleClearance(source: source, status: status, record: record))
+                album.clearances.append(SampleClearance(source: source, status: status, record: record, media: media))
             }
         }
     }
@@ -371,33 +376,38 @@ extension AppState {
     public func sources(of album: Album) -> [SampleClearance] {
         var out: [SampleClearance] = []
         var seen = Set<String>()
-        func add(_ source: String, record: RecordID?) {
-            let key = record?.description ?? source
+        // Keyed by the record when there is one — still, when the record has since left the
+        // library — else by the media. Keyed by the name, a source reverted to "uncleared" when
+        // its record was removed or its song renamed.
+        func add(_ source: String, record: RecordID?, media: MediaRef? = nil) {
+            let key = record?.description ?? media.map { "media:\($0.hash)" } ?? source
             guard seen.insert(key).inserted else { return }
-            if let stored = album.clearances.first(where: { $0.record == record && ($0.record != nil || $0.source == source) }) {
+            if var stored = album.clearances.first(where: { $0.matches(source: source, record: record, media: media) }) {
+                stored.source = source
+                stored.media = stored.media ?? media
                 out.append(stored)
             } else {
-                out.append(SampleClearance(source: source, status: .uncleared, record: record))
+                out.append(SampleClearance(source: source, status: .uncleared, record: record, media: media))
             }
+        }
+        func named(_ id: RecordID?) -> String? {
+            guard let id else { return nil }
+            if let record = library.record(id) { return record.artist.isEmpty ? record.title : "\(record.artist) – \(record.title)" }
+            return album.clearances.first { $0.record == id }?.source
         }
         for songID in album.songs {
             guard let song = (self.song?.id == songID ? self.song : nil) ?? library.song(songID) else { continue }
             for version in song.versions {
                 // A mashup's stems name the record they came out of.
                 if case .audio(let audio) = version.kind, let id = audio.sourceRecord {
-                    if let record = library.record(id) {
-                        add(record.artist.isEmpty ? record.title : "\(record.artist) – \(record.title)", record: record.id)
-                    } else {
-                        add("\(PartLabel.title(of: version)) in \(song.title)", record: nil)
-                    }
+                    add(named(id) ?? "\(PartLabel.title(of: version)) in \(song.title)", record: id)
                     continue
                 }
                 guard case .sample(let sample) = version.kind else { continue }
-                let record = sample.sourceRecord.flatMap { library.record($0) } ?? library.record(forMedia: sample.media)
-                if let record {
-                    add(record.artist.isEmpty ? record.title : "\(record.artist) – \(record.title)", record: record.id)
+                if let id = sample.sourceRecord ?? library.record(forMedia: sample.media)?.id {
+                    add(named(id) ?? "\(PartLabel.title(of: version)) in \(song.title)", record: id)
                 } else {
-                    add("\(PartLabel.title(of: version)) in \(song.title)", record: nil)
+                    add("\(PartLabel.title(of: version)) in \(song.title)", record: nil, media: sample.media)
                 }
             }
         }

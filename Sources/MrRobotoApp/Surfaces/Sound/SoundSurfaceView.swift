@@ -53,8 +53,8 @@ struct SoundSurfaceView: View {
                 // A chop or a groove has no voice to edit: the chain is the whole panel. What there
                 // is instead is the choice between editing the chain it has and stacking another.
                 HStack(spacing: 6) {
-                    chip("Edit its chain", isOn: !surface.stacksPass) { surface.setStacking(false) }
-                    chip("Stack a pass", isOn: surface.stacksPass) { surface.setStacking(true) }
+                    chip("Change its dust", isOn: !surface.stacksPass) { surface.setStacking(false) }
+                    chip("Add more dust", isOn: surface.stacksPass) { surface.setStacking(true) }
                 }
             } else {
                 HStack(spacing: 6) {

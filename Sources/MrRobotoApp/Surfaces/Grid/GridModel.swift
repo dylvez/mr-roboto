@@ -609,6 +609,16 @@ public final class GridModel {
         edited(from: before)
     }
 
+    /// Names the feel a bound groove was made in, without loading it: the steps are the groove's
+    /// own. A groove re-grooved from a chop opened as "Grid" and "Choose a feel", while its title
+    /// named the feel it was.
+    public func recognise(_ version: PartVersion) {
+        guard feelName == nil, let note = version.note,
+              let feel = feelLibrary.feels.first(where: { note.hasPrefix($0.name) }) else { return }
+        feelName = feel.name
+        provenance = feel.provenance
+    }
+
     /// Loads a feel by name from the library, outright. False when the library has no such feel.
     @discardableResult
     public func loadFeel(named name: String) -> Bool {

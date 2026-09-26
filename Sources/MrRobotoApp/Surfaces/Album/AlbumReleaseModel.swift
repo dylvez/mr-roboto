@@ -25,7 +25,15 @@ final class AlbumReleaseModel {
     static func folder(for album: Album, app: AppState) -> URL {
         let base = app.exportDirectory
             ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Music/Mr. Roboto/Exports", isDirectory: true)
-        return base.appendingPathComponent(Export.safe(album.title), isDirectory: true)
+        let named = base.appendingPathComponent(Export.safe(album.title), isDirectory: true)
+        // Another album of the same title released there first: this one gets a folder of its own
+        // rather than being released over it.
+        if let data = try? Data(contentsOf: named.appendingPathComponent("album.json")),
+           let report = try? JSONDecoder().decode(Export.AlbumReport.self, from: data),
+           let other = report.albumID, other != album.id.description {
+            return base.appendingPathComponent("\(Export.safe(album.title)) (\(album.id.description.prefix(8)))", isDirectory: true)
+        }
+        return named
     }
 
     /// Releases the album and shows the folder in Finder. Nil, with `failure` set and a line in

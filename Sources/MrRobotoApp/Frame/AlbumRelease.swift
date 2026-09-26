@@ -114,16 +114,33 @@ extension Export {
         public var notes: String
         public var cover: String
         public var releasedAt: String
+        /// The album released, so a second album with the same title is not released over it.
+        public var albumID: String?
     }
 
     public enum ReleaseFailure: Error, CustomStringConvertible {
-        case noAlbum, noTracks, unplayable(String)
+        case noAlbum, noTracks, unplayable(String), missingTrack(Int)
         public var description: String {
             switch self {
             case .noAlbum: return "That album is not in the library."
             case .noTracks: return "The album has no songs."
             case .unplayable(let title): return "\(title) plays nothing, so it cannot be released."
+            case .missingTrack(let number):
+                return "Track \(number) is a song the library does not hold — never saved, or removed. "
+                    + "Save it, or take it off the album, and release again."
             }
+        }
+    }
+
+    /// The files a release before this one left in `directory`, as its `album.json` lists them:
+    /// removed, so a record re-sequenced is not a folder of both orders. Only what that report
+    /// named, and only plain names inside the folder.
+    static func clearPreviousRelease(in directory: URL) {
+        guard let data = try? Data(contentsOf: directory.appendingPathComponent("album.json")),
+              let previous = try? JSONDecoder().decode(AlbumReport.self, from: data) else { return }
+        for name in previous.tracks.map(\.file) + [previous.cover]
+        where !name.contains("/") && name != "." && name != ".." && !name.isEmpty {
+            try? FileManager.default.removeItem(at: directory.appendingPathComponent(name))
         }
     }
 
@@ -134,17 +151,42 @@ extension Export {
     @MainActor
     public static func release(_ app: AppState, album albumID: AlbumID, to directory: URL,
                                progress: (@MainActor (_ track: Int, _ of: Int, _ title: String) -> Void)? = nil) async throws -> (folder: URL, report: AlbumReport) {
+        // What is on screen, first: a fader let go of a moment ago is in the mix that goes out.
+        app.keepSurfaceWork()
         guard let store = app.store, let album = app.library.album(albumID) else { throw ReleaseFailure.noAlbum }
         guard !album.songs.isEmpty else { throw ReleaseFailure.noTracks }
+        // Every track is there before any is bounced: one missing used to be skipped without a
+        // word, and the rest renumbered around the hole.
+        for (index, id) in album.songs.enumerated() where app.song?.id != id && app.library.song(id) == nil {
+            throw ReleaseFailure.missingTrack(index + 1)
+        }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        clearPreviousRelease(in: directory)
+        // The cover first, so a cover that cannot be read stops the release before any track is
+        // bounced rather than after, and is a PNG whatever it was chosen as.
+        let coverURL = directory.appendingPathComponent("cover.png")
+        switch album.cover {
+        case .image(let media):
+            let source = try store.mediaURL(for: media)
+            let data = try Data(contentsOf: source)
+            guard let png = NSBitmapImageRep(data: data)?.representation(using: .png, properties: [:]) else {
+                throw CocoaError(.fileReadCorruptFile, userInfo: [NSFilePathErrorKey: source.path])
+            }
+            try png.write(to: coverURL)
+        case .drawn(let design):
+            if let png = CoverRenderer.png(design, title: album.title, artist: album.artist) { try png.write(to: coverURL) }
+        }
         var entries: [AlbumReport.TrackEntry] = []
+        /// Tracks that went out without audio their package no longer holds.
+        var incomplete: [String] = []
         var releases: [SongID: TrackRelease] = [:]
         var running = 0.0
         for (index, id) in album.songs.enumerated() {
-            guard let song = app.song?.id == id ? app.song : app.library.song(id) else { continue }
+            guard let song = app.song?.id == id ? app.song : app.library.song(id) else { throw ReleaseFailure.missingTrack(index + 1) }
             progress?(index + 1, album.songs.count, song.title)
             let plan = SongPlayback.plan(for: song) { ref in try? store.mediaURL(for: ref, song: song.id) }.looping(false)
             guard plan.isPlayable else { throw ReleaseFailure.unplayable(song.title) }
+            if plan.missingMedia { incomplete.append(song.title) }
             let stems = try await SectionBounce.render(plan, section: nil, kitsDirectory: AuditionService.defaultKitsDirectory,
                                                        onlyTheMix: true)
             let measured = MixMeter.integratedLoudness(stems.mix, sampleRate: stems.sampleRate)
@@ -163,7 +205,7 @@ extension Export {
             }
             let truePeak = MixMeter.truePeakDB(limited, sampleRate: stems.sampleRate)
             let seconds = Double(limited.first?.count ?? 0) / stems.sampleRate
-            let file = String(format: "%02d — %@.wav", index + 1, safe(song.title))
+            let file = unique(directory.appendingPathComponent(String(format: "%02d — %@.wav", index + 1, safe(song.title)))).lastPathComponent
             try writeWAV24(limited, sampleRate: stems.sampleRate, to: directory.appendingPathComponent(file))
             let gap = index == 0 ? 0 : album.gap(before: id)
             running += gap + seconds
@@ -172,24 +214,19 @@ extension Export {
                                  key: song.key.map { "\($0)" }, tempo: song.tempo))
             releases[id] = TrackRelease(mixVersion: plan.mixVersion, integratedLUFS: lufs, truePeakDBTP: truePeak, durationSeconds: seconds, trimDB: trim)
         }
-        // The cover.
-        let coverURL = directory.appendingPathComponent("cover.png")
-        switch album.cover {
-        case .image(let media):
-            let source = try store.mediaURL(for: media)
-            try? FileManager.default.removeItem(at: coverURL)
-            try FileManager.default.copyItem(at: source, to: coverURL)
-        case .drawn(let design):
-            if let png = CoverRenderer.png(design, title: album.title, artist: album.artist) { try png.write(to: coverURL) }
-        }
         let report = AlbumReport(album: album.title, artist: album.artist, targetLUFS: album.targets.integratedLUFS, ceilingDBTP: album.targets.truePeakDBTP,
                                  runningSeconds: running, tracks: entries,
                                  clearances: app.sources(of: album).map { .init(source: $0.source, status: $0.status.rawValue) },
-                                 notes: album.notes, cover: "cover.png", releasedAt: ISO8601DateFormatter().string(from: Date()))
+                                 notes: album.notes, cover: "cover.png", releasedAt: ISO8601DateFormatter().string(from: Date()),
+                                 albumID: album.id.description)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         try encoder.encode(report).write(to: directory.appendingPathComponent("album.json"))
         app.recordReleases(releases, for: albumID)
+        if !incomplete.isEmpty {
+            app.note(.session, "Released without some of its audio: \(incomplete.joined(separator: ", "))",
+                     detail: "A take or a stem's file is missing from the song's package, so it is not on the record. Re-import it or record it again, then release again.")
+        }
         app.note(.session, "Released \(album.title)", detail: String(format: "%d tracks, %.0f:%02d, target %.0f LUFS → %@", entries.count, running / 60, Int(running) % 60, album.targets.integratedLUFS, directory.path))
         return (directory, report)
     }

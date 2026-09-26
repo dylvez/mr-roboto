@@ -64,10 +64,15 @@ public struct MIDIFile: Hashable, Sendable {
     public func data() -> Data {
         var out = Data()
         out.append(contentsOf: Array("MThd".utf8))
-        out.append(be32(6)); out.append(be16(1)); out.append(be16(UInt16(tracks.count + 1))); out.append(be16(UInt16(ticksPerBeat)))
+        // `ticksPerBeat` and `tempo` count the meter's own beat — an eighth in 6/8 — and a file counts
+        // quarter notes, in its division and its tempo alike. Written as they were, a 6/8 song
+        // put every bar line, marker and note at half the place a DAW read them at.
+        let quarter = Double(max(1, beatUnit)) / 4
+        out.append(be32(6)); out.append(be16(1)); out.append(be16(UInt16(tracks.count + 1)))
+        out.append(be16(UInt16(max(1, Int((Double(ticksPerBeat) * quarter).rounded())))))
         // Track 0: the tempo and the time signature.
         var conductor = Data()
-        let microseconds = UInt32((60_000_000 / max(1, tempo)).rounded())
+        let microseconds = UInt32((60_000_000 / max(1, tempo) * quarter).rounded())
         conductor.append(vlq(0)); conductor.append(contentsOf: [0xFF, 0x51, 0x03, UInt8((microseconds >> 16) & 0xFF), UInt8((microseconds >> 8) & 0xFF), UInt8(microseconds & 0xFF)])
         let denominator = UInt8(log2(Double(max(1, beatUnit))))
         conductor.append(vlq(0)); conductor.append(contentsOf: [0xFF, 0x58, 0x04, UInt8(beatsPerBar), denominator, 24, 8])
@@ -203,6 +208,11 @@ public struct MIDIFile: Hashable, Sendable {
         }
         // Track 0 of a type 1 file is the conductor: no notes, and not a part.
         self.tracks = tracks.filter { !$0.notes.isEmpty || !$0.markers.isEmpty }
+        // The file counted quarter notes; this counts the meter's beat, as it was written from.
+        if beatUnit != 4, beatUnit > 0 {
+            ticksPerBeat = max(1, Int((Double(ticksPerBeat) * 4 / Double(beatUnit)).rounded()))
+            tempo = tempo * Double(beatUnit) / 4
+        }
     }
 
     // MARK: Bytes

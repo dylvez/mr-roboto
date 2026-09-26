@@ -121,6 +121,9 @@ struct TransportBar: View {
         let control = SurfaceWiring.shared.midi(for: app)
         return VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 4) {
+                // Named, as the parts' chips beside it are: four chips under no heading read as a
+                // choice about something, and nothing said what.
+                Text("MIDI").font(Design.Typography.label).tracking(1.1).foregroundStyle(Design.Palette.inkTertiary)
                 ForEach(MIDIControl.Mode.allCases, id: \.self) { mode in
                     BoothChip(mode.title, isOn: control.mode == mode) { control.mode = mode }
                 }
@@ -150,8 +153,8 @@ struct TransportBar: View {
                     .lineLimit(1)
             }
         }
-        // Four chips side by side: Off, Kit, Bass and Keys.
-        .frame(width: 170, alignment: .leading)
+        // The label and four chips side by side: Off, Kit, Bass and Keys.
+        .frame(width: 210, alignment: .leading)
         .help("A MIDI controller plays the song's kit, its bass or its keys now. Play in, or the Booth recording, keeps what you play as a groove, a bass line or a melody.")
     }
 

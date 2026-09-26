@@ -51,7 +51,8 @@ public enum Export {
 
     static func safe(_ name: String) -> String {
         let cleaned = name.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-").trimmingCharacters(in: .whitespaces)
-        return cleaned.isEmpty ? "Untitled" : cleaned
+        // "." and ".." are this folder and the one above it, not names.
+        return cleaned.isEmpty || cleaned == "." || cleaned == ".." ? "Untitled" : cleaned
     }
 
     /// A path nothing is at yet: the one asked for, or the same name with " 2", " 3"… before the
@@ -81,6 +82,10 @@ public enum Export {
         // and ceiling — not on none.
         if plan.mix == nil { plan.mix = MasterModel.startingMix(host: MixAdapter(app: app), base: nil) }
         guard plan.isPlayable else { throw Failure.nothingToBounce }
+        if plan.missingMedia {
+            app.note(.session, "\(song.title) went out without some of its audio",
+                     detail: "A take or a stem's file is missing from the song's package, so it is not in the master.")
+        }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let stems = try await SectionBounce.render(plan, section: nil, kitsDirectory: AuditionService.defaultKitsDirectory,
                                                    onlyTheMix: true)
@@ -241,7 +246,11 @@ public enum Export {
             for i in 0..<frames { buffer.floatChannelData![channel][i] = max(-1, min(1, lane[i])) }
         }
         // Never over something already there: the callers pick a free name with `unique`, and a
-        // caller that did not gets the error rather than a file quietly gone.
+        // caller that did not gets the error rather than a file quietly gone. `AVAudioFile` itself
+        // replaces whatever is at the path without a word, so it is asked here.
+        guard !FileManager.default.fileExists(atPath: url.path) else {
+            throw CocoaError(.fileWriteFileExists, userInfo: [NSFilePathErrorKey: url.path])
+        }
         let file = try AVAudioFile(forWriting: url, settings: settings, commonFormat: .pcmFormatFloat32, interleaved: false)
         try file.write(from: buffer)
     }

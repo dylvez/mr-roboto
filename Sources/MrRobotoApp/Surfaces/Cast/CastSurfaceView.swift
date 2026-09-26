@@ -84,7 +84,7 @@ struct CastSurfaceView: View {
                         .foregroundStyle(Design.Palette.inkSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                Text("\(bible.rules.count) rules · \(bible.goldens.count) goldens · \(bible.openQuestions.count) open questions")
+                Text("\(bible.rules.count) rules · \(bible.goldens.count) worked examples · \(bible.openQuestions.count) open questions")
                     .font(Design.Typography.numeric(10.5))
                     .foregroundStyle(Design.Palette.inkTertiary)
             }

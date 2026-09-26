@@ -895,7 +895,8 @@ public final class ChopLaneSurface: Surface {
     public func commitRegroove(note: String? = nil) throws -> PartVersion {
         guard let host else { throw ChopLaneError.noHost }
         guard let feel else { throw ChopLaneError.noFeel }
-        let summary = note ?? "\(feel.name) at \(Int(tempo.rounded())) bpm"
+        // The feel and the bar it plays, not the lane's preview tempo: the song plays it at its own.
+        let summary = note ?? "\(feel.name) on \(source.label)"
         let version = parent.map {
             $0.spawning(.groove(feel.groove), by: .user, operation: Operation.regroove,
                         note: summary)

@@ -263,7 +263,8 @@ struct MasterFooter: View {
             // The export, from the surface that reads the master: the same call the File menu
             // makes. A view built from its model alone has no frame to ask and points at the menu.
             if let app {
-                FrameButton(title: "Export master…", emphasis: .outlined, isEnabled: app.song != nil && app.busy == nil) {
+                // The primary here: the master is what this tab exists to send somewhere.
+                FrameButton(title: "Export master…", emphasis: .accent, isEnabled: app.song != nil && app.busy == nil) {
                     MrRobotoApp.export(app, what: "Exporting the master…") { try await Export.master(app, to: $0).wav }
                 }
                 .help("The whole song through the mix, limited at the ceiling, as a 24-bit WAV beside a report. Asks where first.")

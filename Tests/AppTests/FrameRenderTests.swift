@@ -320,6 +320,14 @@ extension FrameRenderTests {
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-mixer")
         // At the window's narrowest the EQ moves under each strip rather than off the side.
         try write(FrameView(app: app), size: CGSize(width: 1100, height: 900), name: "frame-mixer-narrow")
+        // A section picked for the level faders: the bass's own level in the Verse, with its Reset.
+        mixer.levelSection = song.sections.first?.id
+        if let bass = mixer.rows.first(where: { $0.label.contains("line") }) {
+            mixer.setLevel(-12, for: bass.part)
+            mixer.endGesture()
+        }
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-mixer-section")
+        mixer.levelSection = nil
         let masterID = try #require(app.perform(Guidance.dockAction(for: .master, in: app.song)))
         let master = SurfaceWiring.shared.masterModel(for: app.bench.items.first { $0.id == masterID }!, app: app)
         await master.read()

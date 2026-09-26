@@ -193,6 +193,7 @@ final class SurfaceWiring {
         let model: GridModel
         if let version = bound {
             model = GridModel(host: adapter, version: version, tempo: tempo, timeSignature: signature, machine: machine)
+            model.recognise(version)
         } else {
             model = GridModel(host: adapter, tempo: tempo, timeSignature: signature, machine: machine)
         }

@@ -44,7 +44,7 @@ enum FieldGuide {
         Entry(word: "Comp", meaning: "One version made from the best bar of each take, seams crossfaded. Hear the comp plays your choice before you make it; made, it stands in for its takes when the song plays."),
         Entry(word: "Mix", meaning: "A strip per part — level, pan, EQ, compressor, send — and a master with a target loudness and a ceiling. Every move you let go of is a version."),
         Entry(word: "Ending", meaning: "How the song ends: on its last bar, or fading over its last 2, 4 or 8 bars. Chosen on the Master tab, heard as the song plays to its end, and written into the master. A loop never ends, so it never fades."),
-        Entry(word: "Key", meaning: "Your Anthropic API key, kept in the keychain: what the band runs on. Set it from the rail, under the field you ask the band from."),
+        Entry(word: "API key", meaning: "Your Anthropic API key, kept in the keychain: what the band runs on. Set it from the rail, under the field you ask the band from."),
         Entry(word: "Voice", meaning: "The lyrics this house has written, imported once (File ▸ Import Voice…). The Lyricist reads new words against them and names the images that repeat."),
         Entry(word: "Bible", meaning: "Everything a persona knows, as data: named lineages, measurable features, cited rules with thresholds, refusals, goldens and open questions. A document the method checks."),
         Entry(word: "House call", meaning: "What this house decided on a persona's open question, by ear — the snare late, not early. Kept with the song, apart from the evidence."),

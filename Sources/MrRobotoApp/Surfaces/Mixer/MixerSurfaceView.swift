@@ -65,10 +65,30 @@ struct MixerSurfaceView: View {
                 .lineLimit(1)
                 .truncationMode(.middle)
             Spacer(minLength: 8)
+            if shownTab == .strips, !model.sections.isEmpty { levelPicker }
             // No Revert here. Every move let go of is already a version, so there is never a working
             // change to throw away; going back is done from the ledger, as the footer says.
             if tabs.count > 1 { tabPicker }
         }
+    }
+
+    /// Which section the level faders set: every section, or one.
+    private var levelPicker: some View {
+        let picked = model.levelSection.flatMap { id in model.sections.first { $0.id == id }?.name }
+        return Menu {
+            Button("Every section") { model.levelSection = nil }
+            Divider()
+            ForEach(model.sections) { section in
+                Button(section.name) { model.levelSection = section.id }
+            }
+        } label: {
+            Text(picked.map { "Level in \($0)" } ?? "Level in every section")
+                .font(Design.Typography.ui(12))
+        }
+        .menuStyle(.button)
+        .fixedSize()
+        .help("Which section the level faders set. Pick one to change a strip's level there alone — the bass out of the Intro — and leave the rest of the song as it is.")
+        .accessibilityLabel(picked.map { "Levels for \($0)" } ?? "Levels for every section")
     }
 
     /// Strips | Master.
@@ -202,7 +222,7 @@ struct MixerSurfaceView: View {
             // 160 and 230, not 200 and 250: the row used to be 926 points, a little wider than the
             // bench at a 1440 window, so the meters were one sideways scroll away on the most
             // common size there is.
-            fader(value: strip.gainDB, range: -60...12, format: "%+.1f dB", width: 160, name: "\(row.label) level") { model.setGain($0, for: row.part) }
+            levelFader(row)
             fader(value: strip.pan, range: -1...1, format: "%+.2f", width: 90, name: "\(row.label) pan") { model.setPan($0, for: row.part) }
             fader(value: strip.sendDB ?? MixerModel.sendOffDB, range: MixerModel.sendOffDB...0, format: "%.0f dB", width: 90,
                   name: "\(row.label) send", readout: MixerModel.sendReadout(strip.sendDB)) { model.setSend(MixerModel.send(fromFader: $0), for: row.part) }
@@ -221,6 +241,28 @@ struct MixerSurfaceView: View {
                 .frame(height: 10)
         }
         .padding(.vertical, 3)
+    }
+
+    /// The level: the strip's own, or — with a section picked — its level there, which says so and
+    /// can be put back to the strip's own.
+    private func levelFader(_ row: MixerModel.Row) -> some View {
+        let own = model.hasSectionLevel(for: row.part)
+        let section = model.levelSection.flatMap { id in model.sections.first { $0.id == id }?.name }
+        return ZStack(alignment: .bottomTrailing) {
+            fader(value: model.level(for: row.part), range: -60...12, format: "%+.1f dB", width: 160,
+                  name: section.map { "\(row.label) level in \($0)" } ?? "\(row.label) level",
+                  readout: section.map { name in
+                      String(format: "%+.1f dB", model.level(for: row.part)) + (own ? " in \(name)" : ", as everywhere")
+                  }) { model.setLevel($0, for: row.part) }
+            if own {
+                Button("Reset") { model.clearSectionLevel(for: row.part) }
+                    .buttonStyle(.plain)
+                    .font(Design.Typography.ui(9.5))
+                    .foregroundStyle(Design.Palette.accent)
+                    .help("Put \(row.label) back to its own level in \(section ?? "this section")")
+            }
+        }
+        .frame(width: 160)
     }
 
     /// A slider with its value under it. `readout` overrides the formatted value where the number
@@ -261,7 +303,7 @@ struct MixerSurfaceView: View {
     /// the Master tab.
     private func lastReading(_ master: MasterModel) -> some View {
         let reading = master.reading
-        let text = reading.map { String(format: "%.1f LUFS · %.1f dBTP", $0.observation.integratedLUFS, $0.truePeakDBTP) } ?? "Not read"
+        let text = reading.map { String(format: "%.1f LUFS · %.1f dBTP", $0.observation.integratedLUFS, $0.truePeakDBTP) } ?? "Loudness not measured"
         return BoothChip(text, isOn: false) { model.tab = .master }
             .opacity(master.isStale ? 0.5 : 1)
             .help(reading == nil
@@ -284,7 +326,7 @@ struct MixerSurfaceView: View {
                         else { model.overlayB = row.part }
                     }
                 }
-                Button(model.isReadingOverlay ? "Reading…" : "Read") { Task { await model.readOverlay() } }
+                Button(model.isReadingOverlay ? "Measuring…" : "Compare") { Task { await model.readOverlay() } }
                     .font(Design.Typography.ui(12))
                     .disabled(model.overlayA == nil || model.overlayB == nil || model.isReadingOverlay)
                     .help("Bounces the two chosen strips on their own and shows where they share energy.")
@@ -323,7 +365,7 @@ struct MixerSurfaceView: View {
         } else if let note = model.lastNote {
             Text("Kept: \(note)").font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.inkTertiary)
         } else {
-            Text("Every move you let go of is a mix version; step back from Parts. Pick two strips and Read for the overlay.")
+            Text("Every move you let go of is a mix version; step back from Parts. Pick two strips and Compare to see where they share energy.")
                 .font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.inkTertiary)
         }
     }

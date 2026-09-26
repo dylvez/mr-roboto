@@ -44,6 +44,35 @@ struct MixAuditTests {
         #expect(mixer.base?.id == cut.id && mixer.strip(groove).gainDB == -2)
     }
 
+    @Test("a strip's level can be set for one section, kept as a version, and put back")
+    func levelsBySection() throws {
+        let (app, directory, _) = CompletenessFixture.app("audit-section-level")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let built = FormFixture.build(tempo: 92)
+        var song = built.song
+        song.sections = [Section(name: "Intro", stitch: [built.groove, built.bass].lanes, lengthInBars: 2),
+                         Section(name: "Verse", stitch: [built.groove, built.bass].lanes, lengthInBars: 4)]
+        app.open(song)
+        let intro = song.sections[0].id
+        let id = try #require(app.perform(SurfaceAction(surface: .mixer, title: "Mixer")))
+        let mixer = SurfaceWiring.shared.mixerModel(for: app.bench.items.first { $0.id == id }!, app: app)
+
+        mixer.levelSection = intro
+        mixer.setLevel(-60, for: built.bass)
+        let kept = try #require(mixer.endGesture())
+        #expect(kept.note?.contains("in Intro") == true, "\(kept.note ?? "")")
+        guard case .mix(let mix) = kept.kind else { Issue.record("not a mix"); return }
+        #expect(mix.gainDB(for: built.bass, in: intro) == -60)
+        #expect(mix.gainDB(for: built.bass, in: song.sections[1].id) == 0, "the Verse is left as it was")
+
+        mixer.levelSection = nil
+        #expect(mixer.level(for: built.bass) == 0, "every section's fader shows the strip's own level")
+        mixer.levelSection = intro
+        #expect(mixer.hasSectionLevel(for: built.bass))
+        mixer.clearSectionLevel(for: built.bass)
+        #expect(!mixer.hasSectionLevel(for: built.bass) && app.playback.mix?.sectionGains.isEmpty == true)
+    }
+
     @Test("a part written while the Mixer is open gets its fader")
     func mixerRowsFollow() throws {
         let (app, directory, _) = CompletenessFixture.app("audit-rows")
@@ -85,6 +114,21 @@ struct MixAuditTests {
         #expect(model.orphanedText == "chords", "a second groove beside the first is not missing: \(model.orphanedText ?? "nil")")
         model.fillAll()
         #expect(model.orphanedText == nil)
+    }
+
+    @Test("a solo on a part no section plays silences nothing, live or in export")
+    func silentSoloSetAside() throws {
+        let built = FormFixture.build(tempo: 92)
+        var song = built.song
+        song.sections = [Section(name: "Verse", stitch: [built.groove].lanes, lengthInBars: 2)]
+        var mix = Mix.unity
+        var bass = mix.strip(for: built.bass, label: "Bass")
+        bass.isSoloed = true
+        mix.set(bass)
+        try song.append(PartVersion(partID: PartID(), kind: .mix(mix), author: .user, operation: Operation.mix))
+        let plan = SongPlayback.plan(for: song, mediaURL: TransportFixture.resolver(URL(fileURLWithPath: "/dev/null")))
+        #expect(plan.mix?.hasSolo == false, "the bass plays nowhere, so its solo is set aside")
+        #expect(Export.heardStrips(of: plan, song: song).map(\.part) == [built.groove], "the groove is heard")
     }
 
     @Test("a form with several chops still has room for its takes, and a node for the click")

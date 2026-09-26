@@ -281,12 +281,26 @@ public struct SampleClearance: Hashable, Codable, Sendable {
     /// The library record the samples came from, when it is in the library.
     public var record: RecordID?
     public var note: String?
+    /// The media a source with no record points at: what keeps its clearance when the song it is
+    /// named after is renamed. Nil for a source with a record, and for one kept before this was.
+    public var media: MediaRef?
 
-    public init(source: String, status: ClearanceStatus = .uncleared, record: RecordID? = nil, note: String? = nil) {
+    public init(source: String, status: ClearanceStatus = .uncleared, record: RecordID? = nil, note: String? = nil,
+                media: MediaRef? = nil) {
         self.source = source
         self.status = status
         self.record = record
         self.note = note
+        self.media = media
+    }
+
+    /// Whether this is the stored state of a source: by its record, else by its media, else — for
+    /// one kept before either was — by its name.
+    public func matches(source: String, record: RecordID?, media: MediaRef?) -> Bool {
+        if let record { return self.record == record }
+        guard self.record == nil else { return false }
+        if let media, let mine = self.media { return mine == media }
+        return self.source == source
     }
 }
 

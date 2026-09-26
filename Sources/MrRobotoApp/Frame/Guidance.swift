@@ -267,8 +267,11 @@ public enum Guidance {
                                       bound: [sample.id])))
         }
 
-        // 4. A groove exists: the Grid is where it is edited and played.
-        if let groove = grooves(in: song).last {
+        // 4. A groove exists and nothing is built on it yet: the Grid is where it is edited and
+        //    played. Once there is a bass line or a form the song has moved on, and a standing
+        //    "open the groove" put itself ahead of every later step on the dock.
+        if let groove = grooves(in: song).last, basslines(in: song).isEmpty,
+           !song.sections.contains(where: { !$0.stitch.isEmpty }) {
             out.append(Proposal(
                 title: "Open \(PartLabel.title(of: groove)) in the Grid",
                 rationale: "Paint steps, set the swing, commit a new version. \(tempoText(song, analysis)).",
@@ -473,6 +476,9 @@ public enum Guidance {
         var out: [SurfaceKind] = []
         if playsAForm || song.versions.contains(where: { $0.type == .lyric }) { out.append(.lyrics) }
         if playsAForm || !takes(in: song).isEmpty { out.append(.booth) }
+        // Takes once there are takes to comp: the surface the Booth hands them to, which lit
+        // nothing on the dock while it was open.
+        if !takes(in: song).isEmpty { out.append(.takes) }
         if playsAForm || !mixes(in: song).isEmpty { out.append(.mixer) }
         return out
     }
@@ -862,7 +868,18 @@ extension AppState {
     /// Nil when the rail is open (the rail is showing them) or when there is nothing to propose.
     public var dockProposal: Proposal? {
         guard regions.isCollapsed(.rail) else { return nil }
-        return proposals.first
+        // Not what is already on the bench: "Re-groove Bar 5" over the lane open on Bar 5 is where
+        // you are, not where to go.
+        return proposals.first { !isShowing($0.action) }
+    }
+
+    /// Whether an open surface already shows what an action would open: its kind, on everything the
+    /// action binds.
+    func isShowing(_ action: SurfaceAction) -> Bool {
+        guard action.prepare == .none else { return false }
+        return bench.items.contains { item in
+            item.kind == action.surface && Set(bound(for: item.id)).isSuperset(of: action.bound)
+        }
     }
 
     /// Whether the frame could actually carry this out, right now, with this song and this library.

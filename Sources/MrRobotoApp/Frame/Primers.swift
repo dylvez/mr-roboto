@@ -97,7 +97,8 @@ public enum Primer {
         case .mixer:
             return ("Mixer",
                     "A strip per part: fader, pan, send, mute and solo, three bands of EQ and a compressor, with meters while "
-                        + "the song plays. Every move you let go of is a mix version — step back from Parts. Pick two strips "
+                        + "the song plays. \"Level in…\" sets a strip's level for one section alone. Every move you let go of is a "
+                        + "mix version — step back from Parts. Pick two strips "
                         + "and the overlay says where they share energy, band by band, in dB. The master is on its own tab.")
         case .master:
             return ("Master",

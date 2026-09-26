@@ -179,7 +179,23 @@ final class MergeAdapter: MergeHosting {
                       sourceRecord: sample.sourceRecord,
                       degradation: sample.degradation,
                       key: move.key ?? sample.key,
-                      span: SongGraph.TimeRange(start: 0, end: seconds))
+                      span: SongGraph.TimeRange(start: 0, end: seconds),
+                      pads: Self.pads(sample, region: region))
+    }
+
+    /// The pads' trims, carried to the merged chop: each follows its slice's marker into the list
+    /// `MergeRender.slices` keeps, which drops the markers outside the region. A merge used to
+    /// drop them all, so a chop tuned and reversed on its pads merged flat.
+    nonisolated static func pads(_ sample: Sample, region: SongGraph.TimeRange) -> [PadTrim] {
+        var kept: [Int: Int] = [:]
+        var next = 0
+        for (index, marker) in sample.slices.enumerated() where marker.position >= region.start && marker.position < region.end {
+            kept[index] = next
+            next += 1
+        }
+        return sample.pads.compactMap { pad in
+            kept[pad.slice].map { var moved = pad; moved.slice = $0; return moved }
+        }
     }
 
     func stitch(_ section: Section) async -> Bool {

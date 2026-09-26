@@ -408,10 +408,8 @@ private struct SwingLever: View {
                     .help("Swing to 50 %: no swing")
                 DetentButton(title: "triplet") { model.snapSwingToTriplet() }
                     .help("Swing to 66.67 %: the second sixteenth on the last triplet")
-                Text(String(format: "factor %.3f", model.swing.factor))
-                    .font(Design.Typography.numeric(10.5))
-                    .foregroundStyle(Design.Palette.inkTertiary)
             }
+            .help(String(format: "Swing factor %.3f", model.swing.factor))
         }
     }
 }

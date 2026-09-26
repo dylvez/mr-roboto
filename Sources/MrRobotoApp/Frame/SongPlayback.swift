@@ -340,6 +340,9 @@ public struct SongPlayback: Equatable, Sendable {
     /// The song's length in bars, when its sections say. With the loop off a groove plays this many
     /// bars and stops; with it on, it plays until you stop it.
     public var lengthInBars: Int?
+    /// Whether some audio the song holds was not in its package, and was left out. The song can
+    /// still play what remains; an export or release says it went out without it.
+    public var missingMedia = false
 
     public init(tempo: Double = 120, timeSignature: TimeSignature = .fourFour,
                 voices: [Voice] = [],
@@ -511,6 +514,20 @@ public struct SongPlayback: Equatable, Sendable {
         return dusty(voices)
     }
 
+    /// The plan's mix with any solo on a part the plan does not sound set aside. A strip left
+    /// soloed after its part was taken out of every section silenced the whole song, live and in
+    /// export, with the soloed part nowhere to be heard.
+    mutating func settingAsideSilentSolos() {
+        guard var mix, mix.hasSolo else { return }
+        let sounding = Set(parts)
+        mix.strips = mix.strips.map { strip in
+            var strip = strip
+            if strip.isSoloed, !sounding.contains(strip.part) { strip.isSoloed = false }
+            return strip
+        }
+        self.mix = mix
+    }
+
     /// Every part this plan sounds, in transport order, deduplicated: one strip each.
     ///
     /// The Mixer draws these and `MixGraph.reserve` claims a slot for each before the transport
@@ -631,6 +648,8 @@ public struct SongPlayback: Equatable, Sendable {
                     : Silence(headline: "\(song.title)'s sections play nothing yet",
                               detail: "Open Structure and stitch a groove, a bass line or a chop into a section.")
             }
+            plan.settingAsideSilentSolos()
+            plan.missingMedia = missingMedia
             return plan
         }
 
@@ -685,6 +704,8 @@ public struct SongPlayback: Equatable, Sendable {
         if !plan.isPlayable {
             plan.silence = silence(for: song, audioVersions: audioVersions, missingMedia: missingMedia)
         }
+        plan.settingAsideSilentSolos()
+        plan.missingMedia = missingMedia
         return plan
     }
 

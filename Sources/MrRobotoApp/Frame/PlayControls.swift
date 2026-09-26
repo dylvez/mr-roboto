@@ -91,7 +91,7 @@ struct NowPlayingReadout: View {
                     .help("Stop \(playing.label)")
                     Text(playing.label).font(Design.Typography.ui(11, weight: .medium)).foregroundStyle(Design.Palette.accent).lineLimit(1)
                 } else {
-                    Text(player.lastError ?? "Nothing on its own").font(Design.Typography.ui(11, weight: .regular))
+                    Text(player.lastError ?? "Nothing auditioning").font(Design.Typography.ui(11, weight: .regular))
                         .foregroundStyle(player.lastError == nil ? Design.Palette.inkTertiary : Design.Palette.warn).lineLimit(1)
                 }
             }

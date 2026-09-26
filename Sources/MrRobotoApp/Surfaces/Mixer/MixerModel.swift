@@ -124,6 +124,42 @@ public final class MixerModel {
     }
 
     public func setGain(_ dB: Double, for part: PartID) { update(part) { $0.gainDB = max(-60, min(12, dB)) } }
+
+    // MARK: Levels by section
+
+    /// The section the level faders set, or nil for every section. A strip's level in a section
+    /// overrides its own there — the bass out of the Intro, the groove down for the breakdown.
+    /// The mix could always hold these, and the transport and exports honoured them, but nothing
+    /// could set one.
+    public var levelSection: SectionID?
+
+    /// The song's sections, for the level picker.
+    public var sections: [Section] { host.song?.sections ?? [] }
+
+    /// A strip's level as its fader shows it: in `levelSection` when one is picked.
+    public func level(for part: PartID) -> Double { mix.gainDB(for: part, in: levelSection) }
+
+    /// Whether a strip has a level of its own in the picked section.
+    public func hasSectionLevel(for part: PartID) -> Bool {
+        guard let section = levelSection else { return false }
+        return mix.sectionGains.contains { $0.section == section && $0.part == part }
+    }
+
+    /// The level fader: the strip's own level, or its level in the picked section.
+    public func setLevel(_ dB: Double, for part: PartID) {
+        guard let section = levelSection else { setGain(dB, for: part); return }
+        mix.sectionGains.removeAll { $0.section == section && $0.part == part }
+        mix.sectionGains.append(SectionGain(section: section, part: part, gainDB: max(-60, min(12, dB))))
+        host.preview(mix)
+    }
+
+    /// The strip back to its own level in the picked section. A version, as any move let go of is.
+    public func clearSectionLevel(for part: PartID) {
+        guard let section = levelSection else { return }
+        mix.sectionGains.removeAll { $0.section == section && $0.part == part }
+        host.preview(mix)
+        endGesture()
+    }
     public func setPan(_ pan: Double, for part: PartID) { update(part) { $0.pan = max(-1, min(1, pan)) } }
     public func setSend(_ dB: Double?, for part: PartID) { update(part) { $0.sendDB = dB.map { max(-60, min(0, $0)) } } }
 
@@ -177,7 +213,8 @@ public final class MixerModel {
     @discardableResult
     public func endGesture() -> PartVersion? {
         guard mix != committed else { return nil }
-        let note = Self.describe(from: committed, to: mix, labels: Dictionary(rows.map { ($0.part, $0.label) }, uniquingKeysWith: { a, _ in a }))
+        let note = Self.describe(from: committed, to: mix, labels: Dictionary(rows.map { ($0.part, $0.label) }, uniquingKeysWith: { a, _ in a }),
+                                 sections: Dictionary(sections.map { ($0.id, $0.name) }, uniquingKeysWith: { a, _ in a }))
         guard let version = host.commit(mix, base: base, note: note) else {
             lastError = "The move could not be kept."
             return nil
@@ -192,7 +229,8 @@ public final class MixerModel {
     }
 
     /// "Bass −3 dB; Kick EQ 80 Hz −6 dB; master ceiling −1 dBTP" — every field that moved.
-    nonisolated static func describe(from a: Mix, to b: Mix, labels: [PartID: String]) -> String {
+    nonisolated static func describe(from a: Mix, to b: Mix, labels: [PartID: String],
+                                     sections: [SectionID: String] = [:]) -> String {
         var moves: [String] = []
         for strip in b.strips {
             let before = a.strip(for: strip.part) ?? Strip(part: strip.part, label: strip.label)
@@ -215,7 +253,13 @@ public final class MixerModel {
         if b.master.fadeOutBars != a.master.fadeOutBars {
             moves.append(b.master.fadeOutBars.map { "fade out over \($0) bar\($0 == 1 ? "" : "s")" } ?? "no fade")
         }
-        if b.sectionGains != a.sectionGains { moves.append("section gains") }
+        for gain in b.sectionGains where !a.sectionGains.contains(gain) {
+            moves.append(String(format: "%@ %+.1f dB in %@", labels[gain.part] ?? "a part", gain.gainDB,
+                                sections[gain.section] ?? "a section"))
+        }
+        for gain in a.sectionGains where !b.sectionGains.contains(where: { $0.section == gain.section && $0.part == gain.part }) {
+            moves.append("\(labels[gain.part] ?? "a part") back to its level in \(sections[gain.section] ?? "a section")")
+        }
         return moves.isEmpty ? "Mix" : moves.joined(separator: "; ")
     }
 
