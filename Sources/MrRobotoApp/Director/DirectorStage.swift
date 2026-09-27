@@ -98,9 +98,9 @@ public actor DirectorStagePad {
 
     public init() {}
 
-    /// How many surfaces one answer may open. The bench's own ceiling: past this the answer is
-    /// retiring its own earlier half.
-    public static let maximumOpens = Design.maximumOpenSurfaces
+    /// How many surfaces one answer may open: three is evidence beside a choice; more is an
+    /// answer that should have been said in words.
+    public static let maximumOpens = 3
 
     /// Starts a turn. Called before the first request, never during one.
     /// Told as each surface lands, so the rail can show it arriving rather than at the end.
@@ -116,7 +116,7 @@ public actor DirectorStagePad {
     public func record(_ choice: DirectorSurfaceChoice) throws {
         guard opened.count < Self.maximumOpens else {
             throw DirectorChoiceProblem(
-                "This answer has already opened \(opened.count) surfaces, which is the whole bench.",
+                "This answer has already opened \(opened.count) surfaces, which is as many as one answer opens.",
                 suggestion: "Say the rest in words, or propose it instead of opening it.")
         }
         opened.append(choice)

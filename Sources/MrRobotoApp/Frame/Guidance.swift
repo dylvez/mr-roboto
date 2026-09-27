@@ -482,23 +482,15 @@ public enum Guidance {
         }
     }
 
-    // MARK: The dock as the song grows
+    // MARK: The dock
 
-    /// The surfaces past the first seven that the dock carries once the song has reached them: the
-    /// words and the Booth once there is a form that plays, the Mixer once there is something to
-    /// mix. Before that they are a keystroke away (⌘9, ⌘0, ⇧⌘M) but not on the shelf, so a first
-    /// session is not a row of twelve chips.
-    public static func laterSurfaces(for song: Song?) -> [SurfaceKind] {
-        guard let song else { return [] }
-        let playsAForm = song.sections.contains { !$0.stitch.isEmpty } && song.versions.contains(where: StructureModel.plays)
-        var out: [SurfaceKind] = []
-        if playsAForm || song.versions.contains(where: { $0.type == .lyric }) { out.append(.lyrics) }
-        if playsAForm || !takes(in: song).isEmpty { out.append(.booth) }
-        // Takes once there are takes to comp: the surface the Booth hands them to, which lit
-        // nothing on the dock while it was open.
-        if !takes(in: song).isEmpty { out.append(.takes) }
-        if playsAForm || !mixes(in: song).isEmpty { out.append(.mixer) }
-        return out
+    /// The surfaces the dock carries: every one you work in, from the start, none waiting for the
+    /// song to reach it; and Takes once there are takes to comp.
+    public static func dockSurfaces(for song: Song?) -> [SurfaceKind] {
+        var kinds = SurfaceKind.gateA + [.lyrics, .booth]
+        if let song, !takes(in: song).isEmpty { kinds.append(.takes) }
+        kinds.append(.mixer)
+        return kinds
     }
 
     /// What the dock's chip says after the name: the key that opens it.
@@ -939,9 +931,8 @@ extension AppState {
 
     /// Opens what a proposal asks for, doing any preparation first, and returns the surface.
     ///
-    /// Reuses an open surface of the same kind bound to the same versions rather than opening a
-    /// second one: the bench holds three, and clicking a ledger row twice should take you back to
-    /// the panel you were just in, not retire something to make room for its twin.
+    /// A surface of the kind already open is reused: brought forward if it is on the same versions,
+    /// turned to them otherwise (`openSurface`). There is one of each kind.
     @discardableResult
     public func perform(_ action: SurfaceAction) -> SurfaceID? {
         // The master lives on the Mixer's own tab now: one surface and one working mix, rather than

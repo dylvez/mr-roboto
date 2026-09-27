@@ -3,14 +3,15 @@ import SwiftUI
 
 /// The bench: the dock of surfaces, then the surface you are working in, filling everything below it.
 ///
-/// One surface at a time is the change. The `Bench` still holds three and still retires the oldest
-/// unpinned one; it now draws `Bench.visible` — the active surface, plus anything pinned — so the
-/// instrument gets the whole bench instead of a third of it. Pinning a second surface splits the
-/// bench between them, which is the one case where two at once is what you asked for.
+/// One surface at a time, drawn from `Bench.visible` — the active surface, plus anything pinned — so
+/// the instrument gets the whole bench. Pinning a second surface splits the bench between them,
+/// which is the one case where two at once is what you asked for.
 ///
-/// The dock is therefore load-bearing: it is no longer only a shelf saying the four surfaces exist,
-/// it is how you move between the ones that are open. A lit chip brings its surface forward; an
-/// unlit one opens it on the most useful thing the song has for it (`Guidance.dockAction`).
+/// The dock is the app's one bar of places to work. It used to sit under a second bar, the song's
+/// path, whose steps opened these same surfaces under other names; two bars for one job, one of
+/// them reading as a sequence the work does not have to follow. A lit chip brings its surface
+/// forward as you left it; an unlit one opens it on the most useful thing the song has for it
+/// (`Guidance.dockAction`).
 struct BenchColumn: View {
     let app: AppState
     var registry: SurfaceRegistry = .shared
@@ -92,9 +93,9 @@ struct BenchColumn: View {
     }
 }
 
-/// The four surfaces, on screen, with the shortcuts that also open them — and, when the session rail
-/// is folded away, the next step, so collapsing the rail never costs you the one thing in it that
-/// tells you what to do.
+/// Every surface you work in, in no order you have to follow, each with how many of its parts the
+/// song has (the same count as its title's menu) and the shortcut that also opens it — and, when
+/// the band's column is folded away, the band's question, so folding it never costs you that.
 ///
 /// A chip is lit while its surface is open and accented while it is the one filling the bench, so the
 /// dock doubles as "what am I looking at" and "what else is open".
@@ -102,67 +103,72 @@ struct SurfaceDock: View {
     let app: AppState
 
     var body: some View {
-        HStack(spacing: 8) {
-            SmallLabel("Surfaces")
-            // Seven chips with their shortcuts when the bench is wide enough; without the shortcuts
-            // when it is not; and as glyphs alone at the bench's minimum, where even the names did
-            // not fit — the names and the shortcuts are in the tooltips and the Surfaces menu
-            // either way. A dock that cannot fit its chips is what made the bench overflow its
-            // column and paint over the rail.
-            //
-            // The next step folds before the names do: its title goes into its tooltip, "Next →"
-            // stays. At the default window the names used to go first, and the dock was a row of
-            // unlabelled glyphs beside a sentence.
-            // The band's question, when its column is folded away: its best answer, one press.
-            let asked = app.dockQuestion
-            // The question is kept before the surfaces' names are: it is what is being asked of you,
-            // and every chip's name is in its tooltip.
-            ViewThatFits(in: .horizontal) {
-                dockRow(.full, next: asked, room: .both)
-                dockRow(.compact, next: asked, room: .both)
-                dockRow(.current, next: asked, room: .both)
-                dockRow(.compact, next: asked, room: .question)
-                dockRow(.current, next: asked, room: .question)
-                dockRow(.glyphs, next: asked, room: .question)
-                dockRow(.glyphs, next: asked, room: .answer)
-                dockRow(.glyphs, next: asked, room: .button)
-            }
-            if !app.bench.items.isEmpty {
-                FrameButton(title: "Close all", emphasis: .quiet) {
-                    app.keepSurfaceWork()
-                    if app.bench.items.contains(where: { app.closingWouldLoseWork($0.id) }) {
-                        isConfirmingCloseAll = true
-                    } else {
-                        app.closeAllSurfaces()
-                    }
-                }
-                .help("Close every surface on the bench. One holding unkept work asks first.")
-                .confirmationDialog("Close every surface? The song would not take some of their edits.",
-                                    isPresented: $isConfirmingCloseAll, titleVisibility: .visible) {
-                    Button("Close all anyway", role: .destructive) { app.closeAllSurfaces() }
-                    Button("Cancel", role: .cancel) {}
-                } message: {
-                    Text(unkeptNames)
-                }
-            }
+        // The widest that fits, trying each in turn. Every surface keeps its name for as long as
+        // anything else can give way first: the shortcuts, then the "Surfaces" label and the words
+        // on Close all, then the chips' padding — and only then the names, which fold to glyphs
+        // with the one you are in still named. Names and shortcuts are in the tooltips either way.
+        //
+        // The band's question, when its column is folded away, is kept before the names go: it is
+        // what is being asked of you, and every chip's name is in its tooltip.
+        let asked = app.dockQuestion
+        ViewThatFits(in: .horizontal) {
+            dockRow(.full, labelled: true, next: asked, room: .both)
+            dockRow(.compact, labelled: true, next: asked, room: .both)
+            dockRow(.tight, labelled: false, next: asked, room: .both)
+            dockRow(.tight, labelled: false, next: asked, room: .question)
+            dockRow(.tight, labelled: false, next: asked, room: .answer)
+            dockRow(.current, labelled: false, next: asked, room: .question)
+            dockRow(.glyphs, labelled: false, next: asked, room: .question)
+            dockRow(.glyphs, labelled: false, next: asked, room: .answer)
+            dockRow(.glyphs, labelled: false, next: asked, room: .button)
         }
         .padding(.horizontal, Design.Metric.gutter)
         .frame(height: FrameLayout.dockHeight)
         .background(Design.Palette.paper)
+        .confirmationDialog("Close every surface? The song would not take some of their edits.",
+                            isPresented: $isConfirmingCloseAll, titleVisibility: .visible) {
+            Button("Close all anyway", role: .destructive) { app.closeAllSurfaces() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(unkeptNames)
+        }
     }
 
     @State private var isConfirmingCloseAll = false
 
-    /// The chips, then the next step, as one row the fit is tried against.
-    private func dockRow(_ style: DockChip.Style, next asked: (question: NextQuestion, option: NextOption)?,
+    /// One way the row can be drawn: the chips, the band's question, and Close all.
+    private func dockRow(_ style: DockChip.Style, labelled: Bool,
+                         next asked: (question: NextQuestion, option: NextOption)?,
                          room: DockQuestion.Room) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: style == .tight ? 5 : 8) {
+            if labelled { SmallLabel("Surfaces") }
             chips(style)
             Spacer(minLength: 8)
             if let asked {
                 DockQuestion(app: app, question: asked.question, option: asked.option, room: room)
                     .fixedSize()
             }
+            if !app.bench.items.isEmpty { closeAll(worded: labelled) }
+        }
+    }
+
+    /// Close all, in words when there is room and as a glyph when there is not.
+    @ViewBuilder
+    private func closeAll(worded: Bool) -> some View {
+        let press = {
+            app.keepSurfaceWork()
+            if app.bench.items.contains(where: { app.closingWouldLoseWork($0.id) }) {
+                isConfirmingCloseAll = true
+            } else {
+                app.closeAllSurfaces()
+            }
+        }
+        let help = "Close every surface on the bench. One holding unkept work asks first."
+        if worded {
+            FrameButton(title: "Close all", emphasis: .quiet, action: press).help(help)
+        } else {
+            ChipButton(systemImage: "xmark.square", help: help, action: press)
+                .accessibilityLabel("Close all surfaces")
         }
     }
 
@@ -172,14 +178,14 @@ struct SurfaceDock: View {
             .map { "\($0.kind.rawValue): \($0.title)" }.joined(separator: ", ")
     }
 
-    /// The seven the dock always carries, then the ones the song has reached.
-    private var kinds: [SurfaceKind] { SurfaceKind.gateA + Guidance.laterSurfaces(for: app.song) }
+    private var kinds: [SurfaceKind] { Guidance.dockSurfaces(for: app.song) }
 
     private func chips(_ style: DockChip.Style) -> some View {
         HStack(spacing: 8) {
             ForEach(kinds, id: \.self) { kind in
                 DockChip(kind: kind,
                          shortcut: Guidance.dockShortcut(for: kind),
+                         count: app.dockCount(for: kind),
                          style: style,
                          isOpen: app.bench.items.contains { $0.kind == kind },
                          isActive: app.bench.active?.kind == kind) {
@@ -194,10 +200,12 @@ private struct DockChip: View {
     /// How much of the chip there is room for, widest first.
     /// `.current` is the glyphs with the one filling the bench named: where you are, in words,
     /// when there is no room for every name.
-    enum Style { case full, compact, current, glyphs }
+    enum Style { case full, compact, tight, current, glyphs }
 
     let kind: SurfaceKind
     let shortcut: String
+    /// How many of its parts the song has; nil draws none.
+    var count: Int? = nil
     var style: Style = .full
     let isOpen: Bool
     let isActive: Bool
@@ -205,11 +213,18 @@ private struct DockChip: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 6) {
+            HStack(spacing: style == .tight ? 4 : 6) {
                 Glyph(name: kind.glyph.name, symbol: kind.glyph.symbol, size: 13)
-                if style == .full || style == .compact || (style == .current && isActive) {
+                if style == .full || style == .compact || style == .tight || (style == .current && isActive) {
                     Text(kind.rawValue)
                         .font(Design.Typography.ui(12.5, weight: isActive ? .semibold : .medium))
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+                if let count, style != .glyphs {
+                    Text("\(count)")
+                        .font(Design.Typography.numeric(11))
+                        .foregroundStyle(isActive ? Design.Palette.accent : Design.Palette.inkSecondary)
                         .lineLimit(1)
                         .fixedSize()
                 }
@@ -222,7 +237,7 @@ private struct DockChip: View {
                 }
             }
             .foregroundStyle(isActive ? Design.Palette.accent : Design.Palette.ink)
-            .padding(.horizontal, 10)
+            .padding(.horizontal, style == .tight ? 7 : 10)
             .frame(height: Design.Metric.controlHeight)
             .background(isActive ? Design.Palette.accentSoft : Design.Palette.panel)
             .overlay(
@@ -239,8 +254,9 @@ private struct DockChip: View {
     }
 
     private var helpText: String {
-        if isActive { return "\(kind.rawValue) is filling the bench (\(shortcut))" }
-        if isOpen { return "Bring \(kind.rawValue) forward (\(shortcut))" }
-        return "Open \(kind.rawValue) (\(shortcut))"
+        let held = count.map { " · \($0) in the song" } ?? ""
+        if isActive { return "\(kind.rawValue) is filling the bench (\(shortcut))\(held)" }
+        if isOpen { return "Bring \(kind.rawValue) forward (\(shortcut))\(held)" }
+        return "Open \(kind.rawValue) (\(shortcut))\(held)"
     }
 }

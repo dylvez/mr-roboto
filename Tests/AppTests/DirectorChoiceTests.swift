@@ -321,7 +321,7 @@ struct DirectorChoiceTests {
             try await pad.record(choice)
         }
         #expect(await pad.opened.count == 3)
-        #expect(DirectorStagePad.maximumOpens == Design.maximumOpenSurfaces)
+        #expect(DirectorStagePad.maximumOpens == 3)
 
         let fourth = try DirectorSurfaceChoice.make(surface: .grid, title: "four",
                                                     fill: .parts([built.grooves[0]]),

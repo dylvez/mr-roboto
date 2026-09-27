@@ -60,9 +60,6 @@ struct HeaderBar: View {
                     .help("Saved on its own a few seconds after the last change, and on ⌘S.")
             }
             Spacer(minLength: 16)
-            // Where you are in the work. See `WorkPath`.
-            PathStrip(app: app)
-            Spacer(minLength: 16)
             if let busy = app.busy {
                 HStack(spacing: 6) {
                     ProgressView()

@@ -320,7 +320,7 @@ struct LayoutBenchTests {
         app.setPinned(true, for: second)
         let third = app.openSurface(.chopLane, title: "three")
 
-        #expect(app.bench.items.count == Design.maximumOpenSurfaces)
+        #expect(app.bench.items.count == 3)
         #expect(app.bench.visible.count == Design.maximumVisibleSurfaces)
         #expect(app.bench.visible.last?.id == third)
         #expect(app.bench.visible.contains { $0.id == second })
@@ -344,19 +344,20 @@ struct LayoutBenchTests {
         #expect(app.bench.activeID == sound)
     }
 
-    @Test("Two surfaces of the same kind are both reachable: the chip steps between them")
-    func dockCyclesWithinAKind() {
+    @Test("One of each kind: a second bar opens in the Chop lane that is open, and its chip finds it")
+    func oneOfEachKind() {
         let app = state()
         let first = app.openSurface(.chopLane, title: "bar 5")
+        let sound = app.openSurface(.sound, title: "kit")
         let second = app.openSurface(.chopLane, title: "bar 9")
-        #expect(app.bench.activeID == second)
+        #expect(second == first && app.bench.activeID == first)
+        #expect(app.bench.items.count == 2)
+        #expect(app.bench.items.first { $0.id == first }?.title == "bar 9")
 
+        app.showSurface(.sound)
+        #expect(app.bench.activeID == sound)
         app.showSurface(.chopLane)
         #expect(app.bench.activeID == first)
-
-        app.showSurface(.chopLane)
-        #expect(app.bench.activeID == second)
-        #expect(app.bench.items.count == 2, "stepping between them opens nothing new")
     }
 
     @Test("Closing what you are working in falls back to what is still open")
@@ -386,11 +387,9 @@ struct LayoutBenchTests {
         #expect(app.bench.items.first { $0.id == first }?.title == "Bar 5 of Arrival")
     }
 
-    @Test("Gate B's three-at-once is still there, one constant away")
-    func gateBCapabilityIntact() {
-        #expect(Design.maximumOpenSurfaces == 3)
+    @Test("Two at once is pinning's, and only pinning's")
+    func twoAtOnce() {
         #expect(Design.maximumVisibleSurfaces == 2)
-        #expect(Design.maximumVisibleSurfaces < Design.maximumOpenSurfaces)
     }
 }
 

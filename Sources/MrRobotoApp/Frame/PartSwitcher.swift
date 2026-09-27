@@ -80,6 +80,14 @@ extension AppState {
         return choices
     }
 
+    /// The number a dock chip carries: the song's sections on Structure, its parts for every other
+    /// surface (the same count as the surface's title menu), nothing on the Booth or at zero.
+    public func dockCount(for kind: SurfaceKind) -> Int? {
+        guard let song, kind != .booth else { return nil }
+        let count = kind == .structure ? song.sections.count : partChoices(for: kind).count
+        return count > 0 ? count : nil
+    }
+
     /// Which of `choices` the surface is on: the part it is working on, else the one its binding
     /// holds.
     func currentChoice(among choices: [PartChoice], for item: BenchItem, working: PartID?) -> PartChoice? {

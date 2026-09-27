@@ -137,19 +137,18 @@ public struct BenchItem: Identifiable, Sendable {
     }
 }
 
-/// The bench: at most three surfaces, replacing the oldest unpinned one — and, of those three, the
-/// one you are working in is what gets drawn.
+/// The bench: one surface of each kind, open until you close it, and — of those — the one you are
+/// working in is what gets drawn, with anything you pinned beside it.
 ///
-/// `items` is the model and has not changed: three surfaces, oldest unpinned retired, pinning
-/// protects. What changed is `visible`, which is what the bench draws. In Gate B, where a Director
-/// opens a Compare and a Check beside the decision you are making, `Design.maximumVisibleSurfaces`
-/// rises to three and the bench stacks them again. In Gate A there is no Director, you drive one
-/// surface at a time, and stacking three of them cost the instrument two thirds of its height for a
-/// mechanic that does not exist yet.
+/// It used to hold three and close the oldest to make room for a fourth, and to allow two of a
+/// kind. In use that read as surfaces vanishing from behind you and a chip landing on the wrong
+/// one of two Piano rolls; the answer people reached for was closing everything and starting
+/// again. Now a surface stays until you close it, and a kind that is open is turned to the next
+/// thing asked of it (`AppState.openSurface`) rather than opened twice.
 ///
-/// Pinning is the exception, and it is exactly the right one: a pinned surface is the case where you
-/// have said you want to keep looking at something while you work on something else. So one surface
-/// fills the bench, and pinning a second splits it.
+/// Pinning is what shows two at once: a pinned surface is the case where you have said you want
+/// to keep looking at something while you work on something else. So one surface fills the bench,
+/// and pinning a second splits it.
 @MainActor
 @Observable
 public final class Bench {
@@ -161,35 +160,15 @@ public final class Bench {
 
     public init() {}
 
-    /// Opens a surface, retiring the oldest unpinned one if the bench is full, and makes it the one
-    /// you are working in. Returns what it retired, so the frame can say what it closed rather than
-    /// having a panel vanish.
-    /// - Parameter retirable: whether a surface may be closed to make room. The frame answers with
-    ///   "has it nothing unkept": a surface holding edits is not retired for a newcomer, and when
-    ///   every unpinned surface is holding something the bench goes one over rather than losing
-    ///   any of it. Work is the one thing a rule about tidiness does not get to take.
-    @discardableResult
-    public func open(_ item: BenchItem, retirable: (BenchItem) -> Bool = { _ in true }) -> BenchItem? {
+    /// Opens a surface and makes it the one you are working in. An item with an id already on the
+    /// bench replaces it in place. Nothing is ever closed to make room.
+    public func open(_ item: BenchItem) {
         if let existing = items.firstIndex(where: { $0.id == item.id }) {
             items[existing] = item
-            activeID = item.id
-            return nil
+        } else {
+            items.append(item)
         }
-        var retired: BenchItem?
-        if items.count >= Design.maximumOpenSurfaces {
-            let candidates = items.enumerated().filter { !$0.element.isPinned }
-            if let oldest = candidates.filter({ retirable($0.element) })
-                .min(by: { $0.element.openedAt < $1.element.openedAt })?.offset {
-                retired = items.remove(at: oldest)
-            } else if candidates.isEmpty, let first = items.firstIndex(where: { retirable($0) }) {
-                // Everything is pinned: the oldest pin gives way rather than refusing to answer.
-                retired = items.remove(at: first)
-            }
-            // Otherwise everything unpinned is holding work: nothing goes.
-        }
-        items.append(item)
         activeID = item.id
-        return retired
     }
 
     public func close(_ id: SurfaceID) {

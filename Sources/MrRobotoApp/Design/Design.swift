@@ -502,17 +502,13 @@ public enum Design {
         public static let inset: CGFloat = 18
     }
 
-    /// At most three surfaces in the bench, from the catalog's own rule.
-    public static let maximumOpenSurfaces = 3
-
-    /// How many of those are drawn at once.
+    /// How many surfaces are drawn at once: the one you are working in, plus one you pinned.
     ///
-    /// The catalog's three-at-once rule was written for Gate B, where a Director opens a Compare and
-    /// a Check *beside* the decision you are making — evidence next to a choice. Gate A has no
-    /// Director: you drive one surface at a time, and handing an instrument a third of the bench to
-    /// pay for a mechanic that does not exist yet is what made the frame unusable. So the bench
-    /// holds three and draws the one you are working in, plus anything you pinned. Raising this to
-    /// `maximumOpenSurfaces` is all Gate B needs.
+    /// The bench itself has no ceiling any more. It held three and closed the oldest to make room,
+    /// which a person experienced as surfaces vanishing from behind them — forty times in a few
+    /// days of sessions — and answered by closing everything to get control back. Now there is one
+    /// surface of each kind, it stays open until you close it, and turning it to another part is its
+    /// title's menu.
     public static let maximumVisibleSurfaces = 2
 }
 

@@ -64,23 +64,10 @@ struct FieldGuideView: View {
                     Wordmark(size: 15)
                     Text("Field Guide")
                         .font(Design.Typography.ui(24, weight: .semibold))
-                    Text("Everything in a song descends from something else. Each step below makes the thing the next one works on, and the strip at the top of the window shows where you are.")
+                    Text("Everything in a song descends from something else, and nothing has to come first. The bar above the bench holds every surface, each with how many of its parts the song has; open any of them, in any order. The band asks what next, and you can always say something else.")
                         .font(Design.Typography.prose(14))
                         .foregroundStyle(Design.Palette.inkSecondary)
                         .fixedSize(horizontal: false, vertical: true)
-                }
-
-                ForEach([WorkPath.flip, .beat], id: \.self) { path in
-                    VStack(alignment: .leading, spacing: 10) {
-                        SmallLabel("The \(path.title.lowercased()) path", color: Design.Palette.accent)
-                        Text(path.summary)
-                            .font(Design.Typography.prose(13.5))
-                            .foregroundStyle(Design.Palette.inkSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                        ForEach(path.steps, id: \.self) { step in
-                            entry(glyph: (step.glyph, step.symbol), word: step.title, meaning: step.meaning)
-                        }
-                    }
                 }
 
                 VStack(alignment: .leading, spacing: 10) {

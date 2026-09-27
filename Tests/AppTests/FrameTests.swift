@@ -76,67 +76,24 @@ struct BenchTests {
         BenchItem(id: SurfaceID(), kind: kind, title: title, isPinned: pinned, openedAt: openedAt)
     }
 
-    @Test("Holds at most three surfaces")
-    func capacity() {
+    @Test("Opens as many as are asked for and never closes one to make room")
+    func noCeiling() {
         let bench = Bench()
-        for index in 0..<5 {
-            bench.open(item("s\(index)", openedAt: Date(timeIntervalSinceReferenceDate: Double(index))))
+        let kinds: [SurfaceKind] = [.grid, .chords, .pianoRoll, .sound, .structure, .lyrics]
+        for (index, kind) in kinds.enumerated() {
+            bench.open(item("s\(index)", kind: kind, openedAt: Date(timeIntervalSinceReferenceDate: Double(index))))
         }
-        #expect(bench.items.count == Design.maximumOpenSurfaces)
+        #expect(bench.items.count == kinds.count)
+        #expect(bench.active?.kind == .lyrics)
     }
 
-    @Test("Opening into a full bench retires the oldest unpinned surface")
-    func retiresOldestUnpinned() {
-        let bench = Bench()
-        let oldest = item("oldest", openedAt: Date(timeIntervalSinceReferenceDate: 0))
-        let middle = item("middle", openedAt: Date(timeIntervalSinceReferenceDate: 1))
-        let newest = item("newest", openedAt: Date(timeIntervalSinceReferenceDate: 2))
-        for one in [oldest, middle, newest] { bench.open(one) }
-
-        let retired = bench.open(item("fourth", openedAt: Date(timeIntervalSinceReferenceDate: 3)))
-
-        #expect(retired?.id == oldest.id)
-        #expect(bench.items.map(\.title) == ["middle", "newest", "fourth"])
-    }
-
-    @Test("A pinned surface is not retired while an unpinned one is available")
-    func pinnedSurvives() {
-        let bench = Bench()
-        let pinned = item("pinned", pinned: true, openedAt: Date(timeIntervalSinceReferenceDate: 0))
-        let unpinned = item("unpinned", openedAt: Date(timeIntervalSinceReferenceDate: 1))
-        let third = item("third", openedAt: Date(timeIntervalSinceReferenceDate: 2))
-        for one in [pinned, unpinned, third] { bench.open(one) }
-
-        let retired = bench.open(item("fourth", openedAt: Date(timeIntervalSinceReferenceDate: 3)))
-
-        #expect(retired?.id == unpinned.id)
-        #expect(bench.items.contains { $0.id == pinned.id })
-    }
-
-    @Test("With everything pinned the bench still answers, retiring the oldest pin")
-    func allPinned() {
-        let bench = Bench()
-        let first = item("first", pinned: true, openedAt: Date(timeIntervalSinceReferenceDate: 0))
-        let second = item("second", pinned: true, openedAt: Date(timeIntervalSinceReferenceDate: 1))
-        let third = item("third", pinned: true, openedAt: Date(timeIntervalSinceReferenceDate: 2))
-        for one in [first, second, third] { bench.open(one) }
-
-        let retired = bench.open(item("fourth", openedAt: Date(timeIntervalSinceReferenceDate: 3)))
-
-        // Refusing to answer would be worse than dropping a pin; the oldest one gives way.
-        #expect(retired?.id == first.id)
-        #expect(bench.items.count == Design.maximumOpenSurfaces)
-        #expect(bench.items.map(\.title) == ["second", "third", "fourth"])
-    }
-
-    @Test("Reopening the same surface id replaces it in place and retires nothing")
+    @Test("Reopening the same surface id replaces it in place")
     func reopenInPlace() {
         let bench = Bench()
         let one = item("one")
         bench.open(one)
-        let retired = bench.open(BenchItem(id: one.id, kind: .sound, title: "one, again"))
+        bench.open(BenchItem(id: one.id, kind: .sound, title: "one, again"))
 
-        #expect(retired == nil)
         #expect(bench.items.count == 1)
         #expect(bench.items[0].title == "one, again")
     }
@@ -284,16 +241,20 @@ struct AppStateTests {
         #expect(app.bound(for: id).isEmpty)
     }
 
-    @Test("A surface retired to make room is reported in the rail")
-    func retirementIsLogged() {
+    @Test("A kind that is open is turned, not opened twice, and nothing else closes")
+    func oneOfEachKind() {
         let app = FrameFixture.state(song: FrameFixture.song())
-        for index in 0..<Design.maximumOpenSurfaces {
-            app.openSurface(.grid, title: "surface \(index)")
-        }
-        app.openSurface(.sound, title: "one more")
+        let grid = app.openSurface(.grid, title: "first")
+        let sound = app.openSurface(.sound, title: "sound")
+        let again = app.openSurface(.grid, title: "second")
 
-        #expect(app.bench.items.count == Design.maximumOpenSurfaces)
-        #expect(app.log.contains { $0.source == .session && $0.text.hasPrefix("Closed Grid") })
+        #expect(again == grid, "the Grid that was open")
+        #expect(app.bench.items.map(\.kind) == [.grid, .sound])
+        #expect(app.bench.activeID == grid)
+        #expect(app.bench.items.first { $0.id == grid }?.title == "second")
+        #expect(!app.log.contains { $0.text.hasPrefix("Closed") })
+        app.showSurface(.sound)
+        #expect(app.bench.activeID == sound, "the dock brings it forward as it was")
     }
 
     @Test("Notes land in the rail in order, attributed")

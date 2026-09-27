@@ -1010,25 +1010,25 @@ public final class AppState {
     /// What is on screen goes into the song before the frame reads it.
     public func keepSurfaceWork() { keepAllSurfaces() }
 
+    /// Opens a surface of `kind` on `bound`, or — when one of that kind is already open — turns
+    /// that one to it and brings it forward. There is one of each kind, and nothing is closed to make
+    /// room; what the open one was showing is kept first (`turn`), and if the song will not take
+    /// it the surface stays where it was and says so.
     @discardableResult
     public func openSurface(_ kind: SurfaceKind, title: String, bound: [VersionID] = [],
                             id: SurfaceID = SurfaceID()) -> SurfaceID {
-        // Whatever the bench retires to make room should have nothing left to lose.
-        if bench.items.count >= Design.maximumOpenSurfaces { keepSurfaceWork() }
-        // A surface holding unkept work is not the one that goes to make room.
-        let retired = bench.open(BenchItem(id: id, kind: kind, title: title)) { [hasUnkeptChanges] in !hasUnkeptChanges($0) }
+        if let open = bench.items.first(where: { $0.kind == kind }) {
+            if self.bound(for: open.id) == bound {
+                retitleSurface(open.id, to: title)
+            } else {
+                _ = turn(open, to: bound, title: title)
+            }
+            focusSurface(open.id)
+            return open.id
+        }
+        bench.open(BenchItem(id: id, kind: kind, title: title))
         bindings[id] = bound
         note(.you, "Opened \(kind.rawValue)", detail: title)
-        if let retired, retired.id != id {
-            bindings[retired.id] = nil
-            albumBindings[retired.id] = nil
-            surfaceLevers[retired.id] = nil
-            answers[retired.id] = nil
-            note(.session, "Closed \(retired.kind.rawValue) to make room", detail: retired.title)
-        } else if bench.items.count > Design.maximumOpenSurfaces {
-            note(.session, "The bench is one over: every surface on it is holding unkept work",
-                 detail: "Keep or close one of them, and the bench is back to \(Design.maximumOpenSurfaces).")
-        }
         return id
     }
 
@@ -1076,25 +1076,15 @@ public final class AppState {
     /// things that are already open — so nothing is logged.
     public func focusSurface(_ id: SurfaceID) { bench.focus(id) }
 
-    /// What a dock chip does: bring this kind of surface forward if it is already open, otherwise
-    /// open it on the most useful thing the song has for it.
-    ///
-    /// The difference matters now that one surface fills the bench. Pressing a lit chip used to
-    /// reopen — which, if the binding had moved on, retired something to make room for a near-twin.
-    /// Now it is the switcher: the dock is how you move between surfaces.
-    /// Pressing the chip of the kind you are already in steps to the next one of that kind, so two
-    /// lanes open on different bars are both reachable from the dock rather than only the newest.
+    /// What a dock chip does: bring this kind of surface forward, as you left it, if it is open;
+    /// otherwise open it on the most useful thing the song has for it. The dock is how you move
+    /// between surfaces, and a surface's title is how you move between its parts.
     public func showSurface(_ kind: SurfaceKind) {
-        let ofKind = bench.items.filter { $0.kind == kind }
-        guard let newest = ofKind.last else {
+        guard let open = bench.items.first(where: { $0.kind == kind }) else {
             perform(Guidance.dockAction(for: kind, in: song))
             return
         }
-        if let active = bench.activeID, let index = ofKind.firstIndex(where: { $0.id == active }) {
-            focusSurface(ofKind[(index + 1) % ofKind.count].id)
-        } else {
-            focusSurface(newest.id)
-        }
+        focusSurface(open.id)
     }
 
     /// Renames an open surface in place, keeping its pin, its position on the bench and whatever you
@@ -1145,7 +1135,7 @@ public final class AppState {
     /// Keeps what the surface was showing — and stays when the song will not take it, because
     /// turning must not be how an edit is lost — then binds it to `bound`, retitles it, and lets go
     /// of its model so the next draw builds it from the new binding. Its place and pin stay.
-    private func turn(_ item: BenchItem, to bound: [VersionID], title: String) -> Bool {
+    func turn(_ item: BenchItem, to bound: [VersionID], title: String) -> Bool {
         keepSurfaceWork()
         if hasUnkeptChanges(item) {
             note(.session, "\(item.kind.rawValue) stayed on \(item.title)",

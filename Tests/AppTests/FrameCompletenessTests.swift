@@ -551,52 +551,27 @@ struct PlayFromSectionTests {
 @Suite("Completeness: the bench keeps unkept work") @MainActor
 struct BenchGuardTests {
 
-    private func item(_ title: String, at seconds: Double) -> BenchItem {
-        BenchItem(id: SurfaceID(), kind: .grid, title: title, openedAt: Date(timeIntervalSinceReferenceDate: seconds))
-    }
-
-    @Test("A full bench retires the oldest unpinned surface that has nothing to lose")
-    func retiresTheCleanOne() {
-        let bench = Bench()
-        let oldest = item("oldest, dirty", at: 0)
-        let middle = item("middle, clean", at: 1)
-        let newest = item("newest, dirty", at: 2)
-        for each in [oldest, middle, newest] { bench.open(each) }
-        let retired = bench.open(item("fourth", at: 3)) { $0.id == middle.id }
-        #expect(retired?.id == middle.id)
-        #expect(bench.items.count == Design.maximumOpenSurfaces)
-        #expect(bench.items.contains { $0.id == oldest.id }, "the oldest stays because it is holding work")
-    }
-
-    @Test("When every unpinned surface is holding work the bench goes one over rather than losing any")
-    func goesOneOver() {
-        let bench = Bench()
-        for index in 0..<3 { bench.open(item("dirty \(index)", at: Double(index))) }
-        let retired = bench.open(item("fourth", at: 3)) { _ in false }
-        #expect(retired == nil)
-        #expect(bench.items.count == Design.maximumOpenSurfaces + 1)
-    }
-
-    @Test("The frame asks the wiring, and says so in the rail when the bench goes over")
-    func frameAsks() {
+    @Test("Surfaces holding work stay open; one the song refuses a keep from is not turned away from it")
+    func keepsWork() throws {
         let (app, directory, _) = CompletenessFixture.app("bench-guard")
         defer { try? FileManager.default.removeItem(at: directory) }
         app.open(CompletenessFixture.song("Guarded"))
         var dirty: Set<SurfaceID> = []
         app.hasUnkeptChanges = { dirty.contains($0.id) }
-        let first = app.openSurface(.grid, title: "one")
-        let second = app.openSurface(.chords, title: "two")
-        let third = app.openSurface(.lyrics, title: "three")
-        dirty = [first, second, third]
-        #expect(app.closingWouldLoseWork(first))
-        let fourth = app.openSurface(.structure, title: "four")
-        #expect(app.bench.items.count == 4)
-        #expect(app.log.last?.text.hasPrefix("The bench is one over") == true)
-        #expect(!app.closingWouldLoseWork(fourth))
+        let grid = app.openSurface(.grid, title: "one")
+        let chords = app.openSurface(.chords, title: "two")
+        dirty = [grid, chords]
+        _ = app.openSurface(.lyrics, title: "three")
+        _ = app.openSurface(.structure, title: "four")
+        #expect(app.bench.items.count == 4, "nothing holding work is closed to make room — nothing is")
 
-        dirty = [first, third]
-        _ = app.openSurface(.pianoRoll, title: "five")
-        #expect(!app.bench.items.contains { $0.id == second }, "the one with nothing to lose went")
-        #expect(app.bench.items.contains { $0.id == first })
+        // Asked to turn to something else while its work is refused, the Grid stays and says so.
+        let groove = try #require(app.song?.versions.first { $0.type == .groove })
+        let same = app.openSurface(.grid, title: "elsewhere", bound: [groove.id])
+        #expect(same == grid)
+        #expect(app.bound(for: grid).isEmpty, "still on what it was on")
+        #expect(app.log.contains { $0.text == "Grid stayed on one" })
+        app.setPinned(true, for: chords)
+        #expect(app.bench.visible.map(\.id) == [grid, chords], "the one you are in, and the pin, in bench order")
     }
 }

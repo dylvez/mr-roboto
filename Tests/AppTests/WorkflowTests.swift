@@ -37,18 +37,15 @@ struct StartingFormTests {
     }
 }
 
-@Suite("Workflow: the dock grows with the song")
-struct DockGrowsTests {
+@Suite("Workflow: one bar of surfaces")
+struct DockTests {
 
-    @Test("the words, the Booth and the Mixer join the dock once there is a form that plays")
-    func laterSurfaces() {
-        var song = Song.new(title: "Sketch")
-        #expect(Guidance.laterSurfaces(for: song).isEmpty)
-        let groove = TransportFixture.grooveVersion()
-        try? song.append(groove)
-        #expect(Guidance.laterSurfaces(for: song).isEmpty, "a groove in no section is not yet a form")
-        song.sections[0].stitch = [Lane(part: groove.partID)]
-        #expect(Guidance.laterSurfaces(for: song) == [.lyrics, .booth, .mixer])
+    @Test("every surface you work in is on the dock from the start; Takes joins once there are takes")
+    func dockSurfaces() {
+        let song = Song.new(title: "Sketch")
+        #expect(Guidance.dockSurfaces(for: song) == [.importRecord, .chopLane, .grid, .chords, .pianoRoll, .sound,
+                                                     .structure, .lyrics, .booth, .mixer])
+        #expect(Guidance.dockSurfaces(for: nil).contains(.mixer))
         #expect(Guidance.dockShortcut(for: .grid) == "⌘3")
         #expect(Guidance.dockShortcut(for: .booth) == "⌘0")
     }
