@@ -3,10 +3,11 @@ import Foundation
 
 /// Beat This! converted to Core ML at a fixed 1500-frame input, in float16, run on the GPU.
 ///
-/// `Bench/python/convert_beat_this_coreml.py` converts `final0` from its PyTorch source, checks it
-/// picks the same beats and downbeats as PyTorch, and installs it compiled (`.mlmodelc`) beside
-/// `beat_this.onnx`. On an M5 it runs a chunk in about 75 ms against ONNX Runtime's 350 ms on the
-/// CPU. It takes only full chunks, which is every chunk of a piece longer than 30 s; shorter pieces
+/// `Bench/python/convert_beat_this_coreml.py` (run by `fetch_models.py`) converts `final0` from its
+/// PyTorch source, checks it picks the same beats and downbeats as PyTorch, and installs it compiled
+/// (`.mlmodelc`) beside `beat_this.onnx`. In the app on an M5 it runs a chunk in about 40 ms against
+/// ONNX Runtime's 450 ms on the CPU, with the same tempo and, on 31 tracks, beats and downbeats
+/// identical or a frame apart but for one in several hundred. It takes only full chunks, which is every chunk of a piece longer than 30 s; shorter pieces
 /// stay on `BeatThisModel`.
 ///
 /// Not the Neural Engine: its compiler does not finish this model (still compiling after two hours).

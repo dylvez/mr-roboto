@@ -350,7 +350,7 @@ struct BeatThisCoreMLTests {
     @Test func arrivalOnTheGPUMatchesONNXRuntime() async throws {
         let tag = "beat-this-coreml"
         guard let url = availableModelURL(tag), fileExists(arrivalMP3, tag, "track"),
-              fileExists(BeatThisTracker.defaultCoreMLModelURL, tag, "Core ML model (run `uv run Bench/python/convert_beat_this_coreml.py`)") else { return }
+              fileExists(BeatThisTracker.defaultCoreMLModelURL, tag, "Core ML model (run `uv run Bench/python/fetch_models.py`)") else { return }
         let onnx = BeatThisTracker(modelURL: url)
         let gpu = BeatThisTracker(modelURL: url, options: .installed)
         #expect(gpu.coreMLModel() != nil, "\(gpu.coreMLUnavailableReason ?? "")")

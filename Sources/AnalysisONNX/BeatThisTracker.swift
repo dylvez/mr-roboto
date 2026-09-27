@@ -12,9 +12,9 @@ import Synchronization
 /// `BeatThisPostprocessor` (the reference's `dbn=False` peak picking, then the tempo-consistency pass).
 ///
 /// The model files are not bundled. Each is loaded lazily, once, when a chunk first needs it:
-/// `modelURL` defaults to `~/Library/Application Support/MrRoboto/models/beat_this.onnx`, which
-/// `Bench/python/fetch_models.py` installs, and `defaultCoreMLModelURL` is `beat_this_1500.mlmodelc`
-/// beside it, which `Bench/python/convert_beat_this_coreml.py` installs. Without the Core ML model,
+/// `modelURL` defaults to `~/Library/Application Support/MrRoboto/models/beat_this.onnx`, and
+/// `defaultCoreMLModelURL` is `beat_this_1500.mlmodelc` beside it; `Bench/python/fetch_models.py`
+/// installs both (the second through `convert_beat_this_coreml.py`). Without the Core ML model,
 /// or if Core ML will not load or run it, every chunk runs on ONNX Runtime.
 public final class BeatThisTracker: BeatTracker, Sendable {
     public static let name = "beat-this"

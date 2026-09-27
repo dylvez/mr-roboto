@@ -1,8 +1,8 @@
-"""Install the ONNX models the Swift analysis providers load at runtime.
+"""Install the models the Swift analysis providers load at runtime.
 
 The app does not bundle model files. `AnalysisONNX.BeatThisTracker` looks for
-`beat_this.onnx` at a caller-provided URL or, by default, in
-`~/Library/Application Support/MrRoboto/models/`. This script puts it there.
+`beat_this.onnx` and `beat_this_1500.mlmodelc` at caller-provided URLs or, by default, in
+`~/Library/Application Support/MrRoboto/models/`. This script puts them there.
 
 beat_this.onnx
   Beat This! (Foscarin, Schlüter, Widmer, ISMIR 2024) `final0` checkpoint exported to ONNX
@@ -12,7 +12,13 @@ beat_this.onnx
   and checked against the bench's own torch `final0` on the Arrival track
   (`check_beat_this_onnx.py`: max |logit diff| 6e-5, identical beats and downbeats).
 
-Usage:  uv run fetch_models.py [--dest DIR] [--force]
+beat_this_1500.mlmodelc
+  The same checkpoint converted to Core ML for the GPU, built here rather than downloaded, by
+  `convert_beat_this_coreml.py`, which checks it against PyTorch on `--check-audio` before
+  installing it. Skipped when already installed (unless --force) or with --no-coreml. Without
+  it the app runs every chunk on ONNX Runtime, about 12x slower.
+
+Usage:  uv run fetch_models.py [--dest DIR] [--force] [--no-coreml] [--check-audio PATH]
 """
 import argparse, hashlib, shutil, sys, urllib.request
 from pathlib import Path
@@ -59,7 +65,9 @@ def ensure_bench_copy(name: str, spec: dict, force: bool) -> Path:
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dest", type=Path, default=DEFAULT_DEST, help=f"install directory (default: {DEFAULT_DEST})")
-    ap.add_argument("--force", action="store_true", help="re-download and overwrite even if hashes match")
+    ap.add_argument("--force", action="store_true", help="re-download and overwrite even if hashes match, and convert again")
+    ap.add_argument("--no-coreml", action="store_true", help="skip the Core ML conversion")
+    ap.add_argument("--check-audio", type=Path, help="a track longer than 30 s to check the conversion on")
     a = ap.parse_args()
     a.dest.mkdir(parents=True, exist_ok=True)
     for name, spec in MODELS.items():
@@ -70,6 +78,22 @@ def main():
             continue
         shutil.copyfile(src, dst)
         print(f"{dst}: installed ({spec['sha256'][:12]}…)")
+    if not a.no_coreml:
+        install_coreml(a.dest, a.force, a.check_audio)
+
+
+def install_coreml(dest: Path, force: bool, audio: Path | None):
+    """Builds and installs the Core ML model. A failure here leaves the ONNX install standing: the app
+    falls back to ONNX Runtime."""
+    import convert_beat_this_coreml as convert  # torch and coremltools: only when converting
+    dst = dest / convert.INSTALLED_NAME
+    if dst.exists() and not force:
+        print(f"{dst}: installed (--force to convert again)")
+        return
+    print(f"converting Beat This! to Core ML for {dst}")
+    if convert.install(audio or convert.DEFAULT_AUDIO, dest) != 0:
+        print(f"{dst}: not installed; the app will run Beat This! on ONNX Runtime. "
+              "Fix the above and run again, or pass --no-coreml.", file=sys.stderr)
 
 
 if __name__ == "__main__":

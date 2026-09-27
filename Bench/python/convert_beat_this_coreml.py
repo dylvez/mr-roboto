@@ -15,6 +15,8 @@ GPU, against PyTorch, peak-picked the reference's way; the beats and downbeats m
 
     uv run convert_beat_this_coreml.py [--audio PATH] [--out DIR]
 
+`fetch_models.py` runs this too (`install`), after installing `beat_this.onnx`.
+
 Installs `beat_this_1500.mlmodelc` (compiled, so the app does not compile it at launch) into
 `~/Library/Application Support/MrRoboto/models` by default, beside `beat_this.onnx`, which the app
 keeps for pieces shorter than one chunk and as the fallback.
@@ -36,6 +38,9 @@ from beat_this.preprocessing import LogMelSpect
 
 FRAMES = 1500
 MODELS = Path.home() / "Library/Application Support/MrRoboto/models"
+INSTALLED_NAME = "beat_this_1500.mlmodelc"
+# Any track longer than 30 s will do for the check; this is the one the bench's goldens use.
+DEFAULT_AUDIO = Path("/Users/dylanfulmer/Documents/projects/vessel/public/assets/audio/interiorseason/Arrival.mp3")
 
 
 # coremltools 9.0 casts a folded one-element shape with `int(array)`, which NumPy 2 refuses ("only
@@ -118,16 +123,15 @@ def full_chunks(spect: torch.Tensor) -> list[torch.Tensor]:
     return [spect[start:start + FRAMES][None] for start in starts]
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--audio", type=Path,
-                        default=Path("/Users/dylanfulmer/Documents/projects/vessel/public/assets/audio/interiorseason/Arrival.mp3"))
-    parser.add_argument("--out", type=Path, default=MODELS)
-    args = parser.parse_args()
-
-    spect = spectrogram(args.audio)
+def install(audio: Path = DEFAULT_AUDIO, out: Path = MODELS) -> int:
+    """Converts, checks against PyTorch on `audio`, and installs `INSTALLED_NAME` into `out`. 0 on success."""
+    if not audio.exists():
+        print(f"no track at {audio} to check the conversion against; pass --audio with any track longer than 30 s",
+              file=sys.stderr)
+        return 1
+    spect = spectrogram(audio)
     if spect.shape[0] < FRAMES:
-        print(f"{args.audio.name} is shorter than one chunk; pick a longer track", file=sys.stderr)
+        print(f"{audio.name} is shorter than one chunk; pick a longer track", file=sys.stderr)
         return 1
 
     model = Logits(load_model("final0", "cpu").eval())
@@ -157,25 +161,33 @@ def main() -> int:
             with torch.no_grad():
                 reference = [t.numpy()[0] for t in model(chunk)]
             start = time.perf_counter()
-            out = loaded.predict({"input_spectrogram": chunk.numpy().astype(np.float32)})
+            predicted = loaded.predict({"input_spectrogram": chunk.numpy().astype(np.float32)})
             elapsed += time.perf_counter() - start
             for name, ref in zip(("beat", "downbeat"), reference):
-                got = out[name].reshape(-1)
+                got = predicted[name].reshape(-1)
                 worst = max(worst, float(np.abs(got - ref).max()))
                 if not np.array_equal(peaks(got), peaks(ref)):
                     print(f"chunk {index}: the converted model's {name}s differ from PyTorch's "
                           f"({sorted(set(peaks(got)) ^ set(peaks(ref)))}); not installing it", file=sys.stderr)
                     return 1
-        print(f"{len(chunks)} chunks of {args.audio.name} on the GPU: {elapsed / len(chunks) * 1000:.1f} ms a chunk, "
+        print(f"{len(chunks)} chunks of {audio.name} on the GPU: {elapsed / len(chunks) * 1000:.1f} ms a chunk, "
               f"max |logit diff| {worst:.4f}, same beats and downbeats as PyTorch")
 
-        args.out.mkdir(parents=True, exist_ok=True)
-        destination = args.out / "beat_this_1500.mlmodelc"
+        out.mkdir(parents=True, exist_ok=True)
+        destination = out / INSTALLED_NAME
         if destination.exists():
             shutil.rmtree(destination)
         shutil.copytree(compiled, destination)
     print(f"installed {destination}")
     return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--audio", type=Path, default=DEFAULT_AUDIO, help="a track longer than 30 s to check the conversion on")
+    parser.add_argument("--out", type=Path, default=MODELS)
+    args = parser.parse_args()
+    return install(args.audio, args.out)
 
 
 if __name__ == "__main__":
