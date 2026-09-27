@@ -72,6 +72,11 @@ public struct AnalysisProviders: Sendable {
 
     // MARK: Resolution
 
+    /// The provider registered as `name` for `capability`, selected or not: a second opinion.
+    public func provider(named name: String, for capability: AnalysisCapability) -> (any AnalysisProvider)? {
+        factories[capability]?[name]?()
+    }
+
     /// The selected provider for `capability`.
     public func provider(for capability: AnalysisCapability) throws -> any AnalysisProvider {
         guard let name = selection[capability] else { throw AnalysisError.providerUnavailable(capability, name: nil) }

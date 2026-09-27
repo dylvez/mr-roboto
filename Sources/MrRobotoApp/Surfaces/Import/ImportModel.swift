@@ -360,6 +360,8 @@ public final class ImportModel {
     public var sections: [SectionRange] { draft?.analysis.sections ?? [] }
     public var instruments: [SongGraph.InstrumentActivity] { draft?.analysis.instruments ?? [] }
     public var loudness: Loudness? { draft?.analysis.loudness }
+    /// What the second beat tracker made of the grid, when one checked it.
+    public var beatCheck: BeatGridCheck? { draft?.analysis.beatCheck }
 
     /// Stems that would sound right now, honouring solo over mute the way a console does.
     public var audibleStems: [StemName] {
@@ -1251,10 +1253,14 @@ public enum ImportAnalysisMapping {
 
         let names = Set(report.provenance.values).sorted()
         let analyzer = names.isEmpty ? nil : names.joined(separator: "+")
+        let check = report.beatCheck.map {
+            BeatGridCheck(checker: $0.checker, agreement: $0.agreement, primaryBPM: $0.primaryBPM,
+                          checkerBPM: $0.checkerBPM, usedChecker: $0.usedChecker)
+        }
 
         return MusicAnalysis(duration: duration, keys: keys, beats: beats, bars: bars, tempo: tempo,
                              sections: sections, instruments: instruments, loudness: loudness,
-                             analyzer: analyzer)
+                             analyzer: analyzer, beatCheck: check)
     }
 }
 

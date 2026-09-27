@@ -268,19 +268,71 @@ private struct ReadingsRow: View {
             Reading("Bars", model.barCount == 0 ? "—" : "\(model.barCount)")
             Reading("Form", model.sections.isEmpty ? "—" : "\(model.sections.count)")
             Reading("Loudness", model.loudness.map { String(format: "%.1f LUFS", $0.integrated) } ?? "—")
+            if model.barCount > 0 {
+                let beats = BeatCheckReading(model.beatCheck)
+                Reading("Beats", beats.value, warns: beats.warns, help: beats.help)
+            }
             Spacer()
         }
         .padding(.vertical, 4)
     }
 }
 
+/// The Beats reading: whether a second tracker checked the grid, and what it found.
+struct BeatCheckReading {
+    let value: String
+    let warns: Bool
+    let help: String
+
+    init(_ check: BeatGridCheck?) {
+        guard let check else {
+            value = "1 tracker"
+            warns = false
+            help = "One beat tracker read this record. Beat This!, the second, is not installed or found no beats; `m0 doctor` says which."
+            return
+        }
+        let checker = check.checker == "beat-this" ? "Beat This!" : check.checker
+        if check.usedChecker {
+            value = checker
+            warns = false
+            help = "Music Understanding found no beat grid, so \(checker) supplied it."
+            return
+        }
+        let percent = Int(((check.agreement ?? 0) * 100).rounded())
+        value = "\(percent)% agree"
+        let tempos = [check.primaryBPM, check.checkerBPM].compactMap { $0 }
+        let heard = tempos.count == 2
+            ? String(format: " Music Understanding hears %.0f bpm, %@ %.0f.", tempos[0], checker, tempos[1]) : ""
+        let octave = check.isOctaveApart ? " One hears it in double time." : ""
+        if (check.agreement ?? 0) >= 0.8 {
+            warns = false
+            help = "\(percent)% of beats land within 70 ms of \(checker)'s, the second beat tracker.\(heard)"
+        } else {
+            warns = true
+            help = "The two beat trackers disagree: \(percent)% of beats within 70 ms.\(heard)\(octave) Check the bar lines before chopping."
+        }
+    }
+}
+
+extension BeatGridCheck {
+    /// Whether one tracker hears the song at twice the other's tempo, within 4%.
+    var isOctaveApart: Bool {
+        guard let a = primaryBPM, let b = checkerBPM, a > 0, b > 0 else { return false }
+        return abs(max(a, b) / min(a, b) - 2) < 0.08
+    }
+}
+
 private struct Reading: View {
     let label: String
     let value: String
+    var warns = false
+    var help: String?
 
-    init(_ label: String, _ value: String) {
+    init(_ label: String, _ value: String, warns: Bool = false, help: String? = nil) {
         self.label = label
         self.value = value
+        self.warns = warns
+        self.help = help
     }
 
     var body: some View {
@@ -291,8 +343,9 @@ private struct Reading: View {
                 .foregroundStyle(Design.Palette.inkTertiary)
             Text(value)
                 .font(Design.Typography.numeric(13))
-                .foregroundStyle(Design.Palette.ink)
+                .foregroundStyle(warns ? Design.Palette.warn : Design.Palette.ink)
         }
+        .help(help ?? "")
     }
 }
 

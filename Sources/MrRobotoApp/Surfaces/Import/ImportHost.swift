@@ -1,5 +1,6 @@
 import AVFAudio
 import Analysis
+import AnalysisONNX
 import Foundation
 import SongGraph
 
@@ -184,9 +185,24 @@ public struct LiveImportHost: ImportHosting {
     /// The capabilities are asked for one at a time rather than through `AnalysisProviders.analyze`
     /// so the surface can say which one is running. `MusicUnderstandingProvider` caches per file and
     /// its first call runs the whole pass, so this is still one ~20 s analysis, not five.
+    /// The provider name the second beat tracker is registered under.
+    public static let beatChecker = BeatThisTracker.name
+
     public func analyze(_ url: URL, progress: @escaping @Sendable (ImportStep) -> Void) async throws -> AnalysisReport {
         var report = AnalysisReport(sourcePath: url.path)
         let start = ContinuousClock.now
+
+        // The second beat tracker listens alongside Music Understanding's pass, which it is much
+        // shorter than, so checking the grid adds no wait. It is anything registered for beats as
+        // `beatChecker` other than the selected tracker; a missing model is a check not made.
+        let checker = providers.selection[.beats] == Self.beatChecker ? nil
+            : providers.provider(named: Self.beatChecker, for: .beats) as? any BeatTracker
+        let checking = checker.map { tracker in
+            Task.detached(priority: .utility) { () -> Result<BeatTrackingResult, Error> in
+                do { return .success(try await tracker.trackBeats(url: url)) } catch { return .failure(error) }
+            }
+        }
+        defer { checking?.cancel() }
 
         // No fraction for the first call: that is where the one pass happens and nothing reports
         // from inside it.
@@ -226,6 +242,20 @@ public struct LiveImportHost: ImportHosting {
             } catch {
                 try Task.checkCancellation()
                 report.notes.append("no \(label) found: \(error)")
+            }
+            if capability == .beats, let checker, let checking {
+                switch await checking.value {
+                case .success(let checked):
+                    let (beats, check) = BeatCheck.reconcile(primary: report.beats, checker: checker.providerName, checked: checked)
+                    report.beats = beats
+                    report.beatCheck = check
+                    if check?.usedChecker == true {
+                        provider = checker
+                        report.notes.append("\(checker.providerName) supplied the beat grid: the selected tracker found none")
+                    }
+                case .failure(let error):
+                    report.notes.append("no second opinion on the beats: \(error)")
+                }
             }
             if let provider {
                 report.capabilities.insert(capability)

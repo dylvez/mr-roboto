@@ -27,6 +27,8 @@ public struct AnalysisReport: Hashable, Codable, Sendable {
     public var wallTime: Double
     /// Human-readable caveats: mapping fallbacks, dropped values, anything the numbers do not show.
     public var notes: [String]
+    /// A second beat tracker's check of `beats`, when one ran.
+    public var beatCheck: BeatCheck?
 
     public init(sourcePath: String, duration: Double? = nil, key: KeyEstimate? = nil, beats: BeatTrackingResult? = nil,
                 structure: StructureAnalysis? = nil, loudness: LoudnessAnalysis? = nil, instruments: InstrumentActivity? = nil,
@@ -66,6 +68,7 @@ public struct AnalysisReport: Hashable, Codable, Sendable {
         if merged.loudness == nil { merged.loudness = other.loudness }
         if merged.instruments == nil { merged.instruments = other.instruments }
         if merged.pace == nil { merged.pace = other.pace }
+        if merged.beatCheck == nil { merged.beatCheck = other.beatCheck }
         merged.capabilities.formUnion(other.capabilities)
         merged.provenance.merge(other.provenance) { mine, _ in mine }
         merged.wallTime += other.wallTime

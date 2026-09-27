@@ -1,5 +1,6 @@
 import Analysis
 import AnalysisMLX
+import AnalysisONNX
 
 // The analysis the app runs on, in one place.
 //
@@ -14,6 +15,9 @@ extension AnalysisProviders {
     public static func app() -> AnalysisProviders {
         var registry = AnalysisProviders.makeDefault()
         registry.register(AppSeparation.demucs, for: [.stemSeparation])
+        // Beat This!, beside Music Understanding rather than instead of it: the import runs it as a
+        // second opinion on the beat grid, and as the grid when Music Understanding finds none.
+        registry.registerONNXProviders()
         return registry
     }
 }

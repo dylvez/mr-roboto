@@ -885,10 +885,12 @@ public struct MusicAnalysis: Hashable, Codable, Sendable {
     public var loudness: Loudness?
     /// The analyzer that produced this, e.g. "MusicUnderstanding 1.0" or "BeatThis 0.3".
     public var analyzer: String?
+    /// A second beat tracker's check of `beats`. Nil in analyses made before there was one.
+    public var beatCheck: BeatGridCheck?
 
     public init(duration: Double, keys: [KeyRange] = [], beats: [BeatMarker] = [], bars: [TimeRange] = [],
                 tempo: [TempoRange] = [], sections: [SectionRange] = [], instruments: [InstrumentActivity] = [],
-                loudness: Loudness? = nil, analyzer: String? = nil) {
+                loudness: Loudness? = nil, analyzer: String? = nil, beatCheck: BeatGridCheck? = nil) {
         self.duration = duration
         self.keys = keys
         self.beats = beats
@@ -898,6 +900,7 @@ public struct MusicAnalysis: Hashable, Codable, Sendable {
         self.instruments = instruments
         self.loudness = loudness
         self.analyzer = analyzer
+        self.beatCheck = beatCheck
     }
 
     /// The key holding for the longest time, if any.
@@ -913,6 +916,28 @@ public struct MusicAnalysis: Hashable, Codable, Sendable {
 
     /// Downbeat times.
     public var downbeats: [Double] { beats.filter(\.isDownbeat).map(\.time) }
+}
+
+/// What a second beat tracker made of an analysis's beat grid, kept with it: whether the two
+/// agreed, or whether the grid is the second one's because the first found none.
+public struct BeatGridCheck: Hashable, Codable, Sendable {
+    /// The tracker that checked the grid, or stood in for it.
+    public var checker: String
+    /// The share of beats the two trackers placed within 70 ms of each other (an F-measure, 0…1).
+    /// Nil when the checker stood in.
+    public var agreement: Double?
+    public var primaryBPM: Double?
+    public var checkerBPM: Double?
+    /// Whether the grid is the checker's.
+    public var usedChecker: Bool
+
+    public init(checker: String, agreement: Double?, primaryBPM: Double?, checkerBPM: Double?, usedChecker: Bool) {
+        self.checker = checker
+        self.agreement = agreement
+        self.primaryBPM = primaryBPM
+        self.checkerBPM = checkerBPM
+        self.usedChecker = usedChecker
+    }
 }
 
 // MARK: - Part kind
