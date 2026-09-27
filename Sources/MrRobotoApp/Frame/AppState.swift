@@ -468,6 +468,10 @@ public final class AppState {
             SurfaceWiring.shared.finishRunningWork(on: state, keeping: keeping)
         }
         state.discardSurfaceModel = { SurfaceWiring.shared.discardModel(for: $0) }
+        state.startFreshPart = { [weak state] item, type in
+            guard let state, type == .melody else { return }
+            SurfaceWiring.shared.pianoRollModel(for: item, app: state).startFreshTune()
+        }
         state.showMasterTab = { [weak state] id in
             guard let state, let item = state.bench.items.first(where: { $0.id == id }) else { return }
             SurfaceWiring.shared.mixerModel(for: item, app: state).tab = .master
@@ -1105,6 +1109,55 @@ public final class AppState {
     public func rebindSurface(_ id: SurfaceID, to versions: [VersionID]) {
         guard bench.items.contains(where: { $0.id == id }) else { return }
         bindings[id] = versions
+    }
+
+    /// Turns an open surface to another part of the song, in place: the surface's own switcher.
+    ///
+    /// What it was showing is kept first, and when the song will not take it the surface stays
+    /// where it is — switching must not be how an edit is lost. Then the surface is bound to what
+    /// the part's ledger row would open it on, retitled, and its model let go of so the next draw
+    /// builds it from the new binding. Its place on the bench and its pin stay.
+    @discardableResult
+    public func switchSurface(_ id: SurfaceID, to choice: PartChoice) -> Bool {
+        guard let item = bench.items.first(where: { $0.id == id }), item.kind.showsParts(of: choice.surface),
+              turn(item, to: choice.bound, title: choice.title) else { return false }
+        select(choice.version)
+        return true
+    }
+
+    /// Turns an open surface to a part of its kind that does not exist yet — "New groove", "New
+    /// melody" — by opening it on nothing, which is how each of these surfaces starts one. Nothing
+    /// is added to the song until something is written: an empty grid is not a groove.
+    @discardableResult
+    public func startNewPart(_ fresh: FreshPart, on id: SurfaceID) -> Bool {
+        guard let item = bench.items.first(where: { $0.id == id }), item.kind.freshParts.contains(fresh),
+              turn(item, to: [], title: fresh.title) else { return false }
+        startFreshPart(item, fresh.type)
+        select(nil)
+        note(.you, "\(fresh.title) in \(item.kind.rawValue)")
+        return true
+    }
+
+    /// What a new part of `type` needs of its surface beyond an empty binding: a Piano roll's
+    /// melody mode. The wiring installs it.
+    @ObservationIgnored var startFreshPart: (BenchItem, PartType) -> Void = { _, _ in }
+
+    /// Keeps what the surface was showing — and stays when the song will not take it, because
+    /// turning must not be how an edit is lost — then binds it to `bound`, retitles it, and lets go
+    /// of its model so the next draw builds it from the new binding. Its place and pin stay.
+    private func turn(_ item: BenchItem, to bound: [VersionID], title: String) -> Bool {
+        keepSurfaceWork()
+        if hasUnkeptChanges(item) {
+            note(.session, "\(item.kind.rawValue) stayed on \(item.title)",
+                 detail: "The song would not take its last edits. Keep or undo them, then switch.")
+            return false
+        }
+        bindings[item.id] = bound
+        surfaceLevers[item.id] = nil
+        answers[item.id] = nil
+        bench.rename(item.id, to: title)
+        discardSurfaceModel(item.id)
+        return true
     }
 
     /// A surface kept a version, so its binding follows it: the kept version replaces the one of

@@ -56,7 +56,7 @@ extension SynthMachine {
     )
 
     /// A copy of `base` that says it is `machine`'s, with its own seed, changed by `change`.
-    private static func derived(_ base: SynthVoiceSpec, _ machine: String, seed: UInt64,
+    static func derived(_ base: SynthVoiceSpec, _ machine: String, seed: UInt64,
                                 _ change: (inout SynthVoiceSpec) -> Void) -> SynthVoiceSpec {
         var spec = base
         spec.machine = machine

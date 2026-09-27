@@ -136,8 +136,16 @@ public struct GridSurfaceView: View {
                     Text("Chop · \(chop.name)").tag(Self.chopTag)
                     Divider()
                 }
-                ForEach(model.machines) { machine in
-                    Text(machine.name).tag(machine.id)
+                // Seventeen in one list was a scroll; by kind, a look.
+                ForEach(SynthMachine.Family.allCases, id: \.self) { family in
+                    let machines = model.machines.filter { $0.family == family }
+                    if !machines.isEmpty {
+                        Section(family.title) {
+                            ForEach(machines) { machine in
+                                Text(machine.name).tag(machine.id)
+                            }
+                        }
+                    }
                 }
             }
             .labelsHidden()

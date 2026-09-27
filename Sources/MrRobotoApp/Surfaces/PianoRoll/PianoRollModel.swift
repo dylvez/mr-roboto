@@ -251,6 +251,19 @@ public final class PianoRollModel {
         autoKeep.schedule { [weak self] in self?.keepNow() }
     }
 
+    /// A new tune from nothing: melody mode on an empty grid. For a roll opened on no part — the
+    /// surface's "New melody" — where switching modes would carry the drafted bass line up an
+    /// octave as the tune's first notes. The draft is parked for Bass mode, and nothing is kept
+    /// until a note is drawn.
+    public func startFreshTune() {
+        guard base == nil, versions.isEmpty, mode == .bass else { return }
+        parked[.bass] = (notes, lengthInBars)
+        mode = .melody
+        notes = []
+        selectedNote = nil
+        refreshReadings()
+    }
+
     /// Accepts the line the writer drafted, untouched, as a part of the song.
     public func useThisLine() {
         touchedModes.insert(mode)

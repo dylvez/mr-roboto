@@ -205,10 +205,9 @@ struct SurfaceHost: View {
                 // One line, always: at the bench's narrowest it broke mid-word, "GR / ID".
                 .lineLimit(1)
                 .fixedSize()
-            Text(SurfaceWiring.shared.liveTitle(for: item) ?? item.title)
-                .font(Design.Typography.ui(16, weight: .medium))
-                .foregroundStyle(Design.Palette.ink)
-                .lineLimit(1)
+            // The title is also the way to the song's other parts of this kind.
+            PartSwitcher(item: item, app: app, title: SurfaceWiring.shared.liveTitle(for: item) ?? item.title,
+                         working: boundPart)
                 .layoutPriority(1)
             // Where the bound part came from. It gives way before the title does.
             if crumbs.count > 1 {
