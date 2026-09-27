@@ -211,7 +211,7 @@ public final class AuditionService {
     public func bounce(_ hits: [VoiceSampler.Hit], machine: SynthMachine, seconds: Double,
                        sampleRate: Double? = nil, channels: Int = 2) async throws -> Bounce {
         let rate = sampleRate ?? engine?.format.sampleRate ?? 48_000
-        let folder = kitsDirectory.appendingPathComponent(machine.id, isDirectory: true)
+        let folder = kitsDirectory.appendingPathComponent(SynthesizedKit.folderName(for: machine), isDirectory: true)
         let kit: LoadedKit
         if let existing = try? KitStore.load(from: folder) {
             kit = existing
@@ -556,21 +556,40 @@ public final class AuditionService {
 
     /// The kit for a drum machine, built into the cache on first use.
     private func drumKit(_ machine: SynthMachine, on engine: Engine) throws -> LoadedKit {
-        let folder = kitsDirectory.appendingPathComponent(machine.id, isDirectory: true)
+        let name = SynthesizedKit.folderName(for: machine)
+        let folder = kitsDirectory.appendingPathComponent(name, isDirectory: true)
         if let existing = try? KitStore.load(from: folder) { return existing }
-        return try SynthesizedKit.build(machine, in: folder, sampleRate: engine.format.sampleRate)
+        let built = try SynthesizedKit.build(machine, in: folder, sampleRate: engine.format.sampleRate)
+        clearStaleKits(prefix: machine.id, keeping: name)
+        return built
     }
 
     private func bassKit(_ voice: BassVoiceSpec, on engine: Engine) throws -> LoadedKit {
-        let folder = kitsDirectory.appendingPathComponent(SynthesizedBass.folderName(for: voice), isDirectory: true)
+        let name = SynthesizedBass.folderName(for: voice)
+        let folder = kitsDirectory.appendingPathComponent(name, isDirectory: true)
         if let existing = try? KitStore.load(from: folder) { return existing }
-        return try SynthesizedBass.build(voice, in: folder, sampleRate: engine.format.sampleRate)
+        let built = try SynthesizedBass.build(voice, in: folder, sampleRate: engine.format.sampleRate)
+        clearStaleKits(prefix: "bass-\(voice.id)", keeping: name)
+        return built
     }
 
     private func instrumentKit(_ spec: InstrumentVoiceSpec, on engine: Engine) throws -> LoadedKit {
-        let folder = kitsDirectory.appendingPathComponent(SynthesizedInstrument.folderName(for: spec), isDirectory: true)
+        // An imported instrument is its own kit, in the library; nothing is rendered or cached.
+        if spec.engine == .sampled { return try SynthesizedInstrument.build(spec, in: kitsDirectory) }
+        let name = SynthesizedInstrument.folderName(for: spec)
+        let folder = kitsDirectory.appendingPathComponent(name, isDirectory: true)
         if let existing = try? KitStore.load(from: folder) { return existing }
-        return try SynthesizedInstrument.build(spec, in: folder, sampleRate: engine.format.sampleRate)
+        let built = try SynthesizedInstrument.build(spec, in: folder, sampleRate: engine.format.sampleRate)
+        clearStaleKits(prefix: "instrument-\(spec.id)", keeping: name)
+        return built
+    }
+
+    /// The renders of a voice from before its settings changed: nothing loads them again.
+    private func clearStaleKits(prefix: String, keeping current: String) {
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: kitsDirectory.path)) ?? []
+        for name in names where KitFingerprint.isStale(name, prefix: prefix, current: current) {
+            try? FileManager.default.removeItem(at: kitsDirectory.appendingPathComponent(name, isDirectory: true))
+        }
     }
 
     /// Lets go of every lane sampler whose part is not in `parts`, so a song closed or a form

@@ -1,5 +1,6 @@
 import AudioEngine
 import Foundation
+import Instrument
 import MusicTheory
 import Observation
 import SongGraph
@@ -217,6 +218,10 @@ public final class AppState {
 
     /// The store the library was read from, and that `save()` writes back to. Nil in tests and previews.
     @ObservationIgnored public let store: LibraryStore?
+
+    /// The instruments imported into this library, as the pickers offer them. The registry
+    /// `InstrumentVoiceSpec.preset(id:)` reads is process-wide; this is the observable copy.
+    public internal(set) var importedInstruments: [InstrumentVoiceSpec] = []
 
     // MARK: Song
 
@@ -525,6 +530,7 @@ public final class AppState {
             libraryStatus = .failed(directory, error.localizedDescription)
             return
         }
+        loadImportedInstruments()
         guard store.exists else {
             library = Library()
             libraryStatus = .empty(directory)

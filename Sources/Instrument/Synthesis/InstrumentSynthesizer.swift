@@ -10,10 +10,10 @@ import Foundation
 /// cached that aliasing would be baked in permanently rather than merely sounding bad live.
 public enum InstrumentSynthesizer {
 
-    /// One note, rendered.
+    /// One note, rendered: the preset's full length, or `seconds` of it (still faded out at the end).
     public static func render(_ spec: InstrumentVoiceSpec, midi: Int, velocity: Int,
-                              sampleRate: Double = 48_000) -> [Float] {
-        let frames = max(1, Int(spec.durationSeconds * sampleRate))
+                              sampleRate: Double = 48_000, seconds: Double? = nil) -> [Float] {
+        let frames = max(1, Int((seconds ?? spec.durationSeconds) * sampleRate))
         let frequency = frequency(ofMIDI: midi)
         let loudness = max(0, min(1, Double(velocity) / 127))
         var samples: [Float]
@@ -24,8 +24,21 @@ public enum InstrumentSynthesizer {
         case .fm:
             samples = frequencyModulated(spec, frequency: frequency, loudness: loudness,
                                          frames: frames, sampleRate: sampleRate)
+        case .pluckedString:
+            samples = plucked(spec, frequency: frequency, midi: midi, loudness: loudness,
+                              frames: frames, sampleRate: sampleRate)
+        case .sampled:
+            // Its sound is its recordings, which are played from its kit, not rendered here.
+            return [Float](repeating: 0, count: frames)
         }
         applyAmplitude(&samples, spec.amplitude, sampleRate: sampleRate)
+        if let tremolo = spec.tremolo, tremolo.depth > 0 {
+            for index in samples.indices {
+                let seconds = Double(index) / sampleRate
+                let dip = tremolo.depth * fadeIn(tremolo, at: seconds) * (0.5 - 0.5 * cos(2 * .pi * tremolo.rateHz * seconds))
+                samples[index] *= Float(1 - dip)
+            }
+        }
         if spec.drive > 0 {
             for index in samples.indices {
                 samples[index] = Float(SynthShaper.saturate(Double(samples[index]), drive: spec.drive))
@@ -40,6 +53,19 @@ public enum InstrumentSynthesizer {
 
     public static func frequency(ofMIDI midi: Int) -> Double { 440 * pow(2, (Double(midi) - 69) / 12) }
 
+    /// How far a wobble has faded in, 0…1, rising over its delay.
+    static func fadeIn(_ modulation: InstrumentVoiceSpec.Modulation, at seconds: Double) -> Double {
+        modulation.delaySeconds <= 0 ? 1 : min(1, seconds / modulation.delaySeconds)
+    }
+
+    /// The pitch multiplier vibrato gives at `seconds`: 1 with none. Cents are small, so the
+    /// exponential is its first-order term — a sample's cost is one sine, not a `pow`.
+    static func vibrato(_ spec: InstrumentVoiceSpec, at seconds: Double) -> Double {
+        guard let vibrato = spec.vibrato, vibrato.depth != 0 else { return 1 }
+        let swing = sin(2 * .pi * vibrato.rateHz * seconds) * fadeIn(vibrato, at: seconds)
+        return 1 + (log(2) / 1_200) * vibrato.depth * swing
+    }
+
     // MARK: Subtractive
 
     private static func subtractive(_ spec: InstrumentVoiceSpec, frequency: Double, midi: Int,
@@ -52,19 +78,21 @@ public enum InstrumentSynthesizer {
         let total = max(0.0001, spec.oscillators.reduce(0) { $0 + $1.level } + spec.subLevel + spec.noiseLevel)
         // Each oscillator's pitch is fixed for the note: worked out once, not at every sample.
         let pitches = spec.oscillators.map { frequency * pow(2, Double($0.octave) + $0.cents / 1_200) }
+        let wobbles = spec.vibrato != nil
         for index in 0..<frames {
             var value = 0.0
+            let bend = wobbles ? vibrato(spec, at: Double(index) / sampleRate) : 1
             for (which, oscillator) in spec.oscillators.enumerated() {
                 let hz = pitches[which]
                 value += oscillator.level * waveform(oscillator.waveform, phase: phases[which],
                                                      frequency: hz, sampleRate: sampleRate,
                                                      pulseWidth: oscillator.pulseWidth)
-                phases[which] += hz / sampleRate
+                phases[which] += hz * bend / sampleRate
                 if phases[which] >= 1 { phases[which] -= 1 }
             }
             if spec.subLevel > 0 {
                 value += spec.subLevel * sin(2 * .pi * subPhase)
-                subPhase += (frequency / 2) / sampleRate
+                subPhase += (frequency / 2) * bend / sampleRate
                 if subPhase >= 1 { subPhase -= 1 }
             }
             if spec.noiseLevel > 0 { value += spec.noiseLevel * seeded.bipolar() }
@@ -177,18 +205,22 @@ public enum InstrumentSynthesizer {
         // Velocity drives the modulators, not the carriers: harder is brighter, which is the
         // whole reason these presets ask for two layers.
         let index = 0.35 + 0.65 * loudness
+        var bend = 1.0
 
         func step(_ which: Int, modulation: Double, seconds: Double) -> Double {
             let op = operators[which]
-            let hz = op.fixedHz ?? frequency * op.ratio
+            // A fixed-pitch operator is a clank; vibrato bends the note, not the clank.
+            let hz = op.fixedHz ?? frequency * op.ratio * bend
             let value = sin(2 * .pi * phases[which] + modulation)
             phases[which] += hz / sampleRate
             if phases[which] >= 1 { phases[which] -= 1 }
             return value * op.level * operatorEnvelope(op, at: seconds)
         }
 
+        let wobbles = spec.vibrato != nil
         for frame in 0..<frames {
             let seconds = Double(frame) / sampleRate
+            if wobbles { bend = vibrato(spec, at: seconds) }
             var out = 0.0
             switch spec.algorithm {
             case .stack:
@@ -212,6 +244,63 @@ public enum InstrumentSynthesizer {
             }
             samples[frame] = Float(out * 0.5)
         }
+        return samples
+    }
+
+    // MARK: Plucked string
+
+    /// Karplus–Strong across the keyboard: a one-period burst of low-passed noise circulates in a
+    /// delay line with a two-point average, losing a little each trip. The average adds half a
+    /// sample of delay, so the line is `period − 0.5` long with its fraction interpolated, which
+    /// keeps the pitch within a cent. The loop gain comes from the ring time wanted at this note:
+    /// the loop runs `frequency × T60` times in that many seconds, so `g = 10^(−3 / (f · T60))`.
+    ///
+    /// Where the string is plucked is a comb on the burst: subtracting the burst from itself
+    /// `pickPosition` of a period later notches the harmonics with a node there, which is what makes
+    /// a pluck by the bridge thin and one over the soundhole round.
+    private static func plucked(_ spec: InstrumentVoiceSpec, frequency: Double, midi: Int, loudness: Double,
+                                frames: Int, sampleRate: Double) -> [Float] {
+        var samples = [Float](repeating: 0, count: frames)
+        guard let pluck = spec.pluck, frequency > 0 else { return samples }
+        let period = sampleRate / frequency
+        let lineLength = period - 0.5
+        let n = Int(lineLength.rounded(.down))
+        let fraction = lineLength - Double(n)
+        guard n >= 2 else { return samples }
+        let ringing = pluck.decaySeconds * pow(261.63 / frequency, pluck.decayKeyTrack)
+        let g = pow(10, -3 / (frequency * max(0.05, ringing)))
+
+        var random = SeededRandom(seed: UInt64(truncatingIfNeeded: midi) &* 0x9E37_79B9_7F4A_7C15 &+ 0x5EED)
+        let bright = min(sampleRate * 0.45, pluck.brightnessHz * (0.4 + 0.6 * loudness))
+        var shaper = Biquad.lowPass(frequency: max(40, bright), sampleRate: sampleRate)
+        var line = [Double](repeating: 0, count: n + 2)
+        for i in line.indices { line[i] = shaper.process(random.bipolar()) }
+        let pick = Int((max(0, min(0.5, pluck.pickPosition)) * period).rounded())
+        if pick > 0 {
+            let burst = line
+            for i in line.indices { line[i] = burst[i] - burst[(i - pick + burst.count) % burst.count] }
+        }
+        let mean = line.reduce(0, +) / Double(line.count)
+        let peak = max(1e-9, line.map { abs($0 - mean) }.max() ?? 1)
+        for i in line.indices { line[i] = (line[i] - mean) / peak }
+
+        var write = 0
+        let count = line.count
+        for i in 0..<frames {
+            let readA = (write - n + count) % count
+            let readB = (readA - 1 + count) % count
+            let delayed = line[readA] * (1 - fraction) + line[readB] * fraction
+            let previous = line[(readA - 1 + count) % count] * (1 - fraction) + line[(readB - 1 + count) % count] * fraction
+            let y = g * 0.5 * (delayed + previous)
+            samples[i] = Float(y)
+            line[write] = y
+            write = (write + 1) % count
+        }
+        // The spec's own filter, when it has one: a darker body than the pluck alone gives. A
+        // resonant one can lift the attack past full scale, so the note is brought back under it.
+        if spec.filterHz < 12_000 { applyFilter(&samples, spec, midi: midi, loudness: loudness, sampleRate: sampleRate) }
+        let loudest = samples.reduce(Float(0)) { max($0, abs($1)) }
+        if loudest > 0.95 { let scale = 0.95 / loudest; for i in samples.indices { samples[i] *= scale } }
         return samples
     }
 
@@ -253,11 +342,19 @@ public enum InstrumentSynthesizer {
 public enum SynthesizedInstrument {
     /// C1 to C7 every four semitones.
     public static let roots: [Int] = Array(stride(from: 24, through: 96, by: 4))
-    public static let headroomDBFS: Double = -3
 
-    public static func folderName(for spec: InstrumentVoiceSpec) -> String { "instrument-\(spec.id)" }
+    /// The kit's folder: the preset's id and a fingerprint of its settings, so a preset changed in
+    /// a later build is rendered again rather than loaded stale from the cache.
+    public static func folderName(for spec: InstrumentVoiceSpec) -> String {
+        "instrument-\(spec.id)-\(KitFingerprint.of(spec, salt: KitLevel.version))"
+    }
 
     public static func build(_ spec: InstrumentVoiceSpec, in folder: URL, sampleRate: Double = 48_000) throws -> LoadedKit {
+        if spec.engine == .sampled {
+            // An imported instrument already is a kit; there is nothing to render.
+            guard let kit = spec.sampledKit else { throw KitError.notADirectory(path: spec.id) }
+            return try KitStore.load(from: URL(fileURLWithPath: kit, isDirectory: true))
+        }
         let samplesFolder = folder.appendingPathComponent("samples", isDirectory: true)
         do {
             try FileManager.default.createDirectory(at: samplesFolder, withIntermediateDirectories: true)
@@ -267,15 +364,19 @@ public enum SynthesizedInstrument {
 
         let layers = spec.velocityLayers
         var rendered: [(root: Int, layer: Int, velocity: Int, samples: [Float])] = []
-        var peak: Float = 0
+        var loudest: [Int: [Float]] = [:]
+        var peaks: [Int: Float] = [:]
         for root in roots {
             for (layer, velocity) in layers.enumerated() {
                 let samples = InstrumentSynthesizer.render(spec, midi: root, velocity: velocity, sampleRate: sampleRate)
-                peak = Swift.max(peak, SynthMeasure.peak(samples))
+                peaks[root] = Swift.max(peaks[root] ?? 0, SynthMeasure.peak(samples))
                 rendered.append((root, layer, velocity, samples))
+                // The top layer is the one a root is levelled by; the softer ones keep their
+                // distance under it, which is what velocity is.
+                if layer == layers.count - 1 { loudest[root] = samples }
             }
         }
-        let scale = peak > 0 ? Float(pow(10, headroomDBFS / 20)) / peak : 1
+        let gains = KitLevel.gains(reference: loudest, peaks: peaks, targetDBFS: KitLevel.instrumentDBFS, sampleRate: sampleRate)
 
         var zones: [Zone] = []
         for entry in rendered {
@@ -287,6 +388,7 @@ public enum SynthesizedInstrument {
             let bandHigh = entry.layer == layers.count - 1 ? 127 : 127 * (entry.layer + 1) / layers.count
             let relativePath = "samples/\(spec.id)_\(entry.root)_v\(entry.velocity).wav"
             var samples = entry.samples
+            let scale = gains[entry.root] ?? 1
             for index in samples.indices { samples[index] *= scale }
             try SynthesizedKit.writeWAV(samples, to: KitPath.resolve(relativePath, in: folder), sampleRate: sampleRate)
             zones.append(Zone(

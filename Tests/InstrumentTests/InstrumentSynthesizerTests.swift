@@ -10,15 +10,17 @@ import Testing
 struct InstrumentSynthesizerTests {
     private static let rate = 48_000.0
 
-    private func render(_ spec: InstrumentVoiceSpec, midi: Int, velocity: Int = 110) -> [Float] {
-        InstrumentSynthesizer.render(spec, midi: midi, velocity: velocity, sampleRate: Self.rate)
+    /// The preset's full length, or `seconds` of it: the per-preset checks look at the first
+    /// second, and fifty presets rendered at five seconds each made the suite crawl.
+    private func render(_ spec: InstrumentVoiceSpec, midi: Int, velocity: Int = 110, seconds: Double? = nil) -> [Float] {
+        InstrumentSynthesizer.render(spec, midi: midi, velocity: velocity, sampleRate: Self.rate, seconds: seconds)
     }
 
     @Test("every preset plays the note it was given, within a few cents, across the keyboard",
           arguments: InstrumentVoiceSpec.all)
     func pitch(spec: InstrumentVoiceSpec) {
         for midi in [36, 60, 84] {
-            let samples = render(spec, midi: midi)
+            let samples = render(spec, midi: midi, seconds: 0.6)
             let expected = InstrumentSynthesizer.frequency(ofMIDI: midi)
             // Half a second, past the attack. Shorter than this and the analysis itself cannot
             // resolve the bottom of the keyboard: at 65 Hz a 200 ms window's bins are 5 Hz apart,
@@ -103,8 +105,8 @@ struct InstrumentSynthesizerTests {
     @Test("a render is the same bytes twice, and nothing clips or goes non-finite",
           arguments: InstrumentVoiceSpec.all)
     func deterministicAndClean(spec: InstrumentVoiceSpec) {
-        let once = render(spec, midi: 60)
-        #expect(once == render(spec, midi: 60), "\(spec.id) is not deterministic")
+        let once = render(spec, midi: 60, seconds: 1.2)
+        #expect(once == render(spec, midi: 60, seconds: 1.2), "\(spec.id) is not deterministic")
         let finite = once.allSatisfy { $0.isFinite }
         let peak = SynthMeasure.peak(once)
         #expect(finite, "\(spec.id) produced a non-finite sample")
@@ -141,6 +143,89 @@ struct InstrumentSynthesizerTests {
 
 @Suite("Instrument: the presets are a usable set")
 struct InstrumentPresetTests {
+    @Test("a bank to choose from: fifty-odd instruments over eleven families, three engines")
+    func aBank() {
+        let all = InstrumentVoiceSpec.all
+        #expect(all.count >= 50, "\(all.count)")
+        #expect(Set(all.map(\.family)) == ["keys", "organ", "bell", "plucked", "strings", "pad", "wind", "brass", "pluck", "lead", "chip"])
+        #expect(Set(all.map(\.engine)) == Set(InstrumentVoiceSpec.Engine.allCases).subtracting([.sampled]), "every engine but an import's")
+        #expect(BassVoiceSpec.all.count >= 15 && Set(BassVoiceSpec.all.map(\.id)).count == BassVoiceSpec.all.count)
+        #expect(Set(BassVoiceSpec.all.map(\.family)) == Set(BassVoiceSpec.Family.allCases))
+    }
+
+    @Test("kits are levelled by how loud they sound, not by their attacks: a pluck, an organ and two basses land together")
+    func levelled() {
+        let rate = 48_000.0
+        func level(_ renders: [Int: [Float]], target: Double) -> (loud: [Double], peak: Double) {
+            let gains = KitLevel.gains(reference: renders, peaks: renders.mapValues(SynthMeasure.peak),
+                                       targetDBFS: target, sampleRate: rate)
+            let loud = renders.map { 20 * log10(KitLevel.loudness($0.value, sampleRate: rate) * Double(gains[$0.key]!)) }
+            let peak = renders.map { 20 * log10(Double(SynthMeasure.peak($0.value) * gains[$0.key]!)) }.max()!
+            return (loud, peak)
+        }
+        let roots = [36, 60, 84]
+        var all: [Double] = []
+        for spec in [InstrumentVoiceSpec.harpsichord, .organ, .rhodes] {
+            let renders = Dictionary(uniqueKeysWithValues: roots.map { ($0, InstrumentSynthesizer.render(spec, midi: $0, velocity: spec.velocityLayers.last!, sampleRate: rate, seconds: 2)) })
+            let (loud, peak) = level(renders, target: KitLevel.instrumentDBFS)
+            #expect(peak <= KitLevel.ceilingDBFS + 0.01, "\(spec.id) peaks at \(peak) dBFS")
+            all += loud
+        }
+        // Peak-normalised, the organ sat 14 dB over the harpsichord.
+        #expect(all.max()! - all.min()! < 5, "instruments spread \(all.max()! - all.min()!) dB: \(all)")
+
+        var basses: [Double] = []
+        for spec in [BassVoiceSpec.finger, .sub] {
+            let renders = Dictionary(uniqueKeysWithValues: [24, 38, 52].map {
+                ($0, BassSynthesizer.render(spec, midi: $0, velocity: 110, sampleRate: rate))
+            })
+            let (loud, peak) = level(renders, target: KitLevel.bassDBFS)
+            #expect(peak <= KitLevel.ceilingDBFS + 0.01)
+            // A line walking down does not fade: every root of one bass within 3 dB.
+            #expect(loud.max()! - loud.min()! < 3, "\(spec.id) across the neck: \(loud)")
+            basses += loud
+        }
+        // They were 20 dB apart: the default bass under the sub by that much.
+        #expect(basses.max()! - basses.min()! < 6, "finger against sub: \(basses)")
+    }
+
+    @Test("vibrato bends the pitch and tremolo dips the level, both fading in after the note starts")
+    func wobbles() {
+        let rate = 48_000.0
+        // The violin at A4: its vibrato is 20 cents at 6 Hz, in after 0.3 s. Zero crossings in a
+        // twelfth of a second either side of a wobble's peak read the pitch rising and falling.
+        let violin = InstrumentSynthesizer.render(.violin, midi: 69, velocity: 110, sampleRate: rate, seconds: 1.5)
+        func hz(_ at: Double) -> Double {
+            let slice = violin[Int(at * rate)..<Int((at + 0.04) * rate)]
+            let crossings = zip(slice, slice.dropFirst()).filter { $0 < 0 && $1 >= 0 }.count
+            return Double(crossings) / 0.04
+        }
+        let early = hz(0.02), steady = [0.8, 0.88, 0.96, 1.04].map(hz)
+        #expect(abs(early - 440) < 30, "\(early)")
+        #expect((steady.max() ?? 0) - (steady.min() ?? 0) > 2, "the pitch moves once the vibrato is in: \(steady)")
+
+        // The vibraphone's tremolo: the level swings at 5.2 Hz once it is in.
+        let vibes = InstrumentSynthesizer.render(.vibraphone, midi: 72, velocity: 110, sampleRate: rate, seconds: 1.5)
+        func level(_ at: Double) -> Float { vibes[Int(at * rate)..<Int((at + 0.02) * rate)].map(abs).max() ?? 0 }
+        let window = stride(from: 0.4, to: 1.2, by: 0.02).map(level)
+        let ratios = zip(window, window.dropFirst()).map { max($0, $1) / max(1e-6, min($0, $1)) }
+        #expect((ratios.max() ?? 1) > 1.08, "the level should swing")
+    }
+
+    @Test("a kit's folder carries a fingerprint of its settings: change one and it is a new render; old ones are recognised")
+    func fingerprints() {
+        let name = SynthesizedInstrument.folderName(for: .rhodes)
+        var retuned = InstrumentVoiceSpec.rhodes
+        retuned.drive += 0.01
+        #expect(name != SynthesizedInstrument.folderName(for: retuned))
+        #expect(name == SynthesizedInstrument.folderName(for: .rhodes), "the same settings, the same folder")
+        #expect(KitFingerprint.isStale("instrument-rhodes", prefix: "instrument-rhodes", current: name), "a render from before fingerprints")
+        #expect(KitFingerprint.isStale(SynthesizedInstrument.folderName(for: retuned), prefix: "instrument-rhodes", current: name))
+        #expect(!KitFingerprint.isStale(name, prefix: "instrument-rhodes", current: name))
+        #expect(!KitFingerprint.isStale("instrument-rhodes-live", prefix: "instrument-rhodes", current: name), "only fingerprints")
+        #expect(!KitFingerprint.isStale(SynthesizedInstrument.folderName(for: .fmPiano), prefix: "instrument-rhodes", current: name))
+    }
+
     @Test("ids are unique, every preset is reachable by id, and the families cover what a song needs")
     func theSet() {
         let all = InstrumentVoiceSpec.all
@@ -161,7 +246,13 @@ struct InstrumentPresetTests {
         case .fm:
             #expect(spec.operators.count == 4, "\(spec.id) has \(spec.operators.count) operators")
             #expect(spec.operators.contains { $0.level > 0 })
+        case .pluckedString:
+            let pluck = try? #require(spec.pluck, "\(spec.id) has no pluck")
+            #expect((pluck?.decaySeconds ?? 0) > 0 && (0...0.5).contains(pluck?.pickPosition ?? -1))
+        case .sampled:
+            Issue.record("\(spec.id): a preset is synthesized; only an import is sampled")
         }
+        #expect(!spec.summary.isEmpty, "\(spec.id) says nothing about how it sounds")
         #expect(spec.durationSeconds >= 1 && spec.durationSeconds <= 10)
         #expect(spec.amplitude.attack >= 0 && spec.amplitude.release > 0)
         #expect((0...1).contains(spec.amplitude.sustain))

@@ -106,6 +106,10 @@ struct FrameCommands: Commands {
                 Button("Lyrics…") { MrRobotoApp.export(app, what: "Exporting the lyrics…") { try Export.lyrics(app, to: $0) } }
             }
             .disabled(app.song == nil)
+            Button("Import Instrument…") {
+                if let url = FilePanels.chooseSFZ() { app.importInstrument(from: url) }
+            }
+            .disabled(app.store == nil)
             Button("Import Voice…") {
                 let panel = NSOpenPanel()
                 panel.allowedContentTypes = [.plainText, .text]

@@ -234,6 +234,11 @@ struct FrameView: View {
         // all three regions open at the default 1440 the frame was 1509 wide, centred, and cut
         // off on both sides: "RARY" for LIBRARY, the Save button half gone. This grows the window.
         .background(WindowFitter(minimumWidth: minimumWidth, minimumHeight: FrameLayout.minimumWindowHeight))
+        .environment(\.importedInstruments, app.importedInstruments)
+        .environment(\.importInstrument, { [app] in
+            FilePanels.chooseSFZ().flatMap { app.importInstrument(from: $0)?.id }
+        })
+        .environment(\.removeInstrument, { [app] id in app.removeImportedInstrument(id: id) })
         .onChange(of: app.regions.isCollapsed(.rail)) { _, collapsed in
             // The rail opened: its lines have been looked at.
             if !collapsed { app.markRailSeen() }

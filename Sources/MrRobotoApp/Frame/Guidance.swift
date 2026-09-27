@@ -145,7 +145,9 @@ enum PartLabel {
                 let dust = sound.preset.flatMap { $0 == "clean" ? nil : $0 }
                 return "\(machine) \(voice)" + (dust.map { ", \($0)" } ?? "")
             }
-            return sound.preset.map { "\(sound.instrument) · \($0)" } ?? sound.instrument
+            // An instrument by its name: "felt-piano" and "sfz-salamander-upright" are keys.
+            let named = InstrumentVoiceSpec.preset(id: sound.instrument)?.name ?? sound.instrument
+            return sound.preset.map { "\(named) · \($0)" } ?? named
         case .bassline:
             return note(of: version) ?? "Bass line"
         case .progression(let progression):

@@ -63,6 +63,10 @@ public struct SynthVelocityLayer: Hashable, Codable, Sendable {
 /// change. No playback path has a special case for it.
 public enum SynthesizedKit {
 
+    /// A machine's kit folder: its id and a fingerprint of its voices, so a machine retuned in a
+    /// later build is rendered again rather than loaded stale from the cache.
+    public static func folderName(for machine: SynthMachine) -> String { "\(machine.id)-\(KitFingerprint.of(machine))" }
+
     /// The choke group the hi-hat pair shares. Both hats carry `group = 1` (they *silence* group 1)
     /// and `offBy = 1` (they *are silenced by* group 1), so either one cuts the other — which is
     /// what one physical pair of hats does, and exactly the SFZ `group=1 off_by=1` idiom
@@ -211,5 +215,97 @@ public enum SynthesizedKit {
         } catch {
             throw KitError.writeFailed(path: url.path, reason: "\(error)")
         }
+    }
+}
+
+// MARK: - A kit's fingerprint
+
+/// Sixteen hex digits that change whenever a voice's settings do: FNV-1a over its JSON, keys
+/// sorted so the same settings are always the same bytes. A kit's folder carries it, so a preset
+/// retuned in a later build is not played from the render of the one before.
+public enum KitFingerprint {
+    /// `salt` stands for how the kit is built rather than what it is of: change the building and
+    /// the salt, and every kit built the old way is rendered again.
+    public static func of<Spec: Encodable>(_ spec: Spec, salt: String = "") -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let data = Data(salt.utf8) + ((try? encoder.encode(spec)) ?? Data())
+        var hash: UInt64 = 0xcbf2_9ce4_8422_2325
+        for byte in data {
+            hash ^= UInt64(byte)
+            hash = hash &* 0x0000_0100_0000_01B3
+        }
+        return String(format: "%016llx", hash)
+    }
+
+    /// Whether `name` is a kit folder of `prefix` ("instrument-rhodes") from another fingerprint,
+    /// or from before fingerprints: a render nothing will load again.
+    public static func isStale(_ name: String, prefix: String, current: String) -> Bool {
+        guard name != current else { return false }
+        if name == prefix { return true }
+        guard name.hasPrefix(prefix + "-") else { return false }
+        let tail = name.dropFirst(prefix.count + 1)
+        return tail.count == 16 && tail.allSatisfy(\.isHexDigit)
+    }
+}
+
+/// How loud a pitched kit is made.
+///
+/// Scaling a kit so its loudest sample sits at one peak level made presets as loud as their
+/// attacks, not as they sound: a harpsichord's pluck is a spike over a quiet string, an organ is
+/// all body, and at the same peak the organ played 14 dB over the harpsichord. The played basses
+/// were worse — the Karplus–Strong string is quieter the lower it goes, so a finger bass was 12 dB
+/// quieter at C1 than at its top, and 20 dB under the sub.
+///
+/// So a kit is levelled by ear's proxy instead: each root is brought to one loudness — the RMS of
+/// its loudest 100 ms — so a line does not fade as it walks down, as far as a peak ceiling allows.
+/// The ceiling wins for the spikiest sounds, which therefore still sit a few dB under the rest.
+public enum KitLevel {
+    /// Bump this when the levelling changes: every pitched kit's fingerprint carries it.
+    public static let version = "level-1"
+    /// No sample in a kit goes over this.
+    public static let ceilingDBFS: Double = -1
+    /// The loudness chords and melodies are made to: under a snare's first 100 ms, which sits
+    /// between -11 and -17 dBFS on the machines here.
+    public static let instrumentDBFS: Double = -14
+    /// The loudness a bass is made to: under the kick, which sits between -5 and -10 dBFS.
+    public static let bassDBFS: Double = -12
+
+    /// The RMS of the loudest 100 ms in the first two seconds: what a note sounds like while it
+    /// is sounding, whether it swells into it or starts there. Longer windows read a short,
+    /// bright note — a harpsichord's top octave — as quieter than it sounds.
+    public static func loudness(_ samples: [Float], sampleRate: Double) -> Double {
+        let window = max(1, Int(0.1 * sampleRate))
+        let hop = max(1, Int(0.025 * sampleRate))
+        let end = min(samples.count, Int(2 * sampleRate))
+        guard end > 0 else { return 0 }
+        var loudest = 0.0
+        var start = 0
+        repeat {
+            let stop = min(samples.count, start + window)
+            var sum = 0.0
+            for index in start..<stop { sum += Double(samples[index]) * Double(samples[index]) }
+            loudest = Swift.max(loudest, (sum / Double(window)).squareRoot())
+            start += hop
+        } while start + window <= end
+        return loudest
+    }
+
+    /// One gain per root: the one that puts `reference` (the root's loudest layer) at
+    /// `targetDBFS`, or as near as the ceiling lets the loudest sample of `peaks` (every render
+    /// of that root) go. Per root, not per kit: one spiky top note would otherwise hold every
+    /// other note down with it.
+    public static func gains(reference: [Int: [Float]], peaks: [Int: Float], targetDBFS: Double,
+                             sampleRate: Double) -> [Int: Float] {
+        let target = pow(10, targetDBFS / 20)
+        let ceiling = pow(10, ceilingDBFS / 20)
+        var gains: [Int: Float] = [:]
+        for (root, samples) in reference {
+            let loud = loudness(samples, sampleRate: sampleRate)
+            let peak = Double(peaks[root] ?? 0)
+            guard loud > 1e-6, peak > 0 else { gains[root] = 1; continue }
+            gains[root] = Float(Swift.min(target / loud, ceiling / peak))
+        }
+        return gains
     }
 }

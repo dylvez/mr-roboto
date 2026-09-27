@@ -4,7 +4,7 @@ import Foundation
 
 /// A complete set of voice specs: one drum machine's panel.
 public struct SynthMachine: Codable, Sendable, Hashable, Identifiable {
-    /// Stable identifier recorded in `kit.json` (`"tr808"`, `"tr909"`, `"linn"`).
+    /// Stable identifier recorded in `kit.json` (`"tr808"`, `"linn"`, `"studio"`…).
     public var id: String
     public var name: String
     /// One line for a kit browser.
@@ -20,7 +20,8 @@ public struct SynthMachine: Codable, Sendable, Hashable, Identifiable {
 
     public func spec(for kind: SynthVoiceKind) -> SynthVoiceSpec? { voices.first { $0.kind == kind } }
 
-    public static var all: [SynthMachine] { [.tr808, .tr909, .linn] }
+    /// The three modelled from their circuits first, then the four derived from them.
+    public static var all: [SynthMachine] { [.tr808, .tr909, .linn, .cr78, .tr707, .dmx, .studio] }
 
     /// The machine with this id, if it is one of the presets.
     public static func preset(id: String) -> SynthMachine? { all.first { $0.id == id } }

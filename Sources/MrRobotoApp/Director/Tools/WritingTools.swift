@@ -76,7 +76,7 @@ public struct WriteMelodyTool: DirectorTool {
             ("bars", Schema.integer("How many bars one pass of the tune covers, rests at the end included; 0 rounds the notes up to the bar.",
                                     minimum: 0, maximum: 64)),
             ("instrument", Schema.string("A preset for this tune to play on, or empty to keep the song's.",
-                                         enum: [""] + InstrumentVoiceSpec.all.map(\.id))),
+                                         enum: [""] + InstrumentVoiceSpec.available.map(\.id))),
             ("parent", Schema.string("A melody version id this rewrites, so it becomes that part's next version; empty for a new part.")),
             ("note", Schema.string("A few words naming the tune for the ledger, in the user's language; empty names it by its range.")),
         ], required: ["notes", "bars", "instrument", "parent", "note"])
@@ -153,7 +153,7 @@ public struct WriteMelodyTool: DirectorTool {
         let preset = instrument.isEmpty ? nil : InstrumentVoiceSpec.preset(id: instrument)
         if !instrument.isEmpty, preset == nil {
             throw DirectorToolFailure(tool: name, reason: "There is no instrument called \"\(instrument)\".",
-                                      suggestion: "One of: \(InstrumentVoiceSpec.all.map(\.id).joined(separator: ", ")); or empty for the song's.")
+                                      suggestion: "One of: \(InstrumentVoiceSpec.available.map(\.id).joined(separator: ", ")); or empty for the song's.")
         }
         let parent = try resolveParent(input.parent, in: song)
 
@@ -627,7 +627,7 @@ public struct SetInstrumentTool: DirectorTool {
     }
     public var schema: DirectorJSON {
         Schema.object([
-            ("instrument", Schema.string("The preset.", enum: InstrumentVoiceSpec.all.map(\.id))),
+            ("instrument", Schema.string("The preset.", enum: InstrumentVoiceSpec.available.map(\.id))),
             ("part", Schema.string("A melody or progression, by version or part id from read_song; empty sets the song's own.")),
         ], required: ["instrument", "part"])
     }
@@ -638,7 +638,7 @@ public struct SetInstrumentTool: DirectorTool {
         }
         guard let spec = InstrumentVoiceSpec.preset(id: input.instrument.trimmingCharacters(in: .whitespaces).lowercased()) else {
             throw DirectorToolFailure(tool: name, reason: "There is no instrument called \"\(input.instrument)\".",
-                                      suggestion: "One of: " + InstrumentVoiceSpec.all.map { "\($0.id) (\($0.name))" }.joined(separator: ", ") + ".")
+                                      suggestion: "One of: " + InstrumentVoiceSpec.available.map { "\($0.id) (\($0.name))" }.joined(separator: ", ") + ".")
         }
         let part = try resolvePart(input.part, in: song)
         let target = part.flatMap { id in song.versions.last { $0.partID == id } }.map(PartLabel.title(of:)) ?? "the song"

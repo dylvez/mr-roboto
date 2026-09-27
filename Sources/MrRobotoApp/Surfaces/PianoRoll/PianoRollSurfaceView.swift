@@ -154,10 +154,27 @@ struct PianoRollSurfaceView: View {
             }
             VStack(alignment: .leading, spacing: 3) {
                 RollLabel("Sound")
-                HStack(spacing: 4) {
-                    ForEach(BassVoiceSpec.all) { voice in
-                        RollChip(voice.name, isOn: model.sound == voice.id) { model.setSound(voice.id) }
+                // Played by hand, then programmed: fifteen chips in one row was a wall.
+                ForEach(BassVoiceSpec.Family.allCases, id: \.self) { family in
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Text(family == .played ? "Played" : "Synth")
+                            .font(Design.Typography.ui(10.5, weight: .medium))
+                            .foregroundStyle(Design.Palette.inkTertiary)
+                            .frame(width: 42, alignment: .leading)
+                        FlowRow(spacing: 4) {
+                            ForEach(BassVoiceSpec.all.filter { $0.family == family }) { voice in
+                                RollChip(voice.name, isOn: model.sound == voice.id) { model.setSound(voice.id) }
+                                    .help(voice.summary)
+                            }
+                        }
                     }
+                }
+                if let voice = BassVoiceSpec.preset(id: model.sound), !voice.summary.isEmpty {
+                    Text(voice.summary)
+                        .font(Design.Typography.ui(11))
+                        .foregroundStyle(Design.Palette.inkTertiary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             VStack(alignment: .leading, spacing: 3) {

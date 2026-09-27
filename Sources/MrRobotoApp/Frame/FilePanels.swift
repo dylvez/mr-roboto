@@ -15,6 +15,13 @@ enum FilePanels {
         choose(types: [.png, .jpeg, .heic, .tiff], message: "An image for the cover. Square reads best; it is copied into the library.", prompt: "Use as Cover")
     }
 
+    /// An SFZ pack's instrument file.
+    static func chooseSFZ() -> URL? {
+        choose(types: [UTType(filenameExtension: "sfz") ?? .data],
+               message: "An SFZ instrument. Its samples are copied into the library; the pack is left where it is.",
+               prompt: "Import")
+    }
+
     private static func choose(types: [UTType], message: String, prompt: String) -> URL? {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = types

@@ -26,6 +26,47 @@ public struct InstrumentVoiceSpec: Codable, Sendable, Hashable, Identifiable {
     public enum Engine: String, Codable, Sendable, Hashable, CaseIterable {
         case subtractive
         case fm
+        /// A plucked string: a burst ringing down a delay line (Karplus–Strong), the bass's played
+        /// voice made to cover the whole keyboard. Guitars, harp, koto, pizzicato.
+        case pluckedString
+        /// Not synthesized at all: recordings brought in from an SFZ pack, played from the kit in
+        /// `sampledKit`. See `ImportedInstruments`.
+        case sampled
+    }
+
+    /// A plucked string's settings (`Engine.pluckedString`).
+    public struct Pluck: Codable, Sendable, Hashable {
+        /// How long the string rings at middle C before it is 60 dB down, seconds.
+        public var decaySeconds: Double
+        /// How far the ring follows the note: 0 rings as long at the top as the bottom; 1 halves
+        /// it every octave up, which is closer to a real string.
+        public var decayKeyTrack: Double
+        /// How bright the pluck is at full velocity: the low-pass on the burst, in Hz.
+        public var brightnessHz: Double
+        /// Where along the string it is plucked, 0…0.5: near the bridge is thin and bright, the
+        /// middle round and hollow. It notches the harmonics that have a node there.
+        public var pickPosition: Double
+
+        public init(decaySeconds: Double, decayKeyTrack: Double = 0.5, brightnessHz: Double = 4_000, pickPosition: Double = 0.18) {
+            self.decaySeconds = decaySeconds
+            self.decayKeyTrack = decayKeyTrack
+            self.brightnessHz = brightnessHz
+            self.pickPosition = pickPosition
+        }
+    }
+
+    /// A slow wobble: vibrato bends the pitch by `depth` cents, tremolo dips the level by `depth`
+    /// (0…1). Both fade in over `delaySeconds`, as a player's does after the note has started.
+    public struct Modulation: Codable, Sendable, Hashable {
+        public var rateHz: Double
+        public var depth: Double
+        public var delaySeconds: Double
+
+        public init(rateHz: Double, depth: Double, delaySeconds: Double = 0.3) {
+            self.rateHz = rateHz
+            self.depth = depth
+            self.delaySeconds = delaySeconds
+        }
     }
 
     /// What an oscillator puts out before the filter. All are band-limited by rendering at the
@@ -122,6 +163,15 @@ public struct InstrumentVoiceSpec: Codable, Sendable, Hashable, Identifiable {
     /// What a persona or a picker says this is for: "keys", "pad", "pluck", "lead", "bell".
     public var family: String
     public var engine: Engine
+    /// What it sounds like, in a player's words, for the picker. Empty says it in its own terms.
+    public var summary: String
+    /// `Engine.pluckedString` only.
+    public var pluck: Pluck?
+    public var vibrato: Modulation?
+    public var tremolo: Modulation?
+    /// `Engine.sampled` only: the folder holding its kit, set when the instrument is registered.
+    /// Not part of what it sounds like, so it is never written to its `instrument.json`.
+    public var sampledKit: String?
 
     // Subtractive
     public var oscillators: [Oscillator]
@@ -154,18 +204,23 @@ public struct InstrumentVoiceSpec: Codable, Sendable, Hashable, Identifiable {
     /// timbre change with how hard it is played, which is what FM and a filter envelope want.
     public var velocityLayers: [Int]
 
-    public init(id: String, name: String, family: String, engine: Engine,
+    public init(id: String, name: String, family: String, engine: Engine, summary: String = "",
+                pluck: Pluck? = nil, vibrato: Modulation? = nil, tremolo: Modulation? = nil,
                 oscillators: [Oscillator] = [], subLevel: Double = 0, noiseLevel: Double = 0,
                 filterHz: Double = 12_000, filterReferenceMIDI: Int = 60, filterKeyTrack: Double = 0.5,
                 filterQ: Double = 0.8, filterEnvelopeOctaves: Double = 0,
                 filterEnvelope: Envelope = Envelope(attack: 0.002, decay: 0.4, sustain: 0.3, release: 0.2),
                 algorithm: Algorithm = .twinPairs, operators: [Operator] = [],
                 amplitude: Envelope = Envelope(), drive: Double = 0, level: Double = 1,
-                durationSeconds: Double = 4, velocityLayers: [Int] = [110]) {
+                durationSeconds: Double = 4, velocityLayers: [Int] = [110], sampledKit: String? = nil) {
         self.id = id
         self.name = name
         self.family = family
         self.engine = engine
+        self.summary = summary
+        self.pluck = pluck
+        self.vibrato = vibrato
+        self.tremolo = tremolo
         self.oscillators = oscillators
         self.subLevel = subLevel
         self.noiseLevel = noiseLevel
@@ -182,6 +237,7 @@ public struct InstrumentVoiceSpec: Codable, Sendable, Hashable, Identifiable {
         self.level = level
         self.durationSeconds = durationSeconds
         self.velocityLayers = velocityLayers.isEmpty ? [110] : velocityLayers.sorted()
+        self.sampledKit = sampledKit
     }
 }
 
@@ -191,12 +247,37 @@ public extension InstrumentVoiceSpec {
 
     /// Everything the app ships. Ordered by family so a picker reads as a keyboard's bank list.
     static let all: [InstrumentVoiceSpec] = [
-        rhodes, wurlitzer, bell, marimba,
-        juno, warmPad, choir,
-        pluck, organ, squareLead, brass,
+        // Keys
+        rhodes, wurlitzer, fmPiano, feltPiano, clavinet, harpsichord, toyPiano, juno,
+        // Organs
+        organ, rockOrgan, pipeOrgan, harmonium, comboOrgan,
+        // Mallets and bells
+        bell, marimba, vibraphone, xylophone, glockenspiel, kalimba, steelDrum, musicBox, tubularBells,
+        // Plucked strings
+        nylonGuitar, steelGuitar, cleanElectric, mutedGuitar, harp, koto, banjo, pizzicato,
+        // Bowed strings
+        stringSection, slowStrings, violin, cello,
+        // Pads and voices
+        warmPad, choir, vocalOohs, glassPad, darkPad, airPad, sweepPad,
+        // Winds
+        flute, clarinet, oboe, panFlute,
+        // Brass
+        brass, synthBrass, trumpet, frenchHorns,
+        // Synth plucks
+        pluck, bellPluck, houseStab,
+        // Leads
+        squareLead, sawLead, sineLead,
+        // Chip
+        chipSquare, chipPulse, chipTriangle,
     ]
 
-    static func preset(id: String) -> InstrumentVoiceSpec? { all.first { $0.id == id } }
+    /// A preset, or an instrument imported into this app, by id.
+    static func preset(id: String) -> InstrumentVoiceSpec? {
+        all.first { $0.id == id } ?? ImportedInstruments.spec(id: id)
+    }
+
+    /// What a picker offers: the presets, then what has been imported.
+    static var available: [InstrumentVoiceSpec] { all + ImportedInstruments.all }
 
     // MARK: FM — the sounds subtractive cannot reach
 
@@ -204,6 +285,7 @@ public extension InstrumentVoiceSpec {
     /// that decays fast, which is the tine being hit and then ringing.
     static let rhodes = InstrumentVoiceSpec(
         id: "rhodes", name: "Rhodes", family: "keys", engine: .fm,
+        summary: "Electric piano, warm and bell-toned; brighter the harder you play.",
         algorithm: .twinPairs,
         operators: [
             Operator(ratio: 1, level: 1, attack: 0.002, decay: 2.6, sustain: 0.18),
@@ -217,6 +299,7 @@ public extension InstrumentVoiceSpec {
     /// The reedier electric piano: one pair, more index, a harder bark at the front.
     static let wurlitzer = InstrumentVoiceSpec(
         id: "wurlitzer", name: "Wurlitzer", family: "keys", engine: .fm,
+        summary: "Reedy electric piano, with more bite than the Rhodes.",
         algorithm: .twoIntoOne,
         operators: [
             Operator(ratio: 1, level: 1, attack: 0.002, decay: 1.8, sustain: 0.14),
@@ -235,6 +318,7 @@ public extension InstrumentVoiceSpec {
     /// Here the note has to read, because melodies get written on this.
     static let bell = InstrumentVoiceSpec(
         id: "bell", name: "Bell", family: "bell", engine: .fm,
+        summary: "Clear, ringing bells, for a tune that should cut through.",
         algorithm: .twinPairs,
         operators: [
             Operator(ratio: 1, level: 1, attack: 0.001, decay: 4, sustain: 0),
@@ -248,6 +332,7 @@ public extension InstrumentVoiceSpec {
     /// Wood, not metal: a low index and a fast decay make a struck bar.
     static let marimba = InstrumentVoiceSpec(
         id: "marimba", name: "Marimba", family: "bell", engine: .fm,
+        summary: "Wooden mallets: short, round and soft-edged.",
         algorithm: .twinPairs,
         operators: [
             Operator(ratio: 1, level: 1, attack: 0.001, decay: 0.7, sustain: 0),
@@ -263,6 +348,7 @@ public extension InstrumentVoiceSpec {
     /// The eighties polysynth: three saws a few cents apart, filter half open.
     static let juno = InstrumentVoiceSpec(
         id: "juno", name: "Poly Saws", family: "keys", engine: .subtractive,
+        summary: "Bright stacked saws, for chords that fill the room.",
         oscillators: [
             Oscillator(waveform: .saw, cents: -7, level: 0.9),
             Oscillator(waveform: .saw, cents: 6, level: 0.9),
@@ -277,6 +363,7 @@ public extension InstrumentVoiceSpec {
     /// A slow pad: detuned saws, the filter crawling open over a second.
     static let warmPad = InstrumentVoiceSpec(
         id: "pad", name: "Warm Pad", family: "pad", engine: .subtractive,
+        summary: "A soft pad that swells in slowly behind everything.",
         oscillators: [
             Oscillator(waveform: .saw, cents: -11, level: 0.8),
             Oscillator(waveform: .saw, cents: 9, level: 0.8),
@@ -291,6 +378,7 @@ public extension InstrumentVoiceSpec {
     /// Breathy and narrow: a triangle pair with noise, filtered low.
     static let choir = InstrumentVoiceSpec(
         id: "choir", name: "Choir", family: "pad", engine: .subtractive,
+        summary: "An airy, voice-like pad.",
         oscillators: [
             Oscillator(waveform: .triangle, cents: -8, level: 0.9),
             Oscillator(waveform: .triangle, cents: 7, level: 0.9),
@@ -305,6 +393,7 @@ public extension InstrumentVoiceSpec {
     /// A pluck: the filter slams shut in a tenth of a second.
     static let pluck = InstrumentVoiceSpec(
         id: "pluck", name: "Pluck", family: "pluck", engine: .subtractive,
+        summary: "A short plucked synth, for riffs and arpeggios.",
         oscillators: [
             Oscillator(waveform: .saw, cents: -4, level: 0.9),
             Oscillator(waveform: .square, cents: 5, level: 0.6),
@@ -316,7 +405,8 @@ public extension InstrumentVoiceSpec {
 
     /// Drawbars: octaves stacked as sines, no filter movement at all.
     static let organ = InstrumentVoiceSpec(
-        id: "organ", name: "Organ", family: "keys", engine: .subtractive,
+        id: "organ", name: "Organ", family: "organ", engine: .subtractive,
+        summary: "A sustained drawbar organ: the chord holds as long as the key does.",
         oscillators: [
             Oscillator(waveform: .sine, octave: 0, level: 1),
             Oscillator(waveform: .sine, octave: 1, level: 0.55),
@@ -331,6 +421,7 @@ public extension InstrumentVoiceSpec {
     /// One square, wide open: the lead that sits on top of everything.
     static let squareLead = InstrumentVoiceSpec(
         id: "lead", name: "Square Lead", family: "lead", engine: .subtractive,
+        summary: "A hollow square lead, for a tune on top.",
         oscillators: [
             Oscillator(waveform: .pulse, cents: 0, level: 1, pulseWidth: 0.3),
             Oscillator(waveform: .pulse, cents: 8, level: 0.55, pulseWidth: 0.42),
@@ -343,7 +434,8 @@ public extension InstrumentVoiceSpec {
 
     /// Brass: the filter swells into the note rather than snapping.
     static let brass = InstrumentVoiceSpec(
-        id: "brass", name: "Brass", family: "lead", engine: .subtractive,
+        id: "brass", name: "Brass", family: "brass", engine: .subtractive,
+        summary: "Synth brass that opens up as the note plays.",
         oscillators: [
             Oscillator(waveform: .saw, cents: -6, level: 1),
             Oscillator(waveform: .saw, cents: 7, level: 0.85),

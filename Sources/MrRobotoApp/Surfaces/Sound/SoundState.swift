@@ -19,7 +19,7 @@ import SongGraph
 /// internals from the schematic and a person turns the knobs.
 public struct SoundState: Equatable, Sendable {
 
-    /// A `SynthMachine.id`: `"tr808"`, `"tr909"`, `"linn"`.
+    /// A `SynthMachine.id`: `"tr808"`, `"linn"`, `"studio"`….
     public var machine: String
     public var voice: SynthVoiceKind
     /// TUNE, DECAY, TONE, SNAPPY, ATTACK, LEVEL as normalised knob positions.

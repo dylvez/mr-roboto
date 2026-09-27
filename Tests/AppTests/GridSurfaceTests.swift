@@ -273,7 +273,7 @@ struct GridSurfaceTests {
         let host = StubGridHost()
         let model = GridModel(host: host)
 
-        #expect(model.machines.map(\.id) == ["tr808", "tr909", "linn"])
+        #expect(model.machines.map(\.id) == ["tr808", "tr909", "linn", "cr78", "tr707", "dmx", "studio"])
         #expect(model.machine.id == "tr808")
 
         model.setMachine(.tr909)

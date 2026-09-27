@@ -432,3 +432,23 @@ extension FrameRenderTests {
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-melody")
     }
 }
+
+extension FrameRenderTests {
+    @Test("the Chords surface voiced on an imported instrument: the Imported family and its line")
+    func importedInstrument() throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        let built = GuidanceFixture.grooved()
+        let app = app(built.song)
+        let spec = InstrumentVoiceSpec(
+            id: "sfz-render-upright", name: "Salamander Upright", family: ImportedInstruments.family, engine: .sampled,
+            summary: "Sampled, from Salamander Upright.sfz: 480 zones from 480 recordings, A0–C8.",
+            sampledKit: "/nonexistent")
+        ImportedInstruments.register(spec)
+        defer { ImportedInstruments.unregister(id: spec.id) }
+        app.importedInstruments = [spec]
+        #expect(app.setInstrument(spec.id))
+        app.perform(SurfaceAction(surface: .chords, title: "Chords"))
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-chords-imported")
+    }
+}

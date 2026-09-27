@@ -232,7 +232,19 @@ struct SynthesizedKitTests {
         #expect(first == second)
     }
 
-    @Test("all three machines build, load and validate")
+    @Test("a machine's kit folder changes when its voices do, so a retuned machine is rendered again")
+    func machineFolderFingerprint() {
+        let names = SynthMachine.all.map(SynthesizedKit.folderName(for:))
+        #expect(Set(names).count == SynthMachine.all.count)
+        #expect(zip(names, SynthMachine.all).allSatisfy { $0.hasPrefix("\($1.id)-") })
+        var retuned = SynthMachine.dmx
+        retuned.voices[0].tone.frequencyHz += 1
+        #expect(SynthesizedKit.folderName(for: retuned) != SynthesizedKit.folderName(for: .dmx))
+        #expect(KitFingerprint.isStale("dmx", prefix: "dmx", current: SynthesizedKit.folderName(for: .dmx)),
+                "the unfingerprinted folder from before is cleared")
+    }
+
+    @Test("every machine builds, loads and validates")
     func allMachinesBuild() throws {
         for machine in SynthMachine.all {
             let dir = TempDirectory("machine-\(machine.id)")

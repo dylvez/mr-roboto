@@ -60,7 +60,7 @@ extension GridHosting {
 /// on the shared `Engine`.
 ///
 /// Kits are built once per machine into the caches directory and reused; `SynthesizedKit.build`
-/// renders 808, 909 and LinnDrum from the specs in `Instrument`, so switching machine is a kit swap
+/// renders every machine from the specs in `Instrument`, so switching machine is a kit swap
 /// (safe at any time, including mid-render) rather than a rebuild of the audio graph.
 public final class LiveGridHost: GridHosting {
     private let core: Core
@@ -126,7 +126,7 @@ public final class LiveGridHost: GridHosting {
         func loadMachine(_ machine: SynthMachine) throws {
             let (_, sampler) = try ensureEngine()
             guard loadedMachine != machine.id else { return }
-            let folder = kitsDirectory.appendingPathComponent(machine.id, isDirectory: true)
+            let folder = kitsDirectory.appendingPathComponent(SynthesizedKit.folderName(for: machine), isDirectory: true)
             let kit: LoadedKit
             if let existing = try? KitStore.load(from: folder) {
                 kit = existing
