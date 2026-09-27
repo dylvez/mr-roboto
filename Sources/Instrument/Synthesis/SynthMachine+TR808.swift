@@ -20,8 +20,8 @@ public struct SynthMachine: Codable, Sendable, Hashable, Identifiable {
 
     public func spec(for kind: SynthVoiceKind) -> SynthVoiceSpec? { voices.first { $0.kind == kind } }
 
-    /// By family, as the Grid lists them: the drum machines — the three modelled from their
-    /// circuits first — then the samplers, the acoustic kits and the styles.
+    /// By family, as the Grid lists them: the drum machines — the three modelled from the hardware
+    /// first — then the samplers, the acoustic kits and the styles.
     public static var all: [SynthMachine] {
         [.tr808, .tr909, .linn, .cr78, .tr606, .tr707, .dmx, .simmons,
          .sp1200, .mpc60,
