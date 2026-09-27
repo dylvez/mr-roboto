@@ -24,13 +24,14 @@ struct SongSettingsPopover: View {
 
     private enum Field: Hashable { case title, artist, tempo, key, meter }
 
-    /// The five settings, together, so a change to any of them can be put back as one.
+    /// The settings, together, so a change to any of them can be put back as one.
     struct Settings: Equatable {
         var title: String
         var artist: String
         var tempo: Double
         var key: Key?
         var meter: TimeSignature
+        var fills: Bool
 
         init(_ song: Song) {
             title = song.title
@@ -38,6 +39,7 @@ struct SongSettingsPopover: View {
             tempo = song.tempo
             key = song.key
             meter = song.timeSignature
+            fills = song.playsFills
         }
 
         /// "92 bpm, D minor, 4/4": what Put back would return to, the parts that differ from now.
@@ -48,6 +50,7 @@ struct SongSettingsPopover: View {
             if tempo != now.tempo { parts.append("\(SongSettingsPopover.tempoText(tempo)) bpm") }
             if key != now.key { parts.append(key?.name ?? "no key") }
             if meter != now.meter { parts.append(meter.description) }
+            if fills != now.fills { parts.append(fills ? "fills" : "no fills") }
             return parts.joined(separator: ", ")
         }
     }
@@ -75,6 +78,12 @@ struct SongSettingsPopover: View {
                 field("Key", text: $keyText, focus: .key, prompt: "D major, F# minor, or blank") { applyKey() }
                 problem(keyProblem)
             }
+            Toggle(isOn: Binding(get: { app.song?.playsFills ?? true }, set: { app.setFills($0) })) {
+                Text("Fills into each section")
+                    .font(Design.Typography.ui(12.5, weight: .regular))
+            }
+            .toggleStyle(.checkbox)
+            .help("The drums play a fill in a section's last bar and a crash on the next one's first beat")
             Text("The tempo and the meter are the clock every part plays to; the key is what the writers and the band read the song in. Nothing already written moves. A change while the song plays lands on the next press of play.")
                 .font(Design.Typography.ui(11.5, weight: .regular))
                 .foregroundStyle(Design.Palette.inkSecondary)
@@ -134,6 +143,7 @@ struct SongSettingsPopover: View {
         app.setTempo(settings.tempo)
         app.setKey(settings.key)
         app.setTimeSignature(settings.meter)
+        app.setFills(settings.fills)
         load()
     }
 

@@ -112,7 +112,7 @@ public struct BassVoiceSpec: Codable, Sendable, Hashable, Identifiable {
 
     public static let all: [BassVoiceSpec] = [
         finger, picked, slap, upright, fretless, muted,
-        sub, long808, acid, analogue, reese, squareBass, fmBass, rubber, pluckBass,
+        sub, long808, acid, analogue, reese, squareBass, fmBass, rubber, pluckBass, logDrum,
     ]
 
     // MARK: Played
@@ -254,6 +254,26 @@ public struct BassVoiceSpec: Codable, Sendable, Hashable, Identifiable {
             amplitude: InstrumentVoiceSpec.Envelope(attack: 0.001, decay: 0.3, sustain: 0.2, release: 0.04),
             drive: 0.2, level: 0.9, durationSeconds: 2),
         decaySeconds: 0.3, releaseSeconds: 0.03)
+
+    /// The amapiano log drum: a round, pitched knock with a quick bloom and a medium decay, played
+    /// as the bass line. One FM pair gives the knock — a modulator at the pitch that dies in a few
+    /// tens of milliseconds — and a second, an octave up, the hollow wood; the drive is the
+    /// saturation the style pushes it into.
+    public static let logDrum = BassVoiceSpec(
+        id: "log-drum", name: "Log Drum", engine: .synth,
+        summary: "The amapiano log drum: a round, knocking, pitched bass that blooms and fades.",
+        synth: InstrumentVoiceSpec(
+            id: "bass-log-drum", name: "Log Drum", family: "bass", engine: .fm,
+            algorithm: .twinPairs,
+            operators: [
+                InstrumentVoiceSpec.Operator(ratio: 1, level: 1, attack: 0.002, decay: 0.7, sustain: 0),
+                InstrumentVoiceSpec.Operator(ratio: 1, level: 0.9, attack: 0.001, decay: 0.06, sustain: 0),
+                InstrumentVoiceSpec.Operator(ratio: 2, level: 0.3, attack: 0.001, decay: 0.25, sustain: 0),
+                InstrumentVoiceSpec.Operator(ratio: 3, level: 0.4, attack: 0.001, decay: 0.03, sustain: 0),
+            ],
+            amplitude: InstrumentVoiceSpec.Envelope(attack: 0.002, decay: 0.8, sustain: 0, release: 0.08),
+            drive: 0.4, level: 0.95, durationSeconds: 2),
+        decaySeconds: 0.7, releaseSeconds: 0.06)
 
     public static func preset(id: String) -> BassVoiceSpec? { all.first { $0.id == id } }
 }

@@ -2,9 +2,9 @@ import MusicTheory
 import SongGraph
 
 // Latin feels, written for this app. The library had one — Bossa Nova — so "something Latin" had
-// one answer. These are the patterns every drummer's method book agrees on, kept to what a drum
-// machine's voices can say: the clave on the rim, the conga's open tones on the perc voice, the
-// surdo on the kick. Each is two bars of sixteenths, because the clave is a two-bar cycle and a
+// one answer. These are the patterns every drummer's method book agrees on, on the kit's hand
+// percussion where the part is a hand part: the clave on the claves, the conga's tones on the
+// congas, the shakers on the shaker, the bell on the cowbell — and the surdo on the kick. Each is two bars of sixteenths, because the clave is a two-bar cycle and a
 // feel that stops after one bar of it has said half a sentence.
 //
 // They are marked `original`, not `researched`: no source is cited for the step numbers, and the
@@ -31,10 +31,10 @@ extension Feels {
         tempoRange: 85...125, suggestedTempo: 100,
         groove: twoBars([
             line(.closedHat, steps: 32, beat: 4, on: eighths(upTo: 32)),
-            line(.rim, steps: 32, beat: 4, on: [0, 6, 12, 20, 24], accents: [0, 6, 12, 20, 24]),
+            line(.claves, steps: 32, beat: 4, on: [0, 6, 12, 20, 24], accents: [0, 6, 12, 20, 24]),
             line(.kick, steps: 32, beat: 4, on: both([6, 12])),
         ]),
-        provenance: written("Son clave, three side first: three strokes in bar one, two in bar two, on the rim; the kick on the and of 2 and on 4, where the bass tumbao lands.",
+        provenance: written("Son clave, three side first: three strokes in bar one, two in bar two, on the claves; the kick on the and of 2 and on 4, where the bass tumbao lands.",
                             lineage: ["Cuban son", "salsa"]))
 
     static let sonClave23 = Feel(
@@ -43,7 +43,7 @@ extension Feels {
         tempoRange: 85...125, suggestedTempo: 100,
         groove: twoBars([
             line(.closedHat, steps: 32, beat: 4, on: eighths(upTo: 32)),
-            line(.rim, steps: 32, beat: 4, on: [4, 8, 16, 22, 28], accents: [4, 8, 16, 22, 28]),
+            line(.claves, steps: 32, beat: 4, on: [4, 8, 16, 22, 28], accents: [4, 8, 16, 22, 28]),
             line(.kick, steps: 32, beat: 4, on: both([6, 12])),
         ]),
         provenance: written("Son clave, two side first: the same five strokes as 3-2 with the bars swapped, which is how most salsa tunes are phrased.",
@@ -55,11 +55,12 @@ extension Feels {
         tempoRange: 90...130, suggestedTempo: 108,
         groove: twoBars([
             line(.closedHat, steps: 32, beat: 4, on: eighths(upTo: 32)),
-            line(.rim, steps: 32, beat: 4, on: [0, 6, 14, 20, 24], accents: [0, 6, 14, 20, 24]),
+            line(.claves, steps: 32, beat: 4, on: [0, 6, 14, 20, 24], accents: [0, 6, 14, 20, 24]),
             line(.kick, steps: 32, beat: 4, on: both([6, 12])),
-            line(.perc, steps: 32, beat: 4, on: both([12, 14])),
+            line(.highConga, steps: 32, beat: 4, on: both([12])),
+            line(.lowConga, steps: 32, beat: 4, on: both([14])),
         ]),
-        provenance: written("Rumba clave: son clave with its third stroke pushed a sixteenth late, the and of 4, which is what makes it lean. Conga open tones on 4 and the and of 4.",
+        provenance: written("Rumba clave: son clave with its third stroke pushed a sixteenth late, the and of 4, which is what makes it lean. Conga open tones on 4 and, on the low drum, the and of 4.",
                             lineage: ["Cuban rumba", "guaguancó"]))
 
     static let salsaTumbao = Feel(
@@ -68,11 +69,12 @@ extension Feels {
         tempoRange: 85...115, suggestedTempo: 96,
         groove: twoBars([
             line(.ride, steps: 32, beat: 4, on: eighths(upTo: 32), accents: both([0, 8])),
-            line(.rim, steps: 32, beat: 4, on: [4, 8, 16, 22, 28], accents: [4, 8, 16, 22, 28]),
-            line(.perc, steps: 32, beat: 4, on: both([12, 14]), ghosts: both([4])),
+            line(.claves, steps: 32, beat: 4, on: [4, 8, 16, 22, 28], accents: [4, 8, 16, 22, 28]),
+            line(.highConga, steps: 32, beat: 4, on: both([4, 12]), ghosts: both([0, 2, 8, 10]), accents: both([4])),
+            line(.lowConga, steps: 32, beat: 4, on: both([14])),
             line(.kick, steps: 32, beat: 4, on: both([6, 12])),
         ]),
-        provenance: written("The conga tumbao under a 2-3 clave: a slap on 2, open tones on 4 and the and of 4, a bell in eighths, and the kick where the bass anticipates.",
+        provenance: written("The conga tumbao under a 2-3 clave: heel and tip ghosted, a slap on 2, an open tone on 4 and the low drum on the and of 4, a bell in eighths, and the kick where the bass anticipates.",
                             lineage: ["salsa", "Fania-era New York"]))
 
     static let chaCha = Feel(
@@ -80,7 +82,7 @@ extension Feels {
         idioms: [.latin],
         tempoRange: 105...130, suggestedTempo: 118,
         groove: twoBars([
-            line(.perc, steps: 32, beat: 4, on: both([0, 4, 8, 12]), accents: both([0, 4, 8, 12])),
+            line(.cowbell, steps: 32, beat: 4, on: both([0, 4, 8, 12]), accents: both([0, 4, 8, 12])),
             line(.closedHat, steps: 32, beat: 4, on: eighths(upTo: 32)),
             line(.rim, steps: 32, beat: 4, on: both([12, 14]), ghosts: both([6])),
             line(.kick, steps: 32, beat: 4, on: both([0, 12])),
@@ -93,7 +95,7 @@ extension Feels {
         idioms: [.latin],
         tempoRange: 90...120, suggestedTempo: 104,
         groove: twoBars([
-            line(.closedHat, steps: 32, beat: 4, on: all(upTo: 32), accents: both([0, 3, 4, 7, 8, 11, 12, 15])),
+            line(.shaker, steps: 32, beat: 4, on: all(upTo: 32), accents: both([0, 3, 4, 7, 8, 11, 12, 15])),
             line(.rim, steps: 32, beat: 4, on: [0, 3, 6, 10, 13, 16, 19, 22, 26, 29]),
             line(.kick, steps: 32, beat: 4, on: both([0, 3, 4, 7, 8, 11, 12, 15]), accents: both([4, 12])),
         ]),

@@ -248,19 +248,19 @@ public extension InstrumentVoiceSpec {
     /// Everything the app ships. Ordered by family so a picker reads as a keyboard's bank list.
     static let all: [InstrumentVoiceSpec] = [
         // Keys
-        rhodes, wurlitzer, fmPiano, feltPiano, clavinet, harpsichord, toyPiano, juno,
+        grandPiano, rhodes, wurlitzer, fmPiano, feltPiano, clavinet, harpsichord, toyPiano, juno,
         // Organs
         organ, rockOrgan, pipeOrgan, harmonium, comboOrgan,
         // Mallets and bells
         bell, marimba, vibraphone, xylophone, glockenspiel, kalimba, steelDrum, musicBox, tubularBells,
         // Plucked strings
-        nylonGuitar, steelGuitar, cleanElectric, mutedGuitar, harp, koto, banjo, pizzicato,
+        nylonGuitar, steelGuitar, cleanElectric, overdrivenGuitar, distortedGuitar, mutedGuitar, harp, koto, banjo, pizzicato,
         // Bowed strings
         stringSection, slowStrings, violin, cello,
         // Pads and voices
         warmPad, choir, vocalOohs, glassPad, darkPad, airPad, sweepPad,
         // Winds
-        flute, clarinet, oboe, panFlute,
+        flute, clarinet, oboe, panFlute, altoSax, tenorSax,
         // Brass
         brass, synthBrass, trumpet, frenchHorns,
         // Synth plucks

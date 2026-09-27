@@ -65,7 +65,7 @@ extension Feels {
         idioms: [.folk, .ballad],
         tempoRange: 70...110, suggestedTempo: 88,
         groove: Groove(stepsPerBar: 8, bars: 1, swing: 0, patterns: [
-            line(DrumVoice.perc, steps: 8, beat: 2, on: [0, 4], ghosts: [2, 6]),
+            line(.shaker, steps: 8, beat: 2, on: [0, 4], ghosts: [2, 6]),
         ]),
         velocities: .soft,
         provenance: chorus("Shaker on the quarters and nothing else — the texture under an alternating-bass pick.",
@@ -77,7 +77,7 @@ extension Feels {
         idioms: [.folk, .pop],
         tempoRange: 90...130, suggestedTempo: 112,
         groove: Groove(stepsPerBar: 8, bars: 1, swing: 0, patterns: [
-            line(DrumVoice.perc, steps: 8, beat: 2, on: [0, 2, 4, 6], ghosts: [1, 3, 5, 7]),
+            line(.tambourine, steps: 8, beat: 2, on: [0, 2, 4, 6], ghosts: [1, 3, 5, 7]),
             line(.kick, steps: 8, beat: 2, on: [0, 4]),
         ]),
         provenance: chorus("Kick on 1 and 3 under a tambourine on every eighth, loud-soft-loud-soft.",
@@ -106,7 +106,7 @@ extension Feels {
         tempoRange: 95...130, suggestedTempo: 114,
         groove: Groove(stepsPerBar: 8, bars: 1, swing: 0, patterns: [
             line(.openHat, steps: 8, beat: 2, on: [0, 2, 4, 6], accents: [0, 2, 4, 6]),
-            line(DrumVoice.perc, steps: 8, beat: 2, on: [], ghosts: [0, 2, 4, 6]),
+            line(.tambourine, steps: 8, beat: 2, on: [], ghosts: [0, 2, 4, 6]),
             line(.snare, steps: 8, beat: 2, on: [2, 6], accents: [2, 6]),
             line(.kick, steps: 8, beat: 2, on: [0, 4]),
         ]),

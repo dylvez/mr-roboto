@@ -80,8 +80,8 @@ extension SynthMachine {
         id: "tr808",
         name: "TR-808",
         summary: "Roland TR-808: bridged-T rings, six square oscillators and a noise generator.",
-        voices: [tr808Kick, tr808Snare, tr808ClosedHat, tr808OpenHat, tr808Clap, tr808Rim,
-                 tr808LowTom, tr808MidTom, tr808HighTom, tr808Cowbell, tr808Crash, tr808Ride]
+        voices: withPercussion([tr808Kick, tr808Snare, tr808ClosedHat, tr808OpenHat, tr808Clap, tr808Rim,
+                 tr808LowTom, tr808MidTom, tr808HighTom, tr808Cowbell, tr808Crash, tr808Ride], "tr808", seed: 0x8080900, electronic: true)
     )
 
     // MARK: Bass drum

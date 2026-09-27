@@ -2,6 +2,7 @@ import AudioEngine
 import Foundation
 import Instrument
 import MusicTheory
+import Performance
 import SongGraph
 
 /// What the transport would play, as a plain value.
@@ -830,14 +831,22 @@ public struct SongPlayback: Equatable, Sendable {
     static func segments(of song: Song, mediaURL: (MediaRef) -> URL?, missingMedia: inout Bool) -> [Segment] {
         var out: [Segment] = []
         var bar = 0
-        for section in song.sections {
+        for (index, section) in song.sections.enumerated() {
             var voices: [Voice] = []
             for lane in section.stitch {
                 // What the lane plays *now*: its part's newest version, unless it is pinned. This
                 // is the point of the whole change — keep a new groove and the form plays it.
                 guard let version = song.version(playing: lane) else { continue }
-                guard let voice = voice(for: version, in: song, mediaURL: mediaURL,
+                guard var voice = voice(for: version, in: song, mediaURL: mediaURL,
                                         missingMedia: &missingMedia) else { continue }
+                // A groove on a kit is played to the section's edges: a fill into the next section,
+                // a crash coming out of the last. A groove on a chop is left as cut — its "toms" are
+                // slices of a record, and a fill made of them would be noise.
+                if song.playsFills, voice.kit == nil, case .groove(let groove) = voice.play {
+                    voice.play = .groove(SectionFill.arranged(
+                        groove, bars: section.lengthInBars, beatsPerBar: song.timeSignature.beatsPerBar,
+                        fillIntoNext: index < song.sections.count - 1, crashIn: index > 0))
+                }
                 voices.append(voice)
             }
             let segment = Segment(section: section.id, name: section.name, startBar: bar,

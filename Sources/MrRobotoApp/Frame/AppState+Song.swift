@@ -48,6 +48,16 @@ extension AppState {
         return true
     }
 
+    /// Turns the arranged drums' fills into each section, and the crash out of it, on or off.
+    @discardableResult
+    public func setFills(_ on: Bool, by source: SessionEntry.Source = .you) -> Bool {
+        guard let current = song, current.playsFills != on else { return false }
+        updateSong { $0.fills = on ? nil : false }
+        if let song { library.upsert(song) }
+        note(source, on ? "Fills into each section" : "No fills: the grooves loop as written")
+        return true
+    }
+
     /// Sets the tempo the clock runs at, clamped to `tempoRange`. Every part keeps its own beats;
     /// they simply go by faster or slower. A tempo changed while the song plays lands on the next
     /// press of play, and the rail says so rather than letting the readout disagree with the ear.

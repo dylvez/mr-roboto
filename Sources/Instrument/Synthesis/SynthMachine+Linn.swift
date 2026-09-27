@@ -58,8 +58,8 @@ extension SynthMachine {
         id: "linn",
         name: "LinnDrum",
         summary: "LinnDrum flavour: acoustic drums companded to 8 bits and clocked out of ROM.",
-        voices: [linnKick, linnSnare, linnClosedHat, linnOpenHat, linnClap, linnRim,
-                 linnLowTom, linnMidTom, linnHighTom, linnCowbell, linnCrash, linnRide]
+        voices: withPercussion([linnKick, linnSnare, linnClosedHat, linnOpenHat, linnClap, linnRim,
+                 linnLowTom, linnMidTom, linnHighTom, linnCowbell, linnCrash, linnRide], "linn", seed: 0x11AA0900)
     )
 
     /// Attaches the `sampled` stage that makes a voice a LinnDrum voice.

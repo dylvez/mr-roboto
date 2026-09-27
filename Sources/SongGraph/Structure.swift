@@ -155,6 +155,13 @@ public struct Song: Identifiable, Hashable, Codable, Sendable {
     public var cast: [String]?
     /// What this house decided on the cast's open questions, by ear.
     public var houseCalls: [HouseCallRecord]?
+    /// Whether the arranged drums play a fill into each section and a crash coming out of it
+    /// (`Performance.SectionFill`). Nil is yes: optional so a song written before round-trips
+    /// byte for byte, and so fills are what a song does unless someone says otherwise.
+    public var fills: Bool?
+
+    /// True unless the song has turned its fills off.
+    public var playsFills: Bool { fills ?? true }
 
     public init(id: SongID = SongID(), title: String, artist: String = "", key: Key? = nil, tempo: Double = 120,
                 timeSignature: TimeSignature = .fourFour, sections: [Section] = [], versions: [PartVersion] = [],

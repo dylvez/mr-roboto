@@ -39,8 +39,8 @@ extension SynthMachine {
         id: "tr909",
         name: "TR-909",
         summary: "Roland TR-909: analog kick, snare and toms; the hats and cymbals were 6-bit samples.",
-        voices: [tr909Kick, tr909Snare, tr909ClosedHat, tr909OpenHat, tr909Clap, tr909Rim,
-                 tr909LowTom, tr909MidTom, tr909HighTom, tr909Cowbell, tr909Crash, tr909Ride]
+        voices: withPercussion([tr909Kick, tr909Snare, tr909ClosedHat, tr909OpenHat, tr909Clap, tr909Rim,
+                 tr909LowTom, tr909MidTom, tr909HighTom, tr909Cowbell, tr909Crash, tr909Ride], "tr909", seed: 0x9090900)
     )
 
     // MARK: Bass drum

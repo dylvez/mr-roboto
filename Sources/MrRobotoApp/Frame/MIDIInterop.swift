@@ -10,9 +10,11 @@ import SongGraph
 public enum DrumMap {
     public static let notes: [(DrumVoice, Int)] = [
         (.kick, 36), (.snare, 38), (.clap, 39), (.rim, 37), (.closedHat, 42), (.openHat, 46),
-        (.ride, 51), (.crash, 49), (.lowTom, 45), (.midTom, 47), (.highTom, 50), (.perc, 75),
+        (.ride, 51), (.crash, 49), (.lowTom, 45), (.midTom, 47), (.highTom, 50), (.cowbell, 56),
+        (.tambourine, 54), (.highBongo, 60), (.lowBongo, 61), (.highConga, 63), (.lowConga, 64),
+        (.shaker, 70), (.claves, 75), (.woodblock, 76), (.perc, 82),
     ]
-    public static func note(for voice: DrumVoice) -> Int { notes.first { $0.0 == voice }?.1 ?? 75 }
+    public static func note(for voice: DrumVoice) -> Int { notes.first { $0.0 == voice }?.1 ?? 82 }
     public static func voice(for note: Int) -> DrumVoice {
         if let exact = notes.first(where: { $0.1 == note }) { return exact.0 }
         switch note {
@@ -23,6 +25,9 @@ public enum DrumMap {
         case 48: return .midTom
         case 52, 55, 57: return .crash
         case 53, 59: return .ride
+        case 62: return .highConga   // Mute Hi Conga
+        case 69: return .shaker      // Cabasa
+        case 77: return .woodblock   // Low Wood Block
         default: return .perc
         }
     }

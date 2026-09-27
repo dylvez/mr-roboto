@@ -146,6 +146,10 @@ public enum SynthesizedKit {
             voiceNotes[entry.spec.kind.drumVoice] = entry.spec.kind.generalMIDINote
         }
 
+        // The catch-all `perc` voice, which feels and MIDI import wrote before the hand percussion
+        // existed, plays on the shaker, so a groove saved then is heard rather than silent.
+        if let shaker = voiceNotes[.shaker], voiceNotes[.perc] == nil { voiceNotes[.perc] = shaker }
+
         var manifest = KitManifest(
             name: name ?? machine.name,
             description: machine.summary,

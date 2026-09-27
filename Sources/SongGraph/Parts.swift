@@ -346,6 +346,18 @@ public struct DrumVoice: RawRepresentable, Hashable, Codable, Sendable, CustomSt
     public static let lowTom = DrumVoice("lowTom")
     public static let midTom = DrumVoice("midTom")
     public static let highTom = DrumVoice("highTom")
+    public static let cowbell = DrumVoice("cowbell")
+    // Hand percussion.
+    public static let shaker = DrumVoice("shaker")
+    public static let tambourine = DrumVoice("tambourine")
+    public static let highConga = DrumVoice("highConga")
+    public static let lowConga = DrumVoice("lowConga")
+    public static let highBongo = DrumVoice("highBongo")
+    public static let lowBongo = DrumVoice("lowBongo")
+    public static let claves = DrumVoice("claves")
+    public static let woodblock = DrumVoice("woodblock")
+    /// Unnamed percussion: what MIDI import makes of a note it has no voice for, and what feels
+    /// wrote before the hand-percussion voices existed. Kits play it on their shaker.
     public static let perc = DrumVoice("perc")
 
     public var description: String { rawValue }

@@ -103,12 +103,13 @@ public struct WriteGrooveTool: DirectorTool {
             ("bars", Schema.integer("How many bars. A clave is a two-bar cycle, so Latin feels want an even number.", minimum: 1, maximum: 16)),
             ("swing_percent", Schema.number("Where the off-beat sixteenth lands: 50 straight, 66.7 triplet, 75 the far end; 0 keeps the feel's own.", minimum: 0, maximum: 75)),
             ("rows", Schema.array("Rows that replace or add voices; empty keeps the feel as written.",
-                                  of: Schema.string("voice: pattern. Voices: kick, snare, clap, rim, closedHat, openHat, ride, crash, lowTom, midTom, highTom, perc."))),
+                                  of: Schema.string("voice: pattern. Voices: kick, snare, clap, rim, closedHat, openHat, ride, crash, lowTom, midTom, highTom, cowbell, shaker, tambourine, highConga, lowConga, highBongo, lowBongo, claves, woodblock."))),
             ("note", Schema.string("One line for the ledger saying what this beat is, in the user's language.")),
         ], required: ["feel", "bars", "swing_percent", "rows", "note"])
     }
 
-    static let voices = ["kick", "snare", "clap", "rim", "closedHat", "openHat", "ride", "crash", "lowTom", "midTom", "highTom", "perc"]
+    static let voices = ["kick", "snare", "clap", "rim", "closedHat", "openHat", "ride", "crash", "lowTom", "midTom", "highTom",
+                         "cowbell", "shaker", "tambourine", "highConga", "lowConga", "highBongo", "lowBongo", "claves", "woodblock", "perc"]
 
     /// One row, read. Throws with the row and what is wrong with it.
     static func parse(_ row: String, steps: Int, tool: String) throws -> GroovePattern {

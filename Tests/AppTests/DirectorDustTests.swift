@@ -302,7 +302,7 @@ struct DirectorDustToolboxTests {
         ("separate_stems", "2a241e427e5f3af03e8b065ce721b20d44d3c09f1ece42be293016bf0276951b"),
         ("chop_bar", "28552c37cc1da03731c85b73f7624068b88ecaef43badf8190084be45816ce1f"),
         ("classify_slices", "ff7f1a8732c54579b55225da582dc6a7e8b1e5eac0fef4ca4ecbc0aad45c7f85"),
-        ("list_feels", "05ccb9b79001ab9da0d57c60f97d369eff8704b573bffc1a689adf1ffa5c8a14"),
+        ("list_feels", "e73c6a6d1a9879ddc5ae4b145d04d9ef2a6771f29c4c891f2bb1e203a3a8b505"),  // limit up to 60: the library has 51
         ("describe_feel", "c51e563c303367f5e62a7b88c13a9f8f0aae2bb4c7f6f5f37fca2485fae7e889"),
         ("regroove_chop", "bc63be6e8be7397119befd24331d9017911413bfbf24d611714963931fb2846d"),
         ("set_swing", "050fe055aebc9a46a0073042d4cd8bef2a077a7ff72c08ece51504e7a2331e4f"),

@@ -287,7 +287,7 @@ struct DirectorToolTests {
         let session = try makeSession()
         defer { tearDown(session) }
         let output = try await ListFeelsTool(workbench: session.workbench)
-            .run(.init(tempo: nil, idiom: nil, beatsPerBar: nil, limit: 40))
+            .run(.init(tempo: nil, idiom: nil, beatsPerBar: nil, limit: 60))
         #expect(output.count == FeelLibrary.standard.count)
         #expect(output.feels.contains { $0.name == "Boom-Bap" })
         #expect(output.idioms.contains("boom-bap"))

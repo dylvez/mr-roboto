@@ -331,7 +331,7 @@ struct GridSurfaceTests {
     @Test("every shipped feel loads into the grid and comes back out identical")
     func everyFeelRoundTrips() {
         let library = FeelLibrary.standard
-        #expect(library.count == 33, "the library ships 33 feels with provenance")
+        #expect(library.count == 51, "the library ships 51 feels with provenance")
         #expect(library.validate().isEmpty)
 
         let model = GridModel(host: StubGridHost())
@@ -582,12 +582,15 @@ struct GridSurfaceTests {
                         "\(machine.name)'s \(spec.kind) is not offered")
             }
         }
-        // perc is written by the feels and by MIDI import, and no machine here plays it.
+        // perc is written by MIDI import; no machine has a voice of that name, and every one plays
+        // it on its shaker.
         #expect(GridModel.knownVoices.contains(.perc))
         #expect(SynthMachine.all.allSatisfy { machine in
             !machine.voices.contains { $0.kind.drumVoice == .perc }
+                && SynthVoiceKind.handPercussion.allSatisfy { kind in machine.spec(for: kind) != nil }
         })
-        #expect(!model.machineSounds(.perc))
+        #expect(model.machineSounds(.perc))
+        #expect(model.machineSounds(.highConga) && model.machineSounds(.claves))
         #expect(model.machineSounds(.ride))
         #expect(model.machineSounds(DrumVoice("cowbell")))
 

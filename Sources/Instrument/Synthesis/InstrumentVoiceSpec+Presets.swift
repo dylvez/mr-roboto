@@ -11,6 +11,25 @@ public extension InstrumentVoiceSpec {
 
     // MARK: Keys
 
+    /// A grand piano, sketched in FM: two pairs, each a string of the unison, one tuned a hair
+    /// sharp of the other so the note beats slowly the way three strings on a real note do. The
+    /// modulators fall away faster than the carriers — a hammer's brightness goes first — and the
+    /// second pair carries a high, fast knock for the hammer itself. Three layers, because on a
+    /// piano how hard you play is mostly how bright it is. A sketch, not a sample: an imported
+    /// SFZ grand is the real thing.
+    static let grandPiano = InstrumentVoiceSpec(
+        id: "grand-piano", name: "Grand Piano", family: "keys", engine: .fm,
+        summary: "A bright, ringing grand piano for chords and ballads.",
+        algorithm: .twinPairs,
+        operators: [
+            Operator(ratio: 1, level: 1, attack: 0.001, decay: 4.2, sustain: 0.04),
+            Operator(ratio: 1, level: 0.62, attack: 0.001, decay: 0.9, sustain: 0.06),
+            Operator(ratio: 1.0014, level: 0.75, attack: 0.001, decay: 3.2, sustain: 0.03),
+            Operator(ratio: 5.01, level: 0.24, attack: 0.001, decay: 0.05, sustain: 0),
+        ],
+        amplitude: Envelope(attack: 0.001, decay: 4.5, sustain: 0.04, release: 0.35),
+        drive: 0.04, level: 0.88, durationSeconds: 6, velocityLayers: [35, 80, 120])
+
     /// The eighties digital piano: a bright attack pair over a clean body, glassier than the Rhodes.
     static let fmPiano = InstrumentVoiceSpec(
         id: "fm-piano", name: "FM Piano", family: "keys", engine: .fm,
@@ -257,6 +276,27 @@ public extension InstrumentVoiceSpec {
         amplitude: Envelope(attack: 0.001, decay: 3, sustain: 1, release: 0.25),
         drive: 0.25, level: 0.85, durationSeconds: 4, velocityLayers: [50, 112])
 
+    /// An electric through a pushed amp: the string driven into saturation, which squashes its
+    /// decay into sustain, then darkened the way a guitar speaker cuts everything over 4 kHz. Each
+    /// note is driven on its own and chords are summed after, so a chord is cleaner than a real
+    /// amp makes it — fine for single lines and power chords, polite on a full barre chord.
+    static let overdrivenGuitar = InstrumentVoiceSpec(
+        id: "overdrive-guitar", name: "Overdriven Guitar", family: "plucked", engine: .pluckedString,
+        summary: "An electric through a cranked amp: warm, singing overdrive for riffs and leads.",
+        pluck: Pluck(decaySeconds: 4, decayKeyTrack: 0.3, brightnessHz: 5_000, pickPosition: 0.11),
+        filterHz: 3_200, filterKeyTrack: 0.2, filterQ: 1.5,
+        amplitude: Envelope(attack: 0.001, decay: 4, sustain: 1, release: 0.18),
+        drive: 0.8, level: 0.72, durationSeconds: 4.5, velocityLayers: [50, 112])
+
+    /// Harder again: more drive, a darker speaker, less dynamics left.
+    static let distortedGuitar = InstrumentVoiceSpec(
+        id: "distorted-guitar", name: "Distorted Guitar", family: "plucked", engine: .pluckedString,
+        summary: "High-gain distortion: thick, compressed and aggressive, for power chords and rock riffs.",
+        pluck: Pluck(decaySeconds: 5, decayKeyTrack: 0.2, brightnessHz: 5_500, pickPosition: 0.1),
+        filterHz: 2_600, filterKeyTrack: 0.15, filterQ: 1.8,
+        amplitude: Envelope(attack: 0.001, decay: 5, sustain: 1, release: 0.15),
+        drive: 1, level: 0.66, durationSeconds: 5, velocityLayers: [50, 112])
+
     static let mutedGuitar = InstrumentVoiceSpec(
         id: "muted-guitar", name: "Muted Guitar", family: "plucked", engine: .pluckedString,
         summary: "Palm-muted plucks: short, tight and rhythmic.",
@@ -459,6 +499,39 @@ public extension InstrumentVoiceSpec {
         filterHz: 2_200, filterKeyTrack: 0.6, filterQ: 2,
         amplitude: Envelope(attack: 0.05, decay: 0.4, sustain: 0.9, release: 0.15),
         level: 0.68, durationSeconds: 4)
+
+    /// A saxophone is a conical reed: a saw's full set of harmonics through a formant-ish
+    /// low-pass that opens with how hard it is blown, breath under it, a bark at the front of the
+    /// note from the filter envelope, and growl from the drive. The vibrato arrives late, as a
+    /// player's does.
+    static let tenorSax = InstrumentVoiceSpec(
+        id: "tenor-sax", name: "Tenor Sax", family: "wind", engine: .subtractive,
+        summary: "A husky, breathy tenor sax: warm in the low register, a growl when pushed.",
+        vibrato: Modulation(rateHz: 5.2, depth: 14, delaySeconds: 0.35),
+        oscillators: [
+            Oscillator(waveform: .saw, level: 1),
+            Oscillator(waveform: .square, cents: 3, level: 0.35),
+        ],
+        noiseLevel: 0.05,
+        filterHz: 1_300, filterKeyTrack: 0.5, filterQ: 1.6, filterEnvelopeOctaves: 1.2,
+        filterEnvelope: Envelope(attack: 0.03, decay: 0.25, sustain: 0.6, release: 0.15),
+        amplitude: Envelope(attack: 0.035, decay: 0.4, sustain: 0.88, release: 0.14),
+        drive: 0.35, level: 0.7, durationSeconds: 4, velocityLayers: [55, 115])
+
+    /// The alto: brighter and more nasal, a little less air.
+    static let altoSax = InstrumentVoiceSpec(
+        id: "alto-sax", name: "Alto Sax", family: "wind", engine: .subtractive,
+        summary: "A bright, singing alto sax for melodies and solos.",
+        vibrato: Modulation(rateHz: 5.5, depth: 12, delaySeconds: 0.3),
+        oscillators: [
+            Oscillator(waveform: .saw, level: 1),
+            Oscillator(waveform: .pulse, level: 0.3, pulseWidth: 0.35),
+        ],
+        noiseLevel: 0.035,
+        filterHz: 1_900, filterKeyTrack: 0.5, filterQ: 1.8, filterEnvelopeOctaves: 1,
+        filterEnvelope: Envelope(attack: 0.025, decay: 0.22, sustain: 0.65, release: 0.14),
+        amplitude: Envelope(attack: 0.03, decay: 0.4, sustain: 0.88, release: 0.13),
+        drive: 0.28, level: 0.68, durationSeconds: 4, velocityLayers: [55, 115])
 
     static let panFlute = InstrumentVoiceSpec(
         id: "pan-flute", name: "Pan Flute", family: "wind", engine: .subtractive,

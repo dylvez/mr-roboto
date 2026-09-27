@@ -434,8 +434,9 @@ public final class GridModel {
 
     // MARK: Voices
 
-    /// Every voice a row can be: the twelve the synthesized machines have sounds for, in the order a
-    /// kit lists them, and `perc`, which the feels and MIDI import write but no machine here plays.
+    /// Every voice a row can be: the drums and hand percussion the synthesized machines have sounds
+    /// for, in the order a kit lists them, and `perc`, which MIDI import writes for a note it has no
+    /// voice for and which every machine plays on its shaker.
     public static let knownVoices: [DrumVoice] = {
         var voices = SynthVoiceKind.allCases.map(\.drumVoice)
         if !voices.contains(.perc) { voices.append(.perc) }
@@ -451,7 +452,8 @@ public final class GridModel {
     /// and keeps — another kit may play it — but on this machine it is silent, and the grid says so.
     public func machineSounds(_ voice: DrumVoice) -> Bool {
         // A chop has a slice for every voice: the class that voice asks for, or the closest.
-        playsOnChop || machine.voices.contains { $0.kind.drumVoice == voice }
+        let asked = voice == .perc ? DrumVoice.shaker : voice
+        return playsOnChop || machine.voices.contains { $0.kind.drumVoice == asked }
     }
 
     /// What the steps play on, as the grid names it.

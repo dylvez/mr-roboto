@@ -188,10 +188,11 @@ public struct FeelLibrary: Hashable, Sendable {
 
 extension FeelLibrary {
     /// Everything the app ships with: the `groove-theory` beat templates, the rhythmic skeletons of
-    /// The Chorus's accompaniment styles, and the feels the first idiom (electronic, lo-fi,
-    /// sample-based) needs that neither source had.
+    /// The Chorus's accompaniment styles, the feels the first idiom (electronic, lo-fi,
+    /// sample-based) needs that neither source had, the Latin set, and the styles and meters none
+    /// of those covered.
     public static let standard = FeelLibrary(
-        Feels.grooveTheory + Feels.accompaniment + Feels.idiom + Feels.latin
+        Feels.grooveTheory + Feels.accompaniment + Feels.idiom + Feels.latin + Feels.styles
     )
 }
 

@@ -156,9 +156,11 @@ struct FeelLibraryTests {
         let suggestions = Self.library.suggest(for: 128, idiom: .house, limit: 3)
         #expect(!suggestions.isEmpty)
         #expect(suggestions.allSatisfy { $0.idioms.contains(.house) })
-        #expect(suggestions[0].name == "Four on the Floor",
+        // Classic House is the one whose home is house; Four on the Floor's is disco.
+        #expect(suggestions[0].name == "Classic House",
                 "best for 128 BPM house was \(suggestions[0].name)")
         #expect(suggestions[0].tempoRange.contains(128))
+        #expect(suggestions.contains { $0.name == "Four on the Floor" })
         #expect(suggestions.contains { $0.name == "Lo-Fi House" })
     }
 

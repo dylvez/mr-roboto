@@ -27,9 +27,9 @@ struct ScratchToolsTests {
             #expect(!feel.provenance.lineage.isEmpty && origin == Provenance.Origin.original, "\(name)")
             #expect(feel.tempoRange.contains(feel.suggestedTempo))
         }
-        let son = FeelLibrary.standard.feel(named: "Son Clave 3-2")!.groove.patterns.first { $0.voice == .rim }!
+        let son = FeelLibrary.standard.feel(named: "Son Clave 3-2")!.groove.patterns.first { $0.voice == .claves }!
         #expect(son.steps.enumerated().filter { $0.element != .rest }.map(\.offset) == [0, 6, 12, 20, 24], "three, then two")
-        let rumba = FeelLibrary.standard.feel(named: "Rumba Clave")!.groove.patterns.first { $0.voice == .rim }!
+        let rumba = FeelLibrary.standard.feel(named: "Rumba Clave")!.groove.patterns.first { $0.voice == .claves }!
         #expect(rumba.steps[14] != .rest && rumba.steps[12] == .rest, "the third stroke a sixteenth late")
     }
 
@@ -48,7 +48,7 @@ struct ScratchToolsTests {
         #expect(version.operation == Operation.written && version.author == .persona("Beatmaker") && version.note == "Four bars of son clave, leaning a little")
         guard case .groove(let groove) = version.kind else { Issue.record("not a groove"); return }
         #expect(groove.bars == 4 && groove.patterns.allSatisfy { $0.steps.count == 64 })
-        let rim = try #require(groove.patterns.first { $0.voice == .rim })
+        let rim = try #require(groove.patterns.first { $0.voice == .claves })
         #expect(rim.steps.enumerated().filter { $0.element != .rest }.map(\.offset) == [0, 6, 12, 20, 24, 32, 38, 44, 52, 56], "the two-bar clave, twice")
         #expect(workspace.heard == [version.id], "it is played for the user")
         #expect(out.detail.contains("Nothing was sampled"))
@@ -69,7 +69,7 @@ struct ScratchToolsTests {
         #expect(over.rows.contains { $0.hasPrefix("kick: X...X...X...X.x.") } && over.rows.contains { $0.hasPrefix("snare: ...x..X") })
 
         await #expect(throws: DirectorToolFailure.self) { try await write.run(.init(feel: "", bars: 2, swing_percent: 0, rows: [], note: "nothing")) }
-        await #expect(throws: DirectorToolFailure.self) { try await write.run(.init(feel: "", bars: 2, swing_percent: 0, rows: ["cowbell: x..."], note: "no such voice")) }
+        await #expect(throws: DirectorToolFailure.self) { try await write.run(.init(feel: "", bars: 2, swing_percent: 0, rows: ["gong: x..."], note: "no such voice")) }
         await #expect(throws: DirectorToolFailure.self) { try await write.run(.init(feel: "", bars: 2, swing_percent: 0, rows: ["kick: x.o."], note: "bad step")) }
         await #expect(throws: DirectorToolFailure.self) { try await write.run(.init(feel: "No Such Feel", bars: 2, swing_percent: 0, rows: [], note: "x")) }
         let empty = DirectorScratchWorkspace(song: nil)

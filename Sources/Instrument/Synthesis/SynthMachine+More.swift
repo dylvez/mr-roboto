@@ -27,32 +27,32 @@ extension SynthMachine {
         id: "cr78",
         name: "CR-78",
         summary: "CR-78 flavour: soft, round analog voices — a bonk of a kick, a ticking hat, pitched-up hand drums.",
-        voices: [cr78Kick, cr78Snare, cr78ClosedHat, cr78OpenHat, cr78Clap, cr78Rim,
-                 cr78LowTom, cr78MidTom, cr78HighTom, cr78Cowbell, cr78Crash, cr78Ride]
+        voices: withPercussion([cr78Kick, cr78Snare, cr78ClosedHat, cr78OpenHat, cr78Clap, cr78Rim,
+                 cr78LowTom, cr78MidTom, cr78HighTom, cr78Cowbell, cr78Crash, cr78Ride], "cr78", seed: 0x780900, electronic: true)
     )
 
     public static let tr707 = SynthMachine(
         id: "tr707",
         name: "TR-707",
         summary: "TR-707 flavour: crisp, tight early-digital samples of a 909-ish kit.",
-        voices: [tr707Kick, tr707Snare, tr707ClosedHat, tr707OpenHat, tr707Clap, tr707Rim,
-                 tr707LowTom, tr707MidTom, tr707HighTom, tr707Cowbell, tr707Crash, tr707Ride]
+        voices: withPercussion([tr707Kick, tr707Snare, tr707ClosedHat, tr707OpenHat, tr707Clap, tr707Rim,
+                 tr707LowTom, tr707MidTom, tr707HighTom, tr707Cowbell, tr707Crash, tr707Ride], "tr707", seed: 0x7070900)
     )
 
     public static let dmx = SynthMachine(
         id: "dmx",
         name: "DMX",
         summary: "DMX flavour: punchy 8-bit samples — a deep kick, a fat snare, a big clap.",
-        voices: [dmxKick, dmxSnare, dmxClosedHat, dmxOpenHat, dmxClap, dmxRim,
-                 dmxLowTom, dmxMidTom, dmxHighTom, dmxCowbell, dmxCrash, dmxRide]
+        voices: withPercussion([dmxKick, dmxSnare, dmxClosedHat, dmxOpenHat, dmxClap, dmxRim,
+                 dmxLowTom, dmxMidTom, dmxHighTom, dmxCowbell, dmxCrash, dmxRide], "dmx", seed: 0xD3C0900)
     )
 
     public static let studio = SynthMachine(
         id: "studio",
         name: "Studio Kit",
         summary: "A clean acoustic kit: no sampler in the way, a beater you can hear, cymbals that ring.",
-        voices: [studioKick, studioSnare, studioClosedHat, studioOpenHat, studioClap, studioRim,
-                 studioLowTom, studioMidTom, studioHighTom, studioCowbell, studioCrash, studioRide]
+        voices: withPercussion([studioKick, studioSnare, studioClosedHat, studioOpenHat, studioClap, studioRim,
+                 studioLowTom, studioMidTom, studioHighTom, studioCowbell, studioCrash, studioRide], "studio", seed: 0x57070900)
     )
 
     /// A copy of `base` that says it is `machine`'s, with its own seed, changed by `change`.

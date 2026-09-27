@@ -127,8 +127,9 @@ public struct Regroove: Sendable {
         /// answers on the backbeat is the snare's, anything metallic keeps time.
         public static let defaultVoices: [SliceClass: [DrumVoice]] = [
             .kick: [.kick, .lowTom],
-            .snare: [.snare, .clap, .rim, .midTom, .highTom],
-            .hat: [.closedHat, .openHat, .ride, .crash, .perc],
+            .snare: [.snare, .clap, .rim, .midTom, .highTom, .highConga, .lowConga, .highBongo, .lowBongo,
+                     .claves, .woodblock, .cowbell],
+            .hat: [.closedHat, .openHat, .ride, .crash, .shaker, .tambourine, .perc],
         ]
 
         /// The class serving `voice`, or `fallback`.

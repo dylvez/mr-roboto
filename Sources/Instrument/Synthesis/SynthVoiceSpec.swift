@@ -4,10 +4,17 @@ import SongGraph
 // MARK: - Voice kind
 
 /// The voices a synthesized kit provides. One case per physical channel on the machines being
-/// modelled, so a preset reads like the front panel.
+/// modelled, so a preset reads like the front panel — then the hand percussion every kit carries
+/// beside its drums (`SynthMachine+Percussion.swift`).
 public enum SynthVoiceKind: String, Codable, Sendable, Hashable, CaseIterable {
     case kick, snare, closedHat, openHat, clap, rim
     case lowTom, midTom, highTom, cowbell, crash, ride
+    case shaker, tambourine, highConga, lowConga, highBongo, lowBongo, claves, woodblock
+
+    /// The hand percussion, in the order a kit lists it.
+    public static let handPercussion: [SynthVoiceKind] = [
+        .shaker, .tambourine, .highConga, .lowConga, .highBongo, .lowBongo, .claves, .woodblock,
+    ]
 
     /// The groove-level voice name this kind answers to.
     public var drumVoice: DrumVoice {
@@ -21,9 +28,17 @@ public enum SynthVoiceKind: String, Codable, Sendable, Hashable, CaseIterable {
         case .lowTom: return .lowTom
         case .midTom: return .midTom
         case .highTom: return .highTom
-        case .cowbell: return DrumVoice("cowbell")
+        case .cowbell: return .cowbell
         case .crash: return .crash
         case .ride: return .ride
+        case .shaker: return .shaker
+        case .tambourine: return .tambourine
+        case .highConga: return .highConga
+        case .lowConga: return .lowConga
+        case .highBongo: return .highBongo
+        case .lowBongo: return .lowBongo
+        case .claves: return .claves
+        case .woodblock: return .woodblock
         }
     }
 
@@ -44,6 +59,14 @@ public enum SynthVoiceKind: String, Codable, Sendable, Hashable, CaseIterable {
         case .crash: return 49       // Crash Cymbal 1
         case .ride: return 51        // Ride Cymbal 1
         case .cowbell: return 56     // Cowbell
+        case .tambourine: return 54  // Tambourine
+        case .highBongo: return 60   // Hi Bongo
+        case .lowBongo: return 61    // Low Bongo
+        case .highConga: return 63   // Open Hi Conga
+        case .lowConga: return 64    // Low Conga
+        case .shaker: return 70      // Maracas
+        case .claves: return 75      // Claves
+        case .woodblock: return 76   // Hi Wood Block
         }
     }
 
@@ -55,6 +78,10 @@ public enum SynthVoiceKind: String, Codable, Sendable, Hashable, CaseIterable {
         case .lowTom: return "low_tom"
         case .midTom: return "mid_tom"
         case .highTom: return "high_tom"
+        case .highConga: return "high_conga"
+        case .lowConga: return "low_conga"
+        case .highBongo: return "high_bongo"
+        case .lowBongo: return "low_bongo"
         default: return rawValue
         }
     }

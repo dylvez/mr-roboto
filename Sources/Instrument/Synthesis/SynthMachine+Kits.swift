@@ -44,14 +44,14 @@ extension SynthMachine {
     public static let tr606 = SynthMachine(
         id: "tr606", name: "TR-606",
         summary: "TR-606 flavour: the 808's thin little sibling — a tight kick, a papery snare, bright hats.",
-        voices: [tr606Kick, tr606Snare, tr606ClosedHat, tr606OpenHat, tr606Clap, tr606Rim,
-                 tr606LowTom, tr606MidTom, tr606HighTom, tr606Cowbell, tr606Crash, tr606Ride])
+        voices: withPercussion([tr606Kick, tr606Snare, tr606ClosedHat, tr606OpenHat, tr606Clap, tr606Rim,
+                 tr606LowTom, tr606MidTom, tr606HighTom, tr606Cowbell, tr606Crash, tr606Ride], "tr606", seed: 0x6060900, electronic: true))
 
     public static let simmons = SynthMachine(
         id: "simmons", name: "Simmons",
         summary: "Simmons SDS-V flavour: toms that sweep down, a snare that is half tone, a kick with a click.",
-        voices: [simmonsKick, simmonsSnare, simmonsClosedHat, simmonsOpenHat, simmonsClap, simmonsRim,
-                 simmonsLowTom, simmonsMidTom, simmonsHighTom, simmonsCowbell, simmonsCrash, simmonsRide])
+        voices: withPercussion([simmonsKick, simmonsSnare, simmonsClosedHat, simmonsOpenHat, simmonsClap, simmonsRim,
+                 simmonsLowTom, simmonsMidTom, simmonsHighTom, simmonsCowbell, simmonsCrash, simmonsRide], "simmons", seed: 0x51350900))
 
     public static let sp1200 = SynthMachine(
         id: "sp1200", name: "SP-1200",
@@ -66,20 +66,20 @@ extension SynthMachine {
     public static let jazz = SynthMachine(
         id: "jazz", name: "Jazz Brushes",
         summary: "A jazz kit played with brushes: a soft felt kick, a swishing snare, a ride that sings.",
-        voices: [jazzKick, jazzSnare, jazzClosedHat, jazzOpenHat, jazzClap, jazzRim,
-                 jazzLowTom, jazzMidTom, jazzHighTom, jazzCowbell, jazzCrash, jazzRide])
+        voices: withPercussion([jazzKick, jazzSnare, jazzClosedHat, jazzOpenHat, jazzClap, jazzRim,
+                 jazzLowTom, jazzMidTom, jazzHighTom, jazzCowbell, jazzCrash, jazzRide], "jazz", seed: 0x7A220900))
 
     public static let rock = SynthMachine(
         id: "rock", name: "Rock Kit",
         summary: "A big rock kit: a deep kick, a fat snare with room, crashes that open up.",
-        voices: [rockKick, rockSnare, rockClosedHat, rockOpenHat, rockClap, rockRim,
-                 rockLowTom, rockMidTom, rockHighTom, rockCowbell, rockCrash, rockRide])
+        voices: withPercussion([rockKick, rockSnare, rockClosedHat, rockOpenHat, rockClap, rockRim,
+                 rockLowTom, rockMidTom, rockHighTom, rockCowbell, rockCrash, rockRide], "rock", seed: 0x70C40900))
 
     public static let funk = SynthMachine(
         id: "funk", name: "Funk Kit",
         summary: "A tight funk kit: a dry, punchy kick, a crisp high snare, tight hats for ghost notes.",
-        voices: [funkKick, funkSnare, funkClosedHat, funkOpenHat, funkClap, funkRim,
-                 funkLowTom, funkMidTom, funkHighTom, funkCowbell, funkCrash, funkRide])
+        voices: withPercussion([funkKick, funkSnare, funkClosedHat, funkOpenHat, funkClap, funkRim,
+                 funkLowTom, funkMidTom, funkHighTom, funkCowbell, funkCrash, funkRide], "funk", seed: 0xF0C40900))
 
     public static let vintage = SynthMachine(
         id: "vintage", name: "Vintage Kit",
@@ -95,8 +95,8 @@ extension SynthMachine {
     public static let trap = SynthMachine(
         id: "trap", name: "Trap Kit",
         summary: "Trap: a long, tuned 808 kick, a sharp clap and snare, crisp hats for rolls.",
-        voices: [trapKick, trapSnare, trapClosedHat, trapOpenHat, trapClap, trapRim,
-                 trapLowTom, trapMidTom, trapHighTom, trapCowbell, trapCrash, trapRide])
+        voices: withPercussion([trapKick, trapSnare, trapClosedHat, trapOpenHat, trapClap, trapRim,
+                 trapLowTom, trapMidTom, trapHighTom, trapCowbell, trapCrash, trapRide], "trap", seed: 0x7EA90900))
 
     public static let lofi = SynthMachine(
         id: "lofi", name: "Lo-fi Kit",
