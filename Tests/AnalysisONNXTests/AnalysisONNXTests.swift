@@ -327,3 +327,47 @@ private var isDebugBuild: Bool {
     false
     #endif
 }
+
+// MARK: - Core ML on the GPU
+
+@Test func missingCoreMLModelRunsEverythingOnONNXRuntime() throws {
+    guard let url = availableModelURL("beat-this-coreml-missing") else { return }
+    let missing = URL(fileURLWithPath: "/nonexistent/beat_this_1500.mlmodelc")
+    let tracker = BeatThisTracker(modelURL: url, options: .init(coreMLModelURL: missing))
+    #expect(tracker.coreMLModel() == nil)
+    #expect(tracker.coreMLUnavailableReason?.contains(missing.path) == true)
+    let logits = try tracker.frameLogits(of: Spectrogram(frameCount: 3000, binCount: 128, values: [Float](repeating: 0, count: 3000 * 128)))
+    #expect(logits.beat.count == 3000 && logits.coreMLChunks == 0)
+
+    #expect(BeatThisTracker(modelURL: url).coreMLModel() == nil)  // none asked for
+    #expect(BeatThisTracker.Options.installed.coreMLModelURL == BeatThisTracker.defaultCoreMLModelURL)
+}
+
+@Suite(.serialized)
+struct BeatThisCoreMLTests {
+    /// The installed Core ML model against ONNX Runtime on Arrival: every chunk on the GPU, the same beats
+    /// and downbeats. Skips when either model is not installed.
+    @Test func arrivalOnTheGPUMatchesONNXRuntime() async throws {
+        let tag = "beat-this-coreml"
+        guard let url = availableModelURL(tag), fileExists(arrivalMP3, tag, "track"),
+              fileExists(BeatThisTracker.defaultCoreMLModelURL, tag, "Core ML model (run `uv run Bench/python/convert_beat_this_coreml.py`)") else { return }
+        let onnx = BeatThisTracker(modelURL: url)
+        let gpu = BeatThisTracker(modelURL: url, options: .installed)
+        #expect(gpu.coreMLModel() != nil, "\(gpu.coreMLUnavailableReason ?? "")")
+
+        _ = try await gpu.analyze(url: arrivalMP3)  // warm
+        let a = try await onnx.analyze(url: arrivalMP3)
+        let b = try await gpu.analyze(url: arrivalMP3)
+        print(String(format: "[%@] inference over %d chunks: ONNX Runtime %.3f s, Core ML %.3f s (%d chunks on Core ML); max |logit diff| beat %.3f downbeat %.3f",
+                     tag, a.chunkCount, a.inferenceTime, b.inferenceTime, b.coreMLChunkCount,
+                     maxAbsDifference(a.beatLogits, b.beatLogits), maxAbsDifference(a.downbeatLogits, b.downbeatLogits)))
+        #expect(a.coreMLChunkCount == 0 && b.coreMLChunkCount == b.chunkCount)
+        #expect(maxAbsDifference(a.beatLogits, b.beatLogits) < 0.5)
+        #expect(b.result.beats == a.result.beats)
+        #expect(b.result.downbeats == a.result.downbeats)
+
+        // A piece shorter than one chunk has one shorter chunk, which stays on ONNX Runtime.
+        let short = try gpu.frameLogits(of: Spectrogram(frameCount: 1000, binCount: 128, values: [Float](repeating: 0, count: 1000 * 128)))
+        #expect(short.beat.count == 1000 && short.coreMLChunks == 0)
+    }
+}

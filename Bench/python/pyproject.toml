@@ -12,6 +12,7 @@ dependencies = [
   "mlx>=0.31",
   "demucs-mlx>=1.4",
   "beat_this @ git+https://github.com/CPJKU/beat_this",
+  "coremltools>=9.0",
 ]
 
 [tool.uv]
