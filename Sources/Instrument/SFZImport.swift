@@ -69,10 +69,24 @@ public struct SFZSkip: Hashable, Sendable, CustomStringConvertible {
 ///     volume  pan  tune  transpose
 ///     ampeg_delay  ampeg_attack  ampeg_hold  ampeg_decay  ampeg_sustain  ampeg_release
 ///
-/// plus `default_path` from `<control>`. Headers `<control>`, `<global>`, `<master>`, `<group>` and
-/// `<region>` are honoured with SFZ's inheritance: an opcode set at an outer level applies to every
-/// region under it until a region overrides it. Any other header's opcodes, and any opcode outside
-/// the list, are reported in `SFZImport.skipped`.
+/// plus `default_path`, `note_offset` and `octave_offset` from `<control>`. Headers `<control>`,
+/// `<global>`, `<master>`, `<group>` and `<region>` are honoured with SFZ's inheritance: an opcode
+/// set at an outer level applies to every region under it until a region overrides it. Any other
+/// header's opcodes, and any opcode outside the list, are reported in `SFZImport.skipped`.
+///
+/// The preprocessor runs first: `#define $NAME value` substitutes into every line after it, and
+/// `#include "file.sfz"` splices a file in, resolved against the main file's folder — how most
+/// large free packs are split up.
+///
+/// Some opcodes decide *which* regions sound rather than how, and a sampler without them would
+/// play every alternative at once. Each is reduced to what this sampler can play, and the reduction
+/// is reported rather than silent:
+///
+/// * `trigger=release` regions (a key's release noise) are left out: this sampler plays on note-on.
+/// * `lorand`/`hirand` random round robins become ordinary round robins, cycled in order.
+/// * keyswitched articulations (`sw_last`) keep only the default one (`sw_default`, else the lowest).
+/// * regions conditioned on a controller (`loccN`/`hiccN`) are kept when the controller's resting
+///   value (`set_ccN`, else 0) is in their range — a piano's pedal-up layer, not its pedal-down one.
 ///
 /// Unit conversions on the way in: `pan` -100…100 → -1…1, `ampeg_sustain` percent → 0…1,
 /// `transpose` semitones folded into `tuneCents`, `end` (SFZ's inclusive last frame) → the
@@ -85,8 +99,23 @@ public enum SFZImporter {
         "offset", "end", "loop_mode", "loop_start", "loop_end",
         "volume", "pan", "tune", "transpose",
         "ampeg_delay", "ampeg_attack", "ampeg_hold", "ampeg_decay", "ampeg_sustain", "ampeg_release",
-        "default_path",
+        "default_path", "note_offset", "octave_offset",
     ]
+
+    /// Opcodes that decide which regions sound. Read, then reduced as the type's comment says.
+    static let selectionOpcodes: Set<String> = [
+        "trigger", "lorand", "hirand", "sw_last", "sw_lokey", "sw_hikey", "sw_default",
+        "sw_down", "sw_up", "sw_previous",
+    ]
+
+    /// `loccN`, `hiccN` and `set_ccN`.
+    static func isControllerOpcode(_ name: String) -> Bool {
+        for prefix in ["on_locc", "on_hicc", "locc", "hicc", "set_cc"] where name.hasPrefix(prefix) {
+            let digits = name.dropFirst(prefix.count)
+            return !digits.isEmpty && digits.allSatisfy(\.isNumber)
+        }
+        return false
+    }
 
     static let supportedHeaders: Set<String> = ["control", "global", "master", "group", "region"]
 
@@ -95,23 +124,99 @@ public enum SFZImporter {
     public static func importKit(at url: URL, name: String? = nil) throws -> SFZImport {
         let text: String
         do {
-            text = try String(contentsOf: url, encoding: .utf8)
+            text = try read(url)
         } catch {
-            // Commercial packs are often Latin-1.
-            guard let fallback = try? Data(contentsOf: url),
-                  let decoded = String(data: fallback, encoding: .isoLatin1) else {
-                throw KitError.sfzUnreadable(path: url.path, reason: "\(error)")
-            }
-            text = decoded
+            throw KitError.sfzUnreadable(path: url.path, reason: "\(error)")
         }
-        return parse(text, name: name ?? url.deletingPathExtension().lastPathComponent)
+        let folder = url.deletingLastPathComponent()
+        return parse(text, name: name ?? url.deletingPathExtension().lastPathComponent) { path in
+            try? read(KitPath.resolve(KitPath.normalized(path), in: folder))
+        }
     }
 
-    /// Parses SFZ text. Pure: no file system access, so it is the unit under test.
-    public static func parse(_ text: String, name: String) -> SFZImport {
+    private static func read(_ url: URL) throws -> String {
+        do {
+            return try String(contentsOf: url, encoding: .utf8)
+        } catch {
+            // Commercial packs are often Latin-1.
+            guard let data = try? Data(contentsOf: url), let decoded = String(data: data, encoding: .isoLatin1) else {
+                throw error
+            }
+            return decoded
+        }
+    }
+
+    /// Parses SFZ text. Pure: `include` is how an `#include` reaches another file, and a caller
+    /// with no files passes nothing, so it is the unit under test.
+    public static func parse(_ text: String, name: String, include: (String) -> String? = { _ in nil }) -> SFZImport {
+        var skipped: [SFZSkip] = []
+        var defines: [String: String] = [:]
+        let lines = preprocess(text, include: include, defines: &defines, depth: 0, skipped: &skipped)
         var parser = Parser(name: name)
-        parser.run(text)
+        parser.skipped = skipped
+        parser.run(lines)
         return parser.finish()
+    }
+
+    // MARK: Preprocessor
+
+    /// Comment-free lines with `#define`s substituted and `#include`s spliced in. A line keeps its
+    /// number in the file it came from; an included file's lines are numbered in that file.
+    static func preprocess(_ text: String, include: (String) -> String?, defines: inout [String: String],
+                           depth: Int, skipped: inout [SFZSkip]) -> [(text: String, line: Int)] {
+        var out: [(text: String, line: Int)] = []
+        var inBlockComment = false
+        // By `isNewline`, not by "\n": in Swift "\r\n" is one Character, so a file with Windows line
+        // endings — most packs made on Windows — split on "\n" is a single line.
+        for (index, rawLine) in text.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline).enumerated() {
+            let line = index + 1
+            var cleaned = stripComments(String(rawLine), inBlockComment: &inBlockComment)
+            let trimmed = cleaned.trimmingCharacters(in: .whitespaces)
+            guard !trimmed.isEmpty else { continue }
+            if trimmed.hasPrefix("#define") {
+                let parts = trimmed.dropFirst("#define".count).trimmingCharacters(in: .whitespaces)
+                    .split(maxSplits: 1, whereSeparator: \.isWhitespace)
+                if parts.count == 2, parts[0].hasPrefix("$") {
+                    defines[String(parts[0])] = substitute(String(parts[1]).trimmingCharacters(in: .whitespaces), defines)
+                } else {
+                    skipped.append(SFZSkip(opcode: "#define", value: trimmed, line: line,
+                                           reason: .unsupportedValue("expected #define $NAME value")))
+                }
+                continue
+            }
+            if trimmed.hasPrefix("#include") {
+                let path = substitute(trimmed.dropFirst("#include".count).trimmingCharacters(in: .whitespaces)
+                    .trimmingCharacters(in: CharacterSet(charactersIn: "\"")), defines)
+                if depth >= 16 {
+                    skipped.append(SFZSkip(opcode: "#include", value: path, line: line,
+                                           reason: .unsupportedValue("includes nested deeper than 16; not followed")))
+                } else if let included = include(path) {
+                    out += preprocess(included, include: include, defines: &defines, depth: depth + 1, skipped: &skipped)
+                } else {
+                    skipped.append(SFZSkip(opcode: "#include", value: path, line: line,
+                                           reason: .unsupportedValue("file not found")))
+                }
+                continue
+            }
+            if trimmed.hasPrefix("#") {
+                skipped.append(SFZSkip(opcode: String(trimmed.prefix { !$0.isWhitespace }), value: trimmed, line: line,
+                                       reason: .unknownOpcode))
+                continue
+            }
+            if !defines.isEmpty { cleaned = substitute(cleaned, defines) }
+            out.append((cleaned, line))
+        }
+        return out
+    }
+
+    /// `$NAME`s replaced, the longest names first so `$VEL` does not eat the start of `$VELOCITY`.
+    static func substitute(_ text: String, _ defines: [String: String]) -> String {
+        guard text.contains("$") else { return text }
+        var out = text
+        for (name, value) in defines.sorted(by: { $0.key.count > $1.key.count }) {
+            out = out.replacingOccurrences(of: name, with: value)
+        }
+        return out
     }
 
     // MARK: Parser
@@ -122,9 +227,16 @@ public enum SFZImporter {
         var line: Int
     }
 
+    /// What a region said about *whether* it sounds, kept beside its zone until every region is in.
+    struct Selection {
+        var keyswitch: Int?
+        var random: Double?
+    }
+
     private struct Parser {
         let name: String
         var defaultPath = ""
+        var control: [String: Assignment] = [:]
         var global: [String: Assignment] = [:]
         var master: [String: Assignment] = [:]
         var group: [String: Assignment] = [:]
@@ -132,17 +244,19 @@ public enum SFZImporter {
         var regionLine = 0
         var currentHeader = "global"
         var zones: [Zone] = []
+        var selections: [Selection] = []
         var skipped: [SFZSkip] = []
         var regionCount = 0
+        var releaseRegions = 0
+        var controllerRegions: [Int: Int] = [:]
+        var switchedRegions = 0
+        var controllerTriggered = 0
+        var keyswitchDefault: Int?
 
         init(name: String) { self.name = name }
 
-        mutating func run(_ text: String) {
-            var inBlockComment = false
-            for (index, rawLine) in text.split(separator: "\n", omittingEmptySubsequences: false).enumerated() {
-                let line = index + 1
-                let cleaned = SFZImporter.stripComments(String(rawLine), inBlockComment: &inBlockComment)
-                guard !cleaned.trimmingCharacters(in: .whitespaces).isEmpty else { continue }
+        mutating func run(_ lines: [(text: String, line: Int)]) {
+            for (cleaned, line) in lines {
                 for token in SFZImporter.tokenize(cleaned, line: line) {
                     switch token {
                     case .header(let header): begin(header: header, line: line)
@@ -159,6 +273,7 @@ public enum SFZImporter {
             switch header {
             case "control":
                 defaultPath = ""
+                control = [:]
             case "global":
                 global = [:]; master = [:]; group = [:]
             case "master":
@@ -180,7 +295,9 @@ public enum SFZImporter {
                                        line: assignment.line, reason: .unknownHeader(currentHeader)))
                 return
             }
-            guard SFZImporter.supportedOpcodes.contains(assignment.name) else {
+            guard SFZImporter.supportedOpcodes.contains(assignment.name)
+                    || SFZImporter.selectionOpcodes.contains(assignment.name)
+                    || SFZImporter.isControllerOpcode(assignment.name) else {
                 skipped.append(SFZSkip(opcode: assignment.name, value: assignment.value,
                                        line: assignment.line, reason: .unknownOpcode))
                 return
@@ -190,10 +307,12 @@ public enum SFZImporter {
                 if !defaultPath.isEmpty && !defaultPath.hasSuffix("/") { defaultPath += "/" }
                 return
             }
+            if assignment.name == "sw_default" { keyswitchDefault = SFZImporter.noteNumber(assignment.value) }
             switch currentHeader {
             case "region": region?[assignment.name] = assignment
             case "group": group[assignment.name] = assignment
             case "master": master[assignment.name] = assignment
+            case "control": control[assignment.name] = assignment
             default: global[assignment.name] = assignment
             }
         }
@@ -202,7 +321,8 @@ public enum SFZImporter {
         mutating func flushRegion() {
             guard let region else { return }
             self.region = nil
-            var merged = global
+            var merged = control
+            merged.merge(global) { _, new in new }
             merged.merge(master) { _, new in new }
             merged.merge(group) { _, new in new }
             merged.merge(region) { _, new in new }
@@ -219,7 +339,38 @@ public enum SFZImporter {
 
             func int(_ key: String) -> Int? { merged[key].flatMap { Int($0.value.trimmingCharacters(in: .whitespaces)) } }
             func float(_ key: String) -> Float? { merged[key].flatMap { Float($0.value.trimmingCharacters(in: .whitespaces)) } }
-            func note(_ key: String) -> Int? { merged[key].flatMap { SFZImporter.noteNumber($0.value) } }
+            let offset = (int("note_offset") ?? 0) + 12 * (int("octave_offset") ?? 0)
+            func note(_ key: String) -> Int? { merged[key].flatMap { SFZImporter.noteNumber($0.value) }.map { $0 + offset } }
+
+            // Whether it sounds at all.
+            let trigger = merged["trigger"]?.value.trimmingCharacters(in: .whitespaces).lowercased() ?? "attack"
+            if trigger == "release" || trigger == "release_key" {
+                releaseRegions += 1
+                return
+            }
+            for (key, value) in merged where (key.hasPrefix("locc") || key.hasPrefix("hicc")) {
+                guard SFZImporter.isControllerOpcode(key), !key.hasPrefix("set_cc"),
+                      let number = Int(key.dropFirst(4)), Double(value.value.trimmingCharacters(in: .whitespaces)) != nil else { continue }
+                let resting = merged["set_cc\(number)"].flatMap { Double($0.value.trimmingCharacters(in: .whitespaces)) } ?? 0
+                let low = merged["locc\(number)"].flatMap { Double($0.value.trimmingCharacters(in: .whitespaces)) } ?? 0
+                let high = merged["hicc\(number)"].flatMap { Double($0.value.trimmingCharacters(in: .whitespaces)) } ?? 127
+                if !(low...max(low, high)).contains(resting) {
+                    controllerRegions[number, default: 0] += 1
+                    return
+                }
+            }
+            // A region a controller fires (a piano's pedal noise), or one on no key at all, is not a note.
+            if merged.keys.contains(where: { $0.hasPrefix("on_locc") || $0.hasPrefix("on_hicc") })
+                || (note("hikey") ?? note("key") ?? 0) < 0 {
+                controllerTriggered += 1
+                return
+            }
+            if merged["sw_down"] != nil || merged["sw_up"] != nil || merged["sw_previous"] != nil {
+                switchedRegions += 1
+                return
+            }
+            let random = merged["lorand"].flatMap { Double($0.value.trimmingCharacters(in: .whitespaces)) }
+                ?? (merged["hirand"] != nil ? 0 : nil)
 
             let sample = KitPath.normalized(defaultPath + KitPath.normalized(samplePath))
             let keyOpcode = note("key")
@@ -290,10 +441,61 @@ public enum SFZImporter {
                 envelope: envelope,
                 loop: loop
             ))
+            selections.append(Selection(keyswitch: note("sw_last"), random: random))
         }
 
-        func finish() -> SFZImport {
-            let manifest = KitManifest(name: name, kind: .sampled, zones: zones)
+        mutating func finish() -> SFZImport {
+            var kept: [Zone] = []
+            var keptSelections: [Selection] = []
+
+            // One articulation: the default, or the lowest switch when the file names none.
+            let switches = Set(selections.compactMap(\.keyswitch))
+            let chosen = keyswitchDefault.flatMap { switches.contains($0) ? $0 : nil } ?? switches.min()
+            for (zone, selection) in zip(zones, selections) {
+                if let key = selection.keyswitch, key != chosen { switchedRegions += 1; continue }
+                kept.append(zone)
+                keptSelections.append(selection)
+            }
+
+            // Random alternatives become a round robin, in the order of their random ranges.
+            struct Slot: Hashable { var key: KeyPlacement; var velocity: ClosedRange<Int> }
+            var sets: [Slot: [(index: Int, random: Double)]] = [:]
+            for (index, (zone, selection)) in zip(kept, keptSelections).enumerated() {
+                guard let random = selection.random, zone.seqLength == 1 else { continue }
+                sets[Slot(key: zone.key, velocity: zone.velocity), default: []].append((index, random))
+            }
+            var converted = 0
+            for members in sets.values where members.count > 1 {
+                for (position, member) in members.sorted(by: { $0.random < $1.random }).enumerated() {
+                    kept[member.index].seqPosition = position + 1
+                    kept[member.index].seqLength = members.count
+                }
+                converted += members.count
+            }
+
+            var skipped = self.skipped
+            let line = 0
+            if releaseRegions > 0 {
+                skipped.append(SFZSkip(opcode: "trigger", value: "release", line: line, reason: .unsupportedValue(
+                    "\(releaseRegions) release-trigger regions left out: this sampler plays on note-on")))
+            }
+            for (number, count) in controllerRegions.sorted(by: { $0.key < $1.key }) {
+                skipped.append(SFZSkip(opcode: "locc\(number)", value: "", line: line, reason: .unsupportedValue(
+                    "\(count) regions for another position of controller \(number) left out; its resting layer is kept")))
+            }
+            if controllerTriggered > 0 {
+                skipped.append(SFZSkip(opcode: "on_locc", value: "", line: line, reason: .unsupportedValue(
+                    "\(controllerTriggered) regions a controller triggers (pedal noise) or on no key left out")))
+            }
+            if switchedRegions > 0 {
+                skipped.append(SFZSkip(opcode: "sw_last", value: chosen.map(String.init) ?? "", line: line, reason: .unsupportedValue(
+                    "\(switchedRegions) keyswitched regions left out: only the default articulation is kept")))
+            }
+            if converted > 0 {
+                skipped.append(SFZSkip(opcode: "lorand", value: "", line: line, reason: .unsupportedValue(
+                    "\(converted) random alternatives play as a round robin instead")))
+            }
+            let manifest = KitManifest(name: name, kind: .sampled, zones: kept)
             return SFZImport(manifest: manifest, skipped: skipped, regionCount: regionCount)
         }
     }

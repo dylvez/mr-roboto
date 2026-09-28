@@ -105,3 +105,86 @@ import Testing
     #expect(loaded.manifest.zones.count == 4)
     #expect(loaded.validate().errors.isEmpty)
 }
+
+// MARK: - The preprocessor and the opcodes that choose which regions sound
+
+@Test func sfzDefinesSubstituteAndIncludesSplice() throws {
+    let main = """
+    #define $EXT wav
+    #define $EXTRA_GAIN -6
+    <control> default_path=Samples/
+    #include "mapping/keys.sfz"
+    <region> sample=top.$EXT key=72 volume=$EXTRA_GAIN
+    #include "missing.sfz"
+    """
+    let files = ["mapping/keys.sfz": "<group> ampeg_release=0.4\n#include \"mapping/low.sfz\"\n<region> sample=mid.$EXT key=60",
+                 "mapping/low.sfz": "<region> sample=low.$EXT key=48"]
+    let result = SFZImporter.parse(main, name: "Split") { files[$0] }
+    #expect(result.manifest.zones.map(\.sample) == ["Samples/low.wav", "Samples/mid.wav", "Samples/top.wav"])
+    #expect(result.manifest.zones.map(\.key) == [.note(48), .note(60), .note(72)])
+    #expect(result.manifest.zones[2].gainDB == -6, "$EXTRA_GAIN is not eaten by $EXT")
+    #expect(result.skipped.contains { $0.opcode == "#include" && $0.value == "missing.sfz" })
+    #expect(!result.skipped.contains { $0.opcode.hasPrefix("#define") })
+
+    // An include that includes itself stops, and says so.
+    let loop = SFZImporter.parse("#include \"self.sfz\"\n<region> sample=a.wav", name: "Loop") { _ in "#include \"self.sfz\"" }
+    #expect(loop.manifest.zones.count == 1)
+    #expect(loop.skipped.contains { $0.opcode == "#include" })
+}
+
+@Test func sfzReleaseTriggersKeyswitchesAndPedalLayersAreReduced() throws {
+    let text = """
+    <control> set_cc64=0 note_offset=12
+    <global> sw_default=c1
+    <group> sw_last=c1
+    <region> sample=legato.wav lokey=48 hikey=60 pitch_keycenter=54
+    <group> sw_last=d1
+    <region> sample=staccato.wav lokey=48 hikey=60
+    <group> trigger=release
+    <region> sample=release.wav lokey=48 hikey=60
+    <group> locc64=64 hicc64=127
+    <region> sample=pedal-down.wav lokey=48 hikey=60 sw_last=c1
+    <group> locc64=0 hicc64=63
+    <region> sample=pedal-up.wav lokey=61 hikey=72 sw_last=c1
+    """
+    let result = SFZImporter.parse(text, name: "Piano")
+    #expect(result.manifest.zones.map(\.sample) == ["legato.wav", "pedal-up.wav"])
+    // note_offset moves every key up an octave.
+    #expect(result.manifest.zones[0].key == .range(60...72, rootNote: 66))
+    let reasons = result.skipped.map(\.description).joined(separator: "\n")
+    #expect(reasons.contains("1 release-trigger"))
+    #expect(reasons.contains("controller 64"))
+    #expect(reasons.contains("keyswitched"))
+
+    // Pedal noise: fired by the controller, on no key.
+    let pedal = SFZImporter.parse("<region> sample=note.wav key=60\n<group> lokey=-1 hikey=-1 on_locc64=126 on_hicc64=127\n<region> sample=pedal.wav",
+                                  name: "Pedal")
+    #expect(pedal.manifest.zones.map(\.sample) == ["note.wav"])
+    #expect(pedal.skipped.contains { $0.description.contains("pedal noise") })
+}
+
+@Test func sfzRandomAlternativesBecomeARoundRobin() throws {
+    let text = """
+    <group> key=38 lovel=1 hivel=127
+    <region> sample=snare-c.wav lorand=0.66 hirand=1
+    <region> sample=snare-a.wav lorand=0 hirand=0.33
+    <region> sample=snare-b.wav lorand=0.33 hirand=0.66
+    <region> sample=kick.wav key=36
+    """
+    let result = SFZImporter.parse(text, name: "Kit")
+    let snares = result.manifest.zones.filter { $0.key == .note(38) }
+    #expect(snares.count == 3)
+    #expect(snares.allSatisfy { $0.seqLength == 3 })
+    #expect(snares.sorted { $0.seqPosition < $1.seqPosition }.map(\.sample) == ["snare-a.wav", "snare-b.wav", "snare-c.wav"])
+    // One hit plays one of them.
+    #expect(result.manifest.zone(note: 38, velocity: 100, roundRobin: 1)?.sample == "snare-b.wav")
+    #expect(result.manifest.validate().findings.allSatisfy { !"\($0)".contains("overlap") })
+    #expect(result.manifest.zones.first { $0.key == .note(36) }?.seqLength == 1)
+}
+
+@Test func sfzWithWindowsLineEndingsImports() {
+    let text = "<group> ampeg_release=1\r\n<region> sample=a\\A0v1.wav lokey=21 hikey=22\r\n<region> sample=a\\C1v1.wav key=24\r\n"
+    let result = SFZImporter.parse(text, name: "CRLF")
+    #expect(result.manifest.zones.map(\.sample) == ["a/A0v1.wav", "a/C1v1.wav"])
+    #expect(result.manifest.zones.allSatisfy { $0.envelope.release == 1 })
+}
