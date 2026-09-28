@@ -110,6 +110,8 @@ public struct WriteBasslineTool: DirectorTool {
         public var hands: String
         public var lagMS: Double
         public var density: Double
+        /// 0 draws one nobody chose. Asked to pick "any number", a model picks the same few, and
+        /// the same seed is the same line: a year of songs would have had four bass lines.
         public var seed: Int
 
         enum CodingKeys: String, CodingKey {
@@ -123,6 +125,8 @@ public struct WriteBasslineTool: DirectorTool {
         public var part: String
         public var groove: String
         public var hands: String
+        /// The seed the line was written from, to write the same one again.
+        public var seed: Int
         public var sound: String
         public var lagMS: Double
         public var chords: String
@@ -136,7 +140,7 @@ public struct WriteBasslineTool: DirectorTool {
         public var detail: String
 
         enum CodingKeys: String, CodingKey {
-            case version, part, groove, hands, sound, chords, note, readings, flags, recorded, detail
+            case version, part, groove, hands, seed, sound, chords, note, readings, flags, recorded, detail
             case lagMS = "lag_ms"
             case noteCount = "note_count"
         }
@@ -166,7 +170,7 @@ public struct WriteBasslineTool: DirectorTool {
                 "Milliseconds behind the kick. 40 is the default and 20 to 65 the documented window; "
                 + "0 is on the kick; negative is ahead of it and refused.", maximum: 90)),
             ("density", Schema.number("How busy, 0 (bare) to 1 (every attack the budget allows).", maximum: 1)),
-            ("seed", Schema.integer("Any whole number. The same seed writes the same line; a different one writes another.")),
+            ("seed", Schema.integer("0 for a new line, which is nearly always. Only to write a line again: the seed an earlier write_bassline returned.")),
         ], required: ["groove", "hands", "lag_ms", "density", "seed"])
     }
 
@@ -212,9 +216,10 @@ public struct WriteBasslineTool: DirectorTool {
             lag = min(lag, Bassist.houseLagCapMS)
         }
 
+        let seed = input.seed == 0 ? Int(GrooveFeel.freshSeed()) : input.seed
         let request = BassRequest(key: key, chords: chords, groove: groove, tempo: tempo, timeSignature: signature,
                                   lineage: lineage, lagMS: lag, density: min(1, max(0, input.density)),
-                                  sound: sound, seed: UInt64(truncatingIfNeeded: input.seed))
+                                  sound: sound, seed: UInt64(truncatingIfNeeded: seed))
         let line = BassWriter.write(request)
         let observation = BassObservation(label: "\(lineage.name) line", bassline: line, groove: groove,
                                           chords: chords, tempo: tempo, timeSignature: signature,
@@ -235,7 +240,7 @@ public struct WriteBasslineTool: DirectorTool {
             await workspace.note("The Bassist: " + flags.map(\.says).joined(separator: " "), detail: version.note)
         }
         return Output(version: version.id.description, part: version.partID.description,
-                      groove: grooveVersion.id.description, hands: lineage.rawValue, sound: sound, lagMS: lag,
+                      groove: grooveVersion.id.description, hands: lineage.rawValue, seed: seed, sound: sound, lagMS: lag,
                       chords: chords.isEmpty ? "none stated: the key's I–IV–V–I in \(key)"
                                              : chords.map { $0.chord.symbol(preferring: key.signature.preference) }.joined(separator: " "),
                       noteCount: line.notes.count, note: version.note ?? "",

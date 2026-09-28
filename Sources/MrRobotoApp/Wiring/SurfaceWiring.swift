@@ -197,6 +197,7 @@ final class SurfaceWiring {
         } else {
             model = GridModel(host: adapter, tempo: tempo, timeSignature: signature, machine: machine)
         }
+        model.houseCalls = app.houseBook.calls
         if let offered, let cut = app.song?.versions.last(where: { $0.partID == offered }) {
             model.offer(GridModel.ChopKit(part: offered, name: PartLabel.title(of: cut)), playing: playing != nil)
         }

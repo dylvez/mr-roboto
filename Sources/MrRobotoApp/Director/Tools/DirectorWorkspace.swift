@@ -127,6 +127,19 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     func keepAudio(_ planar: [[Float]], sampleRate: Double) -> MediaRef?
     /// Opens a song from the library, the open one kept first. Nil when the library does not hold it.
     @discardableResult func openSong(_ id: SongID) -> Song?
+
+    // Memory: what the band has said, kept across songs.
+
+    /// Replaces the library's record of what the band has said. Quiet: a log that could not be
+    /// written is not worth a line in the rail.
+    func keepSaid(_ records: [SaidRecord])
+}
+
+extension DirectorWorkspace {
+    /// The house calls in force for the open song.
+    public var houseBook: HouseBook { HouseBook.of(library, song: song) }
+
+    public func keepSaid(_ records: [SaidRecord]) {}
 }
 
 /// `AppState` seen through the six things the Director needs.
@@ -144,6 +157,8 @@ public final class AppStateWorkspace: DirectorWorkspace {
     public var song: Song? { app.song }
     public var library: Library { app.library }
     public var store: LibraryStore? { app.store }
+
+    public func keepSaid(_ records: [SaidRecord]) { app.keepSaid(records) }
 
     public func version(_ id: VersionID) -> PartVersion? { app.version(id) }
 
@@ -346,6 +361,8 @@ public struct DirectorAuditionOutcome: Sendable, Equatable, Codable {
 public final class DirectorScratchWorkspace: DirectorWorkspace {
     public private(set) var song: Song?
     public private(set) var library: Library
+
+    public func keepSaid(_ records: [SaidRecord]) { library.said = records }
     public let store: LibraryStore?
     /// Every line the tools wrote, in order.
     public private(set) var notes: [(text: String, detail: String?)] = []

@@ -88,7 +88,7 @@ public struct CastTool: DirectorTool {
                                  listensFirstFor: bible.listensFor.min { $0.priority < $1.priority }?.what ?? "",
                                  inRoom: room.contains(bible.id))
         }
-        return Output(cast: members, houseCalls: song.houseCalls?.count ?? 0, detail: detail)
+        return Output(cast: members, houseCalls: await workspace.houseBook.entries.count, detail: detail)
     }
 }
 
@@ -114,6 +114,15 @@ public struct ConveneTool: DirectorTool {
             public var unit: String
             public var holds: Bool
             public var says: String
+            /// How often this has been said, across songs; nil the first time. The numbers stand:
+            /// this is so a repeat is said as a repeat, not word for word.
+            public var saidBefore: String?
+            /// When the house plays the other reading on a question this rule answers to.
+            public var houseCall: String?
+            enum CodingKeys: String, CodingKey {
+                case persona, rule, feature, value, unit, holds, says
+                case saidBefore = "said_before", houseCall = "house_call"
+            }
         }
         public struct Verdict: Encodable, Sendable {
             public var persona: String
@@ -137,8 +146,13 @@ public struct ConveneTool: DirectorTool {
         public var readings: [Reading]
         public var verdicts: [Verdict]
         public var disagreement: Disagreement?
+        /// The house calls in force for the room's questions, each with whose call it is.
+        public var houseCalls: [String]
         public var detail: String
-        enum CodingKeys: String, CodingKey { case room, asked, readings, verdicts, disagreement, detail; case notAsked = "not_asked" }
+        enum CodingKeys: String, CodingKey {
+            case room, asked, readings, verdicts, disagreement, detail
+            case notAsked = "not_asked", houseCalls = "house_calls"
+        }
     }
 
     let workspace: any DirectorWorkspace
@@ -171,6 +185,7 @@ public struct ConveneTool: DirectorTool {
                                       suggestion: "Open a song first.")
         }
         let room = cast.inRoom(for: song)
+        let book = await workspace.houseBook
         var readings: [(PersonaID, PersonaReading)] = []
         var notes: [String] = []
 
@@ -255,8 +270,8 @@ public struct ConveneTool: DirectorTool {
             case .beatmaker:
                 if let version = Guidance.grooves(in: song).last, case .groove(let groove) = version.kind {
                     let observation = GrooveObservation(label: PartLabel.title(of: version), groove: groove,
-                                                        options: GrooveRenderOptions(), tempo: song.tempo, timeSignature: song.timeSignature)
-                    readings += Beatmaker().read(observation).map { (id, $0) }
+                                                        options: .stored(groove), tempo: song.tempo, timeSignature: song.timeSignature)
+                    readings += Beatmaker(houseCalls: book.calls).read(observation).map { (id, $0) }
                 }
             case .bassist:
                 if let line = Guidance.basslines(in: song).last, case .bassline(let bassline) = line.kind,
@@ -311,9 +326,22 @@ public struct ConveneTool: DirectorTool {
             disagreement = Output.Disagreement(between: card.between.map(\.rawValue), about: card.about, settledBy: card.settledBy, compare: title)
         }
 
-        let out = readings.map { id, r -> Output.Reading in
-            let unit = cast.persona(id)?.bible.vocabulary.first { $0.feature == r.feature }?.unit ?? ""
-            return Output.Reading(persona: id.rawValue, rule: r.rule, feature: r.feature.rawValue, value: r.value, unit: unit, holds: r.holds, says: r.says)
+        // What has been said before, counted across songs, and this convening added to it.
+        let library = await workspace.library
+        let said = SaidBefore.update(library.said ?? [], with: readings, song: song.id, title: song.title, today: SaidBefore.today())
+        await workspace.keepSaid(said.records)
+
+        let out = readings.enumerated().map { index, entry -> Output.Reading in
+            let (id, r) = entry
+            let bible = cast.persona(id)?.bible
+            let unit = bible?.vocabulary.first { $0.feature == r.feature }?.unit ?? ""
+            return Output.Reading(persona: id.rawValue, rule: r.rule, feature: r.feature.rawValue, value: r.value, unit: unit, holds: r.holds, says: r.says,
+                                  saidBefore: said.before[index].map { SaidBefore.sentence($0, now: song.id) },
+                                  houseCall: bible.flatMap { book.note(on: r.rule, in: $0) })
+        }
+        let questions = Set(asked.personas.flatMap { $0.bible.openQuestions.map(\.id) })
+        let calls = book.entries.filter { questions.contains($0.call.question) }.map { entry in
+            "\(entry.call.question): \(entry.call.choice.rawValue) (\(entry.scope == .song ? "this song only" : entry.scope == .house ? "the house, every song" : "as shipped"), \(entry.call.decidedOn))"
         }
         let flagged = out.filter { !$0.holds }.count
         var detail = notAsked.isEmpty
@@ -323,7 +351,7 @@ public struct ConveneTool: DirectorTool {
         if !guards.isEmpty { detail += " Guard: \(guards.map { "\($0.persona) (not asked) refuses" }.joined(separator: "; "))." }
         if let disagreement { detail += " \(disagreement.between.joined(separator: " and ")) disagree about \(disagreement.about); a Compare is open." }
         if !notes.isEmpty { detail += " " + notes.joined(separator: " ") }
-        return Output(room: room.ids.map(\.rawValue), asked: asked.ids.map(\.rawValue), notAsked: notAsked.map(\.rawValue), readings: out, verdicts: verdicts, disagreement: disagreement, detail: detail)
+        return Output(room: room.ids.map(\.rawValue), asked: asked.ids.map(\.rawValue), notAsked: notAsked.map(\.rawValue), readings: out, verdicts: verdicts, disagreement: disagreement, houseCalls: calls, detail: detail)
     }
 
     /// The first disagreement that shows.

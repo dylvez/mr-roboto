@@ -104,6 +104,31 @@ struct DirectorBassToolTests {
         #expect(a != c)
     }
 
+    @Test("seed 0 draws a new one each call and says which; passing it back writes that line again")
+    func unseeded() async throws {
+        let rig = BassToolFixture.rig()
+        defer { rig.clean() }
+        func write(_ seed: Int?) async -> (seed: Int?, notes: [NoteEvent]) {
+            var input: [(String, DirectorJSON)] = [
+                ("groove", .string(rig.groove.description)), ("hands", .string("palladino")),
+                ("lag_ms", .double(40)), ("density", .double(0.6)),
+            ]
+            input.append(("seed", .int(seed ?? 0)))
+            let result = await rig.toolbox.run(ClaudeToolUse(id: "u\(seed ?? -1)", name: "write_bassline",
+                                                             input: .object(DirectorJSONObject(input.map { .init($0.0, $0.1) }))))
+            let out = BassToolFixture.json(result)
+            let notes: [NoteEvent]
+            if case .bassline(let line)? = rig.app.song?.versions.last?.kind { notes = line.notes } else { notes = [] }
+            return ((out["seed"] as? NSNumber)?.intValue, notes)
+        }
+        let first = await write(nil), second = await write(nil)
+        let a = try #require(first.seed), b = try #require(second.seed)
+        #expect(a != b, "two lines nobody seeded are two lines")
+        #expect(first.notes != second.notes)
+        let again = await write(a)
+        #expect(again.seed == a && again.notes == first.notes)
+    }
+
     @Test("the Bassist's refusals are the tool's failure, with the reason and the counter")
     func refusals() async {
         let rig = BassToolFixture.rig()

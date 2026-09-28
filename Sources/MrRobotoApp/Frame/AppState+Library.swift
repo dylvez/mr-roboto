@@ -480,20 +480,57 @@ extension AppState {
         return true
     }
 
-    /// Records what this house decided on one of the cast's open questions.
+    /// The house calls in force for the open song: the library's, with the song's own over them.
+    public var houseBook: HouseBook { HouseBook.of(library, song: song) }
+
+    /// Records what this house decided on one of the cast's open questions: in the library, for
+    /// every song from now on. With `onlyThisSong` it is kept with the open song instead, as an
+    /// exception; otherwise any exception the open song had on the question is cleared, so what
+    /// was just chosen is what plays here too.
     @discardableResult
-    public func recordHouseCall(question: String, choice: HouseCall.Choice, how: String) -> Bool {
-        guard song != nil else { return false }
+    public func recordHouseCall(question: String, choice: HouseCall.Choice, how: String, onlyThisSong: Bool = false) -> Bool {
         let record = HouseCallRecord(question: question, choice: choice.rawValue, how: how,
                                      decidedOn: ISO8601DateFormatter().string(from: Date()).prefix(10).description)
-        updateSong { song in
-            var calls = song.houseCalls ?? []
-            calls.removeAll { $0.question == question }
-            calls.append(record)
-            song.houseCalls = calls
+        if onlyThisSong {
+            guard song != nil else { return false }
+            updateSong { song in
+                var calls = song.houseCalls ?? []
+                calls.removeAll { $0.question == question }
+                calls.append(record)
+                song.houseCalls = calls
+            }
+            note(.you, "House call, this song only: \(question) → \(choice.rawValue)", detail: how)
+            return true
         }
-        note(.you, "House call: \(question) → \(choice.rawValue)", detail: how)
+        var updated = library
+        var calls = updated.houseCalls ?? []
+        calls.removeAll { $0.question == question }
+        calls.append(record)
+        updated.houseCalls = calls
+        guard writeLibrary(updated) else { return false }
+        if let own = song?.houseCalls, own.contains(where: { $0.question == question }) {
+            updateSong { song in
+                song.houseCalls?.removeAll { $0.question == question }
+                if song.houseCalls?.isEmpty == true { song.houseCalls = nil }
+            }
+        }
+        note(.you, "House call, every song: \(question) → \(choice.rawValue)", detail: how)
         return true
+    }
+
+    // MARK: What the band has said
+
+    /// Replaces the library's record of what the band has said, and writes it when there is
+    /// somewhere to. Quiet either way: a log is not worth a line in the rail, and a session with no
+    /// library still remembers for as long as it runs.
+    func keepSaid(_ records: [SaidRecord]) {
+        var updated = library
+        updated.said = records
+        if let store, libraryIsWritable, (try? store.saveDocument(updated)) != nil {
+            library = updated
+        } else {
+            library.said = records
+        }
     }
 
     // MARK: Helpers

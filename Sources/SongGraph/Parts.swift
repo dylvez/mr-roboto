@@ -390,6 +390,25 @@ public struct GroovePattern: Hashable, Codable, Sendable {
     }
 }
 
+/// The feel a groove was written from, and the seed its humanizing plays with.
+///
+/// A feel's velocities, per-voice pocket and jitter are render options, not steps, so a groove that
+/// kept only its steps played every feel on the grid. This is the name to look the feel up by
+/// again, and a seed of the groove's own: two songs on the same feel breathe differently, and one
+/// song plays the same way every time it is opened.
+public struct GrooveFeel: Hashable, Codable, Sendable {
+    public var name: String
+    public var seed: UInt64
+
+    public init(name: String, seed: UInt64) {
+        self.name = name
+        self.seed = seed
+    }
+
+    /// A seed nobody chose. Kept under 2^53 so it survives any JSON reader as an exact integer.
+    public static func freshSeed() -> UInt64 { UInt64.random(in: 1...(1 << 53)) }
+}
+
 /// A groove: a step pattern per drum voice with velocity tiers and swing.
 public struct Groove: Hashable, Sendable {
     /// Steps per bar (16 for sixteenths in 4/4).
@@ -403,14 +422,17 @@ public struct Groove: Hashable, Sendable {
     /// The chain the groove plays through, first pass nearest the kit. Empty is dry. See
     /// `Degradation` for why dust is carried on the part it dirties.
     public var degradation: [Degradation]
+    /// The feel it plays in. Nil plays the steps as written, on the grid.
+    public var feel: GrooveFeel?
 
     public init(stepsPerBar: Int = 16, bars: Int = 1, swing: Double = 0, patterns: [GroovePattern],
-                degradation: [Degradation] = []) {
+                degradation: [Degradation] = [], feel: GrooveFeel? = nil) {
         self.stepsPerBar = stepsPerBar
         self.bars = bars
         self.swing = swing
         self.patterns = patterns
         self.degradation = degradation
+        self.feel = feel
     }
 
     public var stepCount: Int { stepsPerBar * bars }
@@ -436,12 +458,12 @@ public struct Groove: Hashable, Sendable {
             })
         }
         return Groove(stepsPerBar: stepsPerBar, bars: target, swing: swing, patterns: tiledPatterns,
-                      degradation: degradation)
+                      degradation: degradation, feel: feel)
     }
 }
 
 extension Groove: Codable {
-    private enum CodingKeys: String, CodingKey { case stepsPerBar, bars, swing, patterns, degradation }
+    private enum CodingKeys: String, CodingKey { case stepsPerBar, bars, swing, patterns, degradation, feel }
 
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -449,11 +471,12 @@ extension Groove: Codable {
                   bars: try c.decode(Int.self, forKey: .bars),
                   swing: try c.decode(Double.self, forKey: .swing),
                   patterns: try c.decode([GroovePattern].self, forKey: .patterns),
-                  degradation: try c.decodeIfPresent([Degradation].self, forKey: .degradation) ?? [])
+                  degradation: try c.decodeIfPresent([Degradation].self, forKey: .degradation) ?? [],
+                  feel: try c.decodeIfPresent(GrooveFeel.self, forKey: .feel))
     }
 
-    /// A dry groove writes exactly what it always wrote: `degradation` is omitted when empty, so
-    /// documents from before dust existed round-trip byte for byte.
+    /// A dry groove writes exactly what it always wrote: `degradation` is omitted when empty and
+    /// `feel` when nil, so documents from before either existed round-trip byte for byte.
     public func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(stepsPerBar, forKey: .stepsPerBar)
@@ -461,6 +484,7 @@ extension Groove: Codable {
         try c.encode(swing, forKey: .swing)
         try c.encode(patterns, forKey: .patterns)
         if !degradation.isEmpty { try c.encode(degradation, forKey: .degradation) }
+        try c.encodeIfPresent(feel, forKey: .feel)
     }
 }
 

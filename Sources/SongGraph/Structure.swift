@@ -111,6 +111,53 @@ public struct HouseCallRecord: Hashable, Codable, Sendable, Identifiable {
     }
 }
 
+/// One thing a persona has said, and how often: what lets a reading that keeps coming back be
+/// said as a pattern ("third song running") rather than word for word. Kept with the library, not
+/// a song, because the repetition that matters is across songs.
+public struct SaidRecord: Hashable, Codable, Sendable, Identifiable {
+    /// The persona's id, e.g. `peer`.
+    public var persona: String
+    /// The rule the reading was made under, e.g. `peer.hook-inside-thirty`.
+    public var rule: String
+    /// Whether the reading held. A rule that keeps passing is a different pattern from one that
+    /// keeps failing, so they are counted apart.
+    public var holds: Bool
+    /// Every time it was said, one song or many.
+    public var times: Int
+    /// The songs it was said about, most recent last, each once, the last `songLimit` of them.
+    public var songs: [SongID]
+    /// The last song's title when it was said, so it can be named without loading the song.
+    public var lastTitle: String
+    /// `yyyy-MM-dd`.
+    public var lastSaid: String
+
+    public static let songLimit = 12
+
+    public var id: String { "\(rule)|\(holds)" }
+
+    public init(persona: String, rule: String, holds: Bool, times: Int, songs: [SongID], lastTitle: String, lastSaid: String) {
+        self.persona = persona
+        self.rule = rule
+        self.holds = holds
+        self.times = times
+        self.songs = songs
+        self.lastTitle = lastTitle
+        self.lastSaid = lastSaid
+    }
+
+    /// This record with one more saying of it, about `song`.
+    public func saying(about song: SongID, titled title: String, on day: String) -> SaidRecord {
+        var next = self
+        next.times += 1
+        next.songs.removeAll { $0 == song }
+        next.songs.append(song)
+        if next.songs.count > Self.songLimit { next.songs.removeFirst(next.songs.count - Self.songLimit) }
+        next.lastTitle = title
+        next.lastSaid = day
+        return next
+    }
+}
+
 /// A proposed combination of versions not yet stitched into a section; personas run these as A/B experiments.
 public struct Experiment: Identifiable, Hashable, Codable, Sendable {
     public let id: ExperimentID
@@ -481,6 +528,11 @@ public struct Library: Hashable, Codable, Sendable {
     /// The house voice: the lyrics this house has written, for a Lyricist to read new words against.
     /// Optional so a library from before it round-trips byte for byte.
     public var voice: [VoiceLyric]?
+    /// What this house decided on the cast's open questions, for every song. A song's own call on
+    /// the same question overrides it. Optional so a library from before it round-trips.
+    public var houseCalls: [HouseCallRecord]?
+    /// What the band has said, and how often. Optional for the same reason.
+    public var said: [SaidRecord]?
 
     public init(songs: [Song] = [], albums: [Album] = [], ideas: [PartVersion] = [], records: [Record] = [],
                 samples: [LibrarySample] = [], voice: [VoiceLyric]? = nil) {

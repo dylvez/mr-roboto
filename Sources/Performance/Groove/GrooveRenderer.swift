@@ -90,6 +90,18 @@ public struct GrooveRenderOptions: Hashable, Sendable {
                             voices: feel.voices,
                             repeats: repeats)
     }
+
+    /// How a groove from a song plays: in the feel it names, on its own seed, with the swing it
+    /// stores (which may have been set apart from the feel's). A groove that names no feel, or one
+    /// the library no longer has, plays its steps on the grid, as every groove did before.
+    public static func stored(_ groove: Groove, feels: FeelLibrary = .standard, repeats: Int = 1) -> GrooveRenderOptions {
+        guard let named = groove.feel, let feel = feels.feel(named: named.name) else {
+            return GrooveRenderOptions(repeats: repeats)
+        }
+        var options = GrooveRenderOptions.feel(feel, seed: named.seed, repeats: repeats)
+        options.swing = nil
+        return options
+    }
 }
 
 // MARK: - Renderer

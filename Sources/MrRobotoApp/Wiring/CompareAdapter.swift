@@ -236,7 +236,7 @@ final class CompareAdapter: CompareHosting {
     static func hits(for groove: Groove, levers: [CompareLever: Double],
                      tempo: Double, timeSignature: TimeSignature) -> [VoiceSampler.Hit] {
         let bpm = levers[.tempo].map { CompareLever.tempo.clamp($0) } ?? tempo
-        var options = GrooveRenderOptions()
+        var options = GrooveRenderOptions.stored(groove)
         if let swing = levers[.swing] { options.swing = Swing(percent: CompareLever.swing.clamp(swing)) }
         if let ghost = levers[.ghostLevel] {
             // The ghost tier as a fraction of the normal one, which is what the lever says it is.
@@ -418,7 +418,7 @@ enum CompareBriefing {
             values = { observation.value(of: $0) }
         case .groove(let groove):
             let observation = GrooveObservation(label: PartLabel.title(of: version), groove: groove,
-                                                options: GrooveRenderOptions(), tempo: tempo)
+                                                options: .stored(groove), tempo: tempo)
             values = { observation.value(of: $0) }
         case .sample(let sample):
             let observation = SourceObservation(label: PartLabel.title(of: version),

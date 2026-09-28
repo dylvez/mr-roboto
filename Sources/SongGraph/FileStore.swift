@@ -316,6 +316,8 @@ public struct LibraryStore: Sendable {
         var records: [Record]
         var samples: [LibrarySample]
         var voice: [VoiceLyric]?
+        var houseCalls: [HouseCallRecord]?
+        var said: [SaidRecord]?
     }
 
     /// Just enough of `song.json` to identify a package without a full decode.
@@ -369,6 +371,8 @@ public struct LibraryStore: Sendable {
         var library = Library(songs: songs, albums: document.albums, ideas: document.ideas,
                               records: document.records, samples: document.samples, voice: document.voice)
         library.songs = songs
+        library.houseCalls = document.houseCalls
+        library.said = document.said
         return (library, unreadable)
     }
 
@@ -379,8 +383,11 @@ public struct LibraryStore: Sendable {
             guard Files.exists(url) else { throw SongGraphError.missingDocument(path: url.path) }
             return try SongGraphCodec.decode(Document.self, from: try Data(contentsOf: url), migrating: .library)
         }
-        return Library(songs: [], albums: document.albums, ideas: document.ideas,
-                       records: document.records, samples: document.samples, voice: document.voice)
+        var library = Library(songs: [], albums: document.albums, ideas: document.ideas,
+                              records: document.records, samples: document.samples, voice: document.voice)
+        library.houseCalls = document.houseCalls
+        library.said = document.said
+        return library
     }
 
     /// One song into its package — a new one given a name no folder here has — and listed in
@@ -443,7 +450,7 @@ public struct LibraryStore: Sendable {
         }
         let document = Document(schemaVersion: SongGraphSchema.current, songs: entries, albums: library.albums,
                                 ideas: library.ideas, records: library.records, samples: library.samples,
-                                voice: library.voice)
+                                voice: library.voice, houseCalls: library.houseCalls, said: library.said)
         let data = try SongGraphCodec.encode(document)
         try FileCoordination.write(documentURL, options: [.forReplacing]) { url in
             try data.write(to: url, options: .atomic)
@@ -466,7 +473,7 @@ public struct LibraryStore: Sendable {
         }
         let document = Document(schemaVersion: SongGraphSchema.current, songs: entries, albums: library.albums,
                                 ideas: library.ideas, records: library.records, samples: library.samples,
-                                voice: library.voice)
+                                voice: library.voice, houseCalls: library.houseCalls, said: library.said)
         let data = try SongGraphCodec.encode(document)
         try FileCoordination.write(documentURL, options: [.forReplacing]) { url in
             try data.write(to: url, options: .atomic)

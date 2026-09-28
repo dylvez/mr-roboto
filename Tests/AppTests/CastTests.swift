@@ -35,10 +35,16 @@ struct CastTests {
         #expect(app.song?.cast == ["beatmaker", "bassist"])
         #expect(app.castInRoom.ids == [.beatmaker, .bassist])
         #expect(app.hasUnsavedChanges)
-        #expect(app.recordHouseCall(question: "beatmaker.oq.snare-direction", choice: .alternative, how: "by ear"))
+        #expect(app.recordHouseCall(question: "beatmaker.oq.snare-direction", choice: .alternative, how: "by ear",
+                                    onlyThisSong: true))
         #expect(app.song?.houseCalls?.count == 1)
+        #expect(app.recordHouseCall(question: "beatmaker.oq.snare-direction", choice: .alternative, how: "this one",
+                                    onlyThisSong: true))
+        #expect(app.song?.houseCalls?.count == 1 && app.song?.houseCalls?.first?.how == "this one")
+        // A call for every song is the library's, and clears the song's own on that question.
         #expect(app.recordHouseCall(question: "beatmaker.oq.snare-direction", choice: .encoded, how: "changed my mind"))
-        #expect(app.song?.houseCalls?.count == 1 && app.song?.houseCalls?.first?.choice == "encoded")
+        #expect(app.song?.houseCalls == nil)
+        #expect(app.library.houseCalls?.count == 1 && app.library.houseCalls?.first?.choice == "encoded")
         app.save()
 
         let later = LibraryFixture.app(directory)
@@ -46,7 +52,8 @@ struct CastTests {
         later.openSong(app.song!.id)
         #expect(later.song?.cast == ["beatmaker", "bassist"])
         #expect(later.castInRoom.ids == [.beatmaker, .bassist])
-        #expect(later.song?.houseCalls?.first?.how == "changed my mind")
+        #expect(later.library.houseCalls?.first?.how == "changed my mind")
+        #expect(later.houseBook.entry(for: "beatmaker.oq.snare-direction")?.scope == .house)
         #expect(later.setCast([]))
         #expect(later.song?.cast == nil, "everyone is the absence of a list")
 

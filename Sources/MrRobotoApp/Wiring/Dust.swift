@@ -142,12 +142,12 @@ enum Dust {
 
     // MARK: A groove as audio
 
-    /// One pass of a groove as hits, the way `GroovePlayer` lays it down: default options, one
-    /// iteration per `repeats`.
+    /// One pass of a groove as hits, the way `GroovePlayer` lays it down: in the feel it names,
+    /// one iteration per `repeats`.
     static func hits(for groove: Groove, tempo: Double, timeSignature: TimeSignature,
                      repeats: Int = 1) -> [VoiceSampler.Hit] {
         let timeline = GrooveTimeline.tempo(max(20, tempo), timeSignature: timeSignature)
-        return GrooveRenderer.render(groove, on: timeline, options: GrooveRenderOptions(repeats: repeats))
+        return GrooveRenderer.render(groove, on: timeline, options: .stored(groove, repeats: repeats))
     }
 
     /// Length of one pass of a groove at this tempo, in seconds.

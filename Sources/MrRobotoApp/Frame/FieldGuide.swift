@@ -50,7 +50,7 @@ enum FieldGuide {
         Entry(word: "API key", meaning: "Your Anthropic API key, kept in the keychain: what the band runs on. Set it from the rail, under the field you ask the band from."),
         Entry(word: "Voice", meaning: "The lyrics this house has written, imported once (File ▸ Import Voice…). The Lyricist reads new words against them and names the images that repeat."),
         Entry(word: "Bible", meaning: "Everything a persona knows, as data: named lineages, measurable features, cited rules with thresholds, refusals, goldens and open questions. A document the method checks."),
-        Entry(word: "House call", meaning: "What this house decided on a persona's open question, by ear — the snare late, not early. Kept with the song, apart from the evidence."),
+        Entry(word: "House call", meaning: "What this house decided on a persona's open question, by ear — the snare late, not early. Kept for every song, unless a song keeps its own, and apart from the evidence."),
         Entry(word: "Critic", meaning: "A rule that looks for one kind of problem. It flags and never fixes."),
         Entry(word: "Lever", meaning: "At most two controls the Director puts on a surface, so you can move the one thing it is asking about."),
     ]

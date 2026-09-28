@@ -123,7 +123,7 @@ struct CastSurfaceView: View {
 
     /// The open questions of everyone in the room, each with what the house chose, if it has.
     private var houseCalls: some View {
-        let calls = Dictionary(uniqueKeysWithValues: (app.song?.houseCalls ?? []).map { ($0.question, $0) })
+        let book = app.houseBook
         let questions = roster.filter { inRoom.contains($0.bible.id.rawValue) }.flatMap { persona in
             persona.bible.openQuestions.map { (persona.bible.name, $0) }
         }
@@ -131,7 +131,7 @@ struct CastSurfaceView: View {
             Text("HOUSE CALLS").font(Design.Typography.label).tracking(1.1).foregroundStyle(Design.Palette.inkTertiary)
             // What a call is, once, above the list. The chips say "Encoded" and "Alternative",
             // and neither word explains itself; the bible's own text for each is on the chip.
-            Text("An open question is one a bible's research could have gone either way on. Encoded is the reading the bible ships with; Alternative is the other, stated fairly. A call here is what this house plays on this song, and a persona reading a part says both: what the record says, and what the house chose.")
+            Text("An open question is one a bible's research could have gone either way on. Encoded is the reading the bible ships with; Alternative is the other, stated fairly. A call here is what this house plays from now on, in every song; right-click a choice to make it this song's alone. A persona reading a part says both: what the record says, and what the house chose.")
                 .font(Design.Typography.ui(11.5, weight: .regular))
                 .foregroundStyle(Design.Palette.inkSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -142,28 +142,48 @@ struct CastSurfaceView: View {
             }
             ForEach(Array(questions.enumerated()), id: \.offset) { _, entry in
                 let (name, question) = entry
-                let call = calls[question.id]
+                let entry = book.entry(for: question.id)
+                let call = entry?.call
                 HStack(alignment: .top, spacing: 10) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("\(name) · \(question.question)")
                             .font(Design.Typography.ui(12.5, weight: .medium))
                             .foregroundStyle(Design.Palette.ink)
                             .fixedSize(horizontal: false, vertical: true)
-                        Text(call.map { "This house: \($0.choice), \($0.decidedOn) — \($0.how)" } ?? "Not decided: the bible's own reading stands.")
+                        Text(entry.map { entry in
+                            let whose = switch entry.scope {
+                            case .song: "This song only"
+                            case .house: "This house, every song"
+                            case .shipped: "As shipped"
+                            }
+                            return "\(whose): \(entry.call.choice.rawValue), \(entry.call.decidedOn) — \(entry.call.how)"
+                        } ?? "Not decided: the bible's own reading stands.")
                             .font(Design.Typography.ui(11, weight: .regular))
                             .foregroundStyle(call == nil ? Design.Palette.inkTertiary : Design.Palette.inkSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer()
-                    CastChip("Encoded", isOn: call?.choice == "encoded") {
+                    CastChip("Encoded", isOn: call?.choice == .encoded) {
                         app.recordHouseCall(question: question.id, choice: .encoded, how: "by ear, on the Cast surface")
                     }
-                    .disabled(app.song == nil)
+                    .contextMenu {
+                        Button("Encoded, This Song Only") {
+                            app.recordHouseCall(question: question.id, choice: .encoded, how: "by ear, on the Cast surface",
+                                                onlyThisSong: true)
+                        }
+                        .disabled(app.song == nil)
+                    }
                     .help("The reading the bible ships with: \(question.encoded)")
-                    CastChip("Alternative", isOn: call?.choice == "alternative") {
+                    CastChip("Alternative", isOn: call?.choice == .alternative) {
                         app.recordHouseCall(question: question.id, choice: .alternative, how: "by ear, on the Cast surface")
                     }
-                    .disabled(app.song == nil)
+                    .contextMenu {
+                        Button("Alternative, This Song Only") {
+                            app.recordHouseCall(question: question.id, choice: .alternative, how: "by ear, on the Cast surface",
+                                                onlyThisSong: true)
+                        }
+                        .disabled(app.song == nil)
+                    }
                     .help("The other reading: \(question.alternative)")
                 }
                 .padding(.vertical, 3)

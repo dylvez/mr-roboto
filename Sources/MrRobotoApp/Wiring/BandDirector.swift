@@ -379,7 +379,7 @@ final class BandDirector: PersonaDirecting {
         var context = PersonaReadingContext(tempo: song.tempo)
         if let version = Guidance.grooves(in: song).last, case .groove(let groove) = version.kind {
             let observation = GrooveObservation(label: PartLabel.title(of: version), groove: groove,
-                                                options: GrooveRenderOptions(), tempo: song.tempo)
+                                                options: .stored(groove), tempo: song.tempo)
             context.ghostRatio = observation.ghostRatio
         }
         if let version = Guidance.samples(in: song).last, case .sample(let sample) = version.kind {

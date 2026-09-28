@@ -299,8 +299,9 @@ struct GridSurfaceTests {
 
         model.load(feel)
 
-        // The pattern, exactly as the feel states it.
-        #expect(model.groove == feel.groove)
+        // The pattern, exactly as the feel states it, and the feel named so the song plays it.
+        #expect(model.groove.unfelt == feel.groove)
+        #expect(model.groove.feel?.name == "Boom-Bap")
         #expect(model.voices == feel.groove.patterns.map(\.voice))
         #expect(model.stepsPerBar == feel.groove.stepsPerBar)
         #expect(model.bars == feel.groove.bars)
@@ -337,7 +338,7 @@ struct GridSurfaceTests {
         let model = GridModel(host: StubGridHost())
         for feel in library.feels {
             model.load(feel)
-            #expect(model.groove == feel.groove, "\(feel.name) did not round-trip")
+            #expect(model.groove.unfelt == feel.groove, "\(feel.name) did not round-trip")
             #expect(model.provenance == feel.provenance, "\(feel.name) lost its provenance")
             #expect(!feel.provenance.summary.isEmpty)
         }
@@ -361,7 +362,7 @@ struct GridSurfaceTests {
         #expect(first.groove != second.groove, "the test needs two different pockets")
 
         #expect(model.loadFeel(named: first.name))
-        #expect(model.groove == first.groove)
+        #expect(model.groove.unfelt == first.groove)
 
         // Edited, then another feel: no question in between. It loads.
         let voice = model.voices[0]
@@ -369,7 +370,7 @@ struct GridSurfaceTests {
         model.set(.accent, voice: voice, step: restStep)
         let edited = model.groove
         #expect(model.loadFeel(named: second.name))
-        #expect(model.groove == second.groove)
+        #expect(model.groove.unfelt == second.groove)
         #expect(model.feelName == second.name)
         #expect(model.tempo == second.suggestedTempo)
 
@@ -385,7 +386,7 @@ struct GridSurfaceTests {
 
         // The one before that is the edit, and before that the first load over an empty grid.
         model.undo()
-        #expect(model.groove == first.groove)
+        #expect(model.groove.unfelt == first.groove)
         model.undo()
         #expect(!model.isPainted)
         #expect(model.feelName == nil)
@@ -393,12 +394,12 @@ struct GridSurfaceTests {
 
         // And forward again, all the way to the second feel.
         model.redo(); model.redo(); model.redo()
-        #expect(model.groove == second.groove)
+        #expect(model.groove.unfelt == second.groove)
         #expect(model.feelName == second.name)
 
         // A name the library does not have changes nothing.
         #expect(model.loadFeel(named: "No Such Feel") == false)
-        #expect(model.groove == second.groove)
+        #expect(model.groove.unfelt == second.groove)
     }
 
     // MARK: Length
@@ -739,5 +740,15 @@ struct GridSurfaceTests {
         let stepDuration = 60 / model.tempo / Double(model.stepsPerBeat)
         let expectedOffset = model.swing.factor * stepDuration * 0.5
         #expect(abs((hits[1].time - stepDuration) - expectedOffset) < 1e-9)
+    }
+}
+
+extension Groove {
+    /// The steps without the feel they play in: what a feel's own groove is compared against, since
+    /// a loaded feel carries its name and a seed of the grid's own.
+    fileprivate var unfelt: Groove {
+        var copy = self
+        copy.feel = nil
+        return copy
     }
 }

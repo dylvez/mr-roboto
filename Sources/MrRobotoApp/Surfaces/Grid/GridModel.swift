@@ -129,6 +129,10 @@ public final class GridModel {
     }
 
     public private(set) var feelName: String?
+    /// The seed the kept groove plays its feel on: fresh when a feel is loaded, the groove's own
+    /// when one that names its feel is opened. Nil for a feel only recognised from a note, which
+    /// keeps playing on the grid as it did.
+    public private(set) var feelSeed: UInt64?
     /// Where the loaded feel came from. Kept because a persona will cite it out loud.
     public private(set) var provenance: Provenance?
     public var feelLibrary: FeelLibrary
@@ -172,6 +176,7 @@ public final class GridModel {
         let timeSignature: TimeSignature
         let tempo: Double
         let feelName: String?
+        let feelSeed: UInt64?
         let provenance: Provenance?
     }
 
@@ -203,7 +208,16 @@ public final class GridModel {
     /// than from a groove stripped of them, because those are most of what the Beatmaker reads. It is
     /// arithmetic over a few hundred steps, so it runs on every edit without a debounce.
     public private(set) var readings: [PersonaReading] = []
-    private let beatmaker = Beatmaker()
+    private var beatmaker = Beatmaker()
+
+    /// The house calls the Beatmaker reads this grid by: the library's and the song's.
+    public var houseCalls: [HouseCall] {
+        get { beatmaker.calls }
+        set {
+            beatmaker = Beatmaker(houseCalls: newValue)
+            refreshReadings()
+        }
+    }
 
     /// The readings that did not hold: what the Beatmaker would say first.
     public var flags: [PersonaReading] { readings.filter { !$0.holds } }
@@ -235,6 +249,16 @@ public final class GridModel {
         self.humanize = humanize
         self.voiceFeels = voiceFeels
         self.feelLibrary = feelLibrary
+        // A groove that names its feel opens playing it, the way the song plays it.
+        if let named = groove.feel, feelLibrary.feel(named: named.name) != nil {
+            let options = GrooveRenderOptions.stored(groove, feels: feelLibrary)
+            self.velocities = options.velocities
+            self.humanize = options.humanize
+            self.voiceFeels = options.voices
+            feelName = named.name
+            feelSeed = named.seed
+            provenance = feelLibrary.feel(named: named.name)?.provenance
+        }
         refreshReadings()
     }
 
@@ -307,12 +331,14 @@ public final class GridModel {
     public var groove: Groove {
         Groove(stepsPerBar: stepsPerBar, bars: bars, swing: swing.factor,
                patterns: voices.map { GroovePattern(voice: $0, steps: steps[$0] ?? []) },
-               degradation: degradation)
+               degradation: degradation,
+               feel: feelName.flatMap { name in feelSeed.map { GrooveFeel(name: name, seed: $0) } })
     }
 
     /// Everything the groove engine needs beyond the pattern.
     public var renderOptions: GrooveRenderOptions {
-        GrooveRenderOptions(velocities: velocities, swing: swing, humanize: humanize, voices: voiceFeels)
+        GrooveRenderOptions(velocities: velocities, swing: swing,
+                            humanize: feelSeed.map { humanize.seeded($0) } ?? humanize, voices: voiceFeels)
     }
 
     // MARK: Editing steps
@@ -607,6 +633,7 @@ public final class GridModel {
         timeSignature = feel.timeSignature
         tempo = feel.suggestedTempo
         feelName = feel.name
+        feelSeed = GrooveFeel.freshSeed()
         provenance = feel.provenance
         edited(from: before)
     }
@@ -644,13 +671,15 @@ public final class GridModel {
         timeSignature = before.timeSignature
         tempo = before.tempo
         feelName = before.feelName
+        feelSeed = before.feelSeed
         provenance = before.provenance
     }
 
     private var snapshot: Snapshot {
         Snapshot(voices: voices, steps: steps, stepsPerBar: stepsPerBar, bars: bars, swing: swing,
                  velocities: velocities, humanize: humanize, voiceFeels: voiceFeels,
-                 timeSignature: timeSignature, tempo: tempo, feelName: feelName, provenance: provenance)
+                 timeSignature: timeSignature, tempo: tempo, feelName: feelName, feelSeed: feelSeed,
+                 provenance: provenance)
     }
 
     /// Feels worth offering at the grid's current tempo and meter, best first.

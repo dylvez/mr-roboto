@@ -138,6 +138,7 @@ public struct WriteGrooveTool: DirectorTool {
         var patterns: [GroovePattern] = []
         var swing = 0.0
         var source = "written by hand"
+        var inFeel: GrooveFeel?
         if !input.feel.trimmingCharacters(in: .whitespaces).isEmpty {
             guard let feel = workbench.engines.feels.feel(named: input.feel) else {
                 throw DirectorToolFailure(tool: name, reason: "There is no feel called \"\(input.feel)\".", suggestion: "Call list_feels to see the names, or leave feel empty and write the rows.")
@@ -150,6 +151,9 @@ public struct WriteGrooveTool: DirectorTool {
             }
             swing = feel.groove.swing
             source = "from \(feel.name)"
+            // The feel's pocket and jitter go with it, on a seed of this groove's own, so the same
+            // feel in the next song does not breathe in the same places.
+            inFeel = GrooveFeel(name: feel.name, seed: GrooveFeel.freshSeed())
         }
         for row in input.rows {
             let pattern = try Self.parse(row, steps: steps, tool: name)
@@ -162,16 +166,17 @@ public struct WriteGrooveTool: DirectorTool {
         if input.swing_percent >= 50 { swing = Swing(percent: input.swing_percent).factor }
         let order = Self.voices
         patterns.sort { (order.firstIndex(of: $0.voice.rawValue) ?? 99) < (order.firstIndex(of: $1.voice.rawValue) ?? 99) }
-        let groove = Groove(stepsPerBar: 16, bars: bars, swing: swing, patterns: patterns)
+        let groove = Groove(stepsPerBar: 16, bars: bars, swing: swing, patterns: patterns, feel: inFeel)
 
         let version = PartVersion(partID: PartID(), kind: .groove(groove), author: .persona("Beatmaker"), operation: Operation.written, note: input.note)
         guard await workspace.record(version) else {
             throw DirectorToolFailure(tool: name, reason: "The groove could not be recorded into the song.")
         }
         // The Beatmaker reads what was written, in its own numbers, in the rail.
-        let observation = GrooveObservation(label: PartLabel.title(of: version), groove: groove, options: GrooveRenderOptions(),
+        let observation = GrooveObservation(label: PartLabel.title(of: version), groove: groove,
+                                            options: .stored(groove, feels: workbench.engines.feels),
                                             tempo: song.tempo, timeSignature: song.timeSignature)
-        let flags = Beatmaker().read(observation).filter { !$0.holds }
+        let flags = Beatmaker(houseCalls: await workspace.houseBook.calls).read(observation).filter { !$0.holds }
         for flag in flags { await workspace.speak("Beatmaker", flag.says, detail: flag.rule) }
         let played = await workspace.hear(version)
         let hits = patterns.reduce(0) { $0 + $1.steps.filter { $0 != .rest }.count }

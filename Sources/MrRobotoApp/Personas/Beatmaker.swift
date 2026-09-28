@@ -46,9 +46,14 @@ import SongGraph
 /// would change if the other reading won. One sign flip each; nothing else moves.
 public struct Beatmaker: Persona {
 
-    public init() {}
+    /// The calls this Beatmaker reads by: the library's and the song's, resolved by `HouseBook`.
+    /// The default is the call this house shipped with.
+    public var calls: [HouseCall]
 
-    /// What this house has decided where the record is contested.
+    public init(houseCalls: [HouseCall] = Beatmaker.houseCalls) { calls = houseCalls }
+
+    /// What this house decided where the record is contested, before any library had a say: the
+    /// call a new library starts from.
     public static let houseCalls: [HouseCall] = [
         HouseCall(question: "beatmaker.oq.snare-direction", choice: .alternative,
                   how: "Chosen by ear: the same eight bars of the lo-fi feel on the LinnDrum at 82 bpm, "
@@ -57,8 +62,11 @@ public struct Beatmaker: Persona {
     ]
 
     /// Whether the house plays the displaced snare late. The documented direction is early.
-    public static var houseSnareIsLate: Bool {
-        houseCalls.contains { $0.question == "beatmaker.oq.snare-direction" && $0.choice == .alternative }
+    public static var houseSnareIsLate: Bool { Beatmaker().snareIsLate }
+
+    /// Whether these calls play the displaced snare late.
+    public var snareIsLate: Bool {
+        calls.contains { $0.question == "beatmaker.oq.snare-direction" && $0.choice == .alternative }
     }
 
     public var bible: PersonaBible { Beatmaker.bible }
@@ -968,7 +976,7 @@ public struct Beatmaker: Persona {
             // house plays it, and keeps the record in the same breath rather than pretending the
             // research went away.
             let late = snare > 0
-            if late == Beatmaker.houseSnareIsLate {
+            if late == snareIsLate {
                 notes.append(PersonaReading(
                     rule: "beatmaker.snare-direction", feature: .snareLagMS, value: snare,
                     holds: true,

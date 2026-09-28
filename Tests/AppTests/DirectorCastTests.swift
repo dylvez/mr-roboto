@@ -84,6 +84,23 @@ struct DirectorCastToolTests {
         #expect(detail.contains("No lyric") && detail.contains("Nothing to bounce"), "\(detail)")
     }
 
+    @Test("convene says what has been said before, across songs, and which house calls are in force")
+    func conveneRemembers() async throws {
+        let workspace = DirectorScratchWorkspace(song: RoomFixture.song())
+        let ask: DirectorJSON = .object([.init("question", .string("does the hook land?")), .init("section", .string("")),
+                                         .init("personas", .array([.string("peer")]))])
+        let first = json(await toolbox(workspace).run(ClaudeToolUse(id: "m1", name: "convene", input: ask)))
+        let fresh = try #require((first["readings"] as? [[String: Any]])?.first { $0["rule"] as? String == "peer.hook-inside-thirty" })
+        #expect(fresh["said_before"] == nil, "the first time is the first time")
+        #expect(workspace.library.said?.contains { $0.rule == "peer.hook-inside-thirty" && $0.times == 1 } == true)
+
+        let second = json(await toolbox(workspace).run(ClaudeToolUse(id: "m2", name: "convene", input: ask)))
+        let again = try #require((second["readings"] as? [[String: Any]])?.first { $0["rule"] as? String == "peer.hook-inside-thirty" })
+        #expect((again["said_before"] as? String)?.hasPrefix("Said once before, all about this song") == true, "\(again)")
+        #expect(again["value"] as? Double == fresh["value"] as? Double, "the numbers do not change")
+        #expect(second["house_calls"] is [String])
+    }
+
     @Test("convene with the room cut down consults only who is in it")
     func conveneRespectsTheRoom() async throws {
         let workspace = DirectorScratchWorkspace(song: RoomFixture.song())

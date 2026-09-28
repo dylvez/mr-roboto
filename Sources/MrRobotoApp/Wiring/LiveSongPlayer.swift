@@ -405,7 +405,7 @@ final class LiveSongPlayer: SongPlaybackHost {
             let key = AuditionService.SamplerKey(.drums, part: voice.part)
             let sampler = try await service.playbackSampler(machine: machine, for: voice.part)
             try Self.route(sampler.node, part: voice.part, on: graph)
-            let player = GroovePlayer(sampler: sampler, groove: groove, timeline: timeline)
+            let player = GroovePlayer(sampler: sampler, groove: groove, timeline: timeline, options: .stored(groove))
             player.drivesSampler = drives(key)
             return .groove(player)
         case .bassline(let line):
