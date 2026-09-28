@@ -12,6 +12,57 @@ extension AppState {
         store?.directoryURL.appendingPathComponent("Instruments", isDirectory: true)
     }
 
+    /// `<library>/Percussion`: recordings the kits' hand percussion can play on.
+    public var percussionDirectory: URL? {
+        store?.directoryURL.appendingPathComponent("Percussion", isDirectory: true)
+    }
+
+    /// Puts the library's recorded percussion in use, if it has some and it is on.
+    func loadRecordedPercussion() {
+        guard let directory = percussionDirectory else { return }
+        recordedPercussion = RecordedPercussion.load(from: directory)
+    }
+
+    /// File ▸ Import VCSL Percussion…: the Versilian library's congas, bongos, shaker, tambourine
+    /// and claves copied into the library and switched on, so every kit plays them in place of
+    /// its synthesized ones.
+    @discardableResult
+    public func importVCSLPercussion(from root: URL) -> Bool {
+        guard let directory = percussionDirectory else {
+            note(.session, "No library to bring the percussion into")
+            return false
+        }
+        do {
+            let set = try RecordedPercussion.importVCSL(from: root, into: directory)
+            recordedPercussion = set
+            if let service = SurfaceWiring.shared.service { Task { await service.drumKitsChanged() } }
+            note(.you, "Every kit's hand percussion is recorded now",
+                 detail: set.assignments.map(\.label).joined(separator: ", ")
+                    + ". Turn it off in the Grid's machine menu to go back to the synthesized ones.")
+            return true
+        } catch {
+            note(.session, "Could not bring in VCSL's percussion", detail: "\(error). Choose the VCSL folder, the one holding Membranophones and Idiophones.")
+            return false
+        }
+    }
+
+    /// Switches the recorded hand percussion on or off in every kit.
+    @discardableResult
+    public func setRecordedPercussion(_ on: Bool) -> Bool {
+        guard var set = recordedPercussion, set.isOn != on, let directory = percussionDirectory else { return false }
+        set.isOn = on
+        do {
+            try RecordedPercussion.save(set, to: directory)
+        } catch {
+            note(.session, "Could not switch the recorded percussion \(on ? "on" : "off")", detail: "\(error)")
+            return false
+        }
+        recordedPercussion = set
+        if let service = SurfaceWiring.shared.service { Task { await service.drumKitsChanged() } }
+        note(.you, on ? "Hand percussion: \(set.name) recordings" : "Hand percussion: synthesized")
+        return true
+    }
+
     /// Registers what is already imported, so a song that plays one finds it. Called when the
     /// library is read.
     func loadImportedInstruments() {

@@ -125,8 +125,10 @@ public final class LiveGridHost: GridHosting {
 
         func loadMachine(_ machine: SynthMachine) throws {
             let (_, sampler) = try ensureEngine()
-            guard loadedMachine != machine.id else { return }
-            let folder = kitsDirectory.appendingPathComponent(SynthesizedKit.folderName(for: machine), isDirectory: true)
+            // By folder, not id: the same machine is another kit once its congas are recordings.
+            let name = SynthesizedKit.folderName(for: machine)
+            guard loadedMachine != name else { return }
+            let folder = kitsDirectory.appendingPathComponent(name, isDirectory: true)
             let kit: LoadedKit
             if let existing = try? KitStore.load(from: folder) {
                 kit = existing
@@ -136,7 +138,7 @@ public final class LiveGridHost: GridHosting {
             // Swapping a kit is safe while rendering; this is why switching machine does not stop
             // the pattern.
             try sampler.prepare(kit)
-            loadedMachine = machine.id
+            loadedMachine = name
         }
 
         func setPattern(_ groove: Groove, options: GrooveRenderOptions,

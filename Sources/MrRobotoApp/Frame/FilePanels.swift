@@ -22,6 +22,17 @@ enum FilePanels {
                prompt: "Import")
     }
 
+    /// A folder: VCSL's checkout, for its hand percussion.
+    static func chooseFolder(message: String, prompt: String) -> URL? {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.message = message
+        panel.prompt = prompt
+        return panel.runModal() == .OK ? panel.url : nil
+    }
+
     private static func choose(types: [UTType], message: String, prompt: String) -> URL? {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = types

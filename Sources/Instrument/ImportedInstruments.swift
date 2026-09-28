@@ -100,7 +100,9 @@ public enum ImportedInstruments {
     /// left out with their zones, and named in the result; an SFZ none of whose samples survive is
     /// an error. Building happens in a hidden folder beside the others and is moved into place
     /// only when it is whole, so a failed import never leaves half an instrument behind.
-    public static func importSFZ(at url: URL, into directory: URL) throws -> Imported {
+    /// - Parameter register: false for a recording that is not played as an instrument — hand
+    ///   percussion brought in for `RecordedPercussion`, which kits use and the picker never shows.
+    public static func importSFZ(at url: URL, into directory: URL, register: Bool = true) throws -> Imported {
         let fm = FileManager.default
         let parsed = try SFZImporter.importKit(at: url)
         guard !parsed.manifest.zones.isEmpty else { throw ImportError.noRegions(file: url.lastPathComponent) }
@@ -171,7 +173,7 @@ public enum ImportedInstruments {
             throw KitError.writeFailed(path: folder.path, reason: "\(error)")
         }
         spec.sampledKit = folder.path
-        register(spec)
+        if register { self.register(spec) }
         return Imported(spec: spec, zones: zones.count, samples: copied.count,
                         skippedOpcodes: parsed.skippedOpcodeNames, unusable: unusable, replaced: replaced)
     }

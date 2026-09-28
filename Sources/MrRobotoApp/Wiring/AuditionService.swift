@@ -278,6 +278,13 @@ public final class AuditionService {
 
     // MARK: Kits and hits — what the Chop lane and the Grid play
 
+    /// Forgets which kit each drum sampler holds, so the next `prepare` installs it afresh. For a
+    /// change every kit feels — the recorded percussion switched on or off — which a machine's id
+    /// alone would not show.
+    public func drumKitsChanged() {
+        for (key, entry) in samplers where key.family == .drums { entry.kitID = nil }
+    }
+
     /// Make a synthesized drum machine playable. Kits are built once into the cache and reused.
     public func prepare(machine: SynthMachine) async throws {
         try await prepare(machine: machine, for: nil)

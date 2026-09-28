@@ -234,7 +234,7 @@ struct SynthesizedKitTests {
 
     @Test("a machine's kit folder changes when its voices do, so a retuned machine is rendered again")
     func machineFolderFingerprint() {
-        let names = SynthMachine.all.map(SynthesizedKit.folderName(for:))
+        let names = SynthMachine.all.map { SynthesizedKit.folderName(for: $0) }
         #expect(Set(names).count == SynthMachine.all.count)
         #expect(zip(names, SynthMachine.all).allSatisfy { $0.hasPrefix("\($1.id)-") })
         var retuned = SynthMachine.dmx

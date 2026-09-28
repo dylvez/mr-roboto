@@ -63,9 +63,13 @@ public struct SynthVelocityLayer: Hashable, Codable, Sendable {
 /// change. No playback path has a special case for it.
 public enum SynthesizedKit {
 
-    /// A machine's kit folder: its id and a fingerprint of its voices, so a machine retuned in a
-    /// later build is rendered again rather than loaded stale from the cache.
-    public static func folderName(for machine: SynthMachine) -> String { "\(machine.id)-\(KitFingerprint.of(machine))" }
+    /// A machine's kit folder: its id and a fingerprint of its voices — and of the recorded
+    /// percussion in use, if any — so a machine retuned in a later build, or a kit whose congas
+    /// became recordings, is built again rather than loaded stale from the cache.
+    public static func folderName(for machine: SynthMachine,
+                                  recorded: RecordedPercussion.Resolved? = RecordedPercussion.inUse) -> String {
+        "\(machine.id)-\(KitFingerprint.of(machine, salt: recorded?.fingerprint ?? ""))"
+    }
 
     /// The choke group the hi-hat pair shares. Both hats carry `group = 1` (they *silence* group 1)
     /// and `offBy = 1` (they *are silenced by* group 1), so either one cuts the other — which is
@@ -86,10 +90,12 @@ public enum SynthesizedKit {
     ///     resample on load.
     ///   - layerCount: velocity layers per voice, 2 or 3.
     ///   - name: kit name; defaults to the machine's.
+    ///   - recorded: recordings to play hand-percussion voices on; the set in use by default.
     @discardableResult
     public static func build(_ machine: SynthMachine, in folder: URL,
                              sampleRate: Double = 48_000, layerCount: Int = 3,
-                             name: String? = nil) throws -> LoadedKit {
+                             name: String? = nil,
+                             recorded: RecordedPercussion.Resolved? = RecordedPercussion.inUse) throws -> LoadedKit {
         let layers = SynthVelocityLayer.split(min(3, max(2, layerCount)))
         let samplesFolder = folder.appendingPathComponent("samples", isDirectory: true)
         do {
@@ -121,7 +127,21 @@ public enum SynthesizedKit {
 
         var zones: [Zone] = []
         var voiceNotes: [DrumVoice: Int] = [:]
-        for entry in rendered {
+
+        // Voices a recording plays (`RecordedPercussion`): its zones in place of the render, each
+        // layer at the loudness of the loudest synthesized layer as this kit plays it.
+        var fromRecordings = Set<SynthVoiceKind>()
+        for spec in machine.voices {
+            guard let recorded, let loudest = rendered.last(where: { $0.spec.kind == spec.kind }) else { continue }
+            let loudness = KitLevel.loudness(loudest.samples.map { $0 * scale }, sampleRate: sampleRate)
+            guard let replacing = try RecordedPercussion.zones(for: spec.kind, from: recorded, note: spec.kind.generalMIDINote,
+                                                              loudness: loudness, in: folder) else { continue }
+            zones += replacing
+            voiceNotes[spec.kind.drumVoice] = spec.kind.generalMIDINote
+            fromRecordings.insert(spec.kind)
+        }
+
+        for entry in rendered where !fromRecordings.contains(entry.spec.kind) {
             let stem = entry.spec.kind.fileStem
             let suffix = "v\(entry.layer.range.lowerBound)_\(entry.layer.range.upperBound)"
             let relativePath = "samples/\(stem)_\(suffix).wav"

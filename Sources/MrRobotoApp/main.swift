@@ -110,6 +110,17 @@ struct FrameCommands: Commands {
                 if let url = FilePanels.chooseSFZ() { app.importInstrument(from: url) }
             }
             .disabled(app.store == nil)
+            Button("Import VCSL Percussion…") {
+                if let url = FilePanels.chooseFolder(
+                    message: "The Versilian Community Sample Library folder (its sfz branch). Its congas, bongos, shaker, tambourine and claves are copied into the library and every kit plays them.",
+                    prompt: "Bring In") {
+                    app.importVCSLPercussion(from: url)
+                }
+            }
+            .disabled(app.store == nil)
+            Toggle("Recorded Hand Percussion", isOn: Binding(get: { app.recordedPercussion?.isOn ?? false },
+                                                            set: { app.setRecordedPercussion($0) }))
+                .disabled(app.recordedPercussion == nil)
             Button("Import Voice…") {
                 let panel = NSOpenPanel()
                 panel.allowedContentTypes = [.plainText, .text]

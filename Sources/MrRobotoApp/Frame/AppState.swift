@@ -222,6 +222,9 @@ public final class AppState {
     /// The instruments imported into this library, as the pickers offer them. The registry
     /// `InstrumentVoiceSpec.preset(id:)` reads is process-wide; this is the observable copy.
     public internal(set) var importedInstruments: [InstrumentVoiceSpec] = []
+    /// The recordings that stand in for the kits' hand percussion, on or off; nil when none were
+    /// ever brought in. `RecordedPercussion.current` is the process-wide copy kits are built with.
+    public internal(set) var recordedPercussion: RecordedPercussion?
 
     // MARK: Song
 
@@ -535,6 +538,7 @@ public final class AppState {
             return
         }
         loadImportedInstruments()
+        loadRecordedPercussion()
         guard store.exists else {
             library = Library()
             libraryStatus = .empty(directory)
