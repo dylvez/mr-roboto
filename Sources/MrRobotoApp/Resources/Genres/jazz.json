@@ -1,0 +1,567 @@
+{
+  "aliases": [
+    "swing",
+    "bebop",
+    "hard bop",
+    "post-bop",
+    "modal jazz",
+    "straight-ahead jazz",
+    "small-group jazz"
+  ],
+  "bassHands": [
+    "walking"
+  ],
+  "family": "jazz",
+  "feels": [
+    "Jazz Waltz",
+    "Broadway Ride",
+    "Ballad Brushes"
+  ],
+  "form": {
+    "evidence": {
+      "inferred": "a 32-bar AABA chorus (cited Rhythm changes) with two soloists taking the Weimar Jazz Database median of two choruses each, framed by the head; 192 bars at the cited ~170 BPM median run about 4.5 minutes, and slower tempos, more soloists or piano and bass solos push toward the ~8-minute median of the records listed"
+    },
+    "sections": [
+      {
+        "bars": 32,
+        "name": "Head"
+      },
+      {
+        "bars": 32,
+        "name": "Solo"
+      },
+      {
+        "bars": 32,
+        "name": "Solo"
+      },
+      {
+        "bars": 32,
+        "name": "Solo"
+      },
+      {
+        "bars": 32,
+        "name": "Solo"
+      },
+      {
+        "bars": 32,
+        "name": "Head"
+      }
+    ]
+  },
+  "id": "jazz",
+  "idioms": [
+    "jazz"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Miles_Davis_Quintet",
+          "https://en.wikipedia.org/wiki/Post-bop"
+        ]
+      },
+      "name": "Miles Davis Quintets",
+      "period": "1955–1968",
+      "why": "The first quintet (Coltrane, Garland, Chambers, Philly Joe Jones) was a definitive hard-bop group. The second (Shorter, Hancock, Carter, Williams, 1964–68) worked on 'time, no changes', taking in free-jazz ideas without giving up the form and treating the players as equals rather than leader and accompanists."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Hard_bop",
+          "https://en.wikipedia.org/wiki/Moanin%27"
+        ]
+      },
+      "name": "Art Blakey and the Jazz Messengers",
+      "period": "1955–1968",
+      "why": "The Messengers and Horace Silver led hard bop. Moanin' (1958), made with Lee Morgan, Benny Golson and Bobby Timmons, joins gospel and blues to modern jazz, driven by the intensity of Blakey's drumming."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Giant_Steps_(composition)",
+          "https://en.wikipedia.org/wiki/So_What_(Miles_Davis_composition)"
+        ]
+      },
+      "name": "John Coltrane",
+      "period": "1955–1967",
+      "why": "A member of Davis's first quintet. 'Giant Steps' (recorded 1959) cycles ii–V–I progressions through keys a major third apart (B, G, E♭), the 'Coltrane changes'. He later took the 'So What' structure for 'Impressions'."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Footprints_(composition)",
+          "https://en.wikipedia.org/wiki/Maiden_Voyage_(composition)"
+        ]
+      },
+      "name": "Wayne Shorter and Herbie Hancock",
+      "period": "1964–1968",
+      "why": "The second quintet's composers. Shorter's 'Footprints' (1966) is a C minor blues whose turnaround doubles the harmonic rhythm through altered chords while Williams and Carter move between metric feels. Hancock's 'Maiden Voyage' (1965) runs a 32-bar AABA on two suspended chords per section over a bossa-derived ostinato."
+    }
+  ],
+  "meters": [
+    "4/4",
+    "3/4"
+  ],
+  "name": "Jazz — small-group swing and post-bop",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://acoustics.org/pressroom/httpdocs/137th/friberg.html"
+        ]
+      },
+      "text": "The ride cymbal's swing ratio varies with tempo: up to about 3.5:1 at slow tempos, 2.38:1 on average at 132 BPM, falling roughly linearly above 150 BPM toward 1:1 near 300. The short note stays at about 100 ms at medium to fast tempos, and 2:1 'triplet feel' holds only at one tempo."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.speech.kth.se/music/performance/Texts/ensemble_swing.htm"
+        ]
+      },
+      "text": "At medium tempos drummers swing harder than 2:1 and soloists softer than 2:1. Soloists are late relative to the drummer on the downbeats and synchronised on the upbeats; that lag is a large part of 'laid back'."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://pmc.ncbi.nlm.nih.gov/articles/PMC5706983/"
+        ]
+      },
+      "text": "In recorded trios the pedal hi-hat on 2 and 4 lands 8.6–27.9 ms ahead of the ride cymbal. Bass and ride agree within a few ms on average, and bassists sit 7–26 ms behind the hi-hat. Listeners preferred asynchronies under about 19 ms: tight and interlocked, but not quantised."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://www.learnjazzstandards.com/blog/learning-jazz/bass/write-walking-bass-line/"
+        ]
+      },
+      "text": "Walking bass: one note per beat, the root on beat 1, other chord tones (roots and fifths first) on beats 2 and 3, and on beat 4 an approach a half step below or above the next bar's first note, or its fifth."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Ii%E2%80%93V%E2%80%93I_progression"
+        ]
+      },
+      "text": "ii–V–I is the unit. ii is a minor seventh and I a major seventh or sixth. The third of each chord becomes the seventh of the next, and the seventh falls a half step to the next third. The tritone substitution swaps V7 for bII7 (Dm7–D♭7–Cmaj7), and chains extend it to iii–VI–ii–V–I."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://community.wvu.edu/~jokatz/BluesPaperPrePrint.pdf"
+        ]
+      },
+      "text": "Modern jazz keeps common-practice habits (begin and end on the tonic, approach the local tonic by a perfect cadence, roots falling by fifths), but prepares V with ii rather than IV. Chromatic chords and modulations are frequent and often reach distant keys without pivots."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/So_What_(Miles_Davis_composition)",
+          "https://en.wikipedia.org/wiki/Maiden_Voyage_(composition)",
+          "https://en.wikipedia.org/wiki/Post-bop"
+        ]
+      },
+      "text": "Post-bop slows the harmonic rhythm. 'So What' is 16 bars of D Dorian, 8 of E♭ Dorian and 8 of D Dorian, voiced in fourths. 'Maiden Voyage' is 32-bar AABA with only two chords per section, all suspended."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Rhythm_changes",
+          "https://schott-campus.com/wp-content/uploads/2017/11/inside_the_jazzomat_final_rev_oa4.pdf"
+        ]
+      },
+      "text": "The 32-bar AABA song form is the default chorus: rhythm changes has A sections of I–vi–ii–V pairs and a bridge of four dominant sevenths, two bars each. In the Weimar Jazz Database solos run a median of two choruses, about 87 seconds, and about 80% of them are in a swing feel, almost all in common time."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Comping_(jazz)"
+        ]
+      },
+      "text": "Comping: piano or guitar voicings built on the 3rd, 7th, 9th and 13th with the root left to the bass. Modern comping leaves space and hits rhythmically interesting moments, the Charleston rhythm among them, while the drummer comps on the snare under the ride."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Hard_bop",
+          "https://en.wikipedia.org/wiki/Post-bop",
+          "https://en.wikipedia.org/wiki/Miles_Davis_Quintet"
+        ]
+      },
+      "text": "Hard bop (mid-1950s–1968) simplified bebop's melodies and brought in gospel, blues and R&B: earthy, repetitive, dance-like rhythms and plagal cadences, with the bass freed from pure timekeeping. Post-bop loosened forms, tempos and meters further, and Miles Davis's second quintet worked on the principle of 'time, no changes'."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://schott-campus.com/wp-content/uploads/2017/11/inside_the_jazzomat_final_rev_oa4.pdf"
+        ]
+      },
+      "text": "Soloists swing less than their drummers and flatten with tempo. In the Weimar Jazz Database, Michael Brecker averages 1.77:1, near-triplet at 92–126 BPM and nearly straight at 300–320 BPM."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre"
+        ]
+      },
+      "text": "Jazz releases measure at a median of −12.8 LUFS integrated (middle half −15.2 to −10.8, n=2,933), about 3 dB quieter than pop and the quietest vocal-era genre in the dataset; loudness and dynamics rank inversely by genre."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Moanin%27",
+          "https://en.wikipedia.org/wiki/Miles_Davis_Quintet"
+        ]
+      },
+      "text": "The canonical quintet is trumpet, tenor saxophone, piano, double bass and drums: Morgan, Golson, Timmons, Merritt and Blakey on Moanin'; Davis, Coltrane, Garland, Chambers and Philly Joe Jones in the first great quintet."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://acoustics.org/pressroom/httpdocs/137th/friberg.html",
+          "https://www.speech.kth.se/music/performance/Texts/ensemble_swing.htm"
+        ]
+      },
+      "text": "Programming a fixed 2:1 triplet swing at every tempo. Drummers go from about 3.5:1 at slow tempos to near straight at 300 BPM and soloists swing less than drummers, so scale the swing with the tempo and lighten it on the lead line."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.tempo-tunes.com/genres/jazz",
+          "https://schott-campus.com/wp-content/uploads/2017/11/inside_the_jazzomat_final_rev_oa4.pdf"
+        ]
+      },
+      "text": "Trusting a tempo detector. Tempo-Tunes' jazz median of 104 BPM against the Weimar database's 170.5 BPM median is the half-time reading its own caveat warns about; up-tempo swing is counted in half notes by machines."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://pmc.ncbi.nlm.nih.gov/articles/PMC5706983/",
+          "https://www.speech.kth.se/music/performance/Texts/ensemble_swing.htm"
+        ]
+      },
+      "text": "Quantising the band to one grid, or letting it drift wide. The real pocket has the hi-hat early and soloists late on downbeats, but listeners preferred asynchronies under about 19 ms."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre"
+        ]
+      },
+      "text": "Mastering to pop loudness. Jazz masters sit around −12.8 LUFS, about 3 dB under pop, to keep their dynamics."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Ii%E2%80%93V%E2%80%93I_progression"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "iim7 - V7 - Imaj7",
+      "text": "The basic cadence. Voice-lead 3rd→7th and 7th→3rd."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Ii%E2%80%93V%E2%80%93I_progression"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "iim7 - bII7 - Imaj7",
+      "text": "The tritone substitution: the dominant becomes bII7 and the bass falls chromatically."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Rhythm_changes"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "Imaj7 - VI7 - iim7 - V7",
+      "text": "The rhythm-changes A-section turnaround, two chords per bar."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Rhythm_changes"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "III7 - VI7 - II7 - V7",
+      "text": "The 'Sears Roebuck' bridge: dominants round the circle of fifths, two bars each."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/So_What_(Miles_Davis_composition)"
+        ]
+      },
+      "mode": "dorian",
+      "roman": "im7 - bIIm7 - im7",
+      "text": "The modal AABA of 'So What': one Dorian chord for 16 bars, up a half step for the bridge, and back."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "inferred": "typical is the Weimar Jazz Database's median solo tempo of 170.5 BPM (456 solos, range 50 to over 300, skewed fast); bounds bracket its medium to up-tempo classes and the 168 and 208 BPM tempos of the cited jazz-trio timing study"
+      },
+      "feature": "tempo.bpm",
+      "high": 240,
+      "low": 110,
+      "typical": 170,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "inferred": "Friberg & Sundström measured ride-cymbal swing ratios of 3.5:1 at slow tempos falling to 1:1 at fast ones, with a mean of 2.38:1 (70.4%) at 132 BPM; the KTH summary says drummers sit above 2:1 (66.7%) at medium tempos; the band 1.5:1–2.6:1 (60–72%) covers medium and medium-up tempos"
+      },
+      "feature": "swing.percent",
+      "high": 72,
+      "low": 60,
+      "typical": 70,
+      "unit": "MPC percent"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://pmc.ncbi.nlm.nih.gov/articles/PMC5706983/"
+        ]
+      },
+      "feature": "pocket.hat.ms",
+      "high": -8,
+      "low": -28,
+      "unit": "ms, positive = late"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://pmc.ncbi.nlm.nih.gov/articles/PMC5706983/"
+        ]
+      },
+      "feature": "pocket.spread.ms",
+      "high": 28,
+      "low": 8,
+      "unit": "ms"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.learnjazzstandards.com/blog/learning-jazz/bass/write-walking-bass-line/"
+        ]
+      },
+      "feature": "bass.attacks.per.bar",
+      "high": 4,
+      "low": 4,
+      "typical": 4,
+      "unit": "attacks per bar"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.learnjazzstandards.com/blog/learning-jazz/bass/write-walking-bass-line/"
+        ]
+      },
+      "feature": "bass.downbeat.coverage",
+      "high": 1.0,
+      "low": 0.95,
+      "unit": "fraction of bars"
+    },
+    {
+      "evidence": {
+        "inferred": "a walking line is one quarter note per beat (cited Learn Jazz Standards), so almost every onset is on the quarter grid; the small allowance is for skip notes and anticipations"
+      },
+      "feature": "bass.syncopation",
+      "high": 0.1,
+      "low": 0.0,
+      "unit": "fraction of onsets"
+    },
+    {
+      "evidence": {
+        "inferred": "the cited walking-bass method puts a chromatic approach on beat 4 into the next root, but lets it come from a half step below, a half step above, or the fifth; roughly one of those three options is the feature's half-step-below case, and most changes are approached somehow"
+      },
+      "feature": "bass.approach.rate",
+      "high": 0.75,
+      "low": 0.25,
+      "unit": "fraction of root moves ≥ a third"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Rhythm_changes",
+          "https://en.wikipedia.org/wiki/So_What_(Miles_Davis_composition)",
+          "https://en.wikipedia.org/wiki/Maiden_Voyage_(composition)"
+        ]
+      },
+      "feature": "harmony.changes.per.bar",
+      "high": 2,
+      "low": 0.1,
+      "unit": "changes per bar"
+    },
+    {
+      "evidence": {
+        "inferred": "descending-fifth root motion alone is 56% of changes in Broze & Shanahan's general jazz corpus and 42% in Katz's Real Book blues corpus (both reported in the cited Katz paper); ascending fourths and fifths add to that, while modal tunes pull it down"
+      },
+      "feature": "harmony.root.motion.fifths",
+      "high": 0.8,
+      "low": 0.45,
+      "unit": "fraction"
+    },
+    {
+      "evidence": {
+        "inferred": "Katz notes that chromatic chords and modulations in modern jazz are frequent, dense and often reach distant keys without pivots; rhythm changes (cited) already puts VI7, I7, iv and a bridge of III7–VI7–II7–V7 against the key"
+      },
+      "feature": "harmony.diatonic.ratio",
+      "high": 0.8,
+      "low": 0.4,
+      "unit": "fraction"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre"
+        ]
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -10.8,
+      "low": -15.2,
+      "typical": -12.8,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "interquartile span and median of 15 small-group records as listed on songbpm.com: So What 9:08, Giant Steps 4:43, Moanin' 9:36, Maiden Voyage 7:56, Footprints 9:46, Oleo (Miles) 5:14, Oleo (Rollins) 25:25, Rhythm-a-Ning 5:47, Speak No Evil 8:26, The Sidewinder 10:27, Song for My Father 7:18, Mercy Mercy Mercy 5:09, Blue Train 10:43, Joy Spring 3:19, Cheese Cake 6:34"
+      },
+      "feature": "form.minutes",
+      "high": 9.8,
+      "low": 5.2,
+      "typical": 7.9,
+      "unit": "minutes"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Miles Davis",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/So_What_(Miles_Davis_composition)"
+        ]
+      },
+      "features": [
+        "harmony.changes.per.bar",
+        "harmony.chords.distinct"
+      ],
+      "listenFor": "The opening: Bill Evans' and Paul Chambers' introduction and the 'So What chord' (three fourths topped by a major third), then 16 bars of D Dorian before the half-step lift at the bridge.",
+      "title": "So What",
+      "year": 1959
+    },
+    {
+      "artist": "Art Blakey and the Jazz Messengers",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Moanin%27",
+          "https://en.wikipedia.org/wiki/Hard_bop"
+        ]
+      },
+      "features": [
+        "swing.percent",
+        "pocket.spread.ms"
+      ],
+      "listenFor": "Throughout: gospel and blues figures on top of a modern rhythm section, with Blakey's drumming pushing the soloists.",
+      "title": "Moanin'",
+      "year": 1958
+    },
+    {
+      "artist": "John Coltrane",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Giant_Steps_(composition)"
+        ]
+      },
+      "features": [
+        "harmony.changes.per.bar",
+        "harmony.diatonic.ratio",
+        "tempo.bpm"
+      ],
+      "listenFor": "Every chorus: ii–V–I cells moving through B, G and E♭ at a fast swing, with the key changing every bar or two.",
+      "title": "Giant Steps",
+      "year": 1960
+    },
+    {
+      "artist": "Herbie Hancock",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Maiden_Voyage_(composition)"
+        ]
+      },
+      "features": [
+        "harmony.changes.per.bar",
+        "bass.syncopation"
+      ],
+      "listenFor": "The head: two suspended chords per 8-bar section over a bossa-derived ostinato, with Ron Carter and Tony Williams.",
+      "title": "Maiden Voyage",
+      "year": 1965
+    },
+    {
+      "artist": "Miles Davis",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Footprints_(composition)"
+        ]
+      },
+      "features": [
+        "harmony.changes.per.bar",
+        "grid.subdivision"
+      ],
+      "listenFor": "The last four bars of each chorus: the altered-chord turnaround at double harmonic rhythm, while the rhythm section moves between simple and compound feels.",
+      "title": "Footprints",
+      "year": 1966
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "upright"
+    ],
+    "instruments": [
+      "grand-piano",
+      "tenor-sax",
+      "alto-sax",
+      "trumpet",
+      "vibraphone",
+      "clean-electric"
+    ],
+    "machines": [
+      "jazz"
+    ]
+  },
+  "summary": "Improvisation over a repeating chorus, most often a 32-bar AABA song form or a blues. The harmony moves in ii–V–I chains, secondary dominants and chromatic substitutions, or in post-bop, over slow modal planes. The rhythm section swings: the ride cymbal's long-short eighths get straighter as the tempo rises, the bass walks one note per beat, the piano comps with rootless voicings, and soloists sit behind the drummer on the downbeats. Tempos are fast by pop standards, and masters are the quietest of any vocal-era genre.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Rhythm_changes",
+      "https://en.wikipedia.org/wiki/Ii%E2%80%93V%E2%80%93I_progression",
+      "https://acoustics.org/pressroom/httpdocs/137th/friberg.html",
+      "https://www.learnjazzstandards.com/blog/learning-jazz/bass/write-walking-bass-line/",
+      "https://en.wikipedia.org/wiki/Comping_(jazz)",
+      "https://www.speech.kth.se/music/performance/Texts/ensemble_swing.htm",
+      "https://schott-campus.com/wp-content/uploads/2017/11/inside_the_jazzomat_final_rev_oa4.pdf",
+      "https://freshlybakedstudios.com/blog/average-lufs-by-genre"
+    ]
+  }
+}

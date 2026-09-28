@@ -1,0 +1,491 @@
+{
+  "aliases": [
+    "atlanta trap",
+    "southern trap",
+    "trap rap",
+    "modern trap"
+  ],
+  "bassHands": [
+    "programmed"
+  ],
+  "family": "hip-hop",
+  "feels": [
+    "Trap Rolling Hats",
+    "Halftime"
+  ],
+  "form": {
+    "evidence": {
+      "cited": [
+        "https://songen.app/blog/how-to-arrange-a-trap-beat/"
+      ]
+    },
+    "sections": [
+      {
+        "bars": 8,
+        "name": "Intro"
+      },
+      {
+        "bars": 16,
+        "name": "Hook"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 8,
+        "name": "Bridge"
+      },
+      {
+        "bars": 16,
+        "name": "Hook"
+      },
+      {
+        "bars": 8,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "trap",
+  "idioms": [
+    "trap",
+    "hip-hop"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Trap_music"
+        ]
+      },
+      "name": "Shawty Redd and DJ Toomp",
+      "period": "late 1990s–2000s",
+      "why": "Shawty Redd pioneered the minimalist, horror-tinged Atlanta sound; DJ Toomp's melodic, sample-driven approach drew on jazz, soul, gospel and funk and underpinned T.I.'s 2003 Trap Muzik, the record that named the genre."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Zaytoven"
+        ]
+      },
+      "name": "Zaytoven",
+      "period": "1997–present",
+      "why": "Church-trained on piano and organ, he builds beats on an Akai MPC and keyboards; his run with Gucci Mane from 'Icy' (2005) and later Future and Migos made played keys a trap staple."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Lex_Luger_(music_producer)",
+          "https://daily.redbullmusicacademy.com/2016/01/interview-lex-luger/"
+        ]
+      },
+      "name": "Lex Luger",
+      "period": "2009–2012 peak",
+      "why": "Working in FL Studio at around ten beats a day, he fixed the modern template: heavy 808s, crisp snare rolls, menacing synths and bombastic orchestral layers inspired by Wagner and Danny Elfman; he says he built it alone, 'because there wasn't no rapping in my ear'."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Metro_Boomin",
+          "https://www.soundonsound.com/techniques/inside-track-metro-boomin-heroes-villains"
+        ]
+      },
+      "name": "Metro Boomin",
+      "period": "2013–present",
+      "why": "Self-taught in FL Studio, he pairs dark, gothic melodies with booming bass; his studio uses an MPC 2000XL, SP-1200, TR-808 and guitar pedals for sounds that are not stock presets, mixed by Ethan Stevens on an SSL."
+    }
+  ],
+  "meters": [
+    "4/4"
+  ],
+  "name": "Trap",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://blog.native-instruments.com/how-to-make-a-trap-beat/",
+          "https://www.musicradar.com/tuition/tech/10-tricks-every-trap-producer-should-know-638684"
+        ]
+      },
+      "text": "Half-time backbeat: the clap or snare lands on beat 3 of a bar written at ~140 BPM (so it feels like 2 and 4 at ~70). Kicks are sparse and syncopated, e.g. on the 1st, 8th and 10th eighth notes of a two-bar pattern; claps can be layered at the original tempo against the half-time snare."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.musicradar.com/how-to/how-to-program-mixed-resolution-trap-style-hi-hat-patterns",
+          "https://blog.native-instruments.com/how-to-make-a-trap-beat/"
+        ]
+      },
+      "text": "Hi-hats are the second defining feature after the 808: a base of eighths or sixteenths that switches between 1/16T triplets, 1/32 and even 1/64 bursts, sometimes several times in one bar, with rolls at phrase ends."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Trap_music",
+          "https://www.musicradar.com/how-to/how-to-program-mixed-resolution-trap-style-hi-hat-patterns"
+        ]
+      },
+      "text": "Tempo is written two ways: the same record can be called 70 BPM (half-time feel) or 140 BPM (grid of the hats); Wikipedia gives 70 programmed as 140, MusicRadar's hat tutorial works at 70. Read tempo at the hat grid (130-160) so subdivision numbers stay consistent."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://arxiv.org/pdf/2502.07524"
+        ]
+      },
+      "text": "The 808 bass drum is kick and bassline at once: a tuned, long-decaying sine near 50 Hz that outlines the harmony. Producers tune it to the key, or (Scott Storch) move the song's key to suit the 808 so it keeps its weight."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Lex_Luger_(music_producer)",
+          "https://en.wikipedia.org/wiki/Metro_Boomin",
+          "https://en.wikipedia.org/wiki/Trap_music"
+        ]
+      },
+      "text": "Palette: heavy 808s, crisp snares, fast hats, synth keys and orchestral layers (strings, brass, bells). Lex Luger drew on Wagner and Danny Elfman and assigns orchestral instruments and tubular bells to pads; Metro Boomin's palette is dark, gothic melody over booming bass."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://emastered.com/blog/trap-chord-progressions"
+        ]
+      },
+      "text": "Minor keys: natural minor, harmonic minor for tension, or Dorian/Phrygian colour. Loops of 2-4 chords (triads and sevenths) over two to four bars; the harmony sits still and sets mood while drums and 808 move."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://blog.native-instruments.com/how-to-make-a-trap-beat/",
+          "https://orphiq.com/resources/trap-vs-drill-comparison"
+        ]
+      },
+      "text": "Instrumental melody is a looped figure (synth, flute, bells, pads) with a counter-melody built from root, octave, fifth and minor seventh; the vocal carries the tune."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://songen.app/blog/how-to-arrange-a-trap-beat/",
+          "https://emastered.com/blog/rap-song-structure"
+        ]
+      },
+      "text": "Beat arrangement: 8-bar intro with few elements, 16-bar hook, 16-bar verse, 8-bar bridge without drums, 16-bar hook, 8-bar outro. Rap convention is 16-bar verses and 8-bar hooks; forms vary and the same 808 loop often runs under verse and hook alike."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://songen.app/blog/how-to-arrange-a-trap-beat/"
+        ]
+      },
+      "text": "Arrangement is subtraction: sections are made by muting parts of the one loop (drop the drums for the bridge, strip layers under the verse), plus alternate drum palettes and octave copies rather than new material."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://www.soundonsound.com/techniques/inside-track-metro-boomin-heroes-villains",
+          "https://www.musicradar.com/tuition/tech/10-tricks-every-trap-producer-should-know-638684"
+        ]
+      },
+      "text": "Low end is managed kick-against-808: on Metro Boomin's Heroes & Villains the bass is controlled with Soothe 2 keyed from the kick, and drums go through API EQ and bus compression; 808 harmonics come from saturation so it reads on small speakers."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://songen.app/blog/how-to-master-a-trap-beat/",
+          "https://www.meterplugs.com/blog/2017/05/18/crest-factor-psr-and-plr.html"
+        ]
+      },
+      "text": "Released masters are loud (roughly -10 to -7 LUFS integrated, -1 dBTP), but the kick transient is where trap keeps its punch: back the limiter off when the kick stops cracking. Ian Shepherd's floor of PSR 8 in the loudest parts is a useful check."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Trap_music",
+          "https://www.cambridge.org/core/journals/popular-music/article/abs/good-things-come-in-threes-triplet-flow-in-recent-hiphop-music/99BC46987A0BF369A0A3CCFC54F1CDBB"
+        ]
+      },
+      "text": "Themes grew out of the 'trap house' (drug dealing, street life). The signature delivery is triplet flow (mixed, phrasal or total), which Duinker ties directly to trap's sparse, slow beats."
+    }
+  ],
+  "parent": "hip-hop",
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.musicradar.com/how-to/how-to-program-mixed-resolution-trap-style-hi-hat-patterns"
+        ]
+      },
+      "text": "Running one hat resolution for the whole bar. Trap hats shift between straight and triplet, slow and fast within a bar; programme the base in eighths and place triplet or 32nd bursts at chosen moments."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://arxiv.org/pdf/2502.07524"
+        ]
+      },
+      "text": "Leaving the 808 untuned. Its long tail is a bass note; out of key it clashes with the loop. Tune it to the key, or move the key to where the 808 keeps its ~50 Hz weight."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://songen.app/blog/how-to-master-a-trap-beat/"
+        ]
+      },
+      "text": "Limiting until the kick stops cracking. Loud is the norm, but back the limiter off about 1 dB once the kick transient dies; a crushed drum loses the genre's punch."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://emastered.com/blog/trap-chord-progressions"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "i - VI - v - i",
+      "text": "Minor loop to the relative major's neighbour and back; e.g. Cm-Ab-Gm-Cm."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://emastered.com/blog/trap-chord-progressions"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "i - v - iv",
+      "text": "Three minor chords, all in the key; cold, no leading tone."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://emastered.com/blog/trap-chord-progressions"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "i - III - VII - iv",
+      "text": "Gm-Bbadd9-F-Cm7, the source's example (it labels it i-III-V-iv, but F in G minor is VII); added ninths and sevenths colour an all-diatonic loop."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "cited": [
+          "https://blog.native-instruments.com/how-to-make-a-trap-beat/",
+          "https://www.musicradar.com/tuition/tech/10-tricks-every-trap-producer-should-know-638684",
+          "https://orphiq.com/resources/trap-vs-drill-comparison"
+        ]
+      },
+      "feature": "tempo.bpm",
+      "high": 160,
+      "low": 130,
+      "typical": 140,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "inferred": "The cited hi-hat tutorials (MusicRadar mixed-resolution hats, Native Instruments trap beat) write triplet feel as explicit 1/16T notes and 32nd rolls on a straight grid rather than applying groove swing, so a programmed line sits at or just off straight."
+      },
+      "feature": "swing.percent",
+      "high": 54,
+      "low": 50,
+      "unit": "MPC percent"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://arxiv.org/pdf/2502.07524",
+          "https://en.wikipedia.org/wiki/Trap_music"
+        ]
+      },
+      "feature": "bass.is.sub",
+      "high": 1,
+      "low": 1,
+      "unit": "1 or 0"
+    },
+    {
+      "evidence": {
+        "inferred": "Deruty (ISMIR 2024) measures the median 808 bass drum fundamental at 49.5 Hz (G1, MIDI 31) and discusses transposing the song down a fourth to D1 (MIDI 26) versus up; the lowest 808 note therefore sits roughly D1 to C2."
+      },
+      "feature": "bass.register.low",
+      "high": 36,
+      "low": 26,
+      "unit": "MIDI note"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://soundcamps.com/blog/spotify-lufs/",
+          "https://songen.app/blog/how-to-master-a-trap-beat/",
+          "https://luvlang.studio/research/loudness-2026"
+        ]
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -7,
+      "low": -10,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://songen.app/blog/how-to-master-a-trap-beat/",
+          "https://soundcamps.com/blog/spotify-lufs/"
+        ]
+      },
+      "feature": "mix.master.target.lufs",
+      "high": -7,
+      "low": -10,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "Peak-to-loudness arithmetic on the cited figures: a -1 to -0.5 dBTP ceiling over a -10 to -7 LUFS integrated master leaves roughly 6.5-9 dB between peak and average."
+      },
+      "feature": "mix.crest.db",
+      "high": 9,
+      "low": 6,
+      "unit": "dB"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://emastered.com/blog/trap-chord-progressions"
+        ]
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 4,
+      "low": 1,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "inferred": "eMastered: trap loops are 'no more than two to four bars' carrying 2-4 chords with subtle changes; at a 140 BPM written tempo that is one chord per bar at most and commonly one per two to four bars."
+      },
+      "feature": "harmony.changes.per.bar",
+      "high": 1,
+      "low": 0.25,
+      "unit": "changes per bar"
+    },
+    {
+      "evidence": {
+        "inferred": "Songen's standard 72-bar trap arrangement runs about 2:20 at 140 BPM; the reference singles run 3:23 (Mask Off), 3:27 radio edit (Bad and Boujee) and 4:03 (Hard in da Paint); Chartmetric reports hip-hop tracks 29 s shorter in 2024 than 2018."
+      },
+      "feature": "form.minutes",
+      "high": 4.0,
+      "low": 2.3,
+      "typical": 3.3,
+      "unit": "minutes"
+    },
+    {
+      "evidence": {
+        "inferred": "Songen and eMastered put the hook straight after a 4-8 bar intro; 8 bars at 140 BPM is 13.7 s, and Léveillé Gauvin's corpus shows hit intros shrinking to about 5 s, so the first hook lands between the downbeat and about half a minute."
+      },
+      "feature": "form.hook.seconds",
+      "high": 30,
+      "low": 0,
+      "unit": "seconds"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Waka Flocka Flame",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Hard_in_da_Paint",
+          "https://en.wikipedia.org/wiki/Lex_Luger_(music_producer)"
+        ]
+      },
+      "features": [
+        "kick.decay.s",
+        "grid.subdivision"
+      ],
+      "listenFor": "Lex Luger's breakout instrumental, his first on radio: from the first bars hear the heavy 808, snare rolls and orchestral layering his Wikipedia entry describes.",
+      "title": "Hard in da Paint",
+      "year": 2010
+    },
+    {
+      "artist": "Migos feat. Lil Uzi Vert",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Bad_and_Boujee"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "harmony.chords.distinct"
+      ],
+      "listenFor": "From the intro, the boom-heavy, moody keyboard loop in Eb minor with ad-libs throughout; a 127 BPM listing shows how half/double-time tempo readings vary.",
+      "title": "Bad and Boujee",
+      "year": 2016
+    },
+    {
+      "artist": "Future",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Mask_Off",
+          "https://songbpm.com/@future/mask-off"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.minutes"
+      ],
+      "listenFor": "The sampled flute loop (Tommy Butler's 'Prison Song') from the opening bars carries the melody on a 150 BPM grid; the whole 3:23 barely leaves it.",
+      "title": "Mask Off",
+      "year": 2017
+    },
+    {
+      "artist": "Fetty Wap",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Trap_music"
+        ]
+      },
+      "features": [
+        "harmony.changes.per.bar"
+      ],
+      "listenFor": "A sung, melodic trap hit (#2 on the Hot 100): from the first hook, the vocal carries the tune rather than the beat.",
+      "title": "Trap Queen",
+      "year": 2015
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "808",
+      "sub"
+    ],
+    "instruments": [
+      "strings",
+      "brass",
+      "tubular-bells",
+      "bell",
+      "flute",
+      "grand-piano",
+      "organ",
+      "dark-pad"
+    ],
+    "machines": [
+      "tr808",
+      "trap"
+    ]
+  },
+  "summary": "Atlanta-born rap music built on a long, tuned Roland TR-808 bass drum that doubles as the bassline, crisp snares or claps landing at half-time, and hi-hats that shift between eighths, sixteenths, triplets and thirty-second rolls within a bar. Over that sits a short, dark, minor-key loop of synths, strings, brass, bells or piano that barely changes harmonically, leaving space for the vocal.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Trap_music",
+      "https://www.musicradar.com/how-to/how-to-program-mixed-resolution-trap-style-hi-hat-patterns",
+      "https://emastered.com/blog/trap-chord-progressions"
+    ]
+  }
+}

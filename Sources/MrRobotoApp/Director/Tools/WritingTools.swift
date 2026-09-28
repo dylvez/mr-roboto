@@ -176,7 +176,7 @@ public struct WriteMelodyTool: DirectorTool {
             ?? PartVersion(partID: PartID(), kind: .melody(melody), author: author, operation: Operation.written, note: note)
 
         let observation = MelodyObservation.of(melody, label: note, key: key, progression: progression, beatsPerBar: beatsPerBar)
-        let readings = Melodist().read(observation)
+        let readings = GenreLens.judge(Melodist().read(observation), by: Melodist.bible, in: await workspace.genreLens)
         let flags = readings.filter { !$0.holds }
 
         let recorded = await workspace.record(version)
@@ -310,7 +310,7 @@ public struct WriteLyricsTool: DirectorTool {
         let corpus = await workspace.voice
         let observation = LyricObservation.of(lyric, label: "Lyric", corpus: corpus, title: song.title,
                                               melody: tune, beatsPerBar: song.timeSignature.beatsPerBar)
-        let readings = Lyricist().read(observation)
+        let readings = GenreLens.judge(Lyricist().read(observation), by: Lyricist.bible, in: await workspace.genreLens)
         let flags = readings.filter { !$0.holds }
         let stanzas = Self.stanzas(of: lyric, schemes: observation.schemes)
         let note = Self.note(for: lyric, lines: observation.lineCount, schemes: observation.schemes)

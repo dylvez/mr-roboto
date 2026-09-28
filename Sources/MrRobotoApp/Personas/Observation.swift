@@ -122,10 +122,16 @@ public struct GrooveObservation: Hashable, Sendable {
         self.timeSignature = timeSignature
         stepsPerBar = max(1, groove.stepsPerBar)
         bars = max(1, groove.bars)
-        swingPercent = (options.swing ?? Swing(factor: groove.swing)).percent
         velocities = options.velocities
 
         let beats = max(1, timeSignature.beatsPerBar)
+        // A triplet grid is swing written into the steps: a shuffle on twelve steps a bar, or a
+        // 12/8 counted in its dotted quarters, is the MPC's 66.7 with the lever at zero. Read as
+        // the lever alone, every shuffle would say it was straight.
+        let lever = (options.swing ?? Swing(factor: groove.swing)).percent
+        let compound = timeSignature.beatUnit == 8 && beats % 3 == 0
+        let stepsPerPulse = Double(stepsPerBar) / Double(compound ? beats / 3 : beats)
+        swingPercent = stepsPerPulse == 3 && lever <= 50 ? Swing.triplet.percent : lever
         let perBeat = Double(stepsPerBar) / Double(beats)
         let step = tempo > 0 ? 60_000 / tempo / max(1, perBeat) : 0
 

@@ -1,0 +1,449 @@
+{
+  "aliases": [
+    "roots reggae",
+    "one drop",
+    "rockers",
+    "steppers",
+    "dub",
+    "dancehall",
+    "rub-a-dub"
+  ],
+  "bassHands": [
+    "one-drop"
+  ],
+  "family": "caribbean",
+  "feels": [
+    "Reggae One Drop"
+  ],
+  "form": {
+    "evidence": {
+      "inferred": "the four-bar keyboard introduction Wikipedia describes, with verse-chorus sections sized so the 80 bars last about 4.3 minutes at the cited 75 BPM, matching the median length of the Wailers recordings listed; riddim-based records and dub versions vary widely"
+    },
+    "sections": [
+      {
+        "bars": 4,
+        "name": "Intro"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 8,
+        "name": "Instrumental"
+      },
+      {
+        "bars": 8,
+        "name": "Verse"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 4,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "reggae",
+  "idioms": [
+    "reggae"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Carlton_Barrett",
+          "https://en.wikipedia.org/wiki/One_drop_rhythm"
+        ]
+      },
+      "name": "Carlton Barrett",
+      "period": "1969–1987",
+      "why": "The Wailers' drummer from 1969, credited with popularising the one drop. He played a highly syncopated, broken triplet pattern on the hi-hat and was known for dazzling drum introductions. He influenced Sly Dunbar, Leroy 'Horsemouth' Wallace and Style Scott."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Aston_Barrett"
+        ]
+      },
+      "name": "Aston 'Family Man' Barrett",
+      "period": "1962–2019",
+      "why": "The Wailers' bassist, bandleader and co-producer with his brother Carlton, who arranged the song structures of major hits on a Fender Jazz Bass through Ampeg SVT and Acoustic 370 amps. Bass Player called his name synonymous with reggae bass tone, and Robbie Shakespeare credited him as his mentor."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/King_Tubby",
+          "https://en.wikipedia.org/wiki/King_Tubbys_Meets_Rockers_Uptown"
+        ]
+      },
+      "name": "King Tubby",
+      "period": "1968–1980s",
+      "why": "A disc cutter for Duke Reid from 1968 who opened his Waterhouse studio in 1971. He made dub by remixing other producers' master tapes live on a custom 12-channel MCI desk, dropping parts in and out and sweeping its high-pass filter. His echo and reverb turned a B-side 'version' into a new composition, as on 'King Tubbys Meets Rockers Uptown' with Augustus Pablo."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Sly_and_Robbie"
+        ]
+      },
+      "name": "Sly and Robbie",
+      "period": "mid-1970s–2021",
+      "why": "Drummer Sly Dunbar and bassist Robbie Shakespeare introduced the harder rockers beat in 1976 that displaced the one drop, pioneered rub-a-dub in the early 1980s, and led reggae's move to computer-assisted programming in the mid-1980s. In the 1990s they put tabla sounds into dancehall beats ('Bam Bam') and produced new artists on their Taxi label."
+    }
+  ],
+  "meters": [
+    "4/4"
+  ],
+  "name": "Reggae",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.musicradar.com/how-to/how-to-program-a-typical-one-drop-reggae-beat-and-add-fills",
+          "https://en.wikipedia.org/wiki/One_drop_rhythm",
+          "https://tunableapp.com/rhythm/reggae-one-drop/"
+        ]
+      },
+      "text": "The one drop leaves beat 1 empty: no kick there, and the bar's weight moves to beat 3, where kick and cross-stick (or snare) hit together. Hats or rimclicks mark 2 and 4 and the offbeats. The music seems to hover because the strongest beat is silent."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.musicradar.com/how-to/how-to-program-a-typical-one-drop-reggae-beat-and-add-fills",
+          "https://en.wikipedia.org/wiki/Carlton_Barrett",
+          "https://wayneandwax.com/org/lessons/roots-riddim-tutorial.html"
+        ]
+      },
+      "text": "Hats are usually swung, locked to the bassline. Carlton Barrett played a highly syncopated, broken triplet pattern on the hi-hat, and an open hat on the last eighth of the bar leading into the next is de rigueur. Crashes are rare, saved for before a chorus."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/One_drop_rhythm",
+          "https://en.wikipedia.org/wiki/Sly_and_Robbie"
+        ]
+      },
+      "text": "The one drop has two siblings. Rockers keeps the one drop and adds a steady kick on every quarter note; Sly Dunbar's harder rockers beat began displacing the one drop around 1976. Steppers adds a kick on every eighth note."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://tunableapp.com/rhythm/reggae-one-drop/",
+          "https://wayneandwax.com/org/lessons/roots-riddim-tutorial.html",
+          "https://songbpm.com/@bob-marley-the-wailers/stir-it-up"
+        ]
+      },
+      "text": "Tempo depends on how you count. Counted so that kick and snare land on 3, roots tempos sit around 60-90 with about 75 the classic. Counted in fast time, the same drum lands on 2 and 4 and wider guides allow 50-100. Automated detectors often report double, e.g. 'Stir It Up' at 150 BPM. The app should read the one-drop count."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Reggae",
+          "https://wayneandwax.com/org/lessons/roots-riddim-tutorial.html",
+          "https://tunableapp.com/rhythm/reggae-one-drop/"
+        ]
+      },
+      "text": "The bass is the centre: a thick, heavy tone with the highs cut, in dotted-quarter and eighth rhythms that outline each chord from the root. With the kick gone from beat 1, the bass defines the harmony and the phrase. Dub-leaning lines repeat notes, especially the fifth below the root. Sources disagree on whether the bass itself takes beat 1: Wayne Marshall has it landing on the strong beats, while the one-drop feel leaves the downbeat open."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/org/lessons/roots-riddim-tutorial.html",
+          "https://en.wikipedia.org/wiki/Reggae"
+        ]
+      },
+      "text": "The skank is short, damped, staccato chords on the 'and' of each beat, usually on guitar, sometimes keys. A delay turns 'chick' into 'chick-a', and a double chop adds another eighth. The organ 'bubble' or shuffle accents the sixteenths just before and after each upbeat, acting as percussion."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/org/lessons/roots-riddim-tutorial.html"
+        ]
+      },
+      "text": "Riddims use a small number of chords with varied voicings, and major-key tunes lean on I, IV and V."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Reggae",
+          "https://www.musicradar.com/how-to/how-to-program-a-typical-one-drop-reggae-beat-and-add-fills",
+          "https://wayneandwax.com/org/lessons/roots-riddim-tutorial.html"
+        ]
+      },
+      "text": "Drummers use open, ringing drum tones but stuff the kick for a deep, punchy thud. A spring reverb on the drum bus is a ubiquitous classic-reggae auxiliary. Three-piece horn sections (trumpet, trombone, sax) play harmonised lines, and hand drums enter through Rastafari and the Kumina and Burru traditions."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/King_Tubby",
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre"
+        ]
+      },
+      "text": "Dub is a mix practice: King Tubby rode instruments in and out of existing multitracks live, swept the MCI desk's high-pass filter until a part vanished, and added echo and reverb, leaving bass and drums with snatches of vocal, horns and keys. Released reggae/dancehall masters measure a median -10.1 LUFS (middle half -11.6 to -8.7), about 0.6 dB quieter than pop (-9.5)."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Reggae",
+          "https://en.wikipedia.org/wiki/Dancehall",
+          "https://en.wikipedia.org/wiki/Under_Mi_Sleng_Teng"
+        ]
+      },
+      "text": "Songs are built on riddims: a backing track that is versioned, dubbed and re-voiced, with keyboards often opening in a four-bar introduction. In dancehall, a single riddim carries many songs: 'Real Rock' is under at least 269 and 'Sleng Teng' over 500."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Dancehall",
+          "https://en.wikipedia.org/wiki/Under_Mi_Sleng_Teng"
+        ]
+      },
+      "text": "Dancehall differs. It is digital from 1985 (Casio MT-40, Oberheim DX), faster, and deejayed or toasted: half talked, half sung over the riddim. Its lyrics shift from roots' spiritual themes to dancing, sex and violence. King Jammy's 'Under Mi Sleng Teng', built on an MT-40 preset, started the change."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Reggae",
+          "https://en.wikipedia.org/wiki/One_Drop_(Bob_Marley_and_the_Wailers_song)"
+        ]
+      },
+      "text": "Lyrics are sung in Jamaican Patois, Jamaican English or Iyaric. Reggae has a tradition of social criticism (materialism, apartheid, injustice) alongside religion, love and leisure, and roots records are often militantly Rastafarian ('One Drop': 'teachings of His Majesty')."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://tunableapp.com/rhythm/reggae-one-drop/"
+        ]
+      },
+      "text": "The one drop leaves a lot of space for the vocal ('No Woman, No Cry' is the usual example), which lets the melody carry the phrase over an empty downbeat instead of competing with a busy kit."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.musicradar.com/how-to/how-to-program-a-typical-one-drop-reggae-beat-and-add-fills",
+          "https://en.wikipedia.org/wiki/One_drop_rhythm"
+        ]
+      },
+      "text": "Putting the kick on 1. The one drop's whole identity is the empty downbeat; put kick and cross-stick together on 3, or switch deliberately to rockers (kick on every beat) or steppers (every eighth)."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://songbpm.com/@bob-marley-the-wailers/stir-it-up",
+          "https://songbpm.com/@bob-marley-the-wailers/one-drop",
+          "https://tunableapp.com/rhythm/reggae-one-drop/"
+        ]
+      },
+      "text": "Reading the tempo at double time. Detectors and fast counting give 120-150 BPM for tunes that live at 60-75 in the one-drop count; judge tempo, backbeat and bass placement in the count where the drop lands on 3."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Reggae",
+          "https://wayneandwax.com/org/lessons/roots-riddim-tutorial.html"
+        ]
+      },
+      "text": "A bright, busy bass. Roll off the treble and mids for a fat, low tone and leave space; the bass carries the harmony, so it doesn't need to fill every eighth."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/org/lessons/roots-riddim-tutorial.html"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "I - IV - V",
+      "text": "The major-key core that roots riddims draw on, voiced as offbeat skanks."
+    },
+    {
+      "evidence": {
+        "inferred": "reduction of the cited I-IV-V emphasis and small chord count to its most common two-chord pair"
+      },
+      "mode": "ionian",
+      "roman": "I - IV",
+      "text": "A two-chord vamp, the smallest of the 'fairly small number of chords' a riddim uses."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "cited": [
+          "https://tunableapp.com/rhythm/reggae-one-drop/",
+          "https://wayneandwax.com/org/lessons/roots-riddim-tutorial.html"
+        ]
+      },
+      "feature": "tempo.bpm",
+      "high": 90,
+      "low": 60,
+      "typical": 75,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre"
+        ]
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -8.7,
+      "low": -11.6,
+      "typical": -10.1,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "set equal to the measured released-master loudness of 1,297 reggae/dancehall tracks (middle 50%, median -10.1) in the cited survey, since the delivered target is the released master"
+      },
+      "feature": "mix.master.target.lufs",
+      "high": -8.7,
+      "low": -11.6,
+      "typical": -10.1,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "Wayne Marshall's 'fairly small number of chords' with I, IV and V emphasised in major keys: two-chord vamps up to I-IV-V plus one more"
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 4,
+      "low": 2,
+      "typical": 3,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "inferred": "durations of the Wailers recordings measured on SongBPM and Wikipedia (One Drop 3:51, Is This Love 3:52, No Woman No Cry 4:11, Stir It Up 5:32; Exodus 7:40 treated as an extended outlier); typical is their median"
+      },
+      "feature": "form.minutes",
+      "high": 5.5,
+      "low": 3.5,
+      "typical": 4.2,
+      "unit": "minutes"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Bob Marley and the Wailers",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/One_Drop_(Bob_Marley_and_the_Wailers_song)",
+          "https://songbpm.com/@bob-marley-the-wailers/one-drop"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "backbeat.count",
+        "bass.downbeat.coverage"
+      ],
+      "listenFor": "The rhythm the song is named for, played by Carlton Barrett: nothing on 1, kick and cross-stick together on 3, for all 3:51.",
+      "title": "One Drop",
+      "year": 1979
+    },
+    {
+      "artist": "Bob Marley and the Wailers",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Stir_It_Up",
+          "https://songbpm.com/@bob-marley-the-wailers/stir-it-up"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.minutes"
+      ],
+      "listenFor": "The 5:32 'Catch a Fire' version: detectors read 150 BPM, but count it as a 75 BPM one drop and hear the skank on the offbeats.",
+      "title": "Stir It Up",
+      "year": 1973
+    },
+    {
+      "artist": "Augustus Pablo & King Tubby",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/King_Tubbys_Meets_Rockers_Uptown"
+        ]
+      },
+      "features": [
+        "mix.bandwidth.hz",
+        "form.density.spread"
+      ],
+      "listenFor": "A dub of Jacob Miller's 'Baby I Love You So', with both Barretts and Robbie Shakespeare in the credits. Hear the vocal cut to fragments while bass and drums stay and echo fills the gaps.",
+      "title": "King Tubbys Meets Rockers Uptown",
+      "year": 1976
+    },
+    {
+      "artist": "Wayne Smith",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Under_Mi_Sleng_Teng"
+        ]
+      },
+      "features": [
+        "bass.is.sub",
+        "song.parts"
+      ],
+      "listenFor": "The digital turn: a Casio MT-40 rock preset bassline, made simple to toast over, that became dancehall's most-versioned riddim.",
+      "title": "Under Mi Sleng Teng",
+      "year": 1985
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "finger",
+      "sub"
+    ],
+    "instruments": [
+      "organ",
+      "clean-electric",
+      "grand-piano",
+      "horns",
+      "trumpet",
+      "tenor-sax"
+    ],
+    "machines": [
+      "studio",
+      "vintage"
+    ]
+  },
+  "summary": "Jamaican music in 4/4, slower than the ska and rocksteady it grew out of. In the one drop, beat one is left empty and kick and cross-stick land together on beat three, over swung or triplet hats. A heavy, treble-cut bass carries the melody and harmony, guitar skanks and organ bubbles sit on the offbeats, and the lyrics, in patois, run from social criticism to Rastafari and love. Dub strips these riddims to drum and bass with echo. From 1985, dancehall moved to digital riddims reused under many deejays.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Reggae",
+      "https://www.musicradar.com/how-to/how-to-program-a-typical-one-drop-reggae-beat-and-add-fills",
+      "https://en.wikipedia.org/wiki/One_drop_rhythm",
+      "https://en.wikipedia.org/wiki/Dancehall"
+    ]
+  }
+}

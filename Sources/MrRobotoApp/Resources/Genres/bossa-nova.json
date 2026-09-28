@@ -1,0 +1,449 @@
+{
+  "aliases": [
+    "bossa",
+    "jazz samba",
+    "bossa nova jazz"
+  ],
+  "bassHands": [
+    "root-fifth"
+  ],
+  "family": "latin",
+  "feels": [
+    "Bossa Nova"
+  ],
+  "form": {
+    "evidence": {
+      "cited": [
+        "https://www.learnjazzstandards.com/blog/girl-from-ipanema-chords/"
+      ]
+    },
+    "sections": [
+      {
+        "bars": 8,
+        "name": "A"
+      },
+      {
+        "bars": 8,
+        "name": "A"
+      },
+      {
+        "bars": 16,
+        "name": "B"
+      },
+      {
+        "bars": 8,
+        "name": "A"
+      }
+    ]
+  },
+  "id": "bossa-nova",
+  "idioms": [
+    "latin",
+    "jazz"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Jo%C3%A3o_Gilberto",
+          "https://en.wikipedia.org/wiki/Bossa_nova"
+        ]
+      },
+      "name": "João Gilberto",
+      "period": "1958–2019",
+      "why": "Invented the batida and the near-spoken vocal delivery; his 1958 single 'Chega de Saudade' and the 1959 LP are taken as the birth of bossa nova. He was an obsessive perfectionist — 28 takes of 'Rosa Morena' to get one vowel right — and recorded voice and guitar on separate mics at equal level."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Ant%C3%B4nio_Carlos_Jobim"
+        ]
+      },
+      "name": "Antônio Carlos Jobim",
+      "period": "1956–1994",
+      "why": "The genre's main composer: a pianist who studied with Koellreutter and took harmony from Debussy and Ravel, writing melodies that dwell on major sevenths over sophisticated substitutions. With Vinicius de Moraes from 1956; later arranged with Claus Ogerman (Wave, 1967)."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "http://jazzontherecord.blogspot.com/2014/06/the-drums-of-bossa-nova.html"
+        ]
+      },
+      "name": "Milton Banana",
+      "period": "1958–1998",
+      "why": "Drummer on Chega de Saudade and Getz/Gilberto who set the bossa nova kit style: quiet, flexible, dynamic, fitted to Gilberto's guitar rather than to a fixed bass-drum ostinato. He recalled that Gilberto's thoroughness made sessions long."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Getz/Gilberto",
+          "https://en.wikipedia.org/wiki/Desafinado"
+        ]
+      },
+      "name": "Stan Getz and Creed Taylor",
+      "period": "1962–1964",
+      "why": "Jazz Samba (with Charlie Byrd, 1962) and Getz/Gilberto (produced by Taylor, recorded 1963, released 1964) took the style to the US charts; Getz/Gilberto was the first non-American album to win Album of the Year."
+    }
+  ],
+  "meters": [
+    "2/4",
+    "4/4"
+  ],
+  "name": "Bossa nova",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Bossa_nova"
+        ]
+      },
+      "text": "The batida is a reduction of samba batucada: the thumb stylizes the surdo, the index, middle and ring fingers phrase like a tamborim. The feel keeps samba's emphasis on beat 2 of a 2/4 bar."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://acousticguitar.com/video-lesson-learn-basic-bossa-nova-patterns-inside-and-out/",
+          "https://abrapem.org/wp-content/uploads/2023/10/60.-Padroes-de-acompanhamento-ao-violao-de-Joao-Gilberto-01.pdf"
+        ]
+      },
+      "text": "The finger pattern is a two-bar cycle, usually taught in 4/4 cut time; João Gilberto's recordings use many variants — a study of two of his 1960 tracks found 19 patterns or variations, organized in pairs of bars, some anticipating the odd bar and some the even."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://acousticguitar.com/video-lesson-learn-basic-bossa-nova-patterns-inside-and-out/"
+        ]
+      },
+      "text": "The bass (the guitarist's thumb, or an upright doubling it) alternates root and fifth on beats 1 and 3, with an occasional bounce on the upbeat before the next beat; chord changes are anticipated on the 'and' of the previous beat rather than struck on the downbeat."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://acousticguitar.com/video-lesson-learn-basic-bossa-nova-patterns-inside-and-out/",
+          "https://www.learnjazzstandards.com/blog/girl-from-ipanema-chords/",
+          "https://www.learnjazzstandards.com/blog/bossa-nova-chord-progressions/"
+        ]
+      },
+      "text": "Chord colour is the idiom: maj9, 6/9, 11ths, 13ths, b9s and 7#5, voiced in four (sometimes five) parts. Jobim favours ii-bII7-I (tritone substitution) and II7#11 over plain ii-V-I, and bridges that modulate without ever stating the new tonic."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Ant%C3%B4nio_Carlos_Jobim"
+        ]
+      },
+      "text": "Jobim drew on Debussy and Ravel as well as Pixinguinha and Ary Barroso; his melodies often insist on the major seventh of the chord rather than resolving to the root."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://www.learnjazzstandards.com/blog/girl-from-ipanema-chords/"
+        ]
+      },
+      "text": "Standards are song forms: Girl from Ipanema is 40 bars, AABA, with a 16-bar bridge made of four four-bar phrases, three of them sequences of the first."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Jo%C3%A3o_Gilberto",
+          "https://en.wikipedia.org/wiki/Bossa_nova"
+        ]
+      },
+      "text": "The singing is quiet, near-conversational and unornamented — João Gilberto recorded voice and guitar on separate microphones so they sat at equal level — a break from the operatic style that came before."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "http://jazzontherecord.blogspot.com/2014/06/the-drums-of-bossa-nova.html"
+        ]
+      },
+      "text": "Drums are understated: Milton Banana, on Chega de Saudade and Getz/Gilberto, played with subtlety and dynamics rather than a fixed set of licks — Jazz Samba needed two American drummers to approximate what he did alone."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Getz/Gilberto",
+          "https://en.wikipedia.org/wiki/Ant%C3%B4nio_Carlos_Jobim"
+        ]
+      },
+      "text": "The export sound adds a jazz soloist and strings to the guitar and voice: Getz's tenor on Getz/Gilberto (Jobim on piano, Milton Banana on drums and pandeiro), Claus Ogerman's strings on Jobim's Wave (1967)."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Getz/Gilberto"
+        ]
+      },
+      "text": "Getz/Gilberto was recorded in two days (18–19 March 1963) at A & R Recording, engineered by Phil Ramone, and won the 1965 Grammy for Best Engineered Recording: an intimate, uncompressed acoustic balance is the reference."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Desafinado",
+          "https://en.wikipedia.org/wiki/Ant%C3%B4nio_Carlos_Jobim"
+        ]
+      },
+      "text": "Lyrics are conversational and self-aware: Newton Mendonça's 'Desafinado' answers critics who said bossa nova was for singers without voices by turning it into a love song about being 'off-key'. Vinicius de Moraes was Jobim's main lyricist."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Bossa_nova",
+          "https://en.wikipedia.org/wiki/Getz/Gilberto"
+        ]
+      },
+      "text": "Born in the Copacabana clubs of Beco das Garrafas in the late 1950s; the canonical instrument is the nylon-string guitar, with piano, upright bass, brushes and a tenor sax or flute in the jazz versions."
+    }
+  ],
+  "parent": "samba",
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.learnjazzstandards.com/blog/girl-from-ipanema-chords/",
+          "http://jazzontherecord.blogspot.com/2014/06/the-drums-of-bossa-nova.html"
+        ]
+      },
+      "text": "Playing it as swing or as a set of drum licks. The feel is samba-derived and straight, and the drummer follows the guitar's batida with dynamics rather than a fixed pattern."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://acousticguitar.com/video-lesson-learn-basic-bossa-nova-patterns-inside-and-out/"
+        ]
+      },
+      "text": "Changing chords squarely on the downbeat and filling every gap. Anticipate changes on the preceding 'and', and keep embellishments sparse so the texture stays open when others play."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Jo%C3%A3o_Gilberto"
+        ]
+      },
+      "text": "Singing out with vibrato and ornament. The idiom is near-speech volume, unornamented, with the voice balanced level with the guitar."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.learnjazzstandards.com/blog/bossa-nova-chord-progressions/",
+          "https://www.learnjazzstandards.com/blog/girl-from-ipanema-chords/"
+        ]
+      },
+      "text": "Resolving every ii-V the textbook way. Use tritone substitutes, dominant IIs and backdoor dominants, and let bridges modulate without cadencing."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.learnjazzstandards.com/blog/girl-from-ipanema-chords/",
+          "https://www.learnjazzstandards.com/blog/bossa-nova-chord-progressions/"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "Imaj7 - II7 - ii7 - bII7",
+      "text": "Girl from Ipanema's A section: a dominant II borrowed for colour, then a ii-bII7-I tritone-substitute cadence home."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.learnjazzstandards.com/blog/bossa-nova-chord-progressions/"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "iii7 - bIII7 - ii7 - bII7",
+      "text": "One Note Samba's twist on iii-VI-ii-V: tritone substitutes turn the roots into a descending chromatic line."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.learnjazzstandards.com/blog/bossa-nova-chord-progressions/"
+        ]
+      },
+      "mode": "mixolydian",
+      "roman": "IVmaj7 - bVII7",
+      "text": "The Ipanema bridge moves: IV to bVII in successive keys, never resolving to their I."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.learnjazzstandards.com/blog/bossa-nova-chord-progressions/"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "iim7b5 - V7 - i",
+      "text": "Manhã de Carnaval is built of minor ii-Vs in A minor alternating with major ii-Vs in the relative C major."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "inferred": "Median and span of the tempos songbpm.com reports (in 4/4 cut-time quarters) for five reference recordings: Girl from Ipanema 132, Chega de Saudade 136, Corcovado 140, Getz's Desafinado 144, João Gilberto's Desafinado 164 (pages https://songbpm.com/@antonio-carlos-jobim/girl-from-ipanema, /@joao-gilberto/chega-de-saudade, /@antonio-carlos-jobim/corcovado, /@stan-getz/desafinado, /@joao-gilberto/desafinado)."
+      },
+      "feature": "tempo.bpm",
+      "high": 165,
+      "low": 120,
+      "typical": 140,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://acousticguitar.com/video-lesson-learn-basic-bossa-nova-patterns-inside-and-out/",
+          "https://abrapem.org/wp-content/uploads/2023/10/60.-Padroes-de-acompanhamento-ao-violao-de-Joao-Gilberto-01.pdf"
+        ]
+      },
+      "feature": "bass.attacks.per.bar",
+      "high": 3,
+      "low": 2,
+      "typical": 2,
+      "unit": "attacks per bar"
+    },
+    {
+      "evidence": {
+        "inferred": "The cited João Gilberto transcription study finds the thumb basses fall on the beginnings of the beats with only occasional anticipations, and the Acoustic Guitar lesson puts them on 1 and 3."
+      },
+      "feature": "bass.downbeat.coverage",
+      "high": 1.0,
+      "low": 0.85,
+      "unit": "fraction of bars"
+    },
+    {
+      "evidence": {
+        "inferred": "Girl from Ipanema's A section (Fmaj7, G7#11, Gm7, Gb7#11, Fmaj7 over eight bars, per Learn Jazz Standards) is about 0.6 a bar; the chord-a-bar sequences of One Note Samba set the upper end."
+      },
+      "feature": "harmony.changes.per.bar",
+      "high": 1.0,
+      "low": 0.5,
+      "unit": "changes per bar"
+    },
+    {
+      "evidence": {
+        "inferred": "In the cited Girl from Ipanema A section two of four chords (the II7 and the bII7 tritone substitute) are outside the key, and the cited bridge never touches its keys' tonics; Jobim's borrowed and substitute dominants keep the ratio well under pop's."
+      },
+      "feature": "harmony.diatonic.ratio",
+      "high": 0.8,
+      "low": 0.4,
+      "unit": "fraction"
+    },
+    {
+      "evidence": {
+        "inferred": "Four distinct chords in the cited Girl from Ipanema A section, plus a bridge that passes through three key centres; the upper bound counts a full 40-bar AABA chorus."
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 14,
+      "low": 5,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "inferred": "João Gilberto's Desafinado runs 1:57 and Chega de Saudade 3:26 (songbpm.com); the Getz/Gilberto tracks run 2:47 to 5:27 (Wikipedia)."
+      },
+      "feature": "form.minutes",
+      "high": 5.5,
+      "low": 1.9,
+      "unit": "minutes"
+    }
+  ],
+  "references": [
+    {
+      "artist": "João Gilberto",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Jo%C3%A3o_Gilberto",
+          "https://songbpm.com/@joao-gilberto/chega-de-saudade"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "bass.attacks.per.bar"
+      ],
+      "listenFor": "Throughout: the guitar's thumb keeps the bass on the main beats while the fingers' syncopated chords and the quiet voice move around it.",
+      "title": "Chega de Saudade",
+      "year": 1959
+    },
+    {
+      "artist": "Stan Getz, João Gilberto & Astrud Gilberto",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/The_Girl_from_Ipanema",
+          "https://www.learnjazzstandards.com/blog/girl-from-ipanema-chords/"
+        ]
+      },
+      "features": [
+        "harmony.diatonic.ratio",
+        "form.minutes"
+      ],
+      "listenFor": "The 16-bar bridge after the two A sections, moving through three keys without landing on a tonic; single edit 2:44, album take 5:24.",
+      "title": "The Girl from Ipanema",
+      "year": 1964
+    },
+    {
+      "artist": "Stan Getz & Charlie Byrd",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Desafinado",
+          "http://jazzontherecord.blogspot.com/2014/06/the-drums-of-bossa-nova.html"
+        ]
+      },
+      "features": [
+        "tempo.bpm"
+      ],
+      "listenFor": "The jazz-samba export version (two drummers) against Gilberto's own: listen to the drums across the whole track for how much busier the American rhythm section is.",
+      "title": "Desafinado",
+      "year": 1962
+    },
+    {
+      "artist": "João Gilberto",
+      "evidence": {
+        "cited": [
+          "https://abrapem.org/wp-content/uploads/2023/10/60.-Padroes-de-acompanhamento-ao-violao-de-Joao-Gilberto-01.pdf",
+          "https://www.learnjazzstandards.com/blog/bossa-nova-chord-progressions/"
+        ]
+      },
+      "features": [
+        "harmony.voice-leading.semitones",
+        "melody.range.semitones"
+      ],
+      "listenFor": "Bars 1–16, the passage the cited study transcribes: the melody repeats its one note while the chromatic substitutions move underneath, and the batida changes pattern from one pair of bars to the next.",
+      "title": "Samba de uma nota só",
+      "year": 1960
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "upright"
+    ],
+    "instruments": [
+      "nylon-guitar",
+      "grand-piano",
+      "tenor-sax",
+      "flute",
+      "strings",
+      "rhodes"
+    ],
+    "machines": [
+      "jazz"
+    ]
+  },
+  "summary": "A quiet, relaxed samba from late-1950s Rio: João Gilberto reduced the samba batucada to one nylon-string guitar, the thumb standing in for the surdo and the fingers for the tamborim, under near-spoken singing. Jobim's harmony — major sevenths, ninths, #11s, tritone substitutions and unresolved modulations — sits on that steady syncopated batida.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Bossa_nova",
+      "https://en.wikipedia.org/wiki/Jo%C3%A3o_Gilberto",
+      "https://en.wikipedia.org/wiki/Ant%C3%B4nio_Carlos_Jobim"
+    ]
+  }
+}

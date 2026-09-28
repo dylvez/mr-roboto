@@ -1,0 +1,493 @@
+{
+  "aliases": [
+    "salsa",
+    "son montuno",
+    "salsa dura",
+    "salsa romántica",
+    "new york salsa",
+    "son cubano"
+  ],
+  "bassHands": [
+    "tumbao"
+  ],
+  "family": "latin",
+  "feels": [
+    "Son Clave 2-3",
+    "Son Clave 3-2",
+    "Salsa Tumbao",
+    "Cha-Cha-Chá",
+    "Rumba Clave",
+    "Afro-Cuban 6/8"
+  ],
+  "form": {
+    "evidence": {
+      "inferred": "Section order from Wikipedia 'Salsa (musical structure)' and Rhythm Notes (intro, verse, montuno with mambo/moña sub-sections, coda); bar counts are an eight-bar-phrase sketch, not sourced."
+    },
+    "sections": [
+      {
+        "bars": 8,
+        "name": "Intro"
+      },
+      {
+        "bars": 32,
+        "name": "Verse"
+      },
+      {
+        "bars": 32,
+        "name": "Coro-pregón"
+      },
+      {
+        "bars": 16,
+        "name": "Mambo"
+      },
+      {
+        "bars": 32,
+        "name": "Coro-pregón"
+      },
+      {
+        "bars": 16,
+        "name": "Moña"
+      },
+      {
+        "bars": 16,
+        "name": "Coro-pregón"
+      },
+      {
+        "bars": 4,
+        "name": "Coda"
+      }
+    ]
+  },
+  "id": "salsa",
+  "idioms": [
+    "latin",
+    "afro-cuban"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Son_montuno",
+          "https://en.wikipedia.org/wiki/Tumbao"
+        ]
+      },
+      "name": "Arsenio Rodríguez",
+      "period": "1940s–1950s",
+      "why": "Developed son montuno in the 1940s: expanded the septeto into the conjunto with three trumpets, piano and conga, and a cowbell in the montuno. He layered interlocking guajeos across instruments and wrote two-celled, clave-specific bass tumbaos that 'sing' — the template salsa inherited."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Eddie_Palmieri"
+        ]
+      },
+      "name": "Eddie Palmieri",
+      "period": "1961–2025",
+      "why": "His Conjunto La Perfecta (1961) replaced violins with trombones and flute — the 'trombanga' — a heavier, bolder front line later bands copied. Azúcar pa' ti (1965) shows his piano; he later recorded mozambique and Harlem River Drive, and rejected the word 'salsa' as a commercial label."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Fania_Records"
+        ]
+      },
+      "name": "Johnny Pacheco and Fania Records",
+      "period": "1964–1980s",
+      "why": "Pacheco co-founded Fania in 1964 with Jerry Masucci, first selling records from his car, and in 1968 assembled the Fania All-Stars. The label's roster — Willie Colón, Héctor Lavoe, Rubén Blades, Celia Cruz, Ray Barretto — is the sound the word 'salsa' was coined for; the 1971 Cheetah concert became the film Our Latin Thing."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Siembra",
+          "https://en.wikipedia.org/wiki/El_Cantante_(song)"
+        ]
+      },
+      "name": "Willie Colón and Rubén Blades",
+      "period": "1970s",
+      "why": "Colón produced and arranged, Blades wrote: Siembra (1978) became the best-selling salsa album, with long-form narrative songs and social commentary. Colón also produced Lavoe's 'El Cantante', a Blades song running over ten minutes."
+    }
+  ],
+  "meters": [
+    "4/4",
+    "2/2"
+  ],
+  "name": "Salsa / son",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Salsa_(musical_structure)",
+          "https://rhythmnotes.net/salsa-rhythms/",
+          "https://pianowithjonny.com/piano-lessons/piano-montunos-the-complete-guide/"
+        ]
+      },
+      "text": "Clave is the structural core: salsa uses son clave almost exclusively, and every rhythm-section part is written to fit it. Most salsa is phrased 2-3; playing a part against the wrong side of the clave ('cruzado') breaks the groove."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://rhythmnotes.net/salsa-rhythms/"
+        ]
+      },
+      "text": "Percussion roles: congas play the tumbao/marcha (slap plus two open tones, heel-toe in between); bongo plays the martillo in verses and switches to the hand bell in the montuno; timbales play cáscara on the shell in quiet sections and the mambo bell in loud ones; maracas and güiro keep the pulse."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Tumbao",
+          "https://rhythmnotes.net/salsa-rhythms/",
+          "https://se7enbeatlab.com/bpm/salsa/"
+        ]
+      },
+      "text": "The tumbao accents the and-of-2 (bombo) and beat 4 (ponche); the and-of-2 usually carries the fifth and beat 4 anticipates the root of the next bar's chord, so the bass announces each chord change a beat early. Arsenio Rodríguez made the tumbao two-celled and clave-specific, and insisted the bass 'sing'."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Guajeo",
+          "https://pianowithjonny.com/piano-lessons/piano-montunos-the-complete-guide/"
+        ]
+      },
+      "text": "The montuno runs over a short vamp — the guajeo literature's standard is I-IV-V-IV, and minor tunes often alternate just i and V. The piano guajeo is a syncopated arpeggiated ostinato, mostly upbeats, often doubled in octaves."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Salsa_(musical_structure)",
+          "https://rhythmnotes.net/salsa-rhythms/"
+        ]
+      },
+      "text": "The son montuno model: a verse section (cuerpo), then the montuno — coro-pregón call-and-response — which usually runs to the end, subdivided into mambo, diablo, moña and especial sections and instrumental solos."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "inferred": "No source gives bar counts; derived from the two-bar clave cycle the cited sources require every part to respect."
+      },
+      "text": "Section lengths vary widely by arrangement and live stretching; the bar counts in the form below are an eight-bar-phrase sketch, each phrase an even number of bars so the clave cycle is never cut."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Coro-preg%C3%B3n"
+        ]
+      },
+      "text": "In the montuno the coro has a fixed melody and text, sung in two or three parts moving in parallel; the lead singer answers with improvised pregones (soneos), often with trademark phrases such as Celia Cruz's '¡Azúcar!'."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://se7enbeatlab.com/bpm/salsa/",
+          "https://en.wikipedia.org/wiki/Salsa_(musical_structure)"
+        ]
+      },
+      "text": "Horns work in call-and-response mambos and moñas — layered horn guajeos, sometimes improvised — rather than as sustained pads. Romántica is softer; dura and timba want tighter percussion and harder horn stabs."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Son_montuno",
+          "https://en.wikipedia.org/wiki/Eddie_Palmieri"
+        ]
+      },
+      "text": "Line-ups vary: Arsenio Rodríguez's conjunto added a trumpet section, piano and conga to the septeto; Eddie Palmieri's La Perfecta (1961) swapped the violins for trombones and flute (the 'trombanga')."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://www.sageaudio.com/articles/mastering-for-latin-music"
+        ]
+      },
+      "text": "Traditional Latin records are mastered quieter than electronic Latin pop and draw their punch from the mid-range, where most of the energy sits; transient shaping there is preferred over heavy limiting."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Siembra"
+        ]
+      },
+      "text": "Fania-era salsa carried narrative and social commentary as well as dance texts: Siembra's 'Pedro Navaja' is modelled on Brecht's Threepenny Opera and 'Plástico' satirizes consumerism."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://se7enbeatlab.com/bpm/salsa/",
+          "https://en.wikipedia.org/wiki/Salsa_(dance)"
+        ]
+      },
+      "text": "Tempo counting is disputed: dancers count 160–220 BPM in quarter notes, but players often feel the music in half time (~90), which is why the montuno and tumbao do not sound frantic. A groove written in 4/4 at ~95 BPM with the tumbao on the and-of-2 and 4 is the same music read at half speed only if the whole clave fits in one bar."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Tumbao",
+          "https://se7enbeatlab.com/bpm/salsa/"
+        ]
+      },
+      "text": "Writing the bass on the downbeat like rock or pop. The tumbao lands on the and-of-2 and on 4, anticipating the next chord's root; beat 1 is usually tied over, not struck."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://pianowithjonny.com/piano-lessons/piano-montunos-the-complete-guide/",
+          "https://se7enbeatlab.com/bpm/salsa/"
+        ]
+      },
+      "text": "Playing the piano montuno 'cruzado' — aligned to the wrong side of the clave. Decide 2-3 or 3-2 first and lock every part to it."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://se7enbeatlab.com/bpm/salsa/"
+        ]
+      },
+      "text": "Using horns as continuous pads. Write call-and-response mambo and moña figures instead, and leave the percussion room to breathe."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Guajeo"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "I - IV - V - IV",
+      "text": "The standard montuno/guajeo vamp, one pass per clave cycle."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://pianowithjonny.com/piano-lessons/piano-montunos-the-complete-guide/"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "i - V",
+      "text": "The two-chord minor montuno (Cm to G) that beginners learn guajeos on."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://pianowithjonny.com/piano-lessons/piano-montunos-the-complete-guide/"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "vi - IV - I - V",
+      "text": "A four-chord montuno used in more contemporary tunes."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Salsa_(dance)",
+          "https://se7enbeatlab.com/bpm/salsa/"
+        ]
+      },
+      "feature": "tempo.bpm",
+      "high": 220,
+      "low": 160,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.sageaudio.com/articles/mastering-for-latin-music"
+        ]
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -8,
+      "low": -14,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "The cited tumbao puts one attack on the and-of-2 and one on 4 per 4/4 bar (Wikipedia 'Tumbao', Rhythm Notes); the third allows for the double ponche Ian Stewart and others describe as variation."
+      },
+      "feature": "bass.attacks.per.bar",
+      "high": 3,
+      "low": 2,
+      "typical": 2,
+      "unit": "attacks per bar"
+    },
+    {
+      "evidence": {
+        "inferred": "In the cited basic tumbao one of the two attacks (the and-of-2) is off the quarter grid and one (beat 4) is on it, giving 0.5; the range allows for pushed variations and for extra on-beat notes."
+      },
+      "feature": "bass.syncopation",
+      "high": 0.7,
+      "low": 0.4,
+      "unit": "fraction of onsets"
+    },
+    {
+      "evidence": {
+        "inferred": "The cited tumbao anticipates the next bar's root on beat 4 and ties it over, so beat 1 is normally not re-struck (Wikipedia 'Tumbao': the bass emphasizes offbeats rather than downbeats)."
+      },
+      "feature": "bass.downbeat.coverage",
+      "high": 0.25,
+      "low": 0,
+      "unit": "fraction of bars"
+    },
+    {
+      "evidence": {
+        "inferred": "The anticipated root on 4 is held over the bar line into the next and-of-2 in the cited tumbao, so notes fill almost all of the space to the next attack."
+      },
+      "feature": "bass.note.length.ratio",
+      "high": 1.0,
+      "low": 0.8,
+      "unit": "fraction of the interval to the next onset"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Guajeo",
+          "https://pianowithjonny.com/piano-lessons/piano-montunos-the-complete-guide/"
+        ]
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 4,
+      "low": 2,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "inferred": "The cited montuno vamps are two-bar patterns aligned to the clave: I-IV-V-IV across two bars is two chords a bar; the two-chord minor vamp (Cm-G) is one a bar."
+      },
+      "feature": "harmony.changes.per.bar",
+      "high": 2,
+      "low": 1,
+      "unit": "changes per bar"
+    },
+    {
+      "evidence": {
+        "inferred": "Counting root motion in the cited vamps: I-IV-V-IV has two fourth/fifth moves out of four (0.5); i-V alternation is all fifths (1.0)."
+      },
+      "feature": "harmony.root.motion.fifths",
+      "high": 1.0,
+      "low": 0.5,
+      "unit": "fraction"
+    },
+    {
+      "evidence": {
+        "inferred": "From the track lengths of Siembra (1978), 4:50 to 7:21, as listed on its Wikipedia page; El Cantante's 10:23 shows the long tail."
+      },
+      "feature": "form.minutes",
+      "high": 7.5,
+      "low": 4.5,
+      "unit": "minutes"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Rubén Blades & Willie Colón",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Siembra"
+        ]
+      },
+      "features": [
+        "form.minutes",
+        "form.hook.seconds"
+      ],
+      "listenFor": "A 7:21 story-song: the narrative verses take their time before the coro-pregón montuno takes over for the rest of the track.",
+      "title": "Pedro Navaja",
+      "year": 1978
+    },
+    {
+      "artist": "Rubén Blades & Willie Colón",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Siembra"
+        ]
+      },
+      "features": [
+        "tempo.bpm"
+      ],
+      "listenFor": "The opening is disco; listen at the switch into the salsa groove for how the whole rhythm section re-seats itself on the clave.",
+      "title": "Plástico",
+      "year": 1978
+    },
+    {
+      "artist": "Héctor Lavoe",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/El_Cantante_(song)"
+        ]
+      },
+      "features": [
+        "form.minutes",
+        "form.repetition"
+      ],
+      "listenFor": "Over 10:23, the long montuno after the verses: fixed coro against Lavoe's improvised pregones, with horn mambos between.",
+      "title": "El Cantante",
+      "year": 1978
+    },
+    {
+      "artist": "Eddie Palmieri",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Eddie_Palmieri"
+        ]
+      },
+      "features": [
+        "harmony.chords.distinct"
+      ],
+      "listenFor": "The trombone-and-flute front line of La Perfecta against Palmieri's piano, from the first horn entry on.",
+      "title": "Azúcar pa' ti",
+      "year": 1965
+    },
+    {
+      "artist": "Fania All-Stars",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Fania_Records"
+        ]
+      },
+      "features": [
+        "form.sections"
+      ],
+      "listenFor": "The 1971 Cheetah Club performance: listen through each tune for the verse-to-montuno handoff and the stacked solos in the montuno.",
+      "title": "Our Latin Thing (Nuestra Cosa)",
+      "year": 1972
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "upright",
+      "finger"
+    ],
+    "instruments": [
+      "grand-piano",
+      "trumpet",
+      "horns",
+      "brass",
+      "flute",
+      "violin"
+    ],
+    "machines": [
+      "studio"
+    ]
+  },
+  "summary": "Dance music built on the son montuno model: every rhythm-section part is written to fit a two-bar son clave, the bass plays an anticipated tumbao on the and-of-2 and on 4, and the piano plays a syncopated guajeo (montuno). A short sung verse gives way to a long call-and-response montuno section, broken up by horn mambos and moñas.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Salsa_(musical_structure)",
+      "https://en.wikipedia.org/wiki/Tumbao",
+      "https://rhythmnotes.net/salsa-rhythms/"
+    ]
+  }
+}

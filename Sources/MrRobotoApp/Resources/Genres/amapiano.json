@@ -1,0 +1,489 @@
+{
+  "aliases": [
+    "piano",
+    "yanos",
+    "private school piano",
+    "sgija",
+    "popiano"
+  ],
+  "bassHands": [
+    "log-drum"
+  ],
+  "family": "electronic",
+  "feels": [
+    "Amapiano"
+  ],
+  "form": {
+    "evidence": {
+      "cited": [
+        "https://beatstorapon.com/blog/how-to-make-amapiano-beat/"
+      ]
+    },
+    "sections": [
+      {
+        "bars": 16,
+        "name": "Intro"
+      },
+      {
+        "bars": 16,
+        "name": "Foundation"
+      },
+      {
+        "bars": 32,
+        "name": "Development"
+      },
+      {
+        "bars": 32,
+        "name": "Log Drum"
+      },
+      {
+        "bars": 16,
+        "name": "Breakdown"
+      },
+      {
+        "bars": 32,
+        "name": "Development"
+      },
+      {
+        "bars": 16,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "amapiano",
+  "idioms": [
+    "amapiano",
+    "house"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://thenativemag.com/kabza-de-small-mdu-aka-trp-pretty-girls-amapiano/",
+          "https://splice.com/blog/what-is-amapiano-music/"
+        ]
+      },
+      "name": "MDU aka TRP",
+      "period": "2010s–present",
+      "why": "Kabza De Small credits him with working out the log drum, the genre's defining sound, whose original preset lives in FL Studio's Fruity DX10 FM synth. He worked with Focalistic, Mr JazziQ and Semi Tee and co-produced 'Isingisi'. In 2021 he and Kabza released the 50-track, mostly instrumental 'Pretty Girls Love Amapiano 3' at ten songs a week."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Kabza_de_Small",
+          "https://www.thatericalper.com/2026/09/03/where-to-start-with-amapiano/",
+          "https://en.wikipedia.org/wiki/I_Am_the_King_of_Amapiano:_Sweet_%26_Dust"
+        ]
+      },
+      "name": "Kabza De Small",
+      "period": "2009–present",
+      "why": "A keyboard, piano and drum-machine producer from eMalahleni who broke through with 'Umshove' (2018). With DJ Maphorisa as Scorpion Kings (2019) he took amapiano from the townships to national attention. His 27-track, nearly four-hour 'I Am the King of Amapiano: Sweet & Dust' (2020) set the DJ-length, feature-heavy album format, with tracks of 5-8.5 minutes."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.thatericalper.com/2026/09/03/where-to-start-with-amapiano/",
+          "https://en.wikipedia.org/wiki/Amapiano",
+          "https://en.wikipedia.org/wiki/I_Am_the_King_of_Amapiano:_Sweet_%26_Dust"
+        ]
+      },
+      "name": "Kelvin Momo",
+      "period": "2020–present",
+      "why": "Described as the genre's 'resident romantic', his hushed vocals and unhurried, private-school elegance define the soulful 'private school' strand. That strand uses shakers, mellow log drums, progressive chord sequences and often live instruments. He features on 'Impilo', the longest track on Kabza's 'Sweet & Dust' (2020)."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/MFR_Souls"
+        ]
+      },
+      "name": "MFR Souls",
+      "period": "2012–present",
+      "why": "DJ-producers Tumelo Nedondwe and Tumelo Mabe from Katlehong in the East Rand are regarded as pioneers of the amapiano sound alongside Kabza De Small and JazziDisciples. Their 'Love You Tonight' (2019, with Sha Sha, Kabza and Maphorisa) and 'Amanikiniki' (2020) went platinum."
+    }
+  ],
+  "meters": [
+    "4/4"
+  ],
+  "name": "Amapiano",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://articles.roland.com/production-hacks-creating-amapiano-tracks/"
+        ]
+      },
+      "text": "Program a 909-style kick on every quarter note, a constant sixteenth-note shaker, an open hat on each offbeat (the third sixteenth of each beat) and a conga figure on 2, the 'a' of 2, the 'and' of 3 and 4, over four bars. Once the log drum is in, the kick can be thinned or made syncopated."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://create.routenote.com/blog/beatmakers-guide-how-to-make-an-amapiano-beat/",
+          "https://beatstorapon.com/blog/how-to-make-amapiano-beat/"
+        ]
+      },
+      "text": "The kick is deep, soft and rounded rather than punchy, with dry, short claps or snares on 2 and 4 that don't dominate. Bongos and congas sit slightly off the beat."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://create.routenote.com/blog/beatmakers-guide-how-to-make-an-amapiano-beat/",
+          "https://beatstorapon.com/blog/how-to-make-amapiano-beat/",
+          "https://www.inspiredbybeatz.com/en/amapiano-production-how-the-log-drum-sound-is-created/"
+        ]
+      },
+      "text": "The bounce comes from swing and velocity. Apply 54-58% swing to the sixteenths, use the same amount on drums, percussion and log drum, and vary shaker velocities with an occasional missing hit and slight timing drift. Perfectly quantised, equal-velocity sixteenths are the stiffest thing you can do."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://articles.roland.com/production-hacks-creating-amapiano-tracks/",
+          "https://www.inspiredbybeatz.com/en/amapiano-production-how-the-log-drum-sound-is-created/",
+          "https://beatstorapon.com/blog/how-to-make-amapiano-beat/",
+          "https://create.routenote.com/blog/beatmakers-guide-how-to-make-an-amapiano-beat/"
+        ]
+      },
+      "text": "The log drum is bass and percussion at once, a hybrid of a kick, an 808, a synth bass and a struck log. Tune it to the key, play roots, fifths, octaves and chord tones in syncopated two-bar call-and-answer phrases with rests, and let glides between notes carry the weight. A simpler sine sub can sit under it, sidechained so the two don't fight."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://splice.com/blog/what-is-amapiano-music/",
+          "https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/plugins/Fruity%20DX10.htm",
+          "https://thenativemag.com/kabza-de-small-mdu-aka-trp-pretty-girls-amapiano/"
+        ]
+      },
+      "text": "The original log drum is a preset on FL Studio's Fruity DX10, an 8-voice FM synth, so it is a synthesised FM tone, not a recording of a real log drum. Kabza De Small credits MDU aka TRP with working out the sound. Producers often push it through a soft clipper or waveshaper for drive."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://articles.roland.com/production-hacks-creating-amapiano-tracks/",
+          "https://create.routenote.com/blog/beatmakers-guide-how-to-make-an-amapiano-beat/"
+        ]
+      },
+      "text": "Harmony comes from jazz and soul: seventh chords and upper extensions (9, 11, 13) on piano or Rhodes, ii-V-I turnarounds, and secondary dominants leading back to the top of the phrase. Minor keys are preferred. Pads can simply alternate two minor triads that share common tones."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/I_Am_the_King_of_Amapiano:_Sweet_%26_Dust",
+          "https://en.wikipedia.org/wiki/Tshwala_Bam",
+          "https://beatstorapon.com/blog/how-to-make-amapiano-beat/"
+        ]
+      },
+      "text": "Tracks are long DJ tools, not pop songs. On Kabza De Small's 27-track 'Sweet & Dust' (2020) every track runs 5:08-8:29, and 'Tshwala Bam' is 6:30 in its single version against 4:23 for the radio edit. One template: intro 8-16 bars, foundation 16, first development 16-32, main log-drum section 16-32, breakdown 8-16, final development 16-32, outro 8-16."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://beatstorapon.com/blog/how-to-make-amapiano-beat/",
+          "https://create.routenote.com/blog/beatmakers-guide-how-to-make-an-amapiano-beat/"
+        ]
+      },
+      "text": "Don't show everything in the intro. Build from atmosphere and light percussion, hold the full log-drum groove back, cut to a breakdown, and bring it back with variations. Low-pass filters handle the transitions into and out of intros and breakdowns."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://splice.com/blog/what-is-amapiano-music/",
+          "https://articles.roland.com/production-hacks-creating-amapiano-tracks/",
+          "https://create.routenote.com/blog/beatmakers-guide-how-to-make-an-amapiano-beat/"
+        ]
+      },
+      "text": "Other signature textures: offbeat trumpets playing quarter notes as a timekeeper, whistles and bird sounds as ear-catchers, bell plucks, marimba, and long sustained pads for a hypnotic bed."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://thenativemag.com/kabza-de-small-mdu-aka-trp-pretty-girls-amapiano/",
+          "https://create.routenote.com/blog/beatmakers-guide-how-to-make-an-amapiano-beat/",
+          "https://www.loopcloud.com/cloud/blog/5243-Get-Started-Producing-Amapiano-using-FL-Studio-and-Loopcloud-Sounds"
+        ]
+      },
+      "text": "Many records are mostly instrumental: Kabza De Small and MDU aka TRP's 50-track 'Pretty Girls Love Amapiano 3' was built on drum patterns and piano chords with few vocals. Where there are vocals they are often repeated chants, pitch-shifted and stacked, rather than verse-chorus singing."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Tshwala_Bam",
+          "https://en.wikipedia.org/wiki/Ke_Star",
+          "https://www.thatericalper.com/2026/09/03/where-to-start-with-amapiano/"
+        ]
+      },
+      "text": "Lyrics are sung or chanted in South African languages, e.g. isiZulu on 'Tshwala Bam', and rapped on piano rap (Focalistic). Pan-African crossovers add Nigerian features (Burna Boy on the 'Tshwala Bam' remix, Davido on 'Ke Star')."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://beatstorapon.com/blog/how-to-make-amapiano-beat/",
+          "https://create.routenote.com/blog/beatmakers-guide-how-to-make-an-amapiano-beat/"
+        ]
+      },
+      "text": "Keep the kick and log drum apart by shortening the kick's decay, dropping selected kicks or light sidechain. Preserve transients and headroom rather than limiting hard. High-pass low-end rumble out of everything but the bass voices."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Amapiano",
+          "https://www.thatericalper.com/2026/09/03/where-to-start-with-amapiano/",
+          "https://splice.com/blog/what-is-amapiano-music/"
+        ]
+      },
+      "text": "Subgenres: 'private school' piano (Kelvin Momo) is soulful and jazzy, with shakers, mellow log drums, progressive chords and live instruments. Popiano (Tyla, Kooldrink) is the pop crossover. Afropiano is the Nigerian afrobeats fusion, and sgija and 3-step are further splits that keep the same warm keys, deep low end and heartbeat-like log drum."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.mixgraph.io/bpm-for/amapiano",
+          "https://en.wikipedia.org/wiki/Water_(Tyla_song)"
+        ]
+      },
+      "text": "The tempo is unusually fixed. Across 6,113 measured tracks the median is 113 BPM, and nine in ten sit at 112-113, stable from 2020 to 2025; tutorials give 108-115. Pop crossovers can run faster ('Water' is 117 BPM)."
+    }
+  ],
+  "parent": "house",
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://beatstorapon.com/blog/how-to-make-amapiano-beat/",
+          "https://www.inspiredbybeatz.com/en/amapiano-production-how-the-log-drum-sound-is-created/"
+        ]
+      },
+      "text": "Dropping in an untuned log drum. It is the bass: tune it to the key and move it through chord tones, or the harmony smears."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://beatstorapon.com/blog/how-to-make-amapiano-beat/",
+          "https://create.routenote.com/blog/beatmakers-guide-how-to-make-an-amapiano-beat/"
+        ]
+      },
+      "text": "Quantising everything. Rigid, equal-velocity sixteenths kill the bounce; apply one swing value (54-58%) across the drums and log drum and vary the shaker's velocities."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.mixgraph.io/bpm-for/amapiano",
+          "https://create.routenote.com/blog/beatmakers-guide-how-to-make-an-amapiano-beat/",
+          "https://beatstorapon.com/blog/how-to-make-amapiano-beat/"
+        ]
+      },
+      "text": "Playing it at house tempo with a hard house kick. Stay near 112-113 BPM with a soft, rounded kick, and leave space so the log drum can be heard."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://beatstorapon.com/blog/how-to-make-amapiano-beat/"
+        ]
+      },
+      "text": "Filling every subdivision with log-drum hits. The rests make the next hit feel heavier, so write a two-bar phrase where bar two answers bar one."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://beatstorapon.com/blog/how-to-make-amapiano-beat/"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "i7 - bVImaj7 - bIIImaj7 - bVII",
+      "text": "The cited example voicing is Em9-Cmaj7-Gmaj7-D6/9: a minor loop with every chord extended to a ninth or sixth."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://articles.roland.com/production-hacks-creating-amapiano-tracks/"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "ii7 - V7 - Imaj7",
+      "text": "The jazz turnaround the Roland tutorial names as common at phrase ends, often with a secondary dominant leading back to the top."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.mixgraph.io/bpm-for/amapiano",
+          "https://articles.roland.com/production-hacks-creating-amapiano-tracks/",
+          "https://www.loopcloud.com/cloud/blog/5243-Get-Started-Producing-Amapiano-using-FL-Studio-and-Loopcloud-Sounds",
+          "https://beatstorapon.com/blog/how-to-make-amapiano-beat/"
+        ]
+      },
+      "feature": "tempo.bpm",
+      "high": 115,
+      "low": 108,
+      "typical": 113,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://create.routenote.com/blog/beatmakers-guide-how-to-make-an-amapiano-beat/"
+        ]
+      },
+      "feature": "swing.percent",
+      "high": 58,
+      "low": 54,
+      "typical": 56,
+      "unit": "MPC percent"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://articles.roland.com/production-hacks-creating-amapiano-tracks/",
+          "https://create.routenote.com/blog/beatmakers-guide-how-to-make-an-amapiano-beat/",
+          "https://beatstorapon.com/blog/how-to-make-amapiano-beat/"
+        ]
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 4,
+      "low": 2,
+      "typical": 4,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://beatstorapon.com/blog/how-to-make-amapiano-beat/",
+          "https://create.routenote.com/blog/beatmakers-guide-how-to-make-an-amapiano-beat/"
+        ]
+      },
+      "feature": "form.sections",
+      "high": 7,
+      "low": 6,
+      "typical": 7,
+      "unit": "sections"
+    },
+    {
+      "evidence": {
+        "inferred": "the 27 track lengths of Kabza De Small's 'I Am the King of Amapiano: Sweet & Dust' (quartiles 5:56 and 7:13, median 6:47, max 8:29), widened down to the 4:51 of 'Ke Star' for vocal singles; radio edits and popiano (Water, 3:20) run shorter"
+      },
+      "feature": "form.minutes",
+      "high": 8,
+      "low": 4.5,
+      "typical": 6.8,
+      "unit": "minutes"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Kabza De Small feat. DJ Maphorisa, Wizkid, Burna Boy, Cassper Nyovest",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/I_Am_the_King_of_Amapiano:_Sweet_%26_Dust"
+        ]
+      },
+      "features": [
+        "form.minutes",
+        "form.sections"
+      ],
+      "listenFor": "A 6:35 DJ-length arrangement where the log drum and piano carry long stretches before and between the guest vocals.",
+      "title": "Sponono",
+      "year": 2020
+    },
+    {
+      "artist": "Kabza De Small feat. Daliwonga",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/I_Am_the_King_of_Amapiano:_Sweet_%26_Dust"
+        ]
+      },
+      "features": [
+        "form.minutes",
+        "bass.syncopation"
+      ],
+      "listenFor": "Named for the instrument: 7:04 of log-drum phrasing to study how the figures change every few bars while the kit stays put.",
+      "title": "iLog Drum",
+      "year": 2020
+    },
+    {
+      "artist": "Focalistic feat. Vigro Deep",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Ke_Star",
+          "https://www.thatericalper.com/2026/09/03/where-to-start-with-amapiano/"
+        ]
+      },
+      "features": [
+        "form.minutes"
+      ],
+      "listenFor": "Piano rap over a Vigro Deep beat, 4:51 long; hear how a rapped vocal sits on the swung shaker without a sung hook.",
+      "title": "Ke Star",
+      "year": 2020
+    },
+    {
+      "artist": "Tyla",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Water_(Tyla_song)"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.minutes"
+      ],
+      "listenFor": "Popiano: a prominent log drum under an R&B-pop song at 117 BPM in D# minor, cut to 3:20. It is the crossover edge of the tempo and length norms.",
+      "title": "Water",
+      "year": 2023
+    },
+    {
+      "artist": "TitoM & Yuppe feat. S.N.E & EeQue",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Tshwala_Bam"
+        ]
+      },
+      "features": [
+        "form.minutes",
+        "form.repetition"
+      ],
+      "listenFor": "Compare the 6:30 single with the 4:23 radio edit to hear which sections a DJ-length amapiano record can lose.",
+      "title": "Tshwala Bam",
+      "year": 2024
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "log-drum",
+      "sub"
+    ],
+    "instruments": [
+      "grand-piano",
+      "rhodes",
+      "pad",
+      "bell-pluck",
+      "marimba",
+      "trumpet"
+    ],
+    "machines": [
+      "tr909"
+    ]
+  },
+  "summary": "A South African house offshoot from the mid-2010s townships of Johannesburg and Pretoria, slower than house at about 112-113 BPM. A soft four-on-the-floor kick and a constant swung sixteenth-note shaker sit under jazzy seventh and ninth chords on piano and Rhodes. Its signature is the log drum, a tuned, gliding FM hit between a kick, an 808 and a bass that plays syncopated root, third and fifth figures. It grew out of kwaito, gqom, deep house, jazz, soul and lounge, made largely by bedroom producers in FL Studio.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Amapiano",
+      "https://www.mixgraph.io/bpm-for/amapiano",
+      "https://articles.roland.com/production-hacks-creating-amapiano-tracks/",
+      "https://www.thatericalper.com/2026/09/03/where-to-start-with-amapiano/"
+    ]
+  }
+}

@@ -1,0 +1,417 @@
+{
+  "aliases": [
+    "black gospel",
+    "traditional black gospel",
+    "urban contemporary gospel",
+    "gospel choir",
+    "praise break",
+    "shout music"
+  ],
+  "bassHands": [
+    "motown"
+  ],
+  "family": "soul",
+  "feels": [
+    "Gospel Shout"
+  ],
+  "form": {
+    "evidence": {
+      "inferred": "sixteen-bar sections after Dorsey (cited Traditional black gospel), the end-of-song vamp and Crouch's chain vamps (cited Vamp article), and a closing shout (cited Shout article); 136 bars at the ~108 BPM songbpm median run about 5.0 minutes, matching the ~5.1-minute median of the records listed. Vamps and shouts vary in length in performance"
+    },
+    "sections": [
+      {
+        "bars": 4,
+        "name": "Intro"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 16,
+        "name": "Chorus"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 16,
+        "name": "Chorus"
+      },
+      {
+        "bars": 32,
+        "name": "Vamp"
+      },
+      {
+        "bars": 16,
+        "name": "Vamp"
+      },
+      {
+        "bars": 16,
+        "name": "Shout"
+      },
+      {
+        "bars": 4,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "gospel",
+  "idioms": [
+    "gospel"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Thomas_A._Dorsey",
+          "https://en.wikipedia.org/wiki/Traditional_black_gospel",
+          "https://en.wikipedia.org/wiki/Gospel_music"
+        ]
+      },
+      "name": "Thomas A. Dorsey",
+      "period": "1928–1970s",
+      "why": "A blues pianist ('Georgia Tom', Ma Rainey's accompanist) who turned to sacred music around 1928. He combined sixteen-bar structure and blues modes and rhythms with religious lyrics, co-founded the National Convention of Gospel Choirs and Choruses in 1932, and mentored the first generation of gospel singers, Mahalia Jackson among them."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Mahalia_Jackson"
+        ]
+      },
+      "name": "Mahalia Jackson",
+      "period": "1946–1971",
+      "why": "She improvised every performance with blue notes and melisma, preferred the slow tempos she learned from Dorsey, and refused offers to record blues. 'Move On Up a Little Higher' (1947) sold two million copies. Mildred Falls accompanied her for 25 years from 1946, improvising while watching her."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Andra%C3%A9_Crouch",
+          "https://en.wikipedia.org/wiki/Vamp_(music)"
+        ]
+      },
+      "name": "Andraé Crouch",
+      "period": "1965–1990s",
+      "why": "He brought contemporary secular styles into church gospel with the Disciples, formed in 1965 ('Soon and Very Soon', 'My Tribute'), and extended the gospel vamp into chain vamps. He became the go-to choir arranger for pop records, including Michael Jackson's 'Man in the Mirror' and Madonna's 'Like a Prayer'."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Kirk_Franklin",
+          "https://en.wikipedia.org/wiki/Stomp_(God%27s_Property_song)"
+        ]
+      },
+      "name": "Kirk Franklin",
+      "period": "1992–present",
+      "why": "A composer, arranger and choir director who built records around 15–17-voice choirs (the Family, 1992; God's Property, 1997) and brought hip-hop elements and contemporary production into them. 'Stomp' samples Funkadelic's 'One Nation Under a Groove' and features Cheryl James of Salt-N-Pepa."
+    }
+  ],
+  "meters": [
+    "4/4"
+  ],
+  "name": "Gospel",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Shout_(Black_gospel_music)"
+        ]
+      },
+      "text": "Shout (praise break): a very fast tempo with snare hits and hand claps on the upbeat of every beat, and the pianist playing counter-rhythms against the established groove. It comes at the end of a song or at an emotional peak, often cued by the singer or preacher, and can last from under a minute to over an hour."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Gospel_music",
+          "https://en.wikipedia.org/wiki/Thomas_A._Dorsey"
+        ]
+      },
+      "text": "Hand-clapping and foot-stomping were the original rhythm section. Dorsey brought improvisation and physical participation into Black Protestant worship, practices condemned as undignified at first."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Vamp_(music)"
+        ]
+      },
+      "text": "The band vamps on a simple ostinato groove at the end of the song, usually over a single chord. Andraé Crouch introduced chain vamps, one vamp after another with each drawn from the first."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Traditional_black_gospel"
+        ]
+      },
+      "text": "Dorsey's gospel blues combined a sixteen-bar structure and blues modes and rhythms with religious lyrics. Singers used ad-libs and repeated short phrases to build a rhythmic foundation under the lead."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://mtosmt.org/issues/mto.24.30.1/mto.24.30.1.shea_et_al.html",
+          "https://en.wikipedia.org/wiki/Plagal_cadence"
+        ]
+      },
+      "text": "Seventh- and ninth-based harmonies are hallmarks of African diasporic American music, especially 20th-century jazz and gospel. Plagal IV→I motion, the hymnal 'amen' cadence, is used in gospel as a repeating progression through whole sections, not only as an ending."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Shout_(Black_gospel_music)",
+          "https://en.wikipedia.org/wiki/Hard_bop"
+        ]
+      },
+      "text": "In the shout, organ or piano plays dominant-seventh chords and improvises over riffs, driven by chromatic basslines. Gospel's plagal cadence also crossed into jazz: hard bop took it up in the mid-1950s."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Shout_(Black_gospel_music)"
+        ]
+      },
+      "text": "Shout basslines are chromatic and move the harmony. The core band is a basic drum kit, bass guitar and keyboards."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Oh_Happy_Day",
+          "https://en.wikipedia.org/wiki/Traditional_black_gospel"
+        ]
+      },
+      "text": "Lead against choir. On 'Oh Happy Day' Dorothy Morrison's solo sits over muted piano, drums and bass, and the full choir answers her in a call and response that rises to a crescendo with handclaps. Congregations join in by calling out catch-phrases or adding lines."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Urban_contemporary_gospel",
+          "https://en.wikipedia.org/wiki/Stomp_(God%27s_Property_song)"
+        ]
+      },
+      "text": "Urban contemporary gospel (1970s onward) centres a solo voice over drums, electric guitar, bass guitar and keyboards, at faster tempos. Its biggest influences are hip-hop and R&B, with funk, jazz and disco too. Kirk Franklin's 'Stomp' (1997) is built on a Funkadelic sample."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Gospel_music",
+          "https://en.wikipedia.org/wiki/Traditional_black_gospel",
+          "https://en.wikipedia.org/wiki/Hammond_organ"
+        ]
+      },
+      "text": "Piano and Hammond organ became the core instruments, with guitar, drums and bass added by the 1920s–30s. The Hammond B-3 (1954–74) through a Leslie rotating speaker gives the Doppler-shifted swirl, with nine drawbars per manual shaping the tone."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Mahalia_Jackson"
+        ]
+      },
+      "text": "The lead improvises. Mahalia Jackson bent notes like a blues singer, used melisma, switched quickly between contralto and soprano, and said she sang 'off-beat, on the beat, between beats'. She never sang a song the same way twice, so her pianist Mildred Falls watched her and followed."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Precious_Lord,_Take_My_Hand",
+          "https://en.wikipedia.org/wiki/Oh_Happy_Day"
+        ]
+      },
+      "text": "Christian texts, often testimony: Dorsey wrote 'Take My Hand, Precious Lord' after the deaths of his wife and infant son in 1932, set to the 1844 hymn tune 'Maitland'. Hymns get reworked too: 'Oh Happy Day' is Philip Doddridge's 1755 hymn rearranged by Edwin Hawkins."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre"
+        ]
+      },
+      "text": "Christian/Gospel releases measure at a median of −9.9 LUFS integrated (middle half −12.2 to −8.5, n=1,896). That is a touch quieter than pop (−9.5) with a wider spread toward dynamic masters."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Vamp_(music)",
+          "https://en.wikipedia.org/wiki/Shout_(Black_gospel_music)",
+          "https://en.wikipedia.org/wiki/Oh_Happy_Day"
+        ]
+      },
+      "text": "Ending on the last chorus. Gospel songs vamp at the end, often over one chord, and build (lead ad-libs over the choir, chain vamps, a shout at the peak), so leave room for a long vamp section."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://mtosmt.org/issues/mto.24.30.1/mto.24.30.1.shea_et_al.html",
+          "https://en.wikipedia.org/wiki/Gospel_music"
+        ]
+      },
+      "text": "Voicing plain triads. Seventh- and ninth-based harmony is a hallmark of gospel, and a triadic hymn-book chart misses it."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Mahalia_Jackson",
+          "https://en.wikipedia.org/wiki/Traditional_black_gospel"
+        ]
+      },
+      "text": "Writing a fixed, on-grid lead. The lead is improvised against the choir's repeated phrases, bending notes and placing phrases around the beat, and the accompanist follows the singer."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Plagal_cadence"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "IV - I",
+      "text": "The plagal 'amen' cadence of hymn endings."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Plagal_cadence",
+          "https://en.wikipedia.org/wiki/Vamp_(music)"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "I - IV - I - IV",
+      "text": "The plagal motion used as a repeating vamp through a whole section."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Ii%E2%80%93V%E2%80%93I_progression",
+          "https://mtosmt.org/issues/mto.24.30.1/mto.24.30.1.shea_et_al.html"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "iim7 - V7 - Imaj7",
+      "text": "The seventh-chord cadence, voiced with ninths and thirteenths as gospel's seventh- and ninth-based vocabulary asks."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre"
+        ]
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -8.5,
+      "low": -12.2,
+      "typical": -9.9,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "interquartile span and median of 17 gospel records as listed on songbpm.com (Spotify tempo data): Oh Happy Day 117, Move On Up a Little Higher 88, Stomp 106, Soon and Very Soon 76, Why We Sing 109, No Weapon 105, Never Would Have Made It 168 (half-time 84), Break Every Chain 113, Love Theory 97, I Smile 144, You Brought the Sunshine 128, Open My Heart 105, Stand 104, Tomorrow 113, Hold My Mule 150, I Need You Now 97, Peace Be Still 180; slow ballads read at double time and shouts run far faster, so the tails are wide"
+      },
+      "feature": "tempo.bpm",
+      "high": 130,
+      "low": 95,
+      "typical": 108,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "inferred": "interquartile span and median of the same 17 songbpm.com listings: 5:09, 3:23, 4:59, 4:50, 5:47, 5:03, 6:55, 7:25, 4:11, 5:08, 3:48, 5:40, 5:20, 4:08, 8:43, 4:11, 6:07; the length comes from vamps and choir builds after the last chorus (cited Vamp article)"
+      },
+      "feature": "form.minutes",
+      "high": 6.1,
+      "low": 4.2,
+      "typical": 5.1,
+      "unit": "minutes"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Mahalia Jackson",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Mahalia_Jackson"
+        ]
+      },
+      "features": [
+        "melody.range.semitones",
+        "melody.notes.per.bar",
+        "tempo.bpm"
+      ],
+      "listenFor": "The lead vocal throughout: bent blue notes, melisma, and phrasing that moves off, on and between the beats over an accompanist who follows her.",
+      "title": "Move On Up a Little Higher",
+      "year": 1947
+    },
+    {
+      "artist": "The Edwin Hawkins Singers",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Oh_Happy_Day"
+        ]
+      },
+      "features": [
+        "form.density.spread",
+        "form.minutes"
+      ],
+      "listenFor": "From the first chorus to the end: Dorothy Morrison's lead answered by the full choir, rising to a crescendo with handclaps, over muted piano, drums and bass recorded in a Berkeley church.",
+      "title": "Oh Happy Day",
+      "year": 1969
+    },
+    {
+      "artist": "God's Property from Kirk Franklin's Nu Nation",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Stomp_(God%27s_Property_song)",
+          "https://en.wikipedia.org/wiki/Urban_contemporary_gospel"
+        ]
+      },
+      "features": [
+        "mix.lufs.integrated",
+        "tempo.bpm"
+      ],
+      "listenFor": "Throughout: a choir record built on a Funkadelic sample, contemporary gospel's R&B and hip-hop production.",
+      "title": "Stomp",
+      "year": 1997
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "finger"
+    ],
+    "instruments": [
+      "organ",
+      "rock-organ",
+      "grand-piano",
+      "choir",
+      "oohs",
+      "clean-electric",
+      "brass"
+    ],
+    "machines": [
+      "studio"
+    ]
+  },
+  "summary": "Christian song led by a dominant solo voice in call and response with a choir and congregation, over piano and Hammond organ, then bass and drums. Thomas A. Dorsey fused it with blues forms and modes. Harmony is rich in sevenths and ninths and in plagal 'amen' motion. Songs do not stop at the last chorus: the band vamps on a short ostinato, often one chord, while the lead ad-libs and the choir builds, and at the peak it can break into a very fast shout. Contemporary gospel adds R&B, funk and hip-hop rhythm and production.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Gospel_music",
+      "https://en.wikipedia.org/wiki/Traditional_black_gospel",
+      "https://en.wikipedia.org/wiki/Vamp_(music)",
+      "https://en.wikipedia.org/wiki/Shout_(Black_gospel_music)",
+      "https://mtosmt.org/issues/mto.24.30.1/mto.24.30.1.shea_et_al.html",
+      "https://en.wikipedia.org/wiki/Urban_contemporary_gospel"
+    ]
+  }
+}

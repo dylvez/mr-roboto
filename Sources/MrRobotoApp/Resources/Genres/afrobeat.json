@@ -1,0 +1,430 @@
+{
+  "aliases": [
+    "afro-beat",
+    "fela afrobeat",
+    "afrofunk"
+  ],
+  "bassHands": [],
+  "family": "african",
+  "feels": [
+    "Afrobeat",
+    "One-Chord Funk"
+  ],
+  "form": {
+    "evidence": {
+      "inferred": "section order from the cited By Common Consent account (guitar riff, band enters, solos, vocals at about halfway); bar counts sized so the 384 bars last about 12.8 minutes at the inferred 120 BPM, inside the cited 10-20 minute lengths, with the vocal starting near the midpoint"
+    },
+    "sections": [
+      {
+        "bars": 16,
+        "name": "Guitar Riff"
+      },
+      {
+        "bars": 48,
+        "name": "Band Groove"
+      },
+      {
+        "bars": 32,
+        "name": "Horn Theme"
+      },
+      {
+        "bars": 96,
+        "name": "Solos"
+      },
+      {
+        "bars": 128,
+        "name": "Vocal Call and Response"
+      },
+      {
+        "bars": 32,
+        "name": "Horn Theme"
+      },
+      {
+        "bars": 32,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "afrobeat",
+  "idioms": [
+    "afrobeat",
+    "funk"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Fela_Kuti",
+          "https://bycommonconsent.com/2017/01/16/guest-post-mutualnight-afrobeat-fela-kutis-zombie/"
+        ]
+      },
+      "name": "Fela Kuti",
+      "period": "1958–1990s",
+      "why": "A multi-instrumentalist (sax, keyboards, trumpet, guitar) who composed the band's parts and led from the stage, shouting cues to the players. He moved from Koola Lobitos' highlife-jazz to afrobeat after a 1969 stay in the US. He wrote 10-30 minute pieces with several guitarists holding fixed patterns and two baritone saxes, and would not perform a song again once it was recorded."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Tony_Allen_(musician)",
+          "https://www.moderndrummer.com/2011/10/tony-allen-afrobeat-innovator/",
+          "https://daily.bandcamp.com/lists/the-beat-behind-afrobeat-a-guide-to-the-music-of-tony-allen"
+        ]
+      },
+      "name": "Tony Allen",
+      "period": "1964–2010s",
+      "why": "Musical director of Africa '70 from 1969 to 1979, and the one player who wrote his own parts while Fela composed for everyone else. He combined Max Roach and Art Blakey's jazz independence with highlife and Yoruba polyrhythm. Fela said there would be no afrobeat without him; he later carried the style into dub, hip-hop and techno collaborations."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://glidemagazine.com/4051/antibalas-afrobeat-orchestra-the-essentials-of-afrobeat/",
+          "https://jambands.com/features/2012/12/13/the-afrobeat-architecture-of-antibalas/",
+          "https://en.wikipedia.org/wiki/Afrobeat"
+        ]
+      },
+      "name": "Antibalas",
+      "period": "late 1990s–present",
+      "why": "The Brooklyn orchestra that led the afrobeat revival, with trumpet, trombone, tenor and baritone sax, two guitars, organ and electric piano, bass, kit, conga and shekere, which Martín Perna likens to a salsa orchestra. The band describes the form it inherited from Fela as a script with rules and its own grammar, played patiently at full length rather than cut down. The band earned a 2020 Grammy nomination."
+    }
+  ],
+  "meters": [
+    "4/4"
+  ],
+  "name": "Afrobeat",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "http://afrofunkforum.blogspot.com/2006/04/afrobeat-architect-tony-allen.html",
+          "https://www.moderndrummer.com/2011/10/tony-allen-afrobeat-innovator/"
+        ]
+      },
+      "text": "Tony Allen built afrobeat drumming as 'one person playing like four': each limb takes a separate traditional drum part, but he thought of the result as one linear pattern. His hi-hat, adapted from Max Roach's jazz hi-hat lessons, never stays closed and varies polyrhythmically against a kick and snare that seem at odds with it yet mesh."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://joethedrummer.com/some-ideas-for-developing-your-afrobeat-drumming/",
+          "https://joethedrummer.com/this-is-the-first-afrobeat-drum-groove-according-to-tony-allen/"
+        ]
+      },
+      "text": "Kit vocabulary: sixteenths on the kick at 1, 1e, 3 and 3e; an eighth-plus-two-sixteenths figure on the hi-hat or ride with the 'ands' lightly accented; syncopated snare figures; and the left foot on the hi-hat on 2 and 4. Play it light, with attack on kick and snare and airy cymbals."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "http://afrofunkforum.blogspot.com/2006/04/afrobeat-architect-tony-allen.html",
+          "https://daily.bandcamp.com/lists/the-beat-behind-afrobeat-a-guide-to-the-music-of-tony-allen"
+        ]
+      },
+      "text": "There is no unison funk backbeat. Kit, percussion, guitars and bass play interlocking, complementary patterns, and the propulsion comes from polyrhythmic tension and release. Allen kept his beat slightly behind the band as a stable floor under it."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://gradyshort.substack.com/p/listening-to-echoes-of-afrobeat-in",
+          "https://glidemagazine.com/4051/antibalas-afrobeat-orchestra-the-essentials-of-afrobeat/"
+        ]
+      },
+      "text": "Guitar roles: the rhythm guitar plays funk-styled, syncopated chord chops. Fela's 'tenor' guitar plays a repeating single-note staccato figure in the middle register, a contrapuntal voice between bass and rhythm guitar that locks the precomposed parts together (Michael Veal)."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://bycommonconsent.com/2017/01/16/guest-post-mutualnight-afrobeat-fela-kutis-zombie/"
+        ]
+      },
+      "text": "A song opens with a simple riff, usually an exchange between rhythm and tenor guitar repeated as an ostinato. Drums, bass, horns and keyboards join, and the band trades solos in an extended jam. The main vocal and chants enter in call and response at about the halfway point."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Fela_Kuti",
+          "https://en.wikipedia.org/wiki/Zombie_(album)",
+          "https://glidemagazine.com/4051/antibalas-afrobeat-orchestra-the-essentials-of-afrobeat/"
+        ]
+      },
+      "text": "Songs run 10-15 minutes at least and often 20-30, and LPs frequently held one track per side ('Zombie' is two tracks, 25:24). Instrumental introductions can take much of the running time. Fela would not perform a song live again once it was recorded, and Antibalas's Martín Perna calls it patient music that can't be truncated."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://gradyshort.substack.com/p/listening-to-echoes-of-afrobeat-in"
+        ]
+      },
+      "text": "Afrobeat is not harmony-driven: songs use few, simple chord changes and get their interest from rhythm and interlocking parts. Veal hears it as a fusion of Fela's popular and traditional culture with African-American styles, Afro-Latin music and modal jazz, so no progressions are listed."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://gradyshort.substack.com/p/listening-to-echoes-of-afrobeat-in",
+          "http://afrofunkforum.blogspot.com/2006/04/afrobeat-architect-tony-allen.html"
+        ]
+      },
+      "text": "The bass is sparse, repetitive and straightforward, close to American funk. It is an ostinato locked with the guitars rather than a melodic lead, so no bass hand in the app's set fits it exactly."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://glidemagazine.com/4051/antibalas-afrobeat-orchestra-the-essentials-of-afrobeat/",
+          "https://en.wikipedia.org/wiki/Fela_Kuti",
+          "https://en.wikipedia.org/wiki/Afrobeat"
+        ]
+      },
+      "text": "The band is an orchestra: trumpet, trombone and tenor and baritone saxes (Fela unusually used two baritones), two electric guitars, organ and electric piano, bass, kit, conga, shekere and other percussion, and a singer with chorus."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://bycommonconsent.com/2017/01/16/guest-post-mutualnight-afrobeat-fela-kutis-zombie/",
+          "https://glidemagazine.com/4051/antibalas-afrobeat-orchestra-the-essentials-of-afrobeat/",
+          "https://en.wikipedia.org/wiki/Expensive_Shit"
+        ]
+      },
+      "text": "Horns state riff themes and trade extended solos on sax, trumpet or keyboards. The vocal is chanted in call and response with the chorus and ad-libbed with the audience live, e.g. 'Water No Get Enemy' with its Latin-tinged sax and chorus riff."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Fela_Kuti",
+          "https://en.wikipedia.org/wiki/Zombie_(album)",
+          "https://en.wikipedia.org/wiki/Afrobeats"
+        ]
+      },
+      "text": "Fela sang in pidgin English so listeners across Africa could follow, and used the songs for confrontational political criticism. 'Zombie' mocked the military and was followed by the army's attack on his Kalakuta Republic commune. This is the clearest line between afrobeat and today's mostly apolitical afrobeats."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Fela_Kuti",
+          "https://en.wikipedia.org/wiki/Afrobeat"
+        ]
+      },
+      "text": "Origins: Fela's Koola Lobitos played highlife-jazz from 1958. A 1969 stay in Los Angeles exposed him to Black Power politics and James Brown, and back in Lagos Nigeria 70, later Africa '70, fused apala, funk, jazz, highlife, salsa and Yoruba music. Africa '70 held a residency at the Afrika Shrine in 1970-75."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://songbpm.com/@fela-kuti/shakara",
+          "https://songbpm.com/@fela-kuti/roforofo-fight",
+          "https://songbpm.com/@fela-kuti/expensive-shit",
+          "https://songbpm.com/@fela-kuti",
+          "https://songbpm.com/@fela-kuti/zombie",
+          "https://songbpm.com/@fela-kuti/sorrow-tears-and-blood",
+          "https://songbpm.com/@fela-kuti/lady"
+        ]
+      },
+      "text": "Tempos cluster in the low-to-mid 120s: Shakara 120, Roforofo Fight 124, Expensive Shit 125, 2000 Blacks 126, Zombie 132. Slower grooves sit near 100 (Sorrow Tears and Blood 101, Lady 107). These are automated detections, so treat single values loosely."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Afrobeats",
+          "https://en.wikipedia.org/wiki/Fela_Kuti"
+        ]
+      },
+      "text": "Confusing afrobeat with afrobeats. Afrobeat is Fela's 10-minute-plus big-band jazz-funk; afrobeats is the 3-minute Nigerian and Ghanaian pop of the 2010s. Don't judge one by the other's form or tempo."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "http://afrofunkforum.blogspot.com/2006/04/afrobeat-architect-tony-allen.html",
+          "https://joethedrummer.com/some-ideas-for-developing-your-afrobeat-drumming/"
+        ]
+      },
+      "text": "Playing a funk backbeat. Afrobeat has no unison 2-and-4; build interlocking parts across kit, percussion, guitars and bass instead, and keep the kit light."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://glidemagazine.com/4051/antibalas-afrobeat-orchestra-the-essentials-of-afrobeat/",
+          "https://bycommonconsent.com/2017/01/16/guest-post-mutualnight-afrobeat-fela-kutis-zombie/"
+        ]
+      },
+      "text": "Cutting it to pop length or bringing the vocal in early. The groove needs time; let the riff, the band and the solos build before the vocal, which arrives around halfway."
+    }
+  ],
+  "progressions": [],
+  "ranges": [
+    {
+      "evidence": {
+        "inferred": "median and spread of the tempos SongBPM measures for eight Africa '70 recordings: Sorrow Tears and Blood 101, Lady 107, Shakara 120, Roforofo Fight 124, Expensive Shit 125, 2000 Blacks Got to Be Free 126, Zombie 132 (Gentleman's 87 read as an outlier); automated detection, so treat as ±3"
+      },
+      "feature": "tempo.bpm",
+      "high": 130,
+      "low": 100,
+      "typical": 122,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Fela_Kuti",
+          "https://bycommonconsent.com/2017/01/16/guest-post-mutualnight-afrobeat-fela-kutis-zombie/",
+          "https://en.wikipedia.org/wiki/Expensive_Shit",
+          "https://songbpm.com/@fela-kuti/lady",
+          "https://songbpm.com/@fela-kuti/roforofo-fight"
+        ]
+      },
+      "feature": "form.minutes",
+      "high": 20,
+      "low": 10,
+      "typical": 13.5,
+      "unit": "minutes"
+    },
+    {
+      "evidence": {
+        "inferred": "the cited account that the main vocal and chants enter at about the halfway point, applied to the cited 10-20 minute song lengths"
+      },
+      "feature": "form.hook.seconds",
+      "high": 600,
+      "low": 300,
+      "unit": "seconds"
+    },
+    {
+      "evidence": {
+        "inferred": "the cited description of 'few, simple chord changes' under songs built on one repeated guitar riff (Veal via Short; By Common Consent)"
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 3,
+      "low": 1,
+      "typical": 2,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "inferred": "one to three chords held over riff-length ostinatos of two bars or more in 10-20 minute songs, from the cited descriptions of form and harmony"
+      },
+      "feature": "harmony.changes.per.bar",
+      "high": 0.5,
+      "low": 0,
+      "unit": "changes per bar"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Fela Kuti & Africa 70",
+      "evidence": {
+        "cited": [
+          "https://songbpm.com/@fela-kuti/zombie",
+          "https://en.wikipedia.org/wiki/Zombie_(album)",
+          "https://bycommonconsent.com/2017/01/16/guest-post-mutualnight-afrobeat-fela-kutis-zombie/"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.minutes",
+        "form.hook.seconds"
+      ],
+      "listenFor": "The fast end, about 132 BPM over 12:26: hear the guitars' riff exchange lock before the horns, and how late the call-and-response vocal arrives.",
+      "title": "Zombie",
+      "year": 1976
+    },
+    {
+      "artist": "Fela Kuti & Africa 70",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Expensive_Shit"
+        ]
+      },
+      "features": [
+        "form.minutes"
+      ],
+      "listenFor": "An 11:00 groove built on a Latin-tinged sax and chorus riff; follow how the horn theme and the chorus answer each other.",
+      "title": "Water No Get Enemy",
+      "year": 1975
+    },
+    {
+      "artist": "Fela Kuti & Africa 70",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Expensive_Shit",
+          "https://songbpm.com/@fela-kuti/expensive-shit"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.minutes"
+      ],
+      "listenFor": "At about 125 BPM over 13:13, a sarcastic political narrative carried by the band's interlocking funk ostinato.",
+      "title": "Expensive Shit",
+      "year": 1975
+    },
+    {
+      "artist": "Fela Kuti & Africa 70",
+      "evidence": {
+        "cited": [
+          "https://songbpm.com/@fela-kuti/lady",
+          "https://en.wikipedia.org/wiki/Fela_Kuti_discography"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.minutes"
+      ],
+      "listenFor": "A slower 107 BPM groove over 13:48; hear how Allen's hi-hat moves while the kick and snare hold the pattern.",
+      "title": "Lady",
+      "year": 1972
+    },
+    {
+      "artist": "Fela Kuti & Africa 70",
+      "evidence": {
+        "cited": [
+          "https://songbpm.com/@fela-kuti/roforofo-fight",
+          "https://en.wikipedia.org/wiki/Fela_Kuti_discography"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.minutes"
+      ],
+      "listenFor": "At about 124 BPM over 15:41, the long-form arc of the style: riff, band, solos, then vocal.",
+      "title": "Roforofo Fight",
+      "year": 1972
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "finger",
+      "muted"
+    ],
+    "instruments": [
+      "clean-electric",
+      "muted-guitar",
+      "tenor-sax",
+      "horns",
+      "trumpet",
+      "organ",
+      "rhodes"
+    ],
+    "machines": [
+      "funk",
+      "vintage"
+    ]
+  },
+  "summary": "The big-band Nigerian style Fela Kuti and drummer Tony Allen built with Africa '70 around 1969-70 from highlife, Yoruba rhythm, jazz and James Brown funk. Interlocking ostinatos (tenor and rhythm guitars, a sparse bass, a busy but light drum kit and percussion) hold one groove for 10-20 minutes over very few chords. Horn riffs and long solos come first, and the political, call-and-response vocal in pidgin English enters late.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Fela_Kuti",
+      "https://en.wikipedia.org/wiki/Tony_Allen_(musician)",
+      "https://bycommonconsent.com/2017/01/16/guest-post-mutualnight-afrobeat-fela-kutis-zombie/",
+      "https://gradyshort.substack.com/p/listening-to-echoes-of-afrobeat-in"
+    ]
+  }
+}

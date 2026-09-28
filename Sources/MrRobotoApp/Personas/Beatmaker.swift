@@ -1055,6 +1055,9 @@ public struct PersonaReading: Hashable, Sendable, Identifiable {
     public var holds: Bool
     /// One line, in the persona's own voice.
     public var says: String
+    /// The genre that re-judged it, when one did (`GenreLens`): the verdict is the genre's, and
+    /// `says` gives both numbers.
+    public var genre: String?
 
     public var id: String { "\(rule)#\(feature)" }
 

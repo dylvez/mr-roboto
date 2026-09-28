@@ -1,0 +1,472 @@
+{
+  "aliases": [
+    "chicago drill",
+    "uk drill",
+    "brooklyn drill",
+    "ny drill"
+  ],
+  "bassHands": [
+    "programmed"
+  ],
+  "family": "hip-hop",
+  "feels": [
+    "UK Drill",
+    "Trap Rolling Hats",
+    "Halftime"
+  ],
+  "form": {
+    "evidence": {
+      "inferred": "Generic rap layout from eMastered (16-bar verses, 8-bar hooks) and Songen's trap arrangement (8-bar intro/outro, 16-bar hooks); no drill-specific form source was found."
+    },
+    "sections": [
+      {
+        "bars": 8,
+        "name": "Intro"
+      },
+      {
+        "bars": 16,
+        "name": "Hook"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 16,
+        "name": "Hook"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 16,
+        "name": "Hook"
+      },
+      {
+        "bars": 8,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "drill",
+  "idioms": [
+    "drill",
+    "trap",
+    "hip-hop"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.xxlmag.com/young-chop-talks-lex-luger-chief-keef-and-studio-habits/",
+          "https://en.wikipedia.org/wiki/Drill_music",
+          "https://en.wikipedia.org/wiki/I_Don%27t_Like"
+        ]
+      },
+      "name": "Young Chop",
+      "period": "2011–2014 peak",
+      "why": "Self-taught in FL Studio from age 11-12, he produced Chief Keef's I Don't Like and Love Sosa, making the Chicago drill sound; he names Shawty Redd and Drumma Boy (not Lex Luger) as his models, and says he and Keef finished Finally Rich in two weeks at about four records a day."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.complex.com/music/2017/10/carns-hill-trench-interview",
+          "https://en.wikipedia.org/wiki/UK_drill"
+        ]
+      },
+      "name": "Carns Hill",
+      "period": "2014–",
+      "why": "Veteran UK producer who made 67's formative 2014 instrumentals; by his account the sound grew from agreeing to make beats 'at 67 bpm' with the group, and he cites Timbaland's structures as his early model."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.musicradar.com/news/m1onthebeat-interview",
+          "https://blog.native-instruments.com/watch-m1onthebeat-make-a-moody-uk-drill-beat-in-5-minutes/"
+        ]
+      },
+      "name": "M1OnTheBeat",
+      "period": "2015–present",
+      "why": "With MKThePlug, among the first to move UK drill off the Chicago template; he reworked the three-step drum pattern to 'change the way it bounces', starts from melody in FL Studio, and builds sliding 808s with slide notes and a square envelope."
+    }
+  ],
+  "meters": [
+    "4/4"
+  ],
+  "name": "Drill",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://orphiq.com/resources/trap-vs-drill-comparison",
+          "https://en.wikipedia.org/wiki/UK_drill",
+          "https://www.complex.com/music/2017/10/carns-hill-trench-interview"
+        ]
+      },
+      "text": "Where they differ, tempo: Chicago drill is written at 60-70 BPM and felt in half-time (hats implying 120-140); UK drill sits at 138-151, usually 140-145. Carns Hill describes making beats 'at 67 bpm' with 67 when the UK sound formed."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/UK_drill",
+          "https://blog.bandlab.com/how-to-make-a-uk-drill-beat-on-bandlab/",
+          "https://unison.audio/how-to-make-drill-beats/"
+        ]
+      },
+      "text": "UK drill drums: hats in a steady 3+3+2 (a sped-up tresillo; 16th steps 1, 4, 7 in BandLab's pattern) with 32nd rolls; snare on beat 3 of the bar at 140, but every second bar it is displaced, landing on beat 4 or on the 'a' of 3. Kicks are few and syncopated (e.g. bar 1 on step 1 and 15, bar 2 on steps 1 and 5)."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Drill_music",
+          "https://orphiq.com/resources/trap-vs-drill-comparison",
+          "https://navidhamidi.com/chicago-drill-vs-uk-drill-a-producers-perspective-on-two-defining-sounds/"
+        ]
+      },
+      "text": "Chicago drill drums: skippy, syncopated hats 'echoing the rapid fire of a machine gun', triplet rolls less layered than trap, busy snares and crash cymbals, on a steady half-time backbeat that gives the head-nodding bounce."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/UK_drill",
+          "https://www.musicradar.com/news/m1onthebeat-interview",
+          "https://navidhamidi.com/chicago-drill-vs-uk-drill-a-producers-perspective-on-two-defining-sounds/"
+        ]
+      },
+      "text": "Where they differ, bass: UK drill's defining element is the sliding 808, glides between notes via portamento or FL Studio slide notes, often with a square envelope so the tail stops cleanly. Chicago drill's 808 is booming, sustained and relatively static."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://unison.audio/how-to-make-drill-beats/",
+          "https://www.musicradar.com/news/m1onthebeat-interview"
+        ]
+      },
+      "text": "Slides work when the sliding note overlaps slightly into the note it glides to; tutorials put the slides around beats 2 and 4. M1onTheBeat saturates the 808 (Fruity Blood Overdrive) for body."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://blog.landr.com/drill-chords/",
+          "https://unison.audio/how-to-make-drill-beats/"
+        ]
+      },
+      "text": "Minor keys throughout (natural minor, harmonic minor, Phrygian); progressions rarely exceed four chords and one-chord vamps with inversions are common. Semitone root motion (i to bII) supplies the menace."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://orphiq.com/resources/trap-vs-drill-comparison",
+          "https://blog.native-instruments.com/watch-m1onthebeat-make-a-moody-uk-drill-beat-in-5-minutes/",
+          "https://navidhamidi.com/chicago-drill-vs-uk-drill-a-producers-perspective-on-two-defining-sounds/"
+        ]
+      },
+      "text": "Short 2-4 bar minor motifs: sparse piano in Chicago drill; in UK drill, eerie piano, bells, orchestral strings and dark pads, often several melodies bouncing off each other (M1onTheBeat layers two or three)."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Drill_music",
+          "https://www.attackmagazine.com/technique/beat-dissected/uk-drill/",
+          "https://www.attackmagazine.com/technique/beat-dissected/make-uk-drill-in-the-style-of-dutchavelli-or-m24/"
+        ]
+      },
+      "text": "Chicago drill: synth brass and bells, crash cymbals, TR-808. UK drill: hard kicks at full velocity, short snares with tails cut, grime-derived hat patterns, triangle 'money shot' on beat 1, piano and bell pads often run through a half-time effect."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://navidhamidi.com/chicago-drill-vs-uk-drill-a-producers-perspective-on-two-defining-sounds/",
+          "https://phatsuspekt.com/loudness"
+        ]
+      },
+      "text": "Chicago drill is minimal and spacious, raw rather than polished, leaving room for the voice; UK drill is sparse but cinematic. Masters are as loud as trap: club/CD rap sits around -9 to -6 LUFS with peaks at -1 dBTP."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://unison.audio/how-to-make-drill-beats/",
+          "https://blog.native-instruments.com/watch-m1onthebeat-make-a-moody-uk-drill-beat-in-5-minutes/"
+        ]
+      },
+      "text": "Beat switches and breakdowns mid-track hold attention; M1onTheBeat's sketch-to-song move is a percolating intro and an ominous half-time outro."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Drill_music",
+          "https://en.wikipedia.org/wiki/UK_drill"
+        ]
+      },
+      "text": "Chicago: grim, deadpan, often Auto-Tuned delivery of gang rivalries without metaphor (Chief Keef: 'I'd rather just say what's going on right now'). UK: British slang, intricate flows, some social commentary alongside the violence."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://emastered.com/blog/rap-song-structure",
+          "https://songen.app/blog/how-to-arrange-a-trap-beat/"
+        ]
+      },
+      "text": "Drill follows rap song form (intro, hooks and 16-bar verses) rather than a genre-specific one; the arrangement below is a typical rap layout, and forms vary widely."
+    }
+  ],
+  "parent": "trap",
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/UK_drill",
+          "https://unison.audio/how-to-make-drill-beats/"
+        ]
+      },
+      "text": "Writing trap drums at 140 and calling it UK drill. Keep the snare on 3 but displace it every second bar, and move the hats onto a 3+3+2 figure."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://navidhamidi.com/chicago-drill-vs-uk-drill-a-producers-perspective-on-two-defining-sounds/",
+          "https://orphiq.com/resources/trap-vs-drill-comparison"
+        ]
+      },
+      "text": "Mixing up the basses: a static trap 808 under UK drill loses the style's signature, while constant glides under Chicago drill sound anachronistic. Slide for UK and Brooklyn; sustain and boom for Chicago."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.musicradar.com/news/m1onthebeat-interview",
+          "https://unison.audio/how-to-make-drill-beats/"
+        ]
+      },
+      "text": "808 tails smearing into each other. Shape the envelope square and control the release so slides are quick and snappy, with each sliding note just long enough to reach the next."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://blog.landr.com/drill-chords/"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "i - VI",
+      "text": "Two chords a third apart; the relative-chord rock under most drill loops (Cm-Ab)."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://blog.landr.com/drill-chords/"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "i - iv",
+      "text": "Two minor chords; 'one of the coldest progressions' (Ebm-Abm)."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://blog.landr.com/drill-chords/"
+        ]
+      },
+      "mode": "phrygian",
+      "roman": "i - bII",
+      "text": "Semitone root motion from the Phrygian mode (Gm-Ab)."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://blog.landr.com/drill-chords/"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "i - VII - VI",
+      "text": "Descending minor line with the last chord held twice as long (Gm-F-Eb)."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "inferred": "Union of the cited norms: UK drill 138-151 (Wikipedia) and 140-145 (Orphiq), with 140-144 in the BandLab and Attack sessions; Chicago drill 60-70 BPM felt in half-time (Orphiq), i.e. 120-140 on the hat grid, e.g. Love Sosa at 132."
+      },
+      "feature": "tempo.bpm",
+      "high": 150,
+      "low": 120,
+      "typical": 140,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "inferred": "Attack Magazine's UK drill session sets swing to 0% (straight); the bounce comes from placing hats and snares on 3+3+2 positions, not from groove swing, so a small allowance only."
+      },
+      "feature": "swing.percent",
+      "high": 54,
+      "low": 50,
+      "unit": "MPC percent"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/UK_drill",
+          "https://www.musicradar.com/news/m1onthebeat-interview"
+        ]
+      },
+      "feature": "bass.is.sub",
+      "high": 1,
+      "low": 1,
+      "unit": "1 or 0"
+    },
+    {
+      "evidence": {
+        "inferred": "Deruty (ISMIR 2024) puts the median 808 fundamental at 49.5 Hz (G1, MIDI 31) with transposition down to D1 (MIDI 26); the Attack drill 808 is transposed down a semitone from its sample, keeping the lowest note in this octave."
+      },
+      "feature": "bass.register.low",
+      "high": 36,
+      "low": 26,
+      "unit": "MIDI note"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://phatsuspekt.com/loudness",
+          "https://soundcamps.com/blog/spotify-lufs/"
+        ]
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -6.5,
+      "low": -9.5,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://blog.landr.com/drill-chords/",
+          "https://unison.audio/how-to-make-drill-beats/"
+        ]
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 4,
+      "low": 1,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "inferred": "LANDR's drill progressions are 1-4 chords, its fullest example holding each chord two bars; the cited tutorials loop 2-4 bar minor motifs, so at most one change a bar at 140."
+      },
+      "feature": "harmony.changes.per.bar",
+      "high": 1,
+      "low": 0.25,
+      "unit": "changes per bar"
+    },
+    {
+      "evidence": {
+        "inferred": "Lengths of the reference records: I Don't Like 4:27, Love Sosa 3:23 (single), Kennington Where It Started 3:53, No Diet 3:12; shortened toward the low end by the 29 s drop in hip-hop track length Chartmetric reports for 2018-2024."
+      },
+      "feature": "form.minutes",
+      "high": 4.5,
+      "low": 2.5,
+      "unit": "minutes"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Chief Keef",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/I_Don%27t_Like"
+        ]
+      },
+      "features": [
+        "form.minutes",
+        "harmony.chords.distinct"
+      ],
+      "listenFor": "Young Chop's production on Chief Keef's debut single, from the first bar: the record that took Chicago drill mainstream; note how little the loop changes across 4:27.",
+      "title": "I Don't Like",
+      "year": 2012
+    },
+    {
+      "artist": "Chief Keef",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Love_Sosa",
+          "https://songbpm.com/@chief-keef/love-sosa"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "grid.subdivision"
+      ],
+      "listenFor": "From the first bar, count the half-time backbeat (66) against the hat grid (132): the Chicago tempo convention in one record.",
+      "title": "Love Sosa",
+      "year": 2012
+    },
+    {
+      "artist": "Harlem Spartans",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/UK_drill",
+          "https://songbpm.com/@harlem-spartans/kennington-where-it-started"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "bass.is.sub"
+      ],
+      "listenFor": "The track credited with taking UK drill mainstream; from the first verse compare its 138 BPM grid and bass movement with Love Sosa.",
+      "title": "Kennington Where It Started",
+      "year": 2017
+    },
+    {
+      "artist": "Digga D",
+      "evidence": {
+        "cited": [
+          "https://songbpm.com/@digga-d/no-diet",
+          "https://en.wikipedia.org/wiki/UK_drill"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "kick.decay.s"
+      ],
+      "listenFor": "A 140 BPM, F# minor UK drill record; from the first verse listen for how the snare and hats sit against the 140 grid rather than a half-time trap backbeat.",
+      "title": "No Diet",
+      "year": 2019
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "808",
+      "sub"
+    ],
+    "instruments": [
+      "grand-piano",
+      "strings",
+      "bell",
+      "synth-brass",
+      "dark-pad",
+      "choir"
+    ],
+    "machines": [
+      "tr808",
+      "trap"
+    ]
+  },
+  "summary": "A trap offshoot from Chicago's South Side (Chief Keef and Young Chop, 2011-12): half-time, sparse, 808-heavy beats under deadpan, confrontational rap. UK drill (Brixton, early 2010s) sped the grid to about 140 BPM, moved the hats to a 3+3+2 figure, displaced the snare and made the sliding 808 its signature; Brooklyn drill took the UK template back to New York.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Drill_music",
+      "https://en.wikipedia.org/wiki/UK_drill"
+    ]
+  }
+}

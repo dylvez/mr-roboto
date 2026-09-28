@@ -20,17 +20,18 @@ struct DirectorToolboxTests {
     @Test("The list is exactly the tools the first proof needs, in the order the work happens")
     func theList() {
         #expect(toolbox().names == DirectorTools.names)
-        #expect(DirectorTools.names.count == 42)
+        #expect(DirectorTools.names.count == 45)
         // The first thing is reading the song: a proposal about a song nobody read is a guess.
         #expect(DirectorTools.names.first == "read_song")
         // Recording is the last step of the first proof; dust, written onto what was recorded, is
         // appended after it rather than inserted anywhere above (`DirectorDustToolboxTests`).
         #expect(DirectorTools.names[13] == "create_part_version")
         #expect(DirectorTools.names[14] == "degrade_part")
-        #expect(Array(DirectorTools.names.suffix(27)) == ["set_progression", "write_bassline", "stitch_section", "arrange",
+        #expect(Array(DirectorTools.names.suffix(30)) == ["set_progression", "write_bassline", "stitch_section", "arrange",
                                                            "read_library", "adopt", "merge", "cast", "convene", "read_take",
                                                            "read_mix", "set_mix", "master", "export", "read_album", "sequence", "release", "plan_mashup", "mashup", "start_song", "write_groove",
-                                                           "write_melody", "write_lyrics", "set_song", "set_instrument", "comp_takes", "open_song"],
+                                                           "write_melody", "write_lyrics", "set_song", "set_instrument", "comp_takes", "open_song",
+                                                           "list_genres", "read_genre", "set_genre"],
                 "M2's four, M3's three, M4's two, M5's one, M6's four, M7's three, the mashup's two, the idea's two and writing's six, appended in gate order")
     }
 

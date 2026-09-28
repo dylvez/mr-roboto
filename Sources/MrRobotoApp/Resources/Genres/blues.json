@@ -1,0 +1,440 @@
+{
+  "aliases": [
+    "chicago blues",
+    "electric blues",
+    "delta blues",
+    "texas blues",
+    "slow blues",
+    "blues shuffle"
+  ],
+  "bassHands": [
+    "walking",
+    "root-fifth"
+  ],
+  "family": "blues",
+  "feels": [
+    "Shuffle",
+    "Slow Blues 12/8"
+  ],
+  "form": {
+    "evidence": {
+      "inferred": "choruses of the cited 12-bar form, one AAB stanza per chorus (cited Blues article); 68 bars at the cited 100 BPM median run about 2.7 minutes, matching the ~2.8-minute median of the classic records listed; the intro is often the last four bars of the form or a turnaround"
+    },
+    "sections": [
+      {
+        "bars": 4,
+        "name": "Intro"
+      },
+      {
+        "bars": 12,
+        "name": "Verse"
+      },
+      {
+        "bars": 12,
+        "name": "Verse"
+      },
+      {
+        "bars": 12,
+        "name": "Solo"
+      },
+      {
+        "bars": 12,
+        "name": "Solo"
+      },
+      {
+        "bars": 12,
+        "name": "Verse"
+      },
+      {
+        "bars": 4,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "blues",
+  "idioms": [
+    "blues"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Muddy_Waters"
+        ]
+      },
+      "name": "Muddy Waters",
+      "period": "1941–1983",
+      "why": "Alan Lomax recorded him for the Library of Congress in 1941. In Chicago from 1943 he amplified Delta blues because an acoustic guitar could not be heard in clubs. His Chess sides from 1948, with Little Walter, Jimmy Rogers, Otis Spann and Willie Dixon, defined the electric Chicago band, and his 1958 England tour shocked audiences who expected acoustic folk blues."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Hoochie_Coochie_Man",
+          "https://en.wikipedia.org/wiki/Smokestack_Lightning"
+        ]
+      },
+      "name": "Willie Dixon",
+      "period": "1954–1956",
+      "why": "Chess's chief songwriter and a session bassist. He wrote 'Hoochie Coochie Man' for Waters, a sixteen-bar stop-time song whose riff passed into the common language of blues, R&B, jazz and rock, and he played bass on Howlin' Wolf's 'Smokestack Lightnin''."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Smokestack_Lightning"
+        ]
+      },
+      "name": "Howlin' Wolf and Hubert Sumlin",
+      "period": "1956",
+      "why": "Recorded at Chess in 1956, 'Smokestack Lightnin'' is built on a propulsive one-chord vamp. Sumlin created the guitar line that defines it, with Willie Johnson on second guitar, Hosea Lee Kennard on piano and Earl Phillips on drums."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/The_Thrill_Is_Gone"
+        ]
+      },
+      "name": "B.B. King",
+      "period": "1969–1970",
+      "why": "His 1969 'The Thrill Is Gone', produced by Bill Szymczyk, is a slow 12-bar blues in B minor with polished production and strings, a departure from his earlier records. It became one of his signature songs and won the 1970 Grammy for Best Male R&B Vocal Performance."
+    }
+  ],
+  "meters": [
+    "4/4",
+    "12/8"
+  ],
+  "name": "Blues",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.totaldrummer.com/blues-shuffle-drum-beat/"
+        ]
+      },
+      "text": "Shuffle: triplet subdivision with the first and third partials played and the middle one rested on the hi-hat, kick on 1 and 3, snare on 2 and 4. It feels like a rock beat on a swung hat."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.betamonkey.com/a-closer-look-at-blues-drumming-styles/"
+        ]
+      },
+      "text": "Blues uses 2/4, 4/4, 6/8 and 12/8, all triplet-based, in named variants: Chicago, Texas and swing shuffles, the Bo Diddley beat, and the Delta slow blues. The drummer's job is a deep pocket the band can lock to."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Blues"
+        ]
+      },
+      "text": "Blues rhythm rests on shuffle patterns and steady bass lines, with the backbeat accented on 2 and 4."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Twelve-bar_blues"
+        ]
+      },
+      "text": "Twelve bars: I for bars 1–4, IV for 5–6, I for 7–8, V then IV in 9–10, and I then V in 11–12. The quick change puts IV in bar 2, and the turnaround (V–I or V–IV–I) leads into the next chorus. Eight- and sixteen-bar blues also exist."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Hoochie_Coochie_Man",
+          "https://en.wikipedia.org/wiki/Smokestack_Lightning"
+        ]
+      },
+      "text": "Not all blues is twelve bars. 'Hoochie Coochie Man' is a sixteen-bar blues with a stop-time five-note riff, recorded at 72 BPM in A. 'Smokestack Lightnin'' is a one-chord vamp in E whose blue notes make it sound minor."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Twelve-bar_blues",
+          "https://community.wvu.edu/~jokatz/BluesPaperPrePrint.pdf"
+        ]
+      },
+      "text": "Dominant sevenths are used especially just before a change. In the jazz blues Katz studied in the Real Book, the fixed skeleton is the opening I, the IV in bar 5, I in bars 7 and 11, and V in bar 10 or 9. ii and VI preparations in bar 9 and a IV in bar 2 are the commonest elaborations."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Blues",
+          "https://www.pianogroove.com/blues-piano-lessons/how-to-play-blues-shuffle/"
+        ]
+      },
+      "text": "Blue notes, the flattened third, fifth and seventh, over the minor pentatonic against major-quality chords are the genre's tension. On piano the minor third slides to the major (E♭→E over C, A♭→A over F, B♭→B over G)."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Blues",
+          "https://en.wikipedia.org/wiki/Call_and_response_(music)"
+        ]
+      },
+      "text": "AAB stanza: a line sung over the first four bars, repeated over the next four, and a longer concluding line over the last four. It is a call and response in which the B section often answers dominant-to-tonic."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://www.pianogroove.com/blues-piano-lessons/how-to-play-blues-shuffle/",
+          "https://en.wikipedia.org/wiki/Twelve-bar_blues"
+        ]
+      },
+      "text": "The left hand, or the bass, is the engine: a root–5th–6th–b7 boogie figure on the shuffle, or a walking line outlining each chord's root."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Hoochie_Coochie_Man",
+          "https://en.wikipedia.org/wiki/Muddy_Waters"
+        ]
+      },
+      "text": "The classic Chicago band is harmonica, electric guitar(s), piano, bass and drums: on 'Hoochie Coochie Man', Little Walter, Jimmy Rogers and Otis Spann behind Muddy Waters, with Willie Dixon writing. Stop-time breaks leave the vocal alone between band hits."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Muddy_Waters",
+          "https://en.wikipedia.org/wiki/Pride_and_Joy_(Stevie_Ray_Vaughan_song)"
+        ]
+      },
+      "text": "Electric amplification is the Chicago sound: Muddy Waters wanted an amplifier because 'couldn't nobody hear you with an acoustic' in noisy clubs. Texas shuffle guitar adds muted chord chops for a percussive effect, as on 'Pride and Joy'."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.tempo-tunes.com/genres/blues"
+        ]
+      },
+      "text": "Tempo-Tunes' 40,760 blues songs have a median of 100 BPM with half between 84 and 118. The busiest band, 82–92, holds only 19%, and the same groove can be counted at half or double time."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.totaldrummer.com/blues-shuffle-drum-beat/"
+        ]
+      },
+      "text": "Programming straight eighths on the hat. The blues shuffle plays the first and third notes of each triplet, so set a triplet grid or heavy swing."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Hoochie_Coochie_Man",
+          "https://en.wikipedia.org/wiki/Smokestack_Lightning",
+          "https://en.wikipedia.org/wiki/Blues"
+        ]
+      },
+      "text": "Assuming every blues is 12-bar I–IV–V. Sixteen-bar stop-time forms ('Hoochie Coochie Man') and one-chord vamps ('Smokestack Lightnin'') are core repertoire; judge the form by its AAB phrasing and blue notes, not only the chord count."
+    },
+    {
+      "evidence": {
+        "inferred": "the cited 12-bar layout uses I7 and IV7 as the tonic and subdominant; both carry a flat seventh that a major key does not own"
+      },
+      "text": "Scoring the dominant-seventh I7 and IV7 as 'leaving the key'. In the blues they are the home chords, so a diatonic-ratio verdict borrowed from major-key pop will misfire; that is why this profile gives no diatonic range."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Twelve-bar_blues"
+        ]
+      },
+      "mode": "mixolydian",
+      "roman": "I7 - I7 - I7 - I7 - IV7 - IV7 - I7 - I7 - V7 - IV7 - I7 - V7",
+      "text": "The basic twelve-bar blues with its V turnaround in bar 12."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Twelve-bar_blues",
+          "https://community.wvu.edu/~jokatz/BluesPaperPrePrint.pdf"
+        ]
+      },
+      "mode": "mixolydian",
+      "roman": "I7 - IV7 - I7 - I7 - IV7 - IV7 - I7 - I7 - V7 - IV7 - I7 - V7",
+      "text": "The quick change: IV in bar 2."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://community.wvu.edu/~jokatz/BluesPaperPrePrint.pdf"
+        ]
+      },
+      "mode": "mixolydian",
+      "roman": "I7 - IV7 - I7 - I7 - IV7 - IV7 - I7 - VI7 - ii7 - V7 - I7 - V7",
+      "text": "Jazz-inflected blues: a VI7 and ii7 prepare the cadential V in bar 10, the commonest elaborations of the skeleton in the Real Book corpus."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.tempo-tunes.com/genres/blues"
+        ]
+      },
+      "feature": "tempo.bpm",
+      "high": 118,
+      "low": 84,
+      "typical": 100,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "inferred": "the shuffle plays the first and third triplet partials (cited Total Drummer), which is 2:1 = 66.7%; the one measured shuffle study found (Räsänen et al., the Rosanna shuffle) came out at 1.79:1 = 64%, so played shuffles sit a little under the notated triplet"
+      },
+      "feature": "swing.percent",
+      "high": 68,
+      "low": 62,
+      "typical": 66.7,
+      "unit": "MPC percent"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Twelve-bar_blues",
+          "https://community.wvu.edu/~jokatz/BluesPaperPrePrint.pdf"
+        ]
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 5,
+      "low": 3,
+      "typical": 3,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "inferred": "in the cited 12-bar layout, I→IV, IV→I, I→V, IV→I and the turnaround I→V are fourths or fifths and only V→IV is a step (5 of 6, ~0.83); Katz's Real Book blues corpus also finds descending fifths the dominant motion at 42%, about four times any other"
+      },
+      "feature": "harmony.root.motion.fifths",
+      "high": 0.9,
+      "low": 0.65,
+      "unit": "fraction"
+    },
+    {
+      "evidence": {
+        "inferred": "a walking boogie bass outlining the chord roots (cited Twelve-bar blues) plays one note a beat (4), and the root–5th–6th–b7 shuffle figure (cited PianoGroove) doubles that on the shuffled eighths (8)"
+      },
+      "feature": "bass.attacks.per.bar",
+      "high": 8,
+      "low": 4,
+      "unit": "attacks per bar"
+    },
+    {
+      "evidence": {
+        "inferred": "range and median of 12 classic blues records as listed on songbpm.com: Hoochie Coochie Man 2:29, Smokestack Lightnin' 3:07, Pride and Joy 3:40, Cross Road Blues 2:30, Mannish Boy 2:58, Boom Boom 2:34, Dust My Broom 2:55, Call It Stormy Monday 3:03, Born Under a Bad Sign 2:47, Hide Away 2:43, Juke 2:47, Bright Lights Big City 2:49; these are single-era cuts, and modern live and album blues run longer"
+      },
+      "feature": "form.minutes",
+      "high": 3.7,
+      "low": 2.5,
+      "typical": 2.8,
+      "unit": "minutes"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Muddy Waters",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Hoochie_Coochie_Man"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.sections",
+        "bass.rest.ratio"
+      ],
+      "listenFor": "The opening verse: the five-note stop-time riff, where the band hits and drops out around the vocal, at a slow 72 BPM.",
+      "title": "Hoochie Coochie Man",
+      "year": 1954
+    },
+    {
+      "artist": "Howlin' Wolf",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Smokestack_Lightning"
+        ]
+      },
+      "features": [
+        "harmony.chords.distinct",
+        "harmony.changes.per.bar"
+      ],
+      "listenFor": "Throughout: a single chord that never changes, with motion carried by Sumlin's riff and the blue-note vocal.",
+      "title": "Smokestack Lightnin'",
+      "year": 1956
+    },
+    {
+      "artist": "B.B. King",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/The_Thrill_Is_Gone"
+        ]
+      },
+      "features": [
+        "harmony.diatonic.ratio",
+        "tempo.bpm"
+      ],
+      "listenFor": "Each chorus: a slow minor 12-bar blues with strings, showing that the form survives minor harmony and orchestral production.",
+      "title": "The Thrill Is Gone",
+      "year": 1969
+    },
+    {
+      "artist": "Stevie Ray Vaughan and Double Trouble",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Pride_and_Joy_(Stevie_Ray_Vaughan_song)"
+        ]
+      },
+      "features": [
+        "swing.percent",
+        "grid.subdivision",
+        "bass.attacks.per.bar"
+      ],
+      "listenFor": "From the intro: a Texas shuffle in E (tuned down to E♭) where muted chord chops and the bassline carry the triplet feel.",
+      "title": "Pride and Joy",
+      "year": 1983
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "upright",
+      "finger"
+    ],
+    "instruments": [
+      "overdrive-guitar",
+      "clean-electric",
+      "grand-piano",
+      "rock-organ",
+      "horns",
+      "strings"
+    ],
+    "machines": [
+      "vintage",
+      "studio"
+    ]
+  },
+  "summary": "A repeating chorus form, usually twelve bars of I, IV and V dominant-seventh chords, sung as AAB stanzas: a line, its repeat, then a longer answering line. It moves on a triplet-based shuffle or a slow 12/8 with the backbeat on 2 and 4, over a boogie or walking bass. The melody leans on minor-pentatonic blue notes against major-sounding chords. Sixteen-bar forms and one-chord vamps belong to the idiom too.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Twelve-bar_blues",
+      "https://en.wikipedia.org/wiki/Blues",
+      "https://www.totaldrummer.com/blues-shuffle-drum-beat/",
+      "https://en.wikipedia.org/wiki/Hoochie_Coochie_Man",
+      "https://en.wikipedia.org/wiki/Smokestack_Lightning"
+    ]
+  }
+}

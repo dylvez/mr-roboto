@@ -1,0 +1,524 @@
+{
+  "aliases": [
+    "neo soul",
+    "nu soul",
+    "soulquarians",
+    "alternative r&b"
+  ],
+  "bassHands": [
+    "palladino"
+  ],
+  "family": "soul",
+  "feels": [
+    "Neo-Soul Pocket"
+  ],
+  "form": {
+    "evidence": {
+      "cited": [
+        "https://beatkey.app/how-to-make-neo-soul-music"
+      ]
+    },
+    "sections": [
+      {
+        "bars": 4,
+        "name": "Intro"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 4,
+        "name": "Pre-Chorus"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 4,
+        "name": "Pre-Chorus"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 8,
+        "name": "Bridge"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 16,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "neo-soul",
+  "idioms": [
+    "neo-soul",
+    "soul"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Neo_soul",
+          "https://en.wikipedia.org/wiki/Voodoo_(D'Angelo_album)",
+          "https://www.slate.com/articles/arts/music_box/2013/02/behind_the_scenes_with_questlove_and_d_angelo_on_voodoo.html"
+        ]
+      },
+      "name": "D'Angelo and Questlove",
+      "period": "1995–2000",
+      "why": "D'Angelo's Brown Sugar (1995) helped launch the genre and Voodoo (2000) is called its crowning achievement. Recorded live at Electric Lady with Questlove as co-pilot, Voodoo's grooves were built to hang on the back of the beat: play as well as possible, then deliberately insert the glitch."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/J_Dilla",
+          "https://www.lrb.co.uk/the-paper/v44/n20/francis-gooding/basement-beats"
+        ]
+      },
+      "name": "J Dilla",
+      "period": "1995–2006",
+      "why": "Questlove credits him with inventing the sound called neo-soul. On the MPC3000 he set straight and swung time against each other — snares nudged forward, kicks and bass lagging — and that feel leaked into Voodoo's live playing."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Voodoo_(D'Angelo_album)",
+          "https://www.slate.com/articles/arts/music_box/2013/02/behind_the_scenes_with_questlove_and_d_angelo_on_voodoo.html"
+        ]
+      },
+      "name": "Pino Palladino",
+      "period": "1998–2000",
+      "why": "Wrote every bass line on Voodoo on a 1961 P-bass and played them far behind the beat. He heard the backing tracks as the kind of deconstructed, deliberately messed-up rhythm J Dilla would make."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Baduizm",
+          "https://en.wikipedia.org/wiki/Soulquarians"
+        ]
+      },
+      "name": "Erykah Badu",
+      "period": "1996–2000",
+      "why": "Baduizm (1997) set heavier hip-hop beats under organic soul with Ron Carter on bass and The Roots on some tracks. She was a Soulquarian; Mama's Gun (2000) came out of the same Electric Lady sessions."
+    }
+  ],
+  "meters": [
+    "4/4",
+    "6/8"
+  ],
+  "name": "Neo-soul / contemporary R&B",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://academic.oup.com/mts/article/45/2/181/7234305"
+        ]
+      },
+      "text": "Layers are displaced against each other on purpose: in D'Angelo's 'Left and Right' (92 BPM) the guitar/percussion layer and the kick/bass/snare layer sit about 55 ms apart on beats 1 and 3 and about 80 ms on 2 and 4 — 8–12% of a quarter note — so the beat becomes a wide 'bin' rather than a point."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.slate.com/articles/arts/music_box/2013/02/behind_the_scenes_with_questlove_and_d_angelo_on_voodoo.html",
+          "https://www.lrb.co.uk/the-paper/v44/n20/francis-gooding/basement-beats"
+        ]
+      },
+      "text": "D'Angelo asked Questlove to play 'drunk' and 'as slow and as dusted' as he had ever played, and Pino Palladino to put the bass far behind the beat; the feel came from J Dilla's MPC work, which pulled basslines far behind, let kicks lag and rushed snares."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://beatkey.app/how-to-make-neo-soul-music",
+          "https://www.reasonstudios.com/news/post/how-to-create-a-neo-soul-beat-in-reason-10"
+        ]
+      },
+      "text": "Programmed versions keep drums unquantised: kick 2–5 ms early, snare 10–20 ms late, 5–20 ms of human offset, ghost notes at 20–30% velocity; Reason's tutorial warns that quantising makes it stiff."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://motifkit.com/neo-soul-chord-progressions/",
+          "https://hearandplay.com/main/neo-soul-chords-minor-chords/"
+        ]
+      },
+      "text": "Nearly every chord is extended to a 9th, 11th or 13th — minor 9 and minor 11 above all, since extended minor chords rarely go past the 11th — in close, middle-register Rhodes or Wurlitzer voicings with the root left to the bass."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://motifkit.com/neo-soul-chord-progressions/"
+        ]
+      },
+      "text": "Atmosphere over resolution: quartal voicings, parallel planing of one shape, and two-chord vamps are as common as functional ii–V–I; chords are treated as colour, not destination."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Voodoo_(D'Angelo_album)",
+          "https://www.slate.com/articles/arts/music_box/2013/02/behind_the_scenes_with_questlove_and_d_angelo_on_voodoo.html"
+        ]
+      },
+      "text": "Played electric bass, not a sub: Palladino wrote Voodoo's bass lines on a 1961 P-bass, taking Stevie Wonder in the choruses and P-Funk in the verses, and sat far behind the beat."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Soulquarians",
+          "https://en.wikipedia.org/wiki/Really_Love_(D%27Angelo_song)",
+          "https://beatkey.app/how-to-make-neo-soul-music"
+        ]
+      },
+      "text": "Rhodes and Wurlitzer, electric guitar, played bass, vintage drums — Electric Lady's 1968 Ludwig kit — and strings (Brent Fischer's string intro on Really Love); organic textures over trap drums and 808s."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Voodoo_(D'Angelo_album)",
+          "https://beatkey.app/how-to-make-neo-soul-music"
+        ]
+      },
+      "text": "Russell Elevado recorded and mixed Voodoo on analogue and vintage gear rather than contemporary digital techniques; guides put bus compression at 2–3 dB of gain reduction and the kick low-passed near 200 Hz."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre",
+          "https://luvlang.studio/research/loudness-2026"
+        ]
+      },
+      "text": "Loudness is measured R&B/Soul as a whole: 11,412 tracks at a −9.6 LUFS median (middle half −11.2 to −8.3), and a separate BS.1770 survey with R&B at −12.6; neo-soul's live, dynamic records are taken to sit toward the quieter end."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Neo_soul",
+          "https://en.wikipedia.org/wiki/Untitled_(How_Does_It_Feel)",
+          "https://en.wikipedia.org/wiki/Voodoo_(D'Angelo_album)"
+        ]
+      },
+      "text": "Album-oriented rather than single-driven, with long songs and codas: Untitled (How Does It Feel) runs 7:10 in 6/8 and stops mid-word on the last chorus; Voodoo runs 78:54."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Voodoo_(D'Angelo_album)",
+          "https://www.slate.com/articles/arts/music_box/2013/02/behind_the_scenes_with_questlove_and_d_angelo_on_voodoo.html",
+          "https://en.wikipedia.org/wiki/Untitled_(How_Does_It_Feel)"
+        ]
+      },
+      "text": "Voodoo was cut live with the players face to face and, apart from Untitled, mostly without overdubs, after the band spent 1996–97 jamming and studying funk and soul recordings; Untitled's harmonies are D'Angelo's own overdubbed voice."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Neo_soul"
+        ]
+      },
+      "text": "Conscious, introspective singer-songwriter lyrics, with women artists unusually prominent."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.reasonstudios.com/news/post/how-to-create-a-neo-soul-beat-in-reason-10"
+        ]
+      },
+      "text": "Quantising the drums; the feel lives in the displacement, and a quantised beat reads stiff."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.lrb.co.uk/the-paper/v44/n20/francis-gooding/basement-beats",
+          "https://en.wikipedia.org/wiki/Voodoo_(D'Angelo_album)"
+        ]
+      },
+      "text": "Treating 'behind the beat' as random sloppiness; Dilla's shifts were precise adjustments, and Questlove describes playing as perfectly as possible, then inserting the glitch deliberately and consistently."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://motifkit.com/neo-soul-chord-progressions/"
+        ]
+      },
+      "text": "Driving every progression to a strong cadence; the style prefers vamps, planing and unresolved colour chords."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://motifkit.com/neo-soul-chord-progressions/"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "ii9 - V13 - Imaj9",
+      "text": "The extended ii–V–I, the one functional cadence the style uses freely."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://motifkit.com/neo-soul-chord-progressions/"
+        ]
+      },
+      "mode": "dorian",
+      "roman": "i11 - iv11",
+      "text": "The minor-eleven drift, slow and non-resolving."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://motifkit.com/neo-soul-chord-progressions/"
+        ]
+      },
+      "mode": "lydian",
+      "roman": "Imaj7#11 - bVIImaj7#11",
+      "text": "Parallel planing: one shape slid down a whole step for colour."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://hearandplay.com/main/neo-soul-chords-minor-chords/"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "i9 - v9 - iv9",
+      "text": "Minor-nine chords on i, v and iv, voiced close with inversions."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://beatkey.app/how-to-make-neo-soul-music"
+        ]
+      },
+      "mode": "dorian",
+      "roman": "im9 - IVmaj9",
+      "text": "The two-chord vamp with the Dorian major IV."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "cited": [
+          "https://beatkey.app/how-to-make-neo-soul-music",
+          "https://www.reasonstudios.com/news/post/how-to-create-a-neo-soul-beat-in-reason-10",
+          "https://academic.oup.com/mts/article/45/2/181/7234305"
+        ]
+      },
+      "feature": "tempo.bpm",
+      "high": 95,
+      "low": 70,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://beatkey.app/how-to-make-neo-soul-music"
+        ]
+      },
+      "feature": "pocket.snare.ms",
+      "high": 20,
+      "low": 10,
+      "unit": "ms"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://academic.oup.com/mts/article/45/2/181/7234305"
+        ]
+      },
+      "feature": "pocket.spread.ms",
+      "high": 80,
+      "low": 55,
+      "unit": "ms"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://beatkey.app/how-to-make-neo-soul-music",
+          "https://www.reasonstudios.com/news/post/how-to-create-a-neo-soul-beat-in-reason-10"
+        ]
+      },
+      "feature": "humanize.timing.ms",
+      "high": 20,
+      "low": 5,
+      "unit": "ms"
+    },
+    {
+      "evidence": {
+        "inferred": "beatkey.app's ghost-note velocity of 20–30% of the main hit, converted as 20·log10(0.3) = −10.5 dB and 20·log10(0.2) = −14 dB, assuming velocity maps linearly to amplitude"
+      },
+      "feature": "ghost.depth.db",
+      "high": 14,
+      "low": 10.5,
+      "unit": "dB under the normal tier"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre",
+          "https://luvlang.studio/research/loudness-2026"
+        ]
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -8.3,
+      "low": -12.6,
+      "typical": -9.6,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://motifkit.com/neo-soul-chord-progressions/",
+          "https://beatkey.app/how-to-make-neo-soul-music"
+        ]
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 5,
+      "low": 2,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Voodoo_(D'Angelo_album)",
+          "https://beatkey.app/how-to-make-neo-soul-music"
+        ]
+      },
+      "feature": "bass.is.sub",
+      "high": 0,
+      "low": 0,
+      "typical": 0,
+      "unit": "1 or 0"
+    },
+    {
+      "evidence": {
+        "inferred": "from the cited lengths: On & On 3:45, Really Love 5:44, Untitled (How Does It Feel) 7:10, with Voodoo running 78:54 as an album of long songs"
+      },
+      "feature": "form.minutes",
+      "high": 7,
+      "low": 3.5,
+      "unit": "minutes"
+    },
+    {
+      "evidence": {
+        "inferred": "beatkey.app's sections: a 4–8-bar intro, 16-bar verse and 4–8-bar pre-chorus put the first chorus 24–32 bars in; 24 bars at 95 BPM is 61 s, 32 bars at 70 BPM is 110 s"
+      },
+      "feature": "form.hook.seconds",
+      "high": 110,
+      "low": 60,
+      "unit": "seconds"
+    }
+  ],
+  "references": [
+    {
+      "artist": "D'Angelo",
+      "evidence": {
+        "cited": [
+          "https://academic.oup.com/mts/article/45/2/181/7234305"
+        ]
+      },
+      "features": [
+        "pocket.spread.ms",
+        "tempo.bpm"
+      ],
+      "listenFor": "At 92 BPM, the guitar and percussion landing 55–80 ms off the kick, bass and snare, widening the beat.",
+      "title": "Left & Right",
+      "year": 2000
+    },
+    {
+      "artist": "D'Angelo",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Untitled_(How_Does_It_Feel)"
+        ]
+      },
+      "features": [
+        "form.minutes",
+        "form.density.spread"
+      ],
+      "listenFor": "A 6/8 Prince-style ballad with overdubbed stacked vocals building to a final chorus that cuts off mid-word at 7:10.",
+      "title": "Untitled (How Does It Feel)",
+      "year": 2000
+    },
+    {
+      "artist": "D'Angelo",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Really_Love_(D%27Angelo_song)"
+        ]
+      },
+      "features": [
+        "form.hook.seconds",
+        "form.minutes"
+      ],
+      "listenFor": "Brent Fischer's string intro before the groove, in a 5:44 song.",
+      "title": "Really Love",
+      "year": 2014
+    },
+    {
+      "artist": "Erykah Badu",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Baduizm"
+        ]
+      },
+      "features": [
+        "form.minutes"
+      ],
+      "listenFor": "The early, compact form of the genre — 3:45 — with hip-hop-weighted drums under jazz-inflected soul.",
+      "title": "On & On",
+      "year": 1996
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "finger"
+    ],
+    "instruments": [
+      "rhodes",
+      "wurlitzer",
+      "organ",
+      "clean-electric",
+      "strings",
+      "oohs",
+      "trumpet"
+    ],
+    "machines": [
+      "studio",
+      "vintage"
+    ]
+  },
+  "summary": "Soul and R&B brought back to live, organic playing and album-length songs, mixed with funk, jazz and hip-hop, as against the producer-driven digital R&B of the 1990s. Its grooves lean on extended ninth and eleventh chords on Rhodes and deliberately displaced rhythm — drums and bass hanging behind the beat in the J Dilla-derived 'drunk' pocket of D'Angelo's Voodoo.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Neo_soul",
+      "https://motifkit.com/neo-soul-chord-progressions/",
+      "https://en.wikipedia.org/wiki/Voodoo_(D'Angelo_album)"
+    ]
+  }
+}

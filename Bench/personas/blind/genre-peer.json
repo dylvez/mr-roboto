@@ -1,0 +1,527 @@
+{
+ "persona": "peer",
+ "items": [
+  {
+   "id": "boom-bap-form",
+   "label": "Boom-bap hip-hop form",
+   "genre": "boom-bap",
+   "material": {
+    "kind": "form",
+    "tempo": 90,
+    "sections": [
+     {
+      "bars": 4,
+      "name": "Intro"
+     },
+     {
+      "bars": 16,
+      "name": "Verse"
+     },
+     {
+      "bars": 8,
+      "name": "Hook"
+     },
+     {
+      "bars": 16,
+      "name": "Verse"
+     },
+     {
+      "bars": 8,
+      "name": "Hook"
+     },
+     {
+      "bars": 16,
+      "name": "Verse"
+     },
+     {
+      "bars": 8,
+      "name": "Hook"
+     },
+     {
+      "bars": 4,
+      "name": "Outro"
+     }
+    ]
+   },
+   "expects": {
+    "peer.hook-inside-thirty": true,
+    "peer.repetition": true
+   }
+  },
+  {
+   "id": "country-form",
+   "label": "Country form",
+   "genre": "country",
+   "material": {
+    "kind": "form",
+    "tempo": 108,
+    "sections": [
+     {
+      "bars": 4,
+      "name": "Intro"
+     },
+     {
+      "bars": 16,
+      "name": "Verse"
+     },
+     {
+      "bars": 8,
+      "name": "Chorus"
+     },
+     {
+      "bars": 16,
+      "name": "Verse"
+     },
+     {
+      "bars": 8,
+      "name": "Chorus"
+     },
+     {
+      "bars": 8,
+      "name": "Bridge"
+     },
+     {
+      "bars": 8,
+      "name": "Chorus"
+     },
+     {
+      "bars": 4,
+      "name": "Outro"
+     }
+    ]
+   },
+   "expects": {
+    "peer.hook-inside-thirty": true
+   }
+  },
+  {
+   "id": "drum-and-bass-form",
+   "label": "Drum & bass / jungle form",
+   "genre": "drum-and-bass",
+   "material": {
+    "kind": "form",
+    "tempo": 174,
+    "sections": [
+     {
+      "bars": 32,
+      "name": "Intro"
+     },
+     {
+      "bars": 16,
+      "name": "Breakdown"
+     },
+     {
+      "bars": 32,
+      "name": "Drop"
+     },
+     {
+      "bars": 16,
+      "name": "Drop Variation"
+     },
+     {
+      "bars": 16,
+      "name": "Breakdown"
+     },
+     {
+      "bars": 32,
+      "name": "Drop"
+     },
+     {
+      "bars": 32,
+      "name": "Outro"
+     }
+    ]
+   },
+   "expects": {
+    "peer.hook-inside-thirty": true,
+    "peer.form-turns": true
+   }
+  },
+  {
+   "id": "dubstep-form",
+   "label": "Dubstep form",
+   "genre": "dubstep",
+   "material": {
+    "kind": "form",
+    "tempo": 140,
+    "sections": [
+     {
+      "bars": 32,
+      "name": "Intro"
+     },
+     {
+      "bars": 16,
+      "name": "Build"
+     },
+     {
+      "bars": 32,
+      "name": "Drop"
+     },
+     {
+      "bars": 16,
+      "name": "Mid-Section"
+     },
+     {
+      "bars": 32,
+      "name": "Breakdown"
+     },
+     {
+      "bars": 16,
+      "name": "Build"
+     },
+     {
+      "bars": 32,
+      "name": "Drop"
+     },
+     {
+      "bars": 32,
+      "name": "Outro"
+     }
+    ]
+   },
+   "expects": {
+    "peer.hook-inside-thirty": true,
+    "peer.form-turns": true,
+    "peer.repetition": true
+   }
+  },
+  {
+   "id": "folk-form",
+   "label": "Folk / singer-songwriter form",
+   "genre": "folk",
+   "material": {
+    "kind": "form",
+    "tempo": 112,
+    "sections": [
+     {
+      "bars": 4,
+      "name": "Intro"
+     },
+     {
+      "bars": 16,
+      "name": "Verse"
+     },
+     {
+      "bars": 16,
+      "name": "Verse"
+     },
+     {
+      "bars": 16,
+      "name": "Verse"
+     },
+     {
+      "bars": 8,
+      "name": "Instrumental"
+     },
+     {
+      "bars": 16,
+      "name": "Verse"
+     },
+     {
+      "bars": 4,
+      "name": "Outro"
+     }
+    ]
+   },
+   "expects": {
+    "peer.form-turns": true,
+    "peer.repetition": true
+   }
+  },
+  {
+   "id": "neo-soul-form",
+   "label": "Neo-soul / contemporary R&B form",
+   "genre": "neo-soul",
+   "material": {
+    "kind": "form",
+    "tempo": 82.5,
+    "sections": [
+     {
+      "bars": 4,
+      "name": "Intro"
+     },
+     {
+      "bars": 16,
+      "name": "Verse"
+     },
+     {
+      "bars": 4,
+      "name": "Pre-Chorus"
+     },
+     {
+      "bars": 8,
+      "name": "Chorus"
+     },
+     {
+      "bars": 16,
+      "name": "Verse"
+     },
+     {
+      "bars": 4,
+      "name": "Pre-Chorus"
+     },
+     {
+      "bars": 8,
+      "name": "Chorus"
+     },
+     {
+      "bars": 8,
+      "name": "Bridge"
+     },
+     {
+      "bars": 8,
+      "name": "Chorus"
+     },
+     {
+      "bars": 16,
+      "name": "Outro"
+     }
+    ]
+   },
+   "expects": {
+    "peer.hook-inside-thirty": true
+   }
+  },
+  {
+   "id": "pop-form",
+   "label": "Contemporary pop form",
+   "genre": "pop",
+   "material": {
+    "kind": "form",
+    "tempo": 112.5,
+    "sections": [
+     {
+      "bars": 4,
+      "name": "Intro"
+     },
+     {
+      "bars": 8,
+      "name": "Verse"
+     },
+     {
+      "bars": 4,
+      "name": "Pre-Chorus"
+     },
+     {
+      "bars": 8,
+      "name": "Chorus"
+     },
+     {
+      "bars": 8,
+      "name": "Verse"
+     },
+     {
+      "bars": 4,
+      "name": "Pre-Chorus"
+     },
+     {
+      "bars": 8,
+      "name": "Chorus"
+     },
+     {
+      "bars": 8,
+      "name": "Bridge"
+     },
+     {
+      "bars": 8,
+      "name": "Chorus"
+     },
+     {
+      "bars": 4,
+      "name": "Outro"
+     }
+    ]
+   },
+   "expects": {
+    "peer.hook-inside-thirty": true
+   }
+  },
+  {
+   "id": "samba-form",
+   "label": "Samba form",
+   "genre": "samba",
+   "material": {
+    "kind": "form",
+    "tempo": 130.0,
+    "sections": [
+     {
+      "bars": 16,
+      "name": "Primeira parte"
+     },
+     {
+      "bars": 8,
+      "name": "Refrão central"
+     },
+     {
+      "bars": 16,
+      "name": "Segunda parte"
+     },
+     {
+      "bars": 8,
+      "name": "Refrão principal"
+     },
+     {
+      "bars": 16,
+      "name": "Primeira parte"
+     },
+     {
+      "bars": 8,
+      "name": "Refrão central"
+     },
+     {
+      "bars": 16,
+      "name": "Segunda parte"
+     },
+     {
+      "bars": 8,
+      "name": "Refrão principal"
+     }
+    ]
+   },
+   "expects": {
+    "peer.form-turns": true,
+    "peer.repetition": true
+   }
+  },
+  {
+   "id": "synth-pop-form",
+   "label": "Synth-pop / EDM pop form",
+   "genre": "synth-pop",
+   "material": {
+    "kind": "form",
+    "tempo": 121.0,
+    "sections": [
+     {
+      "bars": 8,
+      "name": "Intro"
+     },
+     {
+      "bars": 16,
+      "name": "Verse"
+     },
+     {
+      "bars": 8,
+      "name": "Pre-Chorus"
+     },
+     {
+      "bars": 16,
+      "name": "Chorus"
+     },
+     {
+      "bars": 16,
+      "name": "Verse"
+     },
+     {
+      "bars": 8,
+      "name": "Pre-Chorus"
+     },
+     {
+      "bars": 16,
+      "name": "Chorus"
+     },
+     {
+      "bars": 8,
+      "name": "Bridge"
+     },
+     {
+      "bars": 16,
+      "name": "Chorus"
+     },
+     {
+      "bars": 8,
+      "name": "Outro"
+     }
+    ]
+   },
+   "expects": {
+    "peer.hook-inside-thirty": true,
+    "peer.repetition": true
+   }
+  },
+  {
+   "id": "trap-form",
+   "label": "Trap form",
+   "genre": "trap",
+   "material": {
+    "kind": "form",
+    "tempo": 140,
+    "sections": [
+     {
+      "bars": 8,
+      "name": "Intro"
+     },
+     {
+      "bars": 16,
+      "name": "Hook"
+     },
+     {
+      "bars": 16,
+      "name": "Verse"
+     },
+     {
+      "bars": 8,
+      "name": "Bridge"
+     },
+     {
+      "bars": 16,
+      "name": "Hook"
+     },
+     {
+      "bars": 8,
+      "name": "Outro"
+     }
+    ]
+   },
+   "expects": {
+    "peer.hook-inside-thirty": true
+   }
+  },
+  {
+   "id": "trip-hop-form",
+   "label": "Trip-hop form",
+   "genre": "trip-hop",
+   "material": {
+    "kind": "form",
+    "tempo": 81.0,
+    "sections": [
+     {
+      "bars": 8,
+      "name": "Intro"
+     },
+     {
+      "bars": 16,
+      "name": "Verse"
+     },
+     {
+      "bars": 8,
+      "name": "Chorus"
+     },
+     {
+      "bars": 16,
+      "name": "Verse"
+     },
+     {
+      "bars": 8,
+      "name": "Chorus"
+     },
+     {
+      "bars": 8,
+      "name": "Bridge"
+     },
+     {
+      "bars": 8,
+      "name": "Chorus"
+     },
+     {
+      "bars": 16,
+      "name": "Outro"
+     }
+    ]
+   },
+   "expects": {
+    "peer.hook-inside-thirty": true,
+    "peer.repetition": true
+   }
+  }
+ ]
+}

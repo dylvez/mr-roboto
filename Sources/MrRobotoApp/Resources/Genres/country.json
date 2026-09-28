@@ -1,0 +1,518 @@
+{
+  "aliases": [
+    "country and western",
+    "honky-tonk",
+    "nashville sound",
+    "bakersfield sound",
+    "classic country",
+    "outlaw country"
+  ],
+  "bassHands": [
+    "root-fifth"
+  ],
+  "family": "americana",
+  "feels": [
+    "Country Two-Step",
+    "Train Beat",
+    "Shuffle",
+    "Waltz"
+  ],
+  "form": {
+    "evidence": {
+      "inferred": "section order is the cited VCVCBC 'Nashville form' (Songwriting Authority, lacuna.fm); bar counts sized so 72 bars of 4/4 at the cited 108 BPM median run about 2.7 minutes, in line with the cited ~3-minute norm"
+    },
+    "sections": [
+      {
+        "bars": 4,
+        "name": "Intro"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 8,
+        "name": "Bridge"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 4,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "country",
+  "idioms": [
+    "country"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Hank_Williams"
+        ]
+      },
+      "name": "Hank Williams",
+      "period": "1946–1953",
+      "why": "He never learned to read music. He built songs from storytelling and his own experience, and took rhythm and showmanship from the bluesman Rufus 'Tee-Tot' Payne. Fred Rose of Acuff-Rose signed him as a writer in 1946 and set up his move to MGM; 'Lovesick Blues' (1949) went to No. 1 with the Drifting Cowboys, whose line-up included Don Helms on steel and Jerry Rivers on fiddle."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Nashville_sound",
+          "https://en.wikipedia.org/wiki/Crazy_(Willie_Nelson_song)"
+        ]
+      },
+      "name": "Chet Atkins and Owen Bradley (Nashville sound)",
+      "period": "1957–1960s",
+      "why": "RCA, Columbia and Decca staff producers built the Nashville sound in the late 1950s to win back sales lost to rock 'n' roll. They replaced fiddle and steel with strings, background singers and smooth tempos. Bradley's 'Crazy' session for Patsy Cline brought in the jazz-leaning seventh chords Willie Nelson favoured."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Bakersfield_sound",
+          "https://en.wikipedia.org/wiki/Act_Naturally"
+        ]
+      },
+      "name": "Buck Owens and Don Rich (Bakersfield sound)",
+      "period": "1954–1960s",
+      "why": "A West Coast reaction to Nashville's orchestras: twin Fender Telecasters picked rather than strummed, a big drum beat and fiddle. Don Rich, the Buckaroos' band leader, pushed Owens to cut 'Act Naturally', his first country No. 1 (1963)."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Folsom_Prison_Blues",
+          "https://www.drumeo.com/beat/a-drummers-guide-to-country/"
+        ]
+      },
+      "name": "Johnny Cash and the Tennessee Two",
+      "period": "1955–1968",
+      "why": "Cut at Sun in 1955 with Luther Perkins on guitar and Marshall Grant on bass, Cash's records joined the train-song and prison-song traditions. On 'Folsom Prison Blues' a paper under the strings stood in for a drummer. His 1968 live recording at Folsom went to No. 1 country, and his 1960s records are standard examples of the train beat."
+    }
+  ],
+  "meters": [
+    "4/4",
+    "2/4",
+    "3/4"
+  ],
+  "name": "Country",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.drumming.com/drum-lesson/how-to-play-a-train-beat",
+          "https://www.drumeo.com/beat/a-drummers-guide-to-country/"
+        ]
+      },
+      "text": "Train beat: sixteenths hand to hand on the snare (often brushes or rods), accents on the 'and' of 1 and 2, kick on 1 and 2 of a 2/4 bar, hi-hat foot on the 'ands' or all eighths; played with a slight forward edge, just short of rushing."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://songcage.com/blog/how-to-write-a-country-song/",
+          "https://www.drumeo.com/beat/a-drummers-guide-to-country/"
+        ]
+      },
+      "text": "Classic country feels are the two-beat, the shuffle, the train beat and the 3/4 waltz; cross-stick patterns carry ballads and verses."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://songwritingauthority.com/country-songwriting/",
+          "https://www.lacuna.fm/blog/how-to-write-a-country-song"
+        ]
+      },
+      "text": "The 'Nashville form' is verse–chorus–verse–chorus–bridge–chorus. Each verse adds new story detail, the chorus repeats and carries the title, and the bridge makes one shift in time or perspective before the last chorus."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://www.midside.com/presentations/declercq_2018_icmc_text.pdf"
+        ]
+      },
+      "text": "In de Clercq's corpus of 200 famous country songs (1933–2014), 98% use a major tonic only, compared with 78% in the RS 200 rock corpus. 82% of chord instances and 86% of bars are I, IV or V. V is more common than IV, the reverse of rock, and 94% of chords are in root position. Few songs go past seven chords."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://www.midside.com/presentations/declercq_2018_icmc_text.pdf",
+          "https://arxiv.org/pdf/2606.07334"
+        ]
+      },
+      "text": "Country keeps more traditional cadences than rock: IV→V and ii→V happen more often than the reverse, and progressive root motion prevails. Inversions occur mostly on scale degrees 3 and 7 (e.g. I/3 during a bass walk from 1 up to 4, with ii7 expanding the tonic). Chord vocabulary is the most concentrated of the Chordonomicon genres: the top 10 chords cover 82% of chords, against 74% for rock."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://www.notreble.com/buzz/2025/05/21/mastering-country-bass-lines-roots-fifths-and-chord-function-explained/"
+        ]
+      },
+      "text": "Roots and fifths, but chosen by function: R–5–R–5, R–low5–R–low5 or R–5–R–R, with the note before a change setting it up. Stay diatonic and use scale walk-ups (G–A–B–C) into the next chord rather than chromatic approaches."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Nashville_sound",
+          "https://en.wikipedia.org/wiki/Bakersfield_sound",
+          "https://en.wikipedia.org/wiki/Crazy_(Willie_Nelson_song)"
+        ]
+      },
+      "text": "Nashville sound (from 1957, Chet Atkins, Owen Bradley): the fiddle and nasal steel give way to smooth strings, background-vocal groups such as the Anita Kerr Quartet and the Jordanaires, and pop-smooth tempos. Bakersfield (Buck Owens, Merle Haggard) reacted with twin Telecasters picked rather than strummed, a big drum beat, fiddle and occasional pedal-steel solos."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Crazy_(Willie_Nelson_song)",
+          "https://en.wikipedia.org/wiki/Folsom_Prison_Blues"
+        ]
+      },
+      "text": "The A-team session sound on Patsy Cline's 'Crazy' (1961): Floyd Cramer piano, Bob Moore bass, Harold Bradley electric guitar, Buddy Harman drums, steel guitar and the Jordanaires. At the other extreme, Cash's 'Folsom Prison Blues' (1955) got its percussion from a piece of paper threaded under the guitar strings."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre"
+        ]
+      },
+      "text": "Released country and folk masters measure at a median of −9.6 LUFS integrated (middle half −11.4 to −8.2, n=10,779). That is about as loud as pop (−9.5) and a little under rock (−9.2), so country is not mastered quiet."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Crazy_(Willie_Nelson_song)"
+        ]
+      },
+      "text": "The singer phrases, not the grid. Patsy Cline sang 'Crazy' slightly behind the beat, with ascending and descending intervals and broken-chord figures; Bradley had her sing it her own way, not in Nelson's style."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://songcage.com/blog/how-to-write-a-country-song/",
+          "https://www.lacuna.fm/blog/how-to-write-a-country-song"
+        ]
+      },
+      "text": "Country lyrics use more scene-setting words than the other genres in the study Song Cage quotes. The title often carries a twist or double meaning, and by the final chorus it means something new because of concrete detail, not because it has been repeated."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.tempo-tunes.com/genres/country"
+        ]
+      },
+      "text": "Tempo-Tunes (59,536 tracks) puts the median at 108 BPM with half of songs between 90 and 128, and the busiest band at 80–90 BPM. It warns that one groove can be counted at half or double time, which matters for two-beat and train-beat records."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://songcage.com/blog/how-to-write-a-country-song/",
+          "https://www.midside.com/presentations/declercq_2018_icmc_text.pdf"
+        ]
+      },
+      "text": "Writing a four-chord loop with no V→I, in a minor key, at a slow tempo, with even strumming: Song Cage names these as the signals that turn a would-be country song into sad pop. Put a V→I cadence in, write in major, and choose a real feel (two-beat, shuffle or train beat)."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.notreble.com/buzz/2025/05/21/mastering-country-bass-lines-roots-fifths-and-chord-function-explained/"
+        ]
+      },
+      "text": "Borrowing jazz chromatic approach notes in the bass. Country bass stays diatonic: roots and fifths chosen for the chord that comes next, with scale-step walk-ups."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://songcage.com/blog/how-to-write-a-country-song/",
+          "https://www.lacuna.fm/blog/how-to-write-a-country-song"
+        ]
+      },
+      "text": "Holding the title back. Nearly every No. 1 in Murphy's 2002 sample got the title in within 60 seconds, and the chorus carries it, so don't spend a minute on an intro and a long first verse."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.midside.com/presentations/declercq_2018_icmc_text.pdf",
+          "https://songwritingauthority.com/country-songwriting/"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "I - IV - V - I",
+      "text": "The three-chord frame: I, IV and V make up 82% of chord instances in the country corpus, and V goes home to I."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://songwritingauthority.com/country-songwriting/",
+          "https://songcage.com/blog/how-to-write-a-country-song/"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "I - V - vi - IV",
+      "text": "The modern-country relative of I–IV–V. If it loops with no V→I anywhere else in the song, it starts to read as pop."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.midside.com/presentations/declercq_2018_icmc_text.pdf"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "I - ii7 - I - IV",
+      "text": "The tonic expansion from the '80's Ladies' chart: I, ii7, I over its third, then IV, with the bass walking up from scale degree 1 to 4."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.midside.com/presentations/declercq_2018_icmc_text.pdf"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "ii - V - I",
+      "text": "The traditional cadence country keeps more than rock does; ii and IV lead to V far more often than the other way round."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.tempo-tunes.com/genres/country"
+        ]
+      },
+      "feature": "tempo.bpm",
+      "high": 128,
+      "low": 90,
+      "typical": 108,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre"
+        ]
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -8.2,
+      "low": -11.4,
+      "typical": -9.6,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.midside.com/presentations/declercq_2018_icmc_text.pdf",
+          "https://songcage.com/blog/how-to-write-a-country-song/"
+        ]
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 7,
+      "low": 3,
+      "typical": 4,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "inferred": "de Clercq's 200-song corpus: 82% of chord instances are I, IV or V and vi is next most common, while II7 is about 1.3% of changes and bVII appears but is rare; the rest of the vocabulary (ii, iii, vi) is diatonic, so at least ~85% of chords stay in key"
+      },
+      "feature": "harmony.diatonic.ratio",
+      "high": 1.0,
+      "low": 0.85,
+      "unit": "fraction"
+    },
+    {
+      "evidence": {
+        "inferred": "Nashville number charts in the cited de Clercq corpus put at most one number per bar ('each new number is a new bar'), and the corpus counts long holds such as eight bars of tonic as one instance; so one change a bar is the ceiling and a change every two to four bars is common"
+      },
+      "feature": "harmony.changes.per.bar",
+      "high": 1.0,
+      "low": 0.25,
+      "unit": "changes per bar"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.notreble.com/buzz/2025/05/21/mastering-country-bass-lines-roots-fifths-and-chord-function-explained/"
+        ]
+      },
+      "feature": "bass.attacks.per.bar",
+      "high": 4,
+      "low": 2,
+      "typical": 4,
+      "unit": "attacks per bar"
+    },
+    {
+      "evidence": {
+        "inferred": "the cited No Treble lesson (Ryan Madora) says country bass stays within the diatonic scale and uses chromatic passing tones sparingly, approaching changes by diatonic walk-ups instead; a half-step-below approach on most changes would read as jazz or blues"
+      },
+      "feature": "bass.approach.rate",
+      "high": 0.2,
+      "low": 0.0,
+      "unit": "fraction of root moves ≥ a third"
+    },
+    {
+      "evidence": {
+        "inferred": "train beat and two-beat are straight (50) per the cited drumming.com lesson; the honky-tonk shuffle is swung toward the triplet (66.7); both are listed as classic country feels by Song Cage"
+      },
+      "feature": "swing.percent",
+      "high": 66.7,
+      "low": 50,
+      "unit": "MPC percent"
+    },
+    {
+      "evidence": {
+        "inferred": "upper bound from Ralph Murphy's finding (quoted by Song Cage and lacuna.fm) that 19 of 21 country No. 1s of 2002 got the title in within 60 seconds; typical from Songwriting Authority's mid-2020s norm of the hook within 30 seconds; lower bound is a short intro plus one verse at the cited ~108 BPM"
+      },
+      "feature": "form.hook.seconds",
+      "high": 60,
+      "low": 20,
+      "typical": 30,
+      "unit": "seconds"
+    },
+    {
+      "evidence": {
+        "inferred": "Song Cage cites a 181.6 s mean for Billboard country songs 1946–2008 and Songwriting Authority puts a mid-2020s radio single at about 3:10; songbpm.com lists the classic references Folsom Prison Blues 2:49, Crazy 2:45, Act Naturally 2:23, Your Cheatin' Heart 2:42 and Randy Travis's Forever and Ever, Amen 3:33"
+      },
+      "feature": "form.minutes",
+      "high": 3.6,
+      "low": 2.4,
+      "typical": 3.0,
+      "unit": "minutes"
+    },
+    {
+      "evidence": {
+        "inferred": "Songwriting Authority says country favours AABB or ABAB schemes with a strong preference for perfect or near-perfect rhymes; in those schemes every line rhymes, so half the lines (ABCB) is the floor and near rhymes pull real stanzas below 1"
+      },
+      "feature": "lyric.perfect.rhyme.rate",
+      "high": 1.0,
+      "low": 0.5,
+      "unit": "fraction"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Johnny Cash",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Folsom_Prison_Blues",
+          "https://www.drumeo.com/beat/a-drummers-guide-to-country/"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "bass.attacks.per.bar",
+        "grid.subdivision"
+      ],
+      "listenFor": "From the first bar: a driving train-song pulse with no drummer, carried by the paper-muted guitar, Perkins' picking and Grant's bass.",
+      "title": "Folsom Prison Blues",
+      "year": 1955
+    },
+    {
+      "artist": "Patsy Cline",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Crazy_(Willie_Nelson_song)"
+        ]
+      },
+      "features": [
+        "harmony.diatonic.ratio",
+        "harmony.chords.distinct",
+        "melody.range.semitones"
+      ],
+      "listenFor": "Throughout: Nashville-sound strings and the Jordanaires under a vocal placed slightly behind the beat, over seventh chords that were unusual for country at the time.",
+      "title": "Crazy",
+      "year": 1961
+    },
+    {
+      "artist": "Buck Owens and the Buckaroos",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Act_Naturally",
+          "https://en.wikipedia.org/wiki/Bakersfield_sound"
+        ]
+      },
+      "features": [
+        "form.minutes",
+        "pocket.snare.ms"
+      ],
+      "listenFor": "From the intro: the Bakersfield Telecaster twang and hard backbeat, against the Nashville sound's strings.",
+      "title": "Act Naturally",
+      "year": 1963
+    },
+    {
+      "artist": "Hank Williams",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Hank_Williams",
+          "https://www.midside.com/presentations/declercq_2018_icmc_text.pdf"
+        ]
+      },
+      "features": [
+        "harmony.chords.distinct",
+        "harmony.changes.per.bar"
+      ],
+      "listenFor": "From the first verse: a Drifting Cowboys honky-tonk arrangement over the plain I–IV–V frame the country corpus measures.",
+      "title": "Your Cheatin' Heart",
+      "year": 1953
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "finger",
+      "picked",
+      "upright"
+    ],
+    "instruments": [
+      "steel-guitar",
+      "clean-electric",
+      "grand-piano",
+      "violin",
+      "banjo",
+      "strings",
+      "oohs"
+    ],
+    "machines": [
+      "studio",
+      "vintage"
+    ]
+  },
+  "summary": "Song-first American music built on major-key I–IV–V harmony with real cadences (V and ii–V back to I), root–fifth bass and a small set of danceable feels: the train beat, the two-beat, the shuffle and the waltz. Lyrics tell a specific story and put the title in the chorus, usually with a twist on its meaning, and the title reaches the listener inside the first minute. Production swings between polished (the Nashville sound's strings and background vocals) and raw (Bakersfield's Telecasters and big backbeat).",
+  "summaryEvidence": {
+    "cited": [
+      "https://www.midside.com/presentations/declercq_2018_icmc_text.pdf",
+      "https://songcage.com/blog/how-to-write-a-country-song/",
+      "https://www.lacuna.fm/blog/how-to-write-a-country-song",
+      "https://en.wikipedia.org/wiki/Nashville_sound",
+      "https://en.wikipedia.org/wiki/Bakersfield_sound"
+    ]
+  }
+}

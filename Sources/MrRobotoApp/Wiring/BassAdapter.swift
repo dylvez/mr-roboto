@@ -72,7 +72,7 @@ final class BassAdapter: PianoRollHosting {
             let heard = line.lengthInBars.map { groove.tiled(toBars: $0) } ?? groove
             let observation = BassObservation(label: PartLabel.title(of: version), bassline: line, groove: heard,
                                               chords: chords, tempo: song.tempo, timeSignature: song.timeSignature)
-            let readings = Bassist().read(observation)
+            let readings = GenreLens.judge(Bassist().read(observation), by: Bassist.bible, in: GenreLens.of(song))
             let flags = readings.filter { !$0.holds }
             // Only what went wrong, and only when it changes: the readings are on the surface
             // already, and a line kept as you go would otherwise be a line in the rail each time.

@@ -4,22 +4,61 @@ import SongGraph
 
 // MARK: - Lineage
 
-/// Whose hands write the line. The three lineages of the Bassist bible, as the writer's own switch.
+/// Whose hands write the line. The three lineages of the Bassist bible, and the players the genre
+/// profiles call for, as the writer's own switch.
 ///
-/// The names are the bible's: **A** Pino Palladino in the Voodoo years, who owns time placement and
-/// note length; **B** Thundercat, who owns harmony and register; **C** the programmed low end —
-/// Dilla's Moog and sampled bass, the 808 as the bass — where the line *is* the kick. Jamerson is
-/// the shared root of A and B and supplies the chromatic approach both use.
+/// The first three are the bible's: **A** Pino Palladino in the Voodoo years, who owns time
+/// placement and note length; **B** Thundercat, who owns harmony and register; **C** the programmed
+/// low end — Dilla's Moog and sampled bass, the 808 as the bass — where the line *is* the kick.
+/// Jamerson is the shared root of A and B and supplies the chromatic approach both use.
+///
+/// The rest are genres' own ways of playing the bass, each written from the figure the genre is
+/// known by: disco and house octaves, the reggae one drop, the salsa tumbao, a jazz walking line,
+/// country root–fifth, Jamerson's Motown eighths as a line of their own, the rolling sub of drum &
+/// bass, and amapiano's log drum.
 public enum BassLineage: String, Codable, Sendable, Hashable, CaseIterable {
     case palladino
     case thundercat
     case programmed
+    case octave
+    case oneDrop = "one-drop"
+    case tumbao
+    case walking
+    case rootFifth = "root-fifth"
+    case motown
+    case rolling
+    case logDrum = "log-drum"
 
     public var name: String {
         switch self {
         case .palladino: return "Palladino"
         case .thundercat: return "Thundercat"
         case .programmed: return "Programmed"
+        case .octave: return "Octaves"
+        case .oneDrop: return "One drop"
+        case .tumbao: return "Tumbao"
+        case .walking: return "Walking"
+        case .rootFifth: return "Root–fifth"
+        case .motown: return "Motown"
+        case .rolling: return "Rolling sub"
+        case .logDrum: return "Log drum"
+        }
+    }
+
+    /// The genres a player is written from, in a sentence: what the Director is told.
+    public var about: String {
+        switch self {
+        case .palladino: return "behind the kick, roots and slides, note-offs on the beat (neo-soul)"
+        case .thundercat: return "harmony and register, voicings on the change"
+        case .programmed: return "the 808 as the bass: the kick's own pattern, re-pitched, through the sub (trap, drill)"
+        case .octave: return "pumping eighth-note octaves on the root, on the grid (disco, house)"
+        case .oneDrop: return "beat one left empty, a melodic figure landing with the kick on three (reggae)"
+        case .tumbao: return "the and of two and beat four, anticipating the chord and tied over; never on one (salsa, son)"
+        case .walking: return "quarter notes, chord tones on the strong beats, a chromatic step into each change (jazz, swing blues)"
+        case .rootFifth: return "root on one, fifth on three, a walk-up into a change (country, folk)"
+        case .motown: return "Jamerson's melodic eighths: syncopated pickups and chromatic passing tones (Motown, soul)"
+        case .rolling: return "long sub notes, one to three a bar, moving under the breaks (drum & bass, dubstep, garage)"
+        case .logDrum: return "short pitched log-drum hits off the beat (amapiano)"
         }
     }
 
@@ -30,7 +69,7 @@ public enum BassLineage: String, Codable, Sendable, Hashable, CaseIterable {
         switch self {
         case .palladino: return 40
         case .thundercat: return 10
-        case .programmed: return 0
+        case .programmed, .octave, .oneDrop, .tumbao, .walking, .rootFifth, .motown, .rolling, .logDrum: return 0
         }
     }
 
@@ -40,7 +79,9 @@ public enum BassLineage: String, Codable, Sendable, Hashable, CaseIterable {
         switch self {
         case .palladino: return 26...50
         case .thundercat: return 35...67
-        case .programmed: return 16...40
+        case .programmed, .rolling: return 16...40
+        case .octave, .oneDrop, .tumbao, .rootFifth, .logDrum: return 28...52
+        case .walking, .motown: return 28...55
         }
     }
 
@@ -50,14 +91,23 @@ public enum BassLineage: String, Codable, Sendable, Hashable, CaseIterable {
         case .palladino: return 33...45
         case .thundercat: return 38...50
         case .programmed: return 28...40
+        case .rolling: return 26...38
+        case .octave: return 28...40
+        case .oneDrop, .tumbao, .walking, .rootFifth, .motown: return 31...43
+        case .logDrum: return 33...45
         }
     }
 
     /// The bass sound the lineage plays through by default.
     public var defaultSound: String {
         switch self {
-        case .palladino, .thundercat: return "finger"
+        case .palladino, .thundercat, .oneDrop, .motown: return "finger"
         case .programmed: return "sub"
+        case .octave: return "analogue"
+        case .tumbao, .walking: return "upright"
+        case .rootFifth: return "picked"
+        case .rolling: return "reese"
+        case .logDrum: return "log-drum"
         }
     }
 }
@@ -175,6 +225,8 @@ public enum BassWriter {
         case .programmed:
             drafts = writeProgrammed(request, kicks: kicks, harmony: harmony, beatsPerBar: beatsPerBar,
                                      bars: bars)
+        case .octave, .oneDrop, .tumbao, .walking, .rootFifth, .motown, .rolling, .logDrum:
+            drafts = BassFigures.write(request, harmony: harmony, beatsPerBar: beatsPerBar, bars: bars, rng: &rng)
         }
 
         // A slide starts where the note before it stops: nothing rings through an approach.
@@ -360,7 +412,10 @@ public enum BassWriter {
         switch lineage {
         case .palladino: ceiling = tempo <= 100 ? 6 : 7
         case .thundercat: ceiling = tempo <= 100 ? 8 : 9
-        case .programmed: ceiling = 16
+        case .programmed, .octave: ceiling = 16
+        case .walking, .motown, .logDrum: ceiling = 8
+        case .oneDrop, .rootFifth: ceiling = 6
+        case .tumbao, .rolling: ceiling = 3
         }
         return max(1, min(ceiling, Int((2 + density * Double(ceiling - 2)).rounded())))
     }

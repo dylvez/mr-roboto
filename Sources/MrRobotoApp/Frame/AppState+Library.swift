@@ -518,6 +518,27 @@ extension AppState {
         return true
     }
 
+    // MARK: The genre
+
+    /// The open song's genre: the one it was given, or the one its grooves point to.
+    public var genre: GenreBook.Reading? { GenreBook.standard.genre(of: song) }
+
+    /// Places the open song in a genre, by a profile's id, name or alias; nil or "" to leave it to
+    /// be guessed again. False when no song is open or no profile answers to the name.
+    @discardableResult
+    public func setGenre(_ name: String?, by source: SessionEntry.Source = .you) -> Bool {
+        guard song != nil else { return false }
+        let trimmed = name?.trimmingCharacters(in: .whitespaces) ?? ""
+        let profile = trimmed.isEmpty ? nil : GenreBook.standard.profile(named: trimmed)
+        guard trimmed.isEmpty || profile != nil else { return false }
+        guard profile?.id != song?.genre else { return true }
+        updateSong { $0.genre = profile?.id }
+        SurfaceWiring.shared.genreChanged()
+        note(source, profile.map { "Genre: \($0.name)" } ?? "Genre: guessed from the grooves again",
+             detail: profile?.summary)
+        return true
+    }
+
     // MARK: What the band has said
 
     /// Replaces the library's record of what the band has said, and writes it when there is

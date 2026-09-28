@@ -1,0 +1,499 @@
+{
+  "aliases": [
+    "soul",
+    "motown",
+    "motown sound",
+    "southern soul",
+    "stax",
+    "60s soul"
+  ],
+  "bassHands": [
+    "motown",
+    "root-fifth"
+  ],
+  "family": "soul",
+  "feels": [
+    "Motown",
+    "Soul Tambourine",
+    "Shuffle"
+  ],
+  "form": {
+    "evidence": {
+      "inferred": "Hooktheory's section map for My Girl (intro, verse, chorus, outro in a new key) and You Can't Hurry Love, sized so that 60 bars at 105-115 BPM gives the 2.4-3.3 minute single length of the references"
+    },
+    "sections": [
+      {
+        "bars": 4,
+        "name": "Intro"
+      },
+      {
+        "bars": 8,
+        "name": "Verse"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 8,
+        "name": "Verse"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 8,
+        "name": "Bridge"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 8,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "soul",
+  "idioms": [
+    "soul",
+    "motown"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/James_Jamerson",
+          "https://www.musicradar.com/news/play-bass-like-james-jamerson",
+          "https://en.wikipedia.org/wiki/Benny_Benjamin"
+        ]
+      },
+      "name": "James Jamerson",
+      "period": "1959-1972",
+      "why": "Motown's bassist: melodic, syncopated lines with chromatic runs, ghost notes and open strings, plucked with one finger on a flatwound P-bass. He took the chord sheet and played what fitted the song and its lyric, and producers booked sessions around him and Benjamin."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Benny_Benjamin",
+          "https://vinniesperrazza.substack.com/p/on-backbeats"
+        ]
+      },
+      "name": "Benny Benjamin",
+      "period": "1959-1969",
+      "why": "Played the template Motown beat, eighths on the hi-hat and four quarter notes on the snare with the bass drum answering Jamerson, on records from Money to My Girl and You Can't Hurry Love. Berry Gordy and other producers refused to record without him."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Holland%E2%80%93Dozier%E2%80%93Holland"
+        ]
+      },
+      "name": "Holland-Dozier-Holland",
+      "period": "1962-1967",
+      "why": "Dozier and Brian Holland composed and produced; Eddie Holland wrote lyrics and arranged the vocals. They wrote a run of Supremes and Four Tops number ones including Where Did Our Love Go, Stop! In the Name of Love and You Can't Hurry Love."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Booker_T._%26_the_M.G.%27s",
+          "https://drummagazine.com/the-greatest-grooves-of-rb-and-soul/"
+        ]
+      },
+      "name": "Booker T. & the M.G.'s",
+      "period": "1962-1971",
+      "why": "The Stax house band (Al Jackson Jr., Duck Dunn, Steve Cropper, Booker T. Jones), usually with a horn section, behind Otis Redding, Sam & Dave and Wilson Pickett. Their sparse, groove-first playing set the Memphis soul standard."
+    }
+  ],
+  "meters": [
+    "4/4"
+  ],
+  "name": "Soul / Motown",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://vinniesperrazza.substack.com/p/on-backbeats",
+          "https://www.drum-drops.com/products/60s-motown-drops",
+          "https://en.wikipedia.org/wiki/Motown"
+        ]
+      },
+      "text": "The Motown beat: eighth notes on the hi-hat, four quarter notes on the snare, and a bass drum in conversation with Jamerson's line; tambourine plays quarters or the backbeat, and a chopped guitar chord sits with it."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.moderndrummer.com/2009/06/secrets-of-motown/",
+          "https://www.drum-drops.com/products/60s-motown-drops",
+          "https://drummagazine.com/the-greatest-grooves-of-rb-and-soul/"
+        ]
+      },
+      "text": "Motown's drummers played lightly and taped the snares for a tight, crisp sound; Pistol Allen owned the shuffles. Stax's Al Jackson Jr. played simple, economical grooves, even moving 2 and 4 to a tom."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/James_Jamerson",
+          "https://www.musicradar.com/news/play-bass-like-james-jamerson"
+        ]
+      },
+      "text": "Jamerson played melodic, syncopated lines with chromatic runs, inversions, ghost notes and open strings, where most soul bass stayed on roots and fifths. He plucked with one index finger ('the Hook') on a P-bass with old flatwounds and a foam mute: warm, punchy, little sustain."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/James_Jamerson",
+          "https://ryanmadora.com/blog/easy-motown-bass-lines-james-jamerson-for-beginners"
+        ]
+      },
+      "text": "Jamerson worked from chord sheets and then played what he felt fitted the song, including its lyric; shuffles such as How Sweet It Is use descending triads and blues-box shapes."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/the-temptations/my-girl",
+          "https://www.hooktheory.com/theorytab/view/marvin-gaye/i-heard-it-through-the-grapevine",
+          "https://www.hooktheory.com/theorytab/view/aretha-franklin/respect"
+        ]
+      },
+      "text": "Diatonic major progressions with a turnaround (My Girl's verse I-IV and chorus I-ii7-IV-V) or dorian two-chord vamps (Grapevine i-IV7, Respect V7-IV7). A whole-step key change for the last chorus (My Girl's outro moves C to D) is a stock lift."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Soul_music",
+          "https://en.wikipedia.org/wiki/Motown"
+        ]
+      },
+      "text": "Call and response between lead and backing vocalists, from gospel, with a tense lead voice and improvised additions; background parts stay simple rather than elaborate."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Soul_music",
+          "https://en.wikipedia.org/wiki/Motown"
+        ]
+      },
+      "text": "Motown layered strings, brass, vibraphone and handclaps over the rhythm section, with charted string and horn sections; Stax put vibrant horn parts where backing vocals would go."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/The_Funk_Brothers"
+        ]
+      },
+      "text": "The Funk Brothers played head arrangements worked out in the session, with more than one guitarist, two keyboards, and separate tambourine and vibes players."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Motown",
+          "https://en.wikipedia.org/wiki/Soul_music"
+        ]
+      },
+      "text": "Motown mixed trebly, leaning on electronic limiting and high-frequency EQ boosts so records cut through AM radio. Stax put the vocal further back and weighted the low end."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre",
+          "https://luvlang.studio/research/loudness-2026"
+        ]
+      },
+      "text": "Released modern R&B/soul masters: median -9.6 LUFS (middle half -11.2 to -8.3) in the largest survey, -12.6 in a smaller one. Reissues of 1960s singles are a different target; the range is for new releases in the style."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Motown",
+          "https://songbpm.com/@the-supremes/where-did-our-love-go"
+        ]
+      },
+      "text": "Singles run two and a half to three minutes; songwriting teams built them for weekly quality-control meetings where Berry Gordy could veto a release."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://www.moderndrummer.com/2009/06/secrets-of-motown/",
+          "https://www.drum-drops.com/products/60s-motown-drops"
+        ]
+      },
+      "text": "Kick with the front head off and blankets inside, snare taped underneath, floor tom tuned to G; a two-mic kit in a large live room gives the period drum sound."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://vinniesperrazza.substack.com/p/on-backbeats",
+          "https://www.drum-drops.com/products/60s-motown-drops"
+        ]
+      },
+      "text": "Putting the snare only on 2 and 4 and calling it Motown. The Motown beat strikes the snare on all four quarters, doubled by tambourine."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.musicradar.com/news/play-bass-like-james-jamerson",
+          "https://en.wikipedia.org/wiki/James_Jamerson"
+        ]
+      },
+      "text": "A root-and-fifth bass. Motown's bass is a second melody with chromatic passing notes, syncopated pickups and ghost notes."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.moderndrummer.com/2009/06/secrets-of-motown/"
+        ]
+      },
+      "text": "Hitting hard and ringing. The Motown drummers played lightly on taped, damped drums; the drive comes from the four-beat snare and tambourine, not volume."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/the-temptations/my-girl"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "I - ii7 - IV - V",
+      "text": "My Girl's chorus and outro; the outro repeats it a whole step up."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/the-temptations/my-girl"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "I - IV",
+      "text": "My Girl's two-chord verse."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/the-supremes/stop-in-the-name-of-love"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "vi - V - IV - V",
+      "text": "Stop! In the Name of Love's chorus, starting off the tonic."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/the-supremes/you-cant-hurry-love"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "I - IV - I - iii - vi",
+      "text": "You Can't Hurry Love's chorus."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/marvin-gaye/i-heard-it-through-the-grapevine"
+        ]
+      },
+      "mode": "dorian",
+      "roman": "i - IV7",
+      "text": "Grapevine's chorus vamp: the major IV7 is the dorian colour."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "inferred": "Median and spread of ten reference tempos from Hooktheory/songbpm: You Can't Hurry Love 97, I Want You Back 98, Try a Little Tenderness 103, My Girl 105, Stop! In the Name of Love 115, Respect 115-117, Grapevine 117-118, I Can't Help Myself 127, Where Did Our Love Go 135, Heat Wave 165; the range holds nine of ten"
+      },
+      "feature": "tempo.bpm",
+      "high": 135,
+      "low": 95,
+      "typical": 115,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre",
+          "https://luvlang.studio/research/loudness-2026"
+        ]
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -8.3,
+      "low": -12.6,
+      "typical": -9.6,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "Durations of eight reference singles on songbpm: Respect 2:27, Where Did Our Love Go 2:33, Heat Wave 2:42, My Girl 2:45, I Can't Help Myself 2:45, Stop! 2:53, You Can't Hurry Love 2:55, Grapevine 3:14; typical is the median"
+      },
+      "feature": "form.minutes",
+      "high": 3.3,
+      "low": 2.4,
+      "typical": 2.75,
+      "unit": "minutes"
+    },
+    {
+      "evidence": {
+        "inferred": "Hooktheory analyses of the references: Grapevine i-IV7 (2), Respect's V7-IV7 chorus over a C dorian song, My Girl I, IV, ii7, V (4), You Can't Hurry Love I, IV, iii, vi (4), Stop! vi, V, IV, I, v, V7/ii (6)"
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 6,
+      "low": 2,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "inferred": "Hooktheory's transcribed vocal ranges of three references: Grapevine Db4-Bb4 (9), Respect G4-G5 (12), Stop! C4-E5 (16)"
+      },
+      "feature": "melody.range.semitones",
+      "high": 16,
+      "low": 9,
+      "unit": "semitones"
+    }
+  ],
+  "references": [
+    {
+      "artist": "The Temptations",
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/the-temptations/my-girl",
+          "https://songbpm.com/@the-temptations/my-girl"
+        ]
+      },
+      "features": [
+        "harmony.chords.distinct",
+        "tempo.bpm",
+        "form.minutes"
+      ],
+      "listenFor": "A two-chord verse opening into an I-ii7-IV-V chorus, and the whole-step lift to D for the outro, at 105 BPM.",
+      "title": "My Girl",
+      "year": 1964
+    },
+    {
+      "artist": "The Supremes",
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/the-supremes/stop-in-the-name-of-love"
+        ]
+      },
+      "features": [
+        "melody.range.semitones",
+        "harmony.cadence.ratio",
+        "tempo.bpm"
+      ],
+      "listenFor": "A chorus that starts on vi and a 16-semitone lead, at 115-120 BPM.",
+      "title": "Stop! In the Name of Love",
+      "year": 1965
+    },
+    {
+      "artist": "The Supremes",
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/the-supremes/you-cant-hurry-love",
+          "https://en.wikipedia.org/wiki/Benny_Benjamin"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "backbeat.count"
+      ],
+      "listenFor": "The Benjamin-era beat under an I-IV-I-iii-vi chorus at 97 BPM.",
+      "title": "You Can't Hurry Love",
+      "year": 1966
+    },
+    {
+      "artist": "Marvin Gaye",
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/marvin-gaye/i-heard-it-through-the-grapevine",
+          "https://songbpm.com/@marvin-gaye/i-heard-it-through-the-grapevine"
+        ]
+      },
+      "features": [
+        "harmony.chords.distinct",
+        "melody.range.semitones",
+        "tempo.bpm"
+      ],
+      "listenFor": "A dorian i-IV7 vamp and a narrow Db4-Bb4 vocal at 117-118 BPM.",
+      "title": "I Heard It Through the Grapevine",
+      "year": 1968
+    },
+    {
+      "artist": "Aretha Franklin",
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/aretha-franklin/respect",
+          "https://songbpm.com/@aretha-franklin/respect"
+        ]
+      },
+      "features": [
+        "melody.range.semitones",
+        "form.minutes"
+      ],
+      "listenFor": "A C dorian song with a V7-IV7 chorus and an octave lead (G4-G5), under two and a half minutes.",
+      "title": "Respect",
+      "year": 1967
+    },
+    {
+      "artist": "Stevie Wonder",
+      "evidence": {
+        "cited": [
+          "https://vinniesperrazza.substack.com/p/on-backbeats"
+        ]
+      },
+      "features": [
+        "grid.subdivision",
+        "backbeat.count"
+      ],
+      "listenFor": "Benny Benjamin's template: eighths on the hat, four on the snare, kick answering the bass.",
+      "title": "Uptight (Everything's Alright)",
+      "year": 1965
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "finger",
+      "muted"
+    ],
+    "instruments": [
+      "grand-piano",
+      "horns",
+      "strings",
+      "vibraphone",
+      "clean-electric",
+      "organ",
+      "oohs",
+      "tenor-sax",
+      "trumpet"
+    ],
+    "machines": [
+      "vintage",
+      "studio"
+    ]
+  },
+  "summary": "Gospel-rooted popular song that combines R&B and jazz with call and response between lead and backing voices, handclaps and tambourine on the backbeat. Motown's version adds a four-beat snare, a melodic and syncopated electric bass, charted strings and horns and a trebly, limited mix; Stax's version sets the vocal further back behind horns and a heavy low end.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Soul_music",
+      "https://en.wikipedia.org/wiki/Motown"
+    ]
+  }
+}

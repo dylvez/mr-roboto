@@ -197,13 +197,34 @@ public final class ChordsModel {
 
     // MARK: The Harmonist
 
+    /// The song's genre, asked each time the readings are made: a reading is re-judged in it
+    /// (`GenreLens`). Nil — the default, and a song nobody has placed — leaves the persona's own.
+    public var genre: @MainActor () -> GenreLens? = { nil }
+
+    /// Reads again, for a genre that changed under an open sheet.
+    public func genreChanged() { refreshReadings() }
+
+    /// The genre's own progressions, in this sheet's key: the ones written for a key of its kind,
+    /// major or minor, each as the line it would type. What the sheet offers under the field.
+    public var genreProgressions: [(genre: String, roman: String, text: String, about: String)] {
+        guard let profile = genre()?.profile else { return [] }
+        return profile.progressions.compactMap { progression in
+            guard GenreNumerals.fits(mode: progression.mode, key),
+                  let line = GenreNumerals.symbols(progression.roman, in: key, mode: progression.mode) else { return nil }
+            return (profile.name, progression.roman, line, progression.text)
+        }
+    }
+
+    /// Types a genre progression into the field, as one edit.
+    public func use(progression line: String) { text = line }
+
     /// The Harmonist's reading of the bars on screen. On a typo those are the last bars that read,
     /// and so are the readings; the view dims both together.
     private func refreshReadings() {
         guard let progression else { readings = []; return }
         let observation = HarmonyObservation.of(progression, label: title, bassline: host.bassline,
                                                 beatsPerBar: beatsPerBar)
-        readings = Harmonist().read(observation)
+        readings = GenreLens.judge(Harmonist().read(observation), by: Harmonist.bible, in: genre())
     }
 
     /// The readings that did not hold: what the Harmonist would say first.

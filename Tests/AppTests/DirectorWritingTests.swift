@@ -58,8 +58,10 @@ struct DirectorWritingToolboxTests {
     @Test("the six come after write_groove, in order, and none of them spends the optional budget")
     func appended() {
         let names = DirectorTools.names
-        #expect(Array(names.suffix(6)) == Self.six)
-        #expect(names[names.count - 7] == "write_groove", "appended after the last tool, never among the earlier ones")
+        // The genres' three were appended after them; the six stay where they were.
+        let six = names.firstIndex(of: "write_melody").map { Array(names[$0..<($0 + 6)]) } ?? []
+        #expect(six == Self.six)
+        #expect(names.firstIndex(of: "write_melody").map { names[$0 - 1] } == "write_groove", "appended after the last tool, never among the earlier ones")
         let box = WritingFixture.toolbox(DirectorScratchWorkspace(song: DirectorSongFixture.song()))
         #expect(box.names == names)
         for name in Self.six {

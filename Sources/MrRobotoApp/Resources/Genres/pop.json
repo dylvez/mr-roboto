@@ -1,0 +1,522 @@
+{
+  "aliases": [
+    "pop",
+    "dance-pop",
+    "synth-pop",
+    "chart pop",
+    "mainstream pop"
+  ],
+  "bassHands": [
+    "programmed",
+    "octave"
+  ],
+  "family": "pop",
+  "feels": [
+    "Pop Piano Backbeat",
+    "Four on the Floor"
+  ],
+  "form": {
+    "evidence": {
+      "inferred": "Hit Songs Deconstructed's 2017 averages (9 s intro, 23 s first verse, chorus at about 0:42, three choruses with one after a bridge) converted to bars at 100-110 BPM, where a 4/4 bar lasts 2.2-2.4 s"
+    },
+    "sections": [
+      {
+        "bars": 4,
+        "name": "Intro"
+      },
+      {
+        "bars": 8,
+        "name": "Verse"
+      },
+      {
+        "bars": 4,
+        "name": "Pre-Chorus"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 8,
+        "name": "Verse"
+      },
+      {
+        "bars": 4,
+        "name": "Pre-Chorus"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 8,
+        "name": "Bridge"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 4,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "pop",
+  "idioms": [
+    "pop"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Max_Martin",
+          "https://www.musicianwave.com/max-martin-melodic-math-formula/"
+        ]
+      },
+      "name": "Max Martin",
+      "period": "1998-present",
+      "why": "Works melody first and spends days or weeks challenging a melody before lyrics are fitted to it; his 'melodic math' makes each line's syllable count mirror the one before. Grew out of the Cheiron studio model where producers wrote, played and engineered before the singer arrived, and has written or co-written 30 Hot 100 number ones."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Thriller_(album)"
+        ]
+      },
+      "name": "Quincy Jones",
+      "period": "1982",
+      "why": "Produced Thriller at Westlake with a large session budget, working through about 30 songs with Michael Jackson to keep nine, blending post-disco, synth-pop, funk and rock. Both were unhappy with the first mixes and remixed every song, a week on each."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/When_We_All_Fall_Asleep,_Where_Do_We_Go%3F"
+        ]
+      },
+      "name": "Finneas O'Connell",
+      "period": "2018-2019",
+      "why": "Produced When We All Fall Asleep, Where Do We Go? in a small bedroom studio on Logic Pro X with an Apollo interface and HS5 monitors. The sound is amplified bass, minimal percussion, foley, and close-miked, whispered vocals with layered harmonies, and he removed parts rather than adding them."
+    }
+  ],
+  "meters": [
+    "4/4"
+  ],
+  "name": "Contemporary pop",
+  "notes": [
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://www.hitsongsdeconstructed.com/hsd_wire/hit-song-choruses/",
+          "https://www.hitsongsdeconstructed.com/hsd_wire/hip-hop-vs-pop-hooks-faster/"
+        ]
+      },
+      "text": "Verse / pre-chorus / chorus with about three choruses: two after a verse or pre-chorus, one after a bridge (B-A-B-A-B-C-B shapes). Pop intros averaged 9 s and first verses 23 s in 2017; only 15% of pop hits went straight from intro to chorus."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://news.osu.edu/has-music-streaming-killed-the-instrumental-intro/",
+          "https://www.musicianwave.com/max-martin-melodic-math-formula/"
+        ]
+      },
+      "text": "The voice arrives almost immediately: the mean wait before vocals in US top-10 singles fell from about 23 s (1986) to about 5 s (2015), and time to the title fell about 18%. Get the voice in within the first bars and the chorus in before 50 seconds."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://www.musicianwave.com/max-martin-melodic-math-formula/"
+        ]
+      },
+      "text": "Keep the song to three or four distinct parts; Max Martin's rule is that fewer parts, each repeated, beat more parts."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://digitallibrary.vassar.edu/sites/default/files/2022-01/Harmony_and_Syntax_in_Contemporary_Pop_Music_0.pdf"
+        ]
+      },
+      "text": "Almost exclusively diatonic, organised as two- or four-bar cyclical loops that can start on any chord of the cycle; I-V-vi-IV was by far the commonest (31 occurrences in a 97-song Billboard corpus). Some songs never cadence on I at all ('harmonic limbo', e.g. Tik Tok)."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://digitallibrary.vassar.edu/sites/default/files/2022-01/Harmony_and_Syntax_in_Contemporary_Pop_Music_0.pdf"
+        ]
+      },
+      "text": "Minor-key pop is aeolian: v and VII take the dominant role instead of a raised-leading-tone V, and the relative-major loop i-VII-VI-iv / i-III-VII-iv is the minor face of the same syntax."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Max_Martin",
+          "https://www.seresearch.qmul.ac.uk/news/4767/pop-melodies-getting-simpler-in-the-age-of-complexity/",
+          "https://phys.org/news/2024-07-song-melodies-simpler.html"
+        ]
+      },
+      "text": "Write melody first and spend the time challenging it; lyrics are fitted to the melody afterwards. Top-5 Billboard melodies have lost about 30% of their pitch and rhythm complexity since 1950 while notes per second have risen: simpler, more repeated figures sung faster."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://www.musicianwave.com/max-martin-melodic-math-formula/",
+          "https://en.wikipedia.org/wiki/Pop_music"
+        ]
+      },
+      "text": "Melodic math: a line has a set number of syllables and the next line is its mirror image (e.g. Teenage Dream's paired 8-syllable lines); adding or dropping a syllable breaks the flow. Themes are usually simple, most often love and relationships."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://musicalform.org/research/gridification"
+        ]
+      },
+      "text": "Timing is grid-locked: 70% of 2010s-2020s top-five hits show no tempo variation, against 0% in the 1960s-70s; the break came with Beat Detective (2001)."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/When_We_All_Fall_Asleep,_Where_Do_We_Go%3F"
+        ]
+      },
+      "text": "Bedroom-scale production is a mainstream route: amplified sub-heavy bass, minimal percussion, foley and acoustic sounds, and close-miked soft vocals with stacked harmonies (Finneas and Billie Eilish, Logic Pro in a bedroom)."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/When_We_All_Fall_Asleep,_Where_Do_We_Go%3F",
+          "https://www.seresearch.qmul.ac.uk/news/4767/pop-melodies-getting-simpler-in-the-age-of-complexity/"
+        ]
+      },
+      "text": "Fewer layers: the Eilish/Finneas record deliberately left parts out because extra layers made songs sound worse; the density lives in sound choice rather than in more parts."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre",
+          "https://luvlang.studio/research/loudness-2026",
+          "https://en.wikipedia.org/wiki/Loudness_war"
+        ]
+      },
+      "text": "Released pop masters are loud: median -9.5 LUFS integrated with a middle half of -11.2 to -8.1 in a 314,876-track survey, and most commercial masters exceed -1 dBTP. Streaming normalisation (-14 LUFS on Spotify) turns them down on playback; that does not change the release target."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "inferred": "From the cited 'amplified bass, minimalist percussion' description of When We All Fall Asleep and the grid-locked timing of post-2001 hits in the gridification study"
+      },
+      "text": "Two common bass hands: a sub or 808 carrying long low notes under sparse drums (the Eilish sound), or a four-on-the-floor dance-pop pulse; in both the bass is the loudest element below 200 Hz and sits on the grid."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://news.osu.edu/has-music-streaming-killed-the-instrumental-intro/",
+          "https://www.hitsongsdeconstructed.com/hsd_wire/hip-hop-vs-pop-hooks-faster/",
+          "https://www.musicianwave.com/max-martin-melodic-math-formula/"
+        ]
+      },
+      "text": "A long instrumental intro. The voice in hits now arrives after about 5 seconds and the first chorus by about 40; start with the voice or a 4-bar intro and get to the chorus inside 50 seconds."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://digitallibrary.vassar.edu/sites/default/files/2022-01/Harmony_and_Syntax_in_Contemporary_Pop_Music_0.pdf",
+          "https://www.seresearch.qmul.ac.uk/news/4767/pop-melodies-getting-simpler-in-the-age-of-complexity/"
+        ]
+      },
+      "text": "Adding chords to make it 'interesting'. Pop's variety is arrangement and sound over a diatonic loop; keep the loop and change the layers, drums and melody between sections."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://songbpm.com/@taylor-swift/shake-it-off",
+          "https://songbpm.com/@the-weeknd/blinding-lights"
+        ]
+      },
+      "text": "Treating a 160-175 BPM track as out of style. Fast synth-pop (Shake It Off at 160, Blinding Lights at 171) is idiomatic; check whether the backbeat implies the fast reading before halving the tempo."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://digitallibrary.vassar.edu/sites/default/files/2022-01/Harmony_and_Syntax_in_Contemporary_Pop_Music_0.pdf",
+          "https://www.hooktheory.com/blog/i-analyzed-the-chords-of-1300-popular-songs-for-patterns-this-is-what-i-found/"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "I - V - vi - IV",
+      "text": "The most frequent loop in the 2009-2013 Billboard corpus; any rotation of it (vi-IV-I-V, IV-I-V-vi) is the same cycle."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://digitallibrary.vassar.edu/sites/default/files/2022-01/Harmony_and_Syntax_in_Contemporary_Pop_Music_0.pdf"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "i - VII - VI - iv",
+      "text": "The minor-key affiliate of the four-chord loop; VII stands in for the dominant."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/ed-sheeran/shape-of-you"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "i - iv - VI - VII",
+      "text": "Shape of You's loop through intro, verse and chorus, with VIIsus4 in the verse."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/katy-perry/teenage-dream"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "IV7 - vi - V",
+      "text": "Teenage Dream's three-chord loop (V as Vsus4) that avoids landing on I for the whole song."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "inferred": "Spans four of the six reference tempos (Shape of You 96, Levitating 103, Teenage Dream 120, bad guy 135 per Hooktheory/songbpm); the other two, Shake It Off 160 and Blinding Lights 171-172, are fast synth-pop read at full tempo and are called out in a pitfall rather than stretching the range"
+      },
+      "feature": "tempo.bpm",
+      "high": 135,
+      "low": 90,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre",
+          "https://luvlang.studio/research/loudness-2026"
+        ]
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -8.1,
+      "low": -11.2,
+      "typical": -9.5,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "iZotope's statement that pop masters commonly show crest factors of 5 dB or less and that 8-12 dB is the well-balanced master range, set against the cited -9.5 LUFS pop median (which leaves little room above the body for peaks)"
+      },
+      "feature": "mix.crest.db",
+      "high": 10,
+      "low": 5,
+      "unit": "dB"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hitsongsdeconstructed.com/hsd_wire/hit-song-choruses/",
+          "https://www.hitsongsdeconstructed.com/hsd_wire/hip-hop-vs-pop-hooks-faster/",
+          "https://www.musicianwave.com/max-martin-melodic-math-formula/"
+        ]
+      },
+      "feature": "form.hook.seconds",
+      "high": 50,
+      "low": 30,
+      "typical": 42,
+      "unit": "seconds"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://crawlora.net/blog/song-length-2026",
+          "https://en.wikipedia.org/wiki/Pop_music"
+        ]
+      },
+      "feature": "form.minutes",
+      "high": 3.75,
+      "low": 2.5,
+      "typical": 3.2,
+      "unit": "minutes"
+    },
+    {
+      "evidence": {
+        "inferred": "Blendell's Billboard 2009-2013 corpus: four-chord cyclical sequences laid over two- or four-measure progressions, i.e. one or two chords a bar"
+      },
+      "feature": "harmony.changes.per.bar",
+      "high": 2,
+      "low": 1,
+      "typical": 1,
+      "unit": "changes per bar"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://digitallibrary.vassar.edu/sites/default/files/2022-01/Harmony_and_Syntax_in_Contemporary_Pop_Music_0.pdf"
+        ]
+      },
+      "feature": "harmony.diatonic.ratio",
+      "high": 1.0,
+      "low": 0.9,
+      "unit": "fraction"
+    },
+    {
+      "evidence": {
+        "inferred": "Blendell's finding that pop sections loop four-chord sequences, and the Hooktheory analyses of the references: Teenage Dream 3 (IV7 vi Vsus4), Levitating 3 (i7 v7 iv7), bad guy 3, Shape of You 4-5, Blinding Lights 5-6"
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 6,
+      "low": 3,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "inferred": "Hooktheory's transcribed vocal ranges of three references (Teenage Dream 16, Levitating 17, Blinding Lights F3-A#4 = 17), widened by a whole tone each way for song-to-song variation"
+      },
+      "feature": "melody.range.semitones",
+      "high": 19,
+      "low": 14,
+      "unit": "semitones"
+    },
+    {
+      "evidence": {
+        "inferred": "The Musical Form Institute's gridification study: 64% of top hits since 2001 hold one unchanging tempo and the 2010s/2020s median shows no tempo variance at all, so a pop bar is programmed or edited to the grid; 5 ms is below the 0-10 ms deviation experienced musicians begin to hear"
+      },
+      "feature": "humanize.timing.ms",
+      "high": 5,
+      "low": 0,
+      "unit": "ms"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Katy Perry",
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/katy-perry/teenage-dream",
+          "https://www.musicianwave.com/max-martin-melodic-math-formula/"
+        ]
+      },
+      "features": [
+        "harmony.chords.distinct",
+        "harmony.cadence.ratio",
+        "lyric.pattern.match",
+        "tempo.bpm"
+      ],
+      "listenFor": "The IV7-vi-Vsus4 loop under every section that never resolves to I, and the verse's mirrored 8-syllable line pairs.",
+      "title": "Teenage Dream",
+      "year": 2010
+    },
+    {
+      "artist": "Ed Sheeran",
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/ed-sheeran/shape-of-you",
+          "https://songbpm.com/@ed-sheeran/shape-of-you"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "harmony.chords.distinct",
+        "form.repetition"
+      ],
+      "listenFor": "One i-iv-VI-VII minor loop carrying intro, verse and chorus at 96 BPM, with the variety coming from arrangement rather than harmony.",
+      "title": "Shape of You",
+      "year": 2017
+    },
+    {
+      "artist": "The Weeknd",
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/the-weeknd/blinding-lights",
+          "https://songbpm.com/@the-weeknd/blinding-lights"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "melody.range.semitones"
+      ],
+      "listenFor": "Fast synth-pop at about 171 BPM in F dorian, with a vocal range of F3-A#4 across the song.",
+      "title": "Blinding Lights",
+      "year": 2019
+    },
+    {
+      "artist": "Dua Lipa",
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/dua-lipa/levitating",
+          "https://songbpm.com/@dua-lipa/levitating"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "melody.range.semitones",
+        "harmony.chords.distinct"
+      ],
+      "listenFor": "The i7-v7-iv7 chorus loop at 103 BPM and a 17-semitone vocal range (F#3-B4).",
+      "title": "Levitating",
+      "year": 2020
+    },
+    {
+      "artist": "Billie Eilish",
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/billie-eilish/bad-guy",
+          "https://en.wikipedia.org/wiki/When_We_All_Fall_Asleep,_Where_Do_We_Go%3F"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "harmony.chords.distinct",
+        "bass.is.sub"
+      ],
+      "listenFor": "One i-iv-V7 progression in every section at 135 BPM, sub-heavy bass and minimal percussion under a close, soft vocal.",
+      "title": "bad guy",
+      "year": 2019
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "sub",
+      "808",
+      "analogue",
+      "finger"
+    ],
+    "instruments": [
+      "grand-piano",
+      "juno",
+      "pad",
+      "pluck",
+      "saw-lead",
+      "clean-electric",
+      "strings",
+      "oohs"
+    ],
+    "machines": [
+      "tr808",
+      "linn",
+      "studio"
+    ]
+  },
+  "summary": "Short, verse-chorus songs built to stick through repeated choruses and hooks, with simple tonal harmony and an emphasis on recording and production over live performance. Since the streaming era the voice and the hook arrive fast: intros shrank from over 20 seconds in the mid-1980s to about 5 seconds by 2015, and the harmony is usually a diatonic two- or four-bar loop that repeats through a section or the whole song.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Pop_music",
+      "https://news.osu.edu/has-music-streaming-killed-the-instrumental-intro/",
+      "https://digitallibrary.vassar.edu/sites/default/files/2022-01/Harmony_and_Syntax_in_Contemporary_Pop_Music_0.pdf"
+    ]
+  }
+}

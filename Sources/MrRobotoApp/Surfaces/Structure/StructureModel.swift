@@ -322,6 +322,27 @@ public final class StructureModel {
         autoKeep.schedule { [weak self] in self?.keep() }
     }
 
+    /// The song's genre, asked when the form is offered: its typical arrangement is one press away.
+    public var genre: @MainActor () -> GenreProfile? = { nil }
+
+    /// The genre's typical form, when the song has a genre that states one.
+    public var genreForm: (genre: String, form: GenreForm)? {
+        guard let profile = genre(), let form = profile.form, !form.sections.isEmpty else { return nil }
+        return (profile.name, form)
+    }
+
+    /// Every section of the genre's typical form, in order, after the selected section or at the
+    /// end, each playing the newest of everything — one step of undo for the lot.
+    @discardableResult
+    public func addGenreForm() -> [Section] {
+        guard let form = genreForm?.form else { return [] }
+        let made = form.sections.map { Section(name: $0.name, stitch: defaultStitch, lengthInBars: max(1, $0.bars)) }
+        let at = selected.flatMap { id in sections.firstIndex { $0.id == id } }.map { $0 + 1 } ?? sections.count
+        edit("add form") { sections.insert(contentsOf: made, at: at) }
+        selected = made.first?.id
+        return made
+    }
+
     /// A section in the preset's shape, stitched from the newest of everything, after the selected
     /// section or at the end.
     @discardableResult

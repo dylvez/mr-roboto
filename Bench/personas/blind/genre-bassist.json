@@ -1,0 +1,124 @@
+{
+ "persona": "bassist",
+ "items": [
+  {
+   "id": "blues-walking",
+   "label": "walking under Shuffle as Blues",
+   "genre": "blues",
+   "material": {
+    "kind": "bassline",
+    "hands": "walking",
+    "lagMS": 0,
+    "tempo": 100,
+    "feel": "Shuffle",
+    "density": 0.5,
+    "seed": 7
+   },
+   "expects": {
+    "bassist.density": true
+   }
+  },
+  {
+   "id": "bossa-nova-root-fifth",
+   "label": "root-fifth under Bossa Nova as Bossa nova",
+   "genre": "bossa-nova",
+   "material": {
+    "kind": "bassline",
+    "hands": "root-fifth",
+    "lagMS": 0,
+    "tempo": 140,
+    "feel": "Bossa Nova",
+    "density": 0.5,
+    "seed": 7
+   },
+   "expects": {
+    "bassist.downbeat": true
+   }
+  },
+  {
+   "id": "folk-root-fifth",
+   "label": "root-fifth under Folk Strum as Folk / singer-songwriter",
+   "genre": "folk",
+   "material": {
+    "kind": "bassline",
+    "hands": "root-fifth",
+    "lagMS": 0,
+    "tempo": 112,
+    "feel": "Folk Strum",
+    "density": 0.5,
+    "seed": 7
+   },
+   "expects": {
+    "bassist.downbeat": true
+   }
+  },
+  {
+   "id": "funk-motown",
+   "label": "motown under One-Chord Funk as Funk",
+   "genre": "funk",
+   "material": {
+    "kind": "bassline",
+    "hands": "motown",
+    "lagMS": 0,
+    "tempo": 107,
+    "feel": "One-Chord Funk",
+    "density": 0.5,
+    "seed": 7
+   },
+   "expects": {
+    "bassist.downbeat": true
+   }
+  },
+  {
+   "id": "jazz-walking",
+   "label": "walking under Jazz Waltz as Jazz — small-group swing and post-bop",
+   "genre": "jazz",
+   "material": {
+    "kind": "bassline",
+    "hands": "walking",
+    "lagMS": 0,
+    "tempo": 170,
+    "feel": "Jazz Waltz",
+    "density": 0.5,
+    "seed": 7
+   },
+   "expects": {
+    "bassist.downbeat": true
+   }
+  },
+  {
+   "id": "salsa-tumbao",
+   "label": "tumbao under Son Clave 2-3 as Salsa / son",
+   "genre": "salsa",
+   "material": {
+    "kind": "bassline",
+    "hands": "tumbao",
+    "lagMS": 0,
+    "tempo": 190.0,
+    "feel": "Son Clave 2-3",
+    "density": 0.5,
+    "seed": 7
+   },
+   "expects": {
+    "bassist.downbeat": true
+   }
+  },
+  {
+   "id": "techno-rolling",
+   "label": "rolling under Four on the Floor as Techno",
+   "genre": "techno",
+   "material": {
+    "kind": "bassline",
+    "hands": "rolling",
+    "lagMS": 0,
+    "tempo": 133,
+    "feel": "Four on the Floor",
+    "density": 0.5,
+    "seed": 7
+   },
+   "expects": {
+    "bassist.downbeat": true
+   }
+  }
+ ]
+}

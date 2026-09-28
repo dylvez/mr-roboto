@@ -202,8 +202,16 @@ final class SurfaceWiring {
             model.offer(GridModel.ChopKit(part: offered, name: PartLabel.title(of: cut)), playing: playing != nil)
         }
         gridAdapters[item.id] = adapter
+        model.genre = { [weak app] in GenreLens.of(app?.song) }
         grids[item.id] = model
         return model
+    }
+
+    /// The song's genre changed: every open surface that shows a persona's readings reads again.
+    func genreChanged() {
+        for model in grids.values { model.genreChanged() }
+        for model in rolls.values { model.genreChanged() }
+        for model in chordSheets.values { model.genreChanged() }
     }
 
     /// The chop a groove was made from: the sample its lineage starts at, found by walking its
@@ -295,6 +303,7 @@ final class SurfaceWiring {
         model.adoptLevers(lag: levers.first { $0.quantity == .lag }?.value,
                           density: levers.first { $0.quantity == .density }?.value)
         bassAdapters[item.id] = adapter
+        model.genre = { [weak app] in GenreLens.of(app?.song) }
         rolls[item.id] = model
         return model
     }
@@ -327,6 +336,7 @@ final class SurfaceWiring {
         let model = ChordsModel(host: adapter, key: key, beatsPerBar: song?.timeSignature.beatsPerBar ?? 4,
                                 progression: bound, surfaceID: item.id)
         chordsAdapters[item.id] = adapter
+        model.genre = { [weak app] in GenreLens.of(app?.song) }
         chordSheets[item.id] = model
         return model
     }
@@ -339,6 +349,7 @@ final class SurfaceWiring {
             return existing
         }
         let model = StructureModel(host: StructureAdapter(app: app), song: app.song, surfaceID: item.id)
+        model.genre = { [weak app] in app?.genre?.profile }
         structures[item.id] = model
         return model
     }
@@ -420,6 +431,7 @@ final class SurfaceWiring {
         prune(app)
         if let existing = masters[item.id] { return existing }
         let model = MasterModel(host: MixAdapter(app: app), base: Self.workingMix(in: app), surfaceID: item.id)
+        model.genre = { [weak app] in GenreLens.of(app?.song) }
         masters[item.id] = model
         return model
     }
@@ -431,6 +443,7 @@ final class SurfaceWiring {
         let bound = app.bound(for: item.id).compactMap { app.version($0) }.first { $0.type == .lyric }
         let model = LyricsModel(host: LyricsAdapter(app: app, surface: item.id), lyric: bound, corpus: app.voice,
                                 title: app.song?.title, surfaceID: item.id)
+        model.genre = { [weak app] in GenreLens.of(app?.song) }
         lyricSheets[item.id] = model
         return model
     }

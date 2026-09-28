@@ -662,6 +662,11 @@ public struct Bassist: Persona {
                     caveat: String(format: "%.0f ms is more than a house line can wear; I am capping it at %.0f.", lagMS, Self.houseLagCapMS))
             }
             let name = BassLineage(rawValue: lineage)?.name ?? lineage
+            // A genre's own figure plays with the drums, not behind them: say what it is instead
+            // of a lag it does not have.
+            if let figure = BassLineage(rawValue: lineage), ![.palladino, .thundercat].contains(figure), lagMS == 0 {
+                return .agree("\(name): \(figure.about).")
+            }
             if lagMS > Self.lagWindowMS.upperBound {
                 return .agreeWithCaveat(
                     String(format: "%@ hands, %.0f behind the kick, note-off on the beat.", name, lagMS),

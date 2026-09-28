@@ -1,0 +1,478 @@
+{
+  "aliases": [
+    "reggaetón",
+    "dembow",
+    "reggaeton pop",
+    "perreo",
+    "dominican dembow"
+  ],
+  "bassHands": [
+    "programmed"
+  ],
+  "family": "latin",
+  "feels": [
+    "Dembow"
+  ],
+  "form": {
+    "evidence": {
+      "inferred": "Assembled from MusicRadar's eight-bar sections with an intro hook and Wikipedia's verse-chorus-bridge hip-hop structure; verses doubled to 16 bars by rap convention (eMastered). Forms vary."
+    },
+    "sections": [
+      {
+        "bars": 8,
+        "name": "Intro"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 8,
+        "name": "Bridge"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 8,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "reggaeton",
+  "idioms": [
+    "latin",
+    "reggae"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://daily.redbullmusicacademy.com/2013/07/dembow-a-loop-history/",
+          "https://wayneandwax.com/pdfs/dembow-paper-proofs.pdf",
+          "https://en.wikipedia.org/wiki/Dembow_beat"
+        ]
+      },
+      "name": "Steely & Clevie and Dennis 'The Menace' Thompson",
+      "period": "1989–1991",
+      "why": "Steely & Clevie played the Poco Man Jam / Fish Market riddim and Shabba Ranks' 'Dem Bow', adding extra snare rolls to the dancehall beat; Thompson's 'Dub Mix II' (the Pounder), made at Philip Smart's HC&F studio on Long Island for Panama's Nando Boom, became the most-sampled dembow loop."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/DJ_Playero",
+          "https://en.wikipedia.org/wiki/Reggaeton"
+        ]
+      },
+      "name": "DJ Playero",
+      "period": "c. 1992–2002",
+      "why": "His numbered mixtapes mixed and edited dancehall, hip-hop and house riddims under Spanish freestyles, the underground format of the Puerto Rican sound; Daddy Yankee debuted on Playero 34."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/pdfs/dembow-paper-proofs.pdf",
+          "https://en.wikipedia.org/wiki/Luny_Tunes",
+          "https://en.wikipedia.org/wiki/Gasolina"
+        ]
+      },
+      "name": "Luny Tunes",
+      "period": "2003–2007 peak",
+      "why": "Produced Gasolina and the Mas Flow compilations; Marshall credits them with the genre's commercial phase, adding salsa and merengue piano riffs, bachata guitars, synthesized marimbas and strings, and semitone harmonic motion over the dembow."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.complex.com/music/a/antonio-johri/tainy-breaks-down-hits-bestia-album",
+          "https://en.wikipedia.org/wiki/Reggaeton"
+        ]
+      },
+      "name": "Tainy",
+      "period": "2000s–present",
+      "why": "Signed to Luny Tunes at 14, now the main producer behind Bad Bunny and J Balvin; he describes reggaeton as 'throwing things together, whatever feels good', and recent work brings in plena, bomba, cuatro and orchestral instruments."
+    }
+  ],
+  "meters": [
+    "4/4"
+  ],
+  "name": "Reggaeton",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.musicradar.com/news/reggaeton-tips-bad-bunny",
+          "https://wayneandwax.com/pdfs/dembow-paper-proofs.pdf",
+          "https://en.wikipedia.org/wiki/Dembow_beat"
+        ]
+      },
+      "text": "Dembow: kick on all four quarter notes; snare, rim or timbal-like hits on 16th steps 4, 7, 12 and 15 (a 3+3+2 tresillo in each half bar) - 'boom-ch-boom-chick'. Marshall notes the basic dancehall ostinato can be heard as a habanera rhythm."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/pdfs/dembow-paper-proofs.pdf"
+        ]
+      },
+      "text": "The drums are a loop from a small canon of dancehall riddims (Dem Bow, Poco Man Jam, Bam Bam, Drum Song); a typical production alternates two or more of these loops, sometimes only swapping the snare sample, to mark form."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://tempo-finder.com/blog/reggaeton-tempo/",
+          "https://orphiq.com/resources/what-is-dembow",
+          "https://en.wikipedia.org/wiki/Dominican_dembow"
+        ]
+      },
+      "text": "At 85-100 BPM it feels faster than the number because of the syncopated snare against the steady kick; 110 is reached in modern productions. Dominican dembow is a separate, sped-up (115-130 BPM), rawer, drums-forward branch."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://www.musicradar.com/news/reggaeton-tips-bad-bunny",
+          "https://orphiq.com/resources/what-is-reggaeton"
+        ]
+      },
+      "text": "A solid sub-bass, filtered of upper content, on beats 1 and 3 in the basic pattern, following the roots; since the 2010s it is more often a saturated 808 with pitch movement. Doubling it with marcato or synth strings or a bright lead defines its pitch."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/pdfs/dembow-paper-proofs.pdf",
+          "https://orphiq.com/resources/what-is-reggaeton"
+        ]
+      },
+      "text": "Luny Tunes-era productions have 'a limited but significant degree of harmonic motion': the synth bedding moves up a semitone every other measure, or occasionally down a whole tone, around the tonal centre. Current reggaeton leans to fuller pop and R&B chord work on piano, pads and guitar."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://www.musicradar.com/news/reggaeton-tips-bad-bunny",
+          "https://wayneandwax.com/pdfs/dembow-paper-proofs.pdf",
+          "https://orphiq.com/resources/what-is-reggaeton"
+        ]
+      },
+      "text": "Latin and orchestral colour over the loop: flamenco or classical guitar, harpsichord, strings, timpani and marimbas; Luny Tunes brought salsa and merengue piano riffs and bachata's trebly guitars into the genre. Congas, timbales and shakers are usually sampled or programmed."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://www.musicradar.com/news/reggaeton-tips-bad-bunny"
+        ]
+      },
+      "text": "Kick tight and short, EQ'd for top end and high-passed to clear the sub. Snares are made 'boxy': detuned a few semitones, bit-crushed, compressed to soften the transient, EQ'd at 200-400 Hz and gated; percussion edited short and tight; snares widened with doubling or chorus."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://www.musicradar.com/news/reggaeton-tips-bad-bunny"
+        ]
+      },
+      "text": "Work in eight-bar sections and mark changes with fills from existing sounds; drop by removing everything but the bass and bring it all back on the first snare. Intros and breakdowns can carry much more instrumentation than the body and state the harmony, with counter-melodies of a couple of beats."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://orphiq.com/resources/what-is-reggaeton",
+          "https://wayneandwax.com/pdfs/dembow-paper-proofs.pdf"
+        ]
+      },
+      "text": "The vocal melody carries the song more than instrumental melody; delivery runs from aggressive MC phrasing to smooth crooning, with Auto-Tune standard today. Wisin & Yandel's 2003 'Dem Bow' shows the shift from toasting to crooning in the R&B and salsa romántica style."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Reggaeton",
+          "https://www.musicradar.com/news/reggaeton-tips-bad-bunny"
+        ]
+      },
+      "text": "Verse-chorus-bridge song form with repeated hooks, inherited from hip-hop; a sung vocal hook often appears in the intro, or an instrumental hook when only rappers feature."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Reggaeton",
+          "https://wayneandwax.com/pdfs/dembow-paper-proofs.pdf"
+        ]
+      },
+      "text": "Spanish, rapped and sung; themes of sex and the dance floor (perreo), love, and inner-city life. Marshall hears the genre moving from 1990s underground música negra, aligned with race and class, to pan-Latino 'bailando sexy'."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Reggaeton"
+        ]
+      },
+      "text": "Since 2018 a sharper, minimalist dembow has been standard (Te Boté popularised it), alongside trap crossovers."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.musicradar.com/news/reggaeton-tips-bad-bunny"
+        ]
+      },
+      "text": "Letting a long, boomy kick fight the sub. Keep the kick tight and short with its top end EQ'd in, and high-pass it so the sub-bass owns the low end."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://orphiq.com/resources/what-is-dembow",
+          "https://en.wikipedia.org/wiki/Dominican_dembow"
+        ]
+      },
+      "text": "Pushing the tempo to 115-130 and calling it reggaeton; that is Dominican dembow, a rawer, drums-forward style. Reggaeton lives at 85-100."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/pdfs/dembow-paper-proofs.pdf",
+          "https://www.musicradar.com/news/reggaeton-tips-bad-bunny"
+        ]
+      },
+      "text": "Running one dembow loop unchanged for the whole song. Producers alternate between riddim loops or swap the snare sound (blocks, timbales) between sections to mark the form."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/luis-fonsi/despacito"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "i - VI - III - VII",
+      "text": "Despacito's chorus loop (Bm-G-D-A); the minor-key pop loop of the crossover era."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/pdfs/dembow-paper-proofs.pdf"
+        ]
+      },
+      "mode": "phrygian",
+      "roman": "i - bII",
+      "text": "Luny Tunes' bedding moving up a semitone every other measure and back: tension around the tonic without a cadence."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/pdfs/dembow-paper-proofs.pdf"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "i - bVII",
+      "text": "The occasional whole-tone drop Marshall describes in Luny Tunes productions."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "cited": [
+          "https://orphiq.com/resources/what-is-reggaeton",
+          "https://tempo-finder.com/blog/reggaeton-tempo/",
+          "https://orphiq.com/resources/what-is-dembow"
+        ]
+      },
+      "feature": "tempo.bpm",
+      "high": 100,
+      "low": 85,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "inferred": "MusicRadar's basic pattern puts the sub on quarter-notes 1 and 3 (2 a bar); Orphiq says current bass is an 808 with more pitch movement, and the kick it can follow lands on all four beats (Marshall), giving up to 4."
+      },
+      "feature": "bass.attacks.per.bar",
+      "high": 4,
+      "low": 2,
+      "unit": "attacks per bar"
+    },
+    {
+      "evidence": {
+        "inferred": "The cited basic pattern places sub-bass only on beats 1 and 3 (none off the quarter grid); a pickup or anticipation per bar allows up to a quarter off-grid."
+      },
+      "feature": "bass.syncopation",
+      "high": 0.25,
+      "low": 0,
+      "unit": "fraction of onsets"
+    },
+    {
+      "evidence": {
+        "inferred": "MusicRadar's sub on beat 1 of every bar and Marshall's kick on every beat, which the bass is locked to, put an attack on every downbeat."
+      },
+      "feature": "bass.downbeat.coverage",
+      "high": 1,
+      "low": 1,
+      "unit": "fraction of bars"
+    },
+    {
+      "evidence": {
+        "inferred": "Marshall describes Luny Tunes beds moving up a semitone every other measure (two chords); Despacito's chorus loops four (i-VI-III-VII, Hooktheory)."
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 4,
+      "low": 2,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "inferred": "Marshall's 'moves up a semitone every other measure' is 0.5 per bar; a four-chord loop such as Despacito's changes at most once a bar."
+      },
+      "feature": "harmony.changes.per.bar",
+      "high": 1,
+      "low": 0.5,
+      "unit": "changes per bar"
+    },
+    {
+      "evidence": {
+        "inferred": "LuvLang's BS.1770 measurements put the Latin median at -9.5 LUFS integrated; the range spans about ±1.5 LU, the width of the -9.4 to -7.3 hip-hop spread SoundCampaign measured. No reggaeton-only survey was found."
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -8,
+      "low": -11,
+      "typical": -9.5,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "Gasolina runs 3:12-3:13 and Dákiti 3:25; Chartmetric reports Latin tracks 29 s shorter in 2024 than 2018, pulling the low end under three minutes."
+      },
+      "feature": "form.minutes",
+      "high": 4.0,
+      "low": 2.8,
+      "unit": "minutes"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Shabba Ranks",
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/pdfs/dembow-paper-proofs.pdf",
+          "https://en.wikipedia.org/wiki/Dembow_beat"
+        ]
+      },
+      "features": [
+        "grid.subdivision"
+      ],
+      "listenFor": "From the first bar, the Steely & Clevie dancehall beat with its extra snare rolls, which reggaeton producers later heard as a timbal line.",
+      "title": "Dem Bow",
+      "year": 1990
+    },
+    {
+      "artist": "Wisin & Yandel",
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/pdfs/dembow-paper-proofs.pdf"
+        ]
+      },
+      "features": [
+        "harmony.changes.per.bar",
+        "harmony.chords.distinct"
+      ],
+      "listenFor": "Luny Tunes shifting between snare samples of older pistas, synth marimbas and strings, and a bed that moves up a semitone every other measure under crooned vocals.",
+      "title": "Dem Bow",
+      "year": 2003
+    },
+    {
+      "artist": "Daddy Yankee",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Gasolina",
+          "https://songbpm.com/@daddy-yankee/gasolina",
+          "https://wayneandwax.com/pdfs/dembow-paper-proofs.pdf"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.minutes"
+      ],
+      "listenFor": "The galloping synths over the dembow from the intro, at a listed 96 BPM: the first reggaeton Top 40 hit in the US.",
+      "title": "Gasolina",
+      "year": 2004
+    },
+    {
+      "artist": "Luis Fonsi feat. Daddy Yankee",
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/luis-fonsi/despacito",
+          "https://en.wikipedia.org/wiki/Reggaeton"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "harmony.chords.distinct"
+      ],
+      "listenFor": "The chorus's i-VI-III-VII loop in B minor at 89 BPM over the dembow.",
+      "title": "Despacito",
+      "year": 2017
+    },
+    {
+      "artist": "Casper Mágico, Nio García and Darell",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Reggaeton"
+        ]
+      },
+      "features": [
+        "grid.subdivision"
+      ],
+      "listenFor": "From the first verse, the sharper minimalist dembow that became standard after 2018.",
+      "title": "Te Boté",
+      "year": 2018
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "sub",
+      "808"
+    ],
+    "instruments": [
+      "nylon-guitar",
+      "harpsichord",
+      "strings",
+      "marimba",
+      "grand-piano",
+      "clean-electric",
+      "pluck"
+    ],
+    "machines": [
+      "tr808"
+    ]
+  },
+  "summary": "Spanish-language club music from Panama and Puerto Rico (late 1980s-1990s) built on the dembow: a kick on every beat cross-cut by snares or timbal-like hits on a 3+3+2 tresillo, at roughly 85-100 BPM. Sung and rapped vocals carry the song over a sub bass and a short, mostly minor loop that moves little harmonically.",
+  "summaryEvidence": {
+    "cited": [
+      "https://wayneandwax.com/pdfs/dembow-paper-proofs.pdf",
+      "https://en.wikipedia.org/wiki/Reggaeton",
+      "https://orphiq.com/resources/what-is-reggaeton"
+    ]
+  }
+}

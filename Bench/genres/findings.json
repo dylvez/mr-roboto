@@ -1,0 +1,12 @@
+{
+ "boom-bap-Boom-Bap": {"beatmaker.swing-default": "The groove-theory port is quantised straight (50); boom-bap as measured swings 52-62. The library's Boom-Bap Pocket is the swung one."},
+ "funk-One-Chord Funk": {"beatmaker.swing-default": "The feel is straight sixteenths (50); early funk as measured sits at 51.7-61.5. Cold Sweat's 51.7 is nearly straight, so this is a near miss."},
+ "house-Four on the Floor": {"beatmaker.swing-default": "Four on the Floor is the library's generic straight pulse, shared with techno, disco and pop; house as Attack Magazine's settings have it swings 54-63. Classic House is the house feel."},
+ "jazz-Jazz Waltz": {"beatmaker.swing-default": "The library writes its jazz waltz on straight sixteenths in 3/4; jazz ride swing is measured at 60-72. A finding about the feel, not the genre."},
+ "jazz-Broadway Ride": {"beatmaker.swing-default": "Broadway Ride is straight; the jazz profile claims it, and jazz swings 60-72."},
+ "neo-soul-Neo-Soul Pocket": {"beatmaker.snare-direction": "The feel's snare sits 22.5 ms late; the profile's sources put neo-soul's at 10-20. Close, and on the side the house chose.",
+                              "beatmaker.pocket-is-a-span": "The feel's layers spread 18.8 ms; the profile's number is the 55-80 ms measured in Left and Right, one record's extreme."},
+ "disco-prog2": {"harmonist.stays-in-key": "The progression borrows ii and V7 from harmonic minor; the genre's 0.85-1 is over whole songs."},
+ "jazz-prog4": {"harmonist.stays-in-key": "III7-VI7-II7-V7 is a chain of secondary dominants, all out of key by design; the genre's 0.4-0.8 is over whole tunes."},
+ "pop-prog4": {"harmonist.stays-in-key": "IV7 is a borrowed dominant seventh; the genre's 0.9-1 is over whole songs."}
+}

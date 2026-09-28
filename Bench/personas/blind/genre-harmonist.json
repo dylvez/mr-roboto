@@ -1,0 +1,462 @@
+{
+ "persona": "harmonist",
+ "items": [
+  {
+   "id": "bossa-nova-prog1",
+   "label": "Imaj7 - II7 - ii7 - bII7 as Bossa nova",
+   "genre": "bossa-nova",
+   "material": {
+    "kind": "numerals",
+    "roman": "Imaj7 - II7 - ii7 - bII7",
+    "mode": "ionian",
+    "key": "C ionian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "bossa-nova-prog2",
+   "label": "iii7 - bIII7 - ii7 - bII7 as Bossa nova",
+   "genre": "bossa-nova",
+   "material": {
+    "kind": "numerals",
+    "roman": "iii7 - bIII7 - ii7 - bII7",
+    "mode": "ionian",
+    "key": "C ionian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "bossa-nova-prog3",
+   "label": "IVmaj7 - bVII7 as Bossa nova",
+   "genre": "bossa-nova",
+   "material": {
+    "kind": "numerals",
+    "roman": "IVmaj7 - bVII7",
+    "mode": "mixolydian",
+    "key": "C mixolydian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "bossa-nova-prog4",
+   "label": "iim7b5 - V7 - i as Bossa nova",
+   "genre": "bossa-nova",
+   "material": {
+    "kind": "numerals",
+    "roman": "iim7b5 - V7 - i",
+    "mode": "aeolian",
+    "key": "A aeolian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "breakbeat-prog1",
+   "label": "bVII - IV - I as Breakbeat / big beat",
+   "genre": "breakbeat",
+   "material": {
+    "kind": "numerals",
+    "roman": "bVII - IV - I",
+    "mode": "mixolydian",
+    "key": "C mixolydian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "breakbeat-prog2",
+   "label": "i - IV as Breakbeat / big beat",
+   "genre": "breakbeat",
+   "material": {
+    "kind": "numerals",
+    "roman": "i - IV",
+    "mode": "dorian",
+    "key": "A dorian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "country-prog1",
+   "label": "I - IV - V - I as Country",
+   "genre": "country",
+   "material": {
+    "kind": "numerals",
+    "roman": "I - IV - V - I",
+    "mode": "ionian",
+    "key": "C ionian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "country-prog2",
+   "label": "I - V - vi - IV as Country",
+   "genre": "country",
+   "material": {
+    "kind": "numerals",
+    "roman": "I - V - vi - IV",
+    "mode": "ionian",
+    "key": "C ionian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "country-prog3",
+   "label": "I - ii7 - I - IV as Country",
+   "genre": "country",
+   "material": {
+    "kind": "numerals",
+    "roman": "I - ii7 - I - IV",
+    "mode": "ionian",
+    "key": "C ionian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "country-prog4",
+   "label": "ii - V - I as Country",
+   "genre": "country",
+   "material": {
+    "kind": "numerals",
+    "roman": "ii - V - I",
+    "mode": "ionian",
+    "key": "C ionian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "cumbia-prog1",
+   "label": "I - V7 as Cumbia",
+   "genre": "cumbia",
+   "material": {
+    "kind": "numerals",
+    "roman": "I - V7",
+    "mode": "ionian",
+    "key": "C ionian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "cumbia-prog2",
+   "label": "I - IV - V7 - I as Cumbia",
+   "genre": "cumbia",
+   "material": {
+    "kind": "numerals",
+    "roman": "I - IV - V7 - I",
+    "mode": "ionian",
+    "key": "C ionian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "cumbia-prog3",
+   "label": "i - bVII - bVI - bVII as Cumbia",
+   "genre": "cumbia",
+   "material": {
+    "kind": "numerals",
+    "roman": "i - bVII - bVI - bVII",
+    "mode": "aeolian",
+    "key": "A aeolian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "disco-prog1",
+   "label": "i7 - IV7 as Disco",
+   "genre": "disco",
+   "material": {
+    "kind": "numerals",
+    "roman": "i7 - IV7",
+    "mode": "dorian",
+    "key": "A dorian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "disco-prog2",
+   "label": "i - iv7 - VII7 - IIImaj7 - VImaj7 - ii - V7 as Disco",
+   "genre": "disco",
+   "material": {
+    "kind": "numerals",
+    "roman": "i - iv7 - VII7 - IIImaj7 - VImaj7 - ii - V7",
+    "mode": "aeolian",
+    "key": "A aeolian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": false
+   },
+   "notes": {
+    "harmonist.stays-in-key": "The progression borrows ii and V7 from harmonic minor; the genre's 0.85-1 is over whole songs."
+   }
+  },
+  {
+   "id": "disco-prog3",
+   "label": "i7 - VImaj7 - v7 as Disco",
+   "genre": "disco",
+   "material": {
+    "kind": "numerals",
+    "roman": "i7 - VImaj7 - v7",
+    "mode": "aeolian",
+    "key": "A aeolian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "house-prog1",
+   "label": "i - VImaj7 - VII as House",
+   "genre": "house",
+   "material": {
+    "kind": "numerals",
+    "roman": "i - VImaj7 - VII",
+    "mode": "aeolian",
+    "key": "A aeolian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "house-prog2",
+   "label": "v7 - VImaj7 - iv7 - VII7 - i as House",
+   "genre": "house",
+   "material": {
+    "kind": "numerals",
+    "roman": "v7 - VImaj7 - iv7 - VII7 - i",
+    "mode": "aeolian",
+    "key": "A aeolian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "jazz-prog1",
+   "label": "iim7 - V7 - Imaj7 as Jazz — small-group swing and post-bop",
+   "genre": "jazz",
+   "material": {
+    "kind": "numerals",
+    "roman": "iim7 - V7 - Imaj7",
+    "mode": "ionian",
+    "key": "C ionian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "jazz-prog2",
+   "label": "iim7 - bII7 - Imaj7 as Jazz — small-group swing and post-bop",
+   "genre": "jazz",
+   "material": {
+    "kind": "numerals",
+    "roman": "iim7 - bII7 - Imaj7",
+    "mode": "ionian",
+    "key": "C ionian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "jazz-prog3",
+   "label": "Imaj7 - VI7 - iim7 - V7 as Jazz — small-group swing and post-bop",
+   "genre": "jazz",
+   "material": {
+    "kind": "numerals",
+    "roman": "Imaj7 - VI7 - iim7 - V7",
+    "mode": "ionian",
+    "key": "C ionian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "jazz-prog4",
+   "label": "III7 - VI7 - II7 - V7 as Jazz — small-group swing and post-bop",
+   "genre": "jazz",
+   "material": {
+    "kind": "numerals",
+    "roman": "III7 - VI7 - II7 - V7",
+    "mode": "ionian",
+    "key": "C ionian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": false
+   },
+   "notes": {
+    "harmonist.stays-in-key": "III7-VI7-II7-V7 is a chain of secondary dominants, all out of key by design; the genre's 0.4-0.8 is over whole tunes."
+   }
+  },
+  {
+   "id": "jazz-prog5",
+   "label": "im7 - bIIm7 - im7 as Jazz — small-group swing and post-bop",
+   "genre": "jazz",
+   "material": {
+    "kind": "numerals",
+    "roman": "im7 - bIIm7 - im7",
+    "mode": "dorian",
+    "key": "A dorian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "pop-prog1",
+   "label": "I - V - vi - IV as Contemporary pop",
+   "genre": "pop",
+   "material": {
+    "kind": "numerals",
+    "roman": "I - V - vi - IV",
+    "mode": "ionian",
+    "key": "C ionian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "pop-prog2",
+   "label": "i - VII - VI - iv as Contemporary pop",
+   "genre": "pop",
+   "material": {
+    "kind": "numerals",
+    "roman": "i - VII - VI - iv",
+    "mode": "aeolian",
+    "key": "A aeolian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "pop-prog3",
+   "label": "i - iv - VI - VII as Contemporary pop",
+   "genre": "pop",
+   "material": {
+    "kind": "numerals",
+    "roman": "i - iv - VI - VII",
+    "mode": "aeolian",
+    "key": "A aeolian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "pop-prog4",
+   "label": "IV7 - vi - V as Contemporary pop",
+   "genre": "pop",
+   "material": {
+    "kind": "numerals",
+    "roman": "IV7 - vi - V",
+    "mode": "ionian",
+    "key": "C ionian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": false
+   },
+   "notes": {
+    "harmonist.stays-in-key": "IV7 is a borrowed dominant seventh; the genre's 0.9-1 is over whole songs."
+   }
+  },
+  {
+   "id": "rock-prog1",
+   "label": "I - IV - V - I as Rock",
+   "genre": "rock",
+   "material": {
+    "kind": "numerals",
+    "roman": "I - IV - V - I",
+    "mode": "ionian",
+    "key": "C ionian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "rock-prog2",
+   "label": "I - bVII - IV - I as Rock",
+   "genre": "rock",
+   "material": {
+    "kind": "numerals",
+    "roman": "I - bVII - IV - I",
+    "mode": "mixolydian",
+    "key": "C mixolydian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "rock-prog3",
+   "label": "i - iv - III - VI as Rock",
+   "genre": "rock",
+   "material": {
+    "kind": "numerals",
+    "roman": "i - iv - III - VI",
+    "mode": "aeolian",
+    "key": "A aeolian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "rock-prog4",
+   "label": "V - IV - I as Rock",
+   "genre": "rock",
+   "material": {
+    "kind": "numerals",
+    "roman": "V - IV - I",
+    "mode": "ionian",
+    "key": "C ionian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "uk-garage-prog1",
+   "label": "i7 - v - VImaj7 as UK garage / 2-step",
+   "genre": "uk-garage",
+   "material": {
+    "kind": "numerals",
+    "roman": "i7 - v - VImaj7",
+    "mode": "aeolian",
+    "key": "A aeolian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  }
+ ]
+}

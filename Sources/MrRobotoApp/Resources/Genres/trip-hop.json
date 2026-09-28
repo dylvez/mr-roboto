@@ -1,0 +1,470 @@
+{
+  "aliases": [
+    "trip hop",
+    "bristol sound",
+    "downtempo"
+  ],
+  "bassHands": [],
+  "family": "electronic",
+  "feels": [
+    "Trip-Hop"
+  ],
+  "form": {
+    "evidence": {
+      "cited": [
+        "https://beatkey.app/how-to-make-trip-hop-music"
+      ]
+    },
+    "sections": [
+      {
+        "bars": 8,
+        "name": "Intro"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 8,
+        "name": "Bridge"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 16,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "trip-hop",
+  "idioms": [
+    "trip-hop"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Trip_hop",
+          "https://en.wikipedia.org/wiki/Blue_Lines",
+          "https://www.soundonsound.com/people/neil-davidge-recording-100th-window"
+        ]
+      },
+      "name": "Massive Attack",
+      "period": "1990–2003",
+      "why": "Grew out of Bristol's Wild Bunch soundsystem and fused breakbeats, sampling and rap with dub, soul and reggae on Blue Lines at 67–90 BPM. With Neil Davidge, on 100th Window, they built tracks from a single sound into a loop and processed plain drums through delays and filters into melodic parts."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Dummy_(album)",
+          "https://en.wikipedia.org/wiki/Sour_Times"
+        ]
+      },
+      "name": "Portishead",
+      "period": "1994",
+      "why": "On Dummy they recorded their own music, cut it to vinyl, degraded the records physically and resampled and scratched them, and did not record digitally. Geoff Barrow played Rhodes and drums and did the programming; Adrian Utley brought theremin and cimbalom."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Maxinquaye"
+        ]
+      },
+      "name": "Tricky",
+      "period": "1995",
+      "why": "Made Maxinquaye with Mark Saunders from vinyl samples scattered around a home studio, forcing together samples 30 BPM apart and in different keys by pitch-shifting until they held. He kept crackle and glitches, and set Martina Topley-Bird's single-take vocals against his whispered raps."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Trip_hop",
+          "https://en.wikipedia.org/wiki/Endtroducing....."
+        ]
+      },
+      "name": "DJ Shadow",
+      "period": "1994–1996",
+      "why": "His instrumental record was the one Mixmag's Andy Pemberton first called 'trip hop' in 1994. Endtroducing was composed almost entirely of vinyl samples on an MPC60 MKII, a turntable and an ADAT, with a rule against sampling popular records."
+    }
+  ],
+  "meters": [
+    "4/4"
+  ],
+  "name": "Trip-hop",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Trip_hop",
+          "https://beatkey.app/how-to-make-trip-hop-music"
+        ]
+      },
+      "text": "Slowed-down breakbeat samples like 1990s hip-hop beats, heavy on the kick; Bristol's soundsystem culture and Jamaican dub gave it its laid-back, slow and heavy drum feel. Hats are eighth notes, slightly swung."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Blue_Lines",
+          "https://beatkey.app/how-to-make-trip-hop-music"
+        ]
+      },
+      "text": "Tempos run from Blue Lines' 'mellow, moonwalking' 90 BPM down to a 'torpid' 67 (Simon Reynolds); Teardrop sits at 80 and Portishead's Wandering Star at 72."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://beatkey.app/how-to-make-trip-hop-music",
+          "https://en.wikipedia.org/wiki/Teardrop_(song)"
+        ]
+      },
+      "text": "Minor keys dominate (D, A, G, C, E and B minor), in short non-resolving loops such as i–bVII–bVI–bVII or the noir i–iv–bVI–V; much of the harmony arrives inside a sampled or played riff, as with Teardrop's harpsichord figure."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://beatkey.app/how-to-make-trip-hop-music",
+          "https://www.soundonsound.com/people/neil-davidge-recording-100th-window",
+          "https://en.wikipedia.org/wiki/Trip_hop"
+        ]
+      },
+      "text": "Hip-hop-style bass — not complex, but bouncy and prominent — with a sine sub under 80 Hz and body at 100–200 Hz; dub's weight is the model. Bass lines grew out of arrangement: at Massive Attack a sound became a part, then a loop, then the next layer was built on it. No bass hand in the app's list matches cleanly, so none is named."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Trip_hop",
+          "https://en.wikipedia.org/wiki/Dummy_(album)",
+          "https://en.wikipedia.org/wiki/Teardrop_(song)"
+        ]
+      },
+      "text": "Rhodes, saxophone, trumpet, flute, theremin and Mellotron over the beats; Adrian Utley brought theremin and cimbalom to Portishead, and Teardrop is built on a harpsichord riff."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Dummy_(album)",
+          "https://en.wikipedia.org/wiki/Maxinquaye"
+        ]
+      },
+      "text": "Degradation is deliberate: Portishead pressed their own playing to vinyl, walked on the records and skated on them, played them through a broken amplifier, and sampled them back; Tricky kept glitches and crackles rather than cleaning them."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Sour_Times",
+          "https://en.wikipedia.org/wiki/Maxinquaye",
+          "https://en.wikipedia.org/wiki/Trip_hop"
+        ]
+      },
+      "text": "Samples are film and soundtrack music as much as soul and jazz: Sour Times is built on Lalo Schifrin's 'The Danube Incident', sped up nearly a semitone into a dissonant 'hip-hop tuning'; the Ponderosa drum loop came from a 1993 Indian film soundtrack."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://beatkey.app/how-to-make-trip-hop-music",
+          "https://www.soundonsound.com/people/neil-davidge-recording-100th-window"
+        ]
+      },
+      "text": "Long reverbs (2–4 s decay) on a short, controlled kick (150–200 ms decay) at −6 to −4 dBFS; Massive Attack mixed 100th Window as four or five stereo stems with Mark Stent and mastered it over three days."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "inferred": "absence of a trip-hop row in the loudness surveys consulted (freshlybakedstudios.com, luvlang.studio), and the release years of the reference albums (1991–1998)"
+      },
+      "text": "The loudness range is a producer guide's target, not a measured survey; no published loudness survey separates trip-hop. The 1990s classics predate the loudness war's peak and will likely read quieter."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Trip_hop",
+          "https://en.wikipedia.org/wiki/Dummy_(album)",
+          "https://en.wikipedia.org/wiki/Maxinquaye",
+          "https://en.wikipedia.org/wiki/Teardrop_(song)"
+        ]
+      },
+      "text": "Vocals are mostly female singers from R&B, jazz and rock traditions — Beth Gibbons' Billie-Holiday-indebted croon, Elizabeth Fraser's ethereal lines, Martina Topley-Bird's single-take 'broken voice' against Tricky's whispered raps."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://www.soundonsound.com/people/neil-davidge-recording-100th-window",
+          "https://beatkey.app/how-to-make-trip-hop-music"
+        ]
+      },
+      "text": "Structures grow organically rather than by stacking four-bar blocks: Davidge prefers 'what comes before' to dictate 'what comes after'. Forms vary a lot; the section plan here is a typical song layout, not a rule."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://beatkey.app/how-to-make-trip-hop-music"
+        ]
+      },
+      "text": "Sections run long: intro 8–16 bars, verse 16–32, chorus 8–16, bridge 8–16, outro 8–16."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://headlinerhub.com/neil-davidge-producing-massive-attack-teardrop.html",
+          "https://en.wikipedia.org/wiki/Blue_Lines"
+        ]
+      },
+      "text": "Pushing the tempo up for energy; Davidge on Teardrop: take it faster and 'it just wouldn't work'. Keep it in the 67–95 BPM range and get movement from texture."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Dummy_(album)",
+          "https://en.wikipedia.org/wiki/Maxinquaye"
+        ]
+      },
+      "text": "A clean, hi-fi production; the classics were degraded on purpose — records walked on, broken amps, kept crackle."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Maxinquaye"
+        ]
+      },
+      "text": "Stacking samples that disagree in key and tempo and leaving them; Saunders pitch-shifted Tricky's clashing samples until they cohered."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://beatkey.app/how-to-make-trip-hop-music"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "i - bVII - bVI - bVII",
+      "text": "The Bristol minor loop, rocking between the flat seventh and sixth without resolving."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://beatkey.app/how-to-make-trip-hop-music"
+        ]
+      },
+      "mode": "harmonic minor",
+      "roman": "i - iv - bVI - V",
+      "text": "The noir crawl, whose major V gives the soundtrack tension."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Blue_Lines",
+          "https://beatkey.app/how-to-make-trip-hop-music"
+        ]
+      },
+      "feature": "tempo.bpm",
+      "high": 95,
+      "low": 67,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://beatkey.app/how-to-make-trip-hop-music"
+        ]
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -9,
+      "low": -12,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "from the two minor loops beatkey.app gives (i–bVII–bVI–bVII has 3 distinct chords, i–iv–bVI–V has 4), with 2 allowed for the one-riff tracks such as Teardrop's harpsichord figure"
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 4,
+      "low": 2,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "inferred": "from the cited lengths: Sour Times 4:14, Teardrop 5:31, Dummy 49 minutes over 11 tracks (≈4.5 each), Maxinquaye 57:13 over 12 (≈4.8 each)"
+      },
+      "feature": "form.minutes",
+      "high": 6,
+      "low": 4,
+      "unit": "minutes"
+    },
+    {
+      "evidence": {
+        "inferred": "an 8-bar intro plus a 16-bar verse (24 bars, the short end of beatkey.app's section lengths) at 95 BPM is 61 s and at 80 BPM is 72 s; 8+24 bars at 70 BPM is 110 s"
+      },
+      "feature": "form.hook.seconds",
+      "high": 110,
+      "low": 55,
+      "unit": "seconds"
+    },
+    {
+      "evidence": {
+        "inferred": "beatkey.app's section list (intro, verse, chorus, bridge, outro) laid out as intro–verse–chorus–verse–chorus–bridge–chorus–outro is 8; dropping the bridge and one chorus gives 6"
+      },
+      "feature": "form.sections",
+      "high": 8,
+      "low": 6,
+      "unit": "sections"
+    },
+    {
+      "evidence": {
+        "inferred": "from the 8-section layout above: 3 of 8 sections repeat a name (verse once, chorus twice) = 0.375; the 6-section version gives 2 of 6 ≈ 0.33"
+      },
+      "feature": "form.repetition",
+      "high": 0.4,
+      "low": 0.3,
+      "unit": "fraction"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Massive Attack",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Teardrop_(song)",
+          "https://beatkey.app/how-to-make-trip-hop-music"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "harmony.chords.distinct"
+      ],
+      "listenFor": "Davidge's harpsichord riff over a sped-up Les McCann drum sample at 80 BPM, with Elizabeth Fraser's vocal.",
+      "title": "Teardrop",
+      "year": 1998
+    },
+    {
+      "artist": "Portishead",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Sour_Times"
+        ]
+      },
+      "features": [
+        "merge.transpose.semitones"
+      ],
+      "listenFor": "The Lalo Schifrin sample sped up nearly a semitone, leaving the whole track in 'hip-hop tuning' against standard pitch.",
+      "title": "Sour Times",
+      "year": 1994
+    },
+    {
+      "artist": "Portishead",
+      "evidence": {
+        "cited": [
+          "https://beatkey.app/how-to-make-trip-hop-music"
+        ]
+      },
+      "features": [
+        "tempo.bpm"
+      ],
+      "listenFor": "The slow end of the genre, about 72 BPM.",
+      "title": "Wandering Star",
+      "year": 1994
+    },
+    {
+      "artist": "Massive Attack",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Blue_Lines"
+        ]
+      },
+      "features": [
+        "form.density.spread"
+      ],
+      "listenFor": "Wil Malone's orchestral string arrangement lifting Shara Nelson's vocal.",
+      "title": "Unfinished Sympathy",
+      "year": 1991
+    },
+    {
+      "artist": "DJ Shadow",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Endtroducing.....",
+          "https://beatkey.app/how-to-make-trip-hop-music"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "chop.density"
+      ],
+      "listenFor": "A looped piano line from Jeremy Storch's 'I Feel a New Shadow' at about 87 BPM, all from vinyl.",
+      "title": "Building Steam with a Grain of Salt",
+      "year": 1996
+    },
+    {
+      "artist": "Tricky",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Maxinquaye"
+        ]
+      },
+      "features": [
+        "merge.drum.sources"
+      ],
+      "listenFor": "A drum loop lifted from a 1993 Indian film soundtrack under Topley-Bird's vocal.",
+      "title": "Ponderosa",
+      "year": 1995
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "sub",
+      "finger"
+    ],
+    "instruments": [
+      "harpsichord",
+      "rhodes",
+      "organ",
+      "strings",
+      "slow-strings",
+      "clean-electric",
+      "flute",
+      "trumpet",
+      "tenor-sax",
+      "dark-pad"
+    ],
+    "machines": [
+      "vintage",
+      "mpc60"
+    ]
+  },
+  "summary": "The Bristol sound: hip-hop sampling and slowed-down breakbeats under dub's heavy, slow bass, with jazz, soul and film-soundtrack samples, at 'spliff' tempos from about 67 to 90 BPM. It is atmospheric and song-shaped, usually carried by a singer — often a female voice drawn from R&B, jazz or rock — over deliberately degraded, cinematic textures.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Trip_hop",
+      "https://en.wikipedia.org/wiki/Blue_Lines"
+    ]
+  }
+}

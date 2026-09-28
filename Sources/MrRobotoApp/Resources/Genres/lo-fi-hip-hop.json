@@ -1,0 +1,458 @@
+{
+  "aliases": [
+    "lofi hip hop",
+    "lofi",
+    "chillhop",
+    "jazzhop",
+    "beats to relax/study to"
+  ],
+  "bassHands": [],
+  "family": "hip-hop",
+  "feels": [
+    "Lo-Fi Hip-Hop"
+  ],
+  "form": {
+    "evidence": {
+      "inferred": "four- and eight-bar phrases with parts added progressively (Native Instruments, EDMProd) laid out to the 1–3 minute length above: 32 bars at 82 BPM is 1.6 minutes"
+    },
+    "sections": [
+      {
+        "bars": 4,
+        "name": "Intro"
+      },
+      {
+        "bars": 8,
+        "name": "Loop A"
+      },
+      {
+        "bars": 8,
+        "name": "Loop B"
+      },
+      {
+        "bars": 8,
+        "name": "Loop A"
+      },
+      {
+        "bars": 4,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "lo-fi-hip-hop",
+  "idioms": [
+    "lo-fi",
+    "hip-hop"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/J_Dilla",
+          "https://iaspmjournal.net/index.php/IASPM_Journal/article/download/949/pdf_1",
+          "https://en.wikipedia.org/wiki/Donuts_(album)"
+        ]
+      },
+      "name": "J Dilla",
+      "period": "1995–2006",
+      "why": "Disabled the MPC3000's quantise and hand-played beats, juxtaposing straight and swung time; lo-fi enthusiasts call him the godfather of the genre. He also used side-chaining and, by Questlove's account, added cassette-hiss samples for imperfection; Donuts (2006) is 31 mostly one-to-one-and-a-half-minute tracks."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Nujabes",
+          "https://www.stereofox.com/articles/lofi-hip-hop-history-aethetics-artists-and-the-rise-to-popularity/"
+        ]
+      },
+      "name": "Nujabes",
+      "period": "2001–2005",
+      "why": "Made atmospheric instrumentals sampling hip-hop, soul and jazz with turntables, samplers and drum machines, occasionally flute. His Samurai Champloo score (2004) tied lo-fi to anime, which the livestream visuals still echo."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Lofi_Girl",
+          "https://stevengamble.com/lofi/"
+        ]
+      },
+      "name": "ChilledCow / Lofi Girl",
+      "period": "2017–present",
+      "why": "Dimitri Somoguy's channel began streaming lo-fi hip-hop on 25 February 2017 and made the looping study-girl animation the genre's image; it releases tracks on its own label. The stream format, with tracks programmed back to back, shapes the genre's short, even-level tracks."
+    }
+  ],
+  "meters": [
+    "4/4"
+  ],
+  "name": "Lo-fi hip-hop",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://iaspmjournal.net/index.php/IASPM_Journal/article/download/949/pdf_1",
+          "https://en.wikipedia.org/wiki/J_Dilla"
+        ]
+      },
+      "text": "Kick and snare are slightly loose and rhythmically relaxed rather than locked to the grid — the unquantised feel D'Errico traces to J Dilla hand-playing an MPC — though less extreme than Dilla's own work."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.edmprod.com/lofi-hip-hop/"
+        ]
+      },
+      "text": "Hats are swung by hand — first hat pulled back a little, second pushed forward, with small differences on each repeat — while the kick and snare stay on or near the grid; a second kick on the offbeat of each bar is common."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://pudding.cool/2023/06/groove/"
+        ]
+      },
+      "text": "MPC swing percent is the share of the beat the first note of a pair takes: 50 is straight, 66.6 is triplet swing, 60 divides the beat in fifths."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://iaspmjournal.net/index.php/IASPM_Journal/article/download/949/pdf_1",
+          "https://blog.flat.io/lofi-chord-progressions/"
+        ]
+      },
+      "text": "Jazz-influenced extended chords — major sevenths, minor sevenths, ninths — held still in slow one- or two-bar-per-chord loops; one lush major ninth left for several bars, or two chords a step apart, are both idiomatic."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://blog.native-instruments.com/lo-fi-hip-hop-beats/",
+          "https://www.edmprod.com/lofi-hip-hop/"
+        ]
+      },
+      "text": "Many tracks have no dedicated bass — keys and kick carry the low end; when there is one it is a warm sub on chord roots, or a mellow line on chord tones with syncopation and octave jumps. No bass hand is named because the cited sources do not settle on one."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://iaspmjournal.net/index.php/IASPM_Journal/article/download/949/pdf_1"
+        ]
+      },
+      "text": "Acoustic piano is the instrument heard most on the ChilledCow stream; Fender Rhodes, nylon-string or hollow-body electric guitar through chorus or vibrato, occasional harp and sampled string sections are common."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://blog.native-instruments.com/lo-fi-hip-hop-beats/",
+          "https://bpmcalc.com/genres/lo-fi/",
+          "https://modeaudio.com/magazine/lofi-essential-production-tools",
+          "https://tadaoto.com/en/blog/how-to-make-lofi-sound/"
+        ]
+      },
+      "text": "Samples are aged digitally: high frequencies filtered off (Native Instruments' walkthrough low-passes from 3.12 kHz; bpmcalc cites 8–10 kHz), iZotope Vinyl crackle kept under the drums, tape wow and flutter on keys, 12-bit crushing for MPC heritage."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://iaspmjournal.net/index.php/IASPM_Journal/article/download/949/pdf_1",
+          "https://www.edmprod.com/lofi-hip-hop/"
+        ]
+      },
+      "text": "Heavy side-chain compression of the melodic loop to the kick is part of the aesthetic — the 'pumping', wave-like rise and fall D'Errico hears in Dilla and Flying Lotus — and can be more brutal here than in other genres."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "inferred": "absence in the two genre loudness surveys consulted (freshlybakedstudios.com, luvlang.studio), which report hip-hop and R&B but no lo-fi row"
+      },
+      "text": "No published loudness survey separates lo-fi hip-hop from hip-hop, so no LUFS range is given here."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://iaspmjournal.net/index.php/IASPM_Journal/article/download/949/pdf_1"
+        ]
+      },
+      "text": "Almost exclusively instrumental; the only voices are short speech snippets from film or TV, usually placed once at the very beginning or end of a track to set a mood."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://blog.native-instruments.com/lo-fi-hip-hop-beats/",
+          "https://www.edmprod.com/lofi-hip-hop/"
+        ]
+      },
+      "text": "Built in four- or eight-bar phrases, with elements brought in progressively over a short repeating loop rather than through verse and chorus."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://stevengamble.com/lofi/",
+          "https://en.wikipedia.org/wiki/Donuts_(album)"
+        ]
+      },
+      "text": "Tracks are heard as part of hour-long mixes and livestreams, so they are short and flow into each other; Donuts, the model, has 31 tracks in 43 minutes and loops its last track into its first."
+    }
+  ],
+  "parent": "boom-bap",
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://tadaoto.com/en/blog/how-to-make-lofi-sound/"
+        ]
+      },
+      "text": "Low-passing so hard that drum attacks and consonants disappear; set the cutoff by ear against the unprocessed source and add one ageing effect at a time."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://modeaudio.com/magazine/lofi-essential-production-tools",
+          "https://blog.native-instruments.com/lo-fi-hip-hop-beats/"
+        ]
+      },
+      "text": "Crackle loud enough to be a part; keep vinyl noise as a low layer just under the drums."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://iaspmjournal.net/index.php/IASPM_Journal/article/download/949/pdf_1"
+        ]
+      },
+      "text": "Writing a rap or sung topline; the genre is instrumental, and a speech snippet at the start or end is the most vocal it usually gets."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://blog.flat.io/lofi-chord-progressions/"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "Imaj7 - vi7 - ii7 - V7",
+      "text": "The jazz turnaround, one bar each, looping."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://blog.flat.io/lofi-chord-progressions/"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "ii7 - V7 - Imaj7",
+      "text": "The ii–V–I cadence, a bar per chord or two."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://blog.flat.io/lofi-chord-progressions/"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "Imaj7 - vi7 - IVmaj7 - V7",
+      "text": "The four-chord pop loop with sevenths added."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://blog.native-instruments.com/lo-fi-hip-hop-beats/"
+        ]
+      },
+      "mode": "harmonic minor",
+      "roman": "VI - i - V7",
+      "text": "Native Instruments' walkthrough loop (F – Am – E7 in A minor) with tension notes added."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "cited": [
+          "https://iaspmjournal.net/index.php/IASPM_Journal/article/download/949/pdf_1",
+          "https://bpmcalc.com/genres/lo-fi/",
+          "https://blog.native-instruments.com/lo-fi-hip-hop-beats/"
+        ]
+      },
+      "feature": "tempo.bpm",
+      "high": 90,
+      "low": 70,
+      "typical": 82,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "inferred": "bpmcalc.com's lo-fi anchor of sixteenths swung to 60%, bounded by the 52–62% MPC swing that tellingbeatzz.com gives for the boom-bap it descends from, with the bottom raised because the cited sources all call for audible swing"
+      },
+      "feature": "swing.percent",
+      "high": 62,
+      "low": 54,
+      "typical": 60,
+      "unit": "MPC percent"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://blog.native-instruments.com/lo-fi-hip-hop-beats/",
+          "https://bpmcalc.com/genres/lo-fi/",
+          "https://iaspmjournal.net/index.php/IASPM_Journal/article/download/949/pdf_1"
+        ]
+      },
+      "feature": "mix.bandwidth.hz",
+      "high": 10000,
+      "low": 3000,
+      "unit": "Hz"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://blog.flat.io/lofi-chord-progressions/"
+        ]
+      },
+      "feature": "harmony.changes.per.bar",
+      "high": 1,
+      "low": 0.5,
+      "typical": 1,
+      "unit": "changes per bar"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://blog.flat.io/lofi-chord-progressions/",
+          "https://blog.native-instruments.com/lo-fi-hip-hop-beats/"
+        ]
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 4,
+      "low": 2,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://iaspmjournal.net/index.php/IASPM_Journal/article/download/949/pdf_1"
+        ]
+      },
+      "feature": "lyric.lines",
+      "high": 0,
+      "low": 0,
+      "typical": 0,
+      "unit": "lines"
+    },
+    {
+      "evidence": {
+        "inferred": "from Donuts, the genre's cited model: most of its 31 tracks run 1–1.5 minutes and the longest 2:57 (Wikipedia); the stream format plays such tracks back to back in hour-long mixes (Gamble), which favours short loops over long forms"
+      },
+      "feature": "form.minutes",
+      "high": 3,
+      "low": 1,
+      "unit": "minutes"
+    }
+  ],
+  "references": [
+    {
+      "artist": "J Dilla",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Donuts_(album)"
+        ]
+      },
+      "features": [
+        "chop.density",
+        "form.minutes"
+      ],
+      "listenFor": "The Escorts vocal sample chopped into eighth-note slices, on an album whose longest track is 2:57.",
+      "title": "Don't Cry",
+      "year": 2006
+    },
+    {
+      "artist": "Nujabes",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Nujabes"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "harmony.chords.distinct"
+      ],
+      "listenFor": "Across the album, jazz rhythms fused with hip-hop drums and the more downtempo transitions Fat Jon's influence brought.",
+      "title": "Modal Soul",
+      "year": 2005
+    },
+    {
+      "artist": "Hoogway",
+      "evidence": {
+        "cited": [
+          "https://iaspmjournal.net/index.php/IASPM_Journal/article/download/949/pdf_1"
+        ]
+      },
+      "features": [
+        "humanize.timing.ms",
+        "pocket.snare.ms"
+      ],
+      "listenFor": "Slightly loose, relaxed kick and snare throughout.",
+      "title": "Soulful eyes",
+      "year": 2019
+    },
+    {
+      "artist": "Secret Crates",
+      "evidence": {
+        "cited": [
+          "https://iaspmjournal.net/index.php/IASPM_Journal/article/download/949/pdf_1"
+        ]
+      },
+      "features": [
+        "mix.crest.db"
+      ],
+      "listenFor": "Melodic parts side-chained to the kick, rising and falling in volume on every beat.",
+      "title": "Springtime Stroll",
+      "year": 2015
+    },
+    {
+      "artist": "Jinsang and Two Sleepy",
+      "evidence": {
+        "cited": [
+          "https://iaspmjournal.net/index.php/IASPM_Journal/article/download/949/pdf_1"
+        ]
+      },
+      "features": [
+        "mix.bandwidth.hz"
+      ],
+      "listenFor": "Acoustic piano as the lead instrument, the genre's most frequent.",
+      "title": "Yawn",
+      "year": 2017
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "sub",
+      "upright"
+    ],
+    "instruments": [
+      "grand-piano",
+      "felt-piano",
+      "rhodes",
+      "nylon-guitar",
+      "clean-electric",
+      "harp",
+      "strings"
+    ],
+    "machines": [
+      "lofi",
+      "mpc60"
+    ]
+  },
+  "summary": "Almost entirely instrumental hip-hop at 70–85 BPM: a looped piano, Rhodes or guitar sample with jazz-influenced extended chords over loose, unquantised kick and snare. Samples are aged on purpose — high frequencies filtered out, vinyl crackle, tape wobble — and melodic parts often pump against a side-chained kick, in the line of J Dilla and Nujabes.",
+  "summaryEvidence": {
+    "cited": [
+      "https://iaspmjournal.net/index.php/IASPM_Journal/article/download/949/pdf_1",
+      "https://stevengamble.com/lofi/"
+    ]
+  }
+}

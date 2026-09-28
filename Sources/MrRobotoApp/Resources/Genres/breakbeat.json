@@ -1,0 +1,413 @@
+{
+  "aliases": [
+    "big beat",
+    "chemical breaks",
+    "breaks",
+    "nu skool breaks",
+    "acid breaks"
+  ],
+  "bassHands": [],
+  "family": "electronic",
+  "feels": [
+    "Breakbeat (Amen)"
+  ],
+  "form": {
+    "evidence": {
+      "inferred": "Section names from the builds, drops and drum rolls Wikipedia and Vice describe; total of about 144 bars from Block Rockin' Beats (5:14 at 109 BPM) and Praise You (5:23 at 110 BPM); the split into 16- and 32-bar units is an assumption"
+    },
+    "sections": [
+      {
+        "bars": 16,
+        "name": "Intro"
+      },
+      {
+        "bars": 32,
+        "name": "Groove"
+      },
+      {
+        "bars": 16,
+        "name": "Breakdown"
+      },
+      {
+        "bars": 16,
+        "name": "Build"
+      },
+      {
+        "bars": 32,
+        "name": "Drop"
+      },
+      {
+        "bars": 16,
+        "name": "Breakdown"
+      },
+      {
+        "bars": 16,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "breakbeat",
+  "idioms": [
+    "breakbeat",
+    "electronic"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.synthhistory.com/post/interview-with-fatboy-slim",
+          "https://en.wikipedia.org/wiki/Akai_S950",
+          "https://en.wikipedia.org/wiki/Praise_You"
+        ]
+      },
+      "name": "Norman Cook (Fatboy Slim)",
+      "period": "1996-2001",
+      "why": "A self-described late adopter who learnt one tool thoroughly. He used a pair of Akai S950s and an Atari ST, with a TB-303 and SE-1 for synth lines, building tracks from drum loops, breaks and samples by repetition and layering. On 'Praise You' he sped up the source record and time-stretched the chopped vocal line by line in the S950."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://musictech.com/guides/essential-guide/landmarks-prodigy-fat-of-the-land/",
+          "https://lufs.to/genres/breakbeat"
+        ]
+      },
+      "name": "Liam Howlett (The Prodigy)",
+      "period": "1992-1997",
+      "why": "He wrote on a Roland W-30, starting from obscure soul and funk vinyl that he twisted and contorted before adding his own synths. The breaks came from an SP-1200 and the distortion from a Korg Prophecy and guitar pedals. His records went from -14 to -8.6 LUFS between Experience and The Fat of the Land."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Block_Rockin%27_Beats",
+          "https://en.wikipedia.org/wiki/Big_beat"
+        ]
+      },
+      "name": "The Chemical Brothers",
+      "period": "1995-1999",
+      "why": "Tom Rowlands and Ed Simons built 'Block Rockin' Beats' at Orinoco Studios from Bernard Purdie's drums on 'Changes', a Schoolly D vocal hook and borrowed bass. It went to UK number one and won a Grammy for Best Rock Instrumental. London's Sunday Social club night was one of the genre's key rooms."
+    }
+  ],
+  "meters": [
+    "4/4"
+  ],
+  "name": "Breakbeat / big beat",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Breakbeat",
+          "https://en.wikipedia.org/wiki/Amen_break"
+        ]
+      },
+      "text": "The drums are breaks: syncopated patterns cut from funk, jazz and R&B records. The most sampled are the Amen break, James Brown's 'Funky Drummer' (1970), the Incredible Bongo Band's 'Apache' (1973) and Lyn Collins' 'Think (About It)' (1972)."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.vice.com/en/article/big-beat-history-influence-prodigy-fatboy-slim/",
+          "https://en.wikipedia.org/wiki/Big_beat"
+        ]
+      },
+      "text": "Big beat breaks are heavy, distorted and heavily compressed, in 'an arms race' for the chunkiest beats. Its hits sat around 90-120 BPM, faster than hip-hop and trip-hop but slower than house's 120 baseline; Wikipedia gives the genre 100-140 BPM overall."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Akai_S950",
+          "https://www.synthhistory.com/post/interview-with-fatboy-slim"
+        ]
+      },
+      "text": "The Akai S950 is a 12-bit sampler, and Fatboy Slim works almost entirely on a pair of them. He refused to upgrade because he knew the S950's filters so well, and its timestretch (added in 1988) lets length and pitch change independently."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://musictech.com/guides/essential-guide/landmarks-prodigy-fat-of-the-land/"
+        ]
+      },
+      "text": "Liam Howlett sketched The Fat of the Land on a Roland W-30, used an E-mu SP-1200 for the 'Firestarter' breaks, and got the distortion from a Korg Prophecy, Boss guitar pedals and an Alesis Quadraverb. He mixed in Cubase on a Power Mac."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Big_beat",
+          "https://en.wikipedia.org/wiki/Block_Rockin%27_Beats"
+        ]
+      },
+      "text": "Roland TB-303 acid lines from acid house, or bass lifted from records: the bass sound on 'Block Rockin' Beats' comes from The Crusaders, and its line is allegedly from 23 Skidoo."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/fatboy-slim/praise-you",
+          "https://www.hooktheory.com/theorytab/view/fatboy-slim/right-here-right-now"
+        ]
+      },
+      "text": "Not harmony-driven: one to three chord modal loops under the break, for example Mixolydian bVII-IV-I on 'Praise You' and Dorian i-IV on 'Right Here Right Now'. Riffs and samples carry the interest, not the changes."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Praise_You",
+          "https://simonreichmusic.wordpress.com/2019/02/20/sampling-fatboy-slim/"
+        ]
+      },
+      "text": "Tracks are collages of many samples: 'Praise You' uses nine, including a Camille Yarbrough vocal, a Hoyt Axton piano and drums from three different records. Norman Cook sped up the record, chopped the vocal into short pieces and time-stretched each line in the S950."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Big_beat",
+          "https://www.vice.com/en/article/big-beat-history-influence-prodigy-fatboy-slim/"
+        ]
+      },
+      "text": "The form is built from crescendos, builds, drops and extended drum rolls, and moved along with filters, phasers and flangers. It is looser than DJ-tool genres, and track lengths run from about 4:40 to 7 minutes."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "inferred": "No cited source gives bar counts for big beat sections; the plan divides Block Rockin' Beats (5:14 at 109 BPM, about 143 bars) and Praise You (5:23 at 110 BPM, about 148 bars) into 16-bar units"
+      },
+      "text": "Forms vary a lot; the section plan in this profile is an assumption sized to the reference lengths, not a documented convention."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://www.vice.com/en/article/big-beat-history-influence-prodigy-fatboy-slim/",
+          "https://en.wikipedia.org/wiki/Firestarter_(The_Prodigy_song)"
+        ]
+      },
+      "text": "There are few original vocals. Sampled phrases ('get busy, child'), children's records and soundtrack snippets are the lead, which makes the style 'plunderphonics-y'. The Prodigy's Keith Flint on 'Firestarter' is the exception: he wrote his own lines over Howlett's instrumental."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://www.vice.com/en/article/big-beat-history-influence-prodigy-fatboy-slim/",
+          "https://en.wikipedia.org/wiki/Firestarter_(The_Prodigy_song)"
+        ]
+      },
+      "text": "Melody is secondary: a synth line or two fills the holes between samples. The hook is usually a sampled vocal or a riff, such as the Breeders wah guitar looped on 'Firestarter'."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://lufs.to/genres/big-beat",
+          "https://lufs.to/genres/breakbeat"
+        ]
+      },
+      "text": "Loudness jumped in the big beat years. In lufs.to's sample the genre's median is -12.4 LUFS; The Prodigy went from -13.6 (Music for the Jilted Generation, 1994) to -8.6 (The Fat of the Land, 1997), and Propellerheads' Decksandrumsandrockandroll (1998) measures -8.5. Breakbeat overall has a median of -13.5."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.vice.com/en/article/big-beat-history-influence-prodigy-fatboy-slim/",
+          "https://en.wikipedia.org/wiki/Big_beat"
+        ]
+      },
+      "text": "Using a clean, polite break. Big beat breaks are compressed 'liberally' and driven into distortion, so the drums lead the mix instead of sitting behind it."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.vice.com/en/article/big-beat-history-influence-prodigy-fatboy-slim/",
+          "https://songbpm.com/@the-chemical-brothers/block-rockin-beats",
+          "https://songbpm.com/@fatboy-slim/praise-you"
+        ]
+      },
+      "text": "Setting it at house tempo. The big beat hits sat below house's 120 BPM baseline (Block Rockin' Beats 109, Praise You 110), where a break swings rather than races."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Praise_You"
+        ]
+      },
+      "text": "Flagging drums from more than one record in a section as a fault. Here layering breaks from different records is the method: Praise You takes drums from three."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/fatboy-slim/praise-you"
+        ]
+      },
+      "mode": "mixolydian",
+      "roman": "bVII - IV - I",
+      "text": "Praise You's intro and verse in Ab Mixolydian: a descending three-chord loop under the Camille Yarbrough vocal."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/fatboy-slim/right-here-right-now"
+        ]
+      },
+      "mode": "dorian",
+      "roman": "i - IV",
+      "text": "Right Here Right Now's intro in A Dorian: a thirdless minor tonic against the major IV, the Dorian sixth doing the work."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Big_beat",
+          "https://www.vice.com/en/article/big-beat-history-influence-prodigy-fatboy-slim/",
+          "https://songbpm.com/@the-chemical-brothers/block-rockin-beats",
+          "https://songbpm.com/@fatboy-slim/praise-you"
+        ]
+      },
+      "feature": "tempo.bpm",
+      "high": 140,
+      "low": 100,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://lufs.to/genres/big-beat",
+          "https://lufs.to/genres/breakbeat"
+        ]
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -8.5,
+      "low": -14,
+      "typical": -12.4,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "Span of the album versions of the cited references: Firestarter 4:40, Block Rockin' Beats 5:14, Praise You 5:23, The Rockafeller Skank 6:54"
+      },
+      "feature": "form.minutes",
+      "high": 7,
+      "low": 4.5,
+      "unit": "minutes"
+    },
+    {
+      "evidence": {
+        "inferred": "TheoryTab analyses: Praise You loops three chords (bVII-IV-I), Right Here Right Now two (i-IV); one-chord riff tracks such as Firestarter's looped guitar set the lower bound"
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 3,
+      "low": 1,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "inferred": "Both TheoryTab progressions are wholly diatonic to their mode (Ab Mixolydian, A Dorian); modal loops rather than borrowed chords"
+      },
+      "feature": "harmony.diatonic.ratio",
+      "high": 1,
+      "low": 0.9,
+      "unit": "fraction"
+    }
+  ],
+  "references": [
+    {
+      "artist": "The Prodigy",
+      "evidence": {
+        "cited": [
+          "https://songbpm.com/@the-prodigy/firestarter",
+          "https://en.wikipedia.org/wiki/Firestarter_(The_Prodigy_song)",
+          "https://musictech.com/guides/essential-guide/landmarks-prodigy-fat-of-the-land/"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "merge.drum.sources"
+      ],
+      "listenFor": "A break from the SP-1200 at 142 BPM under a looped Breeders wah riff and an Art of Noise vocal sample; the top of the tempo range.",
+      "title": "Firestarter",
+      "year": 1996
+    },
+    {
+      "artist": "The Chemical Brothers",
+      "evidence": {
+        "cited": [
+          "https://songbpm.com/@the-chemical-brothers/block-rockin-beats",
+          "https://en.wikipedia.org/wiki/Block_Rockin%27_Beats"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.minutes"
+      ],
+      "listenFor": "The genre's pocket at 109 BPM: Bernard Purdie's sampled drums compressed hard under the Schoolly D hook.",
+      "title": "Block Rockin' Beats",
+      "year": 1997
+    },
+    {
+      "artist": "Fatboy Slim",
+      "evidence": {
+        "cited": [
+          "https://songbpm.com/@fatboy-slim/the-rockafeller-skank",
+          "https://www.vice.com/en/article/big-beat-history-influence-prodigy-fatboy-slim/"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.minutes"
+      ],
+      "listenFor": "Above the usual range at about 153 BPM and nearly seven minutes long: the fast end of big beat, still built on a break rather than a four-on-the-floor kick.",
+      "title": "The Rockafeller Skank",
+      "year": 1998
+    },
+    {
+      "artist": "Fatboy Slim",
+      "evidence": {
+        "cited": [
+          "https://songbpm.com/@fatboy-slim/praise-you",
+          "https://en.wikipedia.org/wiki/Praise_You",
+          "https://www.hooktheory.com/theorytab/view/fatboy-slim/praise-you"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "merge.drum.sources",
+        "harmony.chords.distinct"
+      ],
+      "listenFor": "110 BPM, nine samples including drums from three records, and a bVII-IV-I Mixolydian loop under the time-stretched vocal from the opening bars.",
+      "title": "Praise You",
+      "year": 1999
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "acid"
+    ],
+    "instruments": [
+      "distorted-guitar",
+      "grand-piano",
+      "rhodes",
+      "organ"
+    ],
+    "machines": [
+      "sp1200",
+      "tr808",
+      "tr909"
+    ]
+  },
+  "summary": "Dance music built on drum breaks sampled from funk, soul, jazz and R&B records (Amen, Funky Drummer, Apache, Think), rather than on a four-on-the-floor kick. Big beat, its mid-to-late-1990s British peak, compressed and distorted those breaks hard. It sat them between hip-hop and house tempos and layered funk and soul loops, TB-303 acid lines, vocal snippets and rock aggression, arranged with builds, drops and drum rolls.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Breakbeat",
+      "https://en.wikipedia.org/wiki/Big_beat",
+      "https://www.vice.com/en/article/big-beat-history-influence-prodigy-fatboy-slim/"
+    ]
+  }
+}

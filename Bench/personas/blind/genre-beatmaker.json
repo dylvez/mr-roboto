@@ -1,0 +1,281 @@
+{
+ "persona": "beatmaker",
+ "items": [
+  {
+   "id": "amapiano-Amapiano",
+   "label": "Amapiano as Amapiano",
+   "genre": "amapiano",
+   "material": {
+    "kind": "feel",
+    "name": "Amapiano"
+   },
+   "expects": {
+    "beatmaker.swing-default": true
+   }
+  },
+  {
+   "id": "blues-Shuffle",
+   "label": "Shuffle as Blues",
+   "genre": "blues",
+   "material": {
+    "kind": "feel",
+    "name": "Shuffle"
+   },
+   "expects": {
+    "beatmaker.swing-default": true
+   }
+  },
+  {
+   "id": "blues-Slow Blues 12/8",
+   "label": "Slow Blues 12/8 as Blues",
+   "genre": "blues",
+   "material": {
+    "kind": "feel",
+    "name": "Slow Blues 12/8"
+   },
+   "expects": {
+    "beatmaker.swing-default": true
+   }
+  },
+  {
+   "id": "boom-bap-Boom-Bap",
+   "label": "Boom-Bap as Boom-bap hip-hop",
+   "genre": "boom-bap",
+   "material": {
+    "kind": "feel",
+    "name": "Boom-Bap"
+   },
+   "expects": {
+    "beatmaker.swing-default": false
+   },
+   "notes": {
+    "beatmaker.swing-default": "The groove-theory port is quantised straight (50); boom-bap as measured swings 52-62. The library's Boom-Bap Pocket is the swung one."
+   }
+  },
+  {
+   "id": "boom-bap-Boom-Bap Pocket",
+   "label": "Boom-Bap Pocket as Boom-bap hip-hop",
+   "genre": "boom-bap",
+   "material": {
+    "kind": "feel",
+    "name": "Boom-Bap Pocket"
+   },
+   "expects": {
+    "beatmaker.swing-default": true,
+    "beatmaker.quantise-off-is-not-the-technique": true
+   }
+  },
+  {
+   "id": "country-Country Two-Step",
+   "label": "Country Two-Step as Country",
+   "genre": "country",
+   "material": {
+    "kind": "feel",
+    "name": "Country Two-Step"
+   },
+   "expects": {
+    "beatmaker.swing-default": true
+   }
+  },
+  {
+   "id": "country-Train Beat",
+   "label": "Train Beat as Country",
+   "genre": "country",
+   "material": {
+    "kind": "feel",
+    "name": "Train Beat"
+   },
+   "expects": {
+    "beatmaker.swing-default": true
+   }
+  },
+  {
+   "id": "drill-UK Drill",
+   "label": "UK Drill as Drill",
+   "genre": "drill",
+   "material": {
+    "kind": "feel",
+    "name": "UK Drill"
+   },
+   "expects": {
+    "beatmaker.swing-default": true
+   }
+  },
+  {
+   "id": "drill-Trap Rolling Hats",
+   "label": "Trap Rolling Hats as Drill",
+   "genre": "drill",
+   "material": {
+    "kind": "feel",
+    "name": "Trap Rolling Hats"
+   },
+   "expects": {
+    "beatmaker.swing-default": true
+   }
+  },
+  {
+   "id": "drum-and-bass-Drum & Bass",
+   "label": "Drum & Bass as Drum & bass / jungle",
+   "genre": "drum-and-bass",
+   "material": {
+    "kind": "feel",
+    "name": "Drum & Bass"
+   },
+   "expects": {
+    "beatmaker.quantise-off-is-not-the-technique": true
+   }
+  },
+  {
+   "id": "funk-One-Chord Funk",
+   "label": "One-Chord Funk as Funk",
+   "genre": "funk",
+   "material": {
+    "kind": "feel",
+    "name": "One-Chord Funk"
+   },
+   "expects": {
+    "beatmaker.swing-default": false,
+    "beatmaker.quantise-off-is-not-the-technique": true
+   },
+   "notes": {
+    "beatmaker.swing-default": "The feel is straight sixteenths (50); early funk as measured sits at 51.7-61.5. Cold Sweat's 51.7 is nearly straight, so this is a near miss."
+   }
+  },
+  {
+   "id": "house-Classic House",
+   "label": "Classic House as House",
+   "genre": "house",
+   "material": {
+    "kind": "feel",
+    "name": "Classic House"
+   },
+   "expects": {
+    "beatmaker.swing-default": true
+   }
+  },
+  {
+   "id": "house-Four on the Floor",
+   "label": "Four on the Floor as House",
+   "genre": "house",
+   "material": {
+    "kind": "feel",
+    "name": "Four on the Floor"
+   },
+   "expects": {
+    "beatmaker.swing-default": false
+   },
+   "notes": {
+    "beatmaker.swing-default": "Four on the Floor is the library's generic straight pulse, shared with techno, disco and pop; house as Attack Magazine's settings have it swings 54-63. Classic House is the house feel."
+   }
+  },
+  {
+   "id": "jazz-Jazz Waltz",
+   "label": "Jazz Waltz as Jazz — small-group swing and post-bop",
+   "genre": "jazz",
+   "material": {
+    "kind": "feel",
+    "name": "Jazz Waltz"
+   },
+   "expects": {
+    "beatmaker.swing-default": false
+   },
+   "notes": {
+    "beatmaker.swing-default": "The library writes its jazz waltz on straight sixteenths in 3/4; jazz ride swing is measured at 60-72. A finding about the feel, not the genre."
+   }
+  },
+  {
+   "id": "jazz-Broadway Ride",
+   "label": "Broadway Ride as Jazz — small-group swing and post-bop",
+   "genre": "jazz",
+   "material": {
+    "kind": "feel",
+    "name": "Broadway Ride"
+   },
+   "expects": {
+    "beatmaker.swing-default": false
+   },
+   "notes": {
+    "beatmaker.swing-default": "Broadway Ride is straight; the jazz profile claims it, and jazz swings 60-72."
+   }
+  },
+  {
+   "id": "lo-fi-hip-hop-Lo-Fi Hip-Hop",
+   "label": "Lo-Fi Hip-Hop as Lo-fi hip-hop",
+   "genre": "lo-fi-hip-hop",
+   "material": {
+    "kind": "feel",
+    "name": "Lo-Fi Hip-Hop"
+   },
+   "expects": {
+    "beatmaker.swing-default": true
+   }
+  },
+  {
+   "id": "neo-soul-Neo-Soul Pocket",
+   "label": "Neo-Soul Pocket as Neo-soul / contemporary R&B",
+   "genre": "neo-soul",
+   "material": {
+    "kind": "feel",
+    "name": "Neo-Soul Pocket"
+   },
+   "expects": {
+    "beatmaker.snare-direction": false,
+    "beatmaker.pocket-is-a-span": false,
+    "beatmaker.quantise-off-is-not-the-technique": true,
+    "beatmaker.ghost-depth": true
+   },
+   "notes": {
+    "beatmaker.snare-direction": "The feel's snare sits 22.5 ms late; the profile's sources put neo-soul's at 10-20. Close, and on the side the house chose.",
+    "beatmaker.pocket-is-a-span": "The feel's layers spread 18.8 ms; the profile's number is the 55-80 ms measured in Left and Right, one record's extreme."
+   }
+  },
+  {
+   "id": "techno-Four on the Floor",
+   "label": "Four on the Floor as Techno",
+   "genre": "techno",
+   "material": {
+    "kind": "feel",
+    "name": "Four on the Floor"
+   },
+   "expects": {
+    "beatmaker.swing-default": true
+   }
+  },
+  {
+   "id": "trap-Trap Rolling Hats",
+   "label": "Trap Rolling Hats as Trap",
+   "genre": "trap",
+   "material": {
+    "kind": "feel",
+    "name": "Trap Rolling Hats"
+   },
+   "expects": {
+    "beatmaker.swing-default": true
+   }
+  },
+  {
+   "id": "trap-Halftime",
+   "label": "Halftime as Trap",
+   "genre": "trap",
+   "material": {
+    "kind": "feel",
+    "name": "Halftime"
+   },
+   "expects": {
+    "beatmaker.swing-default": true
+   }
+  },
+  {
+   "id": "uk-garage-UK Garage 2-Step",
+   "label": "UK Garage 2-Step as UK garage / 2-step",
+   "genre": "uk-garage",
+   "material": {
+    "kind": "feel",
+    "name": "UK Garage 2-Step"
+   },
+   "expects": {
+    "beatmaker.swing-default": true
+   }
+  }
+ ]
+}

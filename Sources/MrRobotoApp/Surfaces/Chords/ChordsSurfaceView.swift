@@ -39,6 +39,19 @@ struct ChordsSurfaceView: View {
                         .foregroundStyle(model.problem == nil ? Design.Palette.inkSecondary : Design.Palette.warn)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+                // The genre's own progressions, in the sheet's key, a press away.
+                let offered = model.genreProgressions
+                if !offered.isEmpty {
+                    HStack(spacing: 6) {
+                        Text(offered[0].genre.uppercased()).font(Design.Typography.label).tracking(1.1)
+                            .foregroundStyle(Design.Palette.inkTertiary)
+                        ForEach(offered, id: \.roman) { entry in
+                            FormChip(entry.roman, isOn: model.text == entry.text) { model.use(progression: entry.text) }
+                                .help("\(entry.text) — \(entry.about)")
+                        }
+                    }
+                    .padding(.top, 2)
+                }
                 // What voices them. Chords used to play on the bass sampler, an octave below where
                 // they were written; now they go through whatever this names.
                 InstrumentPicker(selected: model.instrument, choose: { model.setInstrument($0) }, label: "Voiced on")

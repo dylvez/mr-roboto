@@ -1,0 +1,438 @@
+{
+  "aliases": [
+    "detroit techno",
+    "minimal techno",
+    "berlin techno",
+    "dub techno",
+    "peak-time techno"
+  ],
+  "bassHands": [
+    "rolling"
+  ],
+  "family": "electronic",
+  "feels": [
+    "Four on the Floor"
+  ],
+  "form": {
+    "evidence": {
+      "cited": [
+        "https://tracksensei.com/blog/how-to-arrange-a-techno-track"
+      ]
+    },
+    "sections": [
+      {
+        "bars": 32,
+        "name": "Intro"
+      },
+      {
+        "bars": 32,
+        "name": "Groove"
+      },
+      {
+        "bars": 32,
+        "name": "Build"
+      },
+      {
+        "bars": 32,
+        "name": "Breakdown"
+      },
+      {
+        "bars": 32,
+        "name": "Peak"
+      },
+      {
+        "bars": 32,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "techno",
+  "idioms": [
+    "electronic"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Juan_Atkins",
+          "https://en.wikipedia.org/wiki/Techno"
+        ]
+      },
+      "name": "Juan Atkins",
+      "period": "1980–",
+      "why": "Bought a Korg MS-10 at 15, formed Cybotron with Richard Davis, then founded Metroplex and released Model 500's 'No UFO's' in 1985, generally considered the first techno production. He set out to weld Parliament's cosmic funk to Kraftwerk's rigid computer synth-pop."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Strings_of_Life",
+          "https://en.wikipedia.org/wiki/Detroit_techno"
+        ]
+      },
+      "name": "Derrick May",
+      "period": "1987–",
+      "why": "Built 'Strings of Life' from Michael James's piano piece, taking it up from 80 BPM, chopping it into loops and adding percussion and string samples. The record has no bassline and became an anthem in both house and techno."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Jeff_Mills"
+        ]
+      },
+      "name": "Jeff Mills",
+      "period": "1989–",
+      "why": "Co-founded Underground Resistance, then Axis Records with Robert Hood in 1992 to pursue a more minimal sound. He is called the master of the TR-909 and DJs with three decks and a 909, around 70 records an hour."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Robert_Hood",
+          "https://en.wikipedia.org/wiki/Minimal_techno"
+        ]
+      },
+      "name": "Robert Hood",
+      "period": "1992–",
+      "why": "His 1994 'Minimal Nation' on Axis is considered the inspiration for minimal techno. He describes the sound as stripped down and raw, only drums, basslines and grooves, 'only what's essential'."
+    }
+  ],
+  "meters": [
+    "4/4"
+  ],
+  "name": "Techno",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.attackmagazine.com/technique/beat-dissected/dark-berlin-techno/",
+          "https://www.attackmagazine.com/technique/beat-dissected/thumping-techno/"
+        ]
+      },
+      "text": "Four-to-the-floor kick with an off-beat open hat; the clap may drop to the second kick only, percussion stabs fall on the third kick, and snares or toms move to off-beats and 16ths instead of a 2-and-4 backbeat."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.attackmagazine.com/technique/beat-dissected/dark-berlin-techno/",
+          "https://www.attackmagazine.com/technique/beat-dissected/thumping-techno/",
+          "https://www.attackmagazine.com/technique/beat-dissected/basic-channel-style-dub-techno/",
+          "https://www.musicradar.com/how-to/how-to-program-6-different-four-to-the-floor-grooves"
+        ]
+      },
+      "text": "Swing is light — 50-55% in Berlin styles, up to 60% in thumping 909 techno, none in dub techno — and the groove comes from percussion interplay, bongos and churning hats more than from shuffle."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://tracksensei.com/blog/how-to-arrange-a-techno-track"
+        ]
+      },
+      "text": "Techno builds in plateaus: 32-bar blocks that each add or subtract one element, a 32-64 bar drums-only intro and matching outro for DJs, a 16-32 bar reduction, and removing the kick for 8 bars as the biggest single move."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Techno",
+          "https://www.beatportal.com/articles/783088-step-by-step-guide-to-producing-techno-peak-time-driving-in-the-style-of-layton-giordani-eli-brown-and-adam-beyer",
+          "https://www.attackmagazine.com/technique/tutorials/the-theory-of-techno-parallel-chord-stabs/"
+        ]
+      },
+      "text": "Techno is not harmony-driven: rhythm dominates and vocals and melody are uncommon; where there are chords they are a single stab looped over one or two bars and moved by filter, or a chord shape shifted in parallel regardless of key."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://www.attackmagazine.com/technique/tutorials/warehouse-rolling-techno-bass/",
+          "https://www.beatportal.com/articles/783088-step-by-step-guide-to-producing-techno-peak-time-driving-in-the-style-of-layton-giordani-eli-brown-and-adam-beyer"
+        ]
+      },
+      "text": "The bass rolls on the 16ths between kicks, one repeated root with a few other notes, leaving the first 16th of each beat to the kick; it is sidechained to the kick and band-limited (high-pass 65 Hz, low-pass 350 Hz) so it does not fight the sub or rumble."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://www.attackmagazine.com/technique/beat-dissected/dark-techno-rumble/",
+          "https://www.musicradar.com/how-to/how-to-create-rumbling-techno-kick-drums-with-reverb"
+        ]
+      },
+      "text": "The rumble: a short, compressed 909-type kick with its lows cut near 50 Hz, layered with a second long-decay kick sent through a wet reverb and low-pass filter, sidechained so the tail pumps between kicks."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Techno",
+          "https://en.wikipedia.org/wiki/Jeff_Mills"
+        ]
+      },
+      "text": "TR-808 and TR-909 drum machines, sequencers and synthesizers; Jeff Mills is called the master of the 909 and plays one live in DJ sets."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://tracksensei.com/blog/we-analyzed-563-techno-house-tracks"
+        ]
+      },
+      "text": "Released techno is darker and quieter than dance folklore says: medians of -10.3 (hard) to -12.25 LUFS (melodic), with only 8-12% of energy above 250 Hz, narrow stereo (0.16-0.20) and kick fundamentals near 60 Hz."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Minimal_techno"
+        ]
+      },
+      "text": "Minimal techno keeps 'just drums, basslines and funky grooves and only what's essential' (Robert Hood); it focuses on middle frequencies and develops through understated variation rather than a tune."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Techno"
+        ]
+      },
+      "text": "Vocals are uncommon; techno is largely instrumental."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://tracksensei.com/blog/how-to-arrange-a-techno-track"
+        ]
+      },
+      "text": "Change something small every 8 bars, something bigger every 16, and shift the section every 32; the stab or hook enters only after drums and bass have run for 32-64 bars."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.attackmagazine.com/technique/tutorials/warehouse-rolling-techno-bass/"
+        ]
+      },
+      "text": "Putting the bass on the beat with the kick: leave the first 16th of each beat empty and sidechain the bass so the kick owns the downbeat."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://tracksensei.com/blog/how-to-arrange-a-techno-track"
+        ]
+      },
+      "text": "Starting the bassline or hook inside 16 bars: a DJ cannot beatmatch and blend that fast; hold 32 bars minimum of drums before the bass arrives."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Minimal_techno",
+          "https://en.wikipedia.org/wiki/Techno"
+        ]
+      },
+      "text": "Writing chord progressions and melodies to make it 'musical': techno's development is in adding and removing layers, and minimal techno keeps only what's essential."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://tracksensei.com/blog/we-analyzed-563-techno-house-tracks"
+        ]
+      },
+      "text": "Mastering to -6 LUFS: released techno medians are -10.3 to -12.25 LUFS; loudness comes from low-end weight, not limiting."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.attackmagazine.com/technique/beat-dissected/basic-channel-style-dub-techno/",
+          "https://www.beatportal.com/articles/783088-step-by-step-guide-to-producing-techno-peak-time-driving-in-the-style-of-layton-giordani-eli-brown-and-adam-beyer"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "i",
+      "text": "One minor stab — Attack's Basic Channel-style chord is a single D# minor — looped for a bar or two and moved only by filter, delay and reverb."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.mixgraph.io/bpm-for/techno",
+          "https://tracksensei.com/blog/we-analyzed-563-techno-house-tracks",
+          "https://www.attackmagazine.com/technique/beat-dissected/thumping-techno/",
+          "https://en.wikipedia.org/wiki/Minimal_techno"
+        ]
+      },
+      "feature": "tempo.bpm",
+      "high": 140,
+      "low": 126,
+      "typical": 133,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.attackmagazine.com/technique/beat-dissected/dark-berlin-techno/",
+          "https://www.attackmagazine.com/technique/beat-dissected/dark-techno-rumble/",
+          "https://www.attackmagazine.com/technique/beat-dissected/thumping-techno/",
+          "https://www.attackmagazine.com/technique/beat-dissected/basic-channel-style-dub-techno/"
+        ]
+      },
+      "feature": "swing.percent",
+      "high": 58,
+      "low": 50,
+      "unit": "MPC percent"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://tracksensei.com/blog/we-analyzed-563-techno-house-tracks"
+        ]
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -9.7,
+      "low": -12.3,
+      "typical": -11.0,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "From Attack's rolling bass (a note on almost every 16th but the first of each beat, 12 a bar) down to the one-offbeat-note-per-beat line (4 a bar); Beatportal's peak-time bass is 'simple and repetitive', 16ths with occasional syncopation."
+      },
+      "feature": "bass.attacks.per.bar",
+      "high": 12,
+      "low": 4,
+      "unit": "attacks per bar"
+    },
+    {
+      "evidence": {
+        "inferred": "Attack: 'Leaving the first 16th-note of every beat empty is important to prevent clashing with the kick', and sidechaining ducks the bass under every kick; so a bass attack on the downbeat is the exception."
+      },
+      "feature": "bass.downbeat.coverage",
+      "high": 0.25,
+      "low": 0.0,
+      "unit": "fraction of bars"
+    },
+    {
+      "evidence": {
+        "inferred": "Same Attack rule: with the first 16th of every beat left to the kick, nearly all bass onsets fall off the quarter-note grid."
+      },
+      "feature": "bass.syncopation",
+      "high": 1.0,
+      "low": 0.8,
+      "unit": "fraction of onsets"
+    },
+    {
+      "evidence": {
+        "inferred": "Wikipedia: vocals and melodies are uncommon; Beatportal describes the synth part as a 1- or 2-bar loop moved by filter automation; Attack's dub-techno stab is one minor chord; 'Strings of Life' needs no bassline. Parallel stab lines (UR's 'Timeline') are the exception that moves one chord shape."
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 2,
+      "low": 0,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "inferred": "TrackSensei's DJ map is 192 bars at 130 BPM (5.9 min) with 32-64-bar intro and outro; a 64-bar intro and outro on the same map at 133 BPM gives about 8 min."
+      },
+      "feature": "form.minutes",
+      "high": 8.5,
+      "low": 5.5,
+      "unit": "minutes"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Model 500",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Techno",
+          "https://en.wikipedia.org/wiki/Juan_Atkins"
+        ]
+      },
+      "features": [
+        "tempo.bpm"
+      ],
+      "listenFor": "Throughout: the record generally held to be the first techno production — Kraftwerk's rigid machine pulse under Parliament-derived funk.",
+      "title": "No UFO's",
+      "year": 1985
+    },
+    {
+      "artist": "Rhythim Is Rhythim (Derrick May)",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Strings_of_Life"
+        ]
+      },
+      "features": [
+        "harmony.chords.distinct"
+      ],
+      "listenFor": "Chopped piano and string loops carrying the whole record with no bassline at all.",
+      "title": "Strings of Life",
+      "year": 1987
+    },
+    {
+      "artist": "Jeff Mills",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Jeff_Mills"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "grid.subdivision"
+      ],
+      "listenFor": "Throughout: Mills's first Tresor album from the Detroit–Berlin alliance, with the 909 he is known for mastering at the centre.",
+      "title": "Waveform Transmission Vol. 1",
+      "year": 1992
+    },
+    {
+      "artist": "Robert Hood",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Robert_Hood",
+          "https://en.wikipedia.org/wiki/Minimal_techno"
+        ]
+      },
+      "features": [
+        "form.repetition",
+        "harmony.chords.distinct"
+      ],
+      "listenFor": "Skeletal loops where one element changes at a time — the understated development that defines minimal techno.",
+      "title": "Minimal Nation",
+      "year": 1994
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "sub",
+      "analogue",
+      "acid"
+    ],
+    "instruments": [
+      "stab",
+      "dark-pad",
+      "pad",
+      "strings",
+      "grand-piano"
+    ],
+    "machines": [
+      "tr909",
+      "tr808",
+      "linn"
+    ]
+  },
+  "summary": "Repetitive 4/4 machine music, usually a kick on every beat at roughly 126-140 BPM, where rhythm matters more than anything else and vocals and melodies are uncommon. It began in mid-1980s Detroit, where the Belleville Three merged European synth-pop with funk, soul and electro, and was carried to Berlin in the early 1990s. Tracks develop by adding and removing layers in long blocks rather than by chord changes or song form.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Techno",
+      "https://www.mixgraph.io/bpm-for/techno",
+      "https://tracksensei.com/blog/how-to-arrange-a-techno-track"
+    ]
+  }
+}

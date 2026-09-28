@@ -1,0 +1,438 @@
+{
+  "aliases": [
+    "ukg",
+    "2-step",
+    "two-step garage",
+    "speed garage",
+    "uk garage"
+  ],
+  "bassHands": [
+    "rolling"
+  ],
+  "family": "electronic",
+  "feels": [
+    "UK Garage 2-Step"
+  ],
+  "form": {
+    "evidence": {
+      "inferred": "A vocal-song form sized to the cited radio lengths: 120 bars at 132 BPM is 3.6 min, between 'Sweet Like Chocolate' (3:37) and 'Re-Rewind' (4:02); section lengths follow the 8- and 16-bar phrasing of the house tradition UKG came from."
+    },
+    "sections": [
+      {
+        "bars": 16,
+        "name": "Intro"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 16,
+        "name": "Chorus"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 16,
+        "name": "Chorus"
+      },
+      {
+        "bars": 8,
+        "name": "Breakdown"
+      },
+      {
+        "bars": 16,
+        "name": "Chorus"
+      },
+      {
+        "bars": 16,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "uk-garage",
+  "idioms": [
+    "uk-garage",
+    "electronic"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.redbullmusicacademy.com/lectures/todd-edwards/",
+          "https://en.wikipedia.org/wiki/2-step_garage"
+        ]
+      },
+      "name": "Todd Edwards",
+      "period": "1990s–",
+      "why": "An American producer who used sampled vocals as the instruments in place of organs or pianos, first on an Ensoniq EPS with its hard triplet shuffle, later an Akai S6000. He took the vocal cut-ups from MK and the shuffly drums from Masters at Work's Kenny 'Dope' Gonzalez, and UK DJs sped his records up to 130 BPM."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.soundonsound.com/people/mark-hill-artful-dodger",
+          "https://en.wikipedia.org/wiki/Re-Rewind_(The_Crowd_Say_Bo_Selecta)"
+        ]
+      },
+      "name": "Artful Dodger (Mark Hill)",
+      "period": "late 1990s–early 2000s",
+      "why": "Mark Hill, a trained percussionist, played drums as keyboard parts into Studio Vision and Pro Tools with an Akai S3000 and Roland JV1080s, sampling and reversing odd sources for snares. He built tracks under Craig David's finished vocals, recorded on a Rode NT2 straight into the desk, and kept rough mixes rather than polishing."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.musicradar.com/music-tech/i-didnt-know-garage-very-well-so-i-made-a-slightly-skewed-version-of-this-sound-which-is-what-ended-up-being-my-usp-mj-cole-on-the-making-of-ukg-classic-sincere",
+          "https://en.wikipedia.org/wiki/Sincere_(song)"
+        ]
+      },
+      "name": "MJ Cole",
+      "period": "1998–",
+      "why": "A Royal College of Music-trained pianist and oboist working as a studio engineer for garage DJs, he made 'a slightly skewed version' of the sound because he did not know garage well. 'Sincere' began in his bedroom with ambient pads and ghostly vocal fragments and was finished with Rhodes, pushing garage toward a more emotional register."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/UK_garage"
+        ]
+      },
+      "name": "DJ EZ and speed garage",
+      "period": "1994–1997",
+      "why": "DJs sped American garage house from about 120 to 130 BPM and paired it with rolling snares and reverse-warped basslines from drum and bass. Armand van Helden's 1997 remix of Sneaker Pimps' 'Spin Spin Sugar' popularised the result."
+    }
+  ],
+  "meters": [
+    "4/4"
+  ],
+  "name": "UK garage / 2-step",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://blog.native-instruments.com/uk-garage-music/",
+          "https://www.musicradar.com/how-to/uk-garage-tutorial",
+          "https://theproducerschool.com/blogs/featured-blogs/how-to-program-uk-garage-drums-complete-guide-for-producers"
+        ]
+      },
+      "text": "2-step drops the four-on-the-floor: kick on beat 1 and halfway through beat 3 (the and-of-3), snare or clap on 2 and 4, open hats halfway through beats, and closed hats on the syncopated 16ths between beat and offbeat."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://blog.native-instruments.com/uk-garage-music/",
+          "https://www.reasonstudios.com/news/post/how-make-uk-garage-beats-in-reason-10",
+          "https://www.attackmagazine.com/technique/beat-dissected/rolling-2-step-garage/",
+          "https://www.redbullmusicacademy.com/lectures/todd-edwards/"
+        ]
+      },
+      "text": "Swing is the defining ingredient: 16ths played late give garage its shuffle; Reason's guide sets global shuffle to about 55%, Attack's rolling 2-step 60-65%, and Todd Edwards credits the 'really hard triplet shuffle' of his Ensoniq and Masters at Work's shuffly beats."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://theproducerschool.com/blogs/featured-blogs/how-to-program-uk-garage-drums-complete-guide-for-producers",
+          "https://www.attackmagazine.com/technique/beat-dissected/rolling-2-step-garage/"
+        ]
+      },
+      "text": "Velocity carries the groove as much as timing: ghost closed hats, low-velocity rim shots, and a 16th-note tambourine whose velocity variation is 'the most important part'."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Re-Rewind_(The_Crowd_Say_Bo_Selecta)",
+          "https://en.wikipedia.org/wiki/Sweet_Like_Chocolate",
+          "https://blog.native-instruments.com/uk-garage-music/"
+        ]
+      },
+      "text": "The hits are songs: R&B-styled vocal records with verses and choruses at radio length ('Re-Rewind' 4:02, 'Sweet Like Chocolate' 3:37), while the club side builds gradually, drops the beat before big transitions and contrasts sections."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://www.attackmagazine.com/technique/synth-secrets/old-school-house-chords/",
+          "https://www.reasonstudios.com/news/post/how-make-uk-garage-beats-in-reason-10",
+          "https://en.wikipedia.org/wiki/Sincere_(song)"
+        ]
+      },
+      "text": "Minor sevenths and minor ninths, electric piano and organ stabs; MJ Cole's 'Sincere' is built on ambient pads and warm harmonic textures, finished with Rhodes, under vocal fragments."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/2-step_garage",
+          "https://www.reasonstudios.com/news/post/how-to-make-uk-garage",
+          "https://blog.native-instruments.com/uk-garage-music/",
+          "https://en.wikipedia.org/wiki/UK_garage"
+        ]
+      },
+      "text": "Sub-bass is prominent and usually simple and repetitive, locked to the kick but syncopated; speed garage added the reverse-sounding 'Dred' bass (an opening low-pass filter) from jungle."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://www.attackmagazine.com/technique/synth-secrets/garage-bass/"
+        ]
+      },
+      "text": "The classic garage bass patch: two sine oscillators two octaves down, the second slightly detuned (-12.30 semitones) for a 'wonky' tone, a filter envelope, and 10-15% glide."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://www.soundonsound.com/people/mark-hill-artful-dodger",
+          "https://www.attackmagazine.com/technique/beat-dissected/rolling-2-step-garage/"
+        ]
+      },
+      "text": "Drums were sampled and heavily processed rather than taken from one machine: Mark Hill played his drums as keyboard parts from an Akai S3000 and JV1080s, favouring a sharp snare; Attack's rolling 2-step layers 909, 707 and 808 kicks with DM5 and pitched-up 808 snares."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://www.redbullmusicacademy.com/lectures/todd-edwards/",
+          "https://en.wikipedia.org/wiki/UK_garage"
+        ]
+      },
+      "text": "Vocal fragments become the lead instrument: Todd Edwards cut sampled vocals into syllables and played them instead of organs or pianos, the model for garage's chopped, time-stretched and pitch-shifted vocal hooks."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/2-step_garage",
+          "https://en.wikipedia.org/wiki/UK_garage"
+        ]
+      },
+      "text": "Female house- and R&B-style vocals at first, then male R&B singers too; MCs perform over live sets in a style reminiscent of old-school jungle, the line that led on to grime."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://www.soundonsound.com/people/mark-hill-artful-dodger"
+        ]
+      },
+      "text": "Artful Dodger kept demo-grade mixes — at least half of Craig David's album used the final mixes from their own room — because anything too polished stuck out."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://www.soundonsound.com/people/mark-hill-artful-dodger"
+        ]
+      },
+      "text": "Build tracks under the vocal: Mark Hill took Craig David's finished vocal and built the track underneath it."
+    }
+  ],
+  "parent": "house",
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://blog.native-instruments.com/uk-garage-music/",
+          "https://theproducerschool.com/blogs/featured-blogs/how-to-program-uk-garage-drums-complete-guide-for-producers"
+        ]
+      },
+      "text": "Leaving the grid straight: without swing on the 16ths the pattern sounds like house; late 16ths are what give 2-step its shuffle."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/2-step_garage",
+          "https://www.musicradar.com/how-to/uk-garage-tutorial"
+        ]
+      },
+      "text": "Keeping a kick on every beat and calling it 2-step: the kick must skip — beat 1 and the and-of-3 — while the snare holds 2 and 4."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.redbullmusicacademy.com/lectures/todd-edwards/",
+          "https://www.reasonstudios.com/news/post/how-to-make-uk-garage"
+        ]
+      },
+      "text": "Treating the vocal as a finished topline only: chop it, reverse and pitch syllables and play them like an instrument, as Todd Edwards did."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/craig-david/fill-me-in"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "i7 - v - VImaj7",
+      "text": "'Fill Me In' chorus: minor seventh tonic, a v with a raised fifth, and a major-seventh VI — moody R&B colour over a 132 BPM garage beat."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.attackmagazine.com/technique/synth-secrets/old-school-house-chords/"
+        ]
+      },
+      "mode": "dorian",
+      "roman": "i7 - i7",
+      "text": "The one-chord minor-seventh or minor-ninth stab or organ vamp that old-school house and garage share, moved by rhythm rather than harmony."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.mixgraph.io/bpm-for/uk-garage",
+          "https://en.wikipedia.org/wiki/2-step_garage",
+          "https://blog.native-instruments.com/uk-garage-music/",
+          "https://www.reasonstudios.com/news/post/how-to-make-uk-garage"
+        ]
+      },
+      "feature": "tempo.bpm",
+      "high": 136,
+      "low": 128,
+      "typical": 132,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.reasonstudios.com/news/post/how-make-uk-garage-beats-in-reason-10",
+          "https://www.attackmagazine.com/technique/beat-dissected/rolling-2-step-garage/"
+        ]
+      },
+      "feature": "swing.percent",
+      "high": 65,
+      "low": 55,
+      "unit": "MPC percent"
+    },
+    {
+      "evidence": {
+        "inferred": "Hooktheory counts three chords (i7, v(#5), VI7) in Craig David's 'Fill Me In' chorus; the one-chord minor-seventh or ninth stab over a subby, repetitive bassline is the other common case the Attack and Reason tutorials describe."
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 4,
+      "low": 1,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "inferred": "'Fill Me In' (i7, v(#5), VI7 in C minor per Hooktheory) uses only notes of C natural minor, 1.0; allowing one borrowed chord in five for the jazz-rooted harmony MJ Cole's records are described as having."
+      },
+      "feature": "harmony.diatonic.ratio",
+      "high": 1.0,
+      "low": 0.8,
+      "unit": "fraction"
+    },
+    {
+      "evidence": {
+        "inferred": "Chart singles run 3:37 ('Sweet Like Chocolate') and 4:02 ('Re-Rewind'); club mixes of the same records add DJ intros and outros, the house convention UKG inherits (EDMProd's ~7 min house club structure), so the upper bound sits below a full house club mix."
+      },
+      "feature": "form.minutes",
+      "high": 6.5,
+      "low": 3.5,
+      "unit": "minutes"
+    }
+  ],
+  "references": [
+    {
+      "artist": "MJ Cole",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Sincere_(song)",
+          "https://www.musicradar.com/music-tech/i-didnt-know-garage-very-well-so-i-made-a-slightly-skewed-version-of-this-sound-which-is-what-ended-up-being-my-usp-mj-cole-on-the-making-of-ukg-classic-sincere"
+        ]
+      },
+      "features": [
+        "harmony.chords.distinct",
+        "swing.percent"
+      ],
+      "listenFor": "Throughout: ambient pads, Rhodes and warm harmonic textures under ghostly vocal fragments — garage's melodic, soulful wing.",
+      "title": "Sincere",
+      "year": 1998
+    },
+    {
+      "artist": "Shanks & Bigfoot",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Sweet_Like_Chocolate",
+          "https://en.wikipedia.org/wiki/UK_garage"
+        ]
+      },
+      "features": [
+        "form.minutes"
+      ],
+      "listenFor": "Sharon Woolf's pop vocal in a 3:37 radio form — a UK number one for two weeks in 1999.",
+      "title": "Sweet Like Chocolate",
+      "year": 1999
+    },
+    {
+      "artist": "Artful Dodger feat. Craig David",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Re-Rewind_(The_Crowd_Say_Bo_Selecta)",
+          "https://en.wikipedia.org/wiki/2-step_garage"
+        ]
+      },
+      "features": [
+        "form.minutes",
+        "tempo.bpm"
+      ],
+      "listenFor": "Craig David's R&B topline fused with a 2-step beat — the record that took the combination to No. 2 — in a 4:02 radio form.",
+      "title": "Re-Rewind (The Crowd Say Bo Selecta)",
+      "year": 1999
+    },
+    {
+      "artist": "Craig David",
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/craig-david/fill-me-in",
+          "https://en.wikipedia.org/wiki/UK_garage"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "harmony.chords.distinct",
+        "melody.range.semitones"
+      ],
+      "listenFor": "The chorus's i7, v(#5), VI7 in C minor at 132 BPM, and a sung melody that sits inside a fifth (C4-G4).",
+      "title": "Fill Me In",
+      "year": 2000
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "sub",
+      "analogue",
+      "reese"
+    ],
+    "instruments": [
+      "rhodes",
+      "organ",
+      "stab",
+      "pad",
+      "strings",
+      "grand-piano"
+    ],
+    "machines": [
+      "tr909",
+      "tr808",
+      "tr707"
+    ]
+  },
+  "summary": "London's sped-up take on American garage house, around 130-135 BPM, with shuffled, swung 16th-note hats and snares. In its 2-step form the kick skips beats instead of playing four to the floor, typically hitting beat 1 and the and-of-3 under a snare on 2 and 4. Sub-bass, jazz- and R&B-coloured minor-seventh chords, and chopped, pitched and time-stretched vocals (or full R&B toplines, as with Craig David) complete it.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/UK_garage",
+      "https://en.wikipedia.org/wiki/2-step_garage",
+      "https://blog.native-instruments.com/uk-garage-music/",
+      "https://www.mixgraph.io/bpm-for/uk-garage"
+    ]
+  }
+}

@@ -1,0 +1,425 @@
+{
+  "aliases": [
+    "jersey club",
+    "brick city club",
+    "jersey club music",
+    "jersey club rap"
+  ],
+  "bassHands": [
+    "programmed"
+  ],
+  "family": "electronic",
+  "feels": [
+    "Jersey Club"
+  ],
+  "form": {
+    "evidence": {
+      "inferred": "Laid out from Native Instruments' example arrangement: eight-bar blocks with elements added, vocals and lead dropping out at bar 41 and elements removed from bar 49; section names are the app's, not the source's."
+    },
+    "sections": [
+      {
+        "bars": 8,
+        "name": "Intro"
+      },
+      {
+        "bars": 8,
+        "name": "Groove"
+      },
+      {
+        "bars": 16,
+        "name": "Drop"
+      },
+      {
+        "bars": 8,
+        "name": "Breakdown"
+      },
+      {
+        "bars": 8,
+        "name": "Drop"
+      },
+      {
+        "bars": 8,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "jersey-club",
+  "idioms": [
+    "jersey-club",
+    "electronic",
+    "hip-hop"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/DJ_Tameil",
+          "https://www.thefader.com/2014/06/12/the-skys-the-limit-an-oral-history-of-jersey-club"
+        ]
+      },
+      "name": "DJ Tameil",
+      "period": "1999–2010s",
+      "why": "Credited with pioneering the style after bringing Baltimore club (DJ Technics, Rod Lee) and Chicago house into Newark teen parties; his 2001 Dat Butt EP on his own Anthrax Records was among the first Jersey-made club tracks, and he sold burned CDs on Broad Street. He named it 'Brick City club' in 2002."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Jersey_club",
+          "https://en.wikipedia.org/wiki/DJ_Tameil"
+        ]
+      },
+      "name": "Brick Bandits (DJ Tim Dolla, Mike V, DJ Black Mic)",
+      "period": "early 2000s",
+      "why": "Newark crew that started producing their own club tracks to challenge Tameil's hold on the market; Tim Dolla's 'Swing Dat' is an early staple. The collective's parties in ballrooms and banquet halls built the scene."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.thefader.com/2014/06/12/the-skys-the-limit-an-oral-history-of-jersey-club",
+          "https://orphiq.com/resources/what-is-jersey-club"
+        ]
+      },
+      "name": "DJ Sliink",
+      "period": "2010s",
+      "why": "Second-generation producer who took the sound to international DJ circuits; he recalls that Newark 'always played B-More Club', and argues producers must keep adding elements for the genre to stay strong, aiming for 'a well-rounded song' that reaches different crowds."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/MCVertt",
+          "https://en.wikipedia.org/wiki/Just_Wanna_Rock"
+        ]
+      },
+      "name": "MCVertt",
+      "period": "2021–present",
+      "why": "Newark producer working in FL Studio who carried the kick pattern into rap: IShowSpeed, Sexyy Red, Sugarhill Ddot, and Lil Uzi Vert's Just Wanna Rock (#10 Hot 100)."
+    }
+  ],
+  "meters": [
+    "4/4"
+  ],
+  "name": "Jersey club",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://blog.native-instruments.com/jersey-club/",
+          "https://orphiq.com/resources/what-is-jersey-club"
+        ]
+      },
+      "text": "The kick is the genre: five kicks per bar on 16th steps 1, 5, 9, 12, 15 (spacing 4-4-3-3-2), a half four-on-the-floor whose second half compresses into a tresillo that tips into the next bar. Nudge timing and vary velocity rather than quantise perfectly; keep the fifth kick's tail the shortest."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://blog.native-instruments.com/jersey-club/",
+          "https://orphiq.com/resources/what-is-jersey-club"
+        ]
+      },
+      "text": "No straight backbeat: snares sit on steps 9 and 12 (plus 11 at lower velocity in alternate bars), syncopated against the kicks; closed hats are sparse, on beats 2 and 4."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Jersey_club",
+          "https://orphiq.com/resources/what-is-jersey-club",
+          "https://daily.bandcamp.com/scene-report/jersey-club-music-on-bandcamp"
+        ]
+      },
+      "text": "Bed squeak (from Trillville's 'Some Cut', 2004), gun clicks, bullwhips and chopped breaks (Lyn Collins' 'Think (About It)' via Baltimore club) are the percussion palette; tracks were traditionally made in Sony Acid Pro and FL Studio."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://orphiq.com/resources/what-is-jersey-club"
+        ]
+      },
+      "text": "Treat the bed squeak as functional percussion filling gaps between kicks, or leave it out; many strong tracks use it lightly or skip it."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://orphiq.com/resources/what-is-jersey-club",
+          "https://blog.native-instruments.com/jersey-club/",
+          "https://en.wikipedia.org/wiki/Jersey_club"
+        ]
+      },
+      "text": "Vocal chops carry melody and hook: very short stabs of one or two syllables repeated in staccato runs, often placed on 16th steps 3 and 7 between the kicks; full sung toplines are rare."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://blog.native-instruments.com/jersey-club/",
+          "https://en.wikipedia.org/wiki/Jersey_club"
+        ]
+      },
+      "text": "Bass plays the kick rhythm: an 808 doubles the kick for sub weight, or a synth bass follows the same five-note figure on the root."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://blog.native-instruments.com/jersey-club/",
+          "https://orphiq.com/resources/what-is-jersey-club"
+        ]
+      },
+      "text": "Not harmony-driven: rhythm and chops make the track, so no progressions are listed. The Native Instruments example stays on one root and moves only for two bars of each eight."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://blog.native-instruments.com/jersey-club/"
+        ]
+      },
+      "text": "Loop-first: parts enter and leave in eight-bar blocks, giving dancers and DJs predictable cues; in the NI example vocals and lead drop out at bar 41 and elements are stripped from bar 49."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://orphiq.com/resources/what-is-jersey-club"
+        ]
+      },
+      "text": "Kicks are layered and saturated, doubled by 808s; a single clean kick sample gets buried under the vocal chops."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://daily.bandcamp.com/scene-report/jersey-club-music-on-bandcamp",
+          "https://songbpm.com/@lil-uzi-vert/just-wanna-rock-eqwq9"
+        ]
+      },
+      "text": "Tempo has drifted up: early tracks sat near 130, Team Lilman's anthem runs at 141, and newer producers work at 170-180; Just Wanna Rock is listed at 150. The 130-142 range is the classic norm, not a ceiling."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Baltimore_club",
+          "https://orphiq.com/resources/what-is-jersey-club"
+        ]
+      },
+      "text": "Parent Baltimore club runs about 130 BPM on the 'Sing Sing' and 'Think' breaks with looped vocal snippets and call-and-response; Jersey club smoothed its edges and made it bouncier and more melodic."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Just_Wanna_Rock",
+          "https://en.wikipedia.org/wiki/Jersey_club"
+        ]
+      },
+      "text": "Words are dance calls and chants rather than verses: chopped phrases that tell dancers what to do, and in rap crossovers a single chanted verse and whispered chorus (Just Wanna Rock). The dance culture is competitive and choreographed."
+    }
+  ],
+  "parent": "baltimore club",
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://orphiq.com/resources/what-is-jersey-club"
+        ]
+      },
+      "text": "Dropping a bed squeak onto an existing beat and calling it Jersey club makes 'a costume'. Build the five-kick pattern first; if the track only reads as Jersey club because of the squeak, the rhythm is not doing its job."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://orphiq.com/resources/what-is-jersey-club"
+        ]
+      },
+      "text": "Using one clean kick sample. Layer and saturate the kicks and double them with an 808, or the chops bury them."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://blog.native-instruments.com/jersey-club/",
+          "https://orphiq.com/resources/what-is-jersey-club"
+        ]
+      },
+      "text": "Putting a snare on 2 and 4. The snare answers the kicks on syncopated steps (9, 12, sometimes 11); only closed hats sit on 2 and 4."
+    }
+  ],
+  "progressions": [],
+  "ranges": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Jersey_club",
+          "https://www.thefader.com/2014/06/12/the-skys-the-limit-an-oral-history-of-jersey-club",
+          "https://orphiq.com/resources/what-is-jersey-club",
+          "https://blog.native-instruments.com/jersey-club/"
+        ]
+      },
+      "feature": "tempo.bpm",
+      "high": 142,
+      "low": 130,
+      "typical": 140,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://blog.native-instruments.com/jersey-club/",
+          "https://orphiq.com/resources/what-is-jersey-club"
+        ]
+      },
+      "feature": "bass.attacks.per.bar",
+      "high": 5,
+      "low": 5,
+      "typical": 5,
+      "unit": "attacks per bar"
+    },
+    {
+      "evidence": {
+        "inferred": "Counted from the cited kick figure the bass doubles (16th steps 1, 5, 9, 12, 15): two of five onsets, on step 12 and 15, fall off the quarter-note grid."
+      },
+      "feature": "bass.syncopation",
+      "high": 0.45,
+      "low": 0.35,
+      "typical": 0.4,
+      "unit": "fraction of onsets"
+    },
+    {
+      "evidence": {
+        "inferred": "The cited kick figure the bass follows (Native Instruments, Orphiq) always starts on step 1, so every bar's downbeat carries a bass attack."
+      },
+      "feature": "bass.downbeat.coverage",
+      "high": 1,
+      "low": 1,
+      "unit": "fraction of bars"
+    },
+    {
+      "evidence": {
+        "inferred": "Native Instruments' example holds the bass on F and moves only to G# and G for two bars (three roots); Orphiq says hooks are carried by vocal chops, so one to three harmonic centres."
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 3,
+      "low": 1,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "inferred": "In the Native Instruments example the root changes twice in a repeating eight-bar block (F to G# at bar 5, G at bar 6, back to F), about 0.25-0.4 per bar; static single-root loops give 0."
+      },
+      "feature": "harmony.changes.per.bar",
+      "high": 0.5,
+      "low": 0,
+      "unit": "changes per bar"
+    },
+    {
+      "evidence": {
+        "inferred": "Just Wanna Rock runs 2:03-2:04 and Vibe (If I Back It Up) 2:24; Native Instruments' eight-bar-block arrangement runs to about bar 56, 1.6 minutes at 142 BPM."
+      },
+      "feature": "form.minutes",
+      "high": 3.0,
+      "low": 1.5,
+      "unit": "minutes"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Trillville",
+      "evidence": {
+        "cited": [
+          "https://orphiq.com/resources/what-is-jersey-club"
+        ]
+      },
+      "features": [
+        "grid.subdivision"
+      ],
+      "listenFor": "The squeaking studio chair, kept in time on the record, that became Jersey club's bed-squeak sample; listen from the first verse.",
+      "title": "Some Cut",
+      "year": 2004
+    },
+    {
+      "artist": "DJ Tameil",
+      "evidence": {
+        "cited": [
+          "https://daily.bandcamp.com/scene-report/jersey-club-music-on-bandcamp"
+        ]
+      },
+      "features": [
+        "bass.attacks.per.bar",
+        "tempo.bpm"
+      ],
+      "listenFor": "A founder's track from It's Me Bitches: from the first bar, check its kick against the 1-5-9-12-15 figure and hear how the chopped samples sit between kicks.",
+      "title": "Disco Stick",
+      "year": 2010
+    },
+    {
+      "artist": "Cookiee Kawaii",
+      "evidence": {
+        "cited": [
+          "https://orphiq.com/resources/what-is-jersey-club",
+          "https://en.wikipedia.org/wiki/Jersey_club"
+        ]
+      },
+      "features": [
+        "form.minutes"
+      ],
+      "listenFor": "The track whose 2020 TikTok run brought Jersey club to a mass audience; from the first bar, check the kick figure and how little else is needed.",
+      "title": "Vibe (If I Back It Up)",
+      "year": 2019
+    },
+    {
+      "artist": "Lil Uzi Vert",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Just_Wanna_Rock",
+          "https://songbpm.com/@lil-uzi-vert/just-wanna-rock-eqwq9"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.minutes"
+      ],
+      "listenFor": "MCVertt's Jersey club kick under a single chanted verse and whisper-like chorus, all in 2:03 at a listed 150 BPM.",
+      "title": "Just Wanna Rock",
+      "year": 2022
+    },
+    {
+      "artist": "PinkPantheress and Ice Spice",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Jersey_club"
+        ]
+      },
+      "features": [
+        "bass.syncopation"
+      ],
+      "listenFor": "Jersey club drums under a pop topline (#3 Hot 100): from the first chorus, how the kick figure survives crossover.",
+      "title": "Boy's a Liar Pt. 2",
+      "year": 2023
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "808",
+      "sub"
+    ],
+    "instruments": [
+      "lead",
+      "stab"
+    ],
+    "machines": [
+      "tr808"
+    ]
+  },
+  "summary": "Newark's offshoot of Baltimore club (late 1990s-2000s): 130-140 BPM dance music built on one kick figure, five kicks a bar spaced 4-4-3-3-2 sixteenths, doubled by an 808, under staccato one- or two-syllable vocal chops. Bed squeaks, gun clicks and Baltimore's breakbeats fill the gaps; harmony is minimal and the chops carry the hook.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Jersey_club",
+      "https://orphiq.com/resources/what-is-jersey-club",
+      "https://blog.native-instruments.com/jersey-club/"
+    ]
+  }
+}

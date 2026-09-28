@@ -174,6 +174,10 @@ public final class MasterModel {
         return copy
     }
 
+    /// The song's genre, asked each time the readings are made: a reading is re-judged in it
+    /// (`GenreLens`). Nil — the default, and a song nobody has placed — leaves the persona's own.
+    public var genre: @MainActor () -> GenreLens? = { nil }
+
     /// Bounces the whole song through the working mix and reads it.
     public func read() async {
         guard !isReading else { return }
@@ -190,7 +194,7 @@ public final class MasterModel {
             let spectrum = Self.logSpectrum(MixMeter.powerSpectrum(planar, sampleRate: rate), sampleRate: rate)
             let seconds = rate > 0 ? Double(planar.first?.count ?? 0) / rate : 0
             reading = Reading(observation: observation, truePeakDBTP: truePeak, spectrumDB: spectrum,
-                              readings: Engineer().read(observation), scope: scope, seconds: seconds, mix: bounced)
+                              readings: GenreLens.judge(Engineer().read(observation), by: Engineer.bible, in: genre()), scope: scope, seconds: seconds, mix: bounced)
             ownError = nil
         } catch {
             ownError = "The bounce could not be read: \(error)"

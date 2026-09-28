@@ -156,10 +156,9 @@ public struct WriteBasslineTool: DirectorTool {
     public let name = "write_bassline"
     public var purpose: String {
         "Write a bass line under a groove and record it as a version of a new bass part, signed by "
-        + "the Bassist. Say whose hands: palladino (Voodoo — behind the kick, note-off on the beat, "
-        + "roots and slides), thundercat (harmony and register, voicings on the change), or programmed "
-        + "(the 808 as the bass: the kick's own pattern, re-pitched, through the sub). The Bassist "
-        + "refuses when nothing is straight, when pushed ahead of the kick, and when a played bass "
+        + "the Bassist. Say whose hands — the genre's profile (read_genre) names the ones that fit: "
+        + BassLineage.allCases.map { "\($0.rawValue) (\($0.about))" }.joined(separator: "; ")
+        + ". The Bassist refuses when nothing is straight, when pushed ahead of the kick, and when a played bass "
         + "would sit under a kick that rings past 400 ms; its reason comes back as the error."
     }
     public var schema: DirectorJSON {
@@ -167,8 +166,8 @@ public struct WriteBasslineTool: DirectorTool {
             ("groove", Schema.string("The groove version the line sits under, by id from read_song or create_part_version.")),
             ("hands", Schema.string("Whose hands write it.", enum: BassLineage.allCases.map(\.rawValue))),
             ("lag_ms", Schema.number(
-                "Milliseconds behind the kick. 40 is the default and 20 to 65 the documented window; "
-                + "0 is on the kick; negative is ahead of it and refused.", maximum: 90)),
+                "Milliseconds behind the kick. For palladino 40 is the default and 20 to 65 the documented window; "
+                + "every other player sits on the kick, 0; negative is ahead of it and refused.", maximum: 90)),
             ("density", Schema.number("How busy, 0 (bare) to 1 (every attack the budget allows).", maximum: 1)),
             ("seed", Schema.integer("0 for a new line, which is nearly always. Only to write a line again: the seed an earlier write_bassline returned.")),
         ], required: ["groove", "hands", "lag_ms", "density", "seed"])
@@ -202,9 +201,11 @@ public struct WriteBasslineTool: DirectorTool {
         let sound = lineage.defaultSound
 
         // The Bassist first.
-        let verdict = Bassist().consider(.writeBassline(lineage: lineage.rawValue, lagMS: input.lagMS, tempo: tempo,
+        let lens = await workspace.genreLens
+        let proposal = PersonaProposal.writeBassline(lineage: lineage.rawValue, lagMS: input.lagMS, tempo: tempo,
                                                         hatLagMS: 0, kickLagMS: 0, kickDecaySeconds: kickDecay,
-                                                        sound: sound))
+                                                        sound: sound)
+        let verdict = GenreLens.judge(Bassist().consider(proposal), on: proposal, by: Bassist.bible, in: lens)
         if case .refuse(let rule, let because, let counter) = verdict {
             // The reason first and on its own: the rail keeps a failure's first sentence, and a
             // rule id carries a full stop, so it goes with the suggestion.
@@ -224,7 +225,7 @@ public struct WriteBasslineTool: DirectorTool {
         let observation = BassObservation(label: "\(lineage.name) line", bassline: line, groove: groove,
                                           chords: chords, tempo: tempo, timeSignature: signature,
                                           kickDecaySeconds: kickDecay)
-        let readings = Bassist().read(observation)
+        let readings = GenreLens.judge(Bassist().read(observation), by: Bassist.bible, in: lens)
         let flags = readings.filter { !$0.holds }
 
         var noteParts = ["\(lineage.name) line"]

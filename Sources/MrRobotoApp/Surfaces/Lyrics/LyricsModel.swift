@@ -143,6 +143,10 @@ public final class LyricsModel {
     private let host: any LyricsHosting
     private let lyricist = Lyricist()
 
+    /// The song's genre, asked each time the readings are made: a reading is re-judged in it
+    /// (`GenreLens`). Nil — the default, and a song nobody has placed — leaves the persona's own.
+    public var genre: @MainActor () -> GenreLens? = { nil }
+
     public init(host: any LyricsHosting, lyric: PartVersion? = nil, corpus: LyricCorpus, title: String? = nil,
                 surfaceID: SurfaceID = SurfaceID()) {
         self.host = host
@@ -209,7 +213,7 @@ public final class LyricsModel {
         let observed = LyricObservation.of(lyric, label: title, corpus: corpus, title: songTitle,
                                            melody: set, beatsPerBar: host.beatsPerBar)
         observation = observed
-        readings = lyricist.read(observed)
+        readings = GenreLens.judge(lyricist.read(observed), by: Lyricist.bible, in: genre())
     }
 
     // MARK: Labels

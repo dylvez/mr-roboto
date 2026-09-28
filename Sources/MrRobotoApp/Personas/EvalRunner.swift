@@ -89,6 +89,9 @@ public struct BlindSheet: Codable, Sendable {
         public var material: BlindMaterial
         /// Rule id → whether the reading on it should hold.
         public var expects: [String: Bool]
+        /// The genre the material is read in, by a profile's id: the readings go through its
+        /// `GenreLens`, as they would in a song placed in it. Nil reads with the persona's own lines.
+        public var genre: String?
     }
     public var persona: PersonaID
     public var items: [Item]
@@ -111,8 +114,19 @@ public enum BlindMaterial: Codable, Hashable, Sendable {
     case feel(name: String, tempo: Double?)
     /// A line the writer writes under a feel's groove. The Bassist's material.
     case bassline(hands: String, lagMS: Double, tempo: Double, feel: String, density: Double, seed: UInt64)
+    /// A song's form: sections by name and length, at a tempo. The Peer's material.
+    case form(sections: [FormSection], tempo: Double)
+    /// Chords as a lead sheet writes them, in a key. The Harmonist's material.
+    case progression(chords: String, key: String)
+    /// A genre profile's progression in numerals, in a key. The Harmonist's material too.
+    case numerals(roman: String, mode: String?, key: String)
 
-    private enum CodingKeys: String, CodingKey { case kind, name, tempo, hands, lagMS, feel, density, seed }
+    public struct FormSection: Codable, Hashable, Sendable {
+        public var name: String
+        public var bars: Int
+    }
+
+    private enum CodingKeys: String, CodingKey { case kind, name, tempo, hands, lagMS, feel, density, seed, sections, chords, key, roman, mode }
 
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -124,6 +138,13 @@ public enum BlindMaterial: Codable, Hashable, Sendable {
                              tempo: try c.decode(Double.self, forKey: .tempo), feel: try c.decode(String.self, forKey: .feel),
                              density: try c.decodeIfPresent(Double.self, forKey: .density) ?? 0.5,
                              seed: try c.decodeIfPresent(UInt64.self, forKey: .seed) ?? 0xBA55_0001)
+        case "form":
+            self = .form(sections: try c.decode([FormSection].self, forKey: .sections), tempo: try c.decode(Double.self, forKey: .tempo))
+        case "progression":
+            self = .progression(chords: try c.decode(String.self, forKey: .chords), key: try c.decode(String.self, forKey: .key))
+        case "numerals":
+            self = .numerals(roman: try c.decode(String.self, forKey: .roman), mode: try c.decodeIfPresent(String.self, forKey: .mode),
+                             key: try c.decode(String.self, forKey: .key))
         case let other:
             throw DecodingError.dataCorruptedError(forKey: .kind, in: c, debugDescription: "unknown blind material \(other)")
         }
@@ -137,6 +158,13 @@ public enum BlindMaterial: Codable, Hashable, Sendable {
         case .bassline(let hands, let lagMS, let tempo, let feel, let density, let seed):
             try c.encode("bassline", forKey: .kind); try c.encode(hands, forKey: .hands); try c.encode(lagMS, forKey: .lagMS)
             try c.encode(tempo, forKey: .tempo); try c.encode(feel, forKey: .feel); try c.encode(density, forKey: .density); try c.encode(seed, forKey: .seed)
+        case .form(let sections, let tempo):
+            try c.encode("form", forKey: .kind); try c.encode(sections, forKey: .sections); try c.encode(tempo, forKey: .tempo)
+        case .progression(let chords, let key):
+            try c.encode("progression", forKey: .kind); try c.encode(chords, forKey: .chords); try c.encode(key, forKey: .key)
+        case .numerals(let roman, let mode, let key):
+            try c.encode("numerals", forKey: .kind); try c.encode(roman, forKey: .roman)
+            try c.encodeIfPresent(mode, forKey: .mode); try c.encode(key, forKey: .key)
         }
     }
 }
@@ -168,14 +196,21 @@ public enum BlindRunner {
 
     /// Every item on a sheet, read blind: the observation's label is the item's number, never the
     /// sheet's label.
-    public static func run(_ sheet: BlindSheet, feels: FeelLibrary = .standard) -> [Result] {
+    public static func run(_ sheet: BlindSheet, feels: FeelLibrary = .standard, genres: GenreBook = .standard) -> [Result] {
         sheet.items.enumerated().map { index, item in
             var result = Result(persona: sheet.persona, item: item.id, label: item.label,
                                 checks: item.expects.mapValues { ($0, nil) })
             let blind = "blind item \(index + 1)"
             let readings: [PersonaReading]
             do {
-                readings = try read(item.material, as: sheet.persona, label: blind, feels: feels)
+                let read = try read(item.material, as: sheet.persona, label: blind, feels: feels)
+                if let name = item.genre {
+                    guard let profile = genres.profile(named: name) else { throw Unreadable(description: "no genre called \(name)") }
+                    guard let bible = Cast.standard.persona(sheet.persona)?.bible else { throw Unreadable(description: "no persona \(sheet.persona)") }
+                    readings = GenreLens(profile).apply(read, bible: bible)
+                } else {
+                    readings = read
+                }
             } catch {
                 result.problem = "\(error)"
                 return result
@@ -210,6 +245,20 @@ public enum BlindRunner {
             let observation = BassObservation(label: label, bassline: line, groove: feel.groove, chords: [], tempo: tempo,
                                               timeSignature: feel.timeSignature, options: .feel(feel))
             return Bassist().read(observation)
+        case (.form(let sections, let tempo), .peer):
+            var song = Song(title: label, tempo: tempo)
+            song.sections = sections.map { Section(name: $0.name, stitch: [], lengthInBars: $0.bars) }
+            return Peer().read(FormObservation.of(song))
+        case (.numerals(let roman, let mode, let keyName), .harmonist):
+            guard let key = Key(parsing: keyName) else { throw Unreadable(description: "no key \(keyName)") }
+            guard let line = GenreNumerals.symbols(roman, in: key, mode: mode) else { throw Unreadable(description: "unreadable numerals \(roman)") }
+            return try read(.progression(chords: line, key: keyName), as: persona, label: label, feels: feels)
+        case (.progression(let chords, let keyName), .harmonist):
+            guard let key = Key(parsing: keyName) else { throw Unreadable(description: "no key \(keyName)") }
+            switch Progression.parse(chords, key: key) {
+            case .success(let progression): return Harmonist().read(HarmonyObservation.of(progression, label: label))
+            case .failure(let error): throw Unreadable(description: "\(error)")
+            }
         default:
             throw Unreadable(description: "\(persona.rawValue) does not read that material")
         }

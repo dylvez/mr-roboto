@@ -1,0 +1,448 @@
+{
+  "aliases": [
+    "140",
+    "brostep",
+    "riddim",
+    "deep dubstep",
+    "halfstep"
+  ],
+  "bassHands": [
+    "rolling"
+  ],
+  "family": "electronic",
+  "feels": [
+    "Halftime"
+  ],
+  "form": {
+    "evidence": {
+      "cited": [
+        "https://kansamples.com/blogs/learn/dubstep-track-arrangement"
+      ]
+    },
+    "sections": [
+      {
+        "bars": 32,
+        "name": "Intro"
+      },
+      {
+        "bars": 16,
+        "name": "Build"
+      },
+      {
+        "bars": 32,
+        "name": "Drop"
+      },
+      {
+        "bars": 16,
+        "name": "Mid-Section"
+      },
+      {
+        "bars": 32,
+        "name": "Breakdown"
+      },
+      {
+        "bars": 16,
+        "name": "Build"
+      },
+      {
+        "bars": 32,
+        "name": "Drop"
+      },
+      {
+        "bars": 32,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "dubstep",
+  "idioms": [
+    "dubstep",
+    "electronic"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.redbullmusicacademy.com/lectures/mala-5-db-to-perfection/",
+          "https://en.wikipedia.org/wiki/Digital_Mystikz"
+        ]
+      },
+      "name": "Mala (Digital Mystikz)",
+      "period": "2004-",
+      "why": "He works in Reason, starting the sub from a pure sine and shaping it until it has bite, and treats the gap between the sub and the top end as part of the music. Every tune is cut to dubplate and played at DMZ, the Brixton night he co-founded in 2005, before release; 'Anti War Dub' took nine months to finish."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "http://blackdownsoundboy.blogspot.com/2005/08/skream.html"
+        ]
+      },
+      "name": "Skream",
+      "period": "2003-",
+      "why": "He works in FL Studio 5 with VSTs and is extremely prolific: 600 project files on one drive and 800 on the next. He aimed for 'our own sort of darker' after El-B, and 'Midnight Request Line' started life as a grime tune."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Benga_(musician)"
+        ]
+      },
+      "name": "Benga",
+      "period": "2002-",
+      "why": "He started on PlayStation Music 2000 and moved to FruityLoops. His first record came out on Big Apple Records in 2002 when he was a teenager, followed by 'The Judgement' with Skream in 2003 and 'Night' with Coki in 2008."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.musicradar.com/news/tech/interview-skrillex-on-ableton-live-plug-ins-production-and-more-510973",
+          "https://en.wikipedia.org/wiki/Dubstep"
+        ]
+      },
+      "name": "Skrillex",
+      "period": "2010-",
+      "why": "A self-taught Ableton Live producer whose bass sounds come mostly from FM8, then Massive and Operator, distorted with iZotope Trash and Ohmicide. His style carried the brostep turn to midrange aggression over sub weight."
+    }
+  ],
+  "meters": [
+    "4/4"
+  ],
+  "name": "Dubstep",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Dubstep",
+          "https://kansamples.com/blogs/learn/dubstep-track-arrangement"
+        ]
+      },
+      "text": "Half-time: kick on beat 1, snare or clap on beat 3 only, hats in eighths or sixteenths and less prominent than in drum & bass. Shuffled notes and tuplets are common. There is no snare on 2 and 4."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.redbullmusicacademy.com/lectures/mala-5-db-to-perfection/"
+        ]
+      },
+      "text": "Mala on space: by manipulating space, sound and time, a 140 BPM track can be made to feel sluggish. There is a gap, and then the sub."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Dubstep"
+        ]
+      },
+      "text": "The wobble is one long bass note moved rhythmically by an LFO on volume, distortion or filter cutoff (the 'wub')."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://www.redbullmusicacademy.com/lectures/mala-5-db-to-perfection/"
+        ]
+      },
+      "text": "Mala starts the sub from a straight sine wave in Reason's Subtractor and shapes it with EQ and filtering until it finds 'the biting point'. He low-cuts loose frequencies that make the line flabby."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://www.musicradar.com/tuition/tech/how-to-make-a-dubstep-bass-sound-211550"
+        ]
+      },
+      "text": "A classic dubstep bass patch is Reese-like: sine oscillators detuned by ±30 cents, set two octaves down, with extra layers an octave up, filter saturation, heavy compression and a falling pitch envelope."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Dubstep",
+          "https://www.musicradar.com/news/tech/interview-skrillex-on-ableton-live-plug-ins-production-and-more-510973"
+        ]
+      },
+      "text": "In brostep the midrange carries the weight. Skrillex builds his 'monster' basses mostly in FM8, then Massive and Ableton's Operator, distorts them with iZotope Trash and Ohmicide, and makes sure a sample is 'hitting at 200Hz'."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Benga_(musician)",
+          "http://blackdownsoundboy.blogspot.com/2005/08/skream.html",
+          "https://www.redbullmusicacademy.com/lectures/mala-5-db-to-perfection/"
+        ]
+      },
+      "text": "The first generation worked in bedroom software: Benga started on PlayStation Music 2000 and then FruityLoops, Skream on FL Studio 5, and Mala in Reason. The scene centred on the Big Apple record shop in Croydon."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Dubstep",
+          "https://kansamples.com/blogs/learn/dubstep-track-arrangement"
+        ]
+      },
+      "text": "Intro, main section with the drop, midsection, second main section, outro. Drops conventionally come after bar 16 or bar 32. A 5-6 minute template runs intro 32, build 16, drop 32, mid 16-32, breakdown 32, build 16, drop 32, outro 32."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://kansamples.com/blogs/learn/dubstep-track-arrangement"
+        ]
+      },
+      "text": "Tension comes from subtraction rather than busy builds: one or two bars of silence before the drop, a heavily filtered bass that is revealed at the drop, risers, and occasional snare rolls. The second drop uses a different bass patch. Drops are shorter than in drum & bass (32 bars, not 64) because each bar is denser at the slower tempo."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "http://blackdownsoundboy.blogspot.com/2005/08/skream.html",
+          "https://www.hooktheory.com/theorytab/view/skream/midnight-request-line"
+        ]
+      },
+      "text": "Early dubstep is minimal and minor-key. Blackdown credited the success of Skream's 'Midnight Request Line' to its chords and key change, which stood out in the genre."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://www.redbullmusicacademy.com/lectures/mala-5-db-to-perfection/",
+          "https://en.wikipedia.org/wiki/Digital_Mystikz"
+        ]
+      },
+      "text": "Tracks were tested on the sound system before release. Mala cut dubplates, played them at DMZ (a bimonthly night in Brixton from March 2005), then refined and tested again: 'on a system that is that big' the production is exposed."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre",
+          "https://blog.vmgstudios.com/understanding-loudness-in-audio-production"
+        ]
+      },
+      "text": "Loudness splits by strand. Dance/EDM releases have a median of -8.7 LUFS (middle half -10.4 to -7.4), and Skrillex's 'Fuji Opener' was shown at -6 LKFS. Deep, sub-led dubstep sits at the quieter end."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://kansamples.com/blogs/learn/dubstep-track-arrangement"
+        ]
+      },
+      "text": "Mostly instrumental. Where there are vocals they are samples, often a vocal line before the drop to announce it."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://kansamples.com/blogs/learn/dubstep-track-arrangement",
+          "https://en.wikipedia.org/wiki/Dubstep"
+        ]
+      },
+      "text": "Putting the snare on 2 and 4, which turns it into a 140 BPM breaks or garage track. The snare goes on beat 3; the kick carries beat 1 and the syncopation."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.redbullmusicacademy.com/lectures/mala-5-db-to-perfection/"
+        ]
+      },
+      "text": "A flabby sub: loose low frequencies smear the line. Start from a sine, low-cut what isn't needed, and check it on a big system."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://kansamples.com/blogs/learn/dubstep-track-arrangement"
+        ]
+      },
+      "text": "Stacking risers and rolls into a busy build. Dubstep builds by taking things away: filter the bass, leave a bar or two of silence, and reveal the full bass patch at the drop."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/skrillex/scary-monsters-and-nice-sprites"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "bVI - bVII - i - bVII",
+      "text": "The pre-chorus of Skrillex's 'Scary Monsters and Nice Sprites' in G minor, climbing to the tonic and falling back."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/skrillex/scary-monsters-and-nice-sprites"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "bVI - bVII - i - v",
+      "text": "The same track's outro, with the minor v in place of the return to bVII."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Dubstep",
+          "https://www.redbullmusicacademy.com/lectures/mala-5-db-to-perfection/",
+          "https://kansamples.com/blogs/learn/dubstep-track-arrangement"
+        ]
+      },
+      "feature": "tempo.bpm",
+      "high": 142,
+      "low": 138,
+      "typical": 140,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre",
+          "https://blog.vmgstudios.com/understanding-loudness-in-audio-production"
+        ]
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -6,
+      "low": -10.4,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://kansamples.com/blogs/learn/dubstep-track-arrangement"
+        ]
+      },
+      "feature": "form.sections",
+      "high": 8,
+      "low": 7,
+      "unit": "sections"
+    },
+    {
+      "evidence": {
+        "inferred": "KAN Samples' 5-6 minute template for the long form; the lower bound from the cited references Night (2:53), Scary Monsters and Nice Sprites (4:03) and Midnight Request Line (5:04)"
+      },
+      "feature": "form.minutes",
+      "high": 6,
+      "low": 3,
+      "unit": "minutes"
+    },
+    {
+      "evidence": {
+        "inferred": "The first drop taken as the hook: Wikipedia puts drops after the 16th or 32nd bar (27 s or 55 s at 140 BPM), and KAN Samples' template puts it after a 32-bar intro plus a 16-bar build (about 83 s)"
+      },
+      "feature": "form.hook.seconds",
+      "high": 83,
+      "low": 27,
+      "unit": "seconds"
+    },
+    {
+      "evidence": {
+        "inferred": "Distinct section names in KAN Samples' template: intro, build, drop, mid-section, breakdown, outro (6); 5 when there is no mid-section"
+      },
+      "feature": "form.turns",
+      "high": 6,
+      "low": 5,
+      "unit": "turns"
+    },
+    {
+      "evidence": {
+        "inferred": "KAN Samples' template repeats build and drop once each: 2 repeats over 8 sections (0.25), or 2 over 7 without the mid-section (0.29)"
+      },
+      "feature": "form.repetition",
+      "high": 0.3,
+      "low": 0.25,
+      "unit": "fraction"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Skream",
+      "evidence": {
+        "cited": [
+          "https://songbpm.com/@skream/midnight-request-line",
+          "https://www.hooktheory.com/theorytab/view/skream/midnight-request-line",
+          "http://blackdownsoundboy.blogspot.com/2005/08/skream.html"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "harmony.diatonic.ratio"
+      ],
+      "listenFor": "140 BPM half-time with an unusually harmonic hook: in the chorus, the move from the minor tonic to an altered chord on the raised seventh.",
+      "title": "Midnight Request Line",
+      "year": 2005
+    },
+    {
+      "artist": "Digital Mystikz",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Digital_Mystikz",
+          "https://www.redbullmusicacademy.com/lectures/mala-5-db-to-perfection/"
+        ]
+      },
+      "features": [
+        "mix.tilt.db"
+      ],
+      "listenFor": "Throughout, the space Mala leaves between a sine sub and the sparse top end.",
+      "title": "Anti War Dub",
+      "year": 2006
+    },
+    {
+      "artist": "Benga & Coki",
+      "evidence": {
+        "cited": [
+          "https://songbpm.com/@benga-coki/night",
+          "https://en.wikipedia.org/wiki/Benga_(musician)"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.minutes"
+      ],
+      "listenFor": "A 140 BPM half-time groove in a minor key, under three minutes long, that reached the UK singles chart.",
+      "title": "Night",
+      "year": 2008
+    },
+    {
+      "artist": "Skrillex",
+      "evidence": {
+        "cited": [
+          "https://songbpm.com/@skrillex/scary-monsters-and-nice-sprites",
+          "https://www.hooktheory.com/theorytab/view/skrillex/scary-monsters-and-nice-sprites",
+          "https://www.musicradar.com/news/tech/interview-skrillex-on-ableton-live-plug-ins-production-and-more-510973"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "mix.lufs.integrated"
+      ],
+      "listenFor": "Brostep at 140 BPM in G minor: midrange FM basses in the drops, and a bVI-bVII-i-bVII pre-chorus.",
+      "title": "Scary Monsters and Nice Sprites",
+      "year": 2010
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "sub",
+      "reese",
+      "fm"
+    ],
+    "instruments": [
+      "dark-pad",
+      "strings"
+    ],
+    "machines": []
+  },
+  "summary": "South London bass music at about 140 BPM with a half-time feel: the snare or clap lands on the third beat of the bar, so the groove feels like 70 BPM. It is built on sub-bass and on wobble, a sustained bass note moved rhythmically by an LFO on filter, volume or distortion. From 2011 American brostep moved the weight into the midrange and made it more aggressive.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Dubstep",
+      "https://kansamples.com/blogs/learn/dubstep-track-arrangement"
+    ]
+  }
+}

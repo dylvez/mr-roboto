@@ -1,0 +1,420 @@
+{
+  "aliases": [
+    "folk",
+    "american folk revival",
+    "singer-songwriter",
+    "contemporary folk",
+    "acoustic folk",
+    "folk rock"
+  ],
+  "bassHands": [
+    "root-fifth"
+  ],
+  "family": "americana",
+  "feels": [
+    "Folk Strum",
+    "Travis Shaker",
+    "3/4 Ballad",
+    "Ballad Brushes"
+  ],
+  "form": {
+    "evidence": {
+      "inferred": "strophic AAA shape (cited Strophic form) with a refrain inside each verse, as in 'Blowin' in the Wind'; 80 bars of 4/4 at the cited 112 BPM median run about 2.9 minutes, inside the songbpm-derived 3.0–4.7 minute span once a fifth verse or longer intro is added. Forms vary: many singer-songwriter songs add a chorus"
+    },
+    "sections": [
+      {
+        "bars": 4,
+        "name": "Intro"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 8,
+        "name": "Instrumental"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 4,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "folk",
+  "idioms": [
+    "folk",
+    "ballad"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/American_folk_music_revival",
+          "https://en.wikipedia.org/wiki/This_Land_Is_Your_Land"
+        ]
+      },
+      "name": "Woody Guthrie",
+      "period": "1940–1950s",
+      "why": "A Dust Bowl singer-songwriter whose political and traditional songs, under the slogan 'This Machine Kills Fascists', set the revival's model. He wrote 'This Land Is Your Land' in 1940 as an answer to 'God Bless America', to a borrowed Carter Family hymn tune. He mentored Bob Dylan and Ramblin' Jack Elliott."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/American_folk_music_revival"
+        ]
+      },
+      "name": "Pete Seeger and the Weavers",
+      "period": "1947–1960s",
+      "why": "Seeger co-founded the Weavers in 1947, and they had a massive 1950 hit with a Lead Belly song. He wrote the first version of his banjo instruction book in 1948. Blacklisted in the Red Scare, he stayed central to the revival's repertoire of traditional and topical songs on acoustic instruments."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/American_folk_music_revival",
+          "https://en.wikipedia.org/wiki/Blowin%27_in_the_Wind"
+        ]
+      },
+      "name": "Bob Dylan",
+      "period": "1961–1965",
+      "why": "Signed to Columbia in 1961 with a Guthrie-derived style, he set new words to old tunes: 'Blowin' in the Wind' adapts 'No More Auction Block'. He went electric in 1965 and pulled the revival toward folk rock."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Blue_(Joni_Mitchell_album)"
+        ]
+      },
+      "name": "Joni Mitchell",
+      "period": "1968–1976",
+      "why": "She wrote most of Blue on an Appalachian dulcimer she found at the 1969 Big Sur Folk Festival, then produced the record herself 'in near-seclusion' at A&M Studio C in 1971, in sparse settings built around guitar, dulcimer and piano."
+    }
+  ],
+  "meters": [
+    "4/4",
+    "3/4"
+  ],
+  "name": "Folk / singer-songwriter",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Travis_picking"
+        ]
+      },
+      "text": "Travis picking: the thumb alternates bass notes on two strings on beats 1–4 while index and middle play syncopated melody in between, so one guitar sounds like ragtime piano. The style came from Mose Rager and Ike Everly by way of Merle Travis, and James Taylor and John Prine are among the folk players who took it up."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Strophic_form"
+        ]
+      },
+      "text": "Many folk songs and ballads are strophic: every stanza sung to the same music (A A A), sometimes modified (A A' A''). A refrain is a recurring line inside the verse, not a separate chorus section."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Blowin%27_in_the_Wind",
+          "https://en.wikipedia.org/wiki/This_Land_Is_Your_Land"
+        ]
+      },
+      "text": "'Blowin' in the Wind' is a set of verses of rhetorical questions, each closed by the same refrain line. 'This Land Is Your Land' sings its verses and its chorus to one melody."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Blowin%27_in_the_Wind",
+          "https://en.wikipedia.org/wiki/This_Land_Is_Your_Land"
+        ]
+      },
+      "text": "The folk process borrows tunes. Dylan adapted 'Blowin' in the Wind' from the spiritual 'No More Auction Block'. Guthrie took 'This Land Is Your Land' from the Baptist hymn 'Oh, My Loving Brother', which the Carter Family had recorded as 'When the World's on Fire'."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Plagal_cadence",
+          "https://arxiv.org/pdf/2606.07334"
+        ]
+      },
+      "text": "Folk is lyric-driven rather than harmony-driven. The plagal IV→I is called a natural harmonic choice in folk-influenced music, and in the Chordonomicon genre splits folk's chord vocabulary (top-10 coverage 0.78, entropy 4.38 bits) is more concentrated than rock's (0.74) and less than country's (0.82)."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Singer-songwriter",
+          "https://en.wikipedia.org/wiki/Fire_and_Rain_(song)"
+        ]
+      },
+      "text": "Singer-songwriters work in spare arrangements that serve the song, with acoustic guitar first and piano as the alternative. On 'Fire and Rain' (1970), brushes on the drums and Bobby West's double bass instead of electric were chosen to underscore the song's melancholy, and Carole King played piano."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Blue_(Joni_Mitchell_album)"
+        ]
+      },
+      "text": "Joni Mitchell's Blue (1971) uses acoustic guitar, Appalachian dulcimer and piano in sparse settings, with a few guests: James Taylor on guitar, Stephen Stills on bass and guitar, Russ Kunkel on percussion, and Sneaky Pete Kleinow on pedal steel for two songs. Mitchell produced it herself."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Singer-songwriter",
+          "https://en.wikipedia.org/wiki/American_folk_music_revival",
+          "https://en.wikipedia.org/wiki/Blowin%27_in_the_Wind"
+        ]
+      },
+      "text": "Singer-songwriter lyrics are often personal, first-person and confessional, veiled by metaphor and vague imagery. The revival before them was built on traditional and topical protest songs. Critics credit Dylan's 'Blowin' in the Wind' with moving from the particular to the general so it could fit many causes."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre"
+        ]
+      },
+      "text": "Singer/songwriter releases measure at a median of −10.6 LUFS integrated (middle half −12.4 to −9.2, n=3,163), about a decibel quieter than pop (−9.5) and country/folk (−9.6). Only jazz, instrumental/score and ambient are quieter in that dataset."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.tempo-tunes.com/genres/folk"
+        ]
+      },
+      "text": "Tempo-Tunes' 30,290 folk songs have a median of 112 BPM and an interquartile range of 94–129; the busiest band, 120–130, holds only 17%, so folk is spread wide with no dominant tempo."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Strophic_form",
+          "https://en.wikipedia.org/wiki/Blowin%27_in_the_Wind"
+        ]
+      },
+      "text": "Forcing a pop verse–pre-chorus–chorus–bridge onto a folk song. The idiom is usually strophic, with the hook as a refrain line that closes each verse."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Singer-songwriter",
+          "https://en.wikipedia.org/wiki/Fire_and_Rain_(song)"
+        ]
+      },
+      "text": "Arranging to fill space. Singer-songwriter records are spare: guitar or piano first, and any added part (brushes, double bass, one second guitar) is there to underline the lyric's mood."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre"
+        ]
+      },
+      "text": "Mastering to pop loudness. Singer/songwriter releases sit about a decibel under pop at a −10.6 LUFS median, so aim near −10.5, not −8."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Plagal_cadence"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "I - IV - I",
+      "text": "The plagal 'amen' motion, a natural choice in folk-influenced music."
+    },
+    {
+      "evidence": {
+        "inferred": "the Chordonomicon folk split's chord concentration (top-10 coverage 0.78) sits next to country's (0.82), where de Clercq measures 82% of chords as I, IV or V"
+      },
+      "mode": "ionian",
+      "roman": "I - IV - V - I",
+      "text": "The three-chord frame folk shares with country."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.tempo-tunes.com/genres/folk"
+        ]
+      },
+      "feature": "tempo.bpm",
+      "high": 129,
+      "low": 94,
+      "typical": 112,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre"
+        ]
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -9.2,
+      "low": -12.4,
+      "typical": -10.6,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Travis_picking"
+        ]
+      },
+      "feature": "bass.attacks.per.bar",
+      "high": 4,
+      "low": 4,
+      "typical": 4,
+      "unit": "attacks per bar"
+    },
+    {
+      "evidence": {
+        "inferred": "a Travis-picked accompaniment strikes a thumb bass note on every beat, beat 1 included (cited Travis picking article), so almost every bar's downbeat carries a bass attack"
+      },
+      "feature": "bass.downbeat.coverage",
+      "high": 1.0,
+      "low": 0.9,
+      "unit": "fraction of bars"
+    },
+    {
+      "evidence": {
+        "inferred": "interquartile span and median of 13 folk and singer-songwriter records as listed on songbpm.com: This Land Is Your Land 3:08, Blowin' in the Wind 2:49, Fire and Rain 3:21, A Case of You 4:23, River 4:05, The Boxer 5:08, Pink Moon 2:04, The Times They Are a-Changin' 3:12, Angel from Montgomery 5:08, Suzanne 3:49, If You Could Read My Mind 3:49, Fast Car 4:57, Big Yellow Taxi 2:15"
+      },
+      "feature": "form.minutes",
+      "high": 4.7,
+      "low": 3.0,
+      "typical": 3.8,
+      "unit": "minutes"
+    },
+    {
+      "evidence": {
+        "inferred": "a strophic (AAA) song sets every stanza to the same music (cited Strophic form article), so with four to six verses plus perhaps one instrumental break, (n−1)/n of the sections repeat a name already heard"
+      },
+      "feature": "form.repetition",
+      "high": 0.85,
+      "low": 0.6,
+      "unit": "fraction"
+    },
+    {
+      "evidence": {
+        "inferred": "strophic form has one section (A) repeated; 'This Land Is Your Land' uses the same melody for verses and chorus (cited); an intro/instrumental break or a separate chorus adds at most one or two more names"
+      },
+      "feature": "form.turns",
+      "high": 3,
+      "low": 1,
+      "unit": "turns"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Woody Guthrie",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/This_Land_Is_Your_Land"
+        ]
+      },
+      "features": [
+        "form.repetition",
+        "form.turns"
+      ],
+      "listenFor": "Every verse and the chorus: the same borrowed hymn melody each time, the purest strophic shape.",
+      "title": "This Land Is Your Land",
+      "year": 1944
+    },
+    {
+      "artist": "Bob Dylan",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Blowin%27_in_the_Wind"
+        ]
+      },
+      "features": [
+        "form.repetition",
+        "lyric.lines"
+      ],
+      "listenFor": "The end of each verse: the refrain line returns inside the verse, not as a separate chorus.",
+      "title": "Blowin' in the Wind",
+      "year": 1963
+    },
+    {
+      "artist": "James Taylor",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Fire_and_Rain_(song)"
+        ]
+      },
+      "features": [
+        "form.minutes",
+        "mix.lufs.integrated"
+      ],
+      "listenFor": "Throughout: brushes and double bass under Taylor's guitar and Carole King's piano, chosen to underscore the melancholy.",
+      "title": "Fire and Rain",
+      "year": 1970
+    },
+    {
+      "artist": "Joni Mitchell",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Blue_(Joni_Mitchell_album)"
+        ]
+      },
+      "features": [
+        "song.parts",
+        "form.density.spread"
+      ],
+      "listenFor": "Throughout: James Taylor's guest acoustic guitar alongside Mitchell's own instrument, typical of the album's sparse settings.",
+      "title": "A Case of You",
+      "year": 1971
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "upright",
+      "finger"
+    ],
+    "instruments": [
+      "steel-guitar",
+      "nylon-guitar",
+      "banjo",
+      "grand-piano",
+      "violin",
+      "harmonium"
+    ],
+    "machines": [
+      "studio"
+    ]
+  },
+  "summary": "A song carried by one voice and one acoustic instrument, usually guitar and sometimes piano or dulcimer, in spare arrangements that put the words first. Forms are often strophic, with every verse sung to the same tune and a refrain line in place of a separate chorus. Melodies are frequently adapted from older hymns and spirituals, and the guitar supplies its own bass through Travis-style alternating thumb patterns. The revival's topical songs became, in the singer-songwriter era, personal first-person lyrics veiled by metaphor.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Singer-songwriter",
+      "https://en.wikipedia.org/wiki/Strophic_form",
+      "https://en.wikipedia.org/wiki/Travis_picking",
+      "https://en.wikipedia.org/wiki/American_folk_music_revival",
+      "https://en.wikipedia.org/wiki/Blowin%27_in_the_Wind"
+    ]
+  }
+}

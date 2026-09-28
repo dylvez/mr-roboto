@@ -1,0 +1,491 @@
+{
+  "aliases": [
+    "synthpop",
+    "electropop",
+    "new wave",
+    "technopop",
+    "dance-pop",
+    "synthwave pop"
+  ],
+  "bassHands": [
+    "octave"
+  ],
+  "family": "pop",
+  "feels": [
+    "Four on the Floor",
+    "Pop Piano Backbeat"
+  ],
+  "form": {
+    "evidence": {
+      "inferred": "Verse-chorus with a bridge before the final chorus (Take On Me), pre-chorus from the TheoryTab section lists of Don't You Want Me and Blinding Lights; 120 bars sized to Don't You Want Me (3:57 at 118 BPM, about 117 bars); bar counts per section are an assumption"
+    },
+    "sections": [
+      {
+        "bars": 8,
+        "name": "Intro"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 8,
+        "name": "Pre-Chorus"
+      },
+      {
+        "bars": 16,
+        "name": "Chorus"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 8,
+        "name": "Pre-Chorus"
+      },
+      {
+        "bars": 16,
+        "name": "Chorus"
+      },
+      {
+        "bars": 8,
+        "name": "Bridge"
+      },
+      {
+        "bars": 16,
+        "name": "Chorus"
+      },
+      {
+        "bars": 8,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "synth-pop",
+  "idioms": [
+    "pop",
+    "electronic"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Kraftwerk"
+        ]
+      },
+      "name": "Kraftwerk",
+      "period": "1974-1981",
+      "why": "They treated their Kling Klang studio as an instrument and built their own tools: a vocoder, an electronic drum kit with sensor pads, and the Synthanorma sequencer (1976). From Autobahn to Computer World, their minimal, repetitive 'robot pop' set the template for synth-pop."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.soundonsound.com/techniques/classic-tracks-human-league-dont-you-want-me",
+          "https://en.wikipedia.org/wiki/Don%27t_You_Want_Me"
+        ]
+      },
+      "name": "Martin Rushent with The Human League",
+      "period": "1981",
+      "why": "On Dare, Rushent layered as many as 24 analogue synths on a line, programmed a guide beat on the Linn and added fills afterwards, and comped Phil Oakey's vocals from three takes. He kept a bass line's accidental half-beat slip. 'Don't You Want Me' went to number one in the UK and the US."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.musicradar.com/news/vince-clarke-tape-op"
+        ]
+      },
+      "name": "Vince Clarke",
+      "period": "1981-",
+      "why": "He writes by imagining a part and programming it, since he says he is not a good enough keyboard player to write on the synth. He programmed the Roland MC-4 by entering numbers for CV, gate and control data, and his favourite synths are the Pro One, System-100M, System 700 and Juno-60."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Blue_Monday_(New_Order_song)"
+        ]
+      },
+      "name": "New Order",
+      "period": "1982-1983",
+      "why": "For 'Blue Monday' Bernard Sumner had a sequencer built to sync a DMX and a Moog Source before MIDI existed. Gillian Gilbert wrote the part by hand and kept her accidental extra rest, and an Emulator sampled the choir from Kraftwerk's 'Uranium'."
+    }
+  ],
+  "meters": [
+    "4/4"
+  ],
+  "name": "Synth-pop / EDM pop",
+  "notes": [
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Synth-pop"
+        ]
+      },
+      "text": "Synthesizers, drum machines and sequencers, sometimes replacing every other instrument. Early work is minimalist, repeated melodic elements without complex harmonic development, and acts often worked as duos: a singer and a programmer."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://www.soundonsound.com/techniques/classic-tracks-human-league-dont-you-want-me"
+        ]
+      },
+      "text": "On Dare, Martin Rushent layered synths heavily, sometimes 24 on one line, 'all drifting out of tune', to make the sound full. The Linn LM-1 laid a rudimentary guide beat, with every fill programmed afterwards."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.musicradar.com/news/vince-clarke-tape-op"
+        ]
+      },
+      "text": "Sequencers drive the groove. Vince Clarke ran several synths from a Roland MC-4 CV/gate sequencer, entering CV, gate and control data as numbers, and says the revolution in electronic music came with the sequencer, not with any synth."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Blue_Monday_(New_Order_song)"
+        ]
+      },
+      "text": "'Blue Monday' ran an Oberheim DMX and a Moog Source bass from a sequencer the band built before MIDI. Gillian Gilbert wrote the sequence by hand, and an extra rest she put in by accident was kept as part of the song's feel."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Blue_Monday_(New_Order_song)",
+          "https://www.soundonsound.com/techniques/classic-tracks-human-league-dont-you-want-me"
+        ]
+      },
+      "text": "The bass is a sequenced synth line locked to the machine, such as the Moog Source on 'Blue Monday' or the Roland on the 'Don't You Want Me' chorus, whose half-beat timing slip Rushent kept."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/the-weeknd/blinding-lights",
+          "https://www.hooktheory.com/theorytab/view/the-human-league/dont-you-want-me",
+          "https://www.hooktheory.com/theorytab/view/a-ha/take-on-me"
+        ]
+      },
+      "text": "Modal minor loops with bright turns are common. 'Blinding Lights' cycles i-v-bVII-IV in F Dorian; 'Don't You Want Me' has its verse in A minor and its chorus in the relative C major; 'Take On Me' uses seventh chords (ii7-V7-I-IV7-iii7) and a Phrygian-coloured bridge."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Take_On_Me",
+          "https://news.osu.edu/has-music-streaming-killed-the-instrumental-intro/",
+          "https://www.hitsongsdeconstructed.com/hsd_wire/the-hit-songs-deconstructed-trend-report/"
+        ]
+      },
+      "text": "Verse-chorus form with a bridge before the final chorus. Intros have shrunk from over 20 seconds in the mid-1980s to about 5 seconds, and in 2014 the first chorus arrived at 0:33 on average, with only 5% after a minute."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://www.soundonsound.com/techniques/classic-tracks-human-league-dont-you-want-me",
+          "https://en.wikipedia.org/wiki/Don%27t_You_Want_Me"
+        ]
+      },
+      "text": "Rushent and Jo Callis tracked drums, bass and vocals first, then added synth lines, horns playing pad chords on the chorus, and strings for commercial lift, and softened the originally harsher synth score."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Take_On_Me"
+        ]
+      },
+      "text": "The singer carries the human part. 'Take On Me' spans A2 to a falsetto E5, over two and a half octaves, and is called one of the hardest choruses in pop to sing; that is the extreme, not the norm."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Synth-pop",
+          "https://en.wikipedia.org/wiki/Don%27t_You_Want_Me"
+        ]
+      },
+      "text": "Emotional, even operatic, lead vocals (Marc Almond, Alison Moyet, Annie Lennox) against cool machines. 'Don't You Want Me' was reworked from a male solo into a 'conflicting duet'."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://www.soundonsound.com/techniques/classic-tracks-human-league-dont-you-want-me"
+        ]
+      },
+      "text": "Phil Oakey's vocals were comped from three takes and recorded in a tiled bathroom for its live reflections; Susan Sulley's verse took about 60 takes."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://lufs.to/genres/synth-pop",
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre"
+        ]
+      },
+      "text": "Judge loudness by era. In lufs.to's sample the median is -16.7 LUFS for the 1980s, -12.0 for the 1990s, -10.6 for the 2000s and -9.4 for the 2010s. Current pop releases have a median of -9.5 (middle half -11.2 to -8.1)."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.soundonsound.com/techniques/classic-tracks-human-league-dont-you-want-me"
+        ]
+      },
+      "text": "One clean synth on each line sounds thin and cold. Layer and detune: Rushent stacked many analogue synths on one line and let them drift."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Blue_Monday_(New_Order_song)",
+          "https://www.soundonsound.com/techniques/classic-tracks-human-league-dont-you-want-me"
+        ]
+      },
+      "text": "Quantising every accident away. Several of the genre's defining feels were mistakes that were kept: Gilbert's extra rest in 'Blue Monday' and the half-beat slip of the bass on the 'Don't You Want Me' chorus."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Synth-pop"
+        ]
+      },
+      "text": "Expecting the machines to write the song. OMD's Andy McCluskey answered the 'soulless' critique by pointing out that synthesizers do not make hits by themselves; the melody and the singer still have to."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://news.osu.edu/has-music-streaming-killed-the-instrumental-intro/",
+          "https://www.hitsongsdeconstructed.com/hsd_wire/the-hit-songs-deconstructed-trend-report/"
+        ]
+      },
+      "text": "A 1980s-length instrumental intro on a modern single. Intros have fallen from over 20 seconds to about 5, and most hits reach the first chorus by 0:40."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/the-weeknd/blinding-lights"
+        ]
+      },
+      "mode": "dorian",
+      "roman": "i - v - bVII - IV",
+      "text": "Blinding Lights, verse and chorus in F Dorian: the major IV is the Dorian colour, and the loop never cadences."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/the-human-league/dont-you-want-me"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "i - v - bVI - iv - bVII",
+      "text": "Don't You Want Me's pre-chorus in A minor, which hands over to a chorus in C major."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/a-ha/take-on-me"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "ii7 - V7 - I - IV7 - iii7",
+      "text": "Take On Me's verse: a ii-V-I with seventh chords, unusually jazzy for the style."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/a-ha/take-on-me"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "I - V - vi - IV",
+      "text": "Take On Me's chorus: the axis progression under the falsetto climb."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "inferred": "Span of the cited reference tempos West End Girls 113, Don't You Want Me 118, Sweet Dreams 125, Blue Monday 130; Take On Me (169) and Blinding Lights (171) are the same pulse felt in half-time at 85-86"
+      },
+      "feature": "tempo.bpm",
+      "high": 132,
+      "low": 110,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://lufs.to/genres/synth-pop",
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre"
+        ]
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -8,
+      "low": -17,
+      "typical": -11.7,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hitsongsdeconstructed.com/hsd_wire/the-short-game/",
+          "https://www.hitsongsdeconstructed.com/hsd_wire/the-hit-songs-deconstructed-trend-report/",
+          "https://en.wikipedia.org/wiki/Don%27t_You_Want_Me",
+          "https://en.wikipedia.org/wiki/Blinding_Lights"
+        ]
+      },
+      "feature": "form.minutes",
+      "high": 4,
+      "low": 3.2,
+      "unit": "minutes"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hitsongsdeconstructed.com/hsd_wire/the-hit-songs-deconstructed-trend-report/",
+          "https://news.osu.edu/has-music-streaming-killed-the-instrumental-intro/"
+        ]
+      },
+      "feature": "form.hook.seconds",
+      "high": 60,
+      "low": 20,
+      "typical": 33,
+      "unit": "seconds"
+    },
+    {
+      "evidence": {
+        "inferred": "Counted from the cited TheoryTabs: Blinding Lights uses 5 (Fm, Cm, Eb, Bb, Gm7), Don't You Want Me about 7 across its A-minor verse and C-major chorus, Take On Me 9 including the bridge; a verse-plus-chorus pair uses at least 4"
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 9,
+      "low": 4,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "inferred": "Verse-chorus form with pre-chorus and a bridge before the final chorus (Take On Me, Blinding Lights and Don't You Want Me TheoryTab sections), with or without intro and outro"
+      },
+      "feature": "form.sections",
+      "high": 11,
+      "low": 8,
+      "unit": "sections"
+    },
+    {
+      "evidence": {
+        "inferred": "In the form below, 10 sections under 6 names give 4 repeats (0.4); dropping the pre-chorus or adding a third chorus moves it within this band"
+      },
+      "feature": "form.repetition",
+      "high": 0.55,
+      "low": 0.35,
+      "unit": "fraction"
+    }
+  ],
+  "references": [
+    {
+      "artist": "The Human League",
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/the-human-league/dont-you-want-me",
+          "https://en.wikipedia.org/wiki/Don%27t_You_Want_Me",
+          "https://www.soundonsound.com/techniques/classic-tracks-human-league-dont-you-want-me"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "harmony.diatonic.ratio",
+        "form.minutes"
+      ],
+      "listenFor": "118 BPM on a locked LM-1 grid, and a minor verse and pre-chorus that turn to C major for the chorus.",
+      "title": "Don't You Want Me",
+      "year": 1981
+    },
+    {
+      "artist": "New Order",
+      "evidence": {
+        "cited": [
+          "https://songbpm.com/@new-order/blue-monday",
+          "https://en.wikipedia.org/wiki/Blue_Monday_(New_Order_song)"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.minutes"
+      ],
+      "listenFor": "130 BPM, DMX drums and a sequenced Moog Source bass; the 12-inch runs 7:29 against a 4:09 single edit.",
+      "title": "Blue Monday",
+      "year": 1983
+    },
+    {
+      "artist": "a-ha",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Take_On_Me",
+          "https://songbpm.com/@a-ha/take-on-me",
+          "https://www.hooktheory.com/theorytab/view/a-ha/take-on-me"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "melody.range.semitones"
+      ],
+      "listenFor": "169 BPM felt in half-time; a LinnDrum and Juno-60 backing, and a chorus that climbs from A2 to a falsetto E5.",
+      "title": "Take On Me",
+      "year": 1985
+    },
+    {
+      "artist": "The Weeknd",
+      "evidence": {
+        "cited": [
+          "https://songbpm.com/@the-weeknd/blinding-lights",
+          "https://www.hooktheory.com/theorytab/view/the-weeknd/blinding-lights",
+          "https://en.wikipedia.org/wiki/Blinding_Lights"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "harmony.cadence.ratio",
+        "form.minutes"
+      ],
+      "listenFor": "The revival at 171 BPM with a drum-machine intro, and the i-v-bVII-IV Dorian loop that never cadences over 3:22.",
+      "title": "Blinding Lights",
+      "year": 2019
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "analogue",
+      "fm"
+    ],
+    "instruments": [
+      "juno",
+      "lead",
+      "pad",
+      "synth-brass",
+      "strings",
+      "choir",
+      "fm-piano",
+      "organ"
+    ],
+    "machines": [
+      "linn",
+      "dmx",
+      "tr808"
+    ]
+  },
+  "summary": "Pop songs played on synthesizers, drum machines and sequencers, which often replace every other instrument. The parts are often minimal repeated figures, and the singers are frequently emotional, even operatic. It runs from Kraftwerk and the British early-1980s charts (Human League, Depeche Mode, New Order) to the 21st-century revival that produced 'Blinding Lights'.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Synth-pop",
+      "https://en.wikipedia.org/wiki/Blinding_Lights"
+    ]
+  }
+}

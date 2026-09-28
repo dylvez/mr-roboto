@@ -106,9 +106,11 @@ public struct HarmonyObservation: Hashable, Sendable {
         return min(up, 12 - up)
     }
 
-    /// Root movements by a perfect fourth or fifth, over all movements.
+    /// Root movements by a perfect fourth or fifth, over all movements. A chord held into the next
+    /// bar is not a movement: counted as one, a twelve-bar blues — four bars of I — read as weak
+    /// root motion for standing still.
     public var rootMotionFifths: Double {
-        let moves = zip(chords, chords.dropFirst()).map { $0.root.distance(to: $1.root) }
+        let moves = zip(chords, chords.dropFirst()).map { $0.root.distance(to: $1.root) }.filter { $0 != 0 }
         guard !moves.isEmpty else { return 0 }
         return Double(moves.filter { $0 == 5 || $0 == 7 }.count) / Double(moves.count)
     }

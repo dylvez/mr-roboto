@@ -1,0 +1,477 @@
+{
+  "aliases": [
+    "boom bap",
+    "golden-era hip-hop",
+    "east coast hip-hop",
+    "90s hip-hop"
+  ],
+  "bassHands": [],
+  "family": "hip-hop",
+  "feels": [
+    "Boom-Bap",
+    "Boom-Bap Pocket"
+  ],
+  "form": {
+    "evidence": {
+      "cited": [
+        "https://rapauthority.com/rap-song-structure/"
+      ]
+    },
+    "sections": [
+      {
+        "bars": 4,
+        "name": "Intro"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 8,
+        "name": "Hook"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 8,
+        "name": "Hook"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 8,
+        "name": "Hook"
+      },
+      {
+        "bars": 4,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "boom-bap",
+  "idioms": [
+    "hip-hop",
+    "boom-bap"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.soundonsound.com/people/dj-premier",
+          "https://en.wikipedia.org/wiki/N.Y._State_of_Mind"
+        ]
+      },
+      "name": "DJ Premier",
+      "period": "1990s–2000s",
+      "why": "Samples from a Technics turntable into an Akai S950 with a strict 60-second limit, truncates, and triggers the pieces from an MPC60 used only for drums and sequencing. He often turns off the sixteenth quantise to play drums live, and doubles a sample's bass line note for note instead of EQ'ing for weight."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://create.routenote.com/blog/producer-profile-pete-rock/",
+          "https://en.wikipedia.org/wiki/They_Reminisce_Over_You_(T.R.O.Y.)",
+          "https://en.wikipedia.org/wiki/E-mu_SP-1200"
+        ]
+      },
+      "name": "Pete Rock",
+      "period": "1991–1998",
+      "why": "Paired the SP-1200 with the S950, using the S950's filters to isolate sample basslines and horn samples as hooks and echoed one-shots on Mecca and the Soul Brother. His drums moved from dense layering in the early 1990s to a bit-crushed metallic edge by Soul Survivor (1998)."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Enter_the_Wu-Tang_(36_Chambers)",
+          "https://en.wikipedia.org/wiki/E-mu_SP-1200"
+        ]
+      },
+      "name": "RZA",
+      "period": "1992–1993",
+      "why": "Produced Enter the Wu-Tang (36 Chambers) at Firehouse Studio from soul samples and martial-arts film dialogue. Its 'dirty' sound — drums with more bass and hit than polish — is credited in part to cheap, borrowed equipment."
+    }
+  ],
+  "meters": [
+    "4/4"
+  ],
+  "name": "Boom-bap hip-hop",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://noisegate.com.au/beat-breakdown-90s-style-boom-bap-hip-hop/",
+          "https://www.attackmagazine.com/technique/beat-dissected/90s-boom-bap-hip-hop/"
+        ]
+      },
+      "text": "Kick on the downbeats and the snare on the backbeat, sixteenth-note closed hats with every second hat dropped to a low velocity, an open hat as a turnaround marker; the whole pattern is programmed on a 1/16 grid and then swung."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.attackmagazine.com/technique/beat-dissected/90s-boom-bap-hip-hop/",
+          "https://samplepacksbysoulchemist.com/blogs/soul-chemist-academy/how-to-make-boom-bap-drums-the-complete-guide"
+        ]
+      },
+      "text": "Swing is MPC-style — every second sixteenth delayed — and practitioners set different amounts per voice rather than one heavy setting: Attack's breakdown uses 57% on the kick and snare eighths and a much heavier 74% on the sixteenth hats."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.soundonsound.com/people/dj-premier",
+          "https://samplepacksbysoulchemist.com/blogs/soul-chemist-academy/how-to-make-boom-bap-drums-the-complete-guide"
+        ]
+      },
+      "text": "DJ Premier programs drums but often turns off the sixteenth-note quantise and plays the MPC live so it sounds like live drumming; a snare a little behind the grid reads relaxed and heavy, a little early reads urgent."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://iaspmjournal.net/index.php/IASPM_Journal/article/download/949/pdf_1",
+          "https://en.wikipedia.org/wiki/N.Y._State_of_Mind"
+        ]
+      },
+      "text": "Not harmony-driven: the harmony is whatever the looped record fragment carries. Hip-hop's core move is 'creating a cycle out of linearly-conceived melody' — a few bars of a soul or jazz record repeated under the verses — so no progressions are listed."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://create.routenote.com/blog/producer-profile-pete-rock/",
+          "https://www.soundonsound.com/people/dj-premier"
+        ]
+      },
+      "text": "The bass is usually the sample's own bassline, isolated with the sampler's filter (Pete Rock's S950 filtered-bassline technique), or replayed note for note under the loop: Premier says the weight of his low end is 'not EQ', he plays the record's bass line verbatim underneath. None of the app's bass hands describes this, so bassHands is empty."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/E-mu_SP-1200",
+          "https://www.levelsmusicproduction.com/blog/classic-drum-machines-the-sp-1200"
+        ]
+      },
+      "text": "The SP-1200's 12-bit, 26.04 kHz converters, drop-sample pitch shifting and SSM2044 filters give the gritty, 'dusty, punchy, grainy' sound; producers sampled records at 45 rpm and pitched down to stretch its 10 seconds of sample time."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/N.Y._State_of_Mind",
+          "https://en.wikipedia.org/wiki/Enter_the_Wu-Tang_(36_Chambers)",
+          "https://create.routenote.com/blog/producer-profile-pete-rock/"
+        ]
+      },
+      "text": "Sample sources are soul and jazz records: Premier built N.Y. State of Mind from a Joe Chambers piano loop, Donald Byrd chirps and a Kool & the Gang break; RZA favoured soul samples and kung-fu film dialogue over the era's James Brown breaks; Pete Rock was known for horn samples used as hooks or short echoed one-shots."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://www.attackmagazine.com/technique/beat-dissected/90s-boom-bap-hip-hop/",
+          "https://tellingbeatzz.com/boom-bap-bpm/",
+          "https://www.soundonsound.com/people/dj-premier"
+        ]
+      },
+      "text": "Kick boosted around 60 Hz with a dip near 150 Hz; the sample's low end rolled off and its top slightly reduced so it sits under the drums; sample side-chained to the kick; drum bus compression at 3:1–4:1. Grit is kept on purpose — Premier: in hip-hop he does not care about clean, it's about knowing how to 'dust it up'."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre",
+          "https://luvlang.studio/research/loudness-2026"
+        ]
+      },
+      "text": "The loudness range is measured hip-hop/rap as a whole (48,263 tracks released 2012–2026, median −9.7 LUFS); no survey separates boom-bap, and 1990s originals were mastered before the loudness war peaked, so reissues and new boom-bap may read quieter than modern rap."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://rapauthority.com/rap-song-structure/",
+          "https://en.wikipedia.org/wiki/N.Y._State_of_Mind"
+        ]
+      },
+      "text": "The convention is 16-bar verses and 4–8-bar hooks after a 4–8-bar intro, two or three verses in all; hooks are often not sung — N.Y. State of Mind has no chorus at all, only DJ Premier's scratched vocal samples between verses."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://www.mtosmt.org/issues/mto.09.15.5/mto.09.15.5.adams.html"
+        ]
+      },
+      "text": "Flow sits on a sixteenth-note grid; the older convention is one line per bar with the rhyme on beat 4, while 1990s rappers (RZA's example) used thirty-second notes, multisyllabic rhymes in unpredictable places and enjambment across bars."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://www.soundonsound.com/people/dj-premier"
+        ]
+      },
+      "text": "Premier truncates the sample in the S950, programs it on MPC pads, and makes a long loop 'funky' by rearranging it — the end moved to the front and the front to the end — rather than playing the record as is."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://samplepacksbysoulchemist.com/blogs/soul-chemist-academy/how-to-make-boom-bap-drums-the-complete-guide"
+        ]
+      },
+      "text": "Quantising every drum to the same grid and velocity makes the beat stiff; leave voices at different swing amounts and vary velocities, with ghosts clearly under the backbeat."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://samplepacksbysoulchemist.com/blogs/soul-chemist-academy/how-to-make-boom-bap-drums-the-complete-guide",
+          "https://www.attackmagazine.com/technique/beat-dissected/90s-boom-bap-hip-hop/"
+        ]
+      },
+      "text": "One heavy swing setting on the whole sequence makes everything lean the same way; start moderate and set kick, snare and hats separately."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.soundonsound.com/people/dj-premier"
+        ]
+      },
+      "text": "Boosting a thin sample's low end with EQ; instead double its bass line with a played or filtered bass, as Premier does."
+    }
+  ],
+  "progressions": [],
+  "ranges": [
+    {
+      "evidence": {
+        "cited": [
+          "https://tellingbeatzz.com/boom-bap-bpm/",
+          "https://samplepacksbysoulchemist.com/blogs/soul-chemist-academy/how-to-make-boom-bap-drums-the-complete-guide",
+          "https://noisegate.com.au/beat-breakdown-90s-style-boom-bap-hip-hop/"
+        ]
+      },
+      "feature": "tempo.bpm",
+      "high": 96,
+      "low": 84,
+      "typical": 90,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://tellingbeatzz.com/boom-bap-bpm/",
+          "https://www.attackmagazine.com/technique/beat-dissected/90s-boom-bap-hip-hop/"
+        ]
+      },
+      "feature": "swing.percent",
+      "high": 62,
+      "low": 52,
+      "typical": 57,
+      "unit": "MPC percent"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://tellingbeatzz.com/boom-bap-bpm/"
+        ]
+      },
+      "feature": "humanize.timing.ms",
+      "high": 15,
+      "low": 5,
+      "unit": "ms"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.attackmagazine.com/technique/beat-dissected/90s-boom-bap-hip-hop/",
+          "https://tellingbeatzz.com/boom-bap-bpm/",
+          "https://samplepacksbysoulchemist.com/blogs/soul-chemist-academy/how-to-make-boom-bap-drums-the-complete-guide"
+        ]
+      },
+      "feature": "pocket.snare.ms",
+      "high": 15,
+      "low": 0,
+      "unit": "ms"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre",
+          "https://luvlang.studio/research/loudness-2026"
+        ]
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -8.5,
+      "low": -11.2,
+      "typical": -9.7,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "set equal to the measured released loudness of hip-hop masters (freshlybakedstudios.com middle-50% −11.2 to −8.5, median −9.7), since the delivered master is what those measurements read"
+      },
+      "feature": "mix.master.target.lufs",
+      "high": -8.5,
+      "low": -11.2,
+      "typical": -9.7,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "counted from the cited layouts: intro–verse–hook–verse–hook–verse–hook–outro is 8 (the rapauthority.com 4+16+8 template); two verses with no sung hook, as on N.Y. State of Mind, gives 6 with intro, scratch breaks and outro"
+      },
+      "feature": "form.sections",
+      "high": 8,
+      "low": 6,
+      "typical": 8,
+      "unit": "sections"
+    },
+    {
+      "evidence": {
+        "inferred": "from the 8-section template intro, V, H, V, H, V, H, outro: 4 of 8 sections repeat a name already heard = 0.5; the 2-verse, 2-hook variant with intro and outro gives 2 of 6 ≈ 0.33–0.4"
+      },
+      "feature": "form.repetition",
+      "high": 0.5,
+      "low": 0.4,
+      "unit": "fraction"
+    },
+    {
+      "evidence": {
+        "inferred": "60–68 bars (rapauthority.com template) at 84–96 BPM is 2.5–3.2 minutes; the cited references run longer (N.Y. State of Mind 4:54, T.R.O.Y. 4:45), so 3 to 5"
+      },
+      "feature": "form.minutes",
+      "high": 5,
+      "low": 3,
+      "unit": "minutes"
+    },
+    {
+      "evidence": {
+        "inferred": "a 4-bar intro plus a 16-bar verse (20 bars) at 96 BPM is 50 s; an 8-bar intro plus 16 bars (24 bars) at 84 BPM is 69 s — from the rapauthority.com layout and the cited tempo range"
+      },
+      "feature": "form.hook.seconds",
+      "high": 68,
+      "low": 50,
+      "unit": "seconds"
+    },
+    {
+      "evidence": {
+        "inferred": "two to three 16-bar verses at one line per bar (Adams, MTO 15.5, for the conventional line-to-bar alignment) plus 8-bar hooks, from the rapauthority.com layout"
+      },
+      "feature": "lyric.lines",
+      "high": 72,
+      "low": 32,
+      "unit": "lines"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Nas",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/N.Y._State_of_Mind",
+          "https://tellingbeatzz.com/boom-bap-bpm/"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.hook.seconds",
+        "form.sections"
+      ],
+      "listenFor": "The minimal Joe Chambers piano loop over a Kool & the Gang break for two long verses, with scratched vocal samples standing in for a hook.",
+      "title": "N.Y. State of Mind",
+      "year": 1994
+    },
+    {
+      "artist": "Pete Rock & CL Smooth",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/They_Reminisce_Over_You_(T.R.O.Y.)",
+          "https://tellingbeatzz.com/boom-bap-bpm/"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "swing.percent"
+      ],
+      "listenFor": "The beat built around the bassline of Tom Scott's 'Today', with saxophone as the hook, at about 88 BPM.",
+      "title": "They Reminisce Over You (T.R.O.Y.)",
+      "year": 1992
+    },
+    {
+      "artist": "Wu-Tang Clan",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Enter_the_Wu-Tang_(36_Chambers)"
+        ]
+      },
+      "features": [
+        "degrade.bits",
+        "mix.tilt.db"
+      ],
+      "listenFor": "Across the album, drums that are bass-heavy and hard rather than crisp, under soul loops and kung-fu dialogue.",
+      "title": "Enter the Wu-Tang (36 Chambers)",
+      "year": 1993
+    },
+    {
+      "artist": "Mobb Deep",
+      "evidence": {
+        "cited": [
+          "https://tellingbeatzz.com/boom-bap-bpm/"
+        ]
+      },
+      "features": [
+        "tempo.bpm"
+      ],
+      "listenFor": "The top of the genre's tempo range, about 95 BPM.",
+      "title": "Shook Ones, Pt. II",
+      "year": 1995
+    },
+    {
+      "artist": "A Tribe Called Quest",
+      "evidence": {
+        "cited": [
+          "https://tellingbeatzz.com/boom-bap-bpm/"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "swing.percent"
+      ],
+      "listenFor": "A classic at about 93 BPM for comparing swing against the slower Illmatic tracks.",
+      "title": "Award Tour",
+      "year": 1993
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "finger",
+      "upright"
+    ],
+    "instruments": [
+      "grand-piano",
+      "horns",
+      "alto-sax",
+      "rhodes"
+    ],
+    "machines": [
+      "sp1200",
+      "mpc60"
+    ]
+  },
+  "summary": "Sample-based hip-hop built on a deep, round kick (the boom) and a hard, snapping backbeat snare (the bap), programmed on 12-bit samplers like the SP-1200 and MPC60 with MPC-style swing on a sixteenth grid around 90 BPM. The harmony is a looped fragment of a soul or jazz record, often filtered, with the rapper's 16-bar verses carrying the song rather than a sung melody.",
+  "summaryEvidence": {
+    "cited": [
+      "https://samplepacksbysoulchemist.com/blogs/soul-chemist-academy/how-to-make-boom-bap-drums-the-complete-guide",
+      "https://noisegate.com.au/beat-breakdown-90s-style-boom-bap-hip-hop/",
+      "https://en.wikipedia.org/wiki/E-mu_SP-1200",
+      "https://www.soundonsound.com/people/dj-premier"
+    ]
+  }
+}

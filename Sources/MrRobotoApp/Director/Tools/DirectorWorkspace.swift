@@ -133,6 +133,10 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     /// Replaces the library's record of what the band has said. Quiet: a log that could not be
     /// written is not worth a line in the rail.
     func keepSaid(_ records: [SaidRecord])
+
+    /// Places the open song in a genre by a profile's id, name or alias; "" to leave it to be
+    /// guessed. False with no song open or no such genre.
+    @discardableResult func setGenre(_ name: String) -> Bool
 }
 
 extension DirectorWorkspace {
@@ -140,6 +144,12 @@ extension DirectorWorkspace {
     public var houseBook: HouseBook { HouseBook.of(library, song: song) }
 
     public func keepSaid(_ records: [SaidRecord]) {}
+
+    /// The open song's genre, set or guessed.
+    public var genre: GenreBook.Reading? { GenreBook.standard.genre(of: song) }
+
+    /// The lens the band reads the open song through, when its genre is known.
+    public var genreLens: GenreLens? { genre.map { GenreLens($0.profile) } }
 }
 
 /// `AppState` seen through the six things the Director needs.
@@ -159,6 +169,8 @@ public final class AppStateWorkspace: DirectorWorkspace {
     public var store: LibraryStore? { app.store }
 
     public func keepSaid(_ records: [SaidRecord]) { app.keepSaid(records) }
+
+    public func setGenre(_ name: String) -> Bool { app.setGenre(name, by: .director) }
 
     public func version(_ id: VersionID) -> PartVersion? { app.version(id) }
 
@@ -363,6 +375,15 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
     public private(set) var library: Library
 
     public func keepSaid(_ records: [SaidRecord]) { library.said = records }
+
+    public func setGenre(_ name: String) -> Bool {
+        guard song != nil else { return false }
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        if trimmed.isEmpty { song?.genre = nil; return true }
+        guard let profile = GenreBook.standard.profile(named: trimmed) else { return false }
+        song?.genre = profile.id
+        return true
+    }
     public let store: LibraryStore?
     /// Every line the tools wrote, in order.
     public private(set) var notes: [(text: String, detail: String?)] = []

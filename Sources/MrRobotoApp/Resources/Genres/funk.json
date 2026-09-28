@@ -1,0 +1,468 @@
+{
+  "aliases": [
+    "james brown funk",
+    "p-funk",
+    "new orleans funk",
+    "classic funk"
+  ],
+  "bassHands": [
+    "motown",
+    "octave"
+  ],
+  "family": "soul",
+  "feels": [
+    "One-Chord Funk"
+  ],
+  "form": {
+    "evidence": {
+      "inferred": "The cited vamp-plus-break shape (Cold Sweat's drum break, static vamps, few fills) laid out so that 72 bars at 107 BPM runs about 2.7 minutes, a single edit; album versions repeat the Groove sections"
+    },
+    "sections": [
+      {
+        "bars": 4,
+        "name": "Intro"
+      },
+      {
+        "bars": 16,
+        "name": "Groove"
+      },
+      {
+        "bars": 8,
+        "name": "Bridge"
+      },
+      {
+        "bars": 16,
+        "name": "Groove"
+      },
+      {
+        "bars": 4,
+        "name": "Break"
+      },
+      {
+        "bars": 16,
+        "name": "Groove"
+      },
+      {
+        "bars": 8,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "funk",
+  "idioms": [
+    "funk"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/James_Brown",
+          "https://en.wikipedia.org/wiki/Funk"
+        ]
+      },
+      "name": "James Brown",
+      "period": "1965-1974",
+      "why": "Built songs from interlocking syncopated parts, with guitar as percussion, and centred them on the One; Cold Sweat (1967), with its drum break and single chord, is called the first true funk song. He ran the band with fines and hand signals on stage for any mistake."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Clyde_Stubblefield",
+          "https://articles.roland.com/behind-the-beat-funky-drummer-by-james-brown/"
+        ]
+      },
+      "name": "Clyde Stubblefield",
+      "period": "1965-1970",
+      "why": "Played on Cold Sweat, Mother Popcorn and Funky Drummer with off-kilter syncopations and ghost notes, self-taught from things he could hum, including factory and train rhythms. The Funky Drummer break became one of the most sampled segments in music, uncredited."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.loudersound.com/features/bootsy-collins-on-playing-with-james-brown-learning-from-hendrix-and-lsd",
+          "https://en.wikipedia.org/wiki/Funk"
+        ]
+      },
+      "name": "Bootsy Collins",
+      "period": "1970-1980",
+      "why": "Learned from James Brown to always hit the One and play what he liked in between, then took that rule into P-Funk. He and Larry Graham built funk slap-and-pop bass."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Zigaboo_Modeliste"
+        ]
+      },
+      "name": "Zigaboo Modeliste (The Meters)",
+      "period": "1965-1977",
+      "why": "Brought New Orleans second-line parade drumming into funk as syncopated, percussive patterns, describing his style as a collage of the city's drummers and learnt by ear, not rudiments. Christgau said his drumming sounded almost like the lead."
+    }
+  ],
+  "meters": [
+    "4/4"
+  ],
+  "name": "Funk",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Funk",
+          "https://www.loudersound.com/features/bootsy-collins-on-playing-with-james-brown-learning-from-hendrix-and-lsd"
+        ]
+      },
+      "text": "Emphasise the One: beat 1 of the bar, not only the 2-and-4 backbeat. Brown told Bootsy to always hit the One and play what he liked in between."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://articles.roland.com/behind-the-beat-funky-drummer-by-james-brown/",
+          "https://splice.com/blog/what-is-funk-music/"
+        ]
+      },
+      "text": "Sixteenth-note hi-hat (one-handed in Funky Drummer) with the kick syncopated on the ands and e's, forte snare on 2 and 4, ghost notes on the snare between them, and one or two open hats a phrase."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.gmth.de/zeitschrift/artikel/1224.aspx"
+        ]
+      },
+      "text": "Measured early-funk timing is lightly swung at the sixteenth (1.07:1 to 1.3:1 in most JB and Meters tracks, never triplet 2:1), drummers repeat their microtiming within milliseconds across the groove, and the backbeat is rarely late. Several tracks stretch just after the One and tighten into the next downbeat."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Funk",
+          "https://splice.com/blog/what-is-funk-music/",
+          "https://en.wikipedia.org/wiki/James_Brown"
+        ]
+      },
+      "text": "Static one- or two-chord vamps in dorian or mixolydian colour, voiced as extended chords (m7, m11, dominant 9ths): The Payback in Bb dorian, Funky Drummer between F9 and C13. Cold Sweat reduced the harmony to a single chord."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Funk",
+          "https://splice.com/blog/what-is-funk-music/"
+        ]
+      },
+      "text": "The bass line is the centrepiece: repetitive locked patterns, continuous playing, muted ghost notes, and later thumb-slapped lows with popped highs (Larry Graham, Bootsy Collins). Flatwounds on a P or J bass for the classic sound."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/James_Brown"
+        ]
+      },
+      "text": "Every instrument works as a drum: guitar riffs act as percussion, and parts interlock (bass, drums, guitar, horns) instead of stacking. What matters is 'the pattern of attack points', not the pitches."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Funk",
+          "https://splice.com/blog/what-is-funk-music/"
+        ]
+      },
+      "text": "Rhythm guitar is Jimmy Nolen's chicken scratch: strings lightly pressed then released for muted sixteenth strums, often a bright hollowbody into a Fender Twin. Drums are tuned tight with a snare that rings and pops."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Funk",
+          "https://splice.com/blog/what-is-funk-music/"
+        ]
+      },
+      "text": "Horns punctuate: short staccato stabs in the gaps between vocal lines, accenting snare hits and outlining any chord change."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/James_Brown",
+          "https://en.wikipedia.org/wiki/Funk"
+        ]
+      },
+      "text": "Forms are vamps with a drum break and a bridge rather than verse-chorus arcs; Cold Sweat introduced the drum break, and album cuts run 5-8 minutes on one groove. Few fills keep the drummer in the pocket."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://splice.com/blog/what-is-funk-music/",
+          "https://www.gmth.de/zeitschrift/artikel/1224.aspx"
+        ]
+      },
+      "text": "Vocals and lines work as call and response over the groove, and riffs bounce around the pentatonic scale; the vocalist is one part of the band and does not push the rhythm section's timing."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "inferred": "The two genre loudness surveys consulted (Freshly Baked Studios, LuvLang) report R&B/Soul but not funk"
+      },
+      "text": "No published loudness survey separates funk from R&B/soul, so this profile gives no LUFS range; judge a funk master against the soul profile's figures."
+    }
+  ],
+  "parent": "soul",
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.gmth.de/zeitschrift/artikel/1224.aspx"
+        ]
+      },
+      "text": "Quantising funk to a dead-straight or a triplet grid. Measured funk sits between the two, 1.07:1 to 1.3:1 in most tracks (about 52-57% MPC swing), and repeats the same microtiming every bar."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.gmth.de/zeitschrift/artikel/1224.aspx",
+          "https://articles.roland.com/behind-the-beat-funky-drummer-by-james-brown/"
+        ]
+      },
+      "text": "Pushing the backbeat late to sound 'laid back'. In early funk the backbeat is rarely delayed; the feel comes from the One, ghost notes and sixteenth syncopation."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Funk",
+          "https://en.wikipedia.org/wiki/James_Brown"
+        ]
+      },
+      "text": "Adding chord changes to fill space. Keep one or two chords and put the interest into interlocking rhythm parts, horn stabs and the bass line."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/James_Brown",
+          "https://en.wikipedia.org/wiki/Funk"
+        ]
+      },
+      "mode": "mixolydian",
+      "roman": "I7",
+      "text": "The one-chord dominant vamp: Cold Sweat reduced the harmony to a single chord."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/stevie-wonder/superstition",
+          "https://splice.com/blog/what-is-funk-music/"
+        ]
+      },
+      "mode": "dorian",
+      "roman": "i7",
+      "text": "The minor one-chord vamp: Superstition's verse and The Payback's Bb dorian."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://splice.com/blog/what-is-funk-music/"
+        ]
+      },
+      "mode": "mixolydian",
+      "roman": "I7 - V7",
+      "text": "Funky Drummer's two-chord bounce between F9 and C13, voiced with ninths and thirteenths."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "inferred": "Median and spread of eight reference tempos from songbpm/Hooktheory: Cissy Strut 88 (listed 176 in double time), Funky Drummer 96, Superstition 100, Give Up the Funk 106, Sex Machine 108, Good Times 111, Cold Sweat 120, Papa's Got a Brand New Bag 129; the range holds the middle six"
+      },
+      "feature": "tempo.bpm",
+      "high": 120,
+      "low": 90,
+      "typical": 107,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "inferred": "The ZGMTH early-funk study's measured sixteenth-note swing ratios in early funk converted to MPC percent (ratio/(ratio+1)): Cold Sweat and Funky Drummer 1.07:1 = 51.7, Cissy Strut and Handclapping Song 1.3:1 = 56.5, Funky President 1.6:1 = 61.5; Papa Was Too at 1.8:1 (64.3) is the outlier, and no track reached triplet 2:1"
+      },
+      "feature": "swing.percent",
+      "high": 62,
+      "low": 51,
+      "unit": "MPC percent"
+    },
+    {
+      "evidence": {
+        "inferred": "The ZGMTH early-funk study's microtiming measurements of 14 funk tracks: deviations from the grid of 0-56 ms, with beat-level means around 7 ms at a secondary One and above 20 ms either side of it; the upper bound keeps away from the 56 ms extreme found in a fill"
+      },
+      "feature": "humanize.timing.ms",
+      "high": 25,
+      "low": 5,
+      "unit": "ms"
+    },
+    {
+      "evidence": {
+        "inferred": "The ZGMTH early-funk study found backbeat delay limited, imperceptible or absent in most early funk tracks and early (inverse) in four; 10 ms is the lower edge of what experienced musicians perceive per the same article"
+      },
+      "feature": "pocket.snare.ms",
+      "high": 10,
+      "low": -10,
+      "unit": "ms"
+    },
+    {
+      "evidence": {
+        "inferred": "Durations of eight reference records on songbpm: 2:06, 2:57, 3:05, 4:05, 5:16, 5:46, 7:01, 8:15; singles run 3 minutes, album vamps 5-8"
+      },
+      "feature": "form.minutes",
+      "high": 7,
+      "low": 3,
+      "unit": "minutes"
+    },
+    {
+      "evidence": {
+        "inferred": "The cited static single-chord or two-chord vamp (Wikipedia: Funk) and Cold Sweat's reduction of the harmony to one chord (Wikipedia: James Brown): a one-chord vamp changes 0 times a bar, a two-chord vamp over two or more bars at most 0.5"
+      },
+      "feature": "harmony.changes.per.bar",
+      "high": 0.5,
+      "low": 0,
+      "unit": "changes per bar"
+    },
+    {
+      "evidence": {
+        "inferred": "Static one- or two-chord vamps per the cited Funk article, plus a bridge chord; Superstition's verse is a single i chord in Hooktheory's analysis and Funky Drummer alternates two (F9 and C13) per Splice"
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 3,
+      "low": 1,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "inferred": "James Brown's instruction to Bootsy Collins, 'Always hit The One, the downbeat' (Louder), read as a bass attack on nearly every bar's downbeat"
+      },
+      "feature": "bass.downbeat.coverage",
+      "high": 1.0,
+      "low": 0.9,
+      "unit": "fraction of bars"
+    }
+  ],
+  "references": [
+    {
+      "artist": "James Brown",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/James_Brown",
+          "https://www.gmth.de/zeitschrift/artikel/1224.aspx",
+          "https://songbpm.com/@james-brown/cold-sweat"
+        ]
+      },
+      "features": [
+        "harmony.chords.distinct",
+        "swing.percent",
+        "tempo.bpm"
+      ],
+      "listenFor": "The single-chord vamp and the drum break; a barely swung 1.07:1 sixteenth with a secondary One on the and-of-1 in bar 2.",
+      "title": "Cold Sweat",
+      "year": 1967
+    },
+    {
+      "artist": "James Brown",
+      "evidence": {
+        "cited": [
+          "https://articles.roland.com/behind-the-beat-funky-drummer-by-james-brown/",
+          "https://www.gmth.de/zeitschrift/artikel/1224.aspx",
+          "https://songbpm.com/@james-brown/funky-drummer"
+        ]
+      },
+      "features": [
+        "ghost.ratio",
+        "grid.subdivision",
+        "humanize.timing.ms",
+        "tempo.bpm"
+      ],
+      "listenFor": "Stubblefield's one-handed sixteenth hat, ghost-noted snare and open hat on the e of 4; in the bar 31-32 fill the deviation shrinks from 56 ms to 4 ms over seven sixteenths.",
+      "title": "Funky Drummer",
+      "year": 1970
+    },
+    {
+      "artist": "The Meters",
+      "evidence": {
+        "cited": [
+          "https://www.gmth.de/zeitschrift/artikel/1224.aspx",
+          "https://en.wikipedia.org/wiki/Zigaboo_Modeliste",
+          "https://songbpm.com/@the-meters/cissy-strut"
+        ]
+      },
+      "features": [
+        "swing.percent",
+        "tempo.bpm"
+      ],
+      "listenFor": "Audible 1.3:1 sixteenth swing from Modeliste at about 88 BPM (listed at 176).",
+      "title": "Cissy Strut",
+      "year": 1969
+    },
+    {
+      "artist": "Stevie Wonder",
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/stevie-wonder/superstition",
+          "https://songbpm.com/@stevie-wonder/superstition"
+        ]
+      },
+      "features": [
+        "harmony.changes.per.bar",
+        "tempo.bpm"
+      ],
+      "listenFor": "A single dorian i chord for the verse at 100 BPM, with harmonic movement saved for the chorus.",
+      "title": "Superstition",
+      "year": 1972
+    },
+    {
+      "artist": "Parliament",
+      "evidence": {
+        "cited": [
+          "https://songbpm.com/@parliament/give-up-the-funk-tear-the-roof-off-the-sucker",
+          "https://www.loudersound.com/features/bootsy-collins-on-playing-with-james-brown-learning-from-hendrix-and-lsd"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.minutes",
+        "bass.downbeat.coverage"
+      ],
+      "listenFor": "P-Funk's One-centred groove at 106 BPM stretched to nearly six minutes.",
+      "title": "Give Up the Funk (Tear the Roof off the Sucker)",
+      "year": 1975
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "finger",
+      "slap",
+      "muted"
+    ],
+    "instruments": [
+      "clavinet",
+      "muted-guitar",
+      "clean-electric",
+      "horns",
+      "rhodes",
+      "rock-organ",
+      "tenor-sax",
+      "trumpet"
+    ],
+    "machines": [
+      "funk",
+      "studio"
+    ]
+  },
+  "summary": "Rhythm-first music in which every instrument plays an interlocking, syncopated sixteenth-note part and the whole band lands on 'the One', the downbeat of the bar. Harmony is reduced to a static one- or two-chord vamp in dorian or mixolydian colour, with extended sevenths and ninths, so the groove rather than the changes carries the song.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Funk",
+      "https://en.wikipedia.org/wiki/James_Brown",
+      "https://www.loudersound.com/features/bootsy-collins-on-playing-with-james-brown-learning-from-hendrix-and-lsd"
+    ]
+  }
+}

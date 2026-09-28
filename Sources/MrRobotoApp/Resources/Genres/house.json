@@ -1,0 +1,470 @@
+{
+  "aliases": [
+    "chicago house",
+    "deep house",
+    "classic house",
+    "jackin' house",
+    "garage house"
+  ],
+  "bassHands": [
+    "octave"
+  ],
+  "family": "electronic",
+  "feels": [
+    "Classic House",
+    "Four on the Floor",
+    "Lo-Fi House"
+  ],
+  "form": {
+    "evidence": {
+      "cited": [
+        "https://www.edmprod.com/how-to-make-house-music/",
+        "https://en.wikipedia.org/wiki/House_music"
+      ]
+    },
+    "sections": [
+      {
+        "bars": 32,
+        "name": "Intro"
+      },
+      {
+        "bars": 32,
+        "name": "Groove"
+      },
+      {
+        "bars": 16,
+        "name": "Breakdown"
+      },
+      {
+        "bars": 32,
+        "name": "Drop"
+      },
+      {
+        "bars": 16,
+        "name": "Breakdown"
+      },
+      {
+        "bars": 32,
+        "name": "Drop"
+      },
+      {
+        "bars": 32,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "house",
+  "idioms": [
+    "house",
+    "electronic"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Frankie_Knuckles",
+          "https://en.wikipedia.org/wiki/House_music"
+        ]
+      },
+      "name": "Frankie Knuckles",
+      "period": "1977–2014",
+      "why": "As resident at Chicago's Warehouse from 1977 he re-edited records, extending intros and breaks and adding new beats, and around 1983 added a drum machine bought via Derrick May under disco classics — the combination that defined early Chicago house. He later championed and co-produced Jamie Principle's 'Your Love' and worked with David Morales as Def Mix."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.vice.com/en/article/larry-heard-can-you-feel-it-making-of/",
+          "https://en.wikipedia.org/wiki/Deep_house"
+        ]
+      },
+      "name": "Larry Heard (Mr. Fingers)",
+      "period": "1984–",
+      "why": "Made 'Can You Feel It' with only a Roland Juno-60 and a TR-909, one pass onto one cassette deck and then bounced to a second while adding parts by hand. His jazzy, soulful records are the blueprint for deep house."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Move_Your_Body_(Marshall_Jefferson_song)"
+        ]
+      },
+      "name": "Marshall Jefferson",
+      "period": "1986–",
+      "why": "Recorded 'Move Your Body' with post-office coworkers in five or six hours, playing keyboards at 40-45 BPM and the bass at 40 BPM, then speeding the tape to 122 BPM. It is among the first house records with piano, and its chord progression became standard in house and garage."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/House_music"
+        ]
+      },
+      "name": "Ron Hardy",
+      "period": "1980s",
+      "why": "At the Music Box he remixed tracks live with added synths and drum machines. Hearing house at Music Box volume is what turned Marshall Jefferson from dismissing dance music to producing it."
+    }
+  ],
+  "meters": [
+    "4/4"
+  ],
+  "name": "House",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.musicradar.com/how-to/how-to-program-6-different-four-to-the-floor-grooves",
+          "https://en.wikipedia.org/wiki/House_music"
+        ]
+      },
+      "text": "Bass drum on every beat, clap on 2 and 4, open hi-hat on every off-beat eighth; jackin' and New York styles add sparse ghost snares on 16ths, and funkier house pushes ghost snares, closed hats and percussion further off the grid with more swing."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.attackmagazine.com/technique/beat-dissected/90s-house/",
+          "https://www.attackmagazine.com/technique/beat-dissected/simple-jackin-house/",
+          "https://www.attackmagazine.com/technique/beat-dissected/jazzy-house/"
+        ]
+      },
+      "text": "Swing is applied to the 16ths (MPC-style, 50% straight); the offbeat hat stays on the eighth while the in-between hats, shakers and ghost claps carry the swing, with velocity variation doing as much as timing."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/House_music",
+          "https://www.edmprod.com/how-to-make-house-music/"
+        ]
+      },
+      "text": "Built from repeated eight-bar sections; club versions add at least 16 bars of DJ intro and outro around the body, with breakdowns and drops in 16 or 32 bar blocks and a subtle change every 8 bars. Forms vary: vocal house keeps verse and chorus inside that frame."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://www.edmprod.com/how-to-make-house-music/",
+          "https://www.attackmagazine.com/technique/synth-secrets/old-school-house-chords/",
+          "https://en.wikipedia.org/wiki/Can_You_Feel_It_(Larry_Heard_song)"
+        ]
+      },
+      "text": "Chords come from soul, funk and jazz records: minor sevenths and minor ninths, often sampled or played as stabs; deep house holds long chords rather than stabbing them ('an organ played like strings')."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Move_Your_Body_(Marshall_Jefferson_song)"
+        ]
+      },
+      "text": "Piano chord riffs are a house staple since Marshall Jefferson's 'Move Your Body'; DJ Pierre said everybody has stolen its chord progression."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://www.edmprod.com/how-to-make-house-music/",
+          "https://en.wikipedia.org/wiki/House_music",
+          "https://en.wikipedia.org/wiki/Show_Me_Love_(Robin_S._song)"
+        ]
+      },
+      "text": "Basslines are syncopated, leaning on the off-beats, and traditionally sit above the kick, which fills the sub range; sources range from Juno and TB-303 synth lines to the Korg M1 organ preset of 'Show Me Love'."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/House_music",
+          "https://www.attackmagazine.com/technique/beat-dissected/simple-jackin-house/"
+        ]
+      },
+      "text": "Roland TR-808, TR-909 and TR-707 drums, TB-303 for acid, congas and bongos; jackin' house layers LinnDrum, DMX, 707 and 909 kicks and a DR-202 clap."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre",
+          "https://tracksensei.com/blog/we-analyzed-563-techno-house-tracks"
+        ]
+      },
+      "text": "Released house masters are loud but not the loudest dance music: 12,508 house tracks measure a median of -9.1 LUFS (middle half -10.4 to -8.0), and a 54-track label corpus a median of -11.35 LUFS with true peaks above 0 dBTP."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://tracksensei.com/blog/we-analyzed-563-techno-house-tracks"
+        ]
+      },
+      "text": "House is the widest and most mid-rich of the club styles measured: about 22% of energy above 250 Hz (techno 8-12%), the widest stereo image (0.24) and the most loss when summed to mono (0.46 LU); kick fundamentals sit near 55 Hz."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/House_music",
+          "https://en.wikipedia.org/wiki/Deep_house"
+        ]
+      },
+      "text": "Melody is secondary to the low end; where it exists it is a vocal hook or a piano or synth riff over the loop, and deep house avoids the energy build-up and release of other dance styles."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Can_You_Feel_It_(Larry_Heard_song)",
+          "https://en.wikipedia.org/wiki/Deep_house"
+        ]
+      },
+      "text": "Vocals are soulful and short-form, often a repeated phrase rather than a narrative; 'Can You Feel It' was issued as instrumental, vocal, spoken-word (Martin Luther King's 'I Have a Dream') and a cappella versions."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://www.edmprod.com/how-to-make-house-music/"
+        ]
+      },
+      "text": "Arrangements work by adding and removing layers over the loop; a DJ intro can be just kick, snare and some percussion, and each block introduces or subtracts one element."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.attackmagazine.com/technique/beat-dissected/90s-house/",
+          "https://www.attackmagazine.com/technique/beat-dissected/jazzy-house/",
+          "https://www.attackmagazine.com/technique/beat-dissected/simple-jackin-house/"
+        ]
+      },
+      "text": "Programming the hats and percussion dead straight: house swing lives on the 16ths (Attack's settings run 55-65%, 59 for jazzy house) and in velocity variation; leave the kick and offbeat hat on the grid and swing the in-between hits."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.edmprod.com/how-to-make-house-music/"
+        ]
+      },
+      "text": "Writing a pop-length song with no DJ intro and outro: club versions need 16-32 bars of mostly drums at each end, with the radio edit made separately."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre",
+          "https://tracksensei.com/blog/we-analyzed-563-techno-house-tracks",
+          "https://www.izotope.com/en/learn/dance-electronic-analysis"
+        ]
+      },
+      "text": "Chasing -6 LUFS because it is 'dance music': released house measures around -9 LUFS median (-11 in label-release corpora), so a dynamic kick is normal."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/mr-fingers/can-you-feel-it",
+          "https://en.wikipedia.org/wiki/Can_You_Feel_It_(Larry_Heard_song)"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "i - VImaj7 - VII",
+      "text": "Mr. Fingers' deep-house loop: i with an added ninth, the major-seventh VI, and VII, held as long pad chords rather than stabbed."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/crystal-waters/gypsy-woman"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "v7 - VImaj7 - iv7 - VII7 - i",
+      "text": "'Gypsy Woman' chorus: every chord a seventh, VII with a flat ninth, landing on i with a ninth — the jazz-funk colour house took from its samples."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.attackmagazine.com/technique/synth-secrets/old-school-house-chords/",
+          "https://www.edmprod.com/how-to-make-house-music/"
+        ]
+      },
+      "mode": "dorian",
+      "roman": "i7 - i7",
+      "text": "The one-chord minor-seventh or minor-ninth stab vamp of old-school house and garage, moved rhythmically rather than harmonically."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.mixgraph.io/bpm-for/house",
+          "https://www.attackmagazine.com/technique/beat-dissected/90s-house/",
+          "https://www.attackmagazine.com/technique/beat-dissected/simple-jackin-house/",
+          "https://en.wikipedia.org/wiki/House_music"
+        ]
+      },
+      "feature": "tempo.bpm",
+      "high": 128,
+      "low": 120,
+      "typical": 125,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "inferred": "Union of Attack Magazine's Beat Dissected settings (90s house 55-60%, jazzy house MPC 16 Swing 59, jackin' house 60-65%), trimmed at the top because 65% is the jackin' extreme, and at the bottom because tech-house leaning tracks run nearly straight; 59 is the one exact setting a source states."
+      },
+      "feature": "swing.percent",
+      "high": 63,
+      "low": 54,
+      "typical": 59,
+      "unit": "MPC percent"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre",
+          "https://tracksensei.com/blog/we-analyzed-563-techno-house-tracks"
+        ]
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -8.0,
+      "low": -11.5,
+      "typical": -9.1,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "Hooktheory counts 3 chords in Mr. Fingers' 'Can You Feel It' and 5 per section in Crystal Waters' 'Gypsy Woman'; the low end of 1 is the chordless drum-and-bass track that house also allows (Wikipedia: low register emphasised over melody, sparse texture)."
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 5,
+      "low": 1,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "inferred": "Hooktheory: 'Can You Feel It' (i, VI7, VII in A minor) is fully diatonic, 1.0; 'Gypsy Woman' intro (v7, VI7, ii7, bII7, i9 in D minor) has one borrowed chord in five, 0.8."
+      },
+      "feature": "harmony.diatonic.ratio",
+      "high": 1.0,
+      "low": 0.8,
+      "unit": "fraction"
+    },
+    {
+      "evidence": {
+        "inferred": "EDMProd gives a ~7 min DJ structure and a ~4 min radio edit; Robin S. 'Show Me Love' runs 4:29 on the album and 7:43 in the StoneBridge Club Mix; the form below (192 bars at 125 BPM) is 6.1 min."
+      },
+      "feature": "form.minutes",
+      "high": 8.0,
+      "low": 4.0,
+      "unit": "minutes"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Mr. Fingers",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Can_You_Feel_It_(Larry_Heard_song)",
+          "https://www.vice.com/en/article/larry-heard-can-you-feel-it-making-of/"
+        ]
+      },
+      "features": [
+        "harmony.chords.distinct",
+        "tempo.bpm"
+      ],
+      "listenFor": "Throughout: a Juno-60 organ played like strings, long held chords over a six-note bassline and a plain 909 pattern — how little a deep house track needs.",
+      "title": "Can You Feel It",
+      "year": 1986
+    },
+    {
+      "artist": "Marshall Jefferson",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Move_Your_Body_(Marshall_Jefferson_song)"
+        ]
+      },
+      "features": [
+        "tempo.bpm"
+      ],
+      "listenFor": "The opening piano chords, and the bassline recorded at 40 BPM and sped up to 122 — the tempo of the record.",
+      "title": "Move Your Body (The House Music Anthem)",
+      "year": 1986
+    },
+    {
+      "artist": "Crystal Waters",
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/crystal-waters/gypsy-woman"
+        ]
+      },
+      "features": [
+        "harmony.chords.distinct",
+        "harmony.diatonic.ratio",
+        "tempo.bpm"
+      ],
+      "listenFor": "The chorus's five seventh chords (v7 VI7 iv7 VII7(b9) i9 in D minor) under the 'la da dee' vocal hook at 120 BPM.",
+      "title": "Gypsy Woman (She's Homeless)",
+      "year": 1991
+    },
+    {
+      "artist": "Robin S.",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Show_Me_Love_(Robin_S._song)"
+        ]
+      },
+      "features": [
+        "form.minutes"
+      ],
+      "listenFor": "The Korg M1 organ-preset bassline StoneBridge put under the original vocal and kick, and the 7:43 club length against the 3:21 single.",
+      "title": "Show Me Love (StoneBridge Club Mix)",
+      "year": 1992
+    },
+    {
+      "artist": "Jamie Principle / Frankie Knuckles",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Frankie_Knuckles"
+        ]
+      },
+      "features": [
+        "tempo.bpm"
+      ],
+      "listenFor": "The vocal-dub Knuckles played from reel-to-reel tape for a year before the 1987 release — Chicago's drum-machine-plus-voice template.",
+      "title": "Your Love",
+      "year": 1987
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "analogue",
+      "acid",
+      "sub"
+    ],
+    "instruments": [
+      "grand-piano",
+      "organ",
+      "juno",
+      "pad",
+      "stab",
+      "strings",
+      "rhodes"
+    ],
+    "machines": [
+      "tr909",
+      "tr808",
+      "tr707",
+      "linn",
+      "dmx"
+    ]
+  },
+  "summary": "Repetitive 4/4 dance music built on a kick on every beat, clap or snare on 2 and 4 and off-beat hi-hats, at roughly 120-128 BPM, grown out of DJs re-editing disco with drum machines in 1980s Chicago. The low end (kick and bassline) matters more than melody, the texture is relatively sparse, and tracks are built from repeated eight-bar sections. Harmony, when present, is borrowed from soul, jazz-funk and disco: minor sevenths and ninths held or stabbed over a short loop.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/House_music",
+      "https://en.wikipedia.org/wiki/Deep_house",
+      "https://www.edmprod.com/how-to-make-house-music/"
+    ]
+  }
+}

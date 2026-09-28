@@ -32,6 +32,7 @@ struct SongSettingsPopover: View {
         var key: Key?
         var meter: TimeSignature
         var fills: Bool
+        var genre: String?
 
         init(_ song: Song) {
             title = song.title
@@ -40,6 +41,7 @@ struct SongSettingsPopover: View {
             key = song.key
             meter = song.timeSignature
             fills = song.playsFills
+            genre = song.genre
         }
 
         /// "92 bpm, D minor, 4/4": what Put back would return to, the parts that differ from now.
@@ -51,6 +53,7 @@ struct SongSettingsPopover: View {
             if key != now.key { parts.append(key?.name ?? "no key") }
             if meter != now.meter { parts.append(meter.description) }
             if fills != now.fills { parts.append(fills ? "fills" : "no fills") }
+            if genre != now.genre { parts.append(genre.flatMap { GenreBook.standard.profile(named: $0)?.name } ?? "genre guessed") }
             return parts.joined(separator: ", ")
         }
     }
@@ -78,6 +81,7 @@ struct SongSettingsPopover: View {
                 field("Key", text: $keyText, focus: .key, prompt: "D major, F# minor, or blank") { applyKey() }
                 problem(keyProblem)
             }
+            GenrePicker(app: app)
             Toggle(isOn: Binding(get: { app.song?.playsFills ?? true }, set: { app.setFills($0) })) {
                 Text("Fills into each section")
                     .font(Design.Typography.ui(12.5, weight: .regular))
@@ -144,6 +148,7 @@ struct SongSettingsPopover: View {
         app.setKey(settings.key)
         app.setTimeSignature(settings.meter)
         app.setFills(settings.fills)
+        app.setGenre(settings.genre)
         load()
     }
 
@@ -232,5 +237,54 @@ struct TapTempo: Equatable {
         guard times.count >= 2, let first = times.first, let last = times.last else { return nil }
         let interval = last.timeIntervalSince(first) / Double(times.count - 1)
         return interval > 0 ? 60 / interval : nil
+    }
+}
+
+/// The song's genre: the profiles by family, or left to be guessed from the grooves. Under it, what
+/// the genre is in a sentence, and the tempo it runs at when the song is outside it.
+struct GenrePicker: View {
+    let app: AppState
+
+    private var families: [(String, [GenreProfile])] {
+        Dictionary(grouping: GenreBook.standard.profiles, by: \.family)
+            .map { ($0.key, $0.value) }
+            .sorted { $0.0 < $1.0 }
+    }
+
+    var body: some View {
+        let reading = app.genre
+        VStack(alignment: .leading, spacing: 4) {
+            SmallLabel("Genre")
+            Menu {
+                Button("Guess from the grooves") { app.setGenre(nil) }
+                Divider()
+                ForEach(families, id: \.0) { family, profiles in
+                    Section(family.capitalized) {
+                        ForEach(profiles) { profile in
+                            Button(profile.name) { app.setGenre(profile.id) }
+                        }
+                    }
+                }
+            } label: {
+                Text(reading?.description ?? "None yet — guessed from the grooves")
+                    .font(Design.Typography.ui(12.5, weight: .regular))
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+            .help("The band judges the song by its genre's numbers — loudness, hook time, swing, pocket — and says both its own and the genre's")
+            if let profile = reading?.profile {
+                Text(profile.summary)
+                    .font(Design.Typography.ui(11.5, weight: .regular))
+                    .foregroundStyle(Design.Palette.inkSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(4)
+                if let tempo = profile.tempo, let song = app.song, !profile.fits(tempo: song.tempo, meter: song.timeSignature) {
+                    Text("\(profile.name) runs at \(tempo.span); this song is at \(SongSettingsPopover.tempoText(song.tempo)).")
+                        .font(Design.Typography.ui(11, weight: .regular))
+                        .foregroundStyle(Design.Palette.warn)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
     }
 }

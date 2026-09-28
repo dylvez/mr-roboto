@@ -66,6 +66,11 @@ struct StructureSurfaceView: View {
                     FormChip("+ \(preset.rawValue)", isOn: false) { model.add(preset) }
                         .help("Add a \(preset.bars)-bar \(preset.rawValue.lowercased()) after the selected section, playing the newest of everything")
                 }
+                // The genre's own arrangement, whole, when the song has a genre that states one.
+                if let offered = model.genreForm {
+                    FormChip("+ \(offered.genre) form", isOn: false) { model.addGenreForm() }
+                        .help("Add \(offered.form.sections.map { "\($0.name) \($0.bars)" }.joined(separator: " · ")) — \(offered.form.bars) bars, the way \(offered.genre) is usually arranged")
+                }
             }
             // What the whole form leaves out, above the section detail rather than inside it: a
             // part written after the form was arranged is in no section, and saying that once
@@ -383,7 +388,7 @@ struct FlowRow: Layout {
     }
 }
 
-private struct FormChip: View {
+struct FormChip: View {
     let title: String
     let isOn: Bool
     /// A chip that is a warning rather than a choice — the armed Remove. Warn ink on the warn

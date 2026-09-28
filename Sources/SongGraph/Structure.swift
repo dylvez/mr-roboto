@@ -210,6 +210,11 @@ public struct Song: Identifiable, Hashable, Codable, Sendable {
     /// True unless the song has turned its fills off.
     public var playsFills: Bool { fills ?? true }
 
+    /// The genre the song is in, by the id of a genre profile ("house", "boom-bap"), when someone
+    /// has said. Nil leaves it to be guessed from what the song holds. Optional so a song written
+    /// before genres round-trips byte for byte.
+    public var genre: String?
+
     public init(id: SongID = SongID(), title: String, artist: String = "", key: Key? = nil, tempo: Double = 120,
                 timeSignature: TimeSignature = .fourFour, sections: [Section] = [], versions: [PartVersion] = [],
                 seeds: [Seed] = [], experiments: [Experiment] = [], createdAt: Date = Date()) {

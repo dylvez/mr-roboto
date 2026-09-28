@@ -1,0 +1,520 @@
+{
+  "aliases": [
+    "afropop",
+    "afro-pop",
+    "naija pop",
+    "afrofusion",
+    "afro-fusion"
+  ],
+  "bassHands": [
+    "log-drum"
+  ],
+  "family": "african-pop",
+  "feels": [
+    "Afrobeats"
+  ],
+  "form": {
+    "evidence": {
+      "cited": [
+        "https://beatkey.app/how-to-make-afrobeats"
+      ]
+    },
+    "sections": [
+      {
+        "bars": 8,
+        "name": "Intro"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 8,
+        "name": "Pre-Chorus"
+      },
+      {
+        "bars": 16,
+        "name": "Chorus"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 8,
+        "name": "Pre-Chorus"
+      },
+      {
+        "bars": 16,
+        "name": "Chorus"
+      },
+      {
+        "bars": 8,
+        "name": "Bridge"
+      },
+      {
+        "bars": 16,
+        "name": "Chorus"
+      },
+      {
+        "bars": 8,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "afrobeats",
+  "idioms": [
+    "afrobeats"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Don_Jazzy",
+          "https://www.grammy.com/news/afrobeats-evolution-wizkid-rema-wande-coal-olamide-asake/"
+        ]
+      },
+      "name": "Don Jazzy",
+      "period": "2004–present",
+      "why": "A keyboardist who started as a church drummer, he co-founded Mo' Hits Records with D'banj in 2004. He produced D'banj's early albums and Wande Coal's 'Mushin 2 MoHits' (2008), including 'Bumper 2 Bumper' with its soulful crooning and ad-libs. He then founded Mavin Records in 2012, and his 'It's Don Jazzy Again!' tag became a producer signature the genre copied."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Sarz",
+          "https://afrobeatsintelligence.substack.com/p/sarz-believes-in-destiny-as-long",
+          "https://www.okayafrica.com/sarz-nigerian-music-interview/"
+        ]
+      },
+      "name": "Sarz",
+      "period": "2007–present",
+      "why": "His first full credit was in 2007. He says beats and melodies interest him more than lyrics, credits Timbaland and the Neptunes, and consciously fuses hip-hop low end with Yoruba textures such as fuji. Listeners recognise him by his drums; his credits include Niniola's 'Maradona' and Lojay's 'Monalisa', and he tags beats 'Sarz on the beat'."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://thenativemag.com/cover-story/wizmag-legendury/",
+          "https://en.wikipedia.org/wiki/Ojuelegba_(song)",
+          "https://en.wikipedia.org/wiki/Essence_(Wizkid_song)"
+        ]
+      },
+      "name": "Legendury Beatz",
+      "period": "2010s–present",
+      "why": "A production duo who have worked with Wizkid for nearly a decade, from 'Baddest Boy' (their first session with him) to 'Ojuelegba' (2014) and, with P2J, 'Essence' (2020). They describe working round the clock, making many 'vibes' until one is right. 'Essence' came out of the Made in Lagos production camp in Lagos, where Tems recorded her part as soon as she heard the beat."
+    }
+  ],
+  "meters": [
+    "4/4"
+  ],
+  "name": "Afrobeats",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Afrobeats",
+          "https://beatkey.app/how-to-make-afrobeats"
+        ]
+      },
+      "text": "The groove is 4/4 with a 3-2 or 2-3 clave underneath: a sixteen-step figure accented 3+3+2 (e.g. hats or percussion on steps 1, 3, 6, 8, 11, 14). The asymmetry, not a backbeat, is what rolls the groove forward; spacing the top line evenly is the first thing that makes it stop sounding like afrobeats."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://beatstorapon.com/blog/afrobeats-production-guide-rhythm-chords-mixing/",
+          "https://create.routenote.com/blog/how-to-make-an-afrobeats-track/",
+          "https://hexloops.com/how-to-make-an-afrobeats-drum-pattern-kicks-percussion"
+        ]
+      },
+      "text": "There is no one kick pattern. Documented placements include 1, 2.5 and 4 with rimshots on 1.75 and 3.5 (the core pattern), a four-on-the-floor hybrid, a dancehall-leaning 1 and 2.75, or a kick on every eighth note under the rim. Start with fewer kicks than you think, bring the bass in before adding more, and make each off-beat kick change the phrase."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://hexloops.com/how-to-make-an-afrobeats-drum-pattern-kicks-percussion",
+          "https://beatkey.app/how-to-make-afrobeats"
+        ]
+      },
+      "text": "Shakers or hats run steady eighths or sixteenths, shaped by velocity rather than by more notes. Downbeats are accented and upbeats softened, and the accents are chosen, not randomised. Swing is not a fixed percentage in this style: compare the groove with and without it, and some hits can stay exactly on the grid while others move."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://create.routenote.com/blog/how-to-make-an-afrobeats-track/",
+          "https://hexloops.com/how-to-make-an-afrobeats-drum-pattern-kicks-percussion"
+        ]
+      },
+      "text": "Drums are clean, dry and very short. The main accents are usually a rimshot rather than a snare, and snare, rim or clap is tuned up in pitch to cut through. Percussion (congas, bongos, woodblock, bells, shekere, talking drum, djembe) answers the kit in chosen gaps rather than filling every step."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://create.routenote.com/blog/how-to-make-an-afrobeats-track/",
+          "https://hexloops.com/how-to-make-an-afrobeats-drum-pattern-kicks-percussion",
+          "https://beatkey.app/how-to-make-afrobeats",
+          "https://blog.soundtrap.com/how-to-make-afrobeats/"
+        ]
+      },
+      "text": "The bass is melodic and rhythmically active, not a root-note pad: it answers the kick or carries the rhythm between kick hits, follows the clave, and trades phrases with the lead. It can be a synth or a played electric bass. A common starting point is the chord root with its octave and fifth."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://blog.soundtrap.com/how-to-make-afrobeats/",
+          "https://create.routenote.com/blog/how-to-make-an-afrobeats-track/",
+          "https://beatkey.app/how-to-make-afrobeats",
+          "https://www.mixgraph.io/artists/wizkid",
+          "https://www.mixgraph.io/artists/burna-boy",
+          "https://www.mixgraph.io/artists/davido"
+        ]
+      },
+      "text": "Harmony is a short loop of extended chords (sevenths, ninths, suspended chords) on Rhodes-type keys, guitar or pads. Tutorials disagree on mode: RouteNote says the major scale is favoured, BeatKey says minor and Dorian. Measured catalogues split by artist: 76% of Wizkid's analysed tracks and 68% of Burna Boy's are minor, against 37% of Davido's."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://beatkey.app/how-to-make-afrobeats",
+          "https://beatstorapon.com/blog/afrobeats-production-guide-rhythm-chords-mixing/"
+        ]
+      },
+      "text": "Verse-chorus pop form: intro of 8-16 bars (often clave and shaker only), verses of 16-24, an 8-bar pre-chorus, 16-bar choruses, an optional bridge and an outro that strips elements away. Records run 2.5-3.5 minutes, with the intro taking about 15 seconds."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://beatkey.app/how-to-make-afrobeats",
+          "https://hexloops.com/how-to-make-an-afrobeats-drum-pattern-kicks-percussion"
+        ]
+      },
+      "text": "Energy builds by adding layers, not by taking them away. Build the drum pattern over two bars, where bar one sets the pocket and bar two changes one or two details. Add a percussion fill or variation every 4-8 bars, and make small changes at section boundaries rather than rebuilding the groove."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://create.routenote.com/blog/how-to-make-an-afrobeats-track/",
+          "https://beatstorapon.com/blog/afrobeats-production-guide-rhythm-chords-mixing/"
+        ]
+      },
+      "text": "Vocals range from smooth crooning to chants, with call and response common. Auto-Tune is often used openly and its artefacts treated as a feature. Background harmonies are stacked as 8-16 takes for a crowd-choir effect."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Afrobeats",
+          "https://en.wikipedia.org/wiki/Ojuelegba_(song)"
+        ]
+      },
+      "text": "Lyrics are sung in West African English, mostly Nigerian or Ghanaian, mixed with slang, pidgin and the singer's own Nigerian or Ghanaian languages ('Ojuelegba' moves between English and Yoruba). Unlike Fela's afrobeat, afrobeats generally avoids politics, though End SARS songs such as Burna Boy's '20 10 20' are exceptions."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre",
+          "https://beatstorapon.com/blog/afrobeats-production-guide-rhythm-chords-mixing/"
+        ]
+      },
+      "text": "Released masters measure a median -9.5 LUFS integrated (middle half -10.8 to -8.4) across 2,310 tracks, about as loud as pop and slightly louder than reggae/dancehall. High-pass most non-bass elements around 150 Hz, keep everything below 100-150 Hz mono, and sidechain the bass to the kick for the pumping bounce."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Afrobeats",
+          "https://www.grammy.com/news/afrobeats-evolution-wizkid-rema-wande-coal-olamide-asake/"
+        ]
+      },
+      "text": "Afrobeats draws on highlife, juju, hiplife, azonto, palm-wine music, UK house, hip-hop, dancehall and R&B. Since about 2022 an 'Afropiano' strand has borrowed amapiano's log drums and shakers (Asake's 'Sungba'), and Sarz's 'Maradona' (2017) pulled it toward deep house. Treat those as neighbouring dialects, not the core."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://create.routenote.com/blog/how-to-make-an-afrobeats-track/",
+          "https://blog.soundtrap.com/how-to-make-afrobeats/",
+          "https://www.mixgraph.io/bpm-for/afrobeats",
+          "https://www.mixgraph.io/artists/burna-boy",
+          "https://www.mixgraph.io/artists/wizkid",
+          "https://www.mixgraph.io/artists/davido"
+        ]
+      },
+      "text": "Tempo guidance differs by source (90-110, 95-115, 100-115 BPM). The measured spread over 242 tracks has a median of 110 BPM, a middle half of 99-116 and 90% within 93-123. Per artist, the medians are Burna Boy 103, Wizkid 104 and Davido 110-112. Slow R&B-leaning records go down to about 85-88 BPM ('Last Last' is 88)."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://beatkey.app/how-to-make-afrobeats"
+        ]
+      },
+      "text": "Spacing the hats or shaker evenly. The genre lives on the 3+3+2 clave grouping, so put the accents (or the notes themselves) on the clave's asymmetric steps."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://hexloops.com/how-to-make-an-afrobeats-drum-pattern-kicks-percussion"
+        ]
+      },
+      "text": "Filling the bar with kicks to make an empty loop feel busier. Start with fewer kicks, bring in the bass first and let it answer the kick; add a kick only if it changes the phrase."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.mixgraph.io/bpm-for/afro-house",
+          "https://www.mixgraph.io/bpm-for/afrobeats"
+        ]
+      },
+      "text": "Treating it as afro house. Afro house sits at 120-123 BPM on a straight four-on-the-floor, while afrobeats' middle half is 99-116 BPM on a syncopated kick and rim. Stay under about 116 unless the record is deliberately crossing over."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://beatkey.app/how-to-make-afrobeats",
+          "https://blog.soundtrap.com/how-to-make-afrobeats/"
+        ]
+      },
+      "text": "Keeping the bass to roots and the chords to plain triads. Use sevenths and ninths, and let the bass move melodically with the clave."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Calm_Down_(Rema_song)"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "IV - I",
+      "text": "Rema's 'Calm Down' is a two-chord loop (E-B in B major) under the whole song."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://beatstorapon.com/blog/afrobeats-production-guide-rhythm-chords-mixing/"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "I - IV - vi - V",
+      "text": "A major-key pop loop listed among afrobeats' common progressions, voiced with sevenths and ninths."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://beatkey.app/how-to-make-afrobeats"
+        ]
+      },
+      "mode": "dorian",
+      "roman": "i7 - IV7",
+      "text": "The Dorian vamp (Am7-D7): the raised sixth gives the minor loop its lift."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://beatkey.app/how-to-make-afrobeats"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "i7 - iv7",
+      "text": "The plain minor two-chord loop (Am7-Dm7), the darker counterpart to the Dorian vamp."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.mixgraph.io/bpm-for/afrobeats",
+          "https://blog.soundtrap.com/how-to-make-afrobeats/",
+          "https://hexloops.com/how-to-make-an-afrobeats-drum-pattern-kicks-percussion"
+        ]
+      },
+      "feature": "tempo.bpm",
+      "high": 116,
+      "low": 99,
+      "typical": 110,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre"
+        ]
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -8.4,
+      "low": -10.8,
+      "typical": -9.5,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "set equal to the measured released-master loudness of 2,310 afrobeats tracks (middle 50%, median -9.5) in the cited survey, since the delivered target is the released master"
+      },
+      "feature": "mix.master.target.lufs",
+      "high": -8.4,
+      "low": -10.8,
+      "typical": -9.5,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "the 2.5-3.5 minute norm the cited BeatsToRapOn guide gives, widened to the 3:40 of Calm Down and 4:08 of Essence (Wikipedia); typical is the median of Last Last 2:53, Ojuelegba 3:36, Calm Down 3:40 and Essence 4:08 rounded down toward the guide's norm"
+      },
+      "feature": "form.minutes",
+      "high": 4.2,
+      "low": 2.5,
+      "typical": 3.3,
+      "unit": "minutes"
+    },
+    {
+      "evidence": {
+        "inferred": "Calm Down's two-chord E-B loop (Wikipedia) at the low end and the four-chord loops listed by BeatsToRapOn and BeatKey at the high end"
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 4,
+      "low": 2,
+      "typical": 4,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "inferred": "RouteNote's advice that progressions run over two bars, carrying the two- to four-chord loops BeatsToRapOn and BeatKey list (2 chords over 2-4 bars up to 4 chords over 2 bars)"
+      },
+      "feature": "harmony.changes.per.bar",
+      "high": 2,
+      "low": 0.5,
+      "typical": 1,
+      "unit": "changes per bar"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Wizkid",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Ojuelegba_(song)",
+          "https://www.grammy.com/news/afrobeats-evolution-wizkid-rema-wande-coal-olamide-asake/"
+        ]
+      },
+      "features": [
+        "form.minutes"
+      ],
+      "listenFor": "The unhurried, sparse Legendury Beatz production under an autobiographical vocal in English and Yoruba, all 3:36 of it.",
+      "title": "Ojuelegba",
+      "year": 2014
+    },
+    {
+      "artist": "Wizkid feat. Tems",
+      "evidence": {
+        "cited": [
+          "https://www.mixgraph.io/artists/wizkid",
+          "https://en.wikipedia.org/wiki/Essence_(Wizkid_song)"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.minutes"
+      ],
+      "listenFor": "A 104 BPM afro-R&B groove in E minor that critics called a mix of Afropop and R&B; listen to how the hook repeats over an unchanging 4:08 groove.",
+      "title": "Essence",
+      "year": 2020
+    },
+    {
+      "artist": "Rema",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Calm_Down_(Rema_song)"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "harmony.chords.distinct",
+        "melody.range.semitones"
+      ],
+      "listenFor": "A two-chord IV-I loop at 107 BPM in B major, with a lead vocal spanning D#4 to F#5 (15 semitones) over the whole song.",
+      "title": "Calm Down",
+      "year": 2022
+    },
+    {
+      "artist": "Burna Boy",
+      "evidence": {
+        "cited": [
+          "https://www.mixgraph.io/artists/burna-boy",
+          "https://en.wikipedia.org/wiki/Last_Last"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.minutes"
+      ],
+      "listenFor": "The slow end of the genre: 88 BPM in F minor, built on a Toni Braxton 'He Wasn't Man Enough' sample and finished in 2:53.",
+      "title": "Last Last",
+      "year": 2022
+    },
+    {
+      "artist": "Burna Boy",
+      "evidence": {
+        "cited": [
+          "https://www.mixgraph.io/artists/burna-boy"
+        ]
+      },
+      "features": [
+        "tempo.bpm"
+      ],
+      "listenFor": "A mid-tempo 101 BPM F-minor groove near the centre of the measured tempo distribution; compare its pocket with 'Last Last'.",
+      "title": "Ye",
+      "year": 2018
+    },
+    {
+      "artist": "Niniola",
+      "evidence": {
+        "cited": [
+          "https://www.grammy.com/news/afrobeats-evolution-wizkid-rema-wande-coal-olamide-asake/"
+        ]
+      },
+      "features": [
+        "tempo.bpm"
+      ],
+      "listenFor": "Sarz's deep-house-leaning 'Afro-house' production, which shows where the genre borders on four-on-the-floor.",
+      "title": "Maradona",
+      "year": 2017
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "sub",
+      "finger",
+      "log-drum"
+    ],
+    "instruments": [
+      "rhodes",
+      "clean-electric",
+      "steel-guitar",
+      "marimba",
+      "bell-pluck",
+      "pad",
+      "flute"
+    ],
+    "machines": [
+      "studio"
+    ]
+  },
+  "summary": "The umbrella name for the pop music of Nigeria and Ghana since the 2000s: a 4/4 groove built on a 3-2 or 2-3 clave feel, with short dry drums, a rimshot carrying the accents, shakers filling the sixteenths and a melodic bass answering the kick. It fuses highlife, juju, hiplife and fuji with hip-hop, R&B, dancehall and house, and is sung in West African English, pidgin and local languages, usually over a two- to four-chord loop.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Afrobeats",
+      "https://create.routenote.com/blog/how-to-make-an-afrobeats-track/",
+      "https://beatkey.app/how-to-make-afrobeats"
+    ]
+  }
+}

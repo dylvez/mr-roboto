@@ -119,8 +119,10 @@ public struct ConveneTool: DirectorTool {
             public var saidBefore: String?
             /// When the house plays the other reading on a question this rule answers to.
             public var houseCall: String?
+            /// The genre that drew the line, when it was the genre's and not the persona's.
+            public var genre: String?
             enum CodingKeys: String, CodingKey {
-                case persona, rule, feature, value, unit, holds, says
+                case persona, rule, feature, value, unit, holds, says, genre
                 case saidBefore = "said_before", houseCall = "house_call"
             }
         }
@@ -148,9 +150,11 @@ public struct ConveneTool: DirectorTool {
         public var disagreement: Disagreement?
         /// The house calls in force for the room's questions, each with whose call it is.
         public var houseCalls: [String]
+        /// The genre the readings were judged in, and how it is known; nil when the song has none.
+        public var genre: String?
         public var detail: String
         enum CodingKeys: String, CodingKey {
-            case room, asked, readings, verdicts, disagreement, detail
+            case room, asked, readings, verdicts, disagreement, detail, genre
             case notAsked = "not_asked", houseCalls = "house_calls"
         }
     }
@@ -186,6 +190,8 @@ public struct ConveneTool: DirectorTool {
         }
         let room = cast.inRoom(for: song)
         let book = await workspace.houseBook
+        let genre = await workspace.genre
+        let lens = genre.map { GenreLens($0.profile) }
         var readings: [(PersonaID, PersonaReading)] = []
         var notes: [String] = []
 
@@ -285,6 +291,13 @@ public struct ConveneTool: DirectorTool {
             }
         }
 
+        // Each reading re-judged in the song's genre, where the genre has a number for it.
+        if let lens {
+            readings = readings.map { id, reading in
+                (id, cast.persona(id).map { lens.apply(reading, bible: $0.bible) } ?? reading)
+            }
+        }
+
         // The rail: what did not hold, in each persona's name; a persona with nothing to flag says so once.
         for persona in asked.personas {
             let id = persona.bible.id
@@ -300,13 +313,14 @@ public struct ConveneTool: DirectorTool {
         }
 
         // The question as a proposal, put to the room.
-        let proposal = EngineVocabularyReader().read(input.question, context: PersonaReadingContext(tempo: song.tempo))
+        let proposal = EngineVocabularyReader().read(input.question, context: PersonaReadingContext(tempo: song.tempo, idiom: genre?.profile.id ?? "hip-hop"))
         var verdicts: [Output.Verdict] = []
         var answered: [(PersonaID, PersonaVerdict)] = []
         if case .outOfScope = proposal {} else {
             // The whole room hears the proposal, because guards stay on: a member who was not asked
             // speaks only when a rule of theirs refuses, and is marked as a guard, not an opinion.
-            for (id, verdict) in room.ask(proposal) {
+            for (id, given) in room.ask(proposal) {
+                let verdict = cast.persona(id).map { GenreLens.judge(given, on: proposal, by: $0.bible, in: lens) } ?? given
                 if case .defer_ = verdict { continue }
                 let wasAsked = asked.ids.contains(id)
                 guard wasAsked || verdict.refusedByRule != nil else { continue }
@@ -337,7 +351,7 @@ public struct ConveneTool: DirectorTool {
             let unit = bible?.vocabulary.first { $0.feature == r.feature }?.unit ?? ""
             return Output.Reading(persona: id.rawValue, rule: r.rule, feature: r.feature.rawValue, value: r.value, unit: unit, holds: r.holds, says: r.says,
                                   saidBefore: said.before[index].map { SaidBefore.sentence($0, now: song.id) },
-                                  houseCall: bible.flatMap { book.note(on: r.rule, in: $0) })
+                                  houseCall: bible.flatMap { book.note(on: r.rule, in: $0) }, genre: r.genre)
         }
         let questions = Set(asked.personas.flatMap { $0.bible.openQuestions.map(\.id) })
         let calls = book.entries.filter { questions.contains($0.call.question) }.map { entry in
@@ -351,7 +365,7 @@ public struct ConveneTool: DirectorTool {
         if !guards.isEmpty { detail += " Guard: \(guards.map { "\($0.persona) (not asked) refuses" }.joined(separator: "; "))." }
         if let disagreement { detail += " \(disagreement.between.joined(separator: " and ")) disagree about \(disagreement.about); a Compare is open." }
         if !notes.isEmpty { detail += " " + notes.joined(separator: " ") }
-        return Output(room: room.ids.map(\.rawValue), asked: asked.ids.map(\.rawValue), notAsked: notAsked.map(\.rawValue), readings: out, verdicts: verdicts, disagreement: disagreement, houseCalls: calls, detail: detail)
+        return Output(room: room.ids.map(\.rawValue), asked: asked.ids.map(\.rawValue), notAsked: notAsked.map(\.rawValue), readings: out, verdicts: verdicts, disagreement: disagreement, houseCalls: calls, genre: genre?.description, detail: detail)
     }
 
     /// The first disagreement that shows.

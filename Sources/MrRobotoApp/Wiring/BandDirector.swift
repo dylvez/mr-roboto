@@ -354,7 +354,12 @@ final class BandDirector: PersonaDirecting {
         let proposal = (try? await self.proposal(for: utterance)) ?? .outOfScope(what: utterance)
         // Who is in the room is the song's call: a persona outside the cast is not consulted.
         let room = cast.inRoom(for: app.song)
-        let verdicts = room.ask(proposal)
+        // Each verdict re-judged in the song's genre: a refusal the genre would not make is agreement
+        // with the refusal kept as its caveat.
+        let lens = GenreLens.of(app.song)
+        let verdicts = room.ask(proposal).map { persona, verdict in
+            (persona: persona, verdict: cast.persona(persona).map { GenreLens.judge(verdict, on: proposal, by: $0.bible, in: lens) } ?? verdict)
+        }
         for (persona, verdict) in verdicts {
             // A deferral is not a line worth spending the rail on unless *everybody* deferred, which
             // is the case the next block covers: "not my department" from a persona that was never
@@ -376,7 +381,7 @@ final class BandDirector: PersonaDirecting {
     /// The song, as the reader needs it.
     var context: PersonaReadingContext {
         guard let song = app.song else { return PersonaReadingContext() }
-        var context = PersonaReadingContext(tempo: song.tempo)
+        var context = PersonaReadingContext(tempo: song.tempo, idiom: app.genre?.profile.id ?? "hip-hop")
         if let version = Guidance.grooves(in: song).last, case .groove(let groove) = version.kind {
             let observation = GrooveObservation(label: PartLabel.title(of: version), groove: groove,
                                                 options: .stored(groove), tempo: song.tempo)

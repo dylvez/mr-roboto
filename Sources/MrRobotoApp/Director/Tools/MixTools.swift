@@ -133,7 +133,7 @@ public struct ReadMixTool: DirectorTool {
             pairs = observation.masking.map { Output.Pair(a: $0.aLabel, b: $0.bLabel, band: $0.bandName + " Hz", gapDB: ($0.gapDB * 10).rounded() / 10, louder: $0.louderLabel) }
             let findings = board.review(MixReview(observation: observation, master: mix.master))
             flags = findings.map { Output.Flag(critic: $0.criticName, headline: $0.headline, offered: $0.fixes.first?.title ?? "", otherwise: $0.fixes.dropFirst().first?.title ?? "") }
-            engineer = Engineer().read(observation).map(\.says)
+            engineer = GenreLens.judge(Engineer().read(observation), by: Engineer.bible, in: await workspace.genreLens).map(\.says)
             detail += String(format: ", bounced: %.1f LUFS against %.0f, true peak %.1f against %.1f; %d masking pair%@, %d flag%@.",
                              observation.integratedLUFS, mix.master.targetLUFS, observation.truePeakDBTP ?? observation.peakDBFS, mix.master.ceilingDBTP,
                              pairs.count, pairs.count == 1 ? "" : "s", flags.count, flags.count == 1 ? "" : "s")
@@ -239,7 +239,8 @@ public struct SetMixTool: DirectorTool {
             }
             section = found
         }
-        let verdict = engineer.consider(.moveStrip(part: strip.label, gainDB: input.gainDB, bandHz: input.bandHz, bandDB: input.bandDB))
+        let asked = PersonaProposal.moveStrip(part: strip.label, gainDB: input.gainDB, bandHz: input.bandHz, bandDB: input.bandDB)
+        let verdict = GenreLens.judge(engineer.consider(asked), on: asked, by: Engineer.bible, in: await workspace.genreLens)
         if case .refuse(let rule, let because, let counter) = verdict {
             throw DirectorToolFailure(tool: name, reason: "The Engineer refuses (\(rule)): \(because)", suggestion: counter)
         }
@@ -327,7 +328,8 @@ public struct MasterTool: DirectorTool {
         guard await workspace.song != nil else {
             throw DirectorToolFailure(tool: name, reason: "No song is open.")
         }
-        let verdict = engineer.consider(.setMaster(targetLUFS: input.targetLUFS, ceilingDBTP: input.ceilingDBTP))
+        let master = PersonaProposal.setMaster(targetLUFS: input.targetLUFS, ceilingDBTP: input.ceilingDBTP)
+        let verdict = GenreLens.judge(engineer.consider(master), on: master, by: Engineer.bible, in: await workspace.genreLens)
         if case .refuse(let rule, let because, let counter) = verdict {
             throw DirectorToolFailure(tool: name, reason: "The Engineer refuses (\(rule)): \(because)", suggestion: counter)
         }

@@ -84,6 +84,10 @@ public enum DirectorTools {
             SetInstrumentTool(workspace: workspace).erased(),
             CompTakesTool(workspace: workspace, acting: persona ?? CreatePartVersionTool.director).erased(),
             OpenSongTool(workspace: workspace).erased(),
+            // Genres, appended after the forty-two: what the app knows of each, and which the song is in.
+            ListGenresTool(workspace: workspace).erased(),
+            ReadGenreTool(workspace: workspace).erased(),
+            SetGenreTool(workspace: workspace).erased(),
         ]
         if let stage {
             let pad = pad ?? DirectorStagePad()
@@ -149,6 +153,10 @@ public enum DirectorTools {
         "set_instrument",
         "comp_takes",
         "open_song",
+        // Genres, appended: the profiles read, and the song placed in one.
+        "list_genres",
+        "read_genre",
+        "set_genre",
     ]
 
     /// The two the frame adds. Appended after `names`, never among them: a session with no frame

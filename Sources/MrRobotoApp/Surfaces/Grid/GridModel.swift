@@ -210,6 +210,13 @@ public final class GridModel {
     public private(set) var readings: [PersonaReading] = []
     private var beatmaker = Beatmaker()
 
+    /// The song's genre, asked each time the readings are made: a reading is re-judged in it
+    /// (`GenreLens`). Nil — the default, and a song nobody has placed — leaves the persona's own.
+    public var genre: @MainActor () -> GenreLens? = { nil }
+
+    /// Reads again, for a genre that changed under an open grid.
+    public func genreChanged() { refreshReadings() }
+
     /// The house calls the Beatmaker reads this grid by: the library's and the song's.
     public var houseCalls: [HouseCall] {
         get { beatmaker.calls }
@@ -682,9 +689,14 @@ public final class GridModel {
                  provenance: provenance)
     }
 
-    /// Feels worth offering at the grid's current tempo and meter, best first.
+    /// Feels worth offering at the grid's current tempo and meter, best first — the song's genre's
+    /// own feels ahead of the rest.
     public func suggestedFeels(limit: Int = 8) -> [Feel] {
-        feelLibrary.suggest(for: tempo, timeSignature: timeSignature, limit: limit)
+        let genreFeels = (genre()?.profile.feels ?? []).compactMap { feelLibrary.feel(named: $0) }
+            .filter { $0.timeSignature == timeSignature }
+        let rest = feelLibrary.suggest(for: tempo, timeSignature: timeSignature, limit: limit)
+            .filter { feel in !genreFeels.contains { $0.name == feel.name } }
+        return Array((genreFeels + rest).prefix(limit))
     }
 
     /// The one line a persona says when it cites the loaded feel.
@@ -793,7 +805,7 @@ public final class GridModel {
             let observation = GrooveObservation(label: title, groove: groove, options: renderOptions,
                                                 tempo: tempo, timeSignature: timeSignature)
             // Flags first: what did not hold is what the Beatmaker would say first.
-            let read = beatmaker.read(observation)
+            let read = GenreLens.judge(beatmaker.read(observation), by: Beatmaker.bible, in: genre())
             next = read.filter { !$0.holds } + read.filter(\.holds)
         } else {
             next = []

@@ -99,3 +99,23 @@ codified craft (Pattison, Webb, Davis); players are harder, which is where trans
   ghosts sit 4 dB under a hit; a sub 30 ms off the kick is two low notes fighting — not copied
   from what the persona happened to say. Pilots: the Bassist on the writer's own lines, the
   Beatmaker on the feel library. Corpus records join the sheets as they arrive.
+
+## Genres
+
+A bible is written from its lineages, and every shipped bible's lineages come from one idiom — the
+sampled, behind-the-beat hip-hop and neo-soul the app started in. So a persona's numbers are that
+idiom's numbers, and a house track or a country master judged by them is judged by the wrong
+genre. The genre profiles (`Resources/Genres/`, `Bench/genres/`) are the other half: a genre's
+ranges on the same features, researched to the same standard of evidence.
+
+A song is placed in a genre (the song's settings, or `set_genre`) or has one guessed from the
+feel its newest groove was written in. `GenreLens` then re-judges every reading and refusal whose
+rule thresholds a feature the genre ranges: the side the rule draws moves to the genre's number
+(a ceiling stays a ceiling), the verdict follows the genre, and the reading says both numbers.
+Rules that name a condition rather than a norm, and features that are the same in every genre —
+a machine's reach, a converter's ceiling, how a sample was cut — are never moved.
+
+The genre blind sheets (`blind/genre-<persona>.json`) test the lens against canonical material:
+a genre's own feels, bass hands, form and progressions, read in that genre, should hold on its
+style rules. Where they do not, the item records why (`notes`), and the finding is about the
+feel library or the fragment, not a failure to hide.

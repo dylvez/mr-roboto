@@ -1,0 +1,494 @@
+{
+  "aliases": [
+    "drum and bass",
+    "dnb",
+    "d&b",
+    "jungle",
+    "liquid funk",
+    "neurofunk",
+    "jump up",
+    "techstep"
+  ],
+  "bassHands": [
+    "rolling"
+  ],
+  "family": "electronic",
+  "feels": [
+    "Drum & Bass",
+    "Breakbeat (Amen)"
+  ],
+  "form": {
+    "evidence": {
+      "cited": [
+        "https://www.edmprod.com/how-to-make-drum-and-bass/",
+        "https://blog.native-instruments.com/drum-and-bass/"
+      ]
+    },
+    "sections": [
+      {
+        "bars": 32,
+        "name": "Intro"
+      },
+      {
+        "bars": 16,
+        "name": "Breakdown"
+      },
+      {
+        "bars": 32,
+        "name": "Drop"
+      },
+      {
+        "bars": 16,
+        "name": "Drop Variation"
+      },
+      {
+        "bars": 16,
+        "name": "Breakdown"
+      },
+      {
+        "bars": 32,
+        "name": "Drop"
+      },
+      {
+        "bars": 32,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "drum-and-bass",
+  "idioms": [
+    "drum-and-bass",
+    "breakbeat",
+    "electronic"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.soundonsound.com/people/rob-playford-producing-goldie",
+          "https://en.wikipedia.org/wiki/Drum_and_bass"
+        ]
+      },
+      "name": "Goldie with Rob Playford",
+      "period": "1994-1998",
+      "why": "Goldie brought the ideas, rhythms and arrangements, and Playford did most of the programming on Akai samplers (S950 up to S3200) in Logic. They made breaks sound worn on purpose with noise, bad EQ and distortion, and moved them across the stereo field by treating each channel as its own mono sample. Timeless (1995) was an early sign of mainstream acceptance."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.attackmagazine.com/technique/tutorials/reese-bass-redux/",
+          "https://en.wikipedia.org/wiki/Drum_and_bass"
+        ]
+      },
+      "name": "Kevin Saunderson (Reese)",
+      "period": "1988",
+      "why": "On 'Just Want Another Chance' he made the bass on a Casio CZ phase-distortion synth: two detuned voices beating against each other. Sampled into jungle in 1994, it became the genre's signature bass."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Amen_break"
+        ]
+      },
+      "name": "Gregory Coleman / The Winstons (Amen break)",
+      "period": "1969",
+      "why": "Coleman's four-bar break on 'Amen, Brother' holds the beat for two bars, delays a snare in the third, and in the fourth leaves the first beat empty before a syncopated figure and an early crash. Jungle producers sped it up, re-pitched it and re-ordered its hits into new patterns."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Drum_and_bass",
+          "https://lufs.to/genres/drum-and-bass"
+        ]
+      },
+      "name": "Roni Size & Reprazent",
+      "period": "1997-2000",
+      "why": "New Forms won the 1997 Mercury Prize and got the genre critical recognition. The measured loudness of their records charts the genre's move from about -10.8 LUFS (1997) to -7.7 LUFS (2000)."
+    }
+  ],
+  "meters": [
+    "4/4"
+  ],
+  "name": "Drum & bass / jungle",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://blog.native-instruments.com/drum-and-bass/",
+          "https://unison.audio/dnb-drum-patterns/"
+        ]
+      },
+      "text": "The two-step: kick on the first and sixth eighth notes of the bar (beat 1 and the and-of-3), snare on 2 and 4, a shuffle layer on every eighth, and a fill snare on the last eighth of the pattern."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://unison.audio/dnb-drum-patterns/",
+          "https://www.studiobrootle.com/drum-and-bass-drum-patterns/"
+        ]
+      },
+      "text": "Ghost snares sit on the sixteenth right after the main snare at roughly 15-40% velocity; hats run in sixteenths at 70-80% velocity with 60-100% randomisation; ghost notes are nudged 5-10 ms."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Drum_and_bass",
+          "https://www.edmprod.com/how-to-make-drum-and-bass/"
+        ]
+      },
+      "text": "Tempo history: about 130 BPM in 1990-91, 155-165 BPM by 1993 (jungle), and 170-176 BPM with 174 as the modern norm. Jungle-era references should be judged against the slower tempo."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Amen_break",
+          "https://www.edmprod.com/how-to-make-drum-and-bass/"
+        ]
+      },
+      "text": "The Amen break is four bars (seven seconds) at about 136 BPM, played by Gregory Coleman in 1969; producers sped it up, re-pitched and re-ordered its hits rather than looping it as a bed. The Think and Apache breaks are the other staples, usually layered with one-shot kicks and snares."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://www.soundonsound.com/people/rob-playford-producing-goldie"
+        ]
+      },
+      "text": "On Goldie's records Rob Playford sampled the breaks, added noise, heavy EQ and distortion, and split a break into two mono files so it moved across the stereo field. The string parts came from an Emu Vintage Keys, and the vocals were sampled from DAT."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://www.edmprod.com/how-to-make-drum-and-bass/"
+        ]
+      },
+      "text": "The sub sits from 75-100 Hz down, and the sweet spot for the lowest note is D#1-G#1 (about 39-52 Hz); below D#1 it is poorly heard. Common basses are a saturated sine sub or a Reese made from detuned saws with filter movement, chorus or phaser, and distortion."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://www.attackmagazine.com/technique/tutorials/reese-bass-redux/",
+          "https://en.wikipedia.org/wiki/Drum_and_bass"
+        ]
+      },
+      "text": "The Reese comes from Kevin Saunderson's 1988 'Just Want Another Chance': two oscillators detuned about ±0.27 semitones, monophonic, full sustain, so the beating between them makes rhythmic movement. It reached jungle when Renegade & Ray Keith sampled it for 'Terrorist' (1994)."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://blog.native-instruments.com/drum-and-bass/",
+          "https://en.wikipedia.org/wiki/Jungle_music"
+        ]
+      },
+      "text": "Layering: a mid bass high-passed at 250 Hz for character, over a sine sub for the sustained weight. Jungle basslines came from reggae and dub; Lennie De Ice's 'We Are I.E.' was built on a ragga bassline."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://www.edmprod.com/how-to-make-drum-and-bass/",
+          "https://www.edmprod.com/how-to-make-liquid-drum-and-bass/"
+        ]
+      },
+      "text": "Mostly minor keys (E, F, F# minor, with F minor the most common in liquid). Neurofunk and jump up often use one-note basslines in Phrygian or Locrian; liquid depends on the chords and notes more than on sound design."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://www.edmprod.com/how-to-make-drum-and-bass/",
+          "https://blog.native-instruments.com/drum-and-bass/"
+        ]
+      },
+      "text": "DJ format, in bars: intro 32, breakdown 16-32, drop 16-32, drop variation 16-32, breakdown 16-32, drop 16-32, outro 16-32; a track runs 4-8 minutes. Changes come in 16-bar steps, and the outro is often bassless so a DJ can mix out."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://www.edmprod.com/how-to-make-liquid-drum-and-bass/"
+        ]
+      },
+      "text": "In liquid, the bassline changes every four bars and is muted in places to leave room. A soulful piano riff chopped to show off different voicings is a typical lead element."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://www.edmprod.com/how-to-make-drum-and-bass/",
+          "https://unison.audio/dnb-drum-patterns/"
+        ]
+      },
+      "text": "Drums should poke through, with the bass about level with them. High-pass everything that doesn't need low end, and watch 200-500 Hz for mud and 1-3 kHz for harshness. Breaks are high-passed at 150-200 Hz so they don't fight the sub. On the master: 1-2 dB of bus compression, multiband, and fairly aggressive limiting."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://lufs.to/genres/drum-and-bass",
+          "https://www.edmprod.com/lufs/"
+        ]
+      },
+      "text": "Loudness has climbed. In lufs.to's sample the 1990s median is -11.5 LUFS and the 2000s median is -10.9; Roni Size's 'In the Mode' (2000) measures -7.7; EDMProd reports a Halogenix track at -5.4 LUFS."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Jungle_music",
+          "https://en.wikipedia.org/wiki/Feel_the_Love_(Rudimental_song)"
+        ]
+      },
+      "text": "Jungle took vocal samples and melodies from dub, reggae, dancehall, hip-hop and funk, with MCs and toasting as central parts, for example General Levy on 'Incredible' (1994). Liquid and crossover drum & bass use sung soul vocals."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.edmprod.com/how-to-make-drum-and-bass/"
+        ]
+      },
+      "text": "Putting the sub's root below D#1 (about 39 Hz), where most of it goes unheard. Keep the lowest note between D#1 and G#1 and add weight with saturation instead."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://unison.audio/dnb-drum-patterns/"
+        ]
+      },
+      "text": "Leaving a sampled break full-range, so its low end fights the sub. High-pass breaks at 150-200 Hz, cut around 200-300 Hz, and let a one-shot kick carry the low end."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.attackmagazine.com/technique/tutorials/reese-bass-redux/",
+          "https://blog.native-instruments.com/drum-and-bass/"
+        ]
+      },
+      "text": "Treating a Reese like a steady synth. Its detune beating makes the level swing, so compress and ride it in the mix, and layer a clean sine under it for the sub."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/pendulum/watercolour"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "IV - ii",
+      "text": "Pendulum's 'Watercolour' instrumental: two chords that never reach the tonic."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/rudimental/feel-the-love"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "iv - bVI - bIII - bVII",
+      "text": "The intro of Rudimental's 'Feel the Love' in Bb minor, before the chorus moves to the relative major."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.edmprod.com/how-to-make-drum-and-bass/",
+          "https://blog.native-instruments.com/drum-and-bass/",
+          "https://www.edmprod.com/how-to-make-liquid-drum-and-bass/"
+        ]
+      },
+      "feature": "tempo.bpm",
+      "high": 176,
+      "low": 165,
+      "typical": 174,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://lufs.to/genres/drum-and-bass",
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre"
+        ]
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -7.4,
+      "low": -11.5,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.edmprod.com/how-to-make-drum-and-bass/"
+        ]
+      },
+      "feature": "form.minutes",
+      "high": 8,
+      "low": 4,
+      "unit": "minutes"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://unison.audio/dnb-drum-patterns/"
+        ]
+      },
+      "feature": "humanize.timing.ms",
+      "high": 10,
+      "low": 5,
+      "unit": "ms"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.edmprod.com/how-to-make-drum-and-bass/"
+        ]
+      },
+      "feature": "bass.register.low",
+      "high": 32,
+      "low": 27,
+      "unit": "MIDI note"
+    },
+    {
+      "evidence": {
+        "inferred": "The drop taken as the hook: a 32-bar DJ intro alone at 174 BPM is 44 s; the Native Instruments walkthrough drops at bar 49 (48 bars = 66 s); EDMProd's intro 32 + breakdown 16-32 gives up to 64 bars = 88 s"
+      },
+      "feature": "form.hook.seconds",
+      "high": 88,
+      "low": 44,
+      "typical": 66,
+      "unit": "seconds"
+    },
+    {
+      "evidence": {
+        "inferred": "EDMProd's DJ-format template has 7 sections (intro, breakdown, drop, drop variation, breakdown, drop, outro); its liquid template allows one or two more intro/drop sections"
+      },
+      "feature": "form.sections",
+      "high": 9,
+      "low": 7,
+      "unit": "sections"
+    },
+    {
+      "evidence": {
+        "inferred": "Distinct names in EDMProd's template: intro, breakdown, drop, drop variation, outro (5); 4 when the variation is counted as the drop"
+      },
+      "feature": "form.turns",
+      "high": 5,
+      "low": 4,
+      "unit": "turns"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Goldie",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Inner_City_Life",
+          "https://songbpm.com/@goldie/inner-city-life",
+          "https://www.soundonsound.com/people/rob-playford-producing-goldie"
+        ]
+      },
+      "features": [
+        "tempo.bpm"
+      ],
+      "listenFor": "Jungle-era tempo (about 155 BPM): Diane Charlemagne's vocal and orchestral parts over fast breaks, all the way through.",
+      "title": "Inner City Life",
+      "year": 1994
+    },
+    {
+      "artist": "Renegade & Ray Keith",
+      "evidence": {
+        "cited": [
+          "https://www.attackmagazine.com/technique/tutorials/reese-bass-redux/"
+        ]
+      },
+      "features": [
+        "bass.is.sub"
+      ],
+      "listenFor": "The Reese bass sampled from Kevin Saunderson, its beating detune doing the rhythmic work under the breaks.",
+      "title": "Terrorist",
+      "year": 1994
+    },
+    {
+      "artist": "Roni Size",
+      "evidence": {
+        "cited": [
+          "https://songbpm.com/@roni-size/brown-paper-bag",
+          "https://en.wikipedia.org/wiki/Brown_Paper_Bag_(song)"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.minutes"
+      ],
+      "listenFor": "Late-1990s tempo of 170 BPM over a nine-minute album form, much longer than a single.",
+      "title": "Brown Paper Bag",
+      "year": 1997
+    },
+    {
+      "artist": "Pendulum",
+      "evidence": {
+        "cited": [
+          "https://songbpm.com/@pendulum/watercolour",
+          "https://www.hooktheory.com/theorytab/view/pendulum/watercolour",
+          "https://en.wikipedia.org/wiki/Watercolour_(song)"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "harmony.chords.distinct"
+      ],
+      "listenFor": "The modern 174 BPM norm and the two-chord IV-ii instrumental loop.",
+      "title": "Watercolour",
+      "year": 2010
+    },
+    {
+      "artist": "Rudimental feat. John Newman",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Feel_the_Love_(Rudimental_song)",
+          "https://www.hooktheory.com/theorytab/view/rudimental/feel-the-love"
+        ]
+      },
+      "features": [
+        "harmony.diatonic.ratio"
+      ],
+      "listenFor": "Liquid drum & bass as a UK number one: a sung soul chorus that moves from the Bb-minor intro to the relative major.",
+      "title": "Feel the Love",
+      "year": 2012
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "sub",
+      "reese"
+    ],
+    "instruments": [
+      "strings",
+      "grand-piano",
+      "rhodes",
+      "pad"
+    ],
+    "machines": [
+      "tr808"
+    ]
+  },
+  "summary": "Fast breakbeats, sampled from funk records like the Amen break or programmed as a two-step kick and snare, run at about 170-176 BPM over heavy sub-bass and Reese basslines. Jungle, its early-1990s form, was slower (155-165 BPM) and drew its basslines, vocals and MCs from reggae and dancehall. Tracks are built for DJs: long intros, 16- and 32-bar sections, and drops.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Drum_and_bass",
+      "https://en.wikipedia.org/wiki/Jungle_music",
+      "https://www.edmprod.com/how-to-make-drum-and-bass/"
+    ]
+  }
+}

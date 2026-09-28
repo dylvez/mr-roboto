@@ -347,6 +347,13 @@ public final class PianoRollModel {
     private let host: any PianoRollHosting
     private let bassist = Bassist()
 
+    /// The song's genre, asked each time the readings are made: a reading is re-judged in it
+    /// (`GenreLens`). Nil — the default, and a song nobody has placed — leaves the persona's own.
+    public var genre: @MainActor () -> GenreLens? = { nil }
+
+    /// Reads again, for a genre that changed under an open roll.
+    public func genreChanged() { refreshReadings() }
+
     // MARK: Init
 
     public init(host: any PianoRollHosting,
@@ -779,11 +786,11 @@ public final class PianoRollModel {
                                                       notes: notes, chords: chords.enumerated().map { index, span in
                                                           (span.chord, chords.prefix(index).reduce(0) { $0 + $1.beats })
                                                       })
-            readings = notes.count >= 2 ? Melodist().read(melodyObservation) : []
+            readings = notes.count >= 2 ? GenreLens.judge(Melodist().read(melodyObservation), by: Melodist.bible, in: genre()) : []
             return
         }
         guard let observation else { readings = []; return }
-        readings = bassist.read(observation)
+        readings = GenreLens.judge(bassist.read(observation), by: Bassist.bible, in: genre())
     }
 
     /// The readings that did not hold: what the Bassist would say first.

@@ -1,0 +1,437 @@
+{
+  "aliases": [
+    "samba-enredo",
+    "samba de roda",
+    "partido alto",
+    "pagode",
+    "samba-canção",
+    "batucada"
+  ],
+  "bassHands": [
+    "root-fifth"
+  ],
+  "family": "latin",
+  "feels": [
+    "Samba"
+  ],
+  "form": {
+    "evidence": {
+      "inferred": "Section order from Prado's standard samba-enredo form (four poetic parts), sung through twice as in a parade loop; bar counts in 2/4 are a sketch — the paper gives no fixed lengths and says refrains are the concise parts."
+    },
+    "sections": [
+      {
+        "bars": 16,
+        "name": "Primeira parte"
+      },
+      {
+        "bars": 8,
+        "name": "Refrão central"
+      },
+      {
+        "bars": 16,
+        "name": "Segunda parte"
+      },
+      {
+        "bars": 8,
+        "name": "Refrão principal"
+      },
+      {
+        "bars": 16,
+        "name": "Primeira parte"
+      },
+      {
+        "bars": 8,
+        "name": "Refrão central"
+      },
+      {
+        "bars": 16,
+        "name": "Segunda parte"
+      },
+      {
+        "bars": 8,
+        "name": "Refrão principal"
+      }
+    ]
+  },
+  "id": "samba",
+  "idioms": [
+    "latin"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Pelo_Telefone",
+          "https://en.wikipedia.org/wiki/Samba"
+        ]
+      },
+      "name": "Donga and the Tia Ciata circle",
+      "period": "1916–1930",
+      "why": "'Pelo Telefone', registered by Donga with Mauro de Almeida and recorded by Baiano for Odeon in 1917, is counted as the first recorded samba; it was a collective creation from a candomblé house, involving Pixinguinha and João da Baiana among others."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Cartola",
+          "https://en.wikipedia.org/wiki/Cartola_II"
+        ]
+      },
+      "name": "Cartola",
+      "period": "1928–1980",
+      "why": "Co-founded Mangueira in 1928, disappeared in the 1940s and was rediscovered washing cars in 1956. He wrote slower, contemplative sambas with tritone substitutions and uncommon modulations — over 500 songs — and made his first solo album at 66 in 1974."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Paulinho_da_Viola"
+        ]
+      },
+      "name": "Paulinho da Viola",
+      "period": "1965–present",
+      "why": "Raised among choro masters (his father a guitarist; Pixinguinha and Jacob do Bandolim around the house), he writes traditional sambas with sophisticated harmony and a soft voice, released about an album a year in the 1970s, and wrote carnival sambas for schools."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Pagode",
+          "https://en.wikipedia.org/wiki/Partido_alto"
+        ]
+      },
+      "name": "Fundo de Quintal and Beth Carvalho",
+      "period": "1978–1990s",
+      "why": "Beth Carvalho championed pagode from 1978, recording its pioneers including Zeca Pagodinho; Fundo de Quintal fixed the pagode sound in the early 1980s with banjo, tan-tan and hand repique, and carried partido alto forward."
+    }
+  ],
+  "meters": [
+    "2/4"
+  ],
+  "name": "Samba",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Surdo",
+          "https://hudsonmusic.com/wp-content/uploads/THE-BRAZILIAN-GROOVE-BOOK_Kiko-Freitas_Sample.pdf"
+        ]
+      },
+      "text": "Three surdos carry the pulse: the segunda (higher) plays beat 1, the primeira (lowest, 22–26 inch) plays beat 2 — the strongest point of the bar and the whole bateria's reference — and the terceira (cortador) cuts across both with fills and syncopations and is the only surdo with room to improvise."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.soundbrenner.com/blogs/articles/samba-rhythm",
+          "https://drummagazine.com/lesson-samba-variations-working-drummers-essential-latin-grooves-part-2/"
+        ]
+      },
+      "text": "Above the surdos, tamborim, pandeiro, caixa, agogô and ganzá interlock on a continuous sixteenth-note subdivision, with accents that dance around the pulse rather than landing on it; on a kit this is condensed into bass drum, snare, hi-hat and cross-stick."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Samba"
+        ]
+      },
+      "text": "The syncopated samba that emerged from the Estácio neighbourhood in the late 1920s — the surdo figure its musicians sang as 'bum bum paticumbum pugurumdum' — is the rhythm carnival samba is built on."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://revistas.ufpr.br/musica/article/download/44102/26736",
+          "https://www.acessa.com/cultura/2023/02/129870-como-os-sambas-de-carnaval-desaceleraram-e-voltaram-a-tratar-de-temas-do-povo.html"
+        ]
+      },
+      "text": "Carnival tempos rose as schools grew: about 115–120 BPM in 1972, over 130 by 1987, over 150 by 2004 — at which point each beat is filled with plain eighths because the syncopation can no longer be played. Recent schools have deliberately slowed back to about 137–144."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://revistas.ufpr.br/musica/article/download/44102/26736"
+        ]
+      },
+      "text": "The Sambódromo-era samba-enredo follows one poetic form: primeira parte (introduces the story and climbs to a first peak), refrão central (often lyrical), segunda parte, refrão principal (the climax, written 'to fall into the people's mouth'). Some composers add a third refrain; composers keep at least two so the crowd has two things to learn."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://revistas.ufpr.br/musica/article/download/44102/26736"
+        ]
+      },
+      "text": "The segunda parte is where the bateria rests: dynamics drop, the melody moves lower with longer notes and slower harmonic movement, then the preparation for the main refrain explodes again."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://revistas.ufpr.br/musica/article/download/44102/26736"
+        ]
+      },
+      "text": "Switching between parallel major and minor keys is now the norm in samba-enredo: in 2015 nine of the twelve Grupo Especial sambas modulated this way, some holding the first key only a few bars."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://www.pianogroove.com/bossa-nova-lessons/major-grooves-251-2516-progressions/",
+          "https://www.pianogroove.com/bossa-nova-lessons/major-minor-progressions/",
+          "https://en.wikipedia.org/wiki/Cartola"
+        ]
+      },
+      "text": "Functional ii-V-I cycles extended by a VI7 secondary dominant (often altered) are the everyday progression of Brazilian samba and choro accompaniment; Cartola brought tritone substitutions and unusual modulations into samba."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Cartola_II",
+          "https://en.wikipedia.org/wiki/Dino_7_Cordas",
+          "https://en.wikipedia.org/wiki/Pagode"
+        ]
+      },
+      "text": "In a roda the low end is the surdo (or pagode's tan-tan) plus the seven-string guitar; on Cartola's 1976 album Dino 7 Cordas, the leading seven-string player of samba and choro, plays alongside a six-string guitar and cavaquinho."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Pagode"
+        ]
+      },
+      "text": "Pagode (late 1970s–80s, Fundo de Quintal) added three sounds: Almir Guineto's four-string banjo, louder than the cavaquinho in a roda; Sereno's hand-played tan-tan holding the samba's main beat; and Ubirany's hand repique for turnarounds."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://revistas.ufpr.br/musica/article/download/44102/26736"
+        ]
+      },
+      "text": "Samba-enredo is a 'flow genre' whose melody chases the text through the whole story; variety comes from modulation and from the contrast between refrains and verses."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Partido_alto",
+          "https://en.wikipedia.org/wiki/Pagode"
+        ]
+      },
+      "text": "Partido alto sets a fixed refrain sung by everyone against improvised, competitive solo verses, in a major key; pagode lyrics lean on slang, malice and irony."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Cartola_II",
+          "https://revistas.ufpr.br/musica/article/download/44102/26736"
+        ]
+      },
+      "text": "Outside carnival, sambas are short songs: every track on Cartola's 1976 album runs 2:15–3:53. Bar counts in the form below are a sketch; Prado notes the poetic parts can each hold more than one musical part."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://hudsonmusic.com/wp-content/uploads/THE-BRAZILIAN-GROOVE-BOOK_Kiko-Freitas_Sample.pdf",
+          "https://en.wikipedia.org/wiki/Surdo"
+        ]
+      },
+      "text": "Treating beat 1 as the heavy beat. In samba the lowest surdo plays beat 2, the strongest point of the 2/4 bar; beat 1 is the lighter answer."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://revistas.ufpr.br/musica/article/download/44102/26736",
+          "https://www.acessa.com/cultura/2023/02/129870-como-os-sambas-de-carnaval-desaceleraram-e-voltaram-a-tratar-de-temas-do-povo.html"
+        ]
+      },
+      "text": "Pushing the tempo until the syncopation collapses into straight eighths. The 2000s carnival tempos over 150 BPM were an exaggeration schools have since pulled back from; 137–144 is where the recent parades sit."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.soundbrenner.com/blogs/articles/samba-rhythm"
+        ]
+      },
+      "text": "Confusing samba with bossa nova, baião or Cuban clave. Each has its own accent profile; samba is two pulses over a continuous sixteenth web played by several interlocking voices."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.pianogroove.com/bossa-nova-lessons/major-grooves-251-2516-progressions/"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "ii7 - V7 - Imaj7 - VI7",
+      "text": "The circular 2-5-1-6: the VI7, often altered, turns back to ii and keeps the cycle going."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.pianogroove.com/bossa-nova-lessons/major-minor-progressions/",
+          "https://revistas.ufpr.br/musica/article/download/44102/26736"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "iim7b5 - V7 - i",
+      "text": "The minor 2-5-1 of choro and samba accompaniment, used before the switch to the parallel major."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "cited": [
+          "https://revistas.ufpr.br/musica/article/download/44102/26736",
+          "https://www.soundbrenner.com/blogs/articles/samba-rhythm",
+          "https://www.acessa.com/cultura/2023/02/129870-como-os-sambas-de-carnaval-desaceleraram-e-voltaram-a-tratar-de-temas-do-povo.html"
+        ]
+      },
+      "feature": "tempo.bpm",
+      "high": 145,
+      "low": 115,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Cartola_II"
+        ]
+      },
+      "feature": "form.minutes",
+      "high": 4.0,
+      "low": 2.2,
+      "unit": "minutes"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://revistas.ufpr.br/musica/article/download/44102/26736"
+        ]
+      },
+      "feature": "form.turns",
+      "high": 5,
+      "low": 4,
+      "typical": 4,
+      "unit": "turns"
+    },
+    {
+      "evidence": {
+        "inferred": "Prado's standard samba-enredo form (first part, central refrain, second part, main refrain) has four distinct sections, and each refrain is sung again when the samba goes round; one pass plus a return of both refrains gives 2 repeats in 6 sections (0.33), several passes push it past 0.5."
+      },
+      "feature": "form.repetition",
+      "high": 0.6,
+      "low": 0.3,
+      "unit": "fraction"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Baiano",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Pelo_Telefone",
+          "https://en.wikipedia.org/wiki/Samba"
+        ]
+      },
+      "features": [
+        "form.minutes"
+      ],
+      "listenFor": "Across its 4:03, the first recorded samba, a decade before the Estácio surdo figure: compare its rhythm with any later carnival samba.",
+      "title": "Pelo Telefone",
+      "year": 1917
+    },
+    {
+      "artist": "Cartola",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Cartola_II"
+        ]
+      },
+      "features": [
+        "form.minutes",
+        "tempo.bpm"
+      ],
+      "listenFor": "A 2:51 samba-canção: the seven-string guitar and cavaquinho under a slow, contemplative melody, from the first verse.",
+      "title": "As Rosas não Falam",
+      "year": 1976
+    },
+    {
+      "artist": "Cartola",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Cartola_II",
+          "https://en.wikipedia.org/wiki/Cartola"
+        ]
+      },
+      "features": [
+        "harmony.diatonic.ratio"
+      ],
+      "listenFor": "Over 3:53, how the harmony moves through substitutions and modulations under a simple melody.",
+      "title": "O Mundo É um Moinho",
+      "year": 1976
+    },
+    {
+      "artist": "Unidos do Viradouro",
+      "evidence": {
+        "cited": [
+          "https://revistas.ufpr.br/musica/article/download/44102/26736"
+        ]
+      },
+      "features": [
+        "form.turns",
+        "form.hook.seconds"
+      ],
+      "listenFor": "The four-part enredo form Prado transcribes: the 'Irê, irê, pra agba yê' central refrain after the first part, and the main refrain as the climax.",
+      "title": "Brasil: visões de paraísos e infernos",
+      "year": 2000
+    },
+    {
+      "artist": "Jorge Ben",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Mas_que_Nada"
+        ]
+      },
+      "features": [
+        "tempo.bpm"
+      ],
+      "listenFor": "From the opening, the blend the song is filed under — samba, samba rock and bossa nova in one track — which Sérgio Mendes took abroad in 1966.",
+      "title": "Mas que Nada",
+      "year": 1963
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "upright",
+      "finger"
+    ],
+    "instruments": [
+      "nylon-guitar",
+      "banjo",
+      "flute",
+      "tenor-sax",
+      "choir",
+      "trumpet"
+    ],
+    "machines": [
+      "studio"
+    ]
+  },
+  "summary": "Rio de Janeiro's 2/4 song and carnival music: a rolling sixteenth-note web of interlocking percussion over surdos that answer on beat 1 and land hardest on beat 2. Songs are carried by nylon guitars (including the seven-string) and cavaquinho over functional harmony full of secondary dominants and ii-Vs; the carnival samba-enredo is a sung-through story punctuated by refrains.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Samba",
+      "https://hudsonmusic.com/wp-content/uploads/THE-BRAZILIAN-GROOVE-BOOK_Kiko-Freitas_Sample.pdf",
+      "https://www.soundbrenner.com/blogs/articles/samba-rhythm"
+    ]
+  }
+}

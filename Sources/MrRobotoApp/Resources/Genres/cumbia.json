@@ -1,0 +1,460 @@
+{
+  "aliases": [
+    "cumbia colombiana",
+    "cumbia sonidera",
+    "mexican cumbia",
+    "cumbia villera",
+    "chicha",
+    "peruvian cumbia",
+    "cumbia rebajada"
+  ],
+  "bassHands": [
+    "root-fifth"
+  ],
+  "family": "latin",
+  "feels": [],
+  "form": {
+    "evidence": {
+      "cited": [
+        "https://beatkey.app/how-to-make-cumbia-music"
+      ]
+    },
+    "sections": [
+      {
+        "bars": 8,
+        "name": "Intro"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 16,
+        "name": "Chorus"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 16,
+        "name": "Instrumental"
+      },
+      {
+        "bars": 16,
+        "name": "Chorus"
+      },
+      {
+        "bars": 8,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "cumbia",
+  "idioms": [
+    "latin"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Lucho_Berm%C3%BAdez"
+        ]
+      },
+      "name": "Lucho Bermúdez",
+      "period": "1940s–1994",
+      "why": "A clarinettist-bandleader who arranged coastal cumbia and porro for modern orchestras with brass and woodwinds, taking them from the coast to Bogotá (1943), Buenos Aires and Medellín. Songs such as 'Salsipuedes' and 'Colombia Tierra Querida' made the style a national symbol."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Los_Corraleros_de_Majagual"
+        ]
+      },
+      "name": "Los Corraleros de Majagual",
+      "period": "1961–1990",
+      "why": "Formed in 1961 when Calixto Ochoa and Alfredo Gutiérrez proposed to Discos Fuentes a rural band built on accordion and guacharaca; they grew into a brass-heavy tropical orchestra, won over 30 gold records and trained many later cumbia stars."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Los_Destellos",
+          "https://daily.bandcamp.com/lists/chicha-cumbia-peru-guide"
+        ]
+      },
+      "name": "Enrique Delgado and Los Destellos",
+      "period": "1966–1996",
+      "why": "Delgado's Lima band replaced accordion and horns with electric guitar and bass, playing fuzz- and distortion-coloured lines drawn from surf and psychedelic rock over cumbia, guaracha, Peruvian waltz and huayno. 'Elsa' (1970) sold over a million copies and set up chicha."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Los_%C3%81ngeles_Azules",
+          "https://es.wikipedia.org/wiki/Como_te_voy_a_olvidar"
+        ]
+      },
+      "name": "Los Ángeles Azules",
+      "period": "1980–present",
+      "why": "A family band of six Mejía Avante siblings from Iztapalapa, Mexico City, playing Mexican cumbia; their 1996 'Cómo te voy a olvidar' became a standard, and in 2014 they re-arranged their catalogue with a symphony orchestra."
+    }
+  ],
+  "meters": [
+    "2/4",
+    "2/2"
+  ],
+  "name": "Cumbia",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Guacharaca",
+          "https://en.wikipedia.org/wiki/Cumbia"
+        ]
+      },
+      "text": "The guacharaca (a carved palm rasp scraped with a wire fork) gives the steady 'chu-chucu-chu' backbone of all cumbia and vallenato; the maracas add a second shaken layer."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Cumbia_(Colombia)",
+          "https://en.wikipedia.org/wiki/Cumbia"
+        ]
+      },
+      "text": "The traditional drums: tambora for the low foundation, with the tambor llamador marking the off-beat and the tambor alegre driving the pulse above it."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://se7enbeatlab.com/bpm/cumbia/",
+          "https://beatkey.app/how-to-make-cumbia-music"
+        ]
+      },
+      "text": "Keep the percussion loose and human — cumbia swings — rather than quantized; producers apply a light swing and humanize velocities."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://bassscalespdf.org/blog/how-to-play-cumbia-bass/",
+          "https://se7enbeatlab.com/bpm/cumbia/"
+        ]
+      },
+      "text": "The bass plays a simple, rolling root-fifth figure — roots on 1 and 3, fifths between, sometimes the major third and octave — mostly staccato, notes cut to about half their value; leaving the quarter note unstaccatoed is what gives the swing. On a change to V, enter on its fifth rather than repeat the previous note."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Cumbia_(Colombia)",
+          "https://bassscalespdf.org/blog/how-to-play-cumbia-bass/",
+          "https://beatkey.app/how-to-make-cumbia-music"
+        ]
+      },
+      "text": "Traditional cumbia uses two or three simple chords so the rhythm dominates — typically I and V, or I-IV-V with a dominant seventh on V; Argentine villera adds a minor i-bVII-bVI-bVII loop."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Cumbia_(Colombia)",
+          "https://en.wikipedia.org/wiki/Cumbia",
+          "https://en.wikipedia.org/wiki/Los_Corraleros_de_Majagual",
+          "https://se7enbeatlab.com/bpm/cumbia/"
+        ]
+      },
+      "text": "The lead is a high-pitched wind — gaita or caña de millo in the folk ensemble, the clarinet in orchestral cumbia — or the accordion, on which Los Corraleros de Majagual built their band; newer cumbia often uses a synth-accordion."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Lucho_Berm%C3%BAdez",
+          "https://en.wikipedia.org/wiki/Los_Corraleros_de_Majagual"
+        ]
+      },
+      "text": "Lucho Bermúdez arranged cumbia and porro for big orchestras with brass and woodwind sections in the 1940s; Los Corraleros de Majagual (1961) started from accordion and guacharaca and grew into a brass-and-percussion tropical band."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Los_Destellos",
+          "https://daily.bandcamp.com/lists/chicha-cumbia-peru-guide"
+        ]
+      },
+      "text": "Peruvian cumbia (chicha) put the electric guitar in front — fuzz, distortion and surf/psychedelic tones, from Los Destellos (1966) on — mixing cumbia with huayno and Andean melody."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://beatkey.app/how-to-make-cumbia-music"
+        ]
+      },
+      "text": "A song form with an instrumental break for the lead (accordion or gaita solo over full percussion), which the traditional style treats as mandatory; the chorus (estribillo) is often call-and-response."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://www.sageaudio.com/articles/mastering-for-latin-music",
+          "https://beatkey.app/how-to-make-cumbia-music"
+        ]
+      },
+      "text": "As with other Latin styles, most energy sits in the mid-range; traditional productions take less limiting than electronic ones. Keep the percussion dry and forward and the bass warm around 80–100 Hz."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://se7enbeatlab.com/bpm/cumbia/",
+          "https://beatkey.app/how-to-make-cumbia-music"
+        ]
+      },
+      "text": "Tempo sources disagree by up to 15 BPM; the numbers here follow the slower se7en figures and the traditional-Colombian band from BeatKey. Sub-styles matter: sonidera sits around 85–95, villera around 90–105."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://se7enbeatlab.com/bpm/cumbia/",
+          "https://beatkey.app/how-to-make-cumbia-music"
+        ]
+      },
+      "text": "Quantizing the percussion to a rigid grid. Cumbia swings: leave the guacharaca and drums loose and human, and humanize velocities."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://bassscalespdf.org/blog/how-to-play-cumbia-bass/"
+        ]
+      },
+      "text": "Playing every bass note equally short, or equally long. Keep the pickups staccato but let the quarter note ring to get the lilt."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Cumbia_(Colombia)",
+          "https://beatkey.app/how-to-make-cumbia-music"
+        ]
+      },
+      "text": "Loading the harmony. Two or three chords, with a dominant-seventh V, leave the rhythm in charge; the colour comes from the lead instrument's ornaments."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://beatkey.app/how-to-make-cumbia-music"
+        ]
+      },
+      "text": "Dropping the instrumental break. The lead's solo over full percussion is part of the traditional form, not an optional extra."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://bassscalespdf.org/blog/how-to-play-cumbia-bass/",
+          "https://beatkey.app/how-to-make-cumbia-music"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "I - V7",
+      "text": "The folkloric two-chord cumbia; the bass alternates root and fifth under each."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://beatkey.app/how-to-make-cumbia-music"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "I - IV - V7 - I",
+      "text": "The three-chord version, with the V almost always a dominant seventh."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://beatkey.app/how-to-make-cumbia-music"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "i - bVII - bVI - bVII",
+      "text": "The unresolved minor loop of Argentine cumbia villera."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "inferred": "Spans se7en's 85–110 overall range (classic Colombian 85–100, typical 92; villera 90–105) and BeatKey's 100–115 for traditional Colombian; BeatKey's 100–130 overall is higher than se7en and was not adopted."
+      },
+      "feature": "tempo.bpm",
+      "high": 115,
+      "low": 85,
+      "typical": 95,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.sageaudio.com/articles/mastering-for-latin-music",
+          "https://beatkey.app/how-to-make-cumbia-music"
+        ]
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -8,
+      "low": -14,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://beatkey.app/how-to-make-cumbia-music",
+          "https://se7enbeatlab.com/bpm/cumbia/"
+        ]
+      },
+      "feature": "swing.percent",
+      "high": 58,
+      "low": 52,
+      "unit": "MPC percent"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Cumbia_(Colombia)",
+          "https://bassscalespdf.org/blog/how-to-play-cumbia-bass/",
+          "https://beatkey.app/how-to-make-cumbia-music"
+        ]
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 4,
+      "low": 2,
+      "typical": 3,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://bassscalespdf.org/blog/how-to-play-cumbia-bass/"
+        ]
+      },
+      "feature": "bass.note.length.ratio",
+      "high": 0.7,
+      "low": 0.4,
+      "unit": "fraction of the interval to the next onset"
+    },
+    {
+      "evidence": {
+        "inferred": "Counting the cited bass patterns (bassscalespdf.org) in their 4/4 notation: all-quarter patterns give 4, quarter-and-eighths patterns 5–6."
+      },
+      "feature": "bass.attacks.per.bar",
+      "high": 6,
+      "low": 4,
+      "unit": "attacks per bar"
+    },
+    {
+      "evidence": {
+        "inferred": "The cited patterns put the roots and fifths on the beats; only the added eighth-note pickups fall off the quarter grid, at most two of five or six attacks."
+      },
+      "feature": "bass.syncopation",
+      "high": 0.35,
+      "low": 0,
+      "unit": "fraction of onsets"
+    },
+    {
+      "evidence": {
+        "inferred": "From the cited progressions: I-V alternation is all fifth motion (1.0); I-IV-V7-I has two fourth/fifth moves out of three (0.67)."
+      },
+      "feature": "harmony.root.motion.fifths",
+      "high": 1.0,
+      "low": 0.6,
+      "unit": "fraction"
+    },
+    {
+      "evidence": {
+        "inferred": "Every chord in the cited traditional progressions (I, IV, V7, vi) belongs to the major key; the cited minor villera loop i-bVII-bVI is diatonic to aeolian."
+      },
+      "feature": "harmony.diatonic.ratio",
+      "high": 1.0,
+      "low": 0.9,
+      "unit": "fraction"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Pedro Salcedo y su Orquesta (voc. Wilson Choperena)",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/La_Pollera_Color%C3%A1"
+        ]
+      },
+      "features": [
+        "harmony.chords.distinct",
+        "tempo.bpm"
+      ],
+      "listenFor": "Juan Madera's clarinet melody, the band's instrumental hook before Choperena added words, over the orchestral cumbia rhythm section.",
+      "title": "La Pollera Colorá",
+      "year": 1962
+    },
+    {
+      "artist": "Los Destellos",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Los_Destellos"
+        ]
+      },
+      "features": [
+        "tempo.bpm"
+      ],
+      "listenFor": "The electric guitar taking the lead role the accordion plays in Colombian cumbia, from the first phrase.",
+      "title": "Elsa",
+      "year": 1970
+    },
+    {
+      "artist": "Los Ángeles Azules",
+      "evidence": {
+        "cited": [
+          "https://es.wikipedia.org/wiki/Como_te_voy_a_olvidar"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.minutes"
+      ],
+      "listenFor": "The 1996 Mexican-cumbia original (sung by Carlos Becies); compare it with the 3:14 remake with Vicentico (2020) for how the groove survives a new production.",
+      "title": "Cómo te voy a olvidar",
+      "year": 1996
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "finger",
+      "picked"
+    ],
+    "instruments": [
+      "clarinet",
+      "flute",
+      "horns",
+      "trumpet",
+      "clean-electric",
+      "overdrive-guitar",
+      "lead",
+      "organ"
+    ],
+    "machines": [
+      "studio"
+    ]
+  },
+  "summary": "Colombian Caribbean-coast dance music in 2/4 (or 2/2): the guacharaca's steady 'chu-chucu-chu' scrape and interlocking hand drums under a gaita, clarinet or accordion lead, over two or three chords and a staccato root-fifth bass. It travelled the continent and re-formed around local instruments — brass orchestras in Colombia, electric guitars in Peru, keyboards in Mexico — while keeping the percussion shape.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Cumbia",
+      "https://en.wikipedia.org/wiki/Cumbia_(Colombia)",
+      "https://bassscalespdf.org/blog/how-to-play-cumbia-bass/"
+    ]
+  }
+}

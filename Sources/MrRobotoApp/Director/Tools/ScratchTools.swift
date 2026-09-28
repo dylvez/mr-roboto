@@ -176,7 +176,8 @@ public struct WriteGrooveTool: DirectorTool {
         let observation = GrooveObservation(label: PartLabel.title(of: version), groove: groove,
                                             options: .stored(groove, feels: workbench.engines.feels),
                                             tempo: song.tempo, timeSignature: song.timeSignature)
-        let flags = Beatmaker(houseCalls: await workspace.houseBook.calls).read(observation).filter { !$0.holds }
+        let flags = GenreLens.judge(Beatmaker(houseCalls: await workspace.houseBook.calls).read(observation), by: Beatmaker.bible,
+                                    in: await workspace.genreLens).filter { !$0.holds }
         for flag in flags { await workspace.speak("Beatmaker", flag.says, detail: flag.rule) }
         let played = await workspace.hear(version)
         let hits = patterns.reduce(0) { $0 + $1.steps.filter { $0 != .rest }.count }
