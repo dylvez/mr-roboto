@@ -1,0 +1,617 @@
+{
+ "Blues": {
+  "features": {
+   "melody.leap.max.semitones": {
+    "high": 16.0,
+    "low": 4.0,
+    "typical": 9.0
+   },
+   "melody.motif.ratio": {
+    "high": 0.28690476190476194,
+    "low": 0.09646697388632872,
+    "typical": 0.16666666666666666
+   },
+   "melody.notes.per.bar": {
+    "high": 6.25,
+    "low": 2.7249487354750515,
+    "typical": 4.0
+   },
+   "melody.peak.count": {
+    "high": 9.200000000000003,
+    "low": 1.0,
+    "typical": 4.0
+   },
+   "melody.range.semitones": {
+    "high": 21.200000000000003,
+    "low": 7.0,
+    "typical": 12.0
+   },
+   "melody.rest.ratio": {
+    "high": 0.5524088541666667,
+    "low": 0.10946614583333324,
+    "typical": 0.32592773437500067
+   },
+   "melody.stepwise.ratio": {
+    "high": 0.8915966386554623,
+    "low": 0.1561904761904762,
+    "typical": 0.5862068965517241
+   }
+  },
+  "songs": 11,
+  "windows": 59
+ },
+ "Country": {
+  "features": {
+   "melody.leap.max.semitones": {
+    "high": 12.0,
+    "low": 4.0,
+    "typical": 8.0
+   },
+   "melody.motif.ratio": {
+    "high": 0.25806451612903225,
+    "low": 0.07692307692307693,
+    "typical": 0.14285714285714285
+   },
+   "melody.notes.per.bar": {
+    "high": 5.625,
+    "low": 2.125,
+    "typical": 3.625
+   },
+   "melody.peak.count": {
+    "high": 7.0,
+    "low": 1.0,
+    "typical": 2.0
+   },
+   "melody.range.semitones": {
+    "high": 17.0,
+    "low": 7.0,
+    "typical": 12.0
+   },
+   "melody.rest.ratio": {
+    "high": 0.5459161197140847,
+    "low": 0.134113579155955,
+    "typical": 0.29936497927029404
+   },
+   "melody.stepwise.ratio": {
+    "high": 0.8888888888888888,
+    "low": 0.5,
+    "typical": 0.7333333333333333
+   }
+  },
+  "songs": 147,
+  "windows": 860
+ },
+ "Electronic": {
+  "features": {
+   "melody.leap.max.semitones": {
+    "high": 12.0,
+    "low": 3.0,
+    "typical": 7.0
+   },
+   "melody.motif.ratio": {
+    "high": 0.4117647058823529,
+    "low": 0.10526315789473684,
+    "typical": 0.1951219512195122
+   },
+   "melody.notes.per.bar": {
+    "high": 7.318157755426152,
+    "low": 2.0,
+    "typical": 3.761499148211244
+   },
+   "melody.peak.count": {
+    "high": 13.0,
+    "low": 1.0,
+    "typical": 3.0
+   },
+   "melody.range.semitones": {
+    "high": 17.0,
+    "low": 4.0,
+    "typical": 9.0
+   },
+   "melody.rest.ratio": {
+    "high": 0.6879106438896188,
+    "low": 0.09375,
+    "typical": 0.38460286458333337
+   },
+   "melody.stepwise.ratio": {
+    "high": 0.9230769230769231,
+    "low": 0.2928342245989305,
+    "typical": 0.7333333333333333
+   }
+  },
+  "songs": 117,
+  "windows": 637
+ },
+ "Folk": {
+  "features": {
+   "melody.leap.max.semitones": {
+    "high": 12.0,
+    "low": 3.0,
+    "typical": 7.0
+   },
+   "melody.motif.ratio": {
+    "high": 0.32,
+    "low": 0.06970443349753695,
+    "typical": 0.13333333333333333
+   },
+   "melody.notes.per.bar": {
+    "high": 9.720841481300415,
+    "low": 2.240065502183405,
+    "typical": 3.5117527670041397
+   },
+   "melody.peak.count": {
+    "high": 10.0,
+    "low": 1.0,
+    "typical": 3.0
+   },
+   "melody.range.semitones": {
+    "high": 17.0,
+    "low": 6.300000000000001,
+    "typical": 12.0
+   },
+   "melody.rest.ratio": {
+    "high": 0.6246619914076331,
+    "low": 0.21186523437500068,
+    "typical": 0.39269437638382404
+   },
+   "melody.stepwise.ratio": {
+    "high": 0.9047619047619048,
+    "low": 0.2222222222222222,
+    "typical": 0.6807491289198606
+   }
+  },
+  "songs": 11,
+  "windows": 64
+ },
+ "Jazz": {
+  "features": {
+   "melody.leap.max.semitones": {
+    "high": 14.0,
+    "low": 4.0,
+    "typical": 8.0
+   },
+   "melody.motif.ratio": {
+    "high": 0.2857142857142857,
+    "low": 0.06451612903225806,
+    "typical": 0.13725490196078433
+   },
+   "melody.notes.per.bar": {
+    "high": 7.57396449704142,
+    "low": 2.25,
+    "typical": 4.144846796657382
+   },
+   "melody.peak.count": {
+    "high": 5.0,
+    "low": 1.0,
+    "typical": 2.0
+   },
+   "melody.range.semitones": {
+    "high": 23.0,
+    "low": 7.0,
+    "typical": 12.0
+   },
+   "melody.rest.ratio": {
+    "high": 0.5312499999999998,
+    "low": 0.08950131233595748,
+    "typical": 0.3157552083333337
+   },
+   "melody.stepwise.ratio": {
+    "high": 0.9230769230769231,
+    "low": 0.42857142857142855,
+    "typical": 0.6666666666666666
+   }
+  },
+  "songs": 30,
+  "windows": 171
+ },
+ "Latin": {
+  "features": {
+   "melody.leap.max.semitones": {
+    "high": 12.0,
+    "low": 4.0,
+    "typical": 7.0
+   },
+   "melody.motif.ratio": {
+    "high": 0.26666666666666666,
+    "low": 0.09090909090909091,
+    "typical": 0.15384615384615385
+   },
+   "melody.notes.per.bar": {
+    "high": 7.0714511206987245,
+    "low": 2.4723822433073517,
+    "typical": 4.1536646125606405
+   },
+   "melody.peak.count": {
+    "high": 6.0,
+    "low": 1.0,
+    "typical": 2.0
+   },
+   "melody.range.semitones": {
+    "high": 17.0,
+    "low": 7.0,
+    "typical": 12.0
+   },
+   "melody.rest.ratio": {
+    "high": 0.6096354166666665,
+    "low": 0.11378498561338768,
+    "typical": 0.2895833333333333
+   },
+   "melody.stepwise.ratio": {
+    "high": 0.9,
+    "low": 0.5238095238095238,
+    "typical": 0.7666666666666667
+   }
+  },
+  "songs": 38,
+  "windows": 221
+ },
+ "Metal": {
+  "features": {
+   "melody.leap.max.semitones": {
+    "high": 12.0,
+    "low": 3.0,
+    "typical": 7.0
+   },
+   "melody.motif.ratio": {
+    "high": 0.2857142857142857,
+    "low": 0.08466165413533834,
+    "typical": 0.16843971631205673
+   },
+   "melody.notes.per.bar": {
+    "high": 6.864449755594381,
+    "low": 2.125,
+    "typical": 3.625
+   },
+   "melody.peak.count": {
+    "high": 6.0,
+    "low": 1.0,
+    "typical": 2.0
+   },
+   "melody.range.semitones": {
+    "high": 17.0,
+    "low": 5.0,
+    "typical": 10.0
+   },
+   "melody.rest.ratio": {
+    "high": 0.5612123353127706,
+    "low": 3.465006059855115e-14,
+    "typical": 0.2067090655605855
+   },
+   "melody.stepwise.ratio": {
+    "high": 0.92,
+    "low": 0.586815415821501,
+    "typical": 0.758098223615465
+   }
+  },
+  "songs": 49,
+  "windows": 284
+ },
+ "New Age": {
+  "features": {
+   "melody.leap.max.semitones": {
+    "high": 12.0,
+    "low": 5.0,
+    "typical": 7.0
+   },
+   "melody.motif.ratio": {
+    "high": 0.3527272727272728,
+    "low": 0.07881481481481482,
+    "typical": 0.14814814814814814
+   },
+   "melody.notes.per.bar": {
+    "high": 5.655424836601307,
+    "low": 2.0,
+    "typical": 3.024415857180362
+   },
+   "melody.peak.count": {
+    "high": 6.0,
+    "low": 1.0,
+    "typical": 2.0
+   },
+   "melody.range.semitones": {
+    "high": 19.0,
+    "low": 7.0,
+    "typical": 12.0
+   },
+   "melody.rest.ratio": {
+    "high": 0.5209274087687056,
+    "low": 0.10396512879451279,
+    "typical": 0.27315720808871535
+   },
+   "melody.stepwise.ratio": {
+    "high": 0.8642424242424243,
+    "low": 0.36673684210526314,
+    "typical": 0.6363636363636364
+   }
+  },
+  "songs": 10,
+  "windows": 59
+ },
+ "Pop": {
+  "features": {
+   "melody.leap.max.semitones": {
+    "high": 12.0,
+    "low": 4.0,
+    "typical": 7.0
+   },
+   "melody.motif.ratio": {
+    "high": 0.3076923076923077,
+    "low": 0.08695652173913043,
+    "typical": 0.16129032258064516
+   },
+   "melody.notes.per.bar": {
+    "high": 6.391644908616188,
+    "low": 2.125,
+    "typical": 3.849345192951503
+   },
+   "melody.peak.count": {
+    "high": 8.0,
+    "low": 1.0,
+    "typical": 2.0
+   },
+   "melody.range.semitones": {
+    "high": 17.0,
+    "low": 6.0,
+    "typical": 12.0
+   },
+   "melody.rest.ratio": {
+    "high": 0.5982872449291294,
+    "low": 0.10653715474228011,
+    "typical": 0.32923649835829777
+   },
+   "melody.stepwise.ratio": {
+    "high": 0.9090909090909091,
+    "low": 0.5106382978723404,
+    "typical": 0.7333333333333333
+   }
+  },
+  "songs": 367,
+  "windows": 2134
+ },
+ "Punk": {
+  "features": {
+   "melody.leap.max.semitones": {
+    "high": 9.0,
+    "low": 3.0,
+    "typical": 5.0
+   },
+   "melody.motif.ratio": {
+    "high": 0.3333333333333333,
+    "low": 0.14285714285714285,
+    "typical": 0.23076923076923078
+   },
+   "melody.notes.per.bar": {
+    "high": 5.0016281341582545,
+    "low": 2.193548387096774,
+    "typical": 4.0
+   },
+   "melody.peak.count": {
+    "high": 15.0,
+    "low": 1.0,
+    "typical": 3.0
+   },
+   "melody.range.semitones": {
+    "high": 12.0,
+    "low": 5.0,
+    "typical": 7.0
+   },
+   "melody.rest.ratio": {
+    "high": 0.4843749999999992,
+    "low": 0.21875,
+    "typical": 0.2807017543859649
+   },
+   "melody.stepwise.ratio": {
+    "high": 0.9333333333333333,
+    "low": 0.5384615384615384,
+    "typical": 0.717948717948718
+   }
+  },
+  "songs": 7,
+  "windows": 41
+ },
+ "Rap": {
+  "features": {
+   "melody.leap.max.semitones": {
+    "high": 10.0,
+    "low": 2.0,
+    "typical": 7.0
+   },
+   "melody.motif.ratio": {
+    "high": 0.38095238095238093,
+    "low": 0.09375,
+    "typical": 0.16666666666666666
+   },
+   "melody.notes.per.bar": {
+    "high": 6.984126984126984,
+    "low": 2.75,
+    "typical": 4.4108108108108075
+   },
+   "melody.peak.count": {
+    "high": 6.0,
+    "low": 1.0,
+    "typical": 2.0
+   },
+   "melody.range.semitones": {
+    "high": 14.0,
+    "low": 5.0,
+    "typical": 9.0
+   },
+   "melody.rest.ratio": {
+    "high": 0.5865885416666666,
+    "low": 0.18750000000000178,
+    "typical": 0.3348988439306363
+   },
+   "melody.stepwise.ratio": {
+    "high": 1.0,
+    "low": 0.5625,
+    "typical": 0.8461538461538461
+   }
+  },
+  "songs": 16,
+  "windows": 81
+ },
+ "Reggae": {
+  "features": {
+   "melody.leap.max.semitones": {
+    "high": 12.0,
+    "low": 3.0,
+    "typical": 8.0
+   },
+   "melody.motif.ratio": {
+    "high": 0.28078817733990147,
+    "low": 0.08130618720253834,
+    "typical": 0.15384615384615385
+   },
+   "melody.notes.per.bar": {
+    "high": 7.218610616773283,
+    "low": 2.230691056910569,
+    "typical": 4.720100644509081
+   },
+   "melody.peak.count": {
+    "high": 7.0,
+    "low": 1.0,
+    "typical": 2.0
+   },
+   "melody.range.semitones": {
+    "high": 19.0,
+    "low": 7.0,
+    "typical": 12.0
+   },
+   "melody.rest.ratio": {
+    "high": 0.7001119691178206,
+    "low": 0.12663427561837515,
+    "typical": 0.3973133623521681
+   },
+   "melody.stepwise.ratio": {
+    "high": 0.898989898989899,
+    "low": 0.2980769230769231,
+    "typical": 0.6857142857142857
+   }
+  },
+  "songs": 11,
+  "windows": 66
+ },
+ "RnB": {
+  "features": {
+   "melody.leap.max.semitones": {
+    "high": 12.0,
+    "low": 4.0,
+    "typical": 7.0
+   },
+   "melody.motif.ratio": {
+    "high": 0.274294670846395,
+    "low": 0.07019704433497537,
+    "typical": 0.13793103448275862
+   },
+   "melody.notes.per.bar": {
+    "high": 7.125,
+    "low": 2.3787167449139286,
+    "typical": 4.253155947295012
+   },
+   "melody.peak.count": {
+    "high": 6.0,
+    "low": 1.0,
+    "typical": 2.0
+   },
+   "melody.range.semitones": {
+    "high": 19.0,
+    "low": 7.0,
+    "typical": 12.0
+   },
+   "melody.rest.ratio": {
+    "high": 0.6038244878245871,
+    "low": 0.12165120442708344,
+    "typical": 0.32876530178057095
+   },
+   "melody.stepwise.ratio": {
+    "high": 0.8802008608321377,
+    "low": 0.5192592592592593,
+    "typical": 0.7101018675721562
+   }
+  },
+  "songs": 72,
+  "windows": 416
+ },
+ "Rock": {
+  "features": {
+   "melody.leap.max.semitones": {
+    "high": 12.0,
+    "low": 4.0,
+    "typical": 7.0
+   },
+   "melody.motif.ratio": {
+    "high": 0.3076923076923077,
+    "low": 0.08904761904761907,
+    "typical": 0.16666666666666666
+   },
+   "melody.notes.per.bar": {
+    "high": 6.329444629198536,
+    "low": 2.013018700221556,
+    "typical": 3.625
+   },
+   "melody.peak.count": {
+    "high": 8.0,
+    "low": 1.0,
+    "typical": 2.0
+   },
+   "melody.range.semitones": {
+    "high": 17.0,
+    "low": 5.0,
+    "typical": 10.0
+   },
+   "melody.rest.ratio": {
+    "high": 0.6031865012698303,
+    "low": 0.0859375,
+    "typical": 0.31184895833333337
+   },
+   "melody.stepwise.ratio": {
+    "high": 0.9142857142857143,
+    "low": 0.48,
+    "typical": 0.7307692307692307
+   }
+  },
+  "songs": 690,
+  "windows": 3985
+ },
+ "World": {
+  "features": {
+   "melody.leap.max.semitones": {
+    "high": 12.0,
+    "low": 5.0,
+    "typical": 7.5
+   },
+   "melody.motif.ratio": {
+    "high": 0.2833333333333333,
+    "low": 0.08153191489361702,
+    "typical": 0.15587044534412955
+   },
+   "melody.notes.per.bar": {
+    "high": 6.0078226857887875,
+    "low": 3.001414964991499,
+    "typical": 4.2508484162895925
+   },
+   "melody.peak.count": {
+    "high": 5.700000000000003,
+    "low": 1.0,
+    "typical": 3.0
+   },
+   "melody.range.semitones": {
+    "high": 17.0,
+    "low": 7.0,
+    "typical": 12.0
+   },
+   "melody.rest.ratio": {
+    "high": 0.6322919104627971,
+    "low": 0.15204285983048188,
+    "typical": 0.39431287079605304
+   },
+   "melody.stepwise.ratio": {
+    "high": 0.7777777777777778,
+    "low": 0.41070889894419305,
+    "typical": 0.7078252032520325
+   }
+  },
+  "songs": 8,
+  "windows": 44
+ }
+}

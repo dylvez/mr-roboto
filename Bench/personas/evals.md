@@ -1,6 +1,6 @@
 # Persona evals
 
-Written by `make evals` on 2026-09-28T20:18:54Z. Goldens run through `GoldenRunner`, disagreements through `DisagreementRunner`, blind sheets through `BlindRunner` (`Bench/personas/blind/`).
+Written by `make evals` on 2026-09-28T21:08:55Z. Goldens run through `GoldenRunner`, disagreements through `DisagreementRunner`, blind sheets through `BlindRunner` (`Bench/personas/blind/`).
 
 | Eval | Passed | Of |
 |---|---:|---:|

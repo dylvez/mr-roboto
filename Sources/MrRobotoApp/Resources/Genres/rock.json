@@ -245,6 +245,13 @@
         ]
       },
       "text": "The guitar riff is a primary melodic element alongside the vocal; Berry made the riff the lead line of the song."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "inferred": "computed by Bench/genres/melody_ranges.py over https://colinraffel.com/projects/lmd/ and https://www.tagtraum.com/msd_genre_datasets.html"
+      },
+      "text": "Melody ranges are measured, not recalled: 3985 eight-bar windows from the melody tracks of 690 Lakh MIDI files labelled Rock by tagtraum, each read with the app's own Melodist arithmetic; the range is the 10th to 90th percentile, typical the median. Performed MIDI, so note lengths are as played. The share of chord tones is not measured: the files carry no chords."
     }
   ],
   "parent": null,
@@ -343,15 +350,6 @@
     },
     {
       "evidence": {
-        "inferred": "iZotope's 8-12 dB range for well-balanced masters, lowered by 2 dB because the cited rock median (-9.2 LUFS) is as loud as pop's, whose masters iZotope puts at 5 dB and below"
-      },
-      "feature": "mix.crest.db",
-      "high": 11,
-      "low": 6,
-      "unit": "dB"
-    },
-    {
-      "evidence": {
         "inferred": "Durations of the nine reference records on songbpm: 3:28, 3:43, 4:11, 4:18, 4:30, 5:02, 5:02, 5:35, 5:55; range spans the middle seven, typical is the median"
       },
       "feature": "form.minutes",
@@ -388,6 +386,106 @@
       "high": 6,
       "low": 3,
       "unit": "chords"
+    },
+    {
+      "evidence": {
+        "inferred": "crest = 5.28 - 0.743 x integrated LUFS, the relation fitted across about 2,500 tracks' peak-minus-RMS on lufs.to (the app's own crest measure), applied over Rock's measured -12 to -7.8 LUFS; replaces a first-pass range taken from a general remark"
+      },
+      "feature": "mix.crest.db",
+      "high": 14.2,
+      "low": 11.1,
+      "unit": "dB"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.leap.max.semitones",
+      "high": 12,
+      "low": 4,
+      "typical": 7,
+      "unit": "semitones"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.motif.ratio",
+      "high": 0.31,
+      "low": 0.09,
+      "typical": 0.17,
+      "unit": "fraction of the tune"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.notes.per.bar",
+      "high": 6.3,
+      "low": 2.0,
+      "typical": 3.6,
+      "unit": "notes per bar"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.peak.count",
+      "high": 8,
+      "low": 1,
+      "typical": 2,
+      "unit": "strikes of the top note"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.range.semitones",
+      "high": 17,
+      "low": 5,
+      "typical": 10,
+      "unit": "semitones"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.rest.ratio",
+      "high": 0.6,
+      "low": 0.09,
+      "typical": 0.31,
+      "unit": "fraction of the tune"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.stepwise.ratio",
+      "high": 0.91,
+      "low": 0.48,
+      "typical": 0.73,
+      "unit": "fraction of moves"
     }
   ],
   "references": [

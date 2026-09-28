@@ -323,6 +323,26 @@
       "high": 3.0,
       "low": 1.5,
       "unit": "minutes"
+    },
+    {
+      "evidence": {
+        "inferred": "The Dance/EDM interquartile range (-10.4 to -7.4 LUFS, median -8.7, 18,514 released masters 2012-2026) of https://freshlybakedstudios.com/blog/average-lufs-by-genre, applied because Jersey club is released as club/dance singles; no Jersey-club (or Baltimore-club) measurement found."
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -7.4,
+      "low": -10.4,
+      "typical": -8.7,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -10.4 to -7.4 LUFS (the mix.lufs.integrated range given above, itself inferred), typical -8.7 LUFS -> 11.7 dB. Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest."
+      },
+      "feature": "mix.crest.db",
+      "high": 13.0,
+      "low": 10.8,
+      "typical": 11.7,
+      "unit": "dB"
     }
   ],
   "references": [

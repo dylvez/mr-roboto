@@ -350,15 +350,6 @@
     },
     {
       "evidence": {
-        "inferred": "Peak-to-loudness arithmetic on the cited figures: a -1 to -0.5 dBTP ceiling over a -10 to -7 LUFS integrated master leaves roughly 6.5-9 dB between peak and average."
-      },
-      "feature": "mix.crest.db",
-      "high": 9,
-      "low": 6,
-      "unit": "dB"
-    },
-    {
-      "evidence": {
         "cited": [
           "https://emastered.com/blog/trap-chord-progressions"
         ]
@@ -395,6 +386,15 @@
       "high": 30,
       "low": 0,
       "unit": "seconds"
+    },
+    {
+      "evidence": {
+        "inferred": "crest = 5.28 - 0.743 x integrated LUFS, the relation fitted across about 2,500 tracks' peak-minus-RMS on lufs.to (the app's own crest measure), applied over Trap's measured -10 to -7 LUFS; replaces a first-pass range taken from a general remark"
+      },
+      "feature": "mix.crest.db",
+      "high": 12.7,
+      "low": 10.5,
+      "unit": "dB"
     }
   ],
   "references": [

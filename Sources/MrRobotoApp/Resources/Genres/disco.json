@@ -226,6 +226,13 @@
         ]
       },
       "text": "The singer and the dancefloor are the subject; the genre came out of Black and gay underground clubs, and 'Disco Inferno' marked its move into the mainstream."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "inferred": "computed by Bench/genres/melody_ranges.py over https://colinraffel.com/projects/lmd/ and https://www.tagtraum.com/msd_genre_datasets.html"
+      },
+      "text": "Melody ranges are measured, not recalled: 416 eight-bar windows from the melody tracks of 72 Lakh MIDI files labelled RnB by tagtraum, each read with the app's own Melodist arithmetic; the range is the 10th to 90th percentile, typical the median. Performed MIDI, so note lengths are as played. The share of chord tones is not measured: the files carry no chords. The label is the dataset's RnB label; disco's vocal lines are filed there and under Pop."
     }
   ],
   "parent": null,
@@ -350,6 +357,117 @@
       "high": 8.5,
       "low": 3.5,
       "unit": "minutes"
+    },
+    {
+      "evidence": {
+        "inferred": "The House interquartile range (-10.4 to -8.0 LUFS, median -9.1) of https://freshlybakedstudios.com/blog/average-lufs-by-genre (released masters 2012-2026), applied because a disco record made today (nu-disco, disco house) is released through house/dance channels. This describes a modern release, not 1970s masters: no measurement of original-era disco found (https://lufs.to/genres/disco holds only Giorgio Moroder's 2001 E=MC², -12 to -9.6 LUFS)."
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -8.0,
+      "low": -10.4,
+      "typical": -9.1,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -10.4 to -8.0 LUFS (the mix.lufs.integrated range given above, itself inferred), typical -9.1 LUFS -> 12.0 dB. Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest."
+      },
+      "feature": "mix.crest.db",
+      "high": 13.0,
+      "low": 11.2,
+      "typical": 12.0,
+      "unit": "dB"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.leap.max.semitones",
+      "high": 12,
+      "low": 4,
+      "typical": 7,
+      "unit": "semitones"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.motif.ratio",
+      "high": 0.27,
+      "low": 0.07,
+      "typical": 0.14,
+      "unit": "fraction of the tune"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.notes.per.bar",
+      "high": 7.1,
+      "low": 2.4,
+      "typical": 4.3,
+      "unit": "notes per bar"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.peak.count",
+      "high": 6,
+      "low": 1,
+      "typical": 2,
+      "unit": "strikes of the top note"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.range.semitones",
+      "high": 19,
+      "low": 7,
+      "typical": 12,
+      "unit": "semitones"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.rest.ratio",
+      "high": 0.6,
+      "low": 0.12,
+      "typical": 0.33,
+      "unit": "fraction of the tune"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.stepwise.ratio",
+      "high": 0.88,
+      "low": 0.52,
+      "typical": 0.71,
+      "unit": "fraction of moves"
     }
   ],
   "references": [

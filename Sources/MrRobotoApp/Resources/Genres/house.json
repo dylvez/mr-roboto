@@ -358,6 +358,16 @@
       "high": 8.0,
       "low": 4.0,
       "unit": "minutes"
+    },
+    {
+      "evidence": {
+        "inferred": "Interquartile range and median of lufs.to's per-track dynamic range (peak minus whole-track RMS, per https://lufs.to/methodology) for the 24 House tracks from 17 releases dated 2010 or later linked from https://lufs.to/genres/house (those tracks measure -9.1 to -7.4 LUFS). Older house on the same page (1990s, 2 releases) reads 15.3-16.1 dB and was left out as not what a producer releases today."
+      },
+      "feature": "mix.crest.db",
+      "high": 10.7,
+      "low": 9.4,
+      "typical": 10.0,
+      "unit": "dB"
     }
   ],
   "references": [

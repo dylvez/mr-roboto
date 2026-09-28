@@ -315,6 +315,16 @@
       "high": 1,
       "low": 0.9,
       "unit": "fraction"
+    },
+    {
+      "evidence": {
+        "inferred": "Interquartile range of lufs.to's per-track dynamic range (peak minus whole-track RMS, per https://lufs.to/methodology) over the 108 tracks linked from https://lufs.to/genres/breakbeat, whose page states the median of 15.4 dB. Same source and era mix as this profile's -14 to -8.5 LUFS range (mostly 1990s-2000s releases)."
+      },
+      "feature": "mix.crest.db",
+      "high": 16.7,
+      "low": 13.6,
+      "typical": 15.4,
+      "unit": "dB"
     }
   ],
   "references": [

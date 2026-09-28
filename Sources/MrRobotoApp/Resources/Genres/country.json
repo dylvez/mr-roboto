@@ -227,6 +227,13 @@
         ]
       },
       "text": "Tempo-Tunes (59,536 tracks) puts the median at 108 BPM with half of songs between 90 and 128, and the busiest band at 80–90 BPM. It warns that one groove can be counted at half or double time, which matters for two-beat and train-beat records."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "inferred": "computed by Bench/genres/melody_ranges.py over https://colinraffel.com/projects/lmd/ and https://www.tagtraum.com/msd_genre_datasets.html"
+      },
+      "text": "Melody ranges are measured, not recalled: 860 eight-bar windows from the melody tracks of 147 Lakh MIDI files labelled Country by tagtraum, each read with the app's own Melodist arithmetic; the range is the 10th to 90th percentile, typical the median. Performed MIDI, so note lengths are as played. The share of chord tones is not measured: the files carry no chords."
     }
   ],
   "parent": null,
@@ -416,6 +423,107 @@
       "high": 1.0,
       "low": 0.5,
       "unit": "fraction"
+    },
+    {
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -11.4 to -8.2 LUFS (this profile's own mix.lufs.integrated), typical -9.6 LUFS -> 12.4 dB. Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest."
+      },
+      "feature": "mix.crest.db",
+      "high": 13.8,
+      "low": 11.4,
+      "typical": 12.4,
+      "unit": "dB"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.leap.max.semitones",
+      "high": 12,
+      "low": 4,
+      "typical": 8,
+      "unit": "semitones"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.motif.ratio",
+      "high": 0.26,
+      "low": 0.08,
+      "typical": 0.14,
+      "unit": "fraction of the tune"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.notes.per.bar",
+      "high": 5.6,
+      "low": 2.1,
+      "typical": 3.6,
+      "unit": "notes per bar"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.peak.count",
+      "high": 7,
+      "low": 1,
+      "typical": 2,
+      "unit": "strikes of the top note"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.range.semitones",
+      "high": 17,
+      "low": 7,
+      "typical": 12,
+      "unit": "semitones"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.rest.ratio",
+      "high": 0.55,
+      "low": 0.13,
+      "typical": 0.3,
+      "unit": "fraction of the tune"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.stepwise.ratio",
+      "high": 0.89,
+      "low": 0.5,
+      "typical": 0.73,
+      "unit": "fraction of moves"
     }
   ],
   "references": [

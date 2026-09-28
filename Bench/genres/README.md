@@ -26,3 +26,16 @@ with the genre's research, written down. Four feels play straight where their ge
 (Boom-Bap, One-Chord Funk, Four on the Floor as house, the jazz waltz and Broadway ride); the
 Neo-Soul Pocket is tighter than the one record the profile measures; three progressions borrow
 chords a whole song's diatonic ratio would absorb.
+
+## The second pass: loudness and melody
+
+- `loudness.json` (and `loudness-notes.md` for what could not be filled): integrated loudness for
+  the genres the first pass left empty, and crest factor for most of them, researched on the web.
+  Crest leans on lufs.to, whose "dynamic range" is peak minus whole-track RMS — the app's own
+  measure — and on the relation fitted across its tracks, crest ≈ 5.28 − 0.743 × LUFS.
+- `melody_ranges.py` measures the Melodist's features on the melody tracks of the Lakh MIDI
+  matched set (https://colinraffel.com/projects/lmd/), labelled by tagtraum CD2
+  (https://www.tagtraum.com/msd_genre_datasets.html), in eight-bar windows, 10th to 90th
+  percentile. `melody_ranges.json` is its output. The datasets are not in the repo (1.4 GB).
+- `python3 Bench/genres/merge_ranges.py Sources/MrRobotoApp/Resources/Genres` merges both into the
+  profiles, keeping what a profile already states except the first pass's pop, rock and trap crest.

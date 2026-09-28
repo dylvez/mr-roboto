@@ -344,6 +344,16 @@
       "high": 8.5,
       "low": 5.5,
       "unit": "minutes"
+    },
+    {
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -12.3 to -9.7 LUFS (this profile's own mix.lufs.integrated), typical -11.0 LUFS -> 13.5 dB. Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest. lufs.to's own 2000s techno sample (11 tracks, 5 releases) reads 11.8-14.9 dB, consistent."
+      },
+      "feature": "mix.crest.db",
+      "high": 14.4,
+      "low": 12.5,
+      "typical": 13.5,
+      "unit": "dB"
     }
   ],
   "references": [

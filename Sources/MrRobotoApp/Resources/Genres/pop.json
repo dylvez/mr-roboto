@@ -217,6 +217,13 @@
         "inferred": "From the cited 'amplified bass, minimalist percussion' description of When We All Fall Asleep and the grid-locked timing of post-2001 hits in the gridification study"
       },
       "text": "Two common bass hands: a sub or 808 carrying long low notes under sparse drums (the Eilish sound), or a four-on-the-floor dance-pop pulse; in both the bass is the loudest element below 200 Hz and sits on the grid."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "inferred": "computed by Bench/genres/melody_ranges.py over https://colinraffel.com/projects/lmd/ and https://www.tagtraum.com/msd_genre_datasets.html"
+      },
+      "text": "Melody ranges are measured, not recalled: 2134 eight-bar windows from the melody tracks of 367 Lakh MIDI files labelled Pop by tagtraum, each read with the app's own Melodist arithmetic; the range is the 10th to 90th percentile, typical the median. Performed MIDI, so note lengths are as played. The share of chord tones is not measured: the files carry no chords."
     }
   ],
   "parent": null,
@@ -318,15 +325,6 @@
     },
     {
       "evidence": {
-        "inferred": "iZotope's statement that pop masters commonly show crest factors of 5 dB or less and that 8-12 dB is the well-balanced master range, set against the cited -9.5 LUFS pop median (which leaves little room above the body for peaks)"
-      },
-      "feature": "mix.crest.db",
-      "high": 10,
-      "low": 5,
-      "unit": "dB"
-    },
-    {
-      "evidence": {
         "cited": [
           "https://www.hitsongsdeconstructed.com/hsd_wire/hit-song-choruses/",
           "https://www.hitsongsdeconstructed.com/hsd_wire/hip-hop-vs-pop-hooks-faster/",
@@ -399,6 +397,93 @@
       "high": 5,
       "low": 0,
       "unit": "ms"
+    },
+    {
+      "evidence": {
+        "inferred": "crest = 5.28 - 0.743 x integrated LUFS, the relation fitted across about 2,500 tracks' peak-minus-RMS on lufs.to (the app's own crest measure), applied over Contemporary pop's measured -11.2 to -8.1 LUFS; replaces a first-pass range taken from a general remark"
+      },
+      "feature": "mix.crest.db",
+      "high": 13.6,
+      "low": 11.3,
+      "unit": "dB"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.leap.max.semitones",
+      "high": 12,
+      "low": 4,
+      "typical": 7,
+      "unit": "semitones"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.motif.ratio",
+      "high": 0.31,
+      "low": 0.09,
+      "typical": 0.16,
+      "unit": "fraction of the tune"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.notes.per.bar",
+      "high": 6.4,
+      "low": 2.1,
+      "typical": 3.8,
+      "unit": "notes per bar"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.peak.count",
+      "high": 8,
+      "low": 1,
+      "typical": 2,
+      "unit": "strikes of the top note"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.rest.ratio",
+      "high": 0.6,
+      "low": 0.11,
+      "typical": 0.33,
+      "unit": "fraction of the tune"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.stepwise.ratio",
+      "high": 0.91,
+      "low": 0.51,
+      "typical": 0.73,
+      "unit": "fraction of moves"
     }
   ],
   "references": [

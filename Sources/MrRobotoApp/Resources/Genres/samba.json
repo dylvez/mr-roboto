@@ -331,6 +331,26 @@
       "high": 0.6,
       "low": 0.3,
       "unit": "fraction"
+    },
+    {
+      "evidence": {
+        "inferred": "The Latin interquartile range (-11.0 to -8.2 LUFS, median -9.4, 15,065 released masters 2012-2026) of https://freshlybakedstudios.com/blog/average-lufs-by-genre, applied because samba is released in the Latin category; the survey does not say whether its Latin bucket contains Brazilian music, and no samba-specific measurement was found. Describes a modern release, not original-era 78s/LPs or their reissues."
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -8.2,
+      "low": -11.0,
+      "typical": -9.4,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -11.0 to -8.2 LUFS (the mix.lufs.integrated range given above, itself inferred), typical -9.4 LUFS -> 12.3 dB. Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest."
+      },
+      "feature": "mix.crest.db",
+      "high": 13.5,
+      "low": 11.4,
+      "typical": 12.3,
+      "unit": "dB"
     }
   ],
   "references": [

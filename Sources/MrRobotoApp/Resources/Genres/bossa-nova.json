@@ -355,6 +355,26 @@
       "high": 5.5,
       "low": 1.9,
       "unit": "minutes"
+    },
+    {
+      "evidence": {
+        "inferred": "The Jazz interquartile range (-15.2 to -10.8 LUFS, median -12.8, 2,933 released masters 2012-2026) of https://freshlybakedstudios.com/blog/average-lufs-by-genre, applied because bossa nova is quiet, acoustic nylon-guitar-and-voice music whose canonical and current releases are filed as jazz (Verve's Getz/Gilberto line); no bossa-nova-specific measurement was found. Describes a modern release or reissue as measured in that survey, not the 1958-64 LP masters."
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -10.8,
+      "low": -15.2,
+      "typical": -12.8,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -15.2 to -10.8 LUFS (the mix.lufs.integrated range given above, itself inferred), typical -12.8 LUFS -> 14.8 dB. Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest."
+      },
+      "feature": "mix.crest.db",
+      "high": 16.6,
+      "low": 13.3,
+      "typical": 14.8,
+      "unit": "dB"
     }
   ],
   "references": [

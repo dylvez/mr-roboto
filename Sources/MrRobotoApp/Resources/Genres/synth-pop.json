@@ -230,6 +230,13 @@
         ]
       },
       "text": "Judge loudness by era. In lufs.to's sample the median is -16.7 LUFS for the 1980s, -12.0 for the 1990s, -10.6 for the 2000s and -9.4 for the 2010s. Current pop releases have a median of -9.5 (middle half -11.2 to -8.1)."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "inferred": "computed by Bench/genres/melody_ranges.py over https://colinraffel.com/projects/lmd/ and https://www.tagtraum.com/msd_genre_datasets.html"
+      },
+      "text": "Melody ranges are measured, not recalled: 637 eight-bar windows from the melody tracks of 117 Lakh MIDI files labelled Electronic by tagtraum, each read with the app's own Melodist arithmetic; the range is the 10th to 90th percentile, typical the median. Performed MIDI, so note lengths are as played. The share of chord tones is not measured: the files carry no chords. The label is the Million Song Dataset's Electronic label, measured only where a MIDI file has a melody or vocal track, which is mostly vocal dance-pop and synth-pop."
     }
   ],
   "parent": null,
@@ -387,6 +394,107 @@
       "high": 0.55,
       "low": 0.35,
       "unit": "fraction"
+    },
+    {
+      "evidence": {
+        "inferred": "Interquartile range of lufs.to's per-track dynamic range (peak minus whole-track RMS, per https://lufs.to/methodology) over the 584 tracks linked from https://lufs.to/genres/synth-pop, whose page states the median of 14.3 dB; the profile's LUFS range comes from the same page and spans the same 1980s-2010s mix. The 2010s subset alone (64 tracks) reads 11.2-12.6 dB."
+      },
+      "feature": "mix.crest.db",
+      "high": 16.9,
+      "low": 12.8,
+      "typical": 14.3,
+      "unit": "dB"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.leap.max.semitones",
+      "high": 12,
+      "low": 3,
+      "typical": 7,
+      "unit": "semitones"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.motif.ratio",
+      "high": 0.41,
+      "low": 0.11,
+      "typical": 0.2,
+      "unit": "fraction of the tune"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.notes.per.bar",
+      "high": 7.3,
+      "low": 2.0,
+      "typical": 3.8,
+      "unit": "notes per bar"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.peak.count",
+      "high": 13,
+      "low": 1,
+      "typical": 3,
+      "unit": "strikes of the top note"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.range.semitones",
+      "high": 17,
+      "low": 4,
+      "typical": 9,
+      "unit": "semitones"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.rest.ratio",
+      "high": 0.69,
+      "low": 0.09,
+      "typical": 0.38,
+      "unit": "fraction of the tune"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.stepwise.ratio",
+      "high": 0.92,
+      "low": 0.29,
+      "typical": 0.73,
+      "unit": "fraction of moves"
     }
   ],
   "references": [

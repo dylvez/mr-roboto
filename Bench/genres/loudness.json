@@ -1,0 +1,412 @@
+{
+  "afrobeat": [],
+  "afrobeats": [
+    {
+      "feature": "mix.crest.db",
+      "low": 11.5,
+      "high": 13.3,
+      "unit": "dB",
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -10.8 to -8.4 LUFS (this profile's own mix.lufs.integrated), typical -9.5 LUFS -> 12.3 dB. Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest."
+      },
+      "typical": 12.3
+    }
+  ],
+  "amapiano": [
+    {
+      "feature": "mix.lufs.integrated",
+      "low": -11,
+      "high": -8.0,
+      "unit": "LUFS",
+      "evidence": {
+        "inferred": "Span of two figures: https://freshlybakedstudios.com/blog/average-lufs-by-genre measured House interquartile range of -10.4 to -8.0 LUFS (median -9.1, 12,508 released masters 2012-2026), applied because amapiano is a house offshoot released through the same DJ/house channels, and https://beatkey.app/how-to-make-amapiano-music's amapiano-specific mastering target of -11 to -9 LUFS integrated (a tutorial target, not a measurement). No amapiano-specific measurement of released masters found."
+      }
+    },
+    {
+      "feature": "mix.crest.db",
+      "low": 11.2,
+      "high": 13.5,
+      "unit": "dB",
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -11 to -8.0 LUFS (the mix.lufs.integrated range given above, itself inferred). Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest."
+      }
+    }
+  ],
+  "blues": [],
+  "boom-bap": [
+    {
+      "feature": "mix.crest.db",
+      "low": 11.6,
+      "high": 13.6,
+      "unit": "dB",
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -11.2 to -8.5 LUFS (this profile's own mix.lufs.integrated), typical -9.7 LUFS -> 12.5 dB. Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest. lufs.to's 1990s hip-hop (569 tracks, 34 releases) reads 12.8-15.6 dB, median 14.1, the original-era figure; the fit follows this profile's modern loudness instead."
+      },
+      "typical": 12.5
+    }
+  ],
+  "bossa-nova": [
+    {
+      "feature": "mix.lufs.integrated",
+      "low": -15.2,
+      "high": -10.8,
+      "unit": "LUFS",
+      "evidence": {
+        "inferred": "The Jazz interquartile range (-15.2 to -10.8 LUFS, median -12.8, 2,933 released masters 2012-2026) of https://freshlybakedstudios.com/blog/average-lufs-by-genre, applied because bossa nova is quiet, acoustic nylon-guitar-and-voice music whose canonical and current releases are filed as jazz (Verve's Getz/Gilberto line); no bossa-nova-specific measurement was found. Describes a modern release or reissue as measured in that survey, not the 1958-64 LP masters."
+      },
+      "typical": -12.8
+    },
+    {
+      "feature": "mix.crest.db",
+      "low": 13.3,
+      "high": 16.6,
+      "unit": "dB",
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -15.2 to -10.8 LUFS (the mix.lufs.integrated range given above, itself inferred), typical -12.8 LUFS -> 14.8 dB. Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest."
+      },
+      "typical": 14.8
+    }
+  ],
+  "breakbeat": [
+    {
+      "feature": "mix.crest.db",
+      "low": 13.6,
+      "high": 16.7,
+      "unit": "dB",
+      "evidence": {
+        "inferred": "Interquartile range of lufs.to's per-track dynamic range (peak minus whole-track RMS, per https://lufs.to/methodology) over the 108 tracks linked from https://lufs.to/genres/breakbeat, whose page states the median of 15.4 dB. Same source and era mix as this profile's -14 to -8.5 LUFS range (mostly 1990s-2000s releases)."
+      },
+      "typical": 15.4
+    }
+  ],
+  "country": [
+    {
+      "feature": "mix.crest.db",
+      "low": 11.4,
+      "high": 13.8,
+      "unit": "dB",
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -11.4 to -8.2 LUFS (this profile's own mix.lufs.integrated), typical -9.6 LUFS -> 12.4 dB. Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest."
+      },
+      "typical": 12.4
+    }
+  ],
+  "cumbia": [
+    {
+      "feature": "mix.crest.db",
+      "low": 11.2,
+      "high": 15.7,
+      "unit": "dB",
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -14 to -8 LUFS (this profile's own mix.lufs.integrated). Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest."
+      }
+    }
+  ],
+  "disco": [
+    {
+      "feature": "mix.lufs.integrated",
+      "low": -10.4,
+      "high": -8.0,
+      "unit": "LUFS",
+      "evidence": {
+        "inferred": "The House interquartile range (-10.4 to -8.0 LUFS, median -9.1) of https://freshlybakedstudios.com/blog/average-lufs-by-genre (released masters 2012-2026), applied because a disco record made today (nu-disco, disco house) is released through house/dance channels. This describes a modern release, not 1970s masters: no measurement of original-era disco found (https://lufs.to/genres/disco holds only Giorgio Moroder's 2001 E=MC², -12 to -9.6 LUFS)."
+      },
+      "typical": -9.1
+    },
+    {
+      "feature": "mix.crest.db",
+      "low": 11.2,
+      "high": 13.0,
+      "unit": "dB",
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -10.4 to -8.0 LUFS (the mix.lufs.integrated range given above, itself inferred), typical -9.1 LUFS -> 12.0 dB. Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest."
+      },
+      "typical": 12.0
+    }
+  ],
+  "drill": [
+    {
+      "feature": "mix.crest.db",
+      "low": 10.1,
+      "high": 12.3,
+      "unit": "dB",
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -9.5 to -6.5 LUFS (this profile's own mix.lufs.integrated). Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest."
+      }
+    }
+  ],
+  "drum-and-bass": [
+    {
+      "feature": "mix.crest.db",
+      "low": 10.8,
+      "high": 13.8,
+      "unit": "dB",
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -11.5 to -7.4 LUFS (this profile's own mix.lufs.integrated). Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest. lufs.to's own drum & bass tracks (mostly 1990s-2000s, quieter) read 12.5-16.0 dB; the fit is used instead so crest matches this profile's modern loudness."
+      }
+    }
+  ],
+  "dubstep": [
+    {
+      "feature": "mix.crest.db",
+      "low": 9.7,
+      "high": 13.0,
+      "unit": "dB",
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -10.4 to -6 LUFS (this profile's own mix.lufs.integrated). Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest."
+      }
+    }
+  ],
+  "folk": [
+    {
+      "feature": "mix.crest.db",
+      "low": 12.1,
+      "high": 14.5,
+      "unit": "dB",
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -12.4 to -9.2 LUFS (this profile's own mix.lufs.integrated), typical -10.6 LUFS -> 13.2 dB. Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest."
+      },
+      "typical": 13.2
+    }
+  ],
+  "funk": [
+    {
+      "feature": "mix.lufs.integrated",
+      "low": -11.2,
+      "high": -8.3,
+      "unit": "LUFS",
+      "evidence": {
+        "inferred": "The R&B/Soul interquartile range (-11.2 to -8.3 LUFS, median -9.6, 11,412 released masters 2012-2026) of https://freshlybakedstudios.com/blog/average-lufs-by-genre, applied because funk's parent in this app is soul and funk made today is released in R&B/soul channels. Describes a modern release; no measurement of 1960s-70s funk masters or their reissues found (https://lufs.to/genres/funk is funk rock/metal - Red Hot Chili Peppers, Faith No More, 311 - and was not used)."
+      },
+      "typical": -9.6
+    },
+    {
+      "feature": "mix.crest.db",
+      "low": 11.4,
+      "high": 13.6,
+      "unit": "dB",
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -11.2 to -8.3 LUFS (the mix.lufs.integrated range given above, itself inferred), typical -9.6 LUFS -> 12.4 dB. Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest."
+      },
+      "typical": 12.4
+    }
+  ],
+  "gospel": [
+    {
+      "feature": "mix.crest.db",
+      "low": 11.6,
+      "high": 14.3,
+      "unit": "dB",
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -12.2 to -8.5 LUFS (this profile's own mix.lufs.integrated), typical -9.9 LUFS -> 12.6 dB. Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest."
+      },
+      "typical": 12.6
+    }
+  ],
+  "house": [
+    {
+      "feature": "mix.crest.db",
+      "low": 9.4,
+      "high": 10.7,
+      "unit": "dB",
+      "evidence": {
+        "inferred": "Interquartile range and median of lufs.to's per-track dynamic range (peak minus whole-track RMS, per https://lufs.to/methodology) for the 24 House tracks from 17 releases dated 2010 or later linked from https://lufs.to/genres/house (those tracks measure -9.1 to -7.4 LUFS). Older house on the same page (1990s, 2 releases) reads 15.3-16.1 dB and was left out as not what a producer releases today."
+      },
+      "typical": 10.0
+    }
+  ],
+  "jazz": [
+    {
+      "feature": "mix.crest.db",
+      "low": 13.3,
+      "high": 16.6,
+      "unit": "dB",
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -15.2 to -10.8 LUFS (this profile's own mix.lufs.integrated), typical -12.8 LUFS -> 14.8 dB. Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest."
+      },
+      "typical": 14.8
+    }
+  ],
+  "jersey-club": [
+    {
+      "feature": "mix.lufs.integrated",
+      "low": -10.4,
+      "high": -7.4,
+      "unit": "LUFS",
+      "evidence": {
+        "inferred": "The Dance/EDM interquartile range (-10.4 to -7.4 LUFS, median -8.7, 18,514 released masters 2012-2026) of https://freshlybakedstudios.com/blog/average-lufs-by-genre, applied because Jersey club is released as club/dance singles; no Jersey-club (or Baltimore-club) measurement found."
+      },
+      "typical": -8.7
+    },
+    {
+      "feature": "mix.crest.db",
+      "low": 10.8,
+      "high": 13.0,
+      "unit": "dB",
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -10.4 to -7.4 LUFS (the mix.lufs.integrated range given above, itself inferred), typical -8.7 LUFS -> 11.7 dB. Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest."
+      },
+      "typical": 11.7
+    }
+  ],
+  "lo-fi-hip-hop": [
+    {
+      "feature": "mix.lufs.integrated",
+      "low": -14,
+      "high": -12,
+      "unit": "LUFS",
+      "evidence": {
+        "cited": [
+          "https://luvlang.studio/blog/how-loud-should-my-master-be"
+        ]
+      }
+    },
+    {
+      "feature": "mix.crest.db",
+      "low": 14.2,
+      "high": 15.7,
+      "unit": "dB",
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -14 to -12 LUFS (the mix.lufs.integrated range given above). Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest."
+      }
+    }
+  ],
+  "neo-soul": [
+    {
+      "feature": "mix.crest.db",
+      "low": 11.4,
+      "high": 14.6,
+      "unit": "dB",
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -12.6 to -8.3 LUFS (this profile's own mix.lufs.integrated), typical -9.6 LUFS -> 12.4 dB. Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest."
+      },
+      "typical": 12.4
+    }
+  ],
+  "reggae": [
+    {
+      "feature": "mix.crest.db",
+      "low": 11.7,
+      "high": 13.9,
+      "unit": "dB",
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -11.6 to -8.7 LUFS (this profile's own mix.lufs.integrated), typical -10.1 LUFS -> 12.8 dB. Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest. lufs.to's reggae (mostly 1970s-2000s reissues) reads 15.0-18.3 dB; the fit follows this profile's modern loudness instead."
+      },
+      "typical": 12.8
+    }
+  ],
+  "reggaeton": [
+    {
+      "feature": "mix.crest.db",
+      "low": 11.2,
+      "high": 13.5,
+      "unit": "dB",
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -11 to -8 LUFS (this profile's own mix.lufs.integrated), typical -9.5 LUFS -> 12.3 dB. Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest."
+      },
+      "typical": 12.3
+    }
+  ],
+  "salsa": [
+    {
+      "feature": "mix.crest.db",
+      "low": 11.2,
+      "high": 15.7,
+      "unit": "dB",
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -14 to -8 LUFS (this profile's own mix.lufs.integrated). Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest."
+      }
+    }
+  ],
+  "samba": [
+    {
+      "feature": "mix.lufs.integrated",
+      "low": -11.0,
+      "high": -8.2,
+      "unit": "LUFS",
+      "evidence": {
+        "inferred": "The Latin interquartile range (-11.0 to -8.2 LUFS, median -9.4, 15,065 released masters 2012-2026) of https://freshlybakedstudios.com/blog/average-lufs-by-genre, applied because samba is released in the Latin category; the survey does not say whether its Latin bucket contains Brazilian music, and no samba-specific measurement was found. Describes a modern release, not original-era 78s/LPs or their reissues."
+      },
+      "typical": -9.4
+    },
+    {
+      "feature": "mix.crest.db",
+      "low": 11.4,
+      "high": 13.5,
+      "unit": "dB",
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -11.0 to -8.2 LUFS (the mix.lufs.integrated range given above, itself inferred), typical -9.4 LUFS -> 12.3 dB. Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest."
+      },
+      "typical": 12.3
+    }
+  ],
+  "soul": [
+    {
+      "feature": "mix.crest.db",
+      "low": 11.4,
+      "high": 14.6,
+      "unit": "dB",
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -12.6 to -8.3 LUFS (this profile's own mix.lufs.integrated), typical -9.6 LUFS -> 12.4 dB. Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest."
+      },
+      "typical": 12.4
+    }
+  ],
+  "synth-pop": [
+    {
+      "feature": "mix.crest.db",
+      "low": 12.8,
+      "high": 16.9,
+      "unit": "dB",
+      "evidence": {
+        "inferred": "Interquartile range of lufs.to's per-track dynamic range (peak minus whole-track RMS, per https://lufs.to/methodology) over the 584 tracks linked from https://lufs.to/genres/synth-pop, whose page states the median of 14.3 dB; the profile's LUFS range comes from the same page and spans the same 1980s-2010s mix. The 2010s subset alone (64 tracks) reads 11.2-12.6 dB."
+      },
+      "typical": 14.3
+    }
+  ],
+  "techno": [
+    {
+      "feature": "mix.crest.db",
+      "low": 12.5,
+      "high": 14.4,
+      "unit": "dB",
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -12.3 to -9.7 LUFS (this profile's own mix.lufs.integrated), typical -11.0 LUFS -> 13.5 dB. Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest. lufs.to's own 2000s techno sample (11 tracks, 5 releases) reads 11.8-14.9 dB, consistent."
+      },
+      "typical": 13.5
+    }
+  ],
+  "trip-hop": [
+    {
+      "feature": "mix.crest.db",
+      "low": 12.0,
+      "high": 14.2,
+      "unit": "dB",
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -12 to -9 LUFS (this profile's own mix.lufs.integrated). Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest. lufs.to's trip-hop sample (19 tracks, 2 1990s releases, https://lufs.to/genres/trip-hop) reads 12.0-14.3 dB, median 12.6, consistent."
+      }
+    }
+  ],
+  "uk-garage": [
+    {
+      "feature": "mix.lufs.integrated",
+      "low": -10.4,
+      "high": -8.0,
+      "unit": "LUFS",
+      "evidence": {
+        "inferred": "The House interquartile range (-10.4 to -8.0 LUFS) of https://freshlybakedstudios.com/blog/average-lufs-by-genre (released masters 2012-2026), applied because UK garage is released through house/club channels; no survey-scale UK-garage measurement found. Checked against https://lufs.to/genres/uk-garage, whose only UK-garage sample (Craig David, Born to Do It, 2000 CD, 14 tracks) measures -10.5 to -7.6 LUFS with median -9.7, which is given as typical."
+      },
+      "typical": -9.7
+    },
+    {
+      "feature": "mix.crest.db",
+      "low": 11.2,
+      "high": 13.0,
+      "unit": "dB",
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -10.4 to -8.0 LUFS (the mix.lufs.integrated range given above, itself inferred), typical -9.7 LUFS -> 12.5 dB. Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest. lufs.to's only UK-garage sample (Craig David, Born to Do It, 2000, 14 tracks) reads 11.7-12.8 dB, median 12.5, consistent."
+      },
+      "typical": 12.5
+    }
+  ]
+}

@@ -338,6 +338,26 @@
       "high": 6.5,
       "low": 3.5,
       "unit": "minutes"
+    },
+    {
+      "evidence": {
+        "inferred": "The House interquartile range (-10.4 to -8.0 LUFS) of https://freshlybakedstudios.com/blog/average-lufs-by-genre (released masters 2012-2026), applied because UK garage is released through house/club channels; no survey-scale UK-garage measurement found. Checked against https://lufs.to/genres/uk-garage, whose only UK-garage sample (Craig David, Born to Do It, 2000 CD, 14 tracks) measures -10.5 to -7.6 LUFS with median -9.7, which is given as typical."
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -8.0,
+      "low": -10.4,
+      "typical": -9.7,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (https://lufs.to/genres and the release pages its genre pages link; 2,544 distinct tracks across 27 genre pages; 'dynamic range' there is defined on https://lufs.to/methodology as peak minus RMS of the whole track, the same quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS (r = -0.88, residual SD 1.36 dB). Applied to this genre's integrated-loudness range -10.4 to -8.0 LUFS (the mix.lufs.integrated range given above, itself inferred), typical -9.7 LUFS -> 12.5 dB. Pooled across genres, not a crest measurement of this genre; lufs.to's peak may be true peak, so it can read up to ~0.5 dB above a sample-peak crest. lufs.to's only UK-garage sample (Craig David, Born to Do It, 2000, 14 tracks) reads 11.7-12.8 dB, median 12.5, consistent."
+      },
+      "feature": "mix.crest.db",
+      "high": 13.0,
+      "low": 11.2,
+      "typical": 12.5,
+      "unit": "dB"
     }
   ],
   "references": [
