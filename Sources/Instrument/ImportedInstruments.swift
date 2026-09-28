@@ -58,12 +58,38 @@ public enum ImportedInstruments {
             guard let data = try? Data(contentsOf: folder.appendingPathComponent(specFileName)),
                   var spec = try? JSONDecoder().decode(InstrumentVoiceSpec.self, from: data),
                   spec.engine == .sampled,
-                  (try? KitStore.load(from: folder)) != nil else { continue }
+                  let kit = try? KitStore.load(from: folder) else { continue }
+            // Imported before instruments were levelled, or under another levelling: level it now.
+            if !isLevelled(folder) {
+                _ = try? KitStore.save(KitLevel.levelled(kit.manifest, in: folder), to: folder)
+                try? markLevelled(folder)
+            }
             spec.sampledKit = folder.path
             register(spec)
             found.append(spec)
         }
         return found
+    }
+
+    /// Beside a kit: the levelling it was given (`levelVersion`).
+    static let levelFileName = "level.json"
+    /// Bump when `KitLevel.levelled` changes: every imported kit is levelled again on load. Its
+    /// own, not `KitLevel.version`, which would render every synthesized kit again for nothing.
+    public static let levelVersion = "imported-level-2"
+
+    static func isLevelled(_ folder: URL) -> Bool {
+        guard let data = try? Data(contentsOf: folder.appendingPathComponent(levelFileName)),
+              let stamp = try? JSONDecoder().decode([String: String].self, from: data) else { return false }
+        return stamp["version"] == levelVersion
+    }
+
+    static func markLevelled(_ folder: URL) throws {
+        do {
+            try JSONEncoder().encode(["version": levelVersion])
+                .write(to: folder.appendingPathComponent(levelFileName), options: .atomic)
+        } catch {
+            throw KitError.writeFailed(path: levelFileName, reason: "\(error)")
+        }
     }
 
     /// What an import did, for the person who asked for it.
@@ -152,7 +178,10 @@ public enum ImportedInstruments {
         var manifest = parsed.manifest
         manifest.zones = zones
         manifest.description = "Imported from \(url.lastPathComponent)."
+        // As loud as the instruments the app makes, root by root, the pack's dynamics kept.
+        manifest = KitLevel.levelled(manifest, in: staging)
         _ = try KitStore.save(manifest, to: staging)
+        try markLevelled(staging)
 
         var spec = InstrumentVoiceSpec(
             id: "sfz-\(slug)", name: manifest.name, family: family, engine: .sampled,

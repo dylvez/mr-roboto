@@ -178,7 +178,7 @@ public struct RecordedPercussion: Codable, Hashable, Sendable {
             // Every layer to the voice's loudness, as the synthesized layers are; never over the
             // kit's ceiling.
             var gain: Float = 1
-            if let (samples, rate) = monoSamples(from) {
+            if let (samples, rate) = KitLevel.monoSamples(from) {
                 let own = KitLevel.loudness(samples, sampleRate: rate)
                 let peak = Double(SynthMeasure.peak(samples))
                 if own > 1e-6, peak > 0 {
@@ -201,17 +201,6 @@ public struct RecordedPercussion: Codable, Hashable, Sendable {
             out.append(placed)
         }
         return out
-    }
-
-    /// A file summed to mono, at its own rate.
-    private static func monoSamples(_ url: URL) -> ([Float], Double)? {
-        guard let file = try? AVAudioFile(forReading: url),
-              let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(file.length)),
-              (try? file.read(into: buffer)) != nil, let data = buffer.floatChannelData else { return nil }
-        let channels = Int(buffer.format.channelCount), frames = Int(buffer.frameLength)
-        var mono = [Float](repeating: 0, count: frames)
-        for c in 0..<channels { for i in 0..<frames { mono[i] += data[c][i] / Float(channels) } }
-        return (mono, file.processingFormat.sampleRate)
     }
 
     // MARK: VCSL

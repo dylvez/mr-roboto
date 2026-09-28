@@ -188,3 +188,72 @@ import Testing
     #expect(result.manifest.zones.map(\.sample) == ["a/A0v1.wav", "a/C1v1.wav"])
     #expect(result.manifest.zones.allSatisfy { $0.envelope.release == 1 })
 }
+
+// MARK: - Levelling
+
+@Test func importedKitsAreLevelledRootByRootWithTheirDynamicsKept() throws {
+    let folder = FileManager.default.temporaryDirectory.appendingPathComponent("level-\(UUID())", isDirectory: true)
+    defer { try? FileManager.default.removeItem(at: folder) }
+    func tone(_ name: String, _ amplitude: Float) throws {
+        let samples = (0..<48_000).map { i in amplitude * sin(Float(i) * 2 * .pi * 220 / 48_000) * exp(-Float(i) / 24_000) }
+        try SynthesizedKit.writeWAV(samples, to: folder.appendingPathComponent("samples/\(name).wav"), sampleRate: 48_000)
+    }
+    try tone("c4-soft", 0.2); try tone("c4-hard", 0.8); try tone("c5-soft", 0.0125); try tone("c5-hard", 0.05)
+    let manifest = KitManifest(name: "Uneven", kind: .sampled, zones: [
+        Zone(id: "a", sample: "samples/c4-soft.wav", key: .range(55...66, rootNote: 60), velocity: 1...63),
+        Zone(id: "b", sample: "samples/c4-hard.wav", key: .range(55...66, rootNote: 60), velocity: 64...127),
+        // A quiet recording the pack raised with its own volume, as VCSL does.
+        Zone(id: "c", sample: "samples/c5-soft.wav", key: .range(67...78, rootNote: 72), velocity: 1...63, gainDB: 12),
+        Zone(id: "d", sample: "samples/c5-hard.wav", key: .range(67...78, rootNote: 72), velocity: 64...127, gainDB: 12),
+    ])
+    let levelled = KitLevel.levelled(manifest, in: folder)
+
+    func loudnessDB(_ zone: Zone) throws -> Double {
+        let (samples, rate) = try #require(KitLevel.monoSamples(KitPath.resolve(zone.sample, in: folder)))
+        return 20 * log10(KitLevel.loudness(samples, sampleRate: rate)) + Double(zone.gainDB)
+    }
+    let z = levelled.zones
+    // Both roots' velocity-100 layers (the hard ones) at the instruments' loudness, whatever the pack did.
+    #expect(abs(try loudnessDB(z[1]) - KitLevel.instrumentDBFS) < 0.2)
+    #expect(abs(try loudnessDB(z[3]) - KitLevel.instrumentDBFS) < 0.2)
+    // The soft layers keep their 12 dB under the hard ones: the pack's dynamics.
+    #expect(abs((try loudnessDB(z[1]) - loudnessDB(z[0])) - 12) < 0.3)
+    #expect(abs((try loudnessDB(z[3]) - loudnessDB(z[2])) - 12) < 0.3)
+    // Nothing over the ceiling.
+    for zone in z {
+        let (samples, _) = try #require(KitLevel.monoSamples(KitPath.resolve(zone.sample, in: folder)))
+        #expect(20 * log10(Double(SynthMeasure.peak(samples))) + Double(zone.gainDB) <= KitLevel.ceilingDBFS + 0.01)
+    }
+    // Levelling a levelled kit changes nothing.
+    let twice = KitLevel.levelled(levelled, in: folder)
+    #expect(zip(twice.zones, levelled.zones).allSatisfy { abs($0.gainDB - $1.gainDB) < 0.01 })
+}
+
+@Test func ampVeltrackBecomesTheKitsVelocityCurve() {
+    let tracked = SFZImporter.parse("<group> amp_veltrack=73\n<region> sample=a.wav key=60\n<region> sample=b.wav key=62", name: "Piano")
+    let curve = tracked.manifest.velocityCurve
+    #expect(abs(curve.gain(forVelocity: 127) - 1) < 0.001)
+    // At velocity 64, 73% tracking is 0.27 + 0.73·0.254 ≈ 0.455, not the squared law's 0.254.
+    #expect(abs(curve.gain(forVelocity: 64) - (0.27 + 0.73 * powf(64 / 127, 2))) < 0.01)
+    #expect(!tracked.skippedOpcodeNames.contains("amp_veltrack"))
+    // No amp_veltrack, or 100, is the squared law as before.
+    #expect(SFZImporter.parse("<region> sample=a.wav key=60", name: "P").manifest.velocityCurve == .squared)
+    #expect(SFZImporter.parse("<region> sample=a.wav key=60 amp_veltrack=100", name: "P").manifest.velocityCurve == .squared)
+}
+
+@Test func aGentlerVelocityCurveIsLevelledToSoundAsLoudAtVelocity100() throws {
+    let folder = FileManager.default.temporaryDirectory.appendingPathComponent("level-\(UUID())", isDirectory: true)
+    defer { try? FileManager.default.removeItem(at: folder) }
+    let samples = (0..<48_000).map { i in 0.3 * sin(Float(i) * 2 * .pi * 220 / 48_000) * exp(-Float(i) / 24_000) }
+    try SynthesizedKit.writeWAV(samples, to: folder.appendingPathComponent("samples/a.wav"), sampleRate: 48_000)
+    var manifest = KitManifest(name: "Tracked", kind: .sampled, zones: [
+        Zone(id: "a", sample: "samples/a.wav", key: .range(55...66, rootNote: 60), velocity: 1...127)])
+    manifest.velocityCurve = SFZImporter.velocityCurve(tracking: 73)
+    let zone = try #require(KitLevel.levelled(manifest, in: folder).zones.first)
+    let (mono, rate) = try #require(KitLevel.monoSamples(folder.appendingPathComponent("samples/a.wav")))
+    // As played at velocity 100, through each kit's curve: this kit and a synthesized one match.
+    let played = 20 * log10(KitLevel.loudness(mono, sampleRate: rate)) + Double(zone.gainDB)
+        + 20 * log10(Double(manifest.velocityCurve.gain(forVelocity: 100)))
+    let synthesized = KitLevel.instrumentDBFS + 20 * log10(Double(VelocityCurve.squared.gain(forVelocity: 100)))
+    #expect(abs(played - synthesized) < 0.2)
+}

@@ -296,6 +296,71 @@ public enum KitLevel {
     /// The loudness a bass is made to: under the kick, which sits between -5 and -10 dBFS.
     public static let bassDBFS: Double = -12
 
+    /// A file summed to mono, at its own rate. Nil when it cannot be read as audio.
+    public static func monoSamples(_ url: URL) -> ([Float], Double)? {
+        guard let file = try? AVAudioFile(forReading: url),
+              let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(file.length)),
+              (try? file.read(into: buffer)) != nil, let data = buffer.floatChannelData else { return nil }
+        let channels = Int(buffer.format.channelCount), frames = Int(buffer.frameLength)
+        var mono = [Float](repeating: 0, count: frames)
+        for c in 0..<channels { for i in 0..<frames { mono[i] += data[c][i] / Float(channels) } }
+        return (mono, file.processingFormat.sampleRate)
+    }
+
+    /// A recorded kit — an imported instrument — levelled to sound as loud as the app's own
+    /// instruments **played at the same velocity**: at `referenceVelocity`, through its own
+    /// velocity curve, each root is as loud as a synthesized kit's top layer is through the squared
+    /// law — as far as the ceiling lets that root's loudest peak go. Every layer of a root moves by
+    /// the same gain, so the pack's balance between its layers — its dynamics — is kept, and the
+    /// pack's own `volume` on each region counts as part of it.
+    ///
+    /// Why at a velocity rather than at the top layer: a synthesized piano's layers sit a few dB
+    /// apart, a sampled one's span the instrument's whole range. Matched at their loudest, the
+    /// sampled piano played at an ordinary velocity came out 10 dB under the synthesized one.
+    ///
+    /// Measuring what is there, not what was there, makes it safe to run twice: a kit already at
+    /// the target measures a gain of one.
+    public static let referenceVelocity = 100
+
+    public static func levelled(_ manifest: KitManifest, in folder: URL, targetDBFS: Double = instrumentDBFS) -> KitManifest {
+        struct Measure { var loudness: Double; var peak: Float }
+        var measured: [String: Measure] = [:]
+        func measure(_ zone: Zone) -> Measure? {
+            if let known = measured[zone.sample] { return known }
+            guard let (samples, rate) = monoSamples(KitPath.resolve(zone.sample, in: folder)) else { return nil }
+            let found = Measure(loudness: loudness(samples, sampleRate: rate), peak: SynthMeasure.peak(samples))
+            measured[zone.sample] = found
+            return found
+        }
+        var byRoot: [Int: [Int]] = [:]
+        for (index, zone) in manifest.zones.enumerated() { byRoot[zone.key.rootNote, default: []].append(index) }
+
+        // What a synthesized kit's top layer comes out at, at the reference velocity, as this kit's
+        // curve would play it: the target for the layer that answers that velocity here.
+        let ours = Double(VelocityCurve.squared.gain(forVelocity: referenceVelocity))
+        let theirs = Double(manifest.velocityCurve.gain(forVelocity: referenceVelocity))
+        let target = pow(10, targetDBFS / 20) * ours / Swift.max(theirs, 1e-6), ceiling = pow(10, ceilingDBFS / 20)
+        var out = manifest
+        for indices in byRoot.values {
+            // The layer that answers the reference velocity; the top one when none does.
+            let answers = indices.contains { manifest.zones[$0].velocity.contains(referenceVelocity) }
+            let top = indices.map { manifest.zones[$0].velocity.upperBound }.max() ?? 127
+            var loud = 0.0, peak = 0.0
+            for index in indices {
+                let zone = manifest.zones[index]
+                guard let m = measure(zone) else { continue }
+                let gain = pow(10, Double(zone.gainDB) / 20)
+                peak = Swift.max(peak, Double(m.peak) * gain)
+                let isReference = answers ? zone.velocity.contains(referenceVelocity) : zone.velocity.upperBound == top
+                if isReference { loud = Swift.max(loud, m.loudness * gain) }
+            }
+            guard loud > 1e-6, peak > 0 else { continue }
+            let change = Float(20 * log10(Swift.min(target / loud, ceiling / peak)))
+            for index in indices { out.zones[index].gainDB += change }
+        }
+        return out
+    }
+
     /// The RMS of the loudest 100 ms in the first two seconds: what a note sounds like while it
     /// is sounding, whether it swells into it or starts there. Longer windows read a short,
     /// bright note — a harpsichord's top octave — as quieter than it sounds.

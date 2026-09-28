@@ -99,7 +99,7 @@ public enum SFZImporter {
         "offset", "end", "loop_mode", "loop_start", "loop_end",
         "volume", "pan", "tune", "transpose",
         "ampeg_delay", "ampeg_attack", "ampeg_hold", "ampeg_decay", "ampeg_sustain", "ampeg_release",
-        "default_path", "note_offset", "octave_offset",
+        "default_path", "note_offset", "octave_offset", "amp_veltrack",
     ]
 
     /// Opcodes that decide which regions sound. Read, then reduced as the type's comment says.
@@ -231,6 +231,8 @@ public enum SFZImporter {
     struct Selection {
         var keyswitch: Int?
         var random: Double?
+        /// `amp_veltrack`, percent, when the region said.
+        var velocityTracking: Double?
     }
 
     private struct Parser {
@@ -441,7 +443,8 @@ public enum SFZImporter {
                 envelope: envelope,
                 loop: loop
             ))
-            selections.append(Selection(keyswitch: note("sw_last"), random: random))
+            selections.append(Selection(keyswitch: note("sw_last"), random: random,
+                                        velocityTracking: merged["amp_veltrack"].flatMap { Double($0.value.trimmingCharacters(in: .whitespaces)) }))
         }
 
         mutating func finish() -> SFZImport {
@@ -495,7 +498,14 @@ public enum SFZImporter {
                 skipped.append(SFZSkip(opcode: "lorand", value: "", line: line, reason: .unsupportedValue(
                     "\(converted) random alternatives play as a round robin instead")))
             }
-            let manifest = KitManifest(name: name, kind: .sampled, zones: kept)
+            var manifest = KitManifest(name: name, kind: .sampled, zones: kept)
+            // `amp_veltrack`: how much of the level velocity decides, the rest fixed. A kit has one
+            // curve, so the value most of its regions give. 100, SFZ's default, is the squared law.
+            var tracking: [Double: Int] = [:]
+            for selection in keptSelections { if let t = selection.velocityTracking { tracking[t, default: 0] += 1 } }
+            if let (percent, _) = tracking.max(by: { $0.value < $1.value }), percent != 100 {
+                manifest.velocityCurve = SFZImporter.velocityCurve(tracking: percent)
+            }
             return SFZImport(manifest: manifest, skipped: skipped, regionCount: regionCount)
         }
     }
@@ -591,6 +601,17 @@ public enum SFZImporter {
             out.append(Assignment(name: name, value: value, line: line))
         }
         return out
+    }
+
+    /// SFZ's amplitude velocity tracking as a curve: `(1 − t) + t·(v/127)²` for `t` = percent/100,
+    /// so 100 is the squared law, 0 is no velocity at all, and a pack's 73 keeps a soft note from
+    /// falling as far as it would.
+    public static func velocityCurve(tracking percent: Double) -> VelocityCurve {
+        let t = Float(min(100, max(0, percent)) / 100)
+        return .table((0...127).map { velocity in
+            let v = Float(velocity) / 127
+            return (1 - t) + t * v * v
+        })
     }
 
     /// A key value: a MIDI number, or a note name like `c4`, `f#3`, `bb-1` (SFZ's c4 = 60, which is
