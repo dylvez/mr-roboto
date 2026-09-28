@@ -70,6 +70,41 @@ struct MixGraphTests {
         #expect(MixMeter.samplePeakDB(soloedOut) < -90)
     }
 
+    @Test("two sources on one part are both heard: a sampler for the clean sections and a player for the dusty ones")
+    @AudioActor
+    func twoSourcesOnOnePart() async throws {
+        let engine = try Engine(playerCount: 2, sampleRate: Self.rate, channels: 2)
+        try engine.prepare(offlineSampleRate: Self.rate, maximumFrames: 4_096)
+        let graph = try engine.mixGraph()
+        let part = PartID()
+        let first = try engine.player(0), second = try engine.player(1)
+        try graph.route(first, to: part)
+        try graph.route(second, to: part)
+        graph.apply(.unity)
+        try engine.start()
+        _ = try engine.startTransport(clock: TransportClock(tempo: 120, sampleRate: Self.rate))
+        // 200 Hz on one, 3 kHz on the other: the strip's output must carry both.
+        first.scheduleBuffer(buffer(hz: 200, seconds: 1, amplitude: 0.2, format: engine.format), at: nil, options: [], completionHandler: nil)
+        second.scheduleBuffer(buffer(hz: 3_000, seconds: 1, amplitude: 0.2, format: engine.format), at: nil, options: [], completionHandler: nil)
+        first.play(); second.play()
+        let out = try OfflineRenderer.renderBuffer(engine: engine, frames: AVAudioFramePosition(Self.rate))
+        engine.stop()
+        let lane = Array(UnsafeBufferPointer(start: out.floatChannelData![0], count: Int(out.frameLength)))
+        let middle = Array(lane[(lane.count / 4)..<(lane.count * 3 / 4)])
+        func magnitude(_ hz: Double) -> Double {
+            var re = 0.0, im = 0.0
+            for (i, x) in middle.enumerated() {
+                re += Double(x) * cos(2 * .pi * hz * Double(i) / Self.rate)
+                im -= Double(x) * sin(2 * .pi * hz * Double(i) / Self.rate)
+            }
+            return (re * re + im * im).squareRoot() / Double(middle.count)
+        }
+        // Routing the second used to replace the first at the EQ's single input.
+        #expect(magnitude(200) > 0.02, "the first source is gone: \(magnitude(200))")
+        #expect(magnitude(3_000) > 0.02, "the second source is gone: \(magnitude(3_000))")
+        #expect(graph.part(of: first) == part && graph.part(of: second) == part)
+    }
+
     @Test("a −6 dB peak band at 80 Hz is −6 there and 0 at 1 kHz")
     @AudioActor
     func eq() async throws {

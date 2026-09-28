@@ -21,6 +21,10 @@ import SongGraph
 public final class MixStripNodes: @unchecked Sendable {
     /// The part holding this slot; nil while free.
     public fileprivate(set) var part: PartID?
+    /// Where a part's sources come in: a mixer, so a part heard from two nodes at once — a
+    /// sampler for its clean sections and a player for its dusty ones — has both. The EQ has one
+    /// input bus, and connecting a second node to it silently replaced the first.
+    public let input: AVAudioMixerNode
     public let eq: AVAudioUnitEQ
     public let dynamics: AVAudioUnitEffect
     public let out: AVAudioMixerNode
@@ -34,6 +38,7 @@ public final class MixStripNodes: @unchecked Sendable {
     let lock = NSLock()
 
     init() {
+        input = AVAudioMixerNode()
         eq = AVAudioUnitEQ(numberOfBands: 3)
         dynamics = AVAudioUnitEffect(audioComponentDescription: AudioComponentDescription(
             componentType: kAudioUnitType_Effect, componentSubType: kAudioUnitSubType_DynamicsProcessor,
@@ -126,7 +131,8 @@ public final class MixGraph {
         // The pool.
         for _ in 0..<Self.slotCount {
             let strip = MixStripNodes()
-            for node in [strip.eq, strip.dynamics, strip.out, strip.send] as [AVAudioNode] { av.attach(node) }
+            for node in [strip.input, strip.eq, strip.dynamics, strip.out, strip.send] as [AVAudioNode] { av.attach(node) }
+            try av.connectNode(strip.input, to: strip.eq, format: engine.format)
             try av.connectNode(strip.eq, to: strip.dynamics, format: engine.format)
             try av.connectNode(strip.dynamics, to: strip.out, format: engine.format)
             av.connect(strip.out, to: [AVAudioConnectionPoint(node: engine.mainMixer, bus: engine.mainMixer.nextAvailableInputBus),
@@ -196,7 +202,8 @@ public final class MixGraph {
             return
         }
         av.disconnectNodeOutput(node)
-        try av.connectNode(node, to: strip.eq, format: engine.format)
+        // A bus of its own on the strip's input mixer: every source of the part is heard.
+        av.connect(node, to: strip.input, fromBus: 0, toBus: strip.input.nextAvailableInputBus, format: engine.format)
         routed[ObjectIdentifier(node)] = (node, part)
     }
 
