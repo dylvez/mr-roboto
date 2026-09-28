@@ -1,4 +1,5 @@
 import Foundation
+import Instrument
 import SongGraph
 import SwiftUI
 
@@ -118,9 +119,19 @@ struct FrameCommands: Commands {
                 }
             }
             .disabled(app.store == nil)
-            Toggle("Recorded Hand Percussion", isOn: Binding(get: { app.recordedPercussion?.isOn ?? false },
-                                                            set: { app.setRecordedPercussion($0) }))
-                .disabled(app.recordedPercussion == nil)
+            Menu("Recorded Hand Percussion") {
+                Toggle("On", isOn: Binding(get: { app.recordedPercussion?.isOn ?? false },
+                                           set: { app.setRecordedPercussion($0) }))
+                Section("Keep Synthesized On") {
+                    ForEach(SynthMachine.all) { machine in
+                        Toggle(machine.name, isOn: Binding(
+                            get: { app.recordedPercussion?.keepSynthesized.contains(machine.id) ?? false },
+                            set: { app.setKeepsSynthesizedPercussion(machine, $0) }))
+                    }
+                }
+                .disabled(app.recordedPercussion?.isOn != true)
+            }
+            .disabled(app.recordedPercussion == nil)
             Button("Import Voice…") {
                 let panel = NSOpenPanel()
                 panel.allowedContentTypes = [.plainText, .text]

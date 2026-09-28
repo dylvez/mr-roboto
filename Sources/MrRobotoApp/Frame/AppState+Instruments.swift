@@ -63,6 +63,24 @@ extension AppState {
         return true
     }
 
+    /// Whether `machine` keeps its synthesized hand percussion while the recordings are on.
+    @discardableResult
+    public func setKeepsSynthesizedPercussion(_ machine: SynthMachine, _ keep: Bool) -> Bool {
+        guard var set = recordedPercussion, set.keepSynthesized.contains(machine.id) != keep,
+              let directory = percussionDirectory else { return false }
+        if keep { set.keepSynthesized.append(machine.id) } else { set.keepSynthesized.removeAll { $0 == machine.id } }
+        do {
+            try RecordedPercussion.save(set, to: directory)
+        } catch {
+            note(.session, "Could not change \(machine.name)'s percussion", detail: "\(error)")
+            return false
+        }
+        recordedPercussion = set
+        if let service = SurfaceWiring.shared.service { Task { await service.drumKitsChanged() } }
+        note(.you, keep ? "\(machine.name) keeps its own hand percussion" : "\(machine.name) plays the \(set.name) recordings")
+        return true
+    }
+
     /// Registers what is already imported, so a song that plays one finds it. Called when the
     /// library is read.
     func loadImportedInstruments() {

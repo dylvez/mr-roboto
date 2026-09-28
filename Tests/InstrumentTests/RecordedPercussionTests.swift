@@ -38,7 +38,7 @@ struct RecordedPercussionTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         try Self.recording(in: directory)
         let set = RecordedPercussion(name: "Test", assignments: [
-            .init(kind: .highConga, source: "test-conga", note: 60, label: "a test conga")])
+            .init(kind: .highConga, source: "test-conga", note: 60, label: "a test conga")], keepSynthesized: [])
         let resolved = try #require(RecordedPercussion.resolve(set, in: directory))
 
         let plain = directory.appendingPathComponent("plain", isDirectory: true)
@@ -85,5 +85,32 @@ struct RecordedPercussionTests {
 
         let data = try JSONEncoder().encode(set)
         #expect(try JSONDecoder().decode(RecordedPercussion.self, from: data) == set)
+    }
+}
+
+@Suite("Recorded percussion, per machine")
+struct RecordedPercussionPerMachineTests {
+    @Test("a machine that keeps its own percussion builds the kit it always did; the others take the recordings")
+    func keepSynthesized() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("recorded-\(UUID())", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try RecordedPercussionTests.recording(in: directory)
+        let set = RecordedPercussion(name: "Test", assignments: [
+            .init(kind: .highConga, source: "test-conga", note: 60, label: "a test conga")])
+        #expect(set.keepSynthesized == ["tr808", "cr78", "tr606"], "the circuit machines keep theirs by default")
+        let resolved = try #require(RecordedPercussion.resolve(set, in: directory))
+
+        #expect(SynthesizedKit.folderName(for: .tr808, recorded: resolved) == SynthesizedKit.folderName(for: .tr808, recorded: nil))
+        #expect(SynthesizedKit.folderName(for: .tr909, recorded: resolved) != SynthesizedKit.folderName(for: .tr909, recorded: nil))
+        let eight = try SynthesizedKit.build(.tr808, in: directory.appendingPathComponent("808"), sampleRate: 24_000,
+                                             layerCount: 2, recorded: resolved)
+        let nine = try SynthesizedKit.build(.tr909, in: directory.appendingPathComponent("909"), sampleRate: 24_000,
+                                            layerCount: 2, recorded: resolved)
+        #expect(!eight.manifest.zones.contains { $0.sample.contains("recorded") })
+        #expect(nine.manifest.zones.contains { $0.sample.contains("recorded") })
+
+        // A set saved before this reads with the default machines keeping theirs.
+        let old = #"{"name":"VCSL","isOn":true,"assignments":[]}"#
+        #expect(try JSONDecoder().decode(RecordedPercussion.self, from: Data(old.utf8)).keepSynthesized == ["tr808", "cr78", "tr606"])
     }
 }

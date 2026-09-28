@@ -68,7 +68,7 @@ public enum SynthesizedKit {
     /// became recordings, is built again rather than loaded stale from the cache.
     public static func folderName(for machine: SynthMachine,
                                   recorded: RecordedPercussion.Resolved? = RecordedPercussion.inUse) -> String {
-        "\(machine.id)-\(KitFingerprint.of(machine, salt: recorded?.fingerprint ?? ""))"
+        "\(machine.id)-\(KitFingerprint.of(machine, salt: recorded?.for(machine.id)?.fingerprint ?? ""))"
     }
 
     /// The choke group the hi-hat pair shares. Both hats carry `group = 1` (they *silence* group 1)
@@ -131,6 +131,7 @@ public enum SynthesizedKit {
         // Voices a recording plays (`RecordedPercussion`): its zones in place of the render, each
         // layer at the loudness of the loudest synthesized layer as this kit plays it.
         var fromRecordings = Set<SynthVoiceKind>()
+        let recorded = recorded?.for(machine.id)
         for spec in machine.voices {
             guard let recorded, let loudest = rendered.last(where: { $0.spec.kind == spec.kind }) else { continue }
             let loudness = KitLevel.loudness(loudest.samples.map { $0 * scale }, sampleRate: sampleRate)

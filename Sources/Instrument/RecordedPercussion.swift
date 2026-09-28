@@ -47,12 +47,34 @@ public struct RecordedPercussion: Codable, Hashable, Sendable {
     public var name: String
     public var isOn: Bool
     public var assignments: [Assignment]
+    /// Machines, by id, that keep their synthesized percussion with the set on: an 808's congas
+    /// are its own tom circuits, and part of why it sounds like an 808.
+    public var keepSynthesized: [String]
 
-    public init(name: String, isOn: Bool = true, assignments: [Assignment]) {
+    /// The machines whose percussion is modelled on their own circuits (`handPercussion(electronic:)`).
+    public static let defaultKeepSynthesized = ["tr808", "cr78", "tr606"]
+
+    public init(name: String, isOn: Bool = true, assignments: [Assignment],
+                keepSynthesized: [String] = RecordedPercussion.defaultKeepSynthesized) {
         self.name = name
         self.isOn = isOn
         self.assignments = assignments
+        self.keepSynthesized = keepSynthesized
     }
+
+    private enum CodingKeys: String, CodingKey { case name, isOn, assignments, keepSynthesized }
+
+    /// A set saved before machines could keep their own percussion keeps the default ones.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        name = try c.decode(String.self, forKey: .name)
+        isOn = try c.decode(Bool.self, forKey: .isOn)
+        assignments = try c.decode([Assignment].self, forKey: .assignments)
+        keepSynthesized = try c.decodeIfPresent([String].self, forKey: .keepSynthesized) ?? Self.defaultKeepSynthesized
+    }
+
+    /// Whether `machine` plays the recordings rather than its own percussion.
+    public func applies(to machine: String) -> Bool { isOn && !keepSynthesized.contains(machine) }
 
     // MARK: The set in use
 
@@ -62,6 +84,9 @@ public struct RecordedPercussion: Codable, Hashable, Sendable {
         var kits: [String: LoadedKit]
         /// Salts a kit's fingerprint, so a kit with recordings in it is a different kit.
         public var fingerprint: String
+
+        /// This set for `machine`: itself, or nil when the machine keeps its synthesized percussion.
+        public func `for`(_ machine: String) -> Resolved? { set.applies(to: machine) ? self : nil }
     }
 
     private static let active = Mutex<Resolved?>(nil)
