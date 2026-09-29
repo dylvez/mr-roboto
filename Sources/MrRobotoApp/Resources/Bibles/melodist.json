@@ -482,8 +482,8 @@
       "affects" : [
         "melodist.a-figure-comes-back"
       ],
-      "alternative" : "A motif is a rhythm as much as a shape — Superstition's figure repeats its rhythm while its pitches move — so the measure should be over pitch-and-duration pairs, which would count far fewer things as repeats and would need a tolerance rather than equality.",
-      "encoded" : "The longest run of intervals that occurs twice, ignoring how long the notes are.",
+      "alternative" : "A figure is its intervals, whatever rhythm they return in: a theme brought back in longer notes is still the theme. That was the measure here first, as the longest run of intervals heard twice, and it read a two-bar figure played four times as a fifth of a tune; as a share of the tune covered it would be worth reading beside this one.",
+      "encoded" : "Its rhythm and its shape: a run of four notes or more whose gaps and directions come again, at any pitch and with steps of any size — Superstition's figure repeats its rhythm while its pitches move. Everything such a figure covers is counted, not only the longest.",
       "evidence" : {
         "cited" : [
           "https://en.wikipedia.org/wiki/Superstition_(song)",
@@ -491,7 +491,7 @@
         ]
       },
       "id" : "melodist.oq.motif-by-interval",
-      "question" : "Is a repeated interval figure the right measure of a motif, or does it miss the rhythm?"
+      "question" : "Is a figure its rhythm and its shape, or its intervals?"
     },
     {
       "affects" : [
@@ -1002,7 +1002,7 @@
       "unit" : "notes"
     },
     {
-      "engineField" : "SongGraph.Melody.notes, longest repeated interval run over interval count",
+      "engineField" : "SongGraph.Melody.notes, the moves covered by a run of three that comes again, over all the moves",
       "evidence" : {
         "cited" : [
           "https://en.wikipedia.org/wiki/Motif_(music)",
@@ -1010,7 +1010,7 @@
         ]
       },
       "feature" : "melody.motif.ratio",
-      "meaning" : "the longest run of intervals that occurs twice, over all the tune's moves — the figure you sing back",
+      "meaning" : "the share of the tune's moves that lie in a figure heard twice — four notes or more, in the same rhythm and the same shape, at any pitch",
       "noticeable" : 0.1,
       "unit" : "fraction"
     }

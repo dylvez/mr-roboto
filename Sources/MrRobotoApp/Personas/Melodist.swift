@@ -57,8 +57,15 @@ public struct Melodist: Persona {
     public static let notesPerBarCeiling = 8.0
     /// A tune has to stop somewhere.
     public static let restFloor = 0.1
-    /// How much of the tune has to be a figure you hear twice.
+    /// How much of the tune has to be a figure you hear twice: a quarter of its moves. Of eight-bar
+    /// phrases from 9,000 recorded melodies, three in five clear it (`Bench/genres/melody_ranges.py`);
+    /// a genre whose own melodies mostly do not moves the line, as it does every other.
     public static let motifFloor = 0.25
+
+    /// What a tune is sent back for before it is handed over: a note that fights the chord under
+    /// it, and nothing coming back. The rest of what the Melodist reads is a singer's limits, and
+    /// a synth line or an arpeggio is not held to them on the way in.
+    public static let rewrittenFor: Set<String> = ["melodist.lands-on-the-chord", "melodist.a-figure-comes-back"]
     /// A climax is one note, not a ceiling the tune keeps touching.
     public static let peakCeiling = 3.0
 
@@ -138,8 +145,8 @@ public struct Melodist: Persona {
                               noticeable: 1,
                               evidence: .cited([contour])),
             FeatureDefinition(.motifRatio, unit: "fraction",
-                              meaning: "the longest run of intervals that occurs twice, over all the tune's moves — the figure you sing back",
-                              engineField: "SongGraph.Melody.notes, longest repeated interval run over interval count",
+                              meaning: "the share of the tune's moves that lie in a figure heard twice — four notes or more, in the same rhythm and the same shape, at any pitch",
+                              engineField: "SongGraph.Melody.notes, the moves covered by a run of three that comes again, over all the moves",
                               noticeable: 0.1,
                               evidence: .cited([motif, goodBadUgly])),
         ],
@@ -422,11 +429,16 @@ public struct Melodist: Persona {
 
         openQuestions: [
             OpenQuestion("melodist.oq.motif-by-interval",
-                         question: "Is a repeated interval figure the right measure of a motif, or does it miss the rhythm?",
-                         encoded: "The longest run of intervals that occurs twice, ignoring how long the notes are.",
-                         alternative: "A motif is a rhythm as much as a shape — Superstition's figure repeats its rhythm while "
-                                    + "its pitches move — so the measure should be over pitch-and-duration pairs, which would "
-                                    + "count far fewer things as repeats and would need a tolerance rather than equality.",
+                         question: "Is a figure its rhythm and its shape, or its intervals?",
+                         encoded: "Its rhythm and its shape: a run of four notes or more whose gaps and directions come "
+                                + "again, at any pitch and with steps of any size — Superstition's figure repeats its "
+                                + "rhythm while its pitches move. Everything such a figure covers is counted, not only "
+                                + "the longest.",
+                         alternative: "A figure is its intervals, whatever rhythm they return in: a theme brought back in "
+                                    + "longer notes is still the theme. That was the measure here first, as the longest "
+                                    + "run of intervals heard twice, and it read a two-bar figure played four times as "
+                                    + "a fifth of a tune; as a share of the tune covered it would be worth reading "
+                                    + "beside this one.",
                          affects: ["melodist.a-figure-comes-back"],
                          evidence: .cited([superstition, motif])),
             OpenQuestion("melodist.oq.range-is-a-voice",
@@ -511,15 +523,19 @@ public struct Melodist: Persona {
                         + ". Land the long notes and pass through the rest."))
         }
 
-        let motif = observation.motifRatio
-        notes.append(PersonaReading(
-            rule: "melodist.a-figure-comes-back", feature: .motifRatio, value: motif,
-            holds: motif >= Melodist.motifFloor,
-            says: motif >= Melodist.motifFloor
-                ? String(format: "A figure comes back: %.0f%% of the tune is something you have heard.", motif * 100)
-                : motif > 0
-                    ? String(format: "Only %.0f%% of the tune comes back. State a figure and bring it again, moved if you like — that is what a listener sings.", motif * 100)
-                    : "Nothing comes back. State a figure and bring it again, moved if you like — that is what a listener sings."))
+        // Only a line with room for a figure is read for one: a bed of held chords, or six notes
+        // across sixteen bars, is not a tune that forgot to repeat itself.
+        if observation.hasRoomForAFigure {
+            let motif = observation.motifRatio
+            notes.append(PersonaReading(
+                rule: "melodist.a-figure-comes-back", feature: .motifRatio, value: motif,
+                holds: motif >= Melodist.motifFloor,
+                says: motif >= Melodist.motifFloor
+                    ? String(format: "A figure comes back: %.0f%% of the tune is something you have heard.", motif * 100)
+                    : motif > 0
+                        ? String(format: "Only %.0f%% of the tune comes back. State a figure — four notes in a rhythm — and bring it again, moved if you like: that is what a listener sings.", motif * 100)
+                        : "Nothing comes back. State a figure — four notes in a rhythm — and bring it again, moved if you like: that is what a listener sings."))
+        }
 
         let rest = observation.restRatio
         notes.append(PersonaReading(

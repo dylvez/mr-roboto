@@ -57,10 +57,15 @@ public struct ReadSongTool: DirectorTool {
             /// It is on the **output** rather than in the schema deliberately: a tool's result is not
             /// part of the request prefix, so saying where the audio is costs nothing in cache.
             public var mediaPath: String?
+            /// The part this one is a variation of, when it is one — the drums, for the drums with
+            /// no kick — and the treatment. It plays through that part's strip and instrument.
+            public var variationOf: String?
+            public var variation: String?
 
             enum CodingKeys: String, CodingKey {
-                case id, part, type, operation, author, note, key, tempo
+                case id, part, type, operation, author, note, key, tempo, variation
                 case mediaPath = "media_path"
+                case variationOf = "variation_of"
             }
         }
 
@@ -127,7 +132,9 @@ public struct ReadSongTool: DirectorTool {
                                          key: ReadSongTool.key(of: version).map { "\($0)" },
                                          tempo: ReadSongTool.tempo(of: version),
                                          mediaPath: ReadSongTool.path(of: version, song: song.id,
-                                                                     store: store))
+                                                                     store: store),
+                                         variationOf: song.variation(of: version.partID)?.of.description,
+                                         variation: song.variation(of: version.partID)?.name)
                       },
                       note: nil)
     }

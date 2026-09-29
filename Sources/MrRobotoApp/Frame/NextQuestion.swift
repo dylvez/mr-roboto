@@ -50,6 +50,10 @@ public enum NextMove: Equatable, Sendable {
     /// The library's list, unfolded: every song, for one the question did not name.
     case showLibrary
     case exportMaster
+    /// The loop arranged into a song: `AppState.developAndMaster`.
+    case develop
+    /// The song as it was before it was developed.
+    case putBackDevelopment
     case addToAlbum(AlbumID)
     /// The band's field, with a sentence ready in it and the column open. Nothing is sent: the
     /// band costs a request, and sending is yours.
@@ -66,6 +70,8 @@ public enum NextMove: Equatable, Sendable {
         case .songSettings: return "settings"
         case .showLibrary: return "library"
         case .exportMaster: return "export"
+        case .develop: return "develop"
+        case .putBackDevelopment: return "putBack"
         case .addToAlbum(let id): return "album|\(id.rawValue)"
         case .askBand(let text): return "ask|\(text)"
         }
@@ -208,7 +214,7 @@ enum NextAdvisor {
         }
         candidates.append(Candidate(option: NextOption(
             kind: "groove", title: "Paint a groove",
-            rationale: "Start on a feel, 33 of them on board, and paint the steps by hand.",
+            rationale: "Start on a feel, \(FeelLibrary.standard.count) of them on board, and paint the steps by hand.",
             move: .surface(Guidance.dockAction(for: .grid, in: song))), score: 9))
         candidates.append(Candidate(option: NextOption(
             kind: "chords", title: "Start from chords",
@@ -252,6 +258,25 @@ enum NextAdvisor {
                     rationale: "Optional: the bass is written to the key without them, and to them once they are there.",
                     move: .surface(chords)), score: 4))
             }
+        }
+        // The loop, arranged: offered once there is a loop worth arranging and until it has been.
+        // Two parts that play is a loop; three is one that is waiting to be a song.
+        if !fromTheBand, !app.isDeveloping, !app.isMastering, !Develop.isDeveloped(song), let development = app.development() {
+            let parts = Develop.loop(of: song).count
+            if parts >= 2 {
+                let seconds = StructureModel.seconds(bars: development.bars, tempo: song.tempo, timeSignature: song.timeSignature)
+                candidates.append(Candidate(option: NextOption(
+                    kind: "develop", title: "Develop it into a song",
+                    rationale: "Every section plays the same \(Guidance.count(parts, "part")). This is \(development.shape), "
+                        + "\(StructureModel.clock(seconds)), in \(development.form.words), each section playing the loop its own way.",
+                    move: .develop), score: parts >= 3 ? 7 : 4.5))
+            }
+        }
+        if !fromTheBand, app.canPutBackDevelopment, !app.isDeveloping, !app.isMastering {
+            candidates.append(Candidate(option: NextOption(
+                kind: "putBack", title: "Put it back as it was",
+                rationale: "The form and the mix from before it was developed. What was written for it stays in the song.",
+                move: .putBackDevelopment), score: 1.5))
         }
         // Finishing: a mixed, arranged song is ready to leave as a file, or to join a record.
         if !fromTheBand, !Guidance.mixes(in: song).isEmpty, song.sections.contains(where: { !$0.stitch.isEmpty }) {
@@ -354,7 +379,7 @@ enum NextAdvisor {
         case .chords: return ["chords"]
         case .bass: return ["bass"]
         case .kit, .dust: return ["sound"]
-        case .arrange: return ["arrange"]
+        case .arrange: return ["arrange", "develop"]
         case .words: return ["words"]
         case .sing: return ["sing", "comp"]
         case .mix: return ["mix", "master"]
@@ -366,9 +391,9 @@ enum NextAdvisor {
         switch version.kind {
         case .groove: return ["bass", "chords", "play", "arrange"]
         case .sample: return ["regroove", "groove"]
-        case .bassline: return ["arrange", "chords", "play"]
-        case .progression: return ["bass", "arrange"]
-        case .melody: return ["words", "arrange"]
+        case .bassline: return ["develop", "arrange", "chords", "play"]
+        case .progression: return ["bass", "develop", "arrange"]
+        case .melody: return ["develop", "words", "arrange"]
         case .lyric: return ["sing", "words"]
         case .audio(let audio):
             if audio.comp != nil { return ["mix", "play"] }
@@ -403,7 +428,7 @@ enum NextAdvisor {
         case "bass": return "Bassist"
         case "chords": return "Harmonist"
         case "words": return "Lyricist"
-        case "arrange", "sing", "comp": return "Producer"
+        case "arrange", "develop", "putBack", "sing", "comp": return "Producer"
         case "mix", "master", "export": return "Engineer"
         case "play", "album": return "Peer"
         default: return "Producer"
@@ -420,6 +445,8 @@ enum NextAdvisor {
         case "bass": return "a bass line"
         case "chords": return "chords"
         case "arrange": return "arrange it"
+        case "develop": return "develop it into a song"
+        case "putBack": return "put it back as it was"
         case "words": return "the words"
         case "sing": return "sing over it"
         case "comp": return "comp the takes"
@@ -557,6 +584,10 @@ extension AppState {
             regions.setCollapsed(false, for: .library)
         case .exportMaster:
             MrRobotoApp.export(self, what: "Exporting the master…") { try await Export.master(self, to: $0).wav }
+        case .develop:
+            Task { await developAndMaster() }
+        case .putBackDevelopment:
+            putBackDevelopment()
         case .addToAlbum(let id):
             if addSong(song?.id ?? SongID(), to: id) { _ = openAlbum(id) }
         case .askBand(let text):

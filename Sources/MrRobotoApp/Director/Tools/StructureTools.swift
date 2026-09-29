@@ -73,8 +73,11 @@ enum FormTools {
     /// on naming only those three after the transport learned to play the chords and the tune — so
     /// every form the Director wrote came out without harmony in it.
     static func defaultStitch(in song: Song) -> [Lane] {
+        // The loop, not a variation of it written since for one section.
         StructureModel.playableTypes.compactMap { type in
-            song.versions.last { $0.type == type && StructureModel.plays($0) }.map { Lane(part: $0.partID) }
+            (song.versions.last { $0.type == type && StructureModel.plays($0) && !song.isVariation($0.partID) }
+                ?? song.versions.last { $0.type == type && StructureModel.plays($0) })
+                .map { Lane(part: $0.partID) }
         }
     }
 

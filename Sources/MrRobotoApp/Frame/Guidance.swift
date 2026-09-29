@@ -595,8 +595,21 @@ public enum Guidance {
         song.versions.filter { $0.type == .sample }
     }
 
+    /// Versions of one kind with the variations first, each group in the order the graph holds it.
+    ///
+    /// Nearly every caller of these lists takes the last: the newest groove is what a bass line is
+    /// written under, what the Grid opens on, what a new section plays. A variation — the intro's
+    /// thinned drums — is written after the loop it came from, and would be that newest; and the
+    /// loop is what all of those mean. So the variations go first, and "the newest" is the newest
+    /// part of its own.
+    static func mainsLast(_ versions: [PartVersion], in song: Song) -> [PartVersion] {
+        let varied = Set(song.versions.lazy.filter { $0.variation != nil }.map(\.partID))
+        guard !varied.isEmpty else { return versions }
+        return versions.filter { varied.contains($0.partID) } + versions.filter { !varied.contains($0.partID) }
+    }
+
     public static func grooves(in song: Song) -> [PartVersion] {
-        song.versions.filter { $0.type == .groove }
+        mainsLast(song.versions.filter { $0.type == .groove }, in: song)
     }
 
     public static func sounds(in song: Song) -> [PartVersion] {
@@ -624,15 +637,15 @@ public enum Guidance {
     }
 
     public static func basslines(in song: Song) -> [PartVersion] {
-        song.versions.filter { $0.type == .bassline }
+        mainsLast(song.versions.filter { $0.type == .bassline }, in: song)
     }
 
     public static func progressions(in song: Song) -> [PartVersion] {
-        song.versions.filter { $0.type == .progression }
+        mainsLast(song.versions.filter { $0.type == .progression }, in: song)
     }
 
     public static func melodies(in song: Song) -> [PartVersion] {
-        song.versions.filter { $0.type == .melody }
+        mainsLast(song.versions.filter { $0.type == .melody }, in: song)
     }
 
     /// A chop already cut from this audio version, if there is one.

@@ -841,11 +841,14 @@ public struct SongPlayback: Equatable, Sendable {
                                         missingMedia: &missingMedia) else { continue }
                 // A groove on a kit is played to the section's edges: a fill into the next section,
                 // a crash coming out of the last. A groove on a chop is left as cut — its "toms" are
-                // slices of a record, and a fill made of them would be noise.
+                // slices of a record, and a fill made of them would be noise. A section that says
+                // how it leaves or enters is taken at its word: a build runs its roll to the bar
+                // line, and a fill down the toms over the last of it would be the roll stopping.
                 if song.playsFills, voice.kit == nil, case .groove(let groove) = voice.play {
                     voice.play = .groove(SectionFill.arranged(
                         groove, bars: section.lengthInBars, beatsPerBar: song.timeSignature.beatsPerBar,
-                        fillIntoNext: index < song.sections.count - 1, crashIn: index > 0))
+                        fillIntoNext: index < song.sections.count - 1 && fills(out: section),
+                        crashIn: index > 0 && crashes(into: section)))
                 }
                 voices.append(voice)
             }
@@ -857,30 +860,44 @@ public struct SongPlayback: Equatable, Sendable {
         return out
     }
 
+    /// Whether a section's drums fill into the next: yes, unless it says it leaves another way.
+    static func fills(out section: Section) -> Bool {
+        section.transitionOut.map { $0.kind == .fill } ?? true
+    }
+
+    /// Whether a section opens on a crash: yes, unless it says it is cut to.
+    static func crashes(into section: Section) -> Bool {
+        section.transitionIn.map { $0.kind != .cut } ?? true
+    }
+
     /// One version as a thing that sounds, or nil when it is not one.
     ///
     /// The sound is resolved here, against the part, so every voice carries the instrument it will
     /// actually play on and nothing downstream has to work it out again. That is what lets a pad
     /// hold the chords while a lead plays the tune: two parts, two picks, two samplers.
+    ///
+    /// A variation plays as the part it varies (`Song.strip(of:)`): the breakdown's drums are the
+    /// drums, on the drums' strip, machine and sampler, and only the steps are different.
     static func voice(for version: PartVersion, in song: Song, mediaURL: (MediaRef) -> URL?,
                       missingMedia: inout Bool) -> Voice? {
+        let part = song.strip(of: version.partID)
         switch version.kind {
         case .groove(let groove) where groove.patterns.contains(where: { $0.steps.contains { $0 != .rest } }):
-            return .groove(groove, version: version.id, part: version.partID,
+            return .groove(groove, version: version.id, part: part,
                            name: PartLabel.title(of: version),
-                           sound: machineID(for: version.partID, in: song),
-                           kit: kit(for: version.partID, in: song, mediaURL: mediaURL))
+                           sound: machineID(for: part, in: song),
+                           kit: kit(for: part, in: song, mediaURL: mediaURL))
         case .bassline(let line) where !line.notes.isEmpty:
-            return .bassline(line, version: version.id, part: version.partID,
+            return .bassline(line, version: version.id, part: part,
                              name: PartLabel.title(of: version), sound: line.sound)
         case .progression(let progression) where !progression.chords.isEmpty:
-            return .progression(progression, version: version.id, part: version.partID,
+            return .progression(progression, version: version.id, part: part,
                                 name: PartLabel.title(of: version),
-                                sound: instrumentID(for: version.partID, in: song))
+                                sound: instrumentID(for: part, in: song))
         case .melody(let melody) where !melody.notes.isEmpty:
-            return .melody(melody, version: version.id, part: version.partID,
+            return .melody(melody, version: version.id, part: part,
                            name: PartLabel.title(of: version),
-                           sound: instrumentID(for: version.partID, in: song))
+                           sound: instrumentID(for: part, in: song))
         case .sample(let sample) where !sample.slices.isEmpty:
             if let chop = chopTrack(version, sample, in: song, mediaURL: mediaURL) { return .chop(chop) }
             missingMedia = true
@@ -943,6 +960,8 @@ public struct SongPlayback: Equatable, Sendable {
     /// registry answers.
     private static func sound(in song: Song, for part: PartID?,
                               recognisedBy known: (String) -> Bool) -> String? {
+        // A variation's sound is the sound of the part it varies.
+        let part = part.map(song.strip(of:))
         for version in song.versions.reversed() {
             guard case .sound(let sound) = version.kind, sound.forPart == part else { continue }
             if known(sound.instrument) { return sound.instrument }

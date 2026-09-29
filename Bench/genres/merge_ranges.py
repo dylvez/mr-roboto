@@ -11,10 +11,17 @@ app's own peak-to-RMS; they are replaced by the fitted relation the loudness pas
 lufs.to's per-track data, applied over each genre's measured loudness.
 
     python3 Bench/genres/merge_ranges.py Sources/MrRobotoApp/Resources/Genres
+
+A feature named after `--again` is measured again rather than kept: what the Melodist counts as a
+figure coming back changed on 2026-09-29 (rhythm and shape, everything covered, where it had been
+the longest run of intervals), and every range stated on the old measure was restated on the new.
+
+    python3 Bench/genres/merge_ranges.py Sources/MrRobotoApp/Resources/Genres --again melody.motif.ratio
 """
 import json, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 DST = sys.argv[1]
+AGAIN = set(sys.argv[sys.argv.index("--again") + 1:]) if "--again" in sys.argv else set()
 LAKH = "https://colinraffel.com/projects/lmd/"
 TAGTRAUM = "https://www.tagtraum.com/msd_genre_datasets.html"
 
@@ -64,7 +71,9 @@ for name in sorted(os.listdir(DST)):
         label, caveat = MELODY[p["id"]]
         m = melody[label]
         for feature, stats in sorted(m["features"].items()):
-            if feature in have: continue
+            if feature in have and feature not in AGAIN: continue
+            if feature in have:
+                p["ranges"] = [x for x in p["ranges"] if x["feature"] != feature]
             unit, places = UNITS[feature]
             r = lambda x: round(x, places) if places else int(round(x))
             p["ranges"].append({"feature": feature, "low": r(stats["low"]), "high": r(stats["high"]),

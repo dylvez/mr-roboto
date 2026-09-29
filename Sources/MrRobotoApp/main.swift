@@ -81,6 +81,13 @@ struct FrameCommands: Commands {
             Button("Close Song") { app.closeSong() }
                 .keyboardShortcut("w", modifiers: [.command, .shift])
                 .disabled(app.song == nil)
+            // The loop arranged into a song: what the Structure surface's chip and the band's
+            // question offer, from anywhere.
+            Button(app.isMastering ? "Reading the Master…" : "Develop the Song") { Task { await app.developAndMaster() } }
+                .keyboardShortcut("d", modifiers: [.command, .shift])
+                .disabled(!app.canDevelop || app.isDeveloping || app.isMastering)
+            Button("Put the Song Back as It Was") { app.putBackDevelopment() }
+                .disabled(!app.canPutBackDevelopment || app.isDeveloping || app.isMastering)
             Divider()
             // The dialog first: cancelling it opens nothing, and choosing a file opens the Record
             // surface already importing it. The surface's own well still takes a drop.

@@ -33,10 +33,26 @@ public protocol StructureHosting: AnyObject {
     /// Opens the Lyrics surface, where a stanza is labelled for a section. A host with no frame
     /// does nothing.
     func openLyrics()
+    /// What developing the song would do, for the surface to offer. Nil when nothing plays.
+    func development() -> Development?
+    /// Develops the song: the arrangement written and kept, the master brought to its loudness.
+    func develop() async
+    /// Whether a development is being written now, or its master read.
+    var isDeveloping: Bool { get }
+    var isMastering: Bool { get }
+    /// Whether the song's last development can be put back.
+    var canPutBackDevelopment: Bool { get }
+    func putBackDevelopment()
 }
 
 public extension StructureHosting {
     func openLyrics() {}
+    func development() -> Development? { nil }
+    func develop() async {}
+    var isDeveloping: Bool { false }
+    var isMastering: Bool { false }
+    var canPutBackDevelopment: Bool { false }
+    func putBackDevelopment() {}
 }
 
 /// The Structure surface's model: the sections as a working copy, edited in place and kept as
@@ -68,6 +84,10 @@ public final class StructureModel {
         /// A chop only plays on the transport once it has been dirtied; a clean one is the lane's
         /// raw material. Said here so the surface can say it too.
         public var plays: Bool
+        /// The part this one is a variation of — the drums, for the drums with no kick — or nil
+        /// for a part of its own. A section plays one of a part and its variations: they are one
+        /// player.
+        public var varies: PartID?
 
         /// "Groove", "Bass", "Chords" — what this is, in one word, so a row of chips is readable
         /// without opening any of them. The version titles are sentences: a groove of this app's
@@ -322,6 +342,36 @@ public final class StructureModel {
         autoKeep.schedule { [weak self] in self?.keep() }
     }
 
+    // MARK: Developing
+
+    /// What Develop would do to the form as it stands, in the words its chip's help says: nil when
+    /// the song holds nothing that plays.
+    public var developOffer: String? {
+        guard let development = host.development() else { return nil }
+        let seconds = Self.seconds(bars: development.bars, tempo: tempo, timeSignature: timeSignature)
+        let form = development.plays.map { "\($0.name) \($0.bars)" }.joined(separator: " · ")
+        let writes = development.written.isEmpty ? "Nothing new to write"
+            : "Writes \(development.written.count) variation\(development.written.count == 1 ? "" : "s") of the parts the song has"
+        return "\(form) — \(development.bars) bars, \(Self.clock(seconds)), \(development.form.words). "
+            + "\(writes); each section plays the loop its own way, with a level of its own. Put it back undoes it."
+    }
+
+    public var isDeveloping: Bool { host.isDeveloping }
+    public var isMastering: Bool { host.isMastering }
+    public var canPutBackDevelopment: Bool { host.canPutBackDevelopment }
+
+    /// Keeps the form as it stands, then develops from it.
+    public func develop() async {
+        guard keep() else { return }
+        await host.develop()
+    }
+
+    public func putBackDevelopment() {
+        autoKeep.cancel()
+        revert()
+        host.putBackDevelopment()
+    }
+
     /// The song's genre, asked when the form is offered: its typical arrangement is one press away.
     public var genre: @MainActor () -> GenreProfile? = { nil }
 
@@ -364,9 +414,15 @@ public final class StructureModel {
     public var defaultStitch: [Lane] {
         var out: [Lane] = []
         for type in Self.playableTypes {
-            if let layer = layers.last(where: { $0.type == type && $0.plays }) { out.append(Lane(part: layer.id)) }
+            if let layer = newest(of: type) { out.append(Lane(part: layer.id)) }
         }
         return out
+    }
+
+    /// The newest part of a kind that plays: the loop, before any variation of it written for one
+    /// section.
+    private func newest(of type: PartType) -> Layer? {
+        layers.last { $0.type == type && $0.plays && $0.varies == nil } ?? layers.last { $0.type == type && $0.plays }
     }
 
     public func remove(_ id: SectionID) {
@@ -432,14 +488,27 @@ public final class StructureModel {
     /// chips lit and one part sounding was a lie this had to prevent. A section plays everything it
     /// names now, so two grooves is a thing you can mean — and a part is in a section once or not
     /// at all, which is the only rule left.
+    ///
+    /// One exception: a part and its variations. The drums and the drums with no kick are one
+    /// player on one strip, so choosing one for a section takes the other out of it, in its place.
     public func toggle(_ part: PartID, in id: SectionID) {
+        let family = family(of: part)
         edit("toggle") { update(id) { section in
             if let at = section.stitch.firstIndex(where: { $0.part == part }) {
                 section.stitch.remove(at: at)
+            } else if let at = section.stitch.firstIndex(where: { family.contains($0.part) }) {
+                section.stitch[at] = Lane(part: part)
+                section.stitch.removeAll { $0.part != part && family.contains($0.part) }
             } else {
                 section.stitch.append(Lane(part: part))
             }
         } }
+    }
+
+    /// A part, the part it varies and that part's other variations.
+    func family(of part: PartID) -> Set<PartID> {
+        let root = layer(part)?.varies ?? part
+        return Set([root] + layers.filter { $0.varies == root }.map(\.id))
     }
 
     /// A section naming each part once.
@@ -494,7 +563,7 @@ public final class StructureModel {
     private func fillWithoutRecording(_ id: SectionID) {
         guard let section = sections.first(where: { $0.id == id }) else { return }
         for type in missing(from: section) {
-            guard let layer = layers.last(where: { $0.type == type && $0.plays }) else { continue }
+            guard let layer = newest(of: type) else { continue }
             update(id) { section in
                 if !section.stitch.contains(where: { $0.part == layer.id }) { section.stitch.append(Lane(part: layer.id)) }
             }
@@ -551,8 +620,9 @@ public final class StructureModel {
         // stitch chose between versions. Nothing chooses now: a lane follows its part.
         song.partIDs.compactMap { partID in
             guard let newest = song.latestVersion(of: partID), playableTypes.contains(newest.type) else { return nil }
+            let root = song.strip(of: partID)
             return Layer(id: partID, version: newest.id, title: PartLabel.title(of: newest),
-                         type: newest.type, plays: plays(newest))
+                         type: newest.type, plays: plays(newest), varies: root == partID ? nil : root)
         }
     }
 

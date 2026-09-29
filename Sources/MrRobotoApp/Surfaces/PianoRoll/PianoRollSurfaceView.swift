@@ -154,7 +154,7 @@ struct PianoRollSurfaceView: View {
             }
             VStack(alignment: .leading, spacing: 3) {
                 RollLabel("Sound")
-                // Played by hand, then programmed: fifteen chips in one row was a wall.
+                // Played by hand, then programmed: sixteen chips in one row was a wall.
                 ForEach(BassVoiceSpec.Family.allCases, id: \.self) { family in
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
                         Text(family == .played ? "Played" : "Synth")

@@ -169,6 +169,27 @@ struct FrameRenderTests {
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-structure-verse")
     }
 
+    @Test("a developed song on the Structure surface: the variations as chips, the intensity along each block, at 1440 and at the minimum")
+    func developed() throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        let loop = try DevelopFixture.loop(genre: "breakbeat")
+        let app = app(loop.song)
+        // Before: the loop in a new song's form, with Develop offered.
+        let id = try #require(app.perform(SurfaceAction(surface: .structure, title: loop.song.title)))
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-develop-before")
+        try write(FrameView(app: app), size: CGSize(width: FrameLayout.minimumWindowWidth(collapsed: app.regions.collapsed),
+                                                    height: FrameLayout.minimumWindowHeight), name: "frame-develop-before-narrow")
+        let development = try #require(app.develop())
+        #expect(development.sections.count == 9)
+        let model = SurfaceWiring.shared.structureModel(for: app.bench.items.first { $0.id == id }!, app: app)
+        #expect(model.sections == development.sections)
+        #expect(model.canPutBackDevelopment)
+        model.select(model.sections.first { $0.name == "Breakdown" }?.id)
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-develop")
+        try write(FrameView(app: app), size: CGSize(width: FrameLayout.minimumWindowWidth(collapsed: app.regions.collapsed), height: FrameLayout.minimumWindowHeight), name: "frame-develop-narrow")
+    }
+
     @Test("the library with an idea, a sample, a record and an album; the Album surface open")
     func library() throws {
         FontRegistration.registerBundledFonts()

@@ -6,7 +6,7 @@ import SwiftUI
 
 /// The instrument's visual identity, as a set of interchangeable themes.
 ///
-/// One `Theme` value carries every colour token and every typeface stack the twenty-two surfaces
+/// One `Theme` value carries every colour token and every typeface stack the surfaces
 /// draw with. Exactly one theme is current at a time; `Design.Palette` and `Design.Typography` read
 /// through it, so a surface still writes `Design.Palette.accent` and never knows a theme exists.
 ///

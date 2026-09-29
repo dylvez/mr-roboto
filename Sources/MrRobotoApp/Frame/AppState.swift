@@ -269,7 +269,7 @@ public final class AppState {
 
     // MARK: Bench
 
-    /// At most three open surfaces, oldest unpinned replaced. Owned here, mutated through `openSurface`,
+    /// One surface of each kind, open until you close it. Owned here, mutated through `openSurface`,
     /// `closeSurface` and `setPinned` so every change is logged. The bench draws the one you are
     /// working in, plus anything pinned — see `Bench.visible`.
     public let bench: Bench
@@ -358,6 +358,17 @@ public final class AppState {
     public var director: [Proposal] = []
     /// Options waved away with "Not this", for the song that is open: "stage|kind".
     public internal(set) var nextDismissed: Set<String> = []
+
+    /// What the open song was before it was last developed, for putting it back. Held for the
+    /// session and for that song: see `AppState.develop`.
+    public internal(set) var beforeDevelopment: BeforeDevelopment?
+
+    /// True while a development is being written.
+    public internal(set) var isDeveloping = false
+
+    /// True while the master is being brought to a loudness: the song bounced and read, which
+    /// takes seconds a minute of song. The song plays and can be worked on meanwhile.
+    public internal(set) var isMastering = false
     @ObservationIgnored private var storedNextPreferences: NextPreferences?
     /// What you choose when the band asks what next, remembered across launches.
     public var nextPreferences: NextPreferences {
@@ -908,6 +919,37 @@ public final class AppState {
         }
     }
 
+    /// Several versions and the form, kept as one move: how an arrangement lands. One read of the
+    /// song by the transport and one save, and no line in the rail per version — the caller says
+    /// what was done, once. Nothing joins the form by itself: the form given is the form.
+    @discardableResult
+    func keep(_ versions: [PartVersion], arranged sections: [Section]) -> Bool {
+        guard var current = song else {
+            note(.session, "No song open; nothing to arrange")
+            return false
+        }
+        do {
+            try current.append(contentsOf: versions)
+        } catch {
+            note(.session, "Could not keep the arrangement", detail: "\(error)")
+            return false
+        }
+        current.sections = sections.map { section in
+            var section = section
+            section.lengthInBars = max(1, section.lengthInBars)
+            section.stitch = section.stitch.filter { current.latestVersion(of: $0.part) != nil }
+            return section
+        }
+        song = current
+        hasUnsavedChanges = true
+        if activeSection.map({ id in current.sections.contains { $0.id == id } }) != true {
+            activeSection = current.sections.first?.id
+        }
+        refreshPlayback()
+        scheduleAutosave()
+        return true
+    }
+
     /// The second line of a ledger row: what made this version, who made it, and what from.
     public func provenanceLine(for version: PartVersion) -> String {
         var pieces = [version.operation, version.author.description]
@@ -963,8 +1005,8 @@ public final class AppState {
 
     // MARK: Bench
 
-    /// Opens a surface on the bench, retiring the oldest unpinned one when it is full (the `Bench`'s own
-    /// rule). Returns the id, which is also the key for `bound(for:)`.
+    /// Opens a surface on the bench, or turns the one of its kind that is already open to what is
+    /// bound. Returns the id, which is also the key for `bound(for:)`.
     /// Whether an open surface is holding work that has not been kept. The wiring knows, because
     /// it holds the models; a test with no wiring answers no for everything.
     @ObservationIgnored var hasUnkeptChanges: (BenchItem) -> Bool = { _ in false }
@@ -1467,8 +1509,11 @@ public final class AppState {
         // but does not start playing on top of the groove a section already has. It used to join
         // every section, so three bass lines written to compare all played at once. Where every
         // section already has one, the part's own surface offers to use it instead.
+        // And, in a song that has been developed, only into the sections that kind of part plays
+        // in: an intro arranged without its bass is not where the next bass line goes.
         var joined = 0
-        for index in song.sections.indices where !plays(kind: version.type, in: song.sections[index], of: song) {
+        for index in song.sections.indices where !plays(kind: version.type, in: song.sections[index], of: song)
+            && Develop.wants(version.type, in: song.sections[index], of: song) {
             song.sections[index].stitch.append(Lane(part: version.partID))
             joined += 1
         }

@@ -400,15 +400,6 @@
     },
     {
       "evidence": {
-        "inferred": "crest = 5.28 - 0.743 x integrated LUFS, the relation fitted across about 2,500 tracks' peak-minus-RMS on lufs.to (the app's own crest measure), applied over Contemporary pop's measured -11.2 to -8.1 LUFS; replaces a first-pass range taken from a general remark"
-      },
-      "feature": "mix.crest.db",
-      "high": 13.6,
-      "low": 11.3,
-      "unit": "dB"
-    },
-    {
-      "evidence": {
         "cited": [
           "https://colinraffel.com/projects/lmd/",
           "https://www.tagtraum.com/msd_genre_datasets.html"
@@ -419,19 +410,6 @@
       "low": 4,
       "typical": 7,
       "unit": "semitones"
-    },
-    {
-      "evidence": {
-        "cited": [
-          "https://colinraffel.com/projects/lmd/",
-          "https://www.tagtraum.com/msd_genre_datasets.html"
-        ]
-      },
-      "feature": "melody.motif.ratio",
-      "high": 0.31,
-      "low": 0.09,
-      "typical": 0.16,
-      "unit": "fraction of the tune"
     },
     {
       "evidence": {
@@ -484,6 +462,28 @@
       "low": 0.51,
       "typical": 0.73,
       "unit": "fraction of moves"
+    },
+    {
+      "evidence": {
+        "inferred": "crest = 5.28 - 0.743 x integrated LUFS, the relation fitted across about 2,500 tracks' peak-minus-RMS on lufs.to (the app's own crest measure), applied over Contemporary pop's measured -11.2 to -8.1 LUFS; replaces a first-pass range taken from a general remark"
+      },
+      "feature": "mix.crest.db",
+      "high": 13.6,
+      "low": 11.3,
+      "unit": "dB"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.motif.ratio",
+      "high": 0.9,
+      "low": 0.0,
+      "typical": 0.41,
+      "unit": "fraction of the tune"
     }
   ],
   "references": [

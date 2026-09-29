@@ -112,27 +112,67 @@ public struct MelodyObservation: Hashable, Sendable {
         return Double(notes.filter { $0.pitch.midi == high }.count)
     }
 
-    /// The longest run of notes whose shape appears again later, as a share of the tune.
-    ///
-    /// Shape rather than pitch: the intervals, so a figure repeated a third up still counts. This
-    /// is what makes a tune a tune rather than a walk, and what a listener sings back.
-    public var motifRatio: Double {
-        let steps = intervals
-        guard steps.count >= 4 else { return 0 }
-        var best = 0
-        // Longest run of intervals that occurs at least twice, checked from long to short.
-        for length in stride(from: min(8, steps.count / 2), through: 2, by: -1) {
-            for start in 0...(steps.count - length) {
-                let figure = Array(steps[start..<(start + length)])
-                var found = 0
-                for other in 0...(steps.count - length) where Array(steps[other..<(other + length)]) == figure {
-                    found += 1
-                }
-                if found >= 2 { best = max(best, length) }
-            }
-            if best > 0 { break }
+    /// One move of a tune: which way it goes to the next note, and how long until it.
+    struct Move: Hashable {
+        /// Up, down or the same note again: 1, -1, 0.
+        var direction: Int
+        /// In beats, to the sixteenth.
+        var gap: Double
+    }
+
+    var moves: [Move] {
+        zip(notes, notes.dropFirst()).map { a, b in
+            Move(direction: (b.pitch.midi - a.pitch.midi).signum(),
+                 gap: ((b.start - a.start) * 4).rounded(.toNearestOrEven) / 4)
         }
-        return Double(best) / Double(steps.count)
+    }
+
+    /// The fewest moves that make a figure: three, which is four notes. Two notes in a rhythm come
+    /// back by accident in any tune.
+    public static let shortestFigure = 3
+
+    /// The fewest notes a line has before it is read for a figure, and the fewest a bar. A pad
+    /// holding a chord every four bars has no figure in it and is not short of one.
+    public static let fewestNotesForAFigure = 8
+
+    /// Whether the line is busy enough to have a figure in it at all.
+    public var hasRoomForAFigure: Bool {
+        notes.count >= Self.fewestNotesForAFigure && notesPerBar >= 1
+    }
+
+    /// How much of the tune is a figure heard twice: the share of its moves that lie in a run of
+    /// three or more that comes again later — the statement and every return of it.
+    ///
+    /// A figure is its rhythm and its shape: the time between the notes, and which way each one
+    /// goes. Not its pitches, so a figure brought back a third up is the figure; and not the size
+    /// of its steps, so the answer that ends a tone lower than the question did is still the
+    /// question coming back. The same notes in another rhythm are something else.
+    ///
+    /// It used to be the *longest* run of intervals that occurred twice, over all the moves, and
+    /// no longer than eight. A tune of forty notes could not reach a quarter on it however much
+    /// came back — "the same two-bar figure four times" read 19% — and eight-bar phrases of 9,000
+    /// recorded melodies read 16% at the median (`Bench/genres/melody_ranges.py`). The Melodist's
+    /// floor was a quarter, so it flagged nearly every tune anyone wrote.
+    public var motifRatio: Double {
+        let moves = moves
+        let shortest = Self.shortestFigure
+        guard moves.count >= 4, moves.count >= shortest * 2 else { return 0 }
+        var heard = [Bool](repeating: false, count: moves.count)
+        for a in 0...(moves.count - shortest) {
+            var b = a + shortest
+            while b <= moves.count - shortest {
+                var length = 0
+                while b + length < moves.count, a + length < b, moves[a + length] == moves[b + length] { length += 1 }
+                if length >= shortest {
+                    for offset in 0..<length {
+                        heard[a + offset] = true
+                        heard[b + offset] = true
+                    }
+                }
+                b += 1
+            }
+        }
+        return Double(heard.count { $0 }) / Double(moves.count)
     }
 
     /// The tune's notes as scale degrees, for the sentence.

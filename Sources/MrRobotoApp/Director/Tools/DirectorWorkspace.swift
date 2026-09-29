@@ -137,6 +137,14 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     /// Places the open song in a genre by a profile's id, name or alias; "" to leave it to be
     /// guessed. False with no song open or no such genre.
     @discardableResult func setGenre(_ name: String) -> Bool
+
+    // Developing: the loop arranged, as one move.
+
+    /// Develops the open song in the form given, or the one it would choose, and brings the
+    /// master to its loudness when this workspace can render. Nil when nothing in the song plays.
+    func develop(form: [(name: String, bars: Int)]?) async -> DevelopmentResult?
+    /// The song as it was before it was last developed. False when there is nothing to put back.
+    @discardableResult func putBackDevelopment() -> Bool
 }
 
 extension DirectorWorkspace {
@@ -171,6 +179,13 @@ public final class AppStateWorkspace: DirectorWorkspace {
     public func keepSaid(_ records: [SaidRecord]) { app.keepSaid(records) }
 
     public func setGenre(_ name: String) -> Bool { app.setGenre(name, by: .director) }
+
+    public func develop(form: [(name: String, bars: Int)]?) async -> DevelopmentResult? {
+        await app.developAndMaster(form: form, by: .director)
+    }
+
+    @discardableResult
+    public func putBackDevelopment() -> Bool { app.putBackDevelopment(by: .director) }
 
     public func version(_ id: VersionID) -> PartVersion? { app.version(id) }
 
@@ -386,6 +401,32 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
         return true
     }
     public let store: LibraryStore?
+
+    /// The form and the mix from before the last development, as the frame keeps them.
+    private var beforeDevelopment: (sections: [Section], mix: Mix?)?
+
+    /// Nothing to render with, so the arrangement is kept and no loudness is read.
+    public func develop(form: [(name: String, bars: Int)]?) async -> DevelopmentResult? {
+        guard var current = song,
+              let development = Develop.plan(for: current, form: form, genre: GenreBook.standard.genre(of: current)?.profile) else { return nil }
+        let before = (current.sections, Guidance.mix(in: current))
+        guard (try? current.append(contentsOf: development.versions)) != nil else { return nil }
+        current.sections = development.sections
+        song = current
+        if let mix = development.mix { _ = recordMix(mix, note: "Each section's level, for the arrangement") }
+        beforeDevelopment = before
+        return DevelopmentResult(development: development, loudness: nil)
+    }
+
+    @discardableResult
+    public func putBackDevelopment() -> Bool {
+        guard let before = beforeDevelopment, song != nil else { return false }
+        beforeDevelopment = nil
+        song?.sections = before.sections
+        if let current = song, Guidance.mix(in: current) != before.mix { _ = recordMix(before.mix ?? .unity, note: "The mix as it was") }
+        return true
+    }
+
     /// Every line the tools wrote, in order.
     public private(set) var notes: [(text: String, detail: String?)] = []
 

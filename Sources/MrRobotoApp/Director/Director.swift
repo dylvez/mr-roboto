@@ -4,7 +4,7 @@ import SongGraph
 // The Director.
 //
 // One sentence in, one turn of work out. Everything underneath it already existed: the client
-// streams, the conversation loops, the fourteen tools run the engines. What this adds is the two
+// streams, the conversation loops, the tools in `DirectorTools` run the engines. What this adds is the two
 // ends — a user's sentence at one, and a validated result the frame can apply at the other — plus
 // the thing between them that has to be true whatever happens in the middle: **no ending leaves the
 // app half-done.**

@@ -221,7 +221,8 @@ extension WorkPath {
 
     /// Parts, not versions: a chop and its dusty version are one chop.
     static func count(_ kind: PathStep.Kind, in song: Song) -> Int {
-        func parts(_ versions: [PartVersion]) -> Int { Set(versions.map(\.partID)).count }
+        // A variation is its part played another way, not another part.
+        func parts(_ versions: [PartVersion]) -> Int { Set(versions.map { song.strip(of: $0.partID) }).count }
         switch kind {
         case .record: return Guidance.canShowRecord(in: song) ? 1 : 0
         case .stems: return Guidance.stems(in: song).count

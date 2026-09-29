@@ -179,8 +179,9 @@ public struct OpenSurfaceTool: DirectorTool {
     public let name = "open_surface"
     public var purpose: String {
         "Answer by opening one surface from the fixed catalog and binding it to part versions the "
-        + "song holds. This is how you show something rather than describe it. The bench holds "
-        + "three; a fourth retires the oldest. Never more than one surface per thing you are saying."
+        + "song holds. This is how you show something rather than describe it. The bench holds one "
+        + "surface of each kind: opening a kind that is already open turns it to what you bind. "
+        + "One answer opens three at most, and never more than one surface per thing you are saying."
     }
     public var schema: DirectorJSON {
         Schema.object(StageChoiceBuilder.properties(

@@ -31,9 +31,9 @@ public protocol DirectorStage: AnyObject, Sendable {
     ///
     /// Opening happens *during* the turn rather than after it. A Compare that appears twenty
     /// seconds after you pressed return is a Compare you waited twenty seconds for; a Chop lane that
-    /// appears the moment the bar is cut is the instrument answering while it works. The bench's own
-    /// rule — three surfaces, oldest unpinned retired — is what keeps that from piling up, and it is
-    /// the rule the Director is held to rather than a second one.
+    /// appears the moment the bar is cut is the instrument answering while it works. The bench holds
+    /// one surface of each kind, so a second Grid turns the first rather than piling up beside it;
+    /// how many one answer may open is the pad's rule (`DirectorStagePad.maximumOpens`).
     @discardableResult
     func open(_ choice: DirectorSurfaceChoice) -> SurfaceID?
 
@@ -87,9 +87,8 @@ public final class AppStateStage: DirectorStage {
 /// The choices and proposals of the turn in flight.
 ///
 /// An actor because the tool loop runs every call in a turn concurrently: two `open_surface` calls
-/// in one round would otherwise race on the same array. It is also where rule 3 is counted — three
-/// surfaces is the bench's limit, and a turn that opens four has evicted its own answer before the
-/// user has read it.
+/// in one round would otherwise race on the same array. It is also where rule 3 is counted: one
+/// answer opens three surfaces at most, because a fourth is an answer nobody reads to the end of.
 public actor DirectorStagePad {
     /// What this turn opened, in the order it opened them.
     public private(set) var opened: [DirectorSurfaceChoice] = []

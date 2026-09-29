@@ -2,7 +2,7 @@
 
 The Melodist reads a written tune (`MelodyObservation`, Sources/MrRobotoApp/Personas/MelodyObservation.swift):
 its range, its largest leap, the share of moves that are steps, notes a bar, the share that is rest,
-how many times the top note is struck, and the longest interval figure that comes back. No survey
+how many times the top note is struck, and how much of it is a figure that comes back. No survey
 publishes those numbers by genre, so this measures them on melodies that exist: the melody tracks
 of the Lakh MIDI "matched" set (Raffel 2016), labelled by the tagtraum CD2 genre annotations of the
 Million Song Dataset (Schreiber 2015).
@@ -86,6 +86,26 @@ def skyline(notes):
     line = sorted(by_onset.values())
     return [(s, min(d, line[i + 1][0] - s) if i + 1 < len(line) else d, p) for i, (s, d, p) in enumerate(line)]
 
+SHORTEST_FIGURE = 3
+
+def motif_ratio(notes):
+    """MelodyObservation.motifRatio: the share of the tune's moves that lie in a figure heard twice.
+    A move is which way the tune goes to the next note and how long until it, to the sixteenth; a
+    figure is three moves or more — four notes — that come again later, in the same rhythm and the
+    same shape, at any pitch."""
+    direction = lambda d: (d > 0) - (d < 0)
+    moves = [(direction(b[2] - a[2]), round((b[0] - a[0]) * 4) / 4) for a, b in zip(notes, notes[1:])]
+    n = len(moves)
+    if n < 4: return 0.0
+    covered = [False] * n
+    for a in range(n - SHORTEST_FIGURE + 1):
+        for b in range(a + SHORTEST_FIGURE, n - SHORTEST_FIGURE + 1):
+            length = 0
+            while b + length < n and a + length < b and moves[a + length] == moves[b + length]: length += 1
+            if length >= SHORTEST_FIGURE:
+                for i in range(length): covered[a + i] = covered[b + i] = True
+    return sum(covered) / n
+
 def measure(notes, beats_per_bar):
     """MelodyObservation's arithmetic on one window, notes relative to its start."""
     pitches = [p for _, _, p in notes]
@@ -96,14 +116,7 @@ def measure(notes, beats_per_bar):
         start, end = max(s, covered), s + d
         if end > start: sounding += end - start
         covered = max(covered, end)
-    motif = 0.0
-    if len(intervals) >= 4:
-        best = 0
-        for size in range(min(8, len(intervals) // 2), 1, -1):
-            seen = defaultdict(int)
-            for i in range(len(intervals) - size + 1): seen[tuple(intervals[i:i + size])] += 1
-            if any(c >= 2 for c in seen.values()): best = size; break
-        motif = best / len(intervals)
+    motif = motif_ratio(notes)
     top = max(pitches)
     return {
         "melody.range.semitones": max(pitches) - min(pitches),

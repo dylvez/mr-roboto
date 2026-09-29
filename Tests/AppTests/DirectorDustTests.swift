@@ -317,7 +317,9 @@ struct DirectorDustToolboxTests {
         // for Gate C's Structure surface; once each for M3's Album and Merge surfaces; and once
         // for M4's Cast surface and again for its Lyrics surface.)
         // M5 (Booth, Takes) and M6 (Mixer, Master) joined `SurfaceKind`, so the two schemas that enumerate it changed bytes again.
-        ("open_surface", "e91ac35d002909d388110a955a646344da35f89c724128b0bbbebc24e12848a1"),
+        // And once on 2026-09-29, on purpose: its sentence still said the bench holds three and
+        // retires the oldest, which stopped being true when the bench became one of each kind.
+        ("open_surface", "240f1ecab4bc1a1801fe3fcb6129f6f3bd443f8ca498662e068709aa7e1c945d"),
         ("propose", "73b187c5950d5b6591791c0f66b0b45e6343337a630be23e6879859b8ee7c44f"),
     ]
 
@@ -331,7 +333,7 @@ struct DirectorDustToolboxTests {
     func existingSchemasAreByteIdentical() throws {
         let full = toolbox(stage: true)
         #expect(full.names == DirectorTools.names + DirectorTools.stageNames)
-        #expect(DirectorTools.names.count == 45)
+        #expect(DirectorTools.names.count == 46)
         #expect(DirectorTools.names[14] == "degrade_part")
         #expect(Array(DirectorTools.names.prefix(14)) == Self.before.prefix(14).map(\.0),
                 "the fourteen are in their old order, with nothing inserted among them")
@@ -339,7 +341,7 @@ struct DirectorDustToolboxTests {
         let appended: Set<String> = ["degrade_part", "set_progression", "write_bassline", "stitch_section", "arrange",
                                      "read_library", "adopt", "merge", "cast", "convene", "read_take", "read_mix", "set_mix", "master", "export", "read_album", "sequence", "release", "plan_mashup", "mashup", "start_song", "write_groove",
                                      "write_melody", "write_lyrics", "set_song", "set_instrument", "comp_takes", "open_song",
-                                     "list_genres", "read_genre", "set_genre"]
+                                     "list_genres", "read_genre", "set_genre", "develop"]
         let now = try full.tools.filter { !appended.contains($0.name) }.map { ($0.name, try Self.digest($0.definition)) }
         #expect(now.map(\.0) == Self.before.map(\.0))
         for ((name, hash), (_, old)) in zip(now, Self.before) {
@@ -348,7 +350,7 @@ struct DirectorDustToolboxTests {
         // And the frame-free list is the framed one's prefix, degrade_part included.
         let bare = toolbox(stage: false)
         #expect(Array(full.names.prefix(bare.names.count)) == bare.names)
-        #expect(bare.names.last == "set_genre")
+        #expect(bare.names.last == "develop")
     }
 
     @Test("Its schema stays inside every limit the API enforced, and spends none of the optional budget")

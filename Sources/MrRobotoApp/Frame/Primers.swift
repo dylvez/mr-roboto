@@ -55,7 +55,8 @@ public enum Primer {
                     "The song's form: sections in order, each a name, a length in bars and the parts stitched into it. "
                         + "A section plays each part's newest version and follows it as you work, so keeping a new take is "
                         + "heard where the old one was. Drag a block to reorder, set its bars, duplicate it; the form keeps "
-                        + "itself, and double-clicking a section in the transport plays from it.")
+                        + "itself, and double-clicking a section in the transport plays from it. Develop the song writes "
+                        + "the arrangement from the loop: each section playing it its own way, with a level of its own.")
         case .album:
             return ("Album",
                     "An album is songs in order, with the loudness targets they are delivered to and a clearance state for "

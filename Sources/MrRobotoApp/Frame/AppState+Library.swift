@@ -661,6 +661,8 @@ extension AppState {
     @discardableResult
     public func setMachine(_ id: String, for part: PartID? = nil, by author: Author = .user) -> Bool {
         guard let machine = SynthMachine.preset(id: id), let song else { return false }
+        // A variation plays on the drums of the part it varies: a pick made on one is that part's.
+        let part = part.map(song.strip(of:))
         // Against what the part is heard on, not the machine it last picked: a groove playing on a
         // chop is moved back to its old machine by picking that machine again.
         guard SongPlayback.drumSoundID(for: part, in: song) != machine.id else { return false }
@@ -675,6 +677,7 @@ extension AppState {
     @discardableResult
     public func setChop(_ chop: PartID, for part: PartID, by author: Author = .user) -> Bool {
         guard let song, song.versions.contains(where: { $0.partID == chop && $0.type == .sample }) else { return false }
+        let part = song.strip(of: part)
         let id = ChopSound.id(for: chop)
         guard SongPlayback.drumSoundID(for: part, in: song) != id else { return false }
         let chopName = song.versions.last { $0.partID == chop }.map(PartLabel.title(of:)) ?? "the chop"
@@ -748,6 +751,9 @@ extension AppState {
     @discardableResult
     public func setInstrument(_ id: String, for part: PartID? = nil, by author: Author = .user) -> Bool {
         guard let spec = InstrumentVoiceSpec.preset(id: id), let song else { return false }
+        // A variation plays on the instrument of the part it varies, so a pick made on one is
+        // that part's pick.
+        let part = part.map(song.strip(of:))
         guard SongPlayback.instrumentID(for: part, in: song) != spec.id else { return false }
         let name = part.flatMap { id in song.versions.last { $0.partID == id } }.map(PartLabel.title(of:))
         let note = name.map { "\(spec.name) for \($0)" } ?? "\(spec.name) for the chords and the tune"

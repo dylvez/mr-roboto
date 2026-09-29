@@ -88,6 +88,8 @@ public enum DirectorTools {
             ListGenresTool(workspace: workspace).erased(),
             ReadGenreTool(workspace: workspace).erased(),
             SetGenreTool(workspace: workspace).erased(),
+            // Developing, appended after the forty-five: the loop arranged into a song in one move.
+            DevelopTool(workspace: workspace).erased(),
         ]
         if let stage {
             let pad = pad ?? DirectorStagePad()
@@ -157,6 +159,8 @@ public enum DirectorTools {
         "list_genres",
         "read_genre",
         "set_genre",
+        // Developing, appended: the whole arrangement, written from the loop.
+        "develop",
     ]
 
     /// The two the frame adds. Appended after `names`, never among them: a session with no frame

@@ -61,7 +61,8 @@ struct StructureSurfaceView: View {
                     .help("Drop a section here to put it last.")
                     .accessibilityLabel("End of the form: drop a section here to put it last")
             }
-            HStack(spacing: 4) {
+            // Wrapping: six chips and the two below them are wider than a narrow bench.
+            FlowRow(spacing: 4) {
                 ForEach(StructureModel.Preset.allCases, id: \.self) { preset in
                     FormChip("+ \(preset.rawValue)", isOn: false) { model.add(preset) }
                         .help("Add a \(preset.bars)-bar \(preset.rawValue.lowercased()) after the selected section, playing the newest of everything")
@@ -70,6 +71,22 @@ struct StructureSurfaceView: View {
                 if let offered = model.genreForm {
                     FormChip("+ \(offered.genre) form", isOn: false) { model.addGenreForm() }
                         .help("Add \(offered.form.sections.map { "\($0.name) \($0.bars)" }.joined(separator: " · ")) — \(offered.form.bars) bars, the way \(offered.genre) is usually arranged")
+                }
+                // The whole arrangement, written from the loop: what each section plays, not only
+                // how long it is.
+                if model.isDeveloping {
+                    FormChip("Developing…", isOn: true) {}
+                        .help("Writing the arrangement")
+                } else if model.isMastering {
+                    FormChip("Reading the master…", isOn: true) {}
+                        .help("The song is being bounced and its master brought to its loudness. It plays, and can be worked on, meanwhile.")
+                } else if let offer = model.developOffer {
+                    FormChip("Develop the song", isOn: false) { Task { await model.develop() } }
+                        .help(offer)
+                }
+                if model.canPutBackDevelopment, !model.isDeveloping, !model.isMastering {
+                    FormChip("Put it back", isOn: false) { model.putBackDevelopment() }
+                        .help("The form and the mix as they were before the song was developed. What was written stays in the song.")
                 }
             }
             // What the whole form leaves out, above the section detail rather than inside it: a
@@ -144,6 +161,17 @@ private struct SectionBlock: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
             .frame(width: width, alignment: .leading)
+            // How much is happening, as a line along the foot of the block: read across the strip
+            // it is the song's shape. Only a developed form has one.
+            .overlay(alignment: .bottomLeading) {
+                if let intensity = section.intensity {
+                    Rectangle()
+                        .fill(isSelected ? Design.Palette.accent : Design.Palette.inkTertiary)
+                        .frame(width: max(2, (width - 2 * Design.Metric.corner) * min(1, max(0, intensity))), height: 2)
+                        .padding(.leading, Design.Metric.corner)
+                        .accessibilityLabel("Intensity \(Int((intensity * 100).rounded())) percent")
+                }
+            }
             .background(isSelected ? Design.Palette.accentSoft : Design.Palette.panelAlt,
                         in: RoundedRectangle(cornerRadius: Design.Metric.corner))
             .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
@@ -160,7 +188,8 @@ private struct SectionBlock: View {
         }
         .modifier(SectionDropTarget(model: model, section: section.id))
         .help(model.silence(of: section)
-              ?? "\(section.name) · \(section.lengthInBars) bars · plays \(kinds.joined(separator: ", "))")
+              ?? "\(section.name) · \(section.lengthInBars) bars · plays \(kinds.joined(separator: ", "))"
+                  + (section.intensity.map { " · intensity \(Int(($0 * 100).rounded()))%" } ?? ""))
     }
 }
 

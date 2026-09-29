@@ -1,4 +1,5 @@
 import AVFAudio
+import AudioEngine
 import Foundation
 import Instrument
 import MusicTheory
@@ -36,6 +37,10 @@ final class CompareAdapter: CompareHosting {
     /// The longest a single row is allowed to play. A Compare is judged in its first seconds — the
     /// Komma lesson — and a candidate that runs for a minute is a candidate you stop listening to.
     static let maximumSeconds: Double = 8
+
+    /// The longest a tune or the chords play. A phrase is longer than a bar of drums: a tune cut
+    /// at eight seconds is cut before its answer, which is the half you judge it by.
+    static let maximumPitchedSeconds: Double = 16
 
     /// Set once a candidate has been taken, so a second press does not append a second copy.
     private(set) var chosen: VersionID?
@@ -106,10 +111,47 @@ final class CompareAdapter: CompareHosting {
             await playAudio(audio.media, from: 0, to: CompareAdapter.maximumSeconds, named: name, through: passes)
         case .bassline(let line):
             await playBassline(line, levers: levers)
+        case .melody(let melody):
+            await playPitched(melody.notes, part: version.partID, named: name, levers: levers)
+        case .progression(let progression):
+            await playPitched(Voicing.notes(for: progression), part: version.partID, named: name, levers: levers)
         default:
             app.note(.session, "A \(version.type.rawValue) cannot be auditioned here",
-                     detail: "The Compare plays grooves, chops and recordings; \(name) is neither.")
+                     detail: "The Compare plays grooves, bass lines, tunes, chords, chops and recordings; \(name) is none of them.")
         }
+    }
+
+    /// A tune or the chords, on the instrument its part plays on, at the song's tempo or the
+    /// `tempo` lever's. These were the two kinds a Compare could hold and not play: three
+    /// counter-melodies side by side, and no way to hear which.
+    private func playPitched(_ notes: [NoteEvent], part: PartID, named name: String,
+                             levers: [CompareLever: Double]) async {
+        let hits = CompareAdapter.hits(for: notes, levers: levers, tempo: app.song?.tempo ?? 90,
+                                       timeSignature: app.song?.timeSignature ?? .fourFour)
+        guard !hits.isEmpty else {
+            app.note(.session, "\(name) has no notes in it", detail: "Nothing was played.")
+            return
+        }
+        let spec = app.song.flatMap { InstrumentVoiceSpec.preset(id: SongPlayback.instrumentID(for: part, in: $0)) } ?? .rhodes
+        do {
+            try await service.prepare(instrument: spec)
+        } catch {
+            app.note(.session, "Could not load \(spec.name) to play that", detail: "\(error)")
+            return
+        }
+        await service.playInstrument(hits)
+    }
+
+    /// Written notes as hits under the levers, the first `maximumPitchedSeconds` of them.
+    static func hits(for notes: [NoteEvent], levers: [CompareLever: Double],
+                     tempo: Double, timeSignature: TimeSignature) -> [VoiceSampler.Hit] {
+        let bpm = levers[.tempo].map { CompareLever.tempo.clamp($0) } ?? tempo
+        let clock = TransportClock(tempo: max(20, bpm), timeSignature: timeSignature)
+        return notes.map { note in
+            VoiceSampler.Hit(note: note.pitch.midi, velocity: note.velocity,
+                             at: clock.seconds(forBeat: note.start),
+                             duration: clock.seconds(forBeat: note.duration))
+        }.filter { $0.time < maximumPitchedSeconds }
     }
 
     /// A bass line, with the song's newest groove under it so the lag is heard against a kick:

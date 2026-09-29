@@ -55,36 +55,50 @@ public enum MIDIExport {
             bar += section.lengthInBars
         }
 
-        // Where each part plays: (start bar, bars) spans, in the order the parts were first made.
+        // Where each part plays: what it plays there and for how long, in the order the parts
+        // were first made. A track is a strip: a variation is written on the track of the part it
+        // varies, as it is heard on that part's fader, so the file has one drum track whose intro
+        // is thinner — not a track for every way the drums were played. And what a lane plays is
+        // what the song plays there: a lane held at a version used to be written as its part's
+        // newest, so a form arranged by hand came out as one loop from end to end.
+        struct Placed { var version: PartVersion; var startBar: Int; var bars: Int }
         var order: [PartID] = []
-        var spans: [PartID: [(startBar: Int, bars: Int)]] = [:]
-        func place(_ part: PartID, at startBar: Int, bars: Int) {
-            if spans[part] == nil { order.append(part) }
-            spans[part, default: []].append((startBar, bars))
+        var placed: [PartID: [Placed]] = [:]
+        func place(_ version: PartVersion, at startBar: Int, bars: Int) {
+            let track = song.strip(of: version.partID)
+            if placed[track] == nil { order.append(track) }
+            placed[track, default: []].append(Placed(version: version, startBar: startBar, bars: bars))
         }
         if song.sections.contains(where: { !$0.stitch.isEmpty }) {
             var at = 0
             for section in song.sections {
-                for lane in section.stitch where song.version(playing: lane) != nil {
-                    place(lane.part, at: at, bars: max(1, section.lengthInBars))
+                for lane in section.stitch {
+                    guard let version = song.version(playing: lane) else { continue }
+                    place(version, at: at, bars: max(1, section.lengthInBars))
                 }
                 at += max(1, section.lengthInBars)
             }
         } else {
-            for part in song.partIDs { place(part, at: 0, bars: 0) }
+            // Unarranged: each part's newest version once, and a variation nowhere — nothing plays it.
+            for part in song.partIDs where !song.isVariation(part) {
+                // Graph order rather than `latestVersion`: versions kept in the same millisecond tie
+                // on their timestamp, and the graph is the order they were made in.
+                if let version = song.versions.last(where: { $0.partID == part }) { place(version, at: 0, bars: 0) }
+            }
         }
 
-        for part in order {
-            // Graph order rather than `latestVersion`: versions kept in the same millisecond tie
-            // on their timestamp, and the graph is the order they were made in.
-            guard let version = song.versions.last(where: { $0.partID == part }), let placed = spans[part] else { continue }
-            let name = PartLabel.title(of: version)
-            switch version.kind {
-            case .groove(let groove):
-                let ticksPerStep = Double(ticksPerBeat * beatsPerBar) / Double(max(1, groove.stepsPerBar))
-                let patternBars = max(1, groove.bars)
-                var notes: [MIDIFile.Note] = []
-                for span in placed {
+        for track in order {
+            guard let spans = placed[track], let first = spans.first else { continue }
+            // Named for the part, not for whichever of its variations plays first.
+            let name = song.versions.last { $0.partID == track }.map(PartLabel.title(of:)) ?? PartLabel.title(of: first.version)
+            var notes: [MIDIFile.Note] = []
+            var program: Int?
+            for span in spans {
+                let at = [(startBar: span.startBar, bars: span.bars)]
+                switch span.version.kind {
+                case .groove(let groove):
+                    let ticksPerStep = Double(ticksPerBeat * beatsPerBar) / Double(max(1, groove.stepsPerBar))
+                    let patternBars = max(1, groove.bars)
                     let repeats = span.bars == 0 ? 1 : Int((Double(span.bars) / Double(patternBars)).rounded(.up))
                     for pass in 0..<repeats {
                         let offset = Double((span.startBar + pass * patternBars) * beatsPerBar * ticksPerBeat)
@@ -98,24 +112,25 @@ public enum MIDIExport {
                             }
                         }
                     }
+                case .bassline(let line):
+                    program = 33
+                    notes += tiled(line.notes, over: at, beatsPerBar: beatsPerBar, file: file, channel: 0, lengthInBars: line.lengthInBars)
+                case .melody(let melody):
+                    program = 0
+                    notes += tiled(melody.notes, over: at, beatsPerBar: beatsPerBar, file: file, channel: 1, lengthInBars: melody.lengthInBars)
+                case .progression(let progression):
+                    // The voicing the song plays (`Voicing`, as `KeysPlayer` and the Chords audition use),
+                    // so the file's chords are the ones heard: inversions and register included.
+                    let events = Voicing.notes(for: progression)
+                    let bars = Int((Voicing.lengthInBeats(of: progression) / Double(beatsPerBar)).rounded(.up))
+                    program = 4
+                    notes += tiled(events, over: at, beatsPerBar: beatsPerBar, file: file, channel: 2, lengthInBars: max(1, bars))
+                default:
+                    continue
                 }
-                file.tracks.append(.init(name: name, notes: notes))
-            case .bassline(let line):
-                file.tracks.append(.init(name: name, notes: tiled(line.notes, over: placed, beatsPerBar: beatsPerBar, file: file, channel: 0,
-                                                            lengthInBars: line.lengthInBars), program: 33))
-            case .melody(let melody):
-                file.tracks.append(.init(name: name, notes: tiled(melody.notes, over: placed, beatsPerBar: beatsPerBar, file: file, channel: 1,
-                                                            lengthInBars: melody.lengthInBars), program: 0))
-            case .progression(let progression):
-                // The voicing the song plays (`Voicing`, as `KeysPlayer` and the Chords audition use),
-                // so the file's chords are the ones heard: inversions and register included.
-                let events = Voicing.notes(for: progression)
-                let bars = Int((Voicing.lengthInBeats(of: progression) / Double(beatsPerBar)).rounded(.up))
-                file.tracks.append(.init(name: name, notes: tiled(events, over: placed, beatsPerBar: beatsPerBar, file: file, channel: 2,
-                                                                lengthInBars: max(1, bars)), program: 4))
-            default:
-                continue
             }
+            guard spans.contains(where: { [.groove, .bassline, .melody, .progression].contains($0.version.type) }) else { continue }
+            file.tracks.append(.init(name: name, notes: notes.sorted { $0.start < $1.start }, program: program))
         }
         if !markers.isEmpty {
             if file.tracks.isEmpty { file.tracks.append(.init(name: "Sections", notes: [], markers: markers)) }

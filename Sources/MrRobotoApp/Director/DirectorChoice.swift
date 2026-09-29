@@ -42,7 +42,9 @@ extension SurfaceKind {
         case .grid: return [.groove]
         case .sound: return [.sound, .sample, .groove]
         case .chords: return [.progression]
-        case .pianoRoll: return [.bassline, .groove]
+        // A tune too: the roll has drawn one since it could write one, and the Director, which
+        // writes them, was the one thing that could not open it on what it had written.
+        case .pianoRoll: return [.bassline, .melody, .groove]
         case .structure, .album, .cast, .booth, .mashup: return []
         case .lyrics: return [.lyric]
         case .takes: return [.audio]
@@ -373,8 +375,9 @@ public struct DirectorSurfaceChoice: Sendable, Equatable, Hashable, Identifiable
             }
             if surface.isAnswer {
                 // Like against like: the candidates share a kind. The reference shares it too, with
-                // one exception — bass lines are judged against the groove they sit under, because
-                // the thing a bass line has to beat is not another bass line but the kick.
+                // two exceptions — bass lines are judged against the groove they sit under, because
+                // the thing a bass line has to beat is not another bass line but the kick; and tunes
+                // against the chords they are sung over, for the same reason.
                 let candidates = surface == .compare ? Array(types.dropFirst()) : types
                 if let kind = candidates.first, let other = candidates.first(where: { $0 != kind }) {
                     throw DirectorChoiceProblem(
@@ -382,10 +385,11 @@ public struct DirectorSurfaceChoice: Sendable, Equatable, Hashable, Identifiable
                         suggestion: "Judge like against like.")
                 }
                 if surface == .compare, let kind = candidates.first, kind != notation,
-                   !(notation == .groove && kind == .bassline) {
+                   !(notation == .groove && kind == .bassline), !(notation == .progression && kind == .melody) {
                     throw DirectorChoiceProblem(
                         "A Compare of \(kind.rawValue)s against a \(notation.rawValue) compares two different things.",
-                        suggestion: "Judge like against like; only bass lines are judged against the groove they sit under.")
+                        suggestion: "Judge like against like; only bass lines are judged against the groove they sit under, "
+                            + "and tunes against the chords they are over.")
                 }
             }
         } else {

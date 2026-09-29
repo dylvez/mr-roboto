@@ -25,6 +25,18 @@ public struct WriteMelodyTool: DirectorTool {
         public var instrument: String
         public var parent: String
         public var note: String
+        /// Which writing of the tune this is, 1 to 3. Nil — a caller from before drafts — is the
+        /// last, which is kept as it is.
+        public var draft: Int?
+
+        public init(notes: String, bars: Int, instrument: String, parent: String, note: String, draft: Int? = nil) {
+            self.notes = notes
+            self.bars = bars
+            self.instrument = instrument
+            self.parent = parent
+            self.note = note
+            self.draft = draft
+        }
     }
 
     public struct Output: Encodable, Sendable {
@@ -61,12 +73,18 @@ public struct WriteMelodyTool: DirectorTool {
     /// Melodist's behalf, and the Melodist reads it back.
     public static let author = "Melodist"
 
+    /// The draft that is kept whatever the Melodist flags in it: two rewrites, and then the tune
+    /// is the user's to judge.
+    public static let lastDraft = 3
+
     public let name = "write_melody"
     public var purpose: String {
         "Write a tune and record it as a melody version signed by the Melodist, who reads it back: range, leaps, steps, "
         + "landing on the chords, a figure that returns. Notes are a line: \"D4 0 1, F4 1 0.5, A4 1.5 1.5\" — a pitch "
         + "with its octave, the beat it starts on (0 is the downbeat of bar 1), and how many beats it lasts. Rests are "
-        + "the gaps. Name a parent to rewrite a melody as its next version."
+        + "the gaps. Name a parent to rewrite a melody as its next version. A first or second draft that fights the "
+        + "chords, or in which nothing comes back, is not kept: what was read comes back, and you write it again. The "
+        + "third draft is kept as it is."
     }
     public var schema: DirectorJSON {
         Schema.object([
@@ -79,7 +97,9 @@ public struct WriteMelodyTool: DirectorTool {
                                          enum: [""] + InstrumentVoiceSpec.available.map(\.id))),
             ("parent", Schema.string("A melody version id this rewrites, so it becomes that part's next version; empty for a new part.")),
             ("note", Schema.string("A few words naming the tune for the ledger, in the user's language; empty names it by its range.")),
-        ], required: ["notes", "bars", "instrument", "parent", "note"])
+            ("draft", Schema.integer("Which writing of this tune this is: 1 the first time, 2 and 3 when you write it again after "
+                                     + "the Melodist flagged the one before.", minimum: 1, maximum: 3)),
+        ], required: ["notes", "bars", "instrument", "parent", "note", "draft"])
     }
 
     /// What every refusal of a note shows, so the next call is written right.
@@ -178,6 +198,23 @@ public struct WriteMelodyTool: DirectorTool {
         let observation = MelodyObservation.of(melody, label: note, key: key, progression: progression, beatsPerBar: beatsPerBar)
         let readings = GenreLens.judge(Melodist().read(observation), by: Melodist.bible, in: await workspace.genreLens)
         let flags = readings.filter { !$0.holds }
+        let chords = progression.map { "read over \($0.symbols(preferring: spelling))" } ?? "none stated, so it was read against the key alone"
+
+        // Rewritten before it is handed over: a draft the Melodist flags goes back to be written
+        // again, with what was flagged, and is not kept. The band used to keep every draft and
+        // say its flags to the user — six tunes in six, each arriving with "nothing comes back".
+        let draft = input.draft ?? Self.lastDraft
+        let sentBack = flags.filter { Melodist.rewrittenFor.contains($0.rule) }
+        if !sentBack.isEmpty, draft < Self.lastDraft {
+            return Output(version: "", part: parent?.partID.description ?? "", noteCount: notes.count, bars: bars,
+                          range: range, key: key.name, chords: chords, instrument: nil,
+                          readings: readings.map(\.says), flags: flags.map(\.says), recorded: false,
+                          detail: "Not kept. Draft \(max(1, draft)) goes back for this: "
+                              + sentBack.map(\.says).joined(separator: " ")
+                              + " Write it again answering that and call write_melody with draft \(max(1, draft) + 1)"
+                              + (parent.map { " and the same parent, \($0.id.description)" } ?? "")
+                              + ". Nothing of this draft is in the song, and the user is not told of it.")
+        }
 
         let recorded = await workspace.record(version)
         var playsOn: String?
@@ -188,7 +225,6 @@ public struct WriteMelodyTool: DirectorTool {
                 playsOn = preset.name
             }
         }
-        let chords = progression.map { "read over \($0.symbols(preferring: spelling))" } ?? "none stated, so it was read against the key alone"
         var detail = recorded
             ? "\(notes.count) note\(notes.count == 1 ? "" : "s") over \(bars) bar\(bars == 1 ? "" : "s") in \(key.name), signed by the Melodist"
             : "No song would take it, so it was not recorded"

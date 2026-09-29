@@ -23,4 +23,16 @@ final class StructureAdapter: StructureHosting {
     }
 
     func openLyrics() { app.perform(Guidance.dockAction(for: .lyrics, in: app.song)) }
+
+    func development() -> Development? { app.development() }
+
+    func develop() async { await app.developAndMaster() }
+
+    var isDeveloping: Bool { app.isDeveloping }
+
+    var isMastering: Bool { app.isMastering }
+
+    var canPutBackDevelopment: Bool { app.canPutBackDevelopment }
+
+    func putBackDevelopment() { app.putBackDevelopment() }
 }

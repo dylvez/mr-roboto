@@ -87,8 +87,30 @@ public enum Operation {
     public static let mashup = "mashup"
     /// Played in on a controller while the song ran — a groove, a bass line or a tune as the hands put it.
     public static let played = "played"
+    /// A part written for a section from the part the loop plays: the kit thinned for an intro, the
+    /// bass held under a breakdown. Its parent is what it was made from; see `Variation`.
+    public static let developed = "developed"
     /// Filled in by the schema 1 → 2 migration for versions that predate provenance operations.
     public static let unknown = "unknown"
+}
+
+/// What makes a part a variation of another: the part it was made from, and the treatment.
+///
+/// A song is a loop until its sections differ, and what differs is mostly the same part played
+/// another way — the drums without their kick, the bass holding its roots. Each of those is a part
+/// of its own, so a section names it, a surface edits it and the ledger shows it like any other.
+/// What it shares with the part it came from is everything about how it sounds: one strip on the
+/// Mixer, one instrument, one sampler. `Song.strip(of:)` is where that is read.
+public struct Variation: Hashable, Codable, Sendable {
+    /// The part this is a variation of.
+    public var of: PartID
+    /// The treatment, as a word the app knows: "thin", "no-kick", "build", "lift", "held".
+    public var name: String
+
+    public init(of part: PartID, name: String) {
+        self.of = part
+        self.name = name
+    }
 }
 
 /// One immutable version of a part, with provenance: who made it, from which parents, by which operation.
@@ -106,9 +128,13 @@ public struct PartVersion: Identifiable, Hashable, Codable, Sendable {
     public let note: String?
     /// The seed this version grew directly from, for roots that came from a hummed take, brief or record.
     public let origin: SeedID?
+    /// Set when this part is a variation of another. Nil — nearly always — is a part of its own.
+    /// Synthesized coding omits it when nil, so older documents round-trip byte for byte.
+    public let variation: Variation?
 
     public init(id: VersionID = VersionID(), partID: PartID, kind: PartKind, createdAt: Date = Date(),
-                author: Author, parents: [VersionID] = [], operation: String, note: String? = nil, origin: SeedID? = nil) {
+                author: Author, parents: [VersionID] = [], operation: String, note: String? = nil, origin: SeedID? = nil,
+                variation: Variation? = nil) {
         self.id = id
         self.partID = partID
         self.kind = kind
@@ -118,15 +144,25 @@ public struct PartVersion: Identifiable, Hashable, Codable, Sendable {
         self.operation = operation
         self.note = note
         self.origin = origin
+        self.variation = variation
     }
 
     public var type: PartType { kind.type }
 
-    /// A new version of the same part with this one as its parent.
+    /// A new version of the same part with this one as its parent. A variation stays one.
     public func deriving(_ kind: PartKind, by author: Author, operation: String, note: String? = nil,
                          createdAt: Date = Date(), alsoFrom otherParents: [VersionID] = []) -> PartVersion {
         PartVersion(partID: partID, kind: kind, createdAt: createdAt, author: author,
-                    parents: [id] + otherParents, operation: operation, note: note)
+                    parents: [id] + otherParents, operation: operation, note: note, variation: variation)
+    }
+
+    /// A first version of a new part that is a variation of this one's: the same kind of thing,
+    /// played another way for a section, sounding through this part's strip and instrument.
+    public func varying(_ kind: PartKind, as name: String, of root: PartID? = nil, by author: Author, note: String? = nil,
+                        createdAt: Date = Date()) -> PartVersion {
+        PartVersion(partID: PartID(), kind: kind, createdAt: createdAt, author: author, parents: [id],
+                    operation: Operation.developed, note: note,
+                    variation: Variation(of: root ?? variation?.of ?? partID, name: name))
     }
 
     /// A first version of a new part made from this one (a melody harmonized into a progression, a take chopped into a sample).

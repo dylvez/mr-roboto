@@ -297,6 +297,41 @@ public struct Song: Identifiable, Hashable, Codable, Sendable {
         return versions.compactMap { seen.insert($0.partID).inserted ? $0.partID : nil }
     }
 
+    // MARK: Variations
+
+    /// What makes this part a variation, when it is one. Read from any of its versions: a version
+    /// written without the mark — by a tool that builds one by hand — does not make the part stop
+    /// being what its first version said it was.
+    public func variation(of part: PartID) -> Variation? {
+        versions.first { $0.partID == part && $0.variation != nil }?.variation
+    }
+
+    public func isVariation(_ part: PartID) -> Bool { variation(of: part) != nil }
+
+    /// The part whose strip, instrument and sampler this part sounds through: itself, unless it is
+    /// a variation, and then the part it is a variation of. A variation of a variation follows to
+    /// the root; a chain that comes back on itself stops where it started.
+    public func strip(of part: PartID) -> PartID {
+        var current = part
+        var seen: Set<PartID> = [part]
+        while let next = variation(of: current)?.of, seen.insert(next).inserted, latestVersion(of: next) != nil {
+            current = next
+        }
+        return current
+    }
+
+    /// Every variation of a part, by part, in order of first appearance.
+    public func variations(of part: PartID) -> [PartID] {
+        partIDs.filter { $0 != part && isVariation($0) && strip(of: $0) == part }
+    }
+
+    /// The parts a section's lane for `part` must not sound beside: the part it varies, and that
+    /// part's other variations. They are one instrument, and one player plays one thing at a time.
+    public func family(of part: PartID) -> Set<PartID> {
+        let root = strip(of: part)
+        return Set([root] + variations(of: root))
+    }
+
     public func section(_ id: SectionID) -> Section? { sections.first { $0.id == id } }
     public func seed(_ id: SeedID) -> Seed? { seeds.first { $0.id == id } }
     public func experiment(_ id: ExperimentID) -> Experiment? { experiments.first { $0.id == id } }

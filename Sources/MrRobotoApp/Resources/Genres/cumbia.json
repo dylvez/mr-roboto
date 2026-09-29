@@ -419,19 +419,6 @@
           "https://www.tagtraum.com/msd_genre_datasets.html"
         ]
       },
-      "feature": "melody.motif.ratio",
-      "high": 0.27,
-      "low": 0.09,
-      "typical": 0.15,
-      "unit": "fraction of the tune"
-    },
-    {
-      "evidence": {
-        "cited": [
-          "https://colinraffel.com/projects/lmd/",
-          "https://www.tagtraum.com/msd_genre_datasets.html"
-        ]
-      },
       "feature": "melody.notes.per.bar",
       "high": 7.1,
       "low": 2.5,
@@ -489,6 +476,19 @@
       "low": 0.52,
       "typical": 0.77,
       "unit": "fraction of moves"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.motif.ratio",
+      "high": 0.79,
+      "low": 0.0,
+      "typical": 0.43,
+      "unit": "fraction of the tune"
     }
   ],
   "references": [
