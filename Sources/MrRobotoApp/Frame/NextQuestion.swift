@@ -259,6 +259,22 @@ enum NextAdvisor {
                     move: .surface(chords)), score: 4))
             }
         }
+        // Chords nobody has chosen a playing for are held, every note for the whole bar. Once
+        // something keeps time under them, how they are played is worth a question.
+        if !fromTheBand, !Guidance.grooves(in: song).isEmpty, let chords = Guidance.progressions(in: song).last,
+           case .progression(let sheet) = chords.kind, sheet.playing == nil {
+            let action = Guidance.dockAction(for: .chords, in: song)
+            if !app.isShowing(action) {
+                let usual = song.genre.flatMap { GenreBook.standard.profile(named: $0) }.flatMap { profile in
+                    KeysPattern.usual(inGenre: profile.id).flatMap { $0 == .held ? nil : " \(profile.name) usually plays them as \($0.name.lowercased())." }
+                } ?? ""
+                candidates.append(Candidate(option: NextOption(
+                    kind: "playing", title: "Play the chords",
+                    rationale: "They are held, every note for the whole bar. Played picks the rhythm they are struck in — stabs, "
+                        + "off-beats, pushes, an arpeggio — and Voiced where their notes sit." + usual,
+                    move: .surface(action)), score: 3.5))
+            }
+        }
         // The loop, arranged: offered once there is a loop worth arranging and until it has been.
         // Two parts that play is a loop; three is one that is waiting to be a song.
         if !fromTheBand, !app.isDeveloping, !app.isMastering, !Develop.isDeveloped(song), let development = app.development() {
@@ -392,7 +408,7 @@ enum NextAdvisor {
         case .groove: return ["bass", "chords", "play", "arrange"]
         case .sample: return ["regroove", "groove"]
         case .bassline: return ["develop", "arrange", "chords", "play"]
-        case .progression: return ["bass", "develop", "arrange"]
+        case .progression: return ["bass", "playing", "develop", "arrange"]
         case .melody: return ["develop", "words", "arrange"]
         case .lyric: return ["sing", "words"]
         case .audio(let audio):
@@ -426,7 +442,7 @@ enum NextAdvisor {
         case "stems", "chop", "regroove", "record": return "Sampler"
         case "groove", "sound": return "Beatmaker"
         case "bass": return "Bassist"
-        case "chords": return "Harmonist"
+        case "chords", "playing": return "Harmonist"
         case "words": return "Lyricist"
         case "arrange", "develop", "putBack", "sing", "comp": return "Producer"
         case "mix", "master", "export": return "Engineer"
@@ -444,6 +460,7 @@ enum NextAdvisor {
         case "groove": return "work the groove"
         case "bass": return "a bass line"
         case "chords": return "chords"
+        case "playing": return "play the chords"
         case "arrange": return "arrange it"
         case "develop": return "develop it into a song"
         case "putBack": return "put it back as it was"
@@ -517,6 +534,9 @@ enum NextAdvisor {
             if let groove = Guidance.grooves(in: song).last { return "\(PartLabel.title(of: groove)) has nothing under it yet." }
             return "No bass line yet."
         case "Harmonist":
+            if let chords = Guidance.progressions(in: song).last, case .progression(let sheet) = chords.kind {
+                return "\(PartLabel.title(of: chords)) \(sheet.playing.map { "is played \($0.sentence.lowercased())" } ?? "is held, each chord for as long as it lasts")."
+            }
             return "No chords yet: the bass is written to \(song.key?.name ?? "the key")."
         case "Lyricist":
             return "\(Guidance.count(played.count, "section")) \(play(played.count)), and there are no words yet."

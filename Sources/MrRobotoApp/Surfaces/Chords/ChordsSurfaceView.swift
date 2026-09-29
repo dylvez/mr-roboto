@@ -1,4 +1,5 @@
 import MusicTheory
+import Performance
 import SongGraph
 import SwiftUI
 
@@ -7,6 +8,32 @@ struct ChordsSurfaceView: View {
     @Bindable var model: ChordsModel
 
     var body: some View {
+        VStack(alignment: .leading, spacing: Design.Metric.gutter) {
+            // The sheet scrolls inside the surface: with the pickers under it, the bars and the
+            // Harmonist's reading were below the edge of a window at its minimum.
+            MixScroll(.vertical) { sheet }
+                .frame(maxHeight: .infinity, alignment: .topLeading)
+            HStack(spacing: 10) {
+                model.statusBar
+                if !model.isTouched, model.base == nil, model.isDefault {
+                    Text("Not in the song until you type.")
+                        .font(Design.Typography.ui(11.5))
+                        .foregroundStyle(Design.Palette.inkTertiary)
+                    FrameButton(title: "Add to song", emphasis: .accent) { model.useTheseChords() }
+                        .help("Put the key's I–IV–V–I into the song as its chords. Typing does the same.")
+                }
+            }
+        }
+        .padding(Design.Metric.inset)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(Design.Palette.panel)
+    }
+}
+
+extension ChordsSurfaceView {
+    /// Everything but the status line: the title and key, the line, what voices it, how it is
+    /// played, the bars and the reading of them.
+    @ViewBuilder private var sheet: some View {
         VStack(alignment: .leading, spacing: Design.Metric.gutter) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text(model.title).font(Design.Typography.prose(16, weight: .medium))
@@ -56,6 +83,9 @@ struct ChordsSurfaceView: View {
                 // they were written; now they go through whatever this names.
                 InstrumentPicker(selected: model.instrument, choose: { model.setInstrument($0) }, label: "Voiced on")
                     .padding(.top, 4)
+                // How they are played: the two things a player decides that a lead sheet does not.
+                PlayingPicker(model: model)
+                    .padding(.top, 4)
             }
             if let progression = model.progression {
                 VStack(alignment: .leading, spacing: 6) {
@@ -68,12 +98,15 @@ struct ChordsSurfaceView: View {
                             .foregroundStyle(Design.Palette.warn)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    ScrollView(.horizontal, showsIndicators: false) {
+                    // Eight bars are wider than a bench at its narrowest; they scroll, with the
+                    // scroller showing so a row cut at the edge says there is more.
+                    MixScroll(.horizontal) {
                         HStack(spacing: 8) {
                             ForEach(Array(progression.bars.enumerated()), id: \.offset) { index, bar in
                                 BarCard(index: index, bar: bar, model: model)
                             }
                         }
+                        .padding(.bottom, 8)
                     }
                     .opacity(model.barsAreStale ? 0.4 : 1)
                     .accessibilityHint(model.barsAreStale ? "Stale: the last line that read" : "")
@@ -81,21 +114,57 @@ struct ChordsSurfaceView: View {
                 HarmonistReadings(model: model)
                     .opacity(model.barsAreStale ? 0.4 : 1)
             }
-            Spacer(minLength: 0)
-            HStack(spacing: 10) {
-                model.statusBar
-                if !model.isTouched, model.base == nil, model.isDefault {
-                    Text("Not in the song until you type.")
-                        .font(Design.Typography.ui(11.5))
-                        .foregroundStyle(Design.Palette.inkTertiary)
-                    FrameButton(title: "Add to song", emphasis: .accent) { model.useTheseChords() }
-                        .help("Put the key's I–IV–V–I into the song as its chords. Typing does the same.")
+        }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+}
+
+/// How the chords are played: the rhythm they are struck in and where their notes sit, each a row
+/// of chips that wraps, with the line the top of the chords makes under them.
+private struct PlayingPicker: View {
+    let model: ChordsModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            row("Played") {
+                ForEach(KeysPattern.allCases) { pattern in
+                    FormChip(pattern.name, isOn: model.pattern == pattern) { model.setPattern(pattern) }
+                        .help(pattern.about.prefix(1).uppercased() + pattern.about.dropFirst())
+                        .accessibilityLabel("Played \(pattern.name)")
                 }
             }
+            row("Voiced") {
+                ForEach(KeysVoicing.allCases) { voicing in
+                    FormChip(voicing.name, isOn: model.voicing == voicing) { model.setVoicing(voicing) }
+                        .help(voicing.about.prefix(1).uppercased() + voicing.about.dropFirst())
+                        .accessibilityLabel("Voiced \(voicing.name)")
+                }
+            }
+            if !model.topLine.isEmpty, !model.barsAreStale {
+                Text(String(format: "On top: %@. Voiced %@, the hand travels %.1f semitones a change.",
+                            model.topLine, model.voicing.name.lowercased(), model.movement))
+                    .font(Design.Typography.ui(11.5, weight: .regular))
+                    .foregroundStyle(Design.Palette.inkSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if let caution = model.patternCaution {
+                Label(caution, systemImage: "exclamationmark.triangle")
+                    .font(Design.Typography.ui(11.5, weight: .regular))
+                    .foregroundStyle(Design.Palette.warn)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
-        .padding(Design.Metric.inset)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(Design.Palette.panel)
+    }
+
+    private func row<Chips: View>(_ label: String, @ViewBuilder chips: () -> Chips) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(label.uppercased())
+                .font(Design.Typography.label)
+                .tracking(1.1)
+                .foregroundStyle(Design.Palette.inkTertiary)
+                .frame(width: 58, alignment: .leading)
+            FlowRow(spacing: 4) { chips() }
+        }
     }
 }
 

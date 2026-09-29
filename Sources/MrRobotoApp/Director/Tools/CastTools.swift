@@ -248,7 +248,7 @@ public struct ConveneTool: DirectorTool {
                     notes.append("The Engineer's bounce failed: \(error).")
                 }
             case .melodist:
-                if let version = Self.heard(.melody, in: song, section: section) ?? song.versions.last(where: { $0.type == .melody }),
+                if let version = Self.heard(.melody, in: song, section: section) ?? Guidance.melodies(in: song).last,
                    case .melody(let melody) = version.kind {
                     let progression = (Self.heard(.progression, in: song, section: section) ?? Guidance.progressions(in: song).last).flatMap { version -> Progression? in
                         if case .progression(let p) = version.kind { return p }

@@ -1,4 +1,5 @@
 import Foundation
+import Instrument
 import MusicTheory
 import Performance
 import SongGraph
@@ -202,7 +203,17 @@ public enum Develop {
         let lastPeak = peaks.last
         let chords = loop.last { $0.type == .progression && usual.contains($0.partID) } ?? loop.last { $0.type == .progression }
         var spans: [ChordSpan] = []
-        if let chords, case .progression(let progression) = chords.kind { spans = progression.bars.flatMap(\.chords) }
+        var harmony: Progression?
+        if let chords, case .progression(let progression) = chords.kind {
+            spans = progression.bars.flatMap(\.chords)
+            harmony = progression
+        }
+        // What a bridge's own chords are called: "bridge", and by their length when a second
+        // bridge is another length and so has chords of its own.
+        var bridges: [Int: String] = [:]
+        let drums = loop.last { $0.type == .groove && usual.contains($0.partID) } ?? loop.last { $0.type == .groove }
+        // The way the genre plays its chords, where the song arrives, when its chords are held.
+        let lifted = genre.flatMap { KeysPattern.usual(inGenre: $0.id) }.flatMap { $0 == .held ? nil : $0 }
 
         // MARK: Variations, each written once
 
@@ -259,6 +270,24 @@ public enum Develop {
                 song.version(playing: lane).map { "\(StructureModel.name(of: $0.type).lowercased()), as it was set" }
             }
             var rolls = false
+            // A bridge goes somewhere else, when everything pitched in it is the loop's and will
+            // follow: a tune or a bass line written for this section, a part held at a version,
+            // and a chop — whose notes nobody wrote down — all stay over the chords they were
+            // written to.
+            let pitched: Set<PartType> = [.bassline, .progression, .melody, .sample]
+            // Somewhere else for it to go, when the song has chords to leave: as long as this
+            // section, or a length that goes into it, so the chord that leads back is reached.
+            let elsewhere = role == .bridge ? harmony.flatMap { bridge(from: $0, bars: entry.bars) } : nil
+            let bridgeName = elsewhere.map { chords -> String in
+                if let name = bridges[chords.bars.count] { return name }
+                let name = bridges.isEmpty ? "bridge" : "bridge-\(chords.bars.count)"
+                bridges[chords.bars.count] = name
+                return name
+            } ?? "bridge"
+            let leaves = role == .bridge && kept.isEmpty && elsewhere != nil
+                && parts.contains { $0.partID == chords?.partID }
+                && !parts.contains { $0.type == .sample }
+                && !parts.contains { pitched.contains($0.type) && placed.contains($0.partID) }
 
             for part in parts {
                 // Written for the sections it is in: played there as it was written.
@@ -289,6 +318,14 @@ public enum Develop {
                     }
                 case .bassline(let line):
                     if opens || closes { continue }
+                    if leaves, let elsewhere,
+                       let followed = bass(line, over: elsewhere, under: drums, tempo: song.tempo, timeSignature: song.timeSignature) {
+                        let id = variation(of: part, named: bridgeName, kind: .bassline(followed),
+                                           note: "\(label("Bridge bass", part)): written to the bridge's chords, \(elsewhere.symbols())")
+                        lanes.append(Lane(part: id))
+                        said.append("bass, on the bridge's chords")
+                        continue
+                    }
                     guard let choice = secondIn ? .vary(.light) : bassTreatment(for: role, othersSound: othersSound) else { continue }
                     if case .vary(let treatment) = choice,
                        let varied = BassVariation.vary(line, as: treatment, chords: spans, bars: entry.bars, beatsPerBar: beats) {
@@ -301,10 +338,29 @@ public enum Develop {
                         lanes.append(Lane(part: part.partID))
                         said.append("bass")
                     }
-                case .progression:
+                case .progression(let sheet):
                     if opens || closes { continue }
-                    lanes.append(Lane(part: part.partID))
-                    said.append("chords")
+                    if leaves, let elsewhere, part.partID == chords?.partID {
+                        let id = variation(of: part, named: bridgeName, kind: .progression(elsewhere),
+                                           note: "\(label("Bridge chords", part)): \(elsewhere.symbols()), somewhere else for the bridge to go")
+                        lanes.append(Lane(part: id))
+                        said.append("chords, its own: \(elsewhere.symbols())")
+                        continue
+                    }
+                    let family = InstrumentVoiceSpec.preset(id: SongPlayback.instrumentID(for: part.partID, in: song))?.family ?? "keys"
+                    if let treatment = chordsTreatment(for: role, playing: sheet.playing, lifted: lifted, family: family) {
+                        var played = sheet
+                        played.playing = treatment.isPlain ? nil : treatment
+                        let name = treatment.keysPattern == .held ? "held" : "played-\(treatment.pattern)"
+                        let id = variation(of: part, named: name, kind: .progression(played),
+                                           note: "\(label(treatment.keysPattern == .held ? "Held chords" : "\(treatment.keysPattern.name) chords", part)): "
+                                               + "\(sheet.symbols()), \(treatment.keysPattern.about.components(separatedBy: " (").first ?? treatment.keysPattern.name.lowercased())")
+                        lanes.append(Lane(part: id))
+                        said.append("chords, \(treatment.keysPattern.name.lowercased())")
+                    } else {
+                        lanes.append(Lane(part: part.partID))
+                        said.append("chords")
+                    }
                 case .melody(let tune):
                     guard let choice = tuneTreatment(for: role, hasPeak: !peaks.isEmpty, isLastPeak: index == lastPeak,
                                                      nobodySings: nobodySings) else { continue }
@@ -563,6 +619,84 @@ public enum Develop {
         guard let range = genre?.range(.integratedLUFS) ?? genre?.range(.masterTargetLUFS) else { return nil }
         let typical = range.typical ?? (range.low + range.high) / 2
         return max(-20, min(-8, (typical * 2).rounded() / 2))
+    }
+
+    // MARK: - The chords
+
+    /// How the chords are played in a section, when it is not how they are written. Chords with a
+    /// rhythm are held where the song stands still; chords that are held are given the genre's
+    /// rhythm where the song arrives, on an instrument that can play one. Nil plays them as written.
+    static func chordsTreatment(for role: SectionRole, playing: ChordPlaying?, lifted: KeysPattern?, family: String) -> ChordPlaying? {
+        let written = playing ?? ChordPlaying()
+        switch role {
+        case .intro, .breakdown, .outro:
+            guard written.keysPattern != .held else { return nil }
+            return ChordPlaying(.held, written.keysVoicing)
+        case .hook, .drop:
+            guard written.keysPattern == .held, let lifted, lifted.suits(family: family) else { return nil }
+            return ChordPlaying(lifted, written.keysVoicing, seed: 0x4B45_5953)
+        default:
+            return nil
+        }
+    }
+
+    /// Chords for a bridge: as long as the song's own and played the same way, starting away from
+    /// home and ending on the chord that leads back. In a major key IV, V, vi, V; in a minor one
+    /// VI, VII, iv, V — and from somewhere else again when the song's own chords start there.
+    /// Sevenths when the song's chords have them. Nil in a key with no seven-note scale to build on.
+    ///
+    /// Given the bars of the section they are for, they fit it: sixteen bars of chords in a bridge
+    /// of eight never reached the chord that leads back. They are the longest of sixteen, eight
+    /// and four bars that is no longer than the song's own and goes into the section; in a section
+    /// that is not a multiple of four, a chord a bar, the last of them the one that leads back.
+    static func bridge(from main: Progression, bars section: Int? = nil) -> Progression? {
+        let key = main.key, scale = key.scale, tonic = key.tonic.pitchClass
+        guard scale.isHeptatonic, !main.bars.isEmpty,
+              let home = scale.diatonicChord(degree: 1, root: tonic, size: 3) else { return nil }
+        let minor = home.quality.hasMinorThird
+        let size = main.chords.contains { !$0.quality.isTriad && $0.quality != .power } ? 4 : 3
+        var degrees = minor ? [6, 7, 4, 5] : [4, 5, 6, 5]
+        let opens = main.chords.first.flatMap { key.romanNumeral(for: $0)?.degree }
+        if opens == degrees[0] { degrees = minor ? [4, 7, 6, 5] : [6, 4, 2, 5] }
+        let beats = main.bars[0].beats
+        let own = max(4, main.bars.count)
+        var count = own
+        var aBar = false
+        if let section, section >= 2 {
+            if section % 4 == 0 {
+                count = [16, 8, 4].first { $0 <= own && section % $0 == 0 } ?? 4
+            } else {
+                count = section
+                aBar = true
+            }
+        }
+        var bars: [ProgressionBar] = []
+        for bar in 0..<count {
+            let degree = aBar
+                ? (bar == count - 1 ? degrees[degrees.count - 1] : degrees[bar % degrees.count])
+                : degrees[min(degrees.count - 1, bar * degrees.count / count)]
+            guard var chord = scale.diatonicChord(degree: degree, root: tonic, size: size) else { return nil }
+            // The fifth degree leads home: major, whatever the scale makes of it.
+            if degree == 5, chord.quality.hasMinorThird { chord = Chord(root: chord.root, quality: size == 4 ? .dominantSeventh : .major) }
+            bars.append(ProgressionBar(chord, beats: beats))
+        }
+        let bridge = Progression(key: key, bars: bars, playing: main.playing)
+        return bridge.chords == main.chords ? nil : bridge
+    }
+
+    /// The bass line over other chords: written again in the same hands, lighter, under the same
+    /// drums, when the line says whose hands wrote it; else its roots, held.
+    static func bass(_ line: Bassline, over chords: Progression, under groove: PartVersion?, tempo: Double,
+                     timeSignature: TimeSignature) -> Bassline? {
+        let spans = chords.spans
+        if let hands = line.hands.flatMap(BassLineage.init(rawValue:)), let groove, case .groove(let drums) = groove.kind {
+            var written = BassWriter.write(BassRequest(key: chords.key, chords: spans, groove: drums, tempo: tempo,
+                                                        timeSignature: timeSignature, lineage: hands, density: 0.4,
+                                                        sound: line.sound, seed: 0x4252_4944_4745, bars: chords.bars.count))
+            written.hands = line.hands
+            if !written.notes.isEmpty { return written }
+        }
+        return BassVariation.vary(line, as: .held, chords: spans, bars: chords.bars.count, beatsPerBar: timeSignature.beatsPerBar)
     }
 
     // MARK: - Names and notes

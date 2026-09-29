@@ -1,11 +1,33 @@
 import Foundation
 
-// Chord symbols as people type them: "Dm7", "G7", "C#m7b5", "Bbmaj7", "F/A".
+// Chord symbols as people type them: "Dm7", "G7", "C#m7b5", "Bbmaj7", "F/A", "Cmaj9", "E7#9".
 
 extension ChordQuality {
     /// Every spelling of a quality a lead sheet is likely to carry, longest first so "maj7" is not
     /// read as "ma" + "j7". The canonical `symbol` is always among them.
-    static let spellings: [(String, ChordQuality)] = [
+    public static let spellings: [(String, ChordQuality)] = [
+        // Past the sevenths. Matched whole, so their order among themselves does not matter.
+        ("maj7#11", .majorSevenSharpEleven), ("maj7(#11)", .majorSevenSharpEleven), ("M7#11", .majorSevenSharpEleven),
+        ("Δ#11", .majorSevenSharpEleven), ("maj7♯11", .majorSevenSharpEleven),
+        ("maj13", .majorThirteenth), ("Maj13", .majorThirteenth), ("M13", .majorThirteenth), ("Δ13", .majorThirteenth),
+        ("maj9", .majorNinth), ("Maj9", .majorNinth), ("M9", .majorNinth), ("Δ9", .majorNinth), ("ma9", .majorNinth),
+        ("m6/9", .minorSixNine), ("m69", .minorSixNine), ("min6/9", .minorSixNine), ("-6/9", .minorSixNine),
+        ("6/9", .sixNine), ("69", .sixNine),
+        ("madd9", .minorAddNine), ("m(add9)", .minorAddNine), ("minadd9", .minorAddNine),
+        ("add9", .addNine), ("(add9)", .addNine),
+        ("m13", .minorThirteenth), ("min13", .minorThirteenth), ("-13", .minorThirteenth),
+        ("m11", .minorEleventh), ("min11", .minorEleventh), ("-11", .minorEleventh),
+        ("m9", .minorNinth), ("min9", .minorNinth), ("-9", .minorNinth),
+        ("m6", .minorSixth), ("min6", .minorSixth), ("-6", .minorSixth),
+        ("7sus4", .sevenSuspendedFourth), ("7sus", .sevenSuspendedFourth),
+        ("9sus4", .nineSuspendedFourth), ("9sus", .nineSuspendedFourth),
+        ("7b9", .sevenFlatNine), ("7♭9", .sevenFlatNine), ("7(b9)", .sevenFlatNine),
+        ("7#9", .sevenSharpNine), ("7♯9", .sevenSharpNine), ("7(#9)", .sevenSharpNine),
+        ("7#11", .sevenSharpEleven), ("7♯11", .sevenSharpEleven), ("7(#11)", .sevenSharpEleven),
+        ("7b13", .sevenFlatThirteen), ("7♭13", .sevenFlatThirteen), ("7(b13)", .sevenFlatThirteen),
+        ("7#5", .sevenSharpFive), ("7♯5", .sevenSharpFive), ("aug7", .sevenSharpFive), ("+7", .sevenSharpFive), ("7+", .sevenSharpFive),
+        ("7b5", .sevenFlatFive), ("7♭5", .sevenFlatFive),
+        ("13", .dominantThirteenth), ("11", .dominantEleventh), ("9", .dominantNinth), ("6", .sixth), ("5", .power),
         ("augMaj7", .augmentedMajorSeventh), ("+maj7", .augmentedMajorSeventh),
         ("mMaj7", .minorMajorSeventh), ("mmaj7", .minorMajorSeventh), ("m(maj7)", .minorMajorSeventh), ("minMaj7", .minorMajorSeventh),
         ("m7b5", .halfDiminishedSeventh), ("ø7", .halfDiminishedSeventh), ("ø", .halfDiminishedSeventh), ("min7b5", .halfDiminishedSeventh),
@@ -34,7 +56,8 @@ extension Chord {
         guard !trimmed.isEmpty else { return nil }
         var body = Substring(trimmed)
         var bassText: Substring?
-        if let slash = body.firstIndex(of: "/") {
+        // The last slash, and only when a note follows it: the slash in C6/9 is part of its name.
+        if let slash = body.lastIndex(of: "/"), NoteName(String(body[body.index(after: slash)...])) != nil {
             bassText = body[body.index(after: slash)...]
             body = body[..<slash]
         }

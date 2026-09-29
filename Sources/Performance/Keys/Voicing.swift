@@ -11,11 +11,11 @@ import SongGraph
 /// you press play on the Chords surface are the same chords, in the same octave, that the form
 /// plays back to you.
 ///
-/// The rule is deliberately plain. This app's pitched voices are a pad and a Rhodes, and a close
-/// root-position voicing in the octave below middle C is what either of them is for. Anything
-/// cleverer — drop 2, rootless left hand, a voice-leading pass across the bar line — is a decision
-/// a player makes, and when this app grows one it will be a persona's decision, kept as a version,
-/// not a constant buried in the transport.
+/// The rule below is deliberately plain: a close root-position voicing in the octave below middle
+/// C, struck on the change and held. It is what a progression plays when nobody has said how.
+/// Anything cleverer — a voice-leading pass across the bar line, a rootless left hand, a rhythm —
+/// is a decision a player makes, and it is kept as one: `ChordPlaying`, on the progression, played
+/// by `KeysPlaying.swift`.
 public enum Voicing {
 
     /// The octave the chord's root sits in. C3 is MIDI 48: the left hand's home, and low enough
@@ -39,6 +39,10 @@ public enum Voicing {
                              octave: Int = rootOctave,
                              velocity: Int = velocity,
                              hold: Double = hold) -> [NoteEvent] {
+        // Played the way it says it is played. One that says nothing is held, close: what follows.
+        if let playing = progression.playing, !playing.isPlain {
+            return notes(for: progression, playing: playing, octave: octave, velocity: velocity, hold: hold)
+        }
         var out: [NoteEvent] = []
         var beat = 0.0
         for span in progression.bars.flatMap(\.chords) {

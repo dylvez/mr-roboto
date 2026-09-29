@@ -89,7 +89,9 @@ struct GenreTests {
         #expect(GenreNumerals.symbols("i - VII - VI", in: aMinor, mode: "aeolian") == "Am | G | F")
         #expect(GenreNumerals.symbols("I - V - vi - IV", in: cMajor) == "C | G | Am | F")
         #expect(GenreNumerals.symbols("ii7 - V7 - Imaj7", in: cMajor) == "Dm7 | G7 | Cmaj7")
-        #expect(GenreNumerals.symbols("Imaj7#11 - bVIImaj7#11", in: cMajor) == "Cmaj7 | Bbmaj7")
+        // The colours past the seventh are chords the app reads now; they used to be cut to it.
+        #expect(GenreNumerals.symbols("Imaj7#11 - bVIImaj7#11", in: cMajor) == "Cmaj7#11 | Bbmaj7#11")
+        #expect(GenreNumerals.symbols("ii9 - V13 - Imaj9 - I6/9", in: cMajor) == "Dm9 | G13 | Cmaj9 | C6/9")
         #expect(GenreNumerals.chords("I - Q", in: cMajor) == nil)
         #expect(GenreNumerals.fits(mode: "dorian", aMinor) && !GenreNumerals.fits(mode: "ionian", aMinor))
     }

@@ -52,8 +52,9 @@ public struct SetProgressionTool: DirectorTool {
     public var schema: DirectorJSON {
         Schema.object([
             ("chords", Schema.string(
-                "Chord symbols, bars separated by |: \"Dm7 G7 | Cmaj7 | Am7\". Qualities: m, 7, maj7, "
-                + "m7, m7b5, dim, dim7, aug, sus2, sus4, mMaj7; a slash bass is an inversion (C/E).")),
+                "Chord symbols, bars separated by |: \"Dm9 G13 | Cmaj9 | Am7\". Qualities: m, 7, maj7, m7, m7b5, dim, "
+                + "dim7, aug, sus2, sus4, mMaj7; 6, m6, 6/9, add9, maj9, 9, m9, 11, m11, maj7#11, 13, maj13, m13; 7b9, 7#9, "
+                + "7#11, 7b13, 7#5, 7b5, 7sus4, 9sus4; 5. A slash bass is an inversion (C/E).")),
             ("key", Schema.string(
                 "The key the numerals are read in, as read_song reports it: \"D major\", \"E♭ minor\", "
                 + "\"F# aeolian\".")),
@@ -66,18 +67,21 @@ public struct SetProgressionTool: DirectorTool {
                                       suggestion: "Say it as read_song does: \"D major\", \"A minor\".")
         }
         let beatsPerBar = await workspace.song?.timeSignature.beatsPerBar ?? 4
-        let progression: Progression
+        var progression: Progression
         switch Progression.parse(input.chords, key: key, beatsPerBar: beatsPerBar) {
         case .success(let parsed): progression = parsed
         case .failure(let error):
             throw DirectorToolFailure(tool: name, reason: error.description,
-                                      suggestion: "Symbols like Dm7, G7, Cmaj7, F#m7b5, Bbmaj7, C/E; bars separated by |.")
+                                      suggestion: "Symbols like Dm7, G13, Cmaj9, F#m7b5, Bbmaj7, E7#9, C6/9, C/E; bars separated by |. "
+                                          + "A slash bass has to be a note of the chord.")
         }
         // The song's harmony is one part: new chords are its next version, heard wherever the old
         // ones played. A new part each time sat in no section once the form had chords, or — before
         // that — played on top of them.
-        let existing = await workspace.song.flatMap { song in song.versions.last { $0.type == .progression } }
-        let note = "\(progression.symbols()) in \(key)"
+        let existing = await workspace.song.flatMap { song in Guidance.progressions(in: song).last }
+        // New chords, the same player: how they were played stays, until play_chords says otherwise.
+        if let existing, case .progression(let before) = existing.kind { progression.playing = before.playing }
+        let note = "\(progression.symbols()) in \(key)" + (progression.playing.map { ": \($0.sentence.lowercased())" } ?? "")
         let version = existing.map { $0.deriving(.progression(progression), by: .persona(acting), operation: Operation.written, note: note) }
             ?? PartVersion(partID: PartID(), kind: .progression(progression), author: .persona(acting),
                            operation: Operation.written, note: note)

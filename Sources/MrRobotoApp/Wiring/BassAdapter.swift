@@ -138,6 +138,23 @@ final class ChordsAdapter: ChordsHosting {
         await service.playInstrument(pitches.map { VoiceSampler.Hit(note: $0, velocity: 92, at: 0, duration: duration) })
     }
 
+    /// The chords as they are played, through the same player the surface's own play control
+    /// uses, so picking a way of playing them is heard as the song will play it.
+    func audition(_ progression: Progression, for part: PartID?) async {
+        let player = SurfaceWiring.shared.player(for: app)
+        let clock = app.clock
+        let seconds = clock.seconds(forBeat: progression.bars.reduce(0) { $0 + $1.beats }) + 0.5
+        let song = app.song
+        let id = surface.map { "chords-\($0)" } ?? "chords"
+        await player.play(id: id, label: "these chords", seconds: seconds) {
+            await player.play(progression, in: song, for: part, clock: clock)
+        }
+    }
+
+    func instrumentFamily(for part: PartID?) -> String {
+        InstrumentVoiceSpec.preset(id: instrument(for: part))?.family ?? "keys"
+    }
+
     func commit(_ version: PartVersion) -> Bool {
         guard app.record(version) else { return false }
         if let surface { app.surfaceKept(version, on: surface) }

@@ -298,9 +298,19 @@ struct ChordsTests {
 
     @Test("symbols parse the way a lead sheet writes them", arguments: [
         ("Dm7", Chord(.d, .minorSeventh)), ("G7", Chord(.g, .dominantSeventh)), ("Cmaj7", Chord(.c, .majorSeventh)),
-        ("Ebm11", nil), ("Bbmaj7", Chord(.aSharp, .majorSeventh)), ("F#m7b5", Chord(.fSharp, .halfDiminishedSeventh)),
+        ("Ebm11", Chord(.dSharp, .minorEleventh)), ("Bbmaj7", Chord(.aSharp, .majorSeventh)), ("F#m7b5", Chord(.fSharp, .halfDiminishedSeventh)),
         ("C/E", Chord(root: .c, quality: .major, inversion: 1)), ("Am", Chord(.a, .minor)), ("E", Chord(.e, .major)),
-        ("H7", nil), ("Cmaj9", nil),
+        ("H7", nil), ("Cmaj9", Chord(.c, .majorNinth)),
+        // What a lead sheet adds to the sevenths, as it is typed.
+        ("Dm9", Chord(.d, .minorNinth)), ("G13", Chord(.g, .dominantThirteenth)), ("C6", Chord(.c, .sixth)),
+        ("C6/9", Chord(.c, .sixNine)), ("C69", Chord(.c, .sixNine)), ("Am6", Chord(.a, .minorSixth)),
+        ("Fadd9", Chord(.f, .addNine)), ("E7#9", Chord(.e, .sevenSharpNine)), ("Bb7b9", Chord(.aSharp, .sevenFlatNine)),
+        ("G7sus4", Chord(.g, .sevenSuspendedFourth)), ("G7sus", Chord(.g, .sevenSuspendedFourth)), ("D9sus4", Chord(.d, .nineSuspendedFourth)),
+        ("Fmaj7#11", Chord(.f, .majorSevenSharpEleven)), ("A5", Chord(.a, .power)), ("Ab9", Chord(.gSharp, .dominantNinth)),
+        ("C+7", Chord(.c, .sevenSharpFive)), ("Cmaj9/E", Chord(root: .c, quality: .majorNinth, inversion: 1)),
+        ("C6/9/E", Chord(root: .c, quality: .sixNine, inversion: 1)),
+        // A slash over a note the chord does not hold, and an extension nobody writes.
+        ("C/D", nil), ("C15", nil), ("Cmaj", Chord(.c, .major)),
     ] as [(String, Chord?)])
     func parsing(symbol: String, expected: Chord?) {
         #expect(Chord(parsing: symbol) == expected, "\(symbol)")

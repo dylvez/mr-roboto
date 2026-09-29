@@ -27,6 +27,8 @@ public enum DirectorTools {
                                pad: DirectorStagePad? = nil,
                                persona: String? = nil,
                                cast: Cast = .standard) -> DirectorToolbox {
+        // What the writing tools remember of the draft before. One a toolbox, so one a session.
+        let desk = DraftDesk()
         var tools: [AnyDirectorTool] = [
             ReadSongTool(workspace: workspace).erased(),
             ImportRecordTool(workbench: workbench, workspace: workspace).erased(),
@@ -78,7 +80,7 @@ public enum DirectorTools {
             WriteGrooveTool(workbench: workbench, workspace: workspace).erased(),
             // Writing, appended after the thirty-six: a tune and words in the Melodist's and the
             // Lyricist's names, the song's settings, an instrument, the takes comped, another song.
-            WriteMelodyTool(workspace: workspace).erased(),
+            WriteMelodyTool(workspace: workspace, desk: desk).erased(),
             WriteLyricsTool(workspace: workspace).erased(),
             SetSongTool(workspace: workspace).erased(),
             SetInstrumentTool(workspace: workspace).erased(),
@@ -90,6 +92,8 @@ public enum DirectorTools {
             SetGenreTool(workspace: workspace).erased(),
             // Developing, appended after the forty-five: the loop arranged into a song in one move.
             DevelopTool(workspace: workspace).erased(),
+            // The keys player, appended after the forty-six: how the chords are played.
+            PlayChordsTool(workspace: workspace).erased(),
         ]
         if let stage {
             let pad = pad ?? DirectorStagePad()
@@ -161,6 +165,8 @@ public enum DirectorTools {
         "set_genre",
         // Developing, appended: the whole arrangement, written from the loop.
         "develop",
+        // The keys player, appended: the rhythm the chords are struck in, and how they are voiced.
+        "play_chords",
     ]
 
     /// The two the frame adds. Appended after `names`, never among them: a session with no frame

@@ -37,9 +37,10 @@ public enum Primer {
                         + "with the clean one a step back. On a kit sound, it shapes the synthesized voice.")
         case .chords:
             return ("Chords",
-                    "A progression, typed the way a lead sheet says it: Dm7 G7 | Cmaj7. Bars are separated by |. "
+                    "A progression, typed the way a lead sheet says it: Dm9 G13 | Cmaj9. Bars are separated by |. "
                         + "Click a bar to hear it. What you type keeps itself, and the bass writer reads it. With none, the bass "
-                        + "is written to the key.")
+                        + "is written to the key. Played and Voiced say how a player plays them: the rhythm they are struck "
+                        + "in, and where the notes of each chord sit.")
         case .pianoRoll where variant == "melody":
             return ("Piano roll · melody",
                     "A tune, as many bars long as you set: click to place a note, drag it to move it, or play one in on a "

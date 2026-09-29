@@ -1,5 +1,6 @@
 import Foundation
 import MusicTheory
+import Performance
 import SongGraph
 
 /// The Chords surface's entry in the catalog: the lead sheet, surface #5, bound to a progression.
@@ -45,9 +46,64 @@ public final class ChordsModel {
         didSet {
             parse()
             guard !isApplyingState, oldValue != text else { return }
-            willEdit(ChordsState(text: oldValue, key: key), kind: "text")
+            willEdit(ChordsState(text: oldValue, key: key, playing: playing), kind: "text")
             didEdit()
         }
+    }
+
+    /// How the chords are played: how they are voiced, and the rhythm they are struck in. Held
+    /// and close until somebody says otherwise, which is how every progression used to play.
+    public private(set) var playing = ChordPlaying()
+
+    public var pattern: KeysPattern { playing.keysPattern }
+    public var voicing: KeysVoicing { playing.keysVoicing }
+
+    /// The rhythm the chords are struck in. Heard at once, as the song will play it.
+    public func setPattern(_ pattern: KeysPattern) {
+        guard pattern != self.pattern else { return }
+        willEdit(state, kind: "pattern")
+        playing.pattern = pattern.rawValue
+        // A hand of its own the first time it has a rhythm to play.
+        if pattern != .held, playing.seed == 0 { playing.seed = GrooveFeel.freshSeed() }
+        parse()
+        didEdit()
+        hear()
+    }
+
+    /// Where the notes of each chord sit.
+    public func setVoicing(_ voicing: KeysVoicing) {
+        guard voicing != self.voicing else { return }
+        willEdit(state, kind: "voicing")
+        playing.voicing = voicing.rawValue
+        parse()
+        didEdit()
+        hear()
+    }
+
+    /// Plays the chords as they stand, voiced and struck.
+    public func hear() {
+        guard let progression, problem == nil else { return }
+        let part = self.part
+        Task { [host] in await host.audition(progression, for: part) }
+    }
+
+    /// The top note of each chord as it is voiced, spelled in the key: the line the chords are
+    /// heard as. "E4 · D4 · E4 · E4".
+    public var topLine: String {
+        guard let progression else { return "" }
+        return Voicing.topLine(of: progression, as: voicing).map { key.name(of: Pitch(midi: $0)) }.joined(separator: " · ")
+    }
+
+    /// How far the voices travel from chord to chord as they are voiced, in semitones a voice.
+    public var movement: Double {
+        progression.map { Voicing.movement(of: $0, as: voicing) } ?? 0
+    }
+
+    /// Why the pattern chosen will not be heard well on the instrument chosen, when it will not.
+    public var patternCaution: String? {
+        let family = host.instrumentFamily(for: part)
+        guard !pattern.suits(family: family) else { return nil }
+        return "\(pattern.name) is short notes, and this instrument swells into a note: try it on a piano, an organ or a guitar, or hold the chords."
     }
     public private(set) var key: Key
     public private(set) var progression: Progression?
@@ -84,6 +140,7 @@ public final class ChordsModel {
     struct ChordsState: Equatable, Sendable {
         var text: String
         var key: Key
+        var playing = ChordPlaying()
     }
 
     private var history = EditHistory<ChordsState>()
@@ -93,10 +150,11 @@ public final class ChordsModel {
     public let autoKeep = AutoKeep()
 
     private var state: ChordsState {
-        get { ChordsState(text: text, key: key) }
+        get { ChordsState(text: text, key: key, playing: playing) }
         set {
             isApplyingState = true
             key = newValue.key
+            playing = newValue.playing
             text = newValue.text
             isApplyingState = false
             keyProblem = nil
@@ -158,6 +216,7 @@ public final class ChordsModel {
         if let progression, case .progression(let stored) = progression.kind {
             base = progression
             self.key = stored.key
+            playing = stored.playing ?? ChordPlaying()
             text = stored.symbols()
             opened = (text, stored)
         } else {
@@ -174,7 +233,12 @@ public final class ChordsModel {
 
     /// Reads `text` as the key's I–IV–V–I when it is empty, so an open surface is never blank.
     private func parse() {
-        defer { refreshReadings() }
+        defer {
+            // Played the way the sheet says, whatever the line. Held and close is said as nothing,
+            // so chords nobody has chosen a playing for are the chords they were.
+            progression?.playing = playing.isPlain ? nil : playing
+            refreshReadings()
+        }
         let trimmed = text.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else {
             progression = Progression(key: key, bars: Self.defaultBars(in: key, beatsPerBar: beatsPerBar))
@@ -291,6 +355,7 @@ public final class ChordsModel {
         guard let progression, problem == nil else { return nil }
         let payload = PartKind.progression(progression)
         let text = note ?? "\(progression.symbols()) in \(progression.key)"
+            + (progression.playing.map { ": \($0.sentence.lowercased())" } ?? "")
         let version: PartVersion
         if let kept = versions.last ?? base {
             let previous = host.newest(of: kept.partID) ?? kept

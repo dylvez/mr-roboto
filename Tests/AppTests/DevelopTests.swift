@@ -180,7 +180,8 @@ struct DevelopTests {
         // Nobody sings, so the verse gets the tune's first phrase.
         #expect(development.plays[1].parts == ["drums", "bass", "chords", "tune, first phrase only"])
         #expect(development.plays[2].parts == ["drums, lifted", "bass", "chords", "tune"])
-        #expect(try plays(development, "Bridge").parts == ["drums, on the ride", "bass, lighter", "chords"])
+        #expect(try plays(development, "Bridge").parts == ["drums, on the ride", "bass, on the bridge's chords",
+                                                           "chords, its own: Fmaj7 | G7 | Dm7 | E7"])
         // The last hook is eight bars and the tune is two: room to say it, then say it an octave up.
         #expect(development.plays[6].parts == ["drums, lifted", "bass", "chords", "tune, then an octave up"])
         #expect(try plays(development, "Outro").parts == ["drums, thinned", "bass, lighter", "chords"])
@@ -198,8 +199,8 @@ struct DevelopTests {
         let development = try #require(Develop.plan(for: loop.song))
         // Thinned drums (intro and outro), lifted drums (three hooks), on the ride; a lighter bass
         // (bridge and outro); the tune's first phrase (two verses) and its lift.
-        #expect(development.written == ["Thinned drums", "First phrase of The hook", "Lifted drums",
-                                        "Drums on the ride", "Lighter bass", "Lift of The hook"])
+        #expect(development.written == ["Thinned drums", "First phrase of The hook", "Lifted drums", "Drums on the ride",
+                                        "Bridge bass", "Bridge chords", "Lift of The hook", "Lighter bass"])
         #expect(development.versions.allSatisfy { $0.operation == Operation.developed })
         #expect(development.versions.allSatisfy { $0.author == Develop.author })
         #expect(development.sections[0].stitch.first?.part == development.sections[7].stitch.first?.part)
@@ -229,6 +230,132 @@ struct DevelopTests {
         // The drop still opens on its crash.
         let drop = try #require(plan.segments.first { $0.name == "Drop" }?.groove)
         #expect(drop.patterns.first { $0.voice == .crash }?.steps.first == .accent)
+    }
+
+    // MARK: The chords
+
+    private func progression(_ version: PartVersion?) -> Progression? {
+        if case .progression(let sheet)? = version?.kind { return sheet }
+        return nil
+    }
+
+    private func bassline(_ version: PartVersion?) -> Bassline? {
+        if case .bassline(let line)? = version?.kind { return line }
+        return nil
+    }
+
+    @Test("a bridge goes somewhere else: chords that start away from home and lead back, and the bass written to them")
+    func bridge() throws {
+        let loop = try DevelopFixture.loop()
+        let development = try #require(Develop.plan(for: loop.song))
+        let song = try DevelopFixture.developed(loop.song, development)
+        let section = try #require(song.sections.first { $0.name == "Bridge" })
+        let played = song.versions(playing: section)
+        let chords = try #require(progression(played.first { $0.type == .progression }))
+        #expect(chords.symbols() == "Fmaj7 | G7 | Dm7 | E7")
+        #expect(chords.key == Key(parsing: "A minor"))
+        #expect(chords.bars.allSatisfy { $0.beats == 4 })
+        // It is a variation of the song's chords: their strip, their instrument.
+        let part = try #require(played.first { $0.type == .progression }).partID
+        #expect(song.variation(of: part) == Variation(of: loop.chords.partID, name: "bridge"))
+
+        // The bass is in the hands that wrote the loop's, on the bridge's chords: whatever it
+        // plays on the first beat of a bar is a note of that bar's chord.
+        let line = try #require(bassline(played.first { $0.type == .bassline }))
+        #expect(line.hands == "octave" && line.sound == "analogue")
+        #expect(line.lengthInBars == 4)
+        for (bar, chord) in chords.chords.enumerated() {
+            let first = try #require(line.notes.first { $0.start >= Double(bar * 4) - 0.25 && $0.start < Double(bar * 4) + 1 }, "bar \(bar + 1) has no bass on its one")
+            #expect(chord.pitchClasses.contains(first.pitch.pitchClass), "bar \(bar + 1): \(first.pitch) under \(chord)")
+        }
+        #expect(!played.contains { $0.type == .melody }, "the tune waits for the hook")
+        // Everywhere else the song's own chords play.
+        for other in song.sections where other.name != "Bridge" {
+            let sheet = progression(song.versions(playing: other).first { $0.type == .progression })
+            #expect(sheet == nil || sheet?.symbols() == "Am7 | Fmaj7", "\(other.name)")
+        }
+    }
+
+    @Test("in a major key the bridge is IV, V, vi, V; and from somewhere else when the song starts there")
+    func bridgeInMajor() throws {
+        func sheet(_ line: String, _ key: String) -> Progression { try! Progression.parse(line, key: Key(parsing: key)!).get() }
+        #expect(Develop.bridge(from: sheet("C | G | Am | F", "C major"))?.symbols() == "F | G | Am | G")
+        #expect(Develop.bridge(from: sheet("Cmaj7 | Am7 | Dm7 | G7", "C major"))?.symbols() == "Fmaj7 | G7 | Am7 | G7")
+        // Eight bars of chords: two bars a chord.
+        let eight = try #require(Develop.bridge(from: sheet("C | C | F | F | G | G | C | C", "C major")))
+        #expect(eight.symbols() == "F | F | G | G | Am | Am | G | G")
+        // A song that starts on IV goes to vi.
+        #expect(Develop.bridge(from: sheet("F | G | C | Am", "C major"))?.symbols() == "Am | F | Dm | G")
+        #expect(Develop.bridge(from: sheet("Fmaj7 | G7 | Dm7 | E7", "A minor"))?.symbols() == "Dm7 | G7 | Fmaj7 | E7")
+        // Sixteen bars of chords and a bridge of eight: eight bars, so the one that leads back is reached.
+        let sixteen = sheet("Cm7 | Cm7 | Fm7 | Fm7 | Cm7 | Cm7 | Abmaj7 | G7 | Cm7 | Cm7 | Fm7 | Bb7 | Ebmaj7 | Abmaj7 | G7 | Cm7", "C minor")
+        #expect(Develop.bridge(from: sixteen)?.bars.count == 16)
+        #expect(Develop.bridge(from: sixteen, bars: 8)?.symbols() == "Abmaj7 | Abmaj7 | Bb7 | Bb7 | Fm7 | Fm7 | G7 | G7")
+        // Four bars of chords go twice into eight, and stay four.
+        #expect(Develop.bridge(from: sheet("C | G | Am | F", "C major"), bars: 8)?.symbols() == "F | G | Am | G")
+        #expect(Develop.bridge(from: sheet("C | C | F | F | G | G | C | C", "C major"), bars: 16)?.symbols() == eight.symbols())
+        // Six bars: a chord a bar, ending on the one that leads back.
+        #expect(Develop.bridge(from: sheet("C | G | Am | F", "C major"), bars: 6)?.symbols() == "F | G | Am | G | F | G")
+        #expect(Develop.bridge(from: sheet("C | G | Am | F", "C major"), bars: 5)?.symbols() == "F | G | Am | G | G")
+        // Played the way the song's chords are.
+        var stabbed = sheet("Am7 | Fmaj7", "A minor")
+        stabbed.playing = ChordPlaying(.stabs, .led, seed: 9)
+        #expect(Develop.bridge(from: stabbed)?.playing == stabbed.playing)
+    }
+
+    @Test("a bridge with a tune of its own, or a chop, keeps the chords they were written to")
+    func bridgeStays() throws {
+        var loop = try DevelopFixture.loop(sections: [("Intro", 4), ("Verse", 16), ("Hook", 8), ("Bridge", 8), ("Hook", 8), ("Outro", 4)])
+        let figure = PartVersion(partID: PartID(), kind: .melody(Melody(notes: [DevelopFixture.n(69, 0, 2), DevelopFixture.n(72, 2, 2)], lengthInBars: 1)),
+                                 author: .user, operation: Operation.written, note: "The bridge's own line")
+        try loop.song.append(figure)
+        loop.song.sections[3].stitch = [loop.drums, loop.bass, loop.chords].lanes + [Lane(part: figure.partID)]
+        let development = try #require(Develop.plan(for: loop.song))
+        #expect(development.plays[3].parts == ["drums, on the ride", "bass, lighter", "chords", "tune"])
+        #expect(!development.written.contains("Bridge chords"))
+    }
+
+    @Test("chords with a rhythm are held where the song stands still")
+    func chordsHeld() throws {
+        var loop = try DevelopFixture.loop(genre: "breakbeat")
+        guard case .progression(var sheet) = loop.chords.kind else { return }
+        sheet.playing = ChordPlaying(.stabs, .led, seed: 5)
+        let stabbed = loop.chords.deriving(.progression(sheet), by: .user, operation: Operation.edit, note: "Am7 Fmaj7: stabs")
+        try loop.song.append(stabbed)
+        let development = try #require(Develop.plan(for: loop.song, genre: GenreBook.standard.profile(named: "breakbeat")))
+        let song = try DevelopFixture.developed(loop.song, development)
+        #expect(try plays(development, "Intro 2").parts == ["drums, thinned", "bass, lighter", "chords, held"])
+        #expect(try plays(development, "Breakdown").parts == ["drums, no kick", "bass, held roots", "chords, held", "tune, first phrase only"])
+        #expect(try plays(development, "Drop").parts == ["drums, lifted", "bass", "chords", "tune, then an octave up"])
+        let breakdown = try #require(song.sections.first { $0.name == "Breakdown" })
+        let held = try #require(progression(song.versions(playing: breakdown).first { $0.type == .progression }))
+        #expect(held.playing == ChordPlaying(.held, .led), "held, and voiced as they were")
+        #expect(held.symbols() == sheet.symbols())
+        #expect(development.written.filter { $0 == "Held chords" }.count == 1, "written once, played in four sections")
+    }
+
+    @Test("held chords are given the genre's rhythm where the song arrives, on an instrument that can play one")
+    func chordsLifted() throws {
+        var loop = try DevelopFixture.loop(genre: "house")
+        try loop.song.append(PartVersion(partID: PartID(), kind: .sound(Sound(instrument: "grand-piano", forPart: loop.chords.partID)),
+                                         author: .user, operation: Operation.written, note: "Grand Piano"))
+        let house = try #require(GenreBook.standard.profile(named: "house"))
+        let onPiano = try #require(Develop.plan(for: loop.song, genre: house))
+        let drop = try plays(onPiano, "Drop").parts
+        #expect(drop == ["drums, lifted", "bass", "chords, stabs", "tune"], "\(drop)")
+        #expect(try plays(onPiano, "Groove").parts.contains("chords"))
+        let stabs = try #require(progression(onPiano.versions.first { $0.variation?.name == "played-stabs" }))
+        #expect(stabs.playing?.keysPattern == .stabs)
+        #expect(Voicing.notes(for: stabs).allSatisfy { $0.duration <= 0.35 })
+
+        // On a pad, which swells into a note, they stay held.
+        try loop.song.append(PartVersion(partID: PartID(), kind: .sound(Sound(instrument: "air-pad", forPart: loop.chords.partID)),
+                                         author: .user, operation: Operation.written, note: "Air Pad"))
+        let onPad = try #require(Develop.plan(for: loop.song, genre: house))
+        #expect(try plays(onPad, "Drop").parts.contains("chords"))
+        // And with no genre set nobody knows what rhythm to give them.
+        loop.song.genre = nil
+        #expect(try #require(Develop.plan(for: loop.song)).written.allSatisfy { !$0.contains("chords") || $0 == "Bridge chords" })
     }
 
     @Test("with words to sing, the verses leave the tune out")
@@ -484,7 +611,7 @@ struct DevelopAppTests {
         #expect(names(playing: loop.tune.partID) == ["Verse", "Hook", "Verse", "Hook", "Hook"])
         // Developing again plays each of them its own way.
         let again = try #require(app.develop())
-        #expect(again.written == ["First phrase of The hook", "Lighter bass", "Lift of The hook"])
+        #expect(again.written == ["First phrase of The hook", "Bridge bass", "Lift of The hook", "Lighter bass"])
     }
 
     @Test("a section held at versions of its own is left exactly as it was")

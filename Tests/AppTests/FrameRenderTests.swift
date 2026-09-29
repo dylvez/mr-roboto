@@ -473,3 +473,27 @@ extension FrameRenderTests {
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-chords-imported")
     }
 }
+
+extension FrameRenderTests {
+    @Test("the Chords surface with a playing chosen: both rows of chips, the top line and a caution, at 1440 and at the minimum")
+    func chordsPlayed() throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        var built = GuidanceFixture.grooved()
+        var sheet = try Progression.parse("Cmaj9 | Em7 | Fmaj7 | Am9 | Dm9 G13 | Cmaj9 | C6/9 | E7#9 Am11", key: Key.cMajor).get()
+        sheet.playing = ChordPlaying(.stabs, .led, seed: 11)
+        let chords = PartVersion(partID: PartID(), kind: .progression(sheet), author: .user,
+                                 operation: Operation.written, note: "Eight bars")
+        try built.song.append(chords)
+        let app = app(built.song)
+        // A pad, so the caution is on the sheet: stabs on something that swells.
+        if let pad = InstrumentVoiceSpec.available.first(where: { $0.family == "pad" }) { app.setInstrument(pad.id) }
+        app.perform(SurfaceAction(surface: .chords, title: "Eight bars", bound: [chords.id]))
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-chords-played")
+        try write(FrameView(app: app), size: CGSize(width: FrameLayout.minimumWindowWidth(collapsed: app.regions.collapsed),
+                                                    height: FrameLayout.minimumWindowHeight), name: "frame-chords-played-minimum")
+        let all = FrameLayout.minimumWindowWidth(collapsed: [])
+        for region in FrameRegion.allCases where app.regions.collapsed.contains(region) { app.regions.toggle(region) }
+        try write(FrameView(app: app), size: CGSize(width: all, height: FrameLayout.minimumWindowHeight), name: "frame-chords-played-all-open")
+    }
+}

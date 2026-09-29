@@ -50,14 +50,47 @@ public struct ProgressionBar: Hashable, Codable, Sendable {
     public var beats: Double { chords.reduce(0) { $0 + $1.beats } }
 }
 
+/// How a progression is played: how its chords are voiced, the rhythm they are struck in, and a
+/// seed for the hand that strikes them.
+///
+/// A progression is a lead sheet — which chords, for how long — and a lead sheet says nothing of
+/// how a player plays it. This is that, carried on the chords it plays the way a bass line carries
+/// its hands: the chords stay chords, to be read and rewritten as chords, and what is heard is a
+/// performance of them. `Performance.Voicing` turns the two into notes.
+public struct ChordPlaying: Hashable, Codable, Sendable {
+    /// The rhythm, by a `Performance.KeysPattern`'s id: "held", "stabs", "arpeggio".
+    public var pattern: String
+    /// The voicing, by a `Performance.KeysVoicing`'s id: "close", "led", "spread", "rootless".
+    public var voicing: String
+    /// What the striking varies on. The same seed is the same performance.
+    public var seed: UInt64
+
+    public init(pattern: String = ChordPlaying.held, voicing: String = ChordPlaying.close, seed: UInt64 = 0) {
+        self.pattern = pattern
+        self.voicing = voicing
+        self.seed = seed
+    }
+
+    public static let held = "held"
+    public static let close = "close"
+
+    /// Held, in close position: what every progression played as before it could be played any
+    /// other way, and what one with no playing still does.
+    public var isPlain: Bool { pattern == Self.held && voicing == Self.close }
+}
+
 /// A chord progression: bars of chords with durations, in a key.
 public struct Progression: Hashable, Codable, Sendable {
     public var key: Key
     public var bars: [ProgressionBar]
+    /// How it is played. Nil — every progression written before this — is held, in close
+    /// position. Synthesized coding omits it when nil, so older documents round-trip byte for byte.
+    public var playing: ChordPlaying?
 
-    public init(key: Key, bars: [ProgressionBar]) {
+    public init(key: Key, bars: [ProgressionBar], playing: ChordPlaying? = nil) {
         self.key = key
         self.bars = bars
+        self.playing = playing
     }
 
     /// Every chord in order, ignoring bar boundaries.
@@ -72,7 +105,7 @@ public struct Progression: Hashable, Codable, Sendable {
         let newBars = bars.map { bar in
             ProgressionBar(chords: bar.chords.map { ChordSpan($0.chord.transposed(by: semitones), beats: $0.beats) })
         }
-        return Progression(key: newKey, bars: newBars)
+        return Progression(key: newKey, bars: newBars, playing: playing)
     }
 }
 

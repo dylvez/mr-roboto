@@ -76,13 +76,25 @@ public enum GenreNumerals {
         case "m7": return .minorSeventh
         case "sus2": return .suspendedSecond
         case "sus4", "sus": return .suspendedFourth
-        // Extensions the chord set has no name for are played as their seventh chord.
-        case "9", "11", "13": return upper ? .dominantSeventh : .minorSeventh
-        case "maj9", "6", "add9", "6/9": return upper ? .majorSeventh : .minorSeventh
-        case "m9", "m11", "m6": return .minorSeventh
+        // The case of the numeral says minor, as it does for a seventh.
+        case "9": return upper ? .dominantNinth : .minorNinth
+        case "11": return upper ? .dominantEleventh : .minorEleventh
+        case "13": return upper ? .dominantThirteenth : .minorThirteenth
+        case "6": return upper ? .sixth : .minorSixth
+        case "6/9", "69": return upper ? .sixNine : .minorSixNine
+        case "add9": return upper ? .addNine : .minorAddNine
+        case "maj9": return upper ? .majorNinth : .minorNinth
+        case "m9": return .minorNinth
+        case "m11": return .minorEleventh
+        case "m13": return .minorThirteenth
+        case "m6": return .minorSixth
         default:
-            // An altered chord — "maj7#11", "7b9", "m11(9)" — is played as the chord it alters: the
-            // longest suffix it begins with.
+            // Anything else a lead sheet spells — "maj7#11", "7b9", "7sus4" — as the chord parser
+            // reads it.
+            let normal = suffix.replacingOccurrences(of: "♭", with: "b").replacingOccurrences(of: "♯", with: "#")
+            if let spelled = ChordQuality.spellings.first(where: { $0.0 == normal })?.1 { return spelled }
+            // And what nothing reads — "m11(9)" — is played as the chord it alters: the longest
+            // suffix it begins with.
             let known = ["m7b5", "maj7", "maj9", "dim7", "sus2", "sus4", "add9", "m7", "m9", "m6", "dim", "aug", "7", "9", "11", "13", "6", "ø", "°", "+", "m"]
             guard let base = known.first(where: { suffix.hasPrefix($0) && suffix != $0 }) else { return nil }
             return base == "m" ? .minor : quality(base, upper: upper)

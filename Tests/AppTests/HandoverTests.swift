@@ -174,6 +174,29 @@ struct HandoverTests {
         #expect(tunes(rig).count == 2 && tunes(rig).last?.parents.first?.description == id)
     }
 
+    @Test("a flagged tune written again as draft 2 is that tune's next version, parent named or not; another draft 1 is another tune")
+    func theSameTuneAgain() async throws {
+        let rig = await rig()
+        defer { rig.clean() }
+        let first = await write(rig, Self.arpeggio, draft: 1)
+        let id = try #require(first["version"] as? String)
+        let said = first["detail"] as? String ?? ""
+        #expect(said.contains("write it again with parent \(id) and draft 2"), "\(said)")
+        // The live run's second call: the tune again, answering the flag, naming nobody.
+        let second = await write(rig, Self.figure, draft: 2)
+        #expect(second["part"] as? String == first["part"] as? String, "\(second["detail"] ?? "")")
+        #expect(tunes(rig).last?.parents.first?.description == id)
+        #expect((second["detail"] as? String)?.contains("as the next version of") == true)
+        #expect(Set(tunes(rig).map(\.partID)).count == 1)
+        // An alternative is a tune of its own.
+        let other = await write(rig, Self.figure, draft: 1)
+        #expect(other["part"] as? String != first["part"] as? String)
+        #expect(Set(tunes(rig).map(\.partID)).count == 2)
+        // And a draft 2 after that one, which was not flagged, still follows it and not the first.
+        let again = await write(rig, Self.arpeggio, draft: 2)
+        #expect(again["part"] as? String == other["part"] as? String)
+    }
+
     @Test("the schema asks for the draft, and the prompt says what it is for")
     func told() throws {
         let box = WritingFixture.toolbox(DirectorScratchWorkspace(song: DirectorSongFixture.song()))

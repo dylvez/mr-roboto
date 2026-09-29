@@ -66,8 +66,12 @@ public struct WriteMelodyTool: DirectorTool {
     }
 
     let workspace: any DirectorWorkspace
+    let desk: DraftDesk?
 
-    public init(workspace: any DirectorWorkspace) { self.workspace = workspace }
+    public init(workspace: any DirectorWorkspace, desk: DraftDesk? = nil) {
+        self.workspace = workspace
+        self.desk = desk
+    }
 
     /// Every tune is the Melodist's, whoever holds the toolbox: the Director writes it on the
     /// Melodist's behalf, and the Melodist reads it back.
@@ -84,7 +88,7 @@ public struct WriteMelodyTool: DirectorTool {
         + "with its octave, the beat it starts on (0 is the downbeat of bar 1), and how many beats it lasts. Rests are "
         + "the gaps. Name a parent to rewrite a melody as its next version. A first or second draft that fights the "
         + "chords, or in which nothing comes back, is not kept: what was read comes back, and you write it again. The "
-        + "third draft is kept as it is."
+        + "third draft is kept as it is. A draft after one that was kept is that tune's next version."
     }
     public var schema: DirectorJSON {
         Schema.object([
@@ -97,8 +101,8 @@ public struct WriteMelodyTool: DirectorTool {
                                          enum: [""] + InstrumentVoiceSpec.available.map(\.id))),
             ("parent", Schema.string("A melody version id this rewrites, so it becomes that part's next version; empty for a new part.")),
             ("note", Schema.string("A few words naming the tune for the ledger, in the user's language; empty names it by its range.")),
-            ("draft", Schema.integer("Which writing of this tune this is: 1 the first time, 2 and 3 when you write it again after "
-                                     + "the Melodist flagged the one before.", minimum: 1, maximum: 3)),
+            ("draft", Schema.integer("Which writing of this tune this is: 1 the first time, 2 and 3 when you write the same tune "
+                                     + "again after the Melodist flagged the one before. Another tune starts at 1.", minimum: 1, maximum: 3)),
         ], required: ["notes", "bars", "instrument", "parent", "note", "draft"])
     }
 
@@ -175,7 +179,12 @@ public struct WriteMelodyTool: DirectorTool {
             throw DirectorToolFailure(tool: name, reason: "There is no instrument called \"\(instrument)\".",
                                       suggestion: "One of: \(InstrumentVoiceSpec.available.map(\.id).joined(separator: ", ")); or empty for the song's.")
         }
-        let parent = try resolveParent(input.parent, in: song)
+        let draft = max(1, input.draft ?? Self.lastDraft)
+        var parent = try resolveParent(input.parent, in: song)
+        // The next draft of the tune kept a moment ago, when nobody says which tune it rewrites.
+        if parent == nil, let before = await desk?.rewritten(by: name, draft: draft), let kept = song.version(before), kept.type == .melody {
+            parent = song.latestVersion(of: kept.partID) ?? kept
+        }
 
         let melody = Melody(notes: notes, lengthInBars: input.bars > 0 ? input.bars : nil)
         let key = song.key ?? Guidance.analysis(in: song)?.dominantKey ?? Key.cMajor
@@ -203,9 +212,9 @@ public struct WriteMelodyTool: DirectorTool {
         // Rewritten before it is handed over: a draft the Melodist flags goes back to be written
         // again, with what was flagged, and is not kept. The band used to keep every draft and
         // say its flags to the user — six tunes in six, each arriving with "nothing comes back".
-        let draft = input.draft ?? Self.lastDraft
         let sentBack = flags.filter { Melodist.rewrittenFor.contains($0.rule) }
         if !sentBack.isEmpty, draft < Self.lastDraft {
+            await desk?.sentBack(draft: draft, by: name)
             return Output(version: "", part: parent?.partID.description ?? "", noteCount: notes.count, bars: bars,
                           range: range, key: key.name, chords: chords, instrument: nil,
                           readings: readings.map(\.says), flags: flags.map(\.says), recorded: false,
@@ -219,6 +228,7 @@ public struct WriteMelodyTool: DirectorTool {
         let recorded = await workspace.record(version)
         var playsOn: String?
         if recorded {
+            await desk?.kept(version.id, draft: draft, by: name)
             for flag in flags { await workspace.speak(Self.author, flag.says, detail: flag.rule) }
             if let preset {
                 await workspace.setInstrument(preset.id, for: version.partID)
@@ -231,6 +241,11 @@ public struct WriteMelodyTool: DirectorTool {
         if recorded {
             detail += parent.map { ", as the next version of \(PartLabel.title(of: $0))." } ?? ", as a new part."
             detail += flags.isEmpty ? " The Melodist has nothing to flag." : " The Melodist flags \(flags.count): its words are in the rail."
+            // Said where it is read: the first live run answered a flag with a second tune.
+            if !flags.isEmpty, draft < Self.lastDraft {
+                detail += " To answer a flag, write it again with parent \(version.id.description) and draft \(draft + 1): "
+                    + "that is this tune's next version. With no parent it would be a second tune in the song."
+            }
             detail += " Open the Piano roll on \(version.id.description) to see it and play it."
         } else {
             detail += "."
@@ -391,7 +406,7 @@ public struct WriteLyricsTool: DirectorTool {
         let found: PartVersion
         if trimmed.lowercased() == "newest" {
             // Graph order, not timestamps: two versions kept in the same millisecond tie on time.
-            guard let newest = song.versions.last(where: { $0.type == .melody }) else {
+            guard let newest = Guidance.melodies(in: song).last else {
                 throw DirectorToolFailure(tool: name, reason: "\(song.title) has no melody to set the words to.",
                                           suggestion: "Write one with write_melody first, or leave align_to empty.")
             }

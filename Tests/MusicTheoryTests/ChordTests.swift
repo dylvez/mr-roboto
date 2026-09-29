@@ -97,6 +97,34 @@ struct ChordQualityTests {
         #expect(ChordQuality(intervals: [0, 3, 6, 10]) == .halfDiminishedSeventh)
         #expect(ChordQuality(intervals: [0, 1, 2]) == nil)
     }
+    @Test("the chords past the sevenths are stacked above them, read after them, and know what they are built on")
+    func extended() {
+        #expect(ChordQuality.basic.count == 13)
+        #expect(Array(ChordQuality.allCases.prefix(13)) == ChordQuality.basic)
+        #expect(ChordQuality.triads.count == 6 && ChordQuality.sevenths.count == 7)
+        #expect(ChordQuality.majorNinth.intervals == [0, 4, 7, 11, 14])
+        #expect(Chord(.c, .majorNinth).pitches(octave: 3).map(\.midi) == [48, 52, 55, 59, 62])
+        #expect(Chord(.c, .majorNinth).pitchClasses.map(\.rawValue) == [0, 4, 7, 11, 2])
+        // A sixth and a minor seventh are the same four notes; the seventh is read first.
+        #expect(ChordQuality(intervals: [0, 4, 7, 9]) == .sixth)
+        #expect(Chord.identify([.a, .c, .e, .g]).first == Chord(.a, .minorSeventh))
+        #expect(Chord.identify([.a, .c, .e, .g]).contains(Chord(.c, .sixth)))
+        #expect(ChordQuality(intervals: [0, 2, 4, 7, 11]) == .majorNinth, "a ninth folded into the octave is still the ninth")
+        #expect(ChordQuality.minorNinth.triad == .minor)
+        #expect(ChordQuality.dominantThirteenth.triad == .major)
+        #expect(ChordQuality.sevenSuspendedFourth.triad == .suspendedFourth)
+        #expect(ChordQuality.sevenSharpFive.triad == .augmented)
+        #expect(ChordQuality.power.triad == .major)
+        #expect(ChordQuality.minorNinth.seventh == 10 && ChordQuality.majorNinth.seventh == 11 && ChordQuality.sixth.seventh == nil)
+        #expect(!ChordQuality.minorNinth.isSeventh && ChordQuality.minorNinth.isExtended && !ChordQuality.minorSeventh.isExtended)
+        // In a key, a ninth is spelled on the letter a ninth above its root.
+        let key = Key(tonic: NoteName(.d), mode: .aeolian)
+        #expect(key.spell(Chord(.d, .minorNinth)).map(\.description) == ["D", "F", "A", "C", "E"])
+        #expect(key.romanNumeral(for: Chord(.d, .minorNinth))?.description == "i9")
+        #expect(Key.cMajor.romanNumeral(for: Chord(.g, .dominantThirteenth))?.description == "V13")
+        #expect(Key.cMajor.symbol(of: Chord(.f, .sixNine)) == "F6/9")
+    }
+
     @Test func seventhsKnowTheirTriad() {
         #expect(ChordQuality.dominantSeventh.triad == .major)
         #expect(ChordQuality.halfDiminishedSeventh.triad == .diminished)

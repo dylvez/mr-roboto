@@ -50,6 +50,12 @@ public protocol ChordsHosting: AnyObject {
     func instrument(for part: PartID?) -> String
     /// A chord, on the instrument `part` plays on.
     func audition(pitches: [Int], duration: Double, for part: PartID?) async
+    /// The chords as they are played — voiced and struck — on the instrument `part` plays on, at
+    /// the song's tempo: what is heard when the way they are played is changed.
+    func audition(_ progression: Progression, for part: PartID?) async
+    /// The family of the instrument `part` plays on: keys, pad, strings. A short pattern on an
+    /// instrument that swells into its notes is mostly silence, and the sheet says so.
+    func instrumentFamily(for part: PartID?) -> String
 }
 
 extension ChordsHosting {
@@ -59,4 +65,6 @@ extension ChordsHosting {
     public func audition(pitches: [Int], duration: Double, for part: PartID?) async {
         await audition(pitches: pitches, duration: duration)
     }
+    public func audition(_ progression: Progression, for part: PartID?) async {}
+    public func instrumentFamily(for part: PartID?) -> String { "keys" }
 }

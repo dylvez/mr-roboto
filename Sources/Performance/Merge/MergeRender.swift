@@ -54,6 +54,6 @@ public enum MergeRender {
         let bars = progression.bars.map { bar in
             ProgressionBar(chords: bar.chords.map { ChordSpan(chord: $0.chord.transposed(by: move.semitones), beats: $0.beats) })
         }
-        return Progression(key: move.key ?? progression.key, bars: bars)
+        return Progression(key: move.key ?? progression.key, bars: bars, playing: progression.playing)
     }
 }

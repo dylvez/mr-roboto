@@ -69,18 +69,39 @@ public struct WriteGrooveTool: DirectorTool {
         public var swing_percent: Double
         public var rows: [String]
         public var note: String
+        /// The grid the rows are written on. Nil or 0 is the feel's own, or sixteen with no feel.
+        public var steps_per_bar: Int?
+        /// The groove version this rewrites. Nil or empty is a new beat.
+        public var parent: String?
+
+        public init(feel: String, bars: Int, swing_percent: Double, rows: [String], note: String, steps_per_bar: Int? = nil,
+                    parent: String? = nil) {
+            self.feel = feel
+            self.bars = bars
+            self.swing_percent = swing_percent
+            self.rows = rows
+            self.note = note
+            self.steps_per_bar = steps_per_bar
+            self.parent = parent
+        }
     }
 
     public struct Output: Encodable, Sendable {
         public var version: String
         public var bars: Int
+        /// Steps a bar of the song: what a row is as long as.
+        public var stepsPerBar: Int
         public var swingPercent: Double
         public var hits: Int
         public var rows: [String]
         public var flags: [String]
         public var played: Bool
         public var detail: String
-        enum CodingKeys: String, CodingKey { case version, bars, hits, rows, flags, played, detail; case swingPercent = "swing_percent" }
+        enum CodingKeys: String, CodingKey {
+            case version, bars, hits, rows, flags, played, detail
+            case swingPercent = "swing_percent"
+            case stepsPerBar = "steps_per_bar"
+        }
     }
 
     let workbench: DirectorWorkbench
@@ -94,8 +115,12 @@ public struct WriteGrooveTool: DirectorTool {
     public var purpose: String {
         "Write a drum groove from nothing onto the song's drum machine, record it as a groove version and play it. Start from a feel "
         + "by name (list_feels), from rows you write yourself, or from a feel with some voices rewritten. A row is a voice, a colon and "
-        + "sixteen characters a bar: x a hit, X an accent, g a ghost, . a rest — \"kick: X..x..x.X..x..x.\". A row shorter than the "
-        + "groove repeats. This is the way to make a beat when the user names no record; regroove_chop is only for a sample they chose."
+        + "a character a step: x a hit, X an accent, g a ghost, . a rest — \"kick: X..x..x.X..x..x.\" is a bar of sixteenths. A row "
+        + "shorter than the groove repeats. A feel is written on its own grid, whatever that is: brushes in eighths, a shuffle in "
+        + "triplets, twelve-eight. A feel in another meter than the song's — a waltz in a song in four — is laid across the song's "
+        + "bars, turning over inside them, and the result says where they meet. Name a parent to rewrite a beat as its next "
+        + "version: a beat written again to answer the Beatmaker is the same beat, not another. This is the way to make a beat "
+        + "when the user names no record; regroove_chop is only for a sample they chose."
     }
     public var schema: DirectorJSON {
         Schema.object([
@@ -105,7 +130,11 @@ public struct WriteGrooveTool: DirectorTool {
             ("rows", Schema.array("Rows that replace or add voices; empty keeps the feel as written.",
                                   of: Schema.string("voice: pattern. Voices: kick, snare, clap, rim, closedHat, openHat, ride, crash, lowTom, midTom, highTom, cowbell, shaker, tambourine, highConga, lowConga, highBongo, lowBongo, claves, woodblock."))),
             ("note", Schema.string("One line for the ledger saying what this beat is, in the user's language.")),
-        ], required: ["feel", "bars", "swing_percent", "rows", "note"])
+            ("steps_per_bar", Schema.integer("The grid the rows are written on, in steps a bar of the song: 16 is sixteenths in four, "
+                                             + "12 triplets in four or sixteenths in three, 8 eighths. 0 takes the feel's own, or 16 with no feel.",
+                                             minimum: 0, maximum: 48)),
+            ("parent", Schema.string("A groove version id this rewrites, so it becomes that part's next version; empty for a new beat.")),
+        ], required: ["feel", "bars", "swing_percent", "rows", "note", "steps_per_bar", "parent"])
     }
 
     static let voices = ["kick", "snare", "clap", "rim", "closedHat", "openHat", "ride", "crash", "lowTom", "midTom", "highTom",
@@ -134,20 +163,37 @@ public struct WriteGrooveTool: DirectorTool {
             throw DirectorToolFailure(tool: name, reason: "No song is open to write a beat into.", suggestion: "Call start_song first.")
         }
         let bars = max(1, min(16, input.bars))
-        let steps = 16 * bars
+        let asked = input.steps_per_bar ?? 0
+        guard asked == 0 || (2...48).contains(asked) else {
+            throw DirectorToolFailure(tool: name, reason: "\(asked) steps a bar is not a grid a groove is written on.",
+                                      suggestion: "16 for sixteenths in four, 12 for triplets, 8 for eighths; 0 for the feel's own.")
+        }
+        var stepsPerBar = asked > 0 ? asked : 16
         var patterns: [GroovePattern] = []
         var swing = 0.0
         var source = "written by hand"
         var inFeel: GrooveFeel?
+        var meets: String?
         if !input.feel.trimmingCharacters(in: .whitespaces).isEmpty {
             guard let feel = workbench.engines.feels.feel(named: input.feel) else {
                 throw DirectorToolFailure(tool: name, reason: "There is no feel called \"\(input.feel)\".", suggestion: "Call list_feels to see the names, or leave feel empty and write the rows.")
             }
-            guard feel.groove.stepsPerBar == 16 else {
-                throw DirectorToolFailure(tool: name, reason: "\(feel.name) is not on a sixteenth grid, so it cannot be written this way.", suggestion: "Pick a 4/4 sixteenth feel, or write the rows.")
+            // On its own grid. A feel used to be written only if it was in sixteenths, which left
+            // out the brushes, every shuffle and every waltz: what was asked for by name, twice.
+            let laid = try Self.lay(feel, in: song.timeSignature, bars: bars, tool: name, song: song.title)
+            guard asked == 0 || asked == laid.stepsPerBar else {
+                throw DirectorToolFailure(tool: name, reason: "\(feel.name) is \(laid.stepsPerBar) steps to a bar of this song, and the rows were said to be \(asked).",
+                                          suggestion: "Pass steps_per_bar 0 and write the rows \(laid.stepsPerBar) characters a bar.")
             }
+            stepsPerBar = laid.stepsPerBar
+            meets = laid.meets
+            let steps = stepsPerBar * bars
+            let cycle = max(1, feel.groove.stepCount)
             patterns = feel.groove.patterns.map { pattern in
-                GroovePattern(voice: pattern.voice, steps: (0..<steps).map { pattern.steps.isEmpty ? .rest : pattern.steps[$0 % pattern.steps.count] })
+                GroovePattern(voice: pattern.voice, steps: (0..<steps).map { index in
+                    let step = index % cycle
+                    return step < pattern.steps.count ? pattern.steps[step] : .rest
+                })
             }
             swing = feel.groove.swing
             source = "from \(feel.name)"
@@ -155,6 +201,7 @@ public struct WriteGrooveTool: DirectorTool {
             // feel in the next song does not breathe in the same places.
             inFeel = GrooveFeel(name: feel.name, seed: GrooveFeel.freshSeed())
         }
+        let steps = stepsPerBar * bars
         for row in input.rows {
             let pattern = try Self.parse(row, steps: steps, tool: name)
             patterns.removeAll { $0.voice == pattern.voice }
@@ -166,9 +213,25 @@ public struct WriteGrooveTool: DirectorTool {
         if input.swing_percent >= 50 { swing = Swing(percent: input.swing_percent).factor }
         let order = Self.voices
         patterns.sort { (order.firstIndex(of: $0.voice.rawValue) ?? 99) < (order.firstIndex(of: $1.voice.rawValue) ?? 99) }
-        let groove = Groove(stepsPerBar: 16, bars: bars, swing: swing, patterns: patterns, feel: inFeel)
+        let groove = Groove(stepsPerBar: stepsPerBar, bars: bars, swing: swing, patterns: patterns, feel: inFeel)
 
-        let version = PartVersion(partID: PartID(), kind: .groove(groove), author: .persona("Beatmaker"), operation: Operation.written, note: input.note)
+        // Written again to answer the Beatmaker, it is the next version of the beat it answers.
+        var answered: PartVersion?
+        let named = (input.parent ?? "").trimmingCharacters(in: .whitespaces)
+        if !named.isEmpty {
+            guard let id = VersionID(uuidString: named), let found = song.version(id) else {
+                throw DirectorToolFailure(tool: name, reason: "\"\(named)\" is not a version in this song.",
+                                          suggestion: "Take a groove's id from read_song, or leave parent empty for a new beat.")
+            }
+            guard found.type == .groove else {
+                throw DirectorToolFailure(tool: name, reason: "\(PartLabel.title(of: found)) is a \(found.type.rawValue), not a groove.",
+                                          suggestion: "Name a groove version to rewrite, or leave parent empty.")
+            }
+            answered = found
+        }
+        let author: Author = .persona("Beatmaker")
+        let version = answered.map { $0.deriving(.groove(groove), by: author, operation: Operation.written, note: input.note) }
+            ?? PartVersion(partID: PartID(), kind: .groove(groove), author: author, operation: Operation.written, note: input.note)
         guard await workspace.record(version) else {
             throw DirectorToolFailure(tool: name, reason: "The groove could not be recorded into the song.")
         }
@@ -182,9 +245,40 @@ public struct WriteGrooveTool: DirectorTool {
         let played = await workspace.hear(version)
         let hits = patterns.reduce(0) { $0 + $1.steps.filter { $0 != .rest }.count }
         let percent = (Swing(factor: swing).percent * 10).rounded() / 10
-        return Output(version: version.id.description, bars: bars, swingPercent: percent, hits: hits, rows: patterns.map(Self.text),
-                      flags: flags.map(\.says), played: played,
-                      detail: "\(bars) bar\(bars == 1 ? "" : "s") \(source), \(hits) hits, swing \(percent)%, on the song's drum machine at \(Int(song.tempo.rounded())) bpm. "
+        return Output(version: version.id.description, bars: bars, stepsPerBar: stepsPerBar, swingPercent: percent, hits: hits,
+                      rows: patterns.map(Self.text), flags: flags.map(\.says), played: played,
+                      detail: "\(bars) bar\(bars == 1 ? "" : "s") \(source), \(stepsPerBar) steps a bar, \(hits) hits, swing \(percent)%, on the song's drum machine at \(Int(song.tempo.rounded())) bpm. "
+                          + (meets.map { $0 + " " } ?? "")
+                          + (answered.map { "It is the next version of \(PartLabel.title(of: $0)). " } ?? "")
+                          + (flags.isEmpty ? "" : "To answer a flag, write it again with parent \(version.id.description): that is this beat's "
+                                + "next version. With no parent it would be a second beat in the song. ")
                           + (played ? "It is playing." : "It is recorded; it did not play here.") + " Nothing was sampled.")
+    }
+
+    /// A feel on the grid of a song: its own steps a bar when the song is in its meter; when it
+    /// is not, as many steps a beat as the feel has, across the song's bar, with the feel's bars
+    /// turning over inside the song's. Refused when the two do not count the same beat — a feel
+    /// in eighths of six against a song in quarters of four has no step in common with it.
+    static func lay(_ feel: Feel, in meter: TimeSignature, bars: Int = 0, tool: String, song: String) throws -> (stepsPerBar: Int, meets: String?) {
+        let own = feel.timeSignature
+        if own.beatsPerBar == meter.beatsPerBar, own.beatUnit == meter.beatUnit {
+            return (max(1, feel.groove.stepsPerBar), nil)
+        }
+        let perBeat = feel.groove.stepsPerBar / max(1, own.beatsPerBar)
+        guard own.beatUnit == meter.beatUnit, perBeat >= 1, feel.groove.stepsPerBar % max(1, own.beatsPerBar) == 0 else {
+            throw DirectorToolFailure(
+                tool: tool, reason: "\(feel.name) is in \(own) and \(song) is in \(meter): they do not count the same beat, so one cannot be laid over the other.",
+                suggestion: "set_song the meter to \(own) and write it then, or write the rows yourself in \(meter).")
+        }
+        let stepsPerBar = perBeat * meter.beatsPerBar
+        // Where a bar of the feel and a bar of the song begin together again.
+        func gcd(_ a: Int, _ b: Int) -> Int { b == 0 ? a : gcd(b, a % b) }
+        let feelBar = feel.groove.stepsPerBar
+        let together = feelBar / gcd(feelBar, stepsPerBar)
+        // A loop that is not a whole number of those turns back in the middle of a bar of the feel.
+        let closes = bars <= 0 || bars % together == 0
+        return (stepsPerBar,
+                "\(feel.name) is in \(own) and the song is in \(meter): it turns over inside the song's bars, and the two begin a bar together every \(together) bar\(together == 1 ? "" : "s") of the song."
+                + (closes ? "" : " At \(bars) bar\(bars == 1 ? "" : "s") the loop turns back partway through a bar of \(feel.name): \(together) or \(together * 2) bars close it."))
     }
 }
