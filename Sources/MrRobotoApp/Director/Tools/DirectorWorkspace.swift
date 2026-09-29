@@ -380,6 +380,7 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
         guard song != nil else { return false }
         let trimmed = name.trimmingCharacters(in: .whitespaces)
         if trimmed.isEmpty { song?.genre = nil; return true }
+        if trimmed.lowercased() == GenreBook.none { song?.genre = GenreBook.none; return true }
         guard let profile = GenreBook.standard.profile(named: trimmed) else { return false }
         song?.genre = profile.id
         return true

@@ -517,7 +517,9 @@ public struct Melodist: Persona {
             holds: motif >= Melodist.motifFloor,
             says: motif >= Melodist.motifFloor
                 ? String(format: "A figure comes back: %.0f%% of the tune is something you have heard.", motif * 100)
-                : "Nothing comes back. State a figure and bring it again, moved if you like — that is what a listener sings."))
+                : motif > 0
+                    ? String(format: "Only %.0f%% of the tune comes back. State a figure and bring it again, moved if you like — that is what a listener sings.", motif * 100)
+                    : "Nothing comes back. State a figure and bring it again, moved if you like — that is what a listener sings."))
 
         let rest = observation.restRatio
         notes.append(PersonaReading(

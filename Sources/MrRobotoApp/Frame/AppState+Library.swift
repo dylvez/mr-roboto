@@ -524,17 +524,20 @@ extension AppState {
     public var genre: GenreBook.Reading? { GenreBook.standard.genre(of: song) }
 
     /// Places the open song in a genre, by a profile's id, name or alias; nil or "" to leave it to
-    /// be guessed again. False when no song is open or no profile answers to the name.
+    /// be guessed again; "none" for no genre at all, the band judging by its own numbers. False when
+    /// no song is open or no profile answers to the name.
     @discardableResult
     public func setGenre(_ name: String?, by source: SessionEntry.Source = .you) -> Bool {
         guard song != nil else { return false }
         let trimmed = name?.trimmingCharacters(in: .whitespaces) ?? ""
-        let profile = trimmed.isEmpty ? nil : GenreBook.standard.profile(named: trimmed)
-        guard trimmed.isEmpty || profile != nil else { return false }
-        guard profile?.id != song?.genre else { return true }
-        updateSong { $0.genre = profile?.id }
+        let none = trimmed.lowercased() == GenreBook.none
+        let profile = trimmed.isEmpty || none ? nil : GenreBook.standard.profile(named: trimmed)
+        guard trimmed.isEmpty || none || profile != nil else { return false }
+        let stored = none ? GenreBook.none : profile?.id
+        guard stored != song?.genre else { return true }
+        updateSong { $0.genre = stored }
         SurfaceWiring.shared.genreChanged()
-        note(source, profile.map { "Genre: \($0.name)" } ?? "Genre: guessed from the grooves again",
+        note(source, profile.map { "Genre: \($0.name)" } ?? (none ? "Genre: none — the band's own numbers" : "Genre: guessed from the grooves again"),
              detail: profile?.summary)
         return true
     }

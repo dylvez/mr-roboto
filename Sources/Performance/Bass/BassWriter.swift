@@ -259,7 +259,7 @@ public enum BassWriter {
         // The length is stated, not left to the notes: a line whose last bar is a held rest, or a
         // programmed line whose last kick is early in the bar, is still `bars` long.
         return Bassline(notes: placed, sound: request.sound ?? request.lineage.defaultSound, key: request.key,
-                        lengthInBars: bars)
+                        lengthInBars: bars, hands: request.lineage.rawValue)
     }
 
     // MARK: Lineage A — Palladino

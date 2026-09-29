@@ -511,10 +511,12 @@ public struct SongObservation: Hashable, Sendable {
     }
 
     /// Read off a song. Analyses and audio are not parts a Producer counts: they are the record,
-    /// not decisions about it.
+    /// not decisions about it. Nor are sounds and mixes: an instrument chosen for a part, or the
+    /// song's drum machine, is a setting of a part, and never plays in a section on its own — counted,
+    /// every song with a sampled piano had "Salamander Grand Piano" in no section.
     public static func of(_ song: Song) -> SongObservation {
         let counted = song.partIDs.filter { id in
-            song.latestVersion(of: id).map { ![PartType.analysis, .audio].contains($0.type) } ?? false
+            song.latestVersion(of: id).map { ![PartType.analysis, .audio, .sound, .mix].contains($0.type) } ?? false
         }
         // A lane names the part, so this is the part set directly now rather than a lookup.
         let stitched = Set(song.sections.flatMap(\.stitch).map(\.part))

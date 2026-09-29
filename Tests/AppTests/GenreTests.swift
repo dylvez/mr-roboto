@@ -201,6 +201,8 @@ struct GenreTests {
         #expect(out.genre == first.id && workspace.song?.genre == first.id)
         _ = try await SetGenreTool(workspace: workspace).run(.init(genre: ""))
         #expect(workspace.song?.genre == nil)
+        let none = try await SetGenreTool(workspace: workspace).run(.init(genre: "none"))
+        #expect(none.genre == nil && workspace.song?.genre == GenreBook.none && workspace.genre == nil, "none is no genre, not a guess")
         await #expect(throws: DirectorToolFailure.self) { try await SetGenreTool(workspace: workspace).run(.init(genre: "no such genre")) }
     }
 

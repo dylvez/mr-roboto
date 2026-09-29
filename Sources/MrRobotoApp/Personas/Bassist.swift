@@ -786,14 +786,16 @@ public struct Bassist: Persona {
                     : String(format: "The kick is gone in %.0f ms; the bass has the bottom.", o.kickDecaySeconds * 1000)))
         }
 
-        // 4. What ends the note.
-        notes.append(PersonaReading(
+        // 4. What ends the note. A Palladino technique — note-off as timing — so a genre's own figure
+        // (a walking line is legato by definition, octaves are short by definition) is not read by it.
+        let figure = o.hands.flatMap(BassLineage.init(rawValue:)).map { ![.palladino, .thundercat, .programmed].contains($0) } ?? false
+        if !figure { notes.append(PersonaReading(
             rule: "bassist.note-off", feature: .bassNoteOffOnBeatRate, value: o.noteOffOnBeatRate,
             holds: o.noteOffOnBeatRate >= 0.8 || o.isSub,
             says: o.isSub
                 ? String(format: "Notes fill %.0f%% of the space to the next one, as a sub should.", o.medianLengthRatio * 100)
                 : String(format: "%.0f%% of the note-offs land on a beat; notes fill %.0f%% of the space to the next attack.",
-                         o.noteOffOnBeatRate * 100, o.medianLengthRatio * 100)))
+                         o.noteOffOnBeatRate * 100, o.medianLengthRatio * 100))) }
 
         // 5. Density and rest.
         let isVerseTempo = o.tempo <= 100

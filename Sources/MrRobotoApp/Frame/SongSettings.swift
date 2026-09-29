@@ -257,6 +257,7 @@ struct GenrePicker: View {
             SmallLabel("Genre")
             Menu {
                 Button("Guess from the grooves") { app.setGenre(nil) }
+                Button("None — the band's own numbers") { app.setGenre(GenreBook.none) }
                 Divider()
                 ForEach(families, id: \.0) { family, profiles in
                     Section(family.capitalized) {
@@ -266,7 +267,7 @@ struct GenrePicker: View {
                     }
                 }
             } label: {
-                Text(reading?.description ?? "None yet — guessed from the grooves")
+                Text(reading?.description ?? (app.song?.genre == GenreBook.none ? "None — the band's own numbers" : "None yet — guessed from the grooves"))
                     .font(Design.Typography.ui(12.5, weight: .regular))
             }
             .menuStyle(.borderlessButton)

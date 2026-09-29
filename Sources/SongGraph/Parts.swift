@@ -123,12 +123,17 @@ public struct Bassline: Hashable, Sendable {
     /// groove, or a line whose last bar is a rest, needs it: the notes alone cannot say where a
     /// silence ends.
     public var lengthInBars: Int?
+    /// Whose hands wrote it — a `BassLineage` raw value, "walking", "palladino" — when the writer
+    /// wrote it. A reading of the line needs it: note-offs on the beat are Palladino's technique,
+    /// and a walking line judged by it is judged by the wrong player. Nil for a line played in.
+    public var hands: String?
 
-    public init(notes: [NoteEvent], sound: String? = nil, key: Key? = nil, lengthInBars: Int? = nil) {
+    public init(notes: [NoteEvent], sound: String? = nil, key: Key? = nil, lengthInBars: Int? = nil, hands: String? = nil) {
         self.notes = notes
         self.sound = sound
         self.key = key
         self.lengthInBars = lengthInBars.map { max(1, $0) }
+        self.hands = hands
     }
 
     public var lengthInBeats: Double { notes.map(\.end).max() ?? 0 }
@@ -149,14 +154,15 @@ private func phraseBars(stated: Int?, lastNoteEnd: Double, beatsPerBar: Int) -> 
 }
 
 extension Bassline: Codable {
-    private enum CodingKeys: String, CodingKey { case notes, sound, key, lengthInBars }
+    private enum CodingKeys: String, CodingKey { case notes, sound, key, lengthInBars, hands }
 
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         self.init(notes: try c.decode([NoteEvent].self, forKey: .notes),
                   sound: try c.decodeIfPresent(String.self, forKey: .sound),
                   key: try c.decodeIfPresent(Key.self, forKey: .key),
-                  lengthInBars: try c.decodeIfPresent(Int.self, forKey: .lengthInBars))
+                  lengthInBars: try c.decodeIfPresent(Int.self, forKey: .lengthInBars),
+                  hands: try c.decodeIfPresent(String.self, forKey: .hands))
     }
 
     /// `sound`, `key` and `lengthInBars` are omitted when nil, so a bassline written before they
@@ -167,6 +173,7 @@ extension Bassline: Codable {
         try c.encodeIfPresent(sound, forKey: .sound)
         try c.encodeIfPresent(key, forKey: .key)
         try c.encodeIfPresent(lengthInBars, forKey: .lengthInBars)
+        try c.encodeIfPresent(hands, forKey: .hands)
     }
 }
 

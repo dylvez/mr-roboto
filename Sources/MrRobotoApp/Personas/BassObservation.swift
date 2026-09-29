@@ -17,6 +17,9 @@ public struct BassObservation: Hashable, Sendable {
     public var bars: Int
     /// The bass sound the line plays through, by voice id.
     public var sound: String
+    /// Whose hands wrote the line, when the writer did: a genre's own figure — walking, octaves,
+    /// the tumbao — is not held to a Palladino technique.
+    public var hands: String?
 
     /// Milliseconds behind (positive) or ahead of (negative) the nearest kick, one per onset, in
     /// onset order. A bass with no kick to sit against measures against the beat grid instead.
@@ -97,6 +100,7 @@ public struct BassObservation: Hashable, Sendable {
         self.timeSignature = timeSignature
         self.bars = max(1, groove.bars)
         self.sound = bassline.sound ?? "finger"
+        self.hands = bassline.hands
         self.kickDecaySeconds = kickDecaySeconds
 
         let beatsPerBar = Double(max(1, timeSignature.beatsPerBar))

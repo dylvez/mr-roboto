@@ -248,8 +248,9 @@ public struct ConveneTool: DirectorTool {
                     notes.append("The Engineer's bounce failed: \(error).")
                 }
             case .melodist:
-                if let version = song.versions.last(where: { $0.type == .melody }), case .melody(let melody) = version.kind {
-                    let progression = Guidance.progressions(in: song).last.flatMap { version -> Progression? in
+                if let version = Self.heard(.melody, in: song, section: section) ?? song.versions.last(where: { $0.type == .melody }),
+                   case .melody(let melody) = version.kind {
+                    let progression = (Self.heard(.progression, in: song, section: section) ?? Guidance.progressions(in: song).last).flatMap { version -> Progression? in
                         if case .progression(let p) = version.kind { return p }
                         return nil
                     }
@@ -262,8 +263,9 @@ public struct ConveneTool: DirectorTool {
                     notes.append("No tune yet for the Melodist to read.")
                 }
             case .harmonist:
-                if let version = Guidance.progressions(in: song).last, case .progression(let progression) = version.kind {
-                    let line = Guidance.basslines(in: song).last.flatMap { version -> Bassline? in
+                if let version = Self.heard(.progression, in: song, section: section) ?? Guidance.progressions(in: song).last,
+                   case .progression(let progression) = version.kind {
+                    let line = (Self.heard(.bassline, in: song, section: section) ?? Guidance.basslines(in: song).last).flatMap { version -> Bassline? in
                         if case .bassline(let bassline) = version.kind { return bassline }
                         return nil
                     }
@@ -274,14 +276,17 @@ public struct ConveneTool: DirectorTool {
                     notes.append("No chords yet for the Harmonist to read.")
                 }
             case .beatmaker:
-                if let version = Guidance.grooves(in: song).last, case .groove(let groove) = version.kind {
+                if let version = Self.heard(.groove, in: song, section: section) ?? Guidance.grooves(in: song).last,
+                   case .groove(let groove) = version.kind {
                     let observation = GrooveObservation(label: PartLabel.title(of: version), groove: groove,
                                                         options: .stored(groove), tempo: song.tempo, timeSignature: song.timeSignature)
                     readings += Beatmaker(houseCalls: book.calls).read(observation).map { (id, $0) }
                 }
             case .bassist:
-                if let line = Guidance.basslines(in: song).last, case .bassline(let bassline) = line.kind,
-                   let grooveVersion = Guidance.grooves(in: song).last, case .groove(let groove) = grooveVersion.kind {
+                if let line = Self.heard(.bassline, in: song, section: section) ?? Guidance.basslines(in: song).last,
+                   case .bassline(let bassline) = line.kind,
+                   let grooveVersion = Self.heard(.groove, in: song, section: section) ?? Guidance.grooves(in: song).last,
+                   case .groove(let groove) = grooveVersion.kind {
                     let observation = BassObservation(label: PartLabel.title(of: line), bassline: bassline, groove: groove,
                                                       chords: [], tempo: song.tempo, timeSignature: song.timeSignature)
                     readings += Bassist().read(observation).map { (id, $0) }
@@ -366,6 +371,28 @@ public struct ConveneTool: DirectorTool {
         if let disagreement { detail += " \(disagreement.between.joined(separator: " and ")) disagree about \(disagreement.about); a Compare is open." }
         if !notes.isEmpty { detail += " " + notes.joined(separator: " ") }
         return Output(room: room.ids.map(\.rawValue), asked: asked.ids.map(\.rawValue), notAsked: notAsked.map(\.rawValue), readings: out, verdicts: verdicts, disagreement: disagreement, houseCalls: calls, genre: genre?.description, detail: detail)
+    }
+
+    /// What plays in the section asked about, of one kind: the version each of its lanes plays (its
+    /// pin, or its part's newest), and of several — a lead, piano stabs, a riser — the busiest single
+    /// line, which is the one a listener follows: a melody is weighed by its notes that sound alone
+    /// at their onset, so chords written as a melody do not outvote the tune. Nil with no section named, or none of that
+    /// kind in it; the caller then reads the song's newest, as it always did.
+    static func heard(_ type: PartType, in song: Song, section: Section?) -> PartVersion? {
+        guard let section else { return nil }
+        let playing = section.stitch.compactMap { lane in lane.pin.flatMap { song.version($0) } ?? song.latestVersion(of: lane.part) }
+            .filter { $0.type == type }
+        func weight(_ version: PartVersion) -> Int {
+            switch version.kind {
+            case .melody(let melody):
+                let onsets = Dictionary(grouping: melody.notes, by: { ($0.start * 1000).rounded() })
+                return onsets.values.filter { $0.count == 1 }.count
+            case .bassline(let line): return line.notes.count
+            case .groove(let groove): return groove.patterns.reduce(0) { $0 + $1.steps.filter { $0 != .rest }.count }
+            default: return 0
+            }
+        }
+        return playing.max { weight($0) < weight($1) }
     }
 
     /// The first disagreement that shows.

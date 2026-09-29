@@ -163,11 +163,12 @@ public struct SetGenreTool: DirectorTool {
     public var purpose: String {
         "Place the open song in a genre. From then on the band judges it by that genre's numbers — the Engineer's loudness, "
         + "the Peer's hook time, the Beatmaker's swing, the Bassist's pocket — and says both its own number and the genre's. "
-        + "Without it the genre is guessed from the feel the newest groove was written in. Empty clears it back to the guess."
+        + "Without it the genre is guessed from the feel the newest groove was written in. Empty clears it back to the guess; "
+        + "\"none\" means no genre at all, the band judging by its own numbers."
     }
     public var schema: DirectorJSON {
         Schema.object([
-            ("genre", Schema.string("A genre by id, name or alias, like \"house\"; empty to leave it to be guessed.")),
+            ("genre", Schema.string("A genre by id, name or alias, like \"house\"; empty to leave it to be guessed; \"none\" for no genre.")),
         ], required: ["genre"])
     }
 
@@ -181,7 +182,9 @@ public struct SetGenreTool: DirectorTool {
         }
         let reading = await workspace.genre
         guard let reading else {
-            return Output(genre: nil, detail: "The song has no genre: nothing it holds points to one yet.")
+            let none = await workspace.song?.genre == GenreBook.none
+            return Output(genre: nil, detail: none ? "The song has no genre: the band judges it by its own numbers."
+                                                   : "The song has no genre: nothing it holds points to one yet.")
         }
         let judged = reading.profile.ranges.map(\.feature.rawValue).prefix(8).joined(separator: ", ")
         return Output(genre: reading.profile.id,

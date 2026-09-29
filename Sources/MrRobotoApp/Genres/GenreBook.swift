@@ -6,6 +6,9 @@ import SongGraph
 /// Every genre profile the app has, and which one a song is in.
 public struct GenreBook: Sendable, Equatable {
     public static let directoryName = "Genres"
+    /// What a song says when it wants no genre at all: the band judges it by its own numbers, and
+    /// nothing is guessed from its grooves.
+    public static let none = "none"
 
     public let profiles: [GenreProfile]
 
@@ -80,6 +83,7 @@ public struct GenreBook: Sendable, Equatable {
     /// enough to guess from — 120 bpm is house, pop, rock and disco — so it only breaks a tie.
     public func genre(of song: Song?, feels: FeelLibrary = .standard) -> Reading? {
         guard let song else { return nil }
+        if song.genre == Self.none { return nil }
         if let named = song.genre, let profile = profile(named: named) { return Reading(profile: profile, source: .set) }
         for version in Guidance.grooves(in: song).reversed() {
             guard case .groove(let groove) = version.kind, let feelName = groove.feel?.name ?? Self.feelNamed(in: version.note, feels: feels) else { continue }
