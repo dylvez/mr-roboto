@@ -254,7 +254,7 @@ public extension InstrumentVoiceSpec {
     // MARK: Plucked strings
 
     static let nylonGuitar = InstrumentVoiceSpec(
-        id: "nylon-guitar", name: "Nylon Guitar", family: "plucked", engine: .pluckedString,
+        id: "nylon-guitar", name: "Nylon Guitar", family: "guitar", engine: .pluckedString,
         summary: "A classical guitar: warm, round and gently plucked.",
         pluck: Pluck(decaySeconds: 2.2, decayKeyTrack: 0.5, brightnessHz: 2_600, pickPosition: 0.22),
         filterHz: 4_000, filterKeyTrack: 0.5, filterQ: 0.8,
@@ -262,14 +262,14 @@ public extension InstrumentVoiceSpec {
         level: 0.9, durationSeconds: 4, velocityLayers: [50, 112])
 
     static let steelGuitar = InstrumentVoiceSpec(
-        id: "steel-guitar", name: "Steel Guitar", family: "plucked", engine: .pluckedString,
+        id: "steel-guitar", name: "Steel Guitar", family: "guitar", engine: .pluckedString,
         summary: "An acoustic steel-string: bright, ringing and full.",
         pluck: Pluck(decaySeconds: 3, decayKeyTrack: 0.5, brightnessHz: 6_500, pickPosition: 0.14),
         amplitude: Envelope(attack: 0.001, decay: 3, sustain: 1, release: 0.3),
         level: 0.85, durationSeconds: 4.5, velocityLayers: [50, 112])
 
     static let cleanElectric = InstrumentVoiceSpec(
-        id: "clean-electric", name: "Clean Electric", family: "plucked", engine: .pluckedString,
+        id: "clean-electric", name: "Clean Electric", family: "guitar", engine: .pluckedString,
         summary: "A clean electric guitar, with a touch of amp warmth.",
         pluck: Pluck(decaySeconds: 2.6, decayKeyTrack: 0.4, brightnessHz: 4_500, pickPosition: 0.1),
         filterHz: 5_000, filterKeyTrack: 0.4, filterQ: 1.2,
@@ -281,7 +281,7 @@ public extension InstrumentVoiceSpec {
     /// note is driven on its own and chords are summed after, so a chord is cleaner than a real
     /// amp makes it — fine for single lines and power chords, polite on a full barre chord.
     static let overdrivenGuitar = InstrumentVoiceSpec(
-        id: "overdrive-guitar", name: "Overdriven Guitar", family: "plucked", engine: .pluckedString,
+        id: "overdrive-guitar", name: "Overdriven Guitar", family: "guitar", engine: .pluckedString,
         summary: "An electric through a cranked amp: warm, singing overdrive for riffs and leads.",
         pluck: Pluck(decaySeconds: 4, decayKeyTrack: 0.3, brightnessHz: 5_000, pickPosition: 0.11),
         filterHz: 3_200, filterKeyTrack: 0.2, filterQ: 1.5,
@@ -290,7 +290,7 @@ public extension InstrumentVoiceSpec {
 
     /// Harder again: more drive, a darker speaker, less dynamics left.
     static let distortedGuitar = InstrumentVoiceSpec(
-        id: "distorted-guitar", name: "Distorted Guitar", family: "plucked", engine: .pluckedString,
+        id: "distorted-guitar", name: "Distorted Guitar", family: "guitar", engine: .pluckedString,
         summary: "High-gain distortion: thick, compressed and aggressive, for power chords and rock riffs.",
         pluck: Pluck(decaySeconds: 5, decayKeyTrack: 0.2, brightnessHz: 5_500, pickPosition: 0.1),
         filterHz: 2_600, filterKeyTrack: 0.15, filterQ: 1.8,
@@ -298,7 +298,7 @@ public extension InstrumentVoiceSpec {
         drive: 1, level: 0.66, durationSeconds: 5, velocityLayers: [50, 112])
 
     static let mutedGuitar = InstrumentVoiceSpec(
-        id: "muted-guitar", name: "Muted Guitar", family: "plucked", engine: .pluckedString,
+        id: "muted-guitar", name: "Muted Guitar", family: "guitar", engine: .pluckedString,
         summary: "Palm-muted plucks: short, tight and rhythmic.",
         pluck: Pluck(decaySeconds: 0.35, decayKeyTrack: 0.3, brightnessHz: 2_000, pickPosition: 0.15),
         filterHz: 1_800, filterKeyTrack: 0.5, filterQ: 0.9,

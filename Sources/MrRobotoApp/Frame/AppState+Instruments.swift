@@ -81,6 +81,61 @@ extension AppState {
         return true
     }
 
+    /// `<library>/Kits`: drum kits of recordings, each a machine of its own.
+    public var kitsDirectory: URL? {
+        store?.directoryURL.appendingPathComponent("Kits", isDirectory: true)
+    }
+
+    /// Registers the library's recorded kits, so a song that plays on one finds it.
+    func loadRecordedKits() {
+        guard let directory = kitsDirectory else { return }
+        recordedKits = RecordedKits.load(from: directory)
+    }
+
+    /// File ▸ Import Drum Kit…: an SFZ laid out as General MIDI lays a kit out, copied into the
+    /// library and listed beside the machines. What the recordings do not cover the base machine
+    /// plays, and says so.
+    @discardableResult
+    public func importDrumKit(from url: URL, named name: String? = nil, base: String = RecordedKits.defaultBase) -> RecordedKit? {
+        guard let directory = kitsDirectory else {
+            note(.session, "No library to import \(url.lastPathComponent) into")
+            return nil
+        }
+        do {
+            let result = try RecordedKits.importSFZ(at: url, into: directory, name: name, base: base)
+            recordedKits = RecordedKits.load(from: directory)
+            if let service = SurfaceWiring.shared.service { Task { await service.drumKitsChanged() } }
+            var detail = [result.kit.summary]
+            if !result.unusable.isEmpty {
+                let named = result.unusable.prefix(3).joined(separator: ", ")
+                detail.append("Left out \(result.unusable.count) sample\(result.unusable.count == 1 ? "" : "s") that could not be read: \(named)\(result.unusable.count > 3 ? "…" : "").")
+            }
+            note(.you, "\(result.replaced ? "Re-imported" : "Imported") \(result.kit.name): it is in the Grid's machine menu, under Recorded kits",
+                 detail: detail.joined(separator: " "))
+            return result.kit
+        } catch {
+            note(.session, "Could not import \(url.lastPathComponent) as a drum kit", detail: "\(error)")
+            return nil
+        }
+    }
+
+    /// Takes a recorded kit out of the library. A song that played on it falls back to the song's
+    /// machine, or the TR-808, as it would for any machine it does not know.
+    @discardableResult
+    public func removeRecordedKit(id: String) -> Bool {
+        guard let kit = RecordedKits.kit(id: id), let directory = kitsDirectory else { return false }
+        do {
+            try RecordedKits.remove(id: id, from: directory)
+        } catch {
+            note(.session, "Could not remove \(kit.name)", detail: "\(error)")
+            return false
+        }
+        recordedKits.removeAll { $0.id == id }
+        if let service = SurfaceWiring.shared.service { Task { await service.drumKitsChanged() } }
+        note(.you, "Removed \(kit.name) from the library", detail: "The pack it came from is untouched.")
+        return true
+    }
+
     /// Registers what is already imported, so a song that plays one finds it. Called when the
     /// library is read.
     func loadImportedInstruments() {

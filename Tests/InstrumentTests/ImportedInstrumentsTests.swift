@@ -43,7 +43,7 @@ struct ImportedInstrumentsTests {
         let result = try ImportedInstruments.importSFZ(at: url, into: library)
         defer { ImportedInstruments.unregister(id: result.spec.id) }
         #expect(result.spec.id.hasPrefix("sfz-test-upright-"))
-        #expect(result.spec.engine == .sampled && result.spec.family == ImportedInstruments.family)
+        #expect(result.spec.engine == .sampled && result.spec.family == "keys", "an upright is looked for among the keys")
         #expect(result.zones == 2 && result.samples == 2)
         #expect(result.unusable == ["../Samples/gone.wav"])
         #expect(result.skippedOpcodes.contains("cutoff") && result.skippedOpcodes.contains("fil_type"))
@@ -116,5 +116,35 @@ struct ImportedInstrumentsTests {
         #expect(ImportedInstruments.slug(of: "Salamander Grand Piano V3") == "salamander-grand-piano-v3")
         #expect(ImportedInstruments.slug(of: "  ..//  ") == "instrument")
         #expect(ImportedInstruments.noteName(21) == "A0" && ImportedInstruments.noteName(60) == "C4")
+    }
+
+    @Test("a recording is placed by what it is called, and one nobody can place is among the imported")
+    func placed() {
+        let expected: [(String, String)] = [
+            ("Cello Section", "strings"), ("Violin Section Pizzicato", "plucked"), ("Contrabass Pizzicato", "plucked"),
+            ("Contrabass Bowed", "strings"), ("Salamander Grand Piano (Light)", "keys"), ("Upright Piano, Yamaha", "keys"),
+            ("Tenor Saxophone - Vibrato", "wind"), ("Bass Clarinet", "wind"), ("Trumpet, Harmon Mute", "brass"),
+            ("French Horn", "brass"), ("Pipe Organ", "organ"), ("Vibraphone - Soft Mallets", "bell"), ("Tubular Bells", "bell"),
+            ("Concert Harp", "plucked"), ("Shinyguitar", "guitar"), ("Meatbass", "strings"), ("jRhodes3d", "keys"),
+            ("Archtop Guitar, Pickup", "guitar"), ("Bass Guitar", "bass"), ("Electric Bass, Fretless", "bass"),
+            ("Double Bass Pizzicato", "bass"), ("Double Bass Bowed", "strings"), ("Lyre, Nails", "plucked"),
+            ("Something Else", ImportedInstruments.family),
+        ]
+        for (name, family) in expected {
+            #expect(ImportedInstruments.family(named: name) == family, "\(name)")
+        }
+    }
+
+    @Test("a loop written for a recording at 44.1 kHz is counted at the rate the recording is played at")
+    func countsAtThePlayingRate() {
+        var zone = Zone(id: ZoneID("z"), sample: "a.wav", key: .note(60), sampleStart: 441, sampleEnd: 44_100)
+        zone.loop = Loop(mode: .loopContinuous, start: 22_050, end: 44_099)
+        let moved = ImportedInstruments.atPlayingRate(zone, recordedAt: 44_100)
+        #expect(moved.sampleStart == 480 && moved.sampleEnd == 48_000)
+        #expect(moved.loop?.start == 24_000 && moved.loop?.end == 47_999 && moved.loop?.mode == .loopContinuous)
+        // One recorded at the playing rate is where it was, and so is one with nothing to move.
+        #expect(ImportedInstruments.atPlayingRate(zone, recordedAt: 48_000) == zone)
+        let plain = Zone(id: ZoneID("p"), sample: "b.wav", key: .note(60))
+        #expect(ImportedInstruments.atPlayingRate(plain, recordedAt: 44_100) == plain)
     }
 }

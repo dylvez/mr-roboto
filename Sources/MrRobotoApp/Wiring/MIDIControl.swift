@@ -170,7 +170,7 @@ public final class MIDIControl {
                 if case .bassline(let line) = version.kind { return line.sound }
                 return nil
             }
-            return .bass(BassVoiceSpec.all.first { $0.id == sound }?.id ?? BassVoiceSpec.finger.id)
+            return .bass(sound.flatMap(BassVoiceSpec.resolve(id:))?.id ?? BassVoiceSpec.finger.id)
         case .keys:
             return .keys(app.song.map { SongPlayback.instrumentID(in: $0) } ?? InstrumentVoiceSpec.rhodes.id)
         }
@@ -183,7 +183,7 @@ public final class MIDIControl {
             case .kit(let id):
                 if let machine = SynthMachine.preset(id: id) { try await service.prepare(machine: machine) }
             case .bass(let id):
-                if let spec = BassVoiceSpec.all.first(where: { $0.id == id }) { try await service.prepare(bass: spec) }
+                if let spec = BassVoiceSpec.resolve(id: id) { try await service.prepare(bass: spec) }
             case .keys(let id):
                 if let spec = InstrumentVoiceSpec.preset(id: id) { try await service.prepare(instrument: spec) }
             case nil:

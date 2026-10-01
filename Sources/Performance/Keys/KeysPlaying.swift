@@ -104,7 +104,7 @@ public enum KeysPattern: String, CaseIterable, Codable, Sendable, Identifiable {
 
     /// The instrument families a short pattern can be heard on: what is struck or plucked, and an
     /// organ, which speaks at once. Strings, pads, winds and brass swell into a note.
-    public static let struckFamilies: Set<String> = ["keys", "organ", "bell", "plucked", "pluck", "chip", "lead", "imported"]
+    public static let struckFamilies: Set<String> = ["keys", "organ", "bell", "guitar", "bass", "plucked", "pluck", "chip", "lead", "imported"]
 
     public func suits(family: String) -> Bool { !isShort || Self.struckFamilies.contains(family) }
 

@@ -39,7 +39,7 @@ public struct StartSongTool: DirectorTool {
             ("title", Schema.string("A working title; empty keeps the open song's, or names it for the idea.")),
             ("tempo", Schema.number("Beats per minute.", minimum: 40, maximum: 240)),
             ("key", Schema.string("Like \"D minor\" or \"F# major\"; empty for none yet.")),
-            ("machine", Schema.string("The drum machine the beat plays on.", enum: SynthMachine.all.map(\.id))),
+            ("machine", Schema.string("The drum machine the beat plays on.", enum: SynthMachine.available.map(\.id))),
         ], required: ["title", "tempo", "key", "machine"])
     }
 
@@ -50,7 +50,7 @@ public struct StartSongTool: DirectorTool {
         }
         guard let machine = SynthMachine.preset(id: input.machine) else {
             throw DirectorToolFailure(tool: name, reason: "There is no drum machine called \"\(input.machine)\".",
-                                      suggestion: "Use one of: \(SynthMachine.all.map(\.id).joined(separator: ", ")).")
+                                      suggestion: "Use one of: \(SynthMachine.available.map(\.id).joined(separator: ", ")).")
         }
         guard let song = await workspace.startSong(title: input.title, tempo: input.tempo, key: key, machine: machine.id) else {
             throw DirectorToolFailure(tool: name, reason: "The song could not be started here.", suggestion: "Open the app's library first.")

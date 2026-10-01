@@ -1,0 +1,253 @@
+[
+ {
+  "name": "Steinway Grand",
+  "family": "keys",
+  "from": "VCSL/Chordophones/Zithers/Grand Piano, Steinway B.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0",
+  "below": 0,
+  "above": 0
+ },
+ {
+  "name": "Kawai Grand",
+  "family": "keys",
+  "from": "VCSL/Chordophones/Zithers/Grand Piano, Kawai.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0",
+  "below": 0,
+  "above": 0
+ },
+ {
+  "name": "Knight Upright",
+  "family": "keys",
+  "from": "VCSL/Chordophones/Zithers/Upright Piano, Knight.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0",
+  "below": 0,
+  "above": 0
+ },
+ {
+  "name": "Harpsichord",
+  "family": "keys",
+  "from": "VCSL/Chordophones/Zithers/Harpsichord, Flemish - 8'.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Harpsichord, Italian",
+  "family": "keys",
+  "from": "VCSL/Chordophones/Zithers/Harpsichord, Italian.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Harpsichord, French",
+  "family": "keys",
+  "from": "VCSL/Chordophones/Zithers/Harpsichord, French.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "FM Piano",
+  "family": "keys",
+  "from": "VCSL/Electrophones/TX81Z - FM Piano.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0",
+  "tune": true,
+  "shift": -12
+ },
+ {
+  "name": "Renaissance Organ",
+  "family": "organ",
+  "from": "VCSL/Aerophones/Edge-blown Aerophones/Renaissance Organ - Full.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Vibraphone",
+  "family": "bell",
+  "from": "VCSL/Idiophones/Struck Idiophones/Vibraphone - Soft Mallets.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Vibraphone, Hard Mallets",
+  "family": "bell",
+  "from": "VCSL/Idiophones/Struck Idiophones/Vibraphone - Hard Mallets.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Vibraphone, Bowed",
+  "family": "bell",
+  "from": "VCSL/Idiophones/Struck Idiophones/Vibraphone - Bowed.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Marimba",
+  "family": "bell",
+  "from": "VCSL/Idiophones/Struck Idiophones/Marimba.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Xylophone",
+  "family": "bell",
+  "from": "VCSL/Idiophones/Struck Idiophones/Xylophone - Medium Mallets.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0",
+  "shift": 12,
+  "below": 5
+ },
+ {
+  "name": "Glockenspiel",
+  "family": "bell",
+  "from": "VCSL/Idiophones/Struck Idiophones/Glockenspiel.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0",
+  "below": 7,
+  "shift": 12
+ },
+ {
+  "name": "Tubular Bells",
+  "family": "bell",
+  "from": "VCSL/Idiophones/Struck Idiophones/Tubular Bells 1.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0",
+  "tune": false
+ },
+ {
+  "name": "Hand Chimes",
+  "family": "bell",
+  "from": "VCSL/Idiophones/Struck Idiophones/Hand Chimes.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Balafon",
+  "family": "bell",
+  "from": "VCSL/Idiophones/Struck Idiophones/Balafon - Traditional Mallet.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Kalimba",
+  "family": "bell",
+  "from": "VCSL/Idiophones/Plucked Idiophones/Kalimba, Tanzania.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Kalimba, Kenya",
+  "family": "bell",
+  "from": "VCSL/Idiophones/Plucked Idiophones/Kalimba, Kenya.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Mbira",
+  "family": "bell",
+  "from": "VCSL/Idiophones/Plucked Idiophones/Mbira dzaVadzimu Nyamaropa, Zimbabwe, Low B.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Concert Harp",
+  "family": "plucked",
+  "from": "VCSL/Chordophones/Composite Chordophones/Concert Harp.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Folk Harp",
+  "family": "plucked",
+  "from": "VCSL/Chordophones/Composite Chordophones/Folk Harp.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Strumstick",
+  "family": "plucked",
+  "from": "VCSL/Chordophones/Composite Chordophones/Strumstick.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Dan Tranh",
+  "family": "plucked",
+  "from": "VCSL/Chordophones/Zithers/Dan Tranh - Normal.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Soprano Recorder",
+  "family": "wind",
+  "from": "VCSL/Aerophones/Edge-blown Aerophones/Baroque Soprano Recorder - Sustain.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Alto Recorder",
+  "family": "wind",
+  "from": "VCSL/Aerophones/Edge-blown Aerophones/Baroque Alto Recorder - Sustain.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Tenor Recorder",
+  "family": "wind",
+  "from": "VCSL/Aerophones/Edge-blown Aerophones/Baroque Tenor Recorder - Sustain.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Bass Recorder",
+  "family": "wind",
+  "from": "VCSL/Aerophones/Edge-blown Aerophones/Baroque Bass Recorder - Sustain.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Ocarina",
+  "family": "wind",
+  "from": "VCSL/Aerophones/Edge-blown Aerophones/Ocarina, Typical - Sus.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Harmonica",
+  "family": "wind",
+  "from": "VCSL/Aerophones/Free Aerophones/Harmonica-Hohner-Super64 - Normal.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Saxello",
+  "family": "wind",
+  "from": "VCSL/Aerophones/Reed Aerophones/Saxello - Non-Vibrato.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Tenor Saxophone, Non-Vibrato",
+  "family": "wind",
+  "from": "VCSL/Aerophones/Reed Aerophones/Tenor Saxophone - Non-Vibrato.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Tenor Saxophone, Vibrato",
+  "family": "wind",
+  "from": "VCSL/Aerophones/Reed Aerophones/Tenor Saxophone - Vibrato.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Tenor Saxophone Staccato",
+  "family": "wind",
+  "from": "VCSL/Aerophones/Reed Aerophones/Tenor Saxophone - Staccato.sfz",
+  "credit": "Versilian Community Sample Library",
+  "licence": "CC0-1.0"
+ }
+]

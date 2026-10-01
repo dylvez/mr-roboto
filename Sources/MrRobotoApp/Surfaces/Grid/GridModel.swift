@@ -93,8 +93,9 @@ public final class GridModel {
     // MARK: Machine and feel
 
     public private(set) var machine: SynthMachine
-    /// Every machine `Instrument` can synthesize, by family: drum machines, samplers, kits, styles.
-    public var machines: [SynthMachine] { SynthMachine.all }
+    /// Every machine `Instrument` can synthesize, by family — drum machines, samplers, kits,
+    /// styles — and the recorded kits brought in beside them.
+    public var machines: [SynthMachine] { SynthMachine.available }
 
     /// A chop this groove can play on instead of a machine: the one it plays on, or the one it
     /// was made from. Nil offers machines only.

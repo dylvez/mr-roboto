@@ -169,7 +169,7 @@ final class CompareAdapter: CompareHosting {
             app.note(.session, "That bass line has no notes in it", detail: "Nothing was played.")
             return
         }
-        let voice = BassVoiceSpec.all.first { $0.id == line.sound } ?? .finger
+        let voice = line.sound.flatMap(BassVoiceSpec.resolve(id:)) ?? .finger
         do {
             try await service.prepare(bass: voice)
         } catch {
@@ -454,7 +454,8 @@ enum CompareBriefing {
                   case .groove(let groove) = grooveVersion.kind else { return [] }
             var chords: [ChordSpan] = []
             if let p = Guidance.progressions(in: song).last, case .progression(let stored) = p.kind { chords = stored.spans }
-            let observation = BassObservation(label: PartLabel.title(of: version), bassline: line, groove: groove,
+            let heard = line.lengthInBars.map { groove.tiled(toBars: $0) } ?? groove
+            let observation = BassObservation(label: PartLabel.title(of: version), bassline: line, groove: heard,
                                               chords: chords, tempo: tempo, timeSignature: song.timeSignature,
                                               kickDecaySeconds: SurfaceWiring.kickDecay(in: song))
             values = { observation.value(of: $0) }

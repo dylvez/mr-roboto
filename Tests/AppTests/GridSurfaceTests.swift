@@ -273,8 +273,10 @@ struct GridSurfaceTests {
         let host = StubGridHost()
         let model = GridModel(host: host)
 
-        #expect(model.machines.map(\.id) == ["tr808", "tr909", "linn", "cr78", "tr606", "tr707", "dmx", "simmons",
-                                            "sp1200", "mpc60", "studio", "jazz", "rock", "funk", "vintage", "trap", "lofi"])
+        // Recorded kits are listed after them, when a library has some; another test may have one in.
+        #expect(model.machines.filter { $0.family != .recorded }.map(\.id)
+                == ["tr808", "tr909", "linn", "cr78", "tr606", "tr707", "dmx", "simmons",
+                    "sp1200", "mpc60", "studio", "jazz", "rock", "funk", "vintage", "trap", "lofi"])
         // Listed by kind, and the kinds in the order the list gives them.
         #expect(model.machines.map(\.family) == model.machines.map(\.family).sorted {
             SynthMachine.Family.allCases.firstIndex(of: $0)! < SynthMachine.Family.allCases.firstIndex(of: $1)!

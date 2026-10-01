@@ -29,8 +29,13 @@ public struct SynthMachine: Codable, Sendable, Hashable, Identifiable {
          .trap, .lofi]
     }
 
-    /// The machine with this id, if it is one of the presets.
-    public static func preset(id: String) -> SynthMachine? { all.first { $0.id == id } }
+    /// The presets and the recorded kits brought in beside them (`RecordedKits`): what a picker lists.
+    public static var available: [SynthMachine] { all + RecordedKits.machines }
+
+    /// The machine with this id: one of the presets, or a recorded kit.
+    public static func preset(id: String) -> SynthMachine? {
+        all.first { $0.id == id } ?? RecordedKits.machine(id: id)
+    }
 }
 
 // MARK: - TR-808

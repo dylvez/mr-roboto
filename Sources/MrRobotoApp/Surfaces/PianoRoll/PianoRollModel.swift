@@ -557,9 +557,29 @@ public final class PianoRollModel {
         didEdit()
     }
 
+    /// The imported instruments a bass line can play on: the one it plays on now, and the ones
+    /// that are basses — called one, or a tuba — and reach down to the E a bass guitar's lowest
+    /// string is tuned to. A piano reaches as low and is not a bass.
+    public var importedSounds: [BassVoiceSpec] {
+        ImportedInstruments.all.filter { spec in
+            if spec.id == sound { return true }
+            guard Self.isCalledABass(spec) else { return false }
+            return ImportedInstruments.lowestNote(of: spec).map { $0 <= 40 } == true
+        }.map(BassVoiceSpec.init(imported:))
+    }
+
+    /// Whether an imported instrument is one a bass line would reach for: placed among the
+    /// basses, or called a bass, a contrabass or a tuba. By the word, not the letters: a bassoon
+    /// is not a bass.
+    public static func isCalledABass(_ spec: InstrumentVoiceSpec) -> Bool {
+        if spec.family == "bass" { return true }
+        let words = Set(spec.name.lowercased().split { !$0.isLetter }.map(String.init))
+        return !words.isDisjoint(with: ["bass", "contrabass", "tuba"])
+    }
+
     /// The bass sound. Does not rewrite: the same notes through another voice.
     public func setSound(_ id: String) {
-        guard BassVoiceSpec.all.contains(where: { $0.id == id }), id != sound else { return }
+        guard BassVoiceSpec.resolve(id: id) != nil, id != sound else { return }
         willEdit("sound")
         sound = id
         refreshReadings()
@@ -840,7 +860,7 @@ public final class PianoRollModel {
         if let groove, lengthInBars != groove.bars { parts.append("\(lengthInBars) bars") }
         if lagMS != 0 { parts.append(String(format: "%+.0f ms behind the kick", lagMS)) }
         parts.append(String(format: "%.0f bpm", tempo))
-        parts.append(BassVoiceSpec.all.first { $0.id == sound }?.name ?? sound)
+        parts.append(BassVoiceSpec.resolve(id: sound)?.name ?? sound)
         if usesDefaultChords { parts.append("to the key's I–IV–V–I") }
         return parts.joined(separator: ", ")
     }

@@ -97,6 +97,21 @@ public struct SetProgressionTool: DirectorTool {
 
 // MARK: - write_bassline
 
+extension WriteBasslineTool {
+    /// How long a line is under stated chords that outlast the groove: as long as the chords, in
+    /// whole turns of the groove, sixteen bars at most. Nil is the groove's own length.
+    ///
+    /// A line used to be as long as the groove whatever the chords: under four bars of chords and
+    /// a two-bar break it was two bars, which put the first two chords' roots under all four.
+    static func bars(under chords: [ChordSpan], over groove: Groove, in meter: TimeSignature) -> Int? {
+        let beats = chords.reduce(0) { $0 + $1.beats }
+        let loop = max(1, groove.bars)
+        let stated = Int((beats / Double(max(1, meter.beatsPerBar))).rounded(.up))
+        guard stated > loop else { return nil }
+        return min(16, Int((Double(stated) / Double(loop)).rounded(.up)) * loop)
+    }
+}
+
 /// Writes a bass line under a groove, in a named player's hands, and records it as the Bassist's.
 ///
 /// The Bassist is asked first. `Bassist.consider(.writeBassline(…))` sees the lag, the tempo, the
@@ -224,9 +239,11 @@ public struct WriteBasslineTool: DirectorTool {
         let seed = input.seed == 0 ? Int(GrooveFeel.freshSeed()) : input.seed
         let request = BassRequest(key: key, chords: chords, groove: groove, tempo: tempo, timeSignature: signature,
                                   lineage: lineage, lagMS: lag, density: min(1, max(0, input.density)),
-                                  sound: sound, seed: UInt64(truncatingIfNeeded: seed))
+                                  sound: sound, seed: UInt64(truncatingIfNeeded: seed),
+                                  bars: Self.bars(under: chords, over: groove, in: signature))
         let line = BassWriter.write(request)
-        let observation = BassObservation(label: "\(lineage.name) line", bassline: line, groove: groove,
+        // Read against the groove as the line hears it, so a bar is a bar of the line.
+        let observation = BassObservation(label: "\(lineage.name) line", bassline: line, groove: request.lineGroove,
                                           chords: chords, tempo: tempo, timeSignature: signature,
                                           kickDecaySeconds: kickDecay)
         let readings = GenreLens.judge(Bassist().read(observation), by: Bassist.bible, in: lens)
@@ -235,7 +252,7 @@ public struct WriteBasslineTool: DirectorTool {
         var noteParts = ["\(lineage.name) line"]
         if lag != 0 { noteParts.append(String(format: "%+.0f ms behind the kick", lag)) }
         noteParts.append(String(format: "%.0f bpm", tempo))
-        noteParts.append(BassVoiceSpec.all.first { $0.id == sound }?.name ?? sound)
+        noteParts.append(BassVoiceSpec.resolve(id: sound)?.name ?? sound)
         noteParts.append(chords.isEmpty ? "to the key's I–IV–V–I" : "over \(chordVersion.map { PartLabel.title(of: $0) } ?? "the progression")")
         let version = PartVersion(partID: PartID(), kind: .bassline(line), author: .persona(Self.author),
                                   parents: [grooveVersion.id], operation: Operation.written,

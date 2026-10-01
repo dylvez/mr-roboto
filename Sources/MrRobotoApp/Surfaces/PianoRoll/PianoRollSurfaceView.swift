@@ -160,7 +160,7 @@ struct PianoRollSurfaceView: View {
                         Text(family == .played ? "Played" : "Synth")
                             .font(Design.Typography.ui(10.5, weight: .medium))
                             .foregroundStyle(Design.Palette.inkTertiary)
-                            .frame(width: 42, alignment: .leading)
+                            .frame(width: 56, alignment: .leading)
                         FlowRow(spacing: 4) {
                             ForEach(BassVoiceSpec.all.filter { $0.family == family }) { voice in
                                 RollChip(voice.name, isOn: model.sound == voice.id) { model.setSound(voice.id) }
@@ -169,7 +169,23 @@ struct PianoRollSurfaceView: View {
                         }
                     }
                 }
-                if let voice = BassVoiceSpec.preset(id: model.sound), !voice.summary.isEmpty {
+                // Recordings brought in from SFZ packs, played as the bass.
+                let imported = model.importedSounds
+                if !imported.isEmpty {
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Text("Imported")
+                            .font(Design.Typography.ui(10.5, weight: .medium))
+                            .foregroundStyle(Design.Palette.inkTertiary)
+                            .frame(width: 56, alignment: .leading)
+                        FlowRow(spacing: 4) {
+                            ForEach(imported) { voice in
+                                RollChip(voice.name, isOn: model.sound == voice.id) { model.setSound(voice.id) }
+                                    .help(voice.summary)
+                            }
+                        }
+                    }
+                }
+                if let voice = BassVoiceSpec.resolve(id: model.sound), !voice.summary.isEmpty {
                     Text(voice.summary)
                         .font(Design.Typography.ui(11))
                         .foregroundStyle(Design.Palette.inkTertiary)

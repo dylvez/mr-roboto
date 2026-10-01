@@ -16,10 +16,8 @@ enum FilePanels {
     }
 
     /// An SFZ pack's instrument file.
-    static func chooseSFZ() -> URL? {
-        choose(types: [UTType(filenameExtension: "sfz") ?? .data],
-               message: "An SFZ instrument. Its samples are copied into the library; the pack is left where it is.",
-               prompt: "Import")
+    static func chooseSFZ(message: String = "An SFZ instrument. Its samples are copied into the library; the pack is left where it is.") -> URL? {
+        choose(types: [UTType(filenameExtension: "sfz") ?? .data], message: message, prompt: "Import")
     }
 
     /// A folder: VCSL's checkout, for its hand percussion.

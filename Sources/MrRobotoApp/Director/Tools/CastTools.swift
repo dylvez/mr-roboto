@@ -287,7 +287,10 @@ public struct ConveneTool: DirectorTool {
                    case .bassline(let bassline) = line.kind,
                    let grooveVersion = Self.heard(.groove, in: song, section: section) ?? Guidance.grooves(in: song).last,
                    case .groove(let groove) = grooveVersion.kind {
-                    let observation = BassObservation(label: PartLabel.title(of: line), bassline: bassline, groove: groove,
+                    // Against the groove as the line hears it: a four-bar line over a two-bar break
+                    // was read as twice as busy as it is.
+                    let heard = bassline.lengthInBars.map { groove.tiled(toBars: $0) } ?? groove
+                    let observation = BassObservation(label: PartLabel.title(of: line), bassline: bassline, groove: heard,
                                                       chords: [], tempo: song.tempo, timeSignature: song.timeSignature)
                     readings += Bassist().read(observation).map { (id, $0) }
                 }

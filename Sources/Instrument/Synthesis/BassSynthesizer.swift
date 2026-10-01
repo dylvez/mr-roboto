@@ -276,6 +276,24 @@ public struct BassVoiceSpec: Codable, Sendable, Hashable, Identifiable {
         decaySeconds: 0.7, releaseSeconds: 0.06)
 
     public static func preset(id: String) -> BassVoiceSpec? { all.first { $0.id == id } }
+
+    /// The voice a bass line's sound names: one of the presets, or an instrument brought in from
+    /// an SFZ pack — a pizzicato contrabass, an electric bass somebody recorded — played as the
+    /// bass. The presets are all synthesized, and a recording of a string is not something a
+    /// model of one replaces.
+    public static func resolve(id: String) -> BassVoiceSpec? {
+        preset(id: id) ?? ImportedInstruments.spec(id: id).map(BassVoiceSpec.init(imported:))
+    }
+
+    /// An imported instrument, as a bass voice. Its kit is the instrument's own recordings;
+    /// nothing is rendered.
+    public init(imported spec: InstrumentVoiceSpec) {
+        self.init(id: spec.id, name: spec.name, engine: .synth, family: .played, summary: spec.summary,
+                  synth: spec, durationSeconds: spec.durationSeconds, decaySeconds: 1, releaseSeconds: 0.08)
+    }
+
+    /// Whether the voice is recordings rather than a synthesizer.
+    public var isImported: Bool { synth?.engine == .sampled }
 }
 
 // MARK: - Rendering one note

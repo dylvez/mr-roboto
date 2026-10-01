@@ -68,7 +68,7 @@ public enum SynthesizedKit {
     /// became recordings, is built again rather than loaded stale from the cache.
     public static func folderName(for machine: SynthMachine,
                                   recorded: RecordedPercussion.Resolved? = RecordedPercussion.inUse) -> String {
-        "\(machine.id)-\(KitFingerprint.of(machine, salt: recorded?.for(machine.id)?.fingerprint ?? ""))"
+        "\(machine.id)-\(KitFingerprint.of(machine, salt: RecordedKits.recordings(for: machine, beside: recorded)?.fingerprint ?? ""))"
     }
 
     /// The choke group the hi-hat pair shares. Both hats carry `group = 1` (they *silence* group 1)
@@ -131,7 +131,8 @@ public enum SynthesizedKit {
         // Voices a recording plays (`RecordedPercussion`): its zones in place of the render, each
         // layer at the loudness of the loudest synthesized layer as this kit plays it.
         var fromRecordings = Set<SynthVoiceKind>()
-        let recorded = recorded?.for(machine.id)
+        // A recorded kit's own recordings, and the hand percussion in use for what it leaves.
+        let recorded = RecordedKits.recordings(for: machine, beside: recorded)
         for spec in machine.voices {
             guard let recorded, let loudest = rendered.last(where: { $0.spec.kind == spec.kind }) else { continue }
             let loudness = KitLevel.loudness(loudest.samples.map { $0 * scale }, sampleRate: sampleRate)
@@ -298,13 +299,27 @@ public enum KitLevel {
 
     /// A file summed to mono, at its own rate. Nil when it cannot be read as audio.
     public static func monoSamples(_ url: URL) -> ([Float], Double)? {
+        heard(url).map { ($0.mono, $0.rate) }
+    }
+
+    /// A file as it is measured: summed to mono for how loud it is, and the largest sample of any
+    /// one channel for how far it reaches. The two are not the same number. A drum recorded from
+    /// overheads is louder in one ear than the other, and the side it is on peaks up to 6 dB over
+    /// the sum of both; held under the ceiling by the sum, it went over it on that side.
+    public static func heard(_ url: URL) -> (mono: [Float], peak: Float, rate: Double)? {
         guard let file = try? AVAudioFile(forReading: url),
               let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(file.length)),
-              (try? file.read(into: buffer)) != nil, let data = buffer.floatChannelData else { return nil }
+              (try? SampleCache.readAll(file, into: buffer)) != nil, let data = buffer.floatChannelData else { return nil }
         let channels = Int(buffer.format.channelCount), frames = Int(buffer.frameLength)
         var mono = [Float](repeating: 0, count: frames)
-        for c in 0..<channels { for i in 0..<frames { mono[i] += data[c][i] / Float(channels) } }
-        return (mono, file.processingFormat.sampleRate)
+        var peak: Float = 0
+        for c in 0..<channels {
+            for i in 0..<frames {
+                mono[i] += data[c][i] / Float(channels)
+                peak = Swift.max(peak, abs(data[c][i]))
+            }
+        }
+        return (mono, peak, file.processingFormat.sampleRate)
     }
 
     /// A recorded kit — an imported instrument — levelled to sound as loud as the app's own
@@ -327,8 +342,8 @@ public enum KitLevel {
         var measured: [String: Measure] = [:]
         func measure(_ zone: Zone) -> Measure? {
             if let known = measured[zone.sample] { return known }
-            guard let (samples, rate) = monoSamples(KitPath.resolve(zone.sample, in: folder)) else { return nil }
-            let found = Measure(loudness: loudness(samples, sampleRate: rate), peak: SynthMeasure.peak(samples))
+            guard let file = heard(KitPath.resolve(zone.sample, in: folder)) else { return nil }
+            let found = Measure(loudness: loudness(file.mono, sampleRate: file.rate), peak: file.peak)
             measured[zone.sample] = found
             return found
         }

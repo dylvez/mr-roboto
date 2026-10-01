@@ -1,0 +1,428 @@
+[
+ {
+  "name": "Jazz Bass",
+  "family": "bass",
+  "from": "Packs/karoryfer.growlybass/growlybass_clean.sfz",
+  "credit": "Karoryfer Samples, Growlybass",
+  "licence": "CC0",
+  "shift": -12
+ },
+ {
+  "name": "Jazz Bass Staccato",
+  "family": "bass",
+  "from": "Packs/karoryfer.growlybass/growlybass_vicious.sfz",
+  "credit": "Karoryfer Samples, Growlybass",
+  "licence": "CC0",
+  "shift": -12
+ },
+ {
+  "name": "Flatwound Bass",
+  "family": "bass",
+  "from": "Packs/karoryfer.swagbass/swagbass_clean.sfz",
+  "credit": "Karoryfer Samples, Swagbass",
+  "licence": "CC0"
+ },
+ {
+  "name": "Roundwound Bass",
+  "family": "bass",
+  "from": "Packs/karoryfer.fashionbass/fashionbass_clean.sfz",
+  "credit": "Karoryfer Samples, Fashionbass",
+  "licence": "CC0"
+ },
+ {
+  "name": "Bass VI",
+  "family": "bass",
+  "from": "Packs/karoryfer.pastabass/spaghetti.sfz",
+  "credit": "Karoryfer Samples, Pastabass",
+  "licence": "CC0",
+  "shift": -12
+ },
+ {
+  "name": "Bass VI, Picked",
+  "family": "bass",
+  "from": "Packs/karoryfer.pastabass/linguine.sfz",
+  "credit": "Karoryfer Samples, Pastabass",
+  "licence": "CC0",
+  "shift": -12
+ },
+ {
+  "name": "Bass VI, Muted",
+  "family": "bass",
+  "from": "Packs/karoryfer.pastabass/tagliatelle.sfz",
+  "credit": "Karoryfer Samples, Pastabass",
+  "licence": "CC0",
+  "shift": -12
+ },
+ {
+  "name": "Bass VI, Fingered",
+  "family": "bass",
+  "from": "Packs/karoryfer.pastabass/fetuccine.sfz",
+  "credit": "Karoryfer Samples, Pastabass",
+  "licence": "CC0",
+  "shift": -12
+ },
+ {
+  "name": "Hollowbody Bass",
+  "family": "bass",
+  "from": "Packs/karoryfer.big-little-bass/Programs/01-big_little_pluck.sfz",
+  "credit": "Karoryfer Samples, Big Little Bass",
+  "licence": "CC0",
+  "shift": -12
+ },
+ {
+  "name": "Black Bass",
+  "family": "bass",
+  "from": "Packs/karoryfer.black-and-blue-basses/Programs/05-darkblack_pluck.sfz",
+  "credit": "Karoryfer Samples, Black And Blue Basses",
+  "licence": "CC0",
+  "shift": -12
+ },
+ {
+  "name": "Black Bass Staccato",
+  "family": "bass",
+  "from": "Packs/karoryfer.black-and-blue-basses/Programs/09-darkblack_stac.sfz",
+  "credit": "Karoryfer Samples, Black And Blue Basses",
+  "licence": "CC0",
+  "shift": -12
+ },
+ {
+  "name": "Blue Bass",
+  "family": "bass",
+  "from": "Packs/karoryfer.black-and-blue-basses/Programs/03-babyblue_all.sfz",
+  "credit": "Karoryfer Samples, Black And Blue Basses",
+  "licence": "CC0",
+  "shift": -12
+ },
+ {
+  "name": "Double Bass Pizzicato",
+  "family": "bass",
+  "from": "Packs/karoryfer.meatbass/Programs/04_pizz.sfz",
+  "credit": "Karoryfer Samples, Meatbass",
+  "licence": "CC0"
+ },
+ {
+  "name": "Double Bass Bowed",
+  "family": "strings",
+  "from": "Packs/karoryfer.meatbass/Programs/02_arco_3vel.sfz",
+  "credit": "Karoryfer Samples, Meatbass",
+  "licence": "CC0"
+ },
+ {
+  "name": "Double Bass, Late Night",
+  "family": "bass",
+  "from": "Packs/karoryfer.sneakybass/Programs/02-sneakybass_pluck.sfz",
+  "credit": "Karoryfer Samples, Sneakybass",
+  "licence": "CC0",
+  "shift": -12
+ },
+ {
+  "name": "Electric Guitar",
+  "family": "guitar",
+  "from": "Packs/karoryfer.emilyguitar/emily_clean.sfz",
+  "credit": "Karoryfer Samples, Emilyguitar",
+  "licence": "CC0"
+ },
+ {
+  "name": "Gretsch Guitar",
+  "family": "guitar",
+  "from": "Packs/karoryfer.black-and-green-guitars/Programs/04-green_twang.sfz",
+  "credit": "Karoryfer Samples, Black And Green Guitars",
+  "licence": "CC0"
+ },
+ {
+  "name": "Gretsch Guitar Staccato",
+  "family": "guitar",
+  "from": "Packs/karoryfer.black-and-green-guitars/Programs/05-green_staccato.sfz",
+  "credit": "Karoryfer Samples, Black And Green Guitars",
+  "licence": "CC0"
+ },
+ {
+  "name": "Hofner Guitar",
+  "family": "guitar",
+  "from": "Packs/karoryfer.black-and-green-guitars/Programs/07-black_twang.sfz",
+  "credit": "Karoryfer Samples, Black And Green Guitars",
+  "licence": "CC0"
+ },
+ {
+  "name": "Hofner Guitar Staccato",
+  "family": "guitar",
+  "from": "Packs/karoryfer.black-and-green-guitars/Programs/08-black_staccato.sfz",
+  "credit": "Karoryfer Samples, Black And Green Guitars",
+  "licence": "CC0"
+ },
+ {
+  "name": "Archtop Guitar",
+  "family": "guitar",
+  "from": "Packs/karoryfer.shinyguitar/Programs/main.sfz",
+  "credit": "Karoryfer Samples, Shinyguitar",
+  "licence": "CC0",
+  "defines": {
+   "$sample_dir": "../Samples"
+  },
+  "cc": {
+   "100": 127
+  },
+  "keys": [
+   38,
+   88
+  ]
+ },
+ {
+  "name": "Archtop Guitar, Pickup",
+  "family": "guitar",
+  "from": "Packs/karoryfer.shinyguitar/Programs/main.sfz",
+  "credit": "Karoryfer Samples, Shinyguitar",
+  "licence": "CC0",
+  "defines": {
+   "$sample_dir": "../Samples"
+  },
+  "cc": {
+   "100": 0
+  },
+  "keys": [
+   38,
+   88
+  ]
+ },
+ {
+  "name": "Ganjo",
+  "family": "guitar",
+  "from": "Packs/ganjo/ganjo.sfz",
+  "credit": "sfzinstruments, Ganjo",
+  "licence": "CC0"
+ },
+ {
+  "name": "Lyre",
+  "family": "plucked",
+  "from": "Packs/cithara-barbarica/Programs/02-cithara_barbarica_finger.sfz",
+  "credit": "Karoryfer Samples, Cithara Barbarica",
+  "licence": "CC0",
+  "shift": 12
+ },
+ {
+  "name": "Lyre, Nails",
+  "family": "plucked",
+  "from": "Packs/cithara-barbarica/Programs/03-cithara_barbarica_nail.sfz",
+  "credit": "Karoryfer Samples, Cithara Barbarica",
+  "licence": "CC0",
+  "shift": 12
+ },
+ {
+  "name": "Zither",
+  "family": "plucked",
+  "from": "Packs/hungarian_zither/Programs/hungarian_zither_mel_strings_poly.sfz",
+  "credit": "sfzinstruments, Hungarian Zither",
+  "licence": "CC0",
+  "shift": 24
+ },
+ {
+  "name": "Solo Cello",
+  "family": "strings",
+  "from": "Packs/karoryfer-bigcat.cello/Programs/01- Bowed (velocity layer).sfz",
+  "credit": "Karoryfer Samples, Karoryfer x bigcat cello",
+  "licence": "CC0",
+  "shift": 12,
+  "keys": [
+   24,
+   86
+  ]
+ },
+ {
+  "name": "Solo Cello Pizzicato",
+  "family": "plucked",
+  "from": "Packs/karoryfer-bigcat.cello/Programs/03- Plucked.sfz",
+  "credit": "Karoryfer Samples, Karoryfer x bigcat cello",
+  "licence": "CC0",
+  "shift": 12,
+  "keys": [
+   24,
+   86
+  ]
+ },
+ {
+  "name": "Erhu",
+  "family": "strings",
+  "from": "Packs/aliexpress-erhu/Programs/02-erhu_long.sfz",
+  "credit": "Karoryfer Samples, Aliexpress Erhu",
+  "licence": "CC0",
+  "shift": 12
+ },
+ {
+  "name": "Erhu Short",
+  "family": "strings",
+  "from": "Packs/aliexpress-erhu/Programs/03-erhu_short.sfz",
+  "credit": "Karoryfer Samples, Aliexpress Erhu",
+  "licence": "CC0",
+  "shift": 12
+ },
+ {
+  "name": "Alto Saxophone, Close",
+  "family": "wind",
+  "from": "Packs/karoryfer.weresax/Programs/Sax.sfz",
+  "credit": "Karoryfer Samples, Weresax",
+  "licence": "CC0"
+ },
+ {
+  "name": "Baritone Saxophone, 1926",
+  "family": "wind",
+  "from": "Packs/karoryfer.bear-sax/Programs/2-solo-poly.sfz",
+  "credit": "Karoryfer Samples, Bear Sax",
+  "licence": "CC0",
+  "keys": [
+   29,
+   70
+  ]
+ },
+ {
+  "name": "Baritone Saxophone, 1926 Staccato",
+  "family": "wind",
+  "from": "Packs/karoryfer.bear-sax/Programs/2-solo-poly.sfz",
+  "credit": "Karoryfer Samples, Bear Sax",
+  "licence": "CC0",
+  "keys": [
+   29,
+   70
+  ],
+  "switch": 26
+ },
+ {
+  "name": "Baritone Saxophone, 1926 Growl",
+  "family": "wind",
+  "from": "Packs/karoryfer.bear-sax/Programs/2-solo-poly.sfz",
+  "credit": "Karoryfer Samples, Bear Sax",
+  "licence": "CC0",
+  "keys": [
+   29,
+   70
+  ],
+  "switch": 27
+ },
+ {
+  "name": "Tuba, Brass Band",
+  "family": "brass",
+  "from": "Packs/karoryfer.war-tuba/Programs/2-solo-poly.sfz",
+  "credit": "Karoryfer Samples, War Tuba",
+  "licence": "CC0",
+  "switch": 26,
+  "keys": [
+   27,
+   62
+  ]
+ },
+ {
+  "name": "Tuba, Brass Band Staccato",
+  "family": "brass",
+  "from": "Packs/karoryfer.war-tuba/Programs/2-solo-poly.sfz",
+  "credit": "Karoryfer Samples, War Tuba",
+  "licence": "CC0",
+  "switch": 25,
+  "keys": [
+   27,
+   62
+  ]
+ },
+ {
+  "name": "Soprano Saxophone",
+  "family": "wind",
+  "from": "Packs/MTG.SoloSax/MTG Solo Saxophones/MTG Soprano Sax.sfz",
+  "credit": "Music Technology Group, Universitat Pompeu Fabra: Solo Sax",
+  "licence": "CC BY 4.0"
+ },
+ {
+  "name": "Alto Saxophone",
+  "family": "wind",
+  "from": "Packs/MTG.SoloSax/MTG Solo Saxophones/MTG Alto Sax.sfz",
+  "credit": "Music Technology Group, Universitat Pompeu Fabra: Solo Sax",
+  "licence": "CC BY 4.0"
+ },
+ {
+  "name": "Tenor Saxophone, Studio",
+  "family": "wind",
+  "from": "Packs/MTG.SoloSax/MTG Solo Saxophones/MTG Tenor Sax.sfz",
+  "credit": "Music Technology Group, Universitat Pompeu Fabra: Solo Sax",
+  "licence": "CC BY 4.0"
+ },
+ {
+  "name": "Baritone Saxophone",
+  "family": "wind",
+  "from": "Packs/MTG.SoloSax/MTG Solo Saxophones/MTG Baritone Sax.sfz",
+  "credit": "Music Technology Group, Universitat Pompeu Fabra: Solo Sax",
+  "licence": "CC BY 4.0"
+ },
+ {
+  "name": "Concert Flute",
+  "family": "wind",
+  "from": "Packs/Ixox.Flute/Ixox Flute.sfz",
+  "credit": "Ixox, Flute",
+  "licence": "CC BY 4.0"
+ },
+ {
+  "name": "Splendid Grand Piano",
+  "family": "keys",
+  "from": "Packs/SplendidGrandPiano/Splendid Grand Piano.sfz",
+  "credit": "AKAI, mapped by kinwie",
+  "licence": "public domain",
+  "layers": 4,
+  "tune": false
+ },
+ {
+  "name": "Headroom Piano",
+  "family": "keys",
+  "from": "Packs/BengtNilsson.HeadroomPiano/Headroom Piano (NoFX).sfz",
+  "credit": "Bengt Nilsson, Headroom Piano",
+  "licence": "CC BY 4.0",
+  "layers": 3,
+  "tune": false
+ },
+ {
+  "name": "Intimate Piano",
+  "family": "keys",
+  "from": "Packs/BengtNilsson.HeadroomPiano/Intimate Piano (NoFX).sfz",
+  "credit": "Bengt Nilsson, Headroom Piano",
+  "licence": "CC BY 4.0",
+  "tune": false
+ },
+ {
+  "name": "Osiris Piano",
+  "family": "keys",
+  "from": "Packs/Osiris_Piano/Programs/01-natural.sfz",
+  "credit": "Osiris Piano",
+  "licence": "CC0",
+  "tune": false
+ },
+ {
+  "name": "Rhodes",
+  "family": "keys",
+  "from": "Packs/jlearman.jRhodes3d/jRhodes3d-st-no-xfade.sfz",
+  "credit": "Jeff Learman, jRhodes3d",
+  "licence": "free for making music; the samples CC BY-NC"
+ },
+ {
+  "name": "CP80 Electric Grand",
+  "family": "keys",
+  "from": "Packs/GregSullivan.E-Pianos/CP80/CP80.sfz",
+  "credit": "Greg Sullivan, E-Pianos",
+  "licence": "CC BY 3.0"
+ },
+ {
+  "name": "Pianet",
+  "family": "keys",
+  "from": "Packs/GregSullivan.E-Pianos/Pianet T/Pianet T.sfz",
+  "credit": "Greg Sullivan, E-Pianos",
+  "licence": "CC BY 3.0"
+ },
+ {
+  "name": "Wurlitzer",
+  "family": "keys",
+  "from": "Packs/GregSullivan.E-Pianos/Wurlitzer EP200/Wurlitzer EP200.sfz",
+  "credit": "Greg Sullivan, E-Pianos",
+  "licence": "CC BY 3.0"
+ },
+ {
+  "name": "Steel Drum",
+  "family": "bell",
+  "from": "Packs/jlearman.SteelDrum/jSteelDrum-noxfade.sfz",
+  "credit": "Jeff Learman, jSteelDrum",
+  "licence": "public domain"
+ }
+]

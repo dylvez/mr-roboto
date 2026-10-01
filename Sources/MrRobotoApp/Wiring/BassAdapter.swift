@@ -86,7 +86,7 @@ final class BassAdapter: PianoRollHosting {
     }
 
     private func prepare(_ sound: String) async {
-        let voice = BassVoiceSpec.all.first { $0.id == sound } ?? .finger
+        let voice = BassVoiceSpec.resolve(id: sound) ?? .finger
         guard await service.currentBassID != voice.id else { return }
         do { try await service.prepare(bass: voice) } catch {
             app.note(.session, "Could not load the \(voice.name) bass", detail: "\(error)")

@@ -572,6 +572,8 @@ public final class AuditionService {
     }
 
     private func bassKit(_ voice: BassVoiceSpec, on engine: Engine) throws -> LoadedKit {
+        // An imported instrument played as the bass is its own kit, as it is when it plays chords.
+        if let spec = voice.synth, voice.isImported { return try SynthesizedInstrument.build(spec, in: kitsDirectory) }
         let name = SynthesizedBass.folderName(for: voice)
         let folder = kitsDirectory.appendingPathComponent(name, isDirectory: true)
         if let existing = try? KitStore.load(from: folder) { return existing }

@@ -51,7 +51,7 @@ final class MergeAdapter: MergeHosting {
             }
         case .bassline(let line):
             let moved = MergeRender.bassline(line, move: move)
-            let voice = BassVoiceSpec.all.first { $0.id == moved.sound } ?? .finger
+            let voice = moved.sound.flatMap(BassVoiceSpec.resolve(id:)) ?? .finger
             if await service.currentBassID != voice.id {
                 do { try await service.prepare(bass: voice) } catch {
                     app.note(.session, "Could not load the \(voice.name) bass", detail: "\(error)")

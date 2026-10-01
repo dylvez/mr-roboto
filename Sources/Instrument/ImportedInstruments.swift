@@ -18,7 +18,34 @@ import Synchronization
 /// instrument by id, and every place that plays one looks it up the same way.
 public enum ImportedInstruments {
     public static let specFileName = "instrument.json"
+    /// The family of an import nobody could place: what every import was before they were placed.
     public static let family = "imported"
+
+    /// What a recording is, from what it is called: a cello is a string instrument wherever it
+    /// came from, and is looked for among the strings. The first word that says so decides, so
+    /// "Violin Section Pizzicato" is plucked, "Bass Guitar" is a bass and "Bass Clarinet" is a
+    /// wind. `family` when nothing in the name says.
+    public static func family(named name: String) -> String {
+        let words = name.lowercased()
+        let kinds: [(family: String, words: [String])] = [
+            ("bass", ["bass guitar", "electric bass", "jazz bass", "precision bass", "fretless bass", "bass vi", "upright bass",
+                      "double bass pizz"]),
+            ("guitar", ["guitar", "ganjo"]),
+            ("plucked", ["pizz", "harp", "banjo", "koto", "mandolin", "zither", "ukulele", "lute", "dulcimer",
+                         "psaltery", "cithara", "lyre", "strumstick", "dan tranh", "tagelharpa"]),
+            ("organ", ["organ", "harmonium", "accordion", "melodica"]),
+            ("keys", ["piano", "upright", "grand", "rhodes", "wurlitzer", "clav", "harpsichord", "celesta", "e-piano", "electric piano", "tx81z"]),
+            ("bell", ["vibraphone", "vibes", "marimba", "xylophone", "glockenspiel", "bells", "bell", "chimes", "kalimba", "mbira",
+                      "steel drum", "balafon", "timpani", "music box", "wine glass", "nyunga"]),
+            ("brass", ["trumpet", "horn", "trombone", "tuba", "flugel", "cornet", "euphonium"]),
+            ("wind", ["flute", "piccolo", "oboe", "clarinet", "bassoon", "sax", "recorder", "ocarina", "whistle", "harmonica", "pipes",
+                      "didgeridoo", "shofar"]),
+            ("strings", ["violin", "viola", "cello", "contrabass", "double bass", "strings", "erhu", "fiddle", "bass"]),
+            ("pad", ["choir", "voice", "vocal", "oohs", "aahs"]),
+        ]
+        for kind in kinds where kind.words.contains(where: words.contains) { return kind.family }
+        return family
+    }
 
     private static let registry = Mutex<[InstrumentVoiceSpec]>([])
 
@@ -65,6 +92,8 @@ public enum ImportedInstruments {
                 try? markLevelled(folder)
             }
             spec.sampledKit = folder.path
+            // Brought in before imports were placed: placed now, by name, and only in memory.
+            if spec.family == family { spec.family = family(named: spec.name) }
             register(spec)
             found.append(spec)
         }
@@ -75,7 +104,7 @@ public enum ImportedInstruments {
     static let levelFileName = "level.json"
     /// Bump when `KitLevel.levelled` changes: every imported kit is levelled again on load. Its
     /// own, not `KitLevel.version`, which would render every synthesized kit again for nothing.
-    public static let levelVersion = "imported-level-2"
+    public static let levelVersion = "imported-level-3"
 
     static func isLevelled(_ folder: URL) -> Bool {
         guard let data = try? Data(contentsOf: folder.appendingPathComponent(levelFileName)),
@@ -128,9 +157,13 @@ public enum ImportedInstruments {
     /// only when it is whole, so a failed import never leaves half an instrument behind.
     /// - Parameter register: false for a recording that is not played as an instrument — hand
     ///   percussion brought in for `RecordedPercussion`, which kits use and the picker never shows.
-    public static func importSFZ(at url: URL, into directory: URL, register: Bool = true) throws -> Imported {
+    /// - Parameters:
+    ///   - name: what it is called; the SFZ's own name when nil.
+    ///   - family: where a picker lists it; what its name says it is when nil.
+    public static func importSFZ(at url: URL, into directory: URL, register: Bool = true, name: String? = nil,
+                                 family: String? = nil) throws -> Imported {
         let fm = FileManager.default
-        let parsed = try SFZImporter.importKit(at: url)
+        let parsed = try SFZImporter.importKit(at: url, name: name)
         guard !parsed.manifest.zones.isEmpty else { throw ImportError.noRegions(file: url.lastPathComponent) }
 
         let slug = slug(of: parsed.manifest.name)
@@ -147,6 +180,7 @@ public enum ImportedInstruments {
 
         let source = url.deletingLastPathComponent()
         var copied: [String: String] = [:]
+        var rates: [String: Double] = [:]
         var unusable: [String] = []
         var zones: [Zone] = []
         for zone in parsed.manifest.zones {
@@ -156,7 +190,7 @@ public enum ImportedInstruments {
                 path = known
             } else {
                 let from = KitPath.resolve(zone.sample, in: source).standardizedFileURL
-                guard fm.fileExists(atPath: from.path), (try? AVAudioFile(forReading: from)) != nil else {
+                guard fm.fileExists(atPath: from.path), let audio = try? AVAudioFile(forReading: from) else {
                     unusable.append(zone.sample)
                     continue
                 }
@@ -168,8 +202,9 @@ public enum ImportedInstruments {
                 }
                 path = "samples/\(file)"
                 copied[zone.sample] = path
+                rates[zone.sample] = audio.fileFormat.sampleRate
             }
-            var kept = zone
+            var kept = atPlayingRate(zone, recordedAt: rates[zone.sample] ?? playingRate)
             kept.sample = path
             zones.append(kept)
         }
@@ -184,7 +219,7 @@ public enum ImportedInstruments {
         try markLevelled(staging)
 
         var spec = InstrumentVoiceSpec(
-            id: "sfz-\(slug)", name: manifest.name, family: family, engine: .sampled,
+            id: "sfz-\(slug)", name: manifest.name, family: family ?? Self.family(named: manifest.name), engine: .sampled,
             summary: summary(of: zones, samples: copied.count, file: url.lastPathComponent))
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -205,6 +240,33 @@ public enum ImportedInstruments {
         if register { self.register(spec) }
         return Imported(spec: spec, zones: zones.count, samples: copied.count,
                         skippedOpcodes: parsed.skippedOpcodeNames, unusable: unusable, replaced: replaced)
+    }
+
+    /// The rate recordings are decoded to and played at. A zone's offset, end and loop points are
+    /// frames of the decoded audio.
+    static let playingRate: Double = 48_000
+
+    /// `zone` with the places an SFZ counts in the recording's own frames — where it starts, where
+    /// it ends, where it loops — counted in frames at the rate it is played at. A loop written for
+    /// a 44.1 kHz recording and read against the same recording at 48 kHz turns a tenth early, and
+    /// is heard.
+    static func atPlayingRate(_ zone: Zone, recordedAt rate: Double) -> Zone {
+        guard rate > 0, rate != playingRate else { return zone }
+        func moved(_ frame: Int) -> Int { Int((Double(frame) * playingRate / rate).rounded()) }
+        var zone = zone
+        zone.sampleStart = moved(zone.sampleStart)
+        zone.sampleEnd = zone.sampleEnd.map(moved)
+        if let loop = zone.loop {
+            zone.loop = Loop(mode: loop.mode, start: moved(loop.start), end: moved(loop.end))
+        }
+        return zone
+    }
+
+    /// The lowest key any of an instrument's recordings plays, or nil when its kit does not load.
+    public static func lowestNote(of spec: InstrumentVoiceSpec) -> Int? {
+        guard let folder = spec.sampledKit,
+              let kit = try? KitStore.load(from: URL(fileURLWithPath: folder, isDirectory: true)) else { return nil }
+        return kit.manifest.zones.map(\.key.noteRange.lowerBound).min()
     }
 
     /// Takes an imported instrument out of the app: its folder, copies and all. The pack it came

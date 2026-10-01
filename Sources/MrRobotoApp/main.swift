@@ -118,6 +118,13 @@ struct FrameCommands: Commands {
                 if let url = FilePanels.chooseSFZ() { app.importInstrument(from: url) }
             }
             .disabled(app.store == nil)
+            Button("Import Drum Kit…") {
+                if let url = FilePanels.chooseSFZ(
+                    message: "An SFZ drum kit laid out as General MIDI has it: kick on 36, snare on 38, hats on 42 and 46. Its samples are copied into the library and it is listed beside the machines.") {
+                    app.importDrumKit(from: url)
+                }
+            }
+            .disabled(app.store == nil)
             Button("Import VCSL Percussion…") {
                 if let url = FilePanels.chooseFolder(
                     message: "The Versilian Community Sample Library folder (its sfz branch). Its congas, bongos, shaker, tambourine and claves are copied into the library and every kit plays them.",

@@ -143,11 +143,11 @@ struct InstrumentSynthesizerTests {
 
 @Suite("Instrument: the presets are a usable set")
 struct InstrumentPresetTests {
-    @Test("a bank to choose from: fifty-odd instruments over eleven families, three engines")
+    @Test("a bank to choose from: fifty-odd instruments over twelve families, three engines")
     func aBank() {
         let all = InstrumentVoiceSpec.all
         #expect(all.count >= 50, "\(all.count)")
-        #expect(Set(all.map(\.family)) == ["keys", "organ", "bell", "plucked", "strings", "pad", "wind", "brass", "pluck", "lead", "chip"])
+        #expect(Set(all.map(\.family)) == ["keys", "organ", "bell", "guitar", "plucked", "strings", "pad", "wind", "brass", "pluck", "lead", "chip"])
         #expect(Set(all.map(\.engine)) == Set(InstrumentVoiceSpec.Engine.allCases).subtracting([.sampled]), "every engine but an import's")
         #expect(BassVoiceSpec.all.count >= 15 && Set(BassVoiceSpec.all.map(\.id)).count == BassVoiceSpec.all.count)
         #expect(Set(BassVoiceSpec.all.map(\.family)) == Set(BassVoiceSpec.Family.allCases))

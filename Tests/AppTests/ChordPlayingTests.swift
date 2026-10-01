@@ -244,3 +244,56 @@ struct PlayingNextTests {
         #expect(NextAdvisor.observe("playing", in: try #require(app.song), app: app).contains("is played off-beats, voice-led"))
     }
 }
+
+@Suite("Director: a bass line is as long as its chords", .serialized) @MainActor
+struct BassUnderTheChordsTests {
+
+    @Test("an imported instrument is offered to the bass by the word: a bass, a contrabass, a tuba, never a bassoon")
+    func calledABass() {
+        func spec(_ name: String, family: String = ImportedInstruments.family) -> InstrumentVoiceSpec {
+            InstrumentVoiceSpec(id: "sfz-x", name: name, family: family, engine: .sampled, summary: "")
+        }
+        #expect(PianoRollModel.isCalledABass(spec("Jazz Bass")))
+        #expect(PianoRollModel.isCalledABass(spec("Contrabass Pizzicato")))
+        #expect(PianoRollModel.isCalledABass(spec("Tuba, Brass Band")))
+        #expect(PianoRollModel.isCalledABass(spec("Double Bass, Late Night")))
+        #expect(PianoRollModel.isCalledABass(spec("Big Little", family: "bass")))
+        #expect(!PianoRollModel.isCalledABass(spec("Bassoon")))
+        #expect(!PianoRollModel.isCalledABass(spec("Cello Section")))
+    }
+
+    @Test("four bars of chords over a two-bar break get four bars of bass, a root under every chord")
+    func asLongAsTheChords() async throws {
+        let rig = WritingFixture.rig(nil)
+        defer { rig.clean() }
+        _ = await WritingFixture.run(rig.box, "start_song", #"{"title":"Tidewater","tempo":78,"key":"E minor","machine":"vintage"}"#)
+        let beat = WritingFixture.json(await WritingFixture.run(rig.box, "write_groove",
+            #"{"feel":"Trip-Hop","bars":2,"swing_percent":0,"rows":[],"note":"A break","steps_per_bar":0,"parent":""}"#))
+        let groove = try #require(beat["version"] as? String)
+        let chords = await WritingFixture.run(rig.box, "set_progression", #"{"chords":"Em9 | Cmaj7#11 | Am9 | B7b9","key":"E minor"}"#)
+        #expect(!chords.isError)
+        let result = await WritingFixture.run(rig.box, "write_bassline",
+            #"{"groove":"\#(groove)","hands":"palladino","lag_ms":35,"density":0.45,"seed":7}"#)
+        #expect(!result.isError, "\(result.content)")
+        let song = try #require(rig.app.song)
+        guard case .bassline(let line)? = Guidance.basslines(in: song).last?.kind else { Issue.record("no line"); return }
+        #expect(line.lengthInBars == 4)
+        // What sounds on the first beat of each bar is that bar's root: E, C, A, B.
+        let roots = [4, 0, 9, 11]
+        for (bar, root) in roots.enumerated() {
+            let first = try #require(line.notes.first { $0.start >= Double(bar * 4) - 0.01 && $0.start < Double(bar * 4) + 0.5 }, "bar \(bar + 1)")
+            #expect(first.pitch.midi % 12 == root, "bar \(bar + 1): \(first.pitch)")
+        }
+        // Read a bar at a time, not as twice as busy as it is.
+        let said = (WritingFixture.json(result)["readings"] as? [String] ?? []).joined(separator: " ")
+        #expect(said.contains("attacks a bar"))
+        #expect(!(WritingFixture.json(result)["flags"] as? [String] ?? []).contains { $0.contains("attacks a bar") }, "\(said)")
+
+        // Chords no longer than the groove, and none at all, are the groove's length as before.
+        #expect(WriteBasslineTool.bars(under: [], over: Groove(bars: 2, patterns: []), in: .fourFour) == nil)
+        let two = try Progression.parse("Em9 | Cmaj7", key: Key(parsing: "E minor")!).get().spans
+        #expect(WriteBasslineTool.bars(under: two, over: Groove(bars: 2, patterns: []), in: .fourFour) == nil)
+        let three = try Progression.parse("Em9 | Cmaj7 | Am9", key: Key(parsing: "E minor")!).get().spans
+        #expect(WriteBasslineTool.bars(under: three, over: Groove(bars: 2, patterns: []), in: .fourFour) == 4)
+    }
+}

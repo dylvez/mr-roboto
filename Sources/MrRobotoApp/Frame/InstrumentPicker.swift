@@ -20,11 +20,11 @@ struct InstrumentPicker: View {
     @Environment(\.importInstrument) private var importInstrument
     @Environment(\.removeInstrument) private var removeInstrument
 
-    /// Grouped as a keyboard's bank list: keys and organs, the struck things, strings plucked and
-    /// bowed, pads, winds and brass, then the synths.
+    /// Grouped as a keyboard's bank list: keys and organs, the struck things, guitars and basses,
+    /// strings plucked and bowed, pads, winds and brass, then the synths.
     static let families: [(id: String, title: String)] = [
-        ("keys", "Keys"), ("organ", "Organs"), ("bell", "Mallets & bells"), ("plucked", "Plucked strings"),
-        ("strings", "Strings"), ("pad", "Pads & voices"), ("wind", "Winds"), ("brass", "Brass"),
+        ("keys", "Keys"), ("organ", "Organs"), ("bell", "Mallets & bells"), ("guitar", "Guitars"), ("bass", "Basses"),
+        ("plucked", "Plucked strings"), ("strings", "Strings"), ("pad", "Pads & voices"), ("wind", "Winds"), ("brass", "Brass"),
         ("pluck", "Synth plucks"), ("lead", "Leads"), ("chip", "Chip"),
         (ImportedInstruments.family, "Imported"),
     ]
@@ -50,24 +50,20 @@ struct InstrumentPicker: View {
                     // Chosen as soon as it is in: importing from here is asking to play it here.
                     FamilyChip(title: "Import SFZ…", isOn: false, holdsSelection: false) {
                         if let id = importInstrument() {
-                            browsing = ImportedInstruments.family
+                            browsing = InstrumentVoiceSpec.preset(id: id)?.family ?? ImportedInstruments.family
                             choose(id)
                         }
                     }
                     .help("Bring in a sampled instrument from an SFZ pack. Its samples are copied into the library.")
                 }
             }
-            FlowRow(spacing: 6) {
-                ForEach(instruments.filter { $0.family == family }, id: \.id) { spec in
-                    BoothChip(spec.name, isOn: spec.id == selected) { choose(spec.id) }
-                        .help(Self.character(spec))
-                        .contextMenu {
-                            if spec.engine == .sampled, removeInstrument != nil {
-                                Button("Remove \(spec.name) from the Library…") { removing = spec }
-                            }
-                        }
-                }
-            }
+            // Recordings first, and said to be: a recorded cello and a synthesized one are
+            // different instruments with the same name.
+            let inFamily = instruments.filter { $0.family == family }
+            let recorded = inFamily.filter { $0.engine == .sampled }
+            let synthesized = inFamily.filter { $0.engine != .sampled }
+            if !recorded.isEmpty { row(recorded, label: synthesized.isEmpty ? nil : "Recorded") }
+            if !synthesized.isEmpty { row(synthesized, label: recorded.isEmpty ? nil : "Synthesized") }
             if let spec = InstrumentVoiceSpec.preset(id: selected) {
                 // What it sounds like, as a player would say it; how it is made is in the tooltip.
                 Text("\(spec.name): \(Self.character(spec))")
@@ -92,6 +88,29 @@ struct InstrumentPicker: View {
 
     /// What the preset sounds like, in a player's words. "FM, two pairs, modulated at 1 and 14" was
     /// true and told nobody whether to reach for it.
+    @ViewBuilder
+    private func row(_ specs: [InstrumentVoiceSpec], label: String?) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            if let label {
+                Text(label)
+                    .font(Design.Typography.ui(10.5, weight: .medium))
+                    .foregroundStyle(Design.Palette.inkTertiary)
+                    .frame(width: 72, alignment: .leading)
+            }
+            FlowRow(spacing: 6) {
+                ForEach(specs, id: \.id) { spec in
+                    BoothChip(spec.name, isOn: spec.id == selected) { choose(spec.id) }
+                        .help(Self.character(spec))
+                        .contextMenu {
+                            if spec.engine == .sampled, removeInstrument != nil {
+                                Button("Remove \(spec.name) from the Library…") { removing = spec }
+                            }
+                        }
+                }
+            }
+        }
+    }
+
     static func character(_ spec: InstrumentVoiceSpec) -> String {
         spec.summary.isEmpty ? describe(spec) : spec.summary
     }

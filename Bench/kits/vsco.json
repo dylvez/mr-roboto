@@ -1,0 +1,273 @@
+[
+ {
+  "name": "Cello Section",
+  "family": "strings",
+  "from": "VSCO-2-CE/CelloEnsSusVib.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0",
+  "above": 7
+ },
+ {
+  "name": "Viola Section",
+  "family": "strings",
+  "from": "VSCO-2-CE/ViolaEnsSusVib.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0",
+  "below": 5
+ },
+ {
+  "name": "Violin Section",
+  "family": "strings",
+  "from": "VSCO-2-CE/ViolinEnsSusVib.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Solo Violin",
+  "family": "strings",
+  "from": "VSCO-2-CE/SViolinVib.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Contrabass Bowed",
+  "family": "strings",
+  "from": "VSCO-2-CE/ContrabassSusVB.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Cello Section Spiccato",
+  "family": "strings",
+  "from": "VSCO-2-CE/CelloEnsSpic.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Viola Section Spiccato",
+  "family": "strings",
+  "from": "VSCO-2-CE/ViolaEnsSpic.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Violin Section Spiccato",
+  "family": "strings",
+  "from": "VSCO-2-CE/ViolinEnsSpic.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Contrabass Pizzicato",
+  "family": "plucked",
+  "from": "VSCO-2-CE/ContrabassPizz.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Cello Section Pizzicato",
+  "family": "plucked",
+  "from": "VSCO-2-CE/CelloEnsPizz.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Viola Section Pizzicato",
+  "family": "plucked",
+  "from": "VSCO-2-CE/ViolaEnsPizz.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Violin Section Pizzicato",
+  "family": "plucked",
+  "from": "VSCO-2-CE/ViolinEnsPizz.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Solo Violin Pizzicato",
+  "family": "plucked",
+  "from": "VSCO-2-CE/SViolinPizz.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Harp",
+  "family": "plucked",
+  "from": "VSCO-2-CE/Harp.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Trumpet",
+  "family": "brass",
+  "from": "VSCO-2-CE/TrumpetSusVib.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Trumpet, Harmon Mute",
+  "family": "brass",
+  "from": "VSCO-2-CE/TrumpetHarmonMuteSus.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Trumpet, Straight Mute",
+  "family": "brass",
+  "from": "VSCO-2-CE/TrumpetStraightMuteSus.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Trumpet Staccato",
+  "family": "brass",
+  "from": "VSCO-2-CE/TrumpetStac.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "French Horn",
+  "family": "brass",
+  "from": "VSCO-2-CE/FHornSus.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "French Horn Staccato",
+  "family": "brass",
+  "from": "VSCO-2-CE/FHornStac.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Trombone",
+  "family": "brass",
+  "from": "VSCO-2-CE/TromboneSus.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Trombone Staccato",
+  "family": "brass",
+  "from": "VSCO-2-CE/TromboneStac.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Tuba",
+  "family": "brass",
+  "from": "VSCO-2-CE/TubaSus.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Flute",
+  "family": "wind",
+  "from": "VSCO-2-CE/FluteSusVib.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Piccolo",
+  "family": "wind",
+  "from": "VSCO-2-CE/PiccoloSus.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0",
+  "shift": 12,
+  "below": 5
+ },
+ {
+  "name": "Oboe",
+  "family": "wind",
+  "from": "VSCO-2-CE/OboeSusVib.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Clarinet",
+  "family": "wind",
+  "from": "VSCO-2-CE/ClarinetSus.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Bassoon",
+  "family": "wind",
+  "from": "VSCO-2-CE/BassoonSus.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Upright Piano",
+  "family": "keys",
+  "from": "VSCO-2-CE/UprightPiano.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0",
+  "below": 0,
+  "above": 0
+ },
+ {
+  "name": "Upright Piano No. 1",
+  "family": "keys",
+  "from": "VSCO-2-CE/VSUpright1.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Pipe Organ",
+  "family": "organ",
+  "from": "VSCO-2-CE/OrganLoud.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Pipe Organ, Quiet",
+  "family": "organ",
+  "from": "VSCO-2-CE/OrganQuiet.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Glockenspiel",
+  "family": "bell",
+  "from": "VSCO-2-CE/Glockenspiel.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0",
+  "below": 7,
+  "shift": 12
+ },
+ {
+  "name": "Marimba",
+  "family": "bell",
+  "from": "VSCO-2-CE/Marimba.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0"
+ },
+ {
+  "name": "Xylophone",
+  "family": "bell",
+  "from": "VSCO-2-CE/Xylophone.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0",
+  "shift": 12,
+  "below": 5
+ },
+ {
+  "name": "Tubular Bells",
+  "family": "bell",
+  "from": "VSCO-2-CE/TubularBells.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0",
+  "tune": false
+ },
+ {
+  "name": "Timpani",
+  "family": "bell",
+  "from": "VSCO-2-CE/Timpani.sfz",
+  "credit": "Versilian Studios Chamber Orchestra 2 Community Edition",
+  "licence": "CC0-1.0",
+  "tune": false
+ }
+]

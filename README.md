@@ -35,7 +35,7 @@ That downloads `beat_this.onnx` (83 MB, checked by SHA-256) and converts it to C
 
 ### Optional: sampled instruments
 
-The built-in instruments are all synthesized. SFZ instruments (for example the [Salamander Grand](https://sfzinstruments.github.io/pianos/salamander) or [VCSL](https://github.com/sgossner/VCSL)) come in through File → Import Instrument…, and File → Import VCSL Percussion…, pointed at VCSL's `sfz` branch, gives every kit recorded hand percussion.
+The built-in instruments are all synthesized. SFZ instruments (for example the [Salamander Grand](https://sfzinstruments.github.io/pianos/salamander) or [VCSL](https://github.com/sgossner/VCSL)) come in through File → Import Instrument…, and File → Import VCSL Percussion…, pointed at VCSL's `sfz` branch, gives every kit recorded hand percussion. File → Import Drum Kit… takes an SFZ drum kit laid out as General MIDI (kick on 36, snare on 38, hats on 42 and 46) and lists it beside the drum machines; a kit recorded through several microphones is mixed down first with `Bench/kits/bake_sfz_kit.py`, and `Bench/kits/flatten_sfz.py` prepares a pack's instruments the same way.
 
 ## Development
 

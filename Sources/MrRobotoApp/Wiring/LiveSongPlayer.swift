@@ -409,7 +409,7 @@ final class LiveSongPlayer: SongPlaybackHost {
             player.drivesSampler = drives(key)
             return .groove(player)
         case .bassline(let line):
-            let spec = BassVoiceSpec.all.first { $0.id == voice.sound } ?? .finger
+            let spec = BassVoiceSpec.resolve(id: voice.sound) ?? .finger
             let key = AuditionService.SamplerKey(.bass, part: voice.part)
             let sampler = try await service.playbackBassSampler(voice: spec, for: voice.part)
             try Self.route(sampler.node, part: voice.part, on: graph)

@@ -209,7 +209,7 @@ public final class PartPlayer {
 
     @discardableResult
     public func play(_ notes: [NoteEvent], sound: String?, clock: TransportClock) async -> Double {
-        let voice = BassVoiceSpec.all.first { $0.id == sound } ?? .finger
+        let voice = sound.flatMap(BassVoiceSpec.resolve(id:)) ?? .finger
         if await service.currentBassID != voice.id { try? await service.prepare(bass: voice) }
         let timeline = GrooveTimeline.tempo(clock.tempo, timeSignature: clock.timeSignature)
         await service.playBass(BasslinePlayer.hits(for: Bassline(notes: notes, sound: sound), on: timeline, offsetBeats: 0))

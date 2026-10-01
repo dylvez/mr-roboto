@@ -85,6 +85,12 @@ public struct RecordedPercussion: Codable, Hashable, Sendable {
         /// Salts a kit's fingerprint, so a kit with recordings in it is a different kit.
         public var fingerprint: String
 
+        init(set: RecordedPercussion, kits: [String: LoadedKit], fingerprint: String) {
+            self.set = set
+            self.kits = kits
+            self.fingerprint = fingerprint
+        }
+
         /// This set for `machine`: itself, or nil when the machine keeps its synthesized percussion.
         public func `for`(_ machine: String) -> Resolved? { set.applies(to: machine) ? self : nil }
     }
@@ -110,7 +116,7 @@ public struct RecordedPercussion: Codable, Hashable, Sendable {
         var usable = set
         usable.assignments = set.assignments.filter { kits[$0.source] != nil }
         guard !usable.assignments.isEmpty else { return nil }
-        return Resolved(set: usable, kits: kits, fingerprint: KitFingerprint.of(usable.assignments, salt: "recorded-2"))  // bump when how recordings go into a kit changes
+        return Resolved(set: usable, kits: kits, fingerprint: KitFingerprint.of(usable.assignments, salt: "recorded-3"))  // bump when how recordings go into a kit changes
     }
 
     /// Puts `set` in use with its recordings from `directory`, or takes the one in use away (nil,
@@ -178,9 +184,9 @@ public struct RecordedPercussion: Codable, Hashable, Sendable {
             // Every layer to the voice's loudness, as the synthesized layers are; never over the
             // kit's ceiling.
             var gain: Float = 1
-            if let (samples, rate) = KitLevel.monoSamples(from) {
-                let own = KitLevel.loudness(samples, sampleRate: rate)
-                let peak = Double(SynthMeasure.peak(samples))
+            if let file = KitLevel.heard(from) {
+                let own = KitLevel.loudness(file.mono, sampleRate: file.rate)
+                let peak = Double(file.peak)
                 if own > 1e-6, peak > 0 {
                     gain = Float(min(loudness / own, pow(10, KitLevel.ceilingDBFS / 20) / peak))
                 }
@@ -195,8 +201,10 @@ public struct RecordedPercussion: Codable, Hashable, Sendable {
             // brings the file itself to the voice's loudness, and packs like VCSL raise quiet
             // recordings 12 to 30 dB with `volume` — counted twice, a conga was 25 dB over the kit.
             placed.gainDB = 20 * log10(max(gain, 1e-6))
-            placed.group = nil
-            placed.offBy = nil
+            // One pair of hats, recorded or not: either cuts the other. Nothing else chokes.
+            let isHat = kind == .closedHat || kind == .openHat
+            placed.group = isHat ? SynthesizedKit.hatChokeGroup : nil
+            placed.offBy = isHat ? SynthesizedKit.hatChokeGroup : nil
             placed.loop = nil
             out.append(placed)
         }

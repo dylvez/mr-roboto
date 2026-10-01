@@ -20,6 +20,8 @@ extension SynthMachine {
     /// How a picker groups the machines.
     public enum Family: String, CaseIterable, Sendable {
         case machine, sampler, acoustic, style
+        /// Kits of recordings, brought in from SFZ packs.
+        case recorded
 
         public var title: String {
             switch self {
@@ -27,6 +29,7 @@ extension SynthMachine {
             case .sampler: return "Samplers"
             case .acoustic: return "Acoustic kits"
             case .style: return "Styles"
+            case .recorded: return "Recorded kits"
             }
         }
     }
@@ -37,7 +40,7 @@ extension SynthMachine {
         case "sp1200", "mpc60": return .sampler
         case "studio", "jazz", "rock", "funk", "vintage": return .acoustic
         case "trap", "lofi": return .style
-        default: return .machine
+        default: return id.hasPrefix(RecordedKits.prefix) ? .recorded : .machine
         }
     }
 

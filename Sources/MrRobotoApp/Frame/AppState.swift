@@ -225,6 +225,9 @@ public final class AppState {
     /// The recordings that stand in for the kits' hand percussion, on or off; nil when none were
     /// ever brought in. `RecordedPercussion.current` is the process-wide copy kits are built with.
     public internal(set) var recordedPercussion: RecordedPercussion?
+    /// The kits of recordings brought into this library, which the Grid lists beside the machines.
+    /// `RecordedKits` is the process-wide copy a song's machine is looked up in.
+    public internal(set) var recordedKits: [RecordedKit] = []
 
     // MARK: Song
 
@@ -550,6 +553,7 @@ public final class AppState {
         }
         loadImportedInstruments()
         loadRecordedPercussion()
+        loadRecordedKits()
         guard store.exists else {
             library = Library()
             libraryStatus = .empty(directory)
