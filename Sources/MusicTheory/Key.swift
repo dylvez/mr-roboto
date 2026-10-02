@@ -194,8 +194,10 @@ public struct Key: Hashable, Codable, Sendable, CustomStringConvertible {
 
     /// Chord symbol spelled in this key ("Bb" in F major, "A#" in B major).
     public func symbol(of chord: Chord) -> String {
-        var text = spell(chord)[0].description + chord.quality.symbol
-        if chord.inversion > 0 { text += "/" + spell(chord.bass).description }
+        let names = spell(chord)
+        var text = names[0].description + chord.quality.symbol
+        // The bass as the chord tone it is: A7 over its third is A7/C♯ in any key.
+        if chord.inversion > 0 { text += "/" + names[min(chord.inversion, names.count - 1)].description }
         return text
     }
 

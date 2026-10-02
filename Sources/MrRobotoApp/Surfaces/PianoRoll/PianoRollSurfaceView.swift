@@ -30,6 +30,7 @@ struct PianoRollSurfaceView: View {
         VStack(alignment: .leading, spacing: Design.Metric.gutter) {
             levers
             lengthRow
+            if !model.tuneWays.isEmpty { waysRow }
             if laneFills {
                 NoteLane(model: model)
                     .frame(maxWidth: .infinity, minHeight: 220, maxHeight: .infinity)
@@ -240,6 +241,22 @@ struct PianoRollSurfaceView: View {
                     .font(Design.Typography.ui(11.5, weight: .regular))
                     .foregroundStyle(Design.Palette.inkTertiary)
                     .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    /// The tune played another way without being written again: what the Melodist's "nothing of
+    /// its own" points at.
+    private var waysRow: some View {
+        HStack(alignment: .center, spacing: 10) {
+            RollLabel("Another way")
+            HStack(spacing: 4) {
+                ForEach(model.tuneWays, id: \.self) { treatment in
+                    RollChip(Develop.tuneTitle(treatment, twice: true), isOn: false) { model.play(as: treatment) }
+                        .help(treatment.about.prefix(1).uppercased() + treatment.about.dropFirst() + ". ⌘Z puts it back.")
+                        .accessibilityLabel("Another way: \(treatment.word)")
+                }
             }
             Spacer(minLength: 0)
         }

@@ -97,6 +97,9 @@ public enum DirectorTools {
             // One section at a time, appended after the forty-seven: its intensity, and it against how it stood.
             SetIntensityTool(workspace: workspace).erased(),
             CompareSectionTool(workspace: workspace).erased(),
+            // Another way, appended after the forty-nine: the chords and the tune the song has, said differently.
+            ReharmonizeTool(workspace: workspace).erased(),
+            VaryTuneTool(workspace: workspace).erased(),
         ]
         if let stage {
             let pad = pad ?? DirectorStagePad()
@@ -173,6 +176,9 @@ public enum DirectorTools {
         // One section at a time, appended: made more or less intense, and heard against how it stood.
         "set_intensity",
         "compare_section",
+        // Another way, appended: the chords by a named move, the tune by a named treatment.
+        "reharmonize",
+        "vary_tune",
     ]
 
     /// The two the frame adds. Appended after `names`, never among them: a session with no frame

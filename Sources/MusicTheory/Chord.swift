@@ -345,9 +345,22 @@ public struct Chord: Hashable, Codable, Sendable, CustomStringConvertible {
 
     /// Chord symbol such as "C#m7" or, when inverted, a slash chord such as "C/E".
     public func symbol(preferring preference: SpellingPreference = .sharps) -> String {
-        var text = root.spelling(preferring: preference).description + quality.symbol
-        if inversion > 0 { text += "/" + bass.spelling(preferring: preference).description }
+        let rootName = root.spelling(preferring: preference)
+        var text = rootName.description + quality.symbol
+        if inversion > 0 { text += "/" + bassName(under: rootName, preferring: preference).description }
         return text
+    }
+
+    /// The bass of an inversion, spelled as the chord tone it is: the third of A7 is C♯ whatever
+    /// the key prefers, because it is a third above an A. It used to be spelled on its own, and
+    /// A7 over its third in a flat key read "A7/Db".
+    func bassName(under rootName: NoteName, preferring preference: SpellingPreference) -> NoteName {
+        let index = min(inversion, pitchClasses.count - 1) % pitchClasses.count
+        let steps = quality.letterSteps
+        if index < steps.count, let name = NoteName.spelling(of: bass, letter: rootName.letter.advanced(by: steps[index])) {
+            return name
+        }
+        return bass.spelling(preferring: preference)
     }
 
     /// Long name such as "C# Minor 7th".

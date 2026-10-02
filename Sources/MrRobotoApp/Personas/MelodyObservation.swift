@@ -1,5 +1,6 @@
 import Foundation
 import MusicTheory
+import Performance
 import SongGraph
 
 /// A tune as the Melodist reads it: how far it travels, how it moves between notes, how much of it
@@ -15,6 +16,11 @@ public struct MelodyObservation: Hashable, Sendable {
     public var notes: [NoteEvent]
     /// The chords underneath, each with the beat it starts on. Empty when the song states none.
     public var chords: [(chord: Chord, start: Double)]
+    /// Two other ways to play the tune, each in a few words, for the reading that finds nothing
+    /// in it its own. Empty when it was read with no melody behind it.
+    public var alternatives: [String] = []
+    /// What the library's other songs did. Nil reads the tune alone.
+    public var before: SongsBefore?
 
     public static func == (a: MelodyObservation, b: MelodyObservation) -> Bool {
         a.label == b.label && a.key == b.key && a.beatsPerBar == b.beatsPerBar && a.notes == b.notes
@@ -57,15 +63,37 @@ public struct MelodyObservation: Hashable, Sendable {
         return Double(intervals.filter { abs($0) <= 2 }.count) / Double(intervals.count)
     }
 
-    /// Notes sounding a note of the chord under them, over the notes that had a chord under them.
-    /// 1 when the song states no chords: nothing disagrees with a harmony nobody wrote.
+    /// How much of the tune's sounding time is on a note of the chord under it, over the time it
+    /// sounds with a chord under it. 1 when the song states no chords: nothing disagrees with a
+    /// harmony nobody wrote.
+    ///
+    /// By length, which is what the rule has always said: land the long notes and pass through the
+    /// rest. It used to count notes, so a passing eighth weighed as much as the whole note it led
+    /// to — a tune that walked between its landings, or leaned on a note before resolving it, read
+    /// as fighting the chords, and write_melody sent it back to be made plainer.
     public var chordToneRatio: Double {
-        let judged = notes.compactMap { note -> Bool? in
-            guard let chord = chord(at: note.start) else { return nil }
-            return chord.pitchClasses.contains(note.pitch.pitchClass)
+        var landed = 0.0, judged = 0.0
+        for note in notes {
+            guard let chord = chord(at: note.start) else { continue }
+            let length = max(note.duration, Self.shortestCounted)
+            judged += length
+            if chord.pitchClasses.contains(note.pitch.pitchClass) { landed += length }
         }
-        guard !judged.isEmpty else { return 1 }
-        return Double(judged.filter { $0 }.count) / Double(judged.count)
+        guard judged > 0 else { return 1 }
+        return landed / judged
+    }
+
+    /// A note counts for at least this long, in beats: a grace note is still a note.
+    static let shortestCounted = 0.125
+
+    /// The longest note that sits outside the chord under it: the one to land, if any is.
+    public var longestClash: (note: NoteEvent, chord: Chord)? {
+        var worst: (note: NoteEvent, chord: Chord)?
+        for note in notes {
+            guard let chord = chord(at: note.start), !chord.pitchClasses.contains(note.pitch.pitchClass) else { continue }
+            if worst == nil || note.duration > worst!.note.duration + 1e-9 { worst = (note, chord) }
+        }
+        return worst
     }
 
     /// The first note that sits outside the chord under it, for the sentence that names it.
@@ -175,6 +203,50 @@ public struct MelodyObservation: Hashable, Sendable {
         return Double(heard.count { $0 }) / Double(moves.count)
     }
 
+    // MARK: What is its own
+
+    /// What about the tune is not the default, each in a few words. The default is the tune a
+    /// grid hands you: every note on a beat or halfway between two, every note from the key, no
+    /// move wider than a fourth, and every long note a note of the chord.
+    public var surprises: [String] {
+        var out: [String] = []
+        let scale = Set(key.pitchClasses)
+        let minor = key.scale.diatonicChord(degree: 1, root: key.tonic.pitchClass)?.quality.hasMinorThird ?? false
+        // The raised seventh of a minor key is in every minor tune, over the five: not counted.
+        let leading = key.tonic.pitchClass.transposed(by: 11)
+        let outside = notes.filter { !scale.contains($0.pitch.pitchClass) && !(minor && $0.pitch.pitchClass == leading) }
+        if !outside.isEmpty {
+            let degrees = Array(Set(outside.map { Self.degreeNames[key.tonic.pitchClass.distance(to: $0.pitch.pitchClass)] })).sorted()
+            out.append("the \(degrees.joined(separator: " and the ")) \(degrees.count == 1 ? "is" : "are") from outside the key")
+        }
+        let bar = Double(max(1, beatsPerBar))
+        let offGrid = notes.contains { note in
+            let halves = note.start * 2
+            return abs(halves - halves.rounded()) > 0.04
+        }
+        let tied = notes.contains { note in
+            let inBar = note.start.truncatingRemainder(dividingBy: bar)
+            return inBar >= bar - 0.5 - 1e-9 && note.start + note.duration >= (note.start - inBar + bar) + 0.25
+        }
+        if offGrid { out.append("a note comes in off the eighth") }
+        if tied { out.append("a note is tied over a bar line") }
+        if largestLeapSemitones >= 7 { out.append("it leaps \(Int(largestLeapSemitones)) semitones") }
+        // Long enough to be heard against the chord and not on the way past it: a beat and a
+        // half, or a beat begun on the bar line.
+        if let leaning = notes.first(where: { note in
+            let onTheBar = note.start.truncatingRemainder(dividingBy: bar) < 1e-9
+            guard note.duration >= 1.5 || (note.duration >= 1 && onTheBar), let chord = chord(at: note.start) else { return false }
+            return !chord.pitchClasses.contains(note.pitch.pitchClass)
+        }), let chord = chord(at: leaning.start) {
+            let degree = Self.degreeNames[key.tonic.pitchClass.distance(to: leaning.pitch.pitchClass)]
+            out.append("the \(degree) leans on \(key.symbol(of: chord))")
+        }
+        return out
+    }
+
+    /// How the tune comes in, as the library's memory keeps it.
+    public var opening: SongsBefore.Opening? { SongsBefore.opening(of: notes, key: key, beatsPerBar: beatsPerBar) }
+
     /// The tune's notes as scale degrees, for the sentence.
     public var degrees: [String] {
         notes.map { note in
@@ -196,6 +268,17 @@ public struct MelodyObservation: Hashable, Sendable {
             chords.append((span.chord, beat))
             beat += span.beats
         }
-        return MelodyObservation(label: label, key: key, beatsPerBar: beatsPerBar, notes: melody.notes, chords: chords)
+        var observation = MelodyObservation(label: label, key: key, beatsPerBar: beatsPerBar, notes: melody.notes, chords: chords)
+        observation.alternatives = alternatives(to: melody, key: key, beatsPerBar: beatsPerBar, chords: progression?.spans ?? [])
+        return observation
+    }
+
+    /// The other ways to play a tune that change something, two of them, each as its sentence.
+    public static func alternatives(to melody: Melody, key: Key, beatsPerBar: Int, chords: [ChordSpan]) -> [String] {
+        let loop = melody.loopBars(beatsPerBar: beatsPerBar)
+        return [TuneTreatment.pushed, .answered, .sequenced].compactMap { treatment in
+            TuneVariation.vary(melody, as: treatment, bars: loop * 2, beatsPerBar: beatsPerBar, key: key,
+                               chords: chords) == nil ? nil : treatment.about
+        }.prefix(2).map { $0 }
     }
 }

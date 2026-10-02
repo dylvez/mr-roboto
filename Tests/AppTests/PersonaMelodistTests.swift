@@ -72,6 +72,24 @@ struct PersonaMelodistTests {
         #expect(clash.note.pitch.midi == 62 && clash.chord.root == cMajor.root)
         // With no chords stated, nothing is wrong.
         #expect(observe([60, 61, 62]).chordToneRatio == 1)
+
+        // By length: three passing eighths between two held chord tones are a fifth of the tune,
+        // not three fifths of its notes. Counted by the note this read 40% and was sent back.
+        func note(_ midi: Int, _ start: Double, _ duration: Double) -> NoteEvent {
+            NoteEvent(pitch: Pitch(midi: midi), start: start, duration: duration, velocity: 96)
+        }
+        let walked = MelodyObservation(label: "", key: .cMajor,
+                                       notes: [note(60, 0, 2), note(62, 2, 0.5), note(65, 2.5, 0.5), note(69, 3, 0.5), note(67, 3.5, 4)],
+                                       chords: [(cMajor, 0)])
+        #expect(abs(walked.chordToneRatio - 6 / 7.5) < 1e-9)
+        #expect(Melodist().read(walked).first { $0.rule == "melodist.lands-on-the-chord" }?.holds == true)
+        // A long note off the chord is what the reading names, however late it comes.
+        let leaning = MelodyObservation(label: "", key: .cMajor,
+                                        notes: [note(62, 0, 0.5), note(64, 0.5, 1), note(65, 1.5, 3), note(64, 4.5, 0.5)],
+                                        chords: [(cMajor, 0)])
+        #expect(leaning.firstClash?.note.pitch.midi == 62 && leaning.longestClash?.note.pitch.midi == 65)
+        let said = try #require(Melodist().read(leaning).first { $0.rule == "melodist.lands-on-the-chord" })
+        #expect(!said.holds && said.says.contains("the longest note off it is the 4 over C"), "\(said.says)")
     }
 
     @Test("the readings: the shape first, then the number that is wrong, in degrees and semitones")

@@ -119,6 +119,12 @@ final class CompareAdapter: CompareHosting {
             return true
         }
         guard app.record(version) else { return false }
+        // What goes with it: the bass that follows the chords taken.
+        for companion in candidate.companions where app.version(companion.id) == nil {
+            if app.record(companion) { app.refreshSurfaces(showing: companion.partID, now: companion.id) }
+        }
+        if !candidate.companions.isEmpty { app.select(version.id) }
+        app.refreshSurfaces(showing: version.partID, now: version.id)
         chosen = version.id
         return true
     }

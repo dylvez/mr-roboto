@@ -268,6 +268,11 @@ public final class ChordsModel {
     /// Reads again, for a genre that changed under an open sheet.
     public func genreChanged() { refreshReadings() }
 
+    /// What the library's other songs did, for the readings that are made against them, and the
+    /// house's calls, which can turn those readings off. Asked each time, like the genre.
+    public var before: @MainActor () -> SongsBefore? = { nil }
+    public var house: @MainActor () -> HouseBook? = { nil }
+
     /// The genre's own progressions, in this sheet's key: the ones written for a key of its kind,
     /// major or minor, each as the line it would type. What the sheet offers under the field.
     public var genreProgressions: [(genre: String, roman: String, text: String, about: String)] {
@@ -282,13 +287,31 @@ public final class ChordsModel {
     /// Types a genre progression into the field, as one edit.
     public func use(progression line: String) { text = line }
 
+    /// The other ways the sheet on screen can be said, each one named move: a borrowed chord, a
+    /// bass line of inversions, a chord's own dominant before it. The ones a listener hears as a
+    /// new chord first. Empty on a typo and on a sheet with nowhere to go.
+    public var anotherWays: [Reharmonized] {
+        guard problem == nil, let progression else { return [] }
+        return ReharmonizeTool.offered.compactMap { Reharmonize.apply($0, to: progression) }
+    }
+
+    /// Types one of them into the field, as one edit: ⌘Z puts the sheet back.
+    public func use(way: Reharmonized) {
+        // A step of its own, whatever was typed a moment before or is typed a moment after.
+        lastEdit = nil
+        text = way.progression.symbols()
+        lastEdit = nil
+    }
+
     /// The Harmonist's reading of the bars on screen. On a typo those are the last bars that read,
     /// and so are the readings; the view dims both together.
     private func refreshReadings() {
         guard let progression else { readings = []; return }
-        let observation = HarmonyObservation.of(progression, label: title, bassline: host.bassline,
+        var observation = HarmonyObservation.of(progression, label: title, bassline: host.bassline,
                                                 beatsPerBar: beatsPerBar)
-        readings = GenreLens.judge(Harmonist().read(observation), by: Harmonist.bible, in: genre())
+        observation.before = before()
+        let judged = GenreLens.judge(Harmonist().read(observation), by: Harmonist.bible, in: genre())
+        readings = house()?.settle(judged, by: Harmonist.bible) ?? judged
     }
 
     /// The readings that did not hold: what the Harmonist would say first.

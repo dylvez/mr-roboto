@@ -74,6 +74,33 @@ public struct Development: Equatable, Sendable {
 
 public enum Develop {
 
+    /// How much developing does to the harmony and the tune beyond arranging them.
+    public enum Harmony: Equatable, Sendable {
+        /// As it first was: one bridge a mode, every chorus on the verse's chords, the tune held
+        /// back in the verses and an octave up the last time.
+        case plain
+        /// More of the song made its own: the bridge is one of several, the last arrival's chords
+        /// are said another way with the bass following them, a chorus in the middle leans on its
+        /// bar lines, and a line answers the tune where it rests. The seed chooses among them, so
+        /// two songs do not get the same bridge and one song gets the same one every time.
+        case varied(seed: UInt64)
+
+        var seed: UInt64? {
+            if case .varied(let seed) = self { return seed }
+            return nil
+        }
+    }
+
+    /// A seed for a song: the same song always the same, another song another.
+    public static func seed(for song: Song) -> UInt64 {
+        var hash: UInt64 = 0xcbf2_9ce4_8422_2325
+        for byte in song.id.rawValue.uuidString.utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 0x0000_0100_0000_01B3
+        }
+        return hash
+    }
+
     /// The form a song with no genre and none of its own is given.
     public static let standardForm: [(name: String, bars: Int)] = [
         ("Intro", 4), ("Verse", 16), ("Hook", 8), ("Verse", 16), ("Hook", 8), ("Bridge", 8), ("Hook", 8), ("Outro", 4),
@@ -135,7 +162,10 @@ public enum Develop {
     /// Whether a lane holds its part at one version. That is a decision somebody made about that
     /// section, and developing leaves it exactly as it is.
     static func isHeld(_ lane: Lane, in song: Song) -> Bool {
-        lane.pin.flatMap(song.version) != nil
+        if lane.pin.flatMap(song.version) != nil { return true }
+        // A variation somebody asked for in this section by name — its chords said another way,
+        // its tune pushed — is theirs the same way: it stays where it was put.
+        return song.versions.first { $0.partID == lane.part }?.operation == Operation.placed
     }
 
     /// Whether a genre is dance music, which builds with a roll and lifts with an open hat.
@@ -153,9 +183,10 @@ public enum Develop {
     ///     This much a guess is good for.
     ///   - instrumental: whether nobody sings. Nil reads it off the song: no words and no takes.
     /// - Returns: nil when nothing in the song plays.
+    ///   - harmony: how far past arranging it goes; `.plain` is what developing always did.
     public static func plan(for song: Song, form given: [(name: String, bars: Int)]? = nil,
                             genre: GenreProfile? = nil, electronic: Bool? = nil, instrumental: Bool? = nil,
-                            by author: Author = Develop.author) -> Development? {
+                            harmony varying: Harmony = .plain, by author: Author = Develop.author) -> Development? {
         let loop = loop(of: song)
         guard !loop.isEmpty else { return nil }
         let beats = song.timeSignature.beatsPerBar
@@ -248,6 +279,8 @@ public enum Develop {
         var plays: [Development.Plays] = []
         var occurrences: [SectionRole: Int] = [:]
         var roles: [(section: SectionID, role: SectionRole)] = []
+        /// The line that answers the tune in the last arrival, once written: its part, and where.
+        var answering: (part: PartID, section: SectionID)?
 
         for (index, entry) in shape.enumerated() {
             let role = entry.role
@@ -277,7 +310,8 @@ public enum Develop {
             let pitched: Set<PartType> = [.bassline, .progression, .melody, .sample]
             // Somewhere else for it to go, when the song has chords to leave: as long as this
             // section, or a length that goes into it, so the chord that leads back is reached.
-            let elsewhere = role == .bridge ? harmony.flatMap { bridge(from: $0, bars: entry.bars) } : nil
+            let elsewhere = role == .bridge
+                ? harmony.flatMap { bridge(from: $0, bars: entry.bars, variant: varying.seed.map { Int($0 % 97) }) } : nil
             let bridgeName = elsewhere.map { chords -> String in
                 if let name = bridges[chords.bars.count] { return name }
                 let name = bridges.isEmpty ? "bridge" : "bridge-\(chords.bars.count)"
@@ -289,11 +323,27 @@ public enum Develop {
                 && !parts.contains { $0.type == .sample }
                 && !parts.contains { pitched.contains($0.type) && placed.contains($0.partID) }
 
+            // The last arrival's chords said another way, when the song is being varied: one move
+            // the sheet has room for and the tune still sits on.
+            var lastWay: Reharmonized?
+            if let seed = varying.seed, index == lastPeak, !leaves, let chords, case .progression(let sheet) = chords.kind,
+               parts.contains(where: { $0.partID == chords.partID }), !placed.contains(chords.partID),
+               !parts.contains(where: { $0.type == .sample }) {
+                let tunes = parts.compactMap { part -> Melody? in
+                    if case .melody(let tune) = part.kind, !placed.contains(part.partID) { return tune }
+                    return nil
+                }
+                lastWay = lastArrival(of: sheet, bars: entry.bars, beatsPerBar: beats, under: tunes, key: song.key ?? sheet.key, seed: seed)
+            }
+
             for part in parts {
                 // Written for the sections it is in: played there as it was written.
                 if placed.contains(part.partID) {
-                    lanes.append(Lane(part: part.partID))
-                    said.append(word(for: part.type))
+                    // Once: the line that answers the tune is put in beside the tune it answers.
+                    if !lanes.contains(part: part.partID) {
+                        lanes.append(Lane(part: part.partID))
+                        said.append(word(for: part.type))
+                    }
                     continue
                 }
                 switch part.kind {
@@ -327,6 +377,16 @@ public enum Develop {
                         continue
                     }
                     guard let choice = secondIn ? .vary(.light) : bassTreatment(for: role, othersSound: othersSound) else { continue }
+                    // Under chords said another way, the line follows them: the same rhythm, the
+                    // notes that were the old chord's moved onto the new one.
+                    if let lastWay, let harmony, case .plain = choice,
+                       let followed = refit(line, from: harmony, to: lastWay.progression, beatsPerBar: beats) {
+                        let id = variation(of: part, named: "last-\(lastWay.move.rawValue)", kind: .bassline(followed),
+                                           note: "\(label("Last chorus bass", part)): the line, following \(lastWay.progression.symbols())")
+                        lanes.append(Lane(part: id))
+                        said.append("bass, following the chords")
+                        continue
+                    }
                     if case .vary(let treatment) = choice,
                        let varied = BassVariation.vary(line, as: treatment, chords: spans, bars: entry.bars, beatsPerBar: beats) {
                         let name = treatment.rawValue + (treatment == .pulse ? "-\(varied.lengthInBars ?? entry.bars)" : "")
@@ -344,10 +404,24 @@ public enum Develop {
                         let id = variation(of: part, named: bridgeName, kind: .progression(elsewhere),
                                            note: "\(label("Bridge chords", part)): \(elsewhere.symbols()), somewhere else for the bridge to go")
                         lanes.append(Lane(part: id))
-                        said.append("chords, its own: \(elsewhere.symbols())")
+                        // What the bridge plays: these, or the ones somebody wrote there by hand.
+                        var plays = elsewhere
+                        if case .progression(let kept)? = (versions.last { $0.partID == id } ?? song.latestVersion(of: id))?.kind { plays = kept }
+                        said.append("chords, its own: \(plays.symbols())")
                         continue
                     }
                     let family = InstrumentVoiceSpec.preset(id: SongPlayback.instrumentID(for: part.partID, in: song))?.family ?? "keys"
+                    if let lastWay, part.partID == chords?.partID {
+                        var played = lastWay.progression
+                        if let treatment = chordsTreatment(for: role, playing: sheet.playing, lifted: lifted, family: family) {
+                            played.playing = treatment.isPlain ? nil : treatment
+                        }
+                        let id = variation(of: part, named: "last-\(lastWay.move.rawValue)", kind: .progression(played),
+                                           note: "\(label("Last chorus chords", part)): \(lastWay.says)")
+                        lanes.append(Lane(part: id))
+                        said.append("chords, \(lastWay.move.name.lowercased()): \(played.symbols())")
+                        continue
+                    }
                     if let treatment = chordsTreatment(for: role, playing: sheet.playing, lifted: lifted, family: family) {
                         var played = sheet
                         played.playing = treatment.isPlain ? nil : treatment
@@ -362,10 +436,18 @@ public enum Develop {
                         said.append("chords")
                     }
                 case .melody(let tune):
-                    guard let choice = tuneTreatment(for: role, hasPeak: !peaks.isEmpty, isLastPeak: index == lastPeak,
+                    guard var choice = tuneTreatment(for: role, hasPeak: !peaks.isEmpty, isLastPeak: index == lastPeak,
                                                      nobodySings: nobodySings) else { continue }
+                    // An arrival in the middle of a varied song is not the first one again: it is
+                    // said twice with a second ending where there is room, and leans on its bar
+                    // lines where there is not.
+                    if varying.seed != nil, case .plain = choice, role.isPeak, index != peaks.first, index != lastPeak {
+                        let loop = tune.loopBars(beatsPerBar: beats)
+                        choice = .vary(entry.bars >= loop * 2 ? .answered : .pushed)
+                    }
                     if case .vary(let treatment) = choice,
-                       let varied = TuneVariation.vary(tune, as: treatment, bars: entry.bars, beatsPerBar: beats) {
+                       let varied = TuneVariation.vary(tune, as: treatment, bars: entry.bars, beatsPerBar: beats,
+                                                       key: song.key ?? harmony?.key, chords: spans) {
                         let twice = (varied.lengthInBars ?? 0) > tune.loopBars(beatsPerBar: beats)
                         let name = treatment == .lift ? (twice ? "lift" : "raised") : treatment.rawValue
                         let id = variation(of: part, named: name, kind: .melody(varied),
@@ -375,6 +457,27 @@ public enum Develop {
                     } else {
                         lanes.append(Lane(part: part.partID))
                         said.append("tune")
+                    }
+                    // And where the song arrives for the last time, a line answers it in its rests.
+                    if varying.seed != nil, index == lastPeak, answering == nil,
+                       let answers = TuneVariation.answers(to: tune, beatsPerBar: beats) {
+                        let note = answerNote(to: part)
+                        let existing = loop.first { isAnswer($0) }
+                        let id: PartID
+                        if let existing {
+                            id = existing.partID
+                            if existing.kind != .melody(answers) {
+                                versions.append(existing.deriving(.melody(answers), by: author, operation: Operation.developed, note: note))
+                            }
+                        } else {
+                            let version = PartVersion(partID: PartID(), kind: .melody(answers), author: author,
+                                                      operation: Operation.developed, note: note)
+                            versions.append(version)
+                            id = version.partID
+                        }
+                        if !lanes.contains(part: id) { lanes.append(Lane(part: id)) }
+                        said.append("a line answering the tune")
+                        answering = (id, entry.existing?.id ?? SectionID())
                     }
                 case .sample:
                     lanes.append(Lane(part: part.partID))
@@ -397,6 +500,7 @@ public enum Develop {
             section.transitionIn = nil
             sections.append(section)
             roles.append((section.id, role))
+            if let line = answering, index == lastPeak { answering = (line.part, section.id) }
             plays.append(Development.Plays(id: section.id, name: section.name, bars: section.lengthInBars, role: role,
                                            intensity: section.intensity ?? intensity, parts: said))
         }
@@ -417,6 +521,11 @@ public enum Develop {
                 let base = mix.strip(for: strip)?.gainDB ?? 0
                 mix.sectionGains.append(SectionGain(section: section.id, part: strip, gainDB: max(-60, min(12, base + offset))))
             }
+        }
+        // The answering line sits under the tune it answers.
+        if let answering, !mix.sectionGains.contains(where: { $0.section == answering.section && $0.part == answering.part }) {
+            let base = mix.strip(for: answering.part)?.gainDB ?? 0
+            mix.sectionGains.append(SectionGain(section: answering.section, part: answering.part, gainDB: base + answeringLevel))
         }
         let target = loudness(for: genre) ?? before.master.targetLUFS
         mix.master.targetLUFS = target
@@ -649,7 +758,10 @@ public enum Develop {
     /// of eight never reached the chord that leads back. They are the longest of sixteen, eight
     /// and four bars that is no longer than the song's own and goes into the section; in a section
     /// that is not a multiple of four, a chord a bar, the last of them the one that leads back.
-    static func bridge(from main: Progression, bars section: Int? = nil) -> Progression? {
+    ///
+    /// - Parameter variant: which of the mode's bridges, when the song is being varied; nil is the
+    ///   one bridge developing always wrote.
+    static func bridge(from main: Progression, bars section: Int? = nil, variant: Int? = nil) -> Progression? {
         let key = main.key, scale = key.scale, tonic = key.tonic.pitchClass
         guard scale.isHeptatonic, !main.bars.isEmpty,
               let home = scale.diatonicChord(degree: 1, root: tonic, size: 3) else { return nil }
@@ -658,6 +770,12 @@ public enum Develop {
         var degrees = minor ? [6, 7, 4, 5] : [4, 5, 6, 5]
         let opens = main.chords.first.flatMap { key.romanNumeral(for: $0)?.degree }
         if opens == degrees[0] { degrees = minor ? [4, 7, 6, 5] : [6, 4, 2, 5] }
+        if let variant {
+            // Somewhere else, and not the same somewhere as the last song: each ends on the five,
+            // none opens where the loop does.
+            let pool = (minor ? minorBridges : majorBridges).filter { $0[0] != opens }
+            if !pool.isEmpty { degrees = pool[((variant % pool.count) + pool.count) % pool.count] }
+        }
         let beats = main.bars[0].beats
         let own = max(4, main.bars.count)
         var count = own
@@ -682,6 +800,110 @@ public enum Develop {
         }
         let bridge = Progression(key: key, bars: bars, playing: main.playing)
         return bridge.chords == main.chords ? nil : bridge
+    }
+
+    /// The ways a bridge goes somewhere else in a minor key, by degree: the flat six and seven
+    /// climbing; the four through the circle of fifths; down from the relative major; the six
+    /// and the three; the four and the seven.
+    static let minorBridges = [[6, 7, 4, 5], [4, 7, 3, 5], [3, 7, 6, 5], [6, 3, 4, 5], [4, 7, 6, 5]]
+    /// And in a major one: the four and five; the six falling by thirds; three–six–two–five round
+    /// the circle; the six and the three.
+    static let majorBridges = [[4, 5, 6, 5], [6, 4, 2, 5], [3, 6, 2, 5], [6, 3, 4, 5]]
+
+    /// How far under its strip the line answering the tune sits, dB.
+    static let answeringLevel = -5.0
+
+    /// What the line that answers a tune is called. It is a part of its own — its own strip, its
+    /// own level — and not a variation, so its note is what says it is not the song's tune.
+    static func answerNote(to tune: PartVersion) -> String {
+        "\(answerPrefix)\(PartLabel.title(of: tune)): its phrase endings again in the rests, an octave away"
+    }
+    static let answerPrefix = "Answers to "
+
+    /// Whether a version is the line that answers a tune: asked wherever "the song's tune" is
+    /// looked up, because that line is newer than the tune it answers.
+    public static func isAnswer(_ version: PartVersion) -> Bool {
+        version.type == .melody && (version.note ?? "").hasPrefix(answerPrefix)
+    }
+
+    /// The moves tried on the last arrival's chords, in the order a seed starts from.
+    static let lastArrivalMoves: [Reharmonization] = [.bassLine, .passing, .secondaryDominant, .borrowed, .turnaround, .tritone, .uneven]
+
+    /// The last arrival's chords said another way: the first move, from where the seed starts,
+    /// that the sheet has room for, that fits the section, and that leaves the tune on its chords.
+    static func lastArrival(of sheet: Progression, bars: Int, beatsPerBar: Int, under tunes: [Melody], key: Key,
+                            seed: UInt64) -> Reharmonized? {
+        let moves = lastArrivalMoves
+        let start = Int((seed / 97) % UInt64(moves.count))
+        let section = Double(bars * max(1, beatsPerBar))
+        for offset in moves.indices {
+            let move = moves[(start + offset) % moves.count]
+            guard let made = Reharmonize.apply(move, to: sheet, variant: Int(seed % 7)) else { continue }
+            let length = made.progression.bars.reduce(0) { $0 + $1.beats }
+            guard length <= section + 1e-9, section.truncatingRemainder(dividingBy: length) < 1e-9 else { continue }
+            let sits = tunes.allSatisfy { tune in
+                let was = MelodyObservation.of(tune, label: "", key: key, progression: sheet, beatsPerBar: beatsPerBar).chordToneRatio
+                let now = MelodyObservation.of(tune, label: "", key: key, progression: made.progression, beatsPerBar: beatsPerBar).chordToneRatio
+                return now >= min(was, Melodist.chordToneFloor) - 0.05
+            }
+            if sits { return made }
+        }
+        return nil
+    }
+
+    /// A bass line made to follow other chords without being written again: its rhythm and its
+    /// shape kept, each note that was on the old chord's bass moved to the new chord's, and each
+    /// that the new chord does not hold moved to the nearest note it does. Nil when nothing moves.
+    static func refit(_ line: Bassline, from old: Progression, to new: Progression, beatsPerBar: Int) -> Bassline? {
+        func chord(in sheet: Progression, at beat: Double) -> Chord? {
+            let total = sheet.bars.reduce(0) { $0 + $1.beats }
+            guard total > 0 else { return nil }
+            var at = beat.truncatingRemainder(dividingBy: total)
+            for span in sheet.spans {
+                if at < span.beats - 1e-9 { return span.chord }
+                at -= span.beats
+            }
+            return sheet.spans.last?.chord
+        }
+        let own = Double(line.loopBars(beatsPerBar: beatsPerBar) * max(1, beatsPerBar))
+        let total = new.bars.reduce(0) { $0 + $1.beats }
+        guard own > 0, total > 0 else { return nil }
+        let passes = max(1, Int((total / own).rounded(.up)))
+        var notes: [NoteEvent] = []
+        var moved = false
+        // Inside the register the line already plays in: a root moved to the fifth below it is a
+        // note under the instrument.
+        let lowest = line.notes.map(\.pitch.midi).min() ?? 0, highest = line.notes.map(\.pitch.midi).max() ?? 127
+        for pass in 0..<passes {
+            for note in line.notes {
+                let start = note.start + Double(pass) * own
+                guard start < total - 1e-9 else { continue }
+                var midi = note.pitch.midi
+                if let was = chord(in: old, at: start), let now = chord(in: new, at: start), was != now {
+                    let pitchClass = note.pitch.pitchClass
+                    var target: PitchClass?
+                    if pitchClass == was.bass { target = now.bass }
+                    else if !now.pitchClasses.contains(pitchClass) {
+                        target = now.pitchClasses.min { a, b in
+                            min(pitchClass.distance(to: a), 12 - pitchClass.distance(to: a)) < min(pitchClass.distance(to: b), 12 - pitchClass.distance(to: b))
+                        }
+                    }
+                    if let target, target != pitchClass {
+                        let up = pitchClass.distance(to: target)
+                        midi += up <= 6 ? up : up - 12
+                        if midi < lowest { midi += 12 } else if midi > highest, midi - 12 >= lowest { midi -= 12 }
+                        moved = true
+                    }
+                }
+                notes.append(NoteEvent(pitch: Pitch(midi: midi), start: start, duration: min(note.duration, total - start),
+                                       velocity: note.velocity))
+            }
+        }
+        guard moved else { return nil }
+        var followed = line
+        followed.notes = notes
+        followed.lengthInBars = Int((total / Double(max(1, beatsPerBar))).rounded(.up))
+        return followed
     }
 
     /// The bass line over other chords: written again in the same hands, lighter, under the same
@@ -743,6 +965,7 @@ public enum Develop {
         switch treatment {
         case .lift: return twice ? "then an octave up" : "an octave up"
         case .sparse: return "first phrase only"
+        case .answered, .pushed, .sequenced: return treatment.word
         }
     }
 
@@ -752,6 +975,9 @@ public enum Develop {
         switch treatment {
         case .lift: return twice ? "Lift" : "Octave up"
         case .sparse: return "First phrase"
+        case .answered: return "Second ending"
+        case .pushed: return "Push"
+        case .sequenced: return "Sequence"
         }
     }
 }

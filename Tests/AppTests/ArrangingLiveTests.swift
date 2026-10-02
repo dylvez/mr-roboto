@@ -81,7 +81,7 @@ final class ArrangingLiveTests {
         report("ending", "\(turn.ending)")
         report("elapsed", String(format: "%.0f s", Date().timeIntervalSince(started)))
         report("calls", log.calls.map { $0.failed ? "\($0.name)✗" : $0.name }.joined(separator: " → "))
-        for call in log.calls where call.failed || ["develop", "write_melody", "play_chords", "write_groove", "set_progression"].contains(call.name) {
+        for call in log.calls where call.failed || ["develop", "write_melody", "play_chords", "write_groove", "set_progression", "reharmonize", "vary_tune"].contains(call.name) {
             report(call.failed ? "  failed" : "  said", "\(call.name): \(call.said.prefix(420))")
         }
         report("opened", log.surfaces.isEmpty ? "(nothing)" : log.surfaces.joined(separator: " · "))
@@ -144,6 +144,43 @@ final class ArrangingLiveTests {
         }
         #expect(!log.calls.contains { $0.name == "set_progression" && $0.failed }, "a chord symbol was refused")
         report("play_chords", "\(log.count("play_chords")) call\(log.count("play_chords") == 1 ? "" : "s")")
+    }
+
+    @Test("chords that feel predictable are offered other ways, then one is taken in one section, and the tune is played another way")
+    func anotherWay() async throws {
+        let loop = try DevelopVariedTests.loop()
+        let rig = try await rig("another-way", song: loop.song)
+        defer { try? FileManager.default.removeItem(at: rig.directory) }
+        _ = try #require(rig.app.develop())
+        func sheet(_ section: SongGraph.Section?) -> String {
+            guard let song = rig.app.song, let section,
+                  case .progression(let sheet)? = AnotherWay.lane(of: .progression, in: section, of: song)?.version.kind else { return "" }
+            return sheet.symbols()
+        }
+        func tune(_ section: SongGraph.Section?) -> String {
+            guard let song = rig.app.song, let section, let lane = AnotherWay.lane(of: .melody, in: section, of: song) else { return "no tune" }
+            return song.variation(of: lane.lane.part)?.name ?? "as written"
+        }
+        let hooks = { rig.app.song?.sections.filter { $0.name == "Hook" } ?? [] }
+        report("the song", (rig.app.song?.sections ?? []).map { "\($0.name) \($0.lengthInBars)" }.joined(separator: " · "))
+        report("hooks before", hooks().map { "\(sheet($0)) [tune \(tune($0))]" }.joined(separator: " / "))
+
+        let (_, first) = await turn("The chords feel predictable. What else could they be? I want to hear options before anything changes.",
+                                    rig, label: "what else")
+        #expect(first.count("reharmonize") >= 1, "\(first.calls.map(\.name))")
+        report("chords after", sheet(rig.app.song?.sections.first { $0.name == "Verse" }))
+        report("compare open", "\(rig.app.bench.items.contains { $0.kind == .compare })")
+
+        let (_, second) = await turn("Use the borrowed chord, but only in the first chorus. Leave the rest alone.", rig, label: "one section")
+        #expect(second.count("reharmonize") >= 1, "\(second.calls.map(\.name))")
+        report("hooks after", hooks().map { "\(sheet($0)) [tune \(tune($0))]" }.joined(separator: " / "))
+        report("verse after", sheet(rig.app.song?.sections.first { $0.name == "Verse" }))
+
+        let (_, third) = await turn("The tune is the same every time it comes round. Do something with it in the first chorus too.", rig, label: "the tune")
+        #expect(third.count("vary_tune") + third.count("write_melody") >= 1, "\(third.calls.map(\.name))")
+        report("hooks at the end", hooks().map { "\(sheet($0)) [tune \(tune($0))]" }.joined(separator: " / "))
+        let said = rig.app.log.filter { [.persona("Harmonist"), .persona("Melodist")].contains($0.source) && !$0.text.contains(" → ") }.map(\.text)
+        report("the band said", said.isEmpty ? "(nothing)" : said.joined(separator: " / "))
     }
 
     @Test("a waltz, by name, in a song in four")

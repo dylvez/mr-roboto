@@ -90,6 +90,10 @@ public enum Operation {
     /// A part written for a section from the part the loop plays: the kit thinned for an intro, the
     /// bass held under a breakdown. Its parent is what it was made from; see `Variation`.
     public static let developed = "developed"
+    /// A part played another way for the sections somebody named — the last chorus's chords with a
+    /// borrowed chord, the second hook's tune pushed over its bar lines. A variation like one
+    /// developing writes, but asked for by name, so developing leaves it where it was put.
+    public static let placed = "placed"
     /// Filled in by the schema 1 → 2 migration for versions that predate provenance operations.
     public static let unknown = "unknown"
 }

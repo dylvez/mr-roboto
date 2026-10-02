@@ -67,6 +67,12 @@ public struct Harmonist: Persona {
     public static let maximumChords = 8.0
     /// Root movements by a fourth or fifth, at least this often.
     public static let rootMotionFloor = 0.25
+    /// Things about a progression that are not the default, at least this many.
+    public static let departuresFloor = 1.0
+    /// Other recent songs going round the same loop, at most this many.
+    public static let repeatsCeiling = 0.0
+    /// Of the songs before, how many in one key before the key is worth a word.
+    static let sameKeyWorthSaying = 3
 
     // MARK: - The bible
 
@@ -105,6 +111,8 @@ public struct Harmonist: Persona {
                            features: [.changesPerBar, .distinctChords]),
             ListeningPoint(4, "Which chords the key does not own, and whether the phrases land.",
                            features: [.diatonicRatio, .cadenceRatio, .rootMotionFifths]),
+            ListeningPoint(5, "Whether anything in it is this song's own, and whether the last song did the same.",
+                           features: [.harmonyDepartures, .harmonyRepeats]),
         ],
 
         vocabulary: [
@@ -143,6 +151,16 @@ public struct Harmonist: Persona {
                               engineField: "SongGraph.Bassline.notes against MusicTheory.Chord.pitchClasses at each change",
                               noticeable: 0.1,
                               evidence: .cited([godOnlyKnows])),
+            FeatureDefinition(.harmonyDepartures, unit: "departures",
+                              meaning: "how many things about the progression are not the default: a chord from outside the key (the major five of a minor key aside), a bass that is not the root, chords of different lengths, not opening at home, more than four roots",
+                              engineField: "SongGraph.Progression: MusicTheory.Chord.inversion, SongGraph.ChordSpan.beats, MusicTheory.Key.pitchClasses",
+                              noticeable: 1,
+                              evidence: .cited([borrowedChord, alfie, godOnlyKnows])),
+            FeatureDefinition(.harmonyRepeats, unit: "songs",
+                              meaning: "how many of the library's other recent songs go round the same roots in the same order",
+                              engineField: "SongGraph.Library.songs, each main SongGraph.Progression's roots above its tonic",
+                              noticeable: 1,
+                              evidence: .inferred("a count of this library's own songs: nothing outside it bears on it")),
         ],
 
         ranges: [
@@ -211,6 +229,18 @@ public struct Harmonist: Persona {
                         threshold: .atLeast(.rootMotionFifths, rootMotionFloor, unit: "fraction"),
                         engineAction: "SongGraph.Progression chord roots reordered by MusicTheory.PitchClass.distance(to:)",
                         evidence: .cited([cadence, alfie])),
+            PersonaRule("harmonist.something-of-its-own",
+                        when: "every chord is from the key, in root position, the same length, and the loop opens at home",
+                        then: "say so, and offer two ways out to hear — a bass that moves, a chord borrowed, a bar shared; the usual loop is not wrong and it is nobody's",
+                        threshold: .atLeast(.harmonyDepartures, departuresFloor, unit: "departures"),
+                        engineAction: "Performance.Reharmonize.options(for:) on SongGraph.Progression, two offered",
+                        evidence: .cited([borrowedChord, alfie, godOnlyKnows])),
+            PersonaRule("harmonist.not-the-last-song-again",
+                        when: "another recent song in the library goes round the same loop",
+                        then: "name the songs; the same roots in the same order twice running is a habit, and the house should hear that it has one",
+                        threshold: .atMost(.harmonyRepeats, repeatsCeiling, unit: "songs"),
+                        engineAction: "SongGraph.Library.songs read for each main SongGraph.Progression's roots",
+                        evidence: .inferred("a count of this library's own songs")),
             PersonaRule("harmonist.borrowed-is-named",
                         when: "a chord outside the key is used",
                         then: "name it as borrowed and say where it came from; an unnamed outside chord reads as a mistake to everyone else in the room",
@@ -452,6 +482,16 @@ public struct Harmonist: Persona {
                                     + "the one that belongs to it, and judging the change alone reads that as a clash.",
                          affects: ["harmonist.bass-agrees"],
                          evidence: .cited([godOnlyKnows])),
+            OpenQuestion("harmonist.oq.say-the-usual",
+                         question: "Should the Harmonist say when a progression is the usual one, or the last song's again?",
+                         encoded: "Yes. Every other rule here keeps a progression from straying, and a loop that passes "
+                                + "all of them can be the commonest four chords there are; something should say so, "
+                                + "once, with a way out to hear.",
+                         alternative: "No. A loop is a loop, half the records this app is for are four chords in a "
+                                    + "minor key on purpose, and a house that chooses them does not need telling each "
+                                    + "time — the readings stay, and stop being flags.",
+                         affects: ["harmonist.something-of-its-own", "harmonist.not-the-last-song-again"],
+                         evidence: .inferred("the tension between a critic that only guards the centre and an idiom that lives there")),
             OpenQuestion("harmonist.oq.eight-chords",
                          question: "Is eight distinct chords really the ceiling?",
                          encoded: "Eight, from the references topping out near there.",
@@ -544,6 +584,44 @@ public struct Harmonist: Persona {
                 ? "%.0f%% of the root moves are by a fourth or a fifth."
                 : "%.0f%% of the root moves are by a fourth. Stepwise roots are colour; put one fourth in for a spine.",
                 fifths * 100)))
+
+        // What in it is this song's own. A loop of three chords or more is read for it: two
+        // chords are a vamp, and a vamp is a decision.
+        if observation.loop.count >= 3 {
+            let own = observation.departures
+            // Ninths, a sharp eleven, a flat nine: the chords' colour can be the song's own while
+            // the loop under them is everybody's. Said, so the flag is about the shape alone.
+            var coloured: [String] = []
+            for chord in observation.chords where chord.pitchClasses.count >= 5 {
+                let symbol = observation.key.symbol(of: chord)
+                if !coloured.contains(symbol) { coloured.append(symbol) }
+            }
+            var plain = "Every chord is from \(observation.key.name), a root in every bass, each as long as the last, home first: "
+                + "the usual loop. Nothing in it is wrong, and "
+                + (coloured.isEmpty ? "nothing in it is this song's yet."
+                                    : "its colours are its own (\(coloured.prefix(3).joined(separator: ", "))); the shape under them is not yet.")
+            if !observation.alternatives.isEmpty {
+                plain += " Two ways out to hear: " + observation.alternatives.joined(separator: "; or ") + "."
+            }
+            notes.append(PersonaReading(
+                rule: "harmonist.something-of-its-own", feature: .harmonyDepartures, value: Double(own.count),
+                holds: Double(own.count) >= Harmonist.departuresFloor,
+                says: own.isEmpty ? plain : "Its own: " + own.joined(separator: "; ") + "."))
+        }
+
+        // And what the songs before it did, when they are in view.
+        if let before = observation.before, !before.entries.isEmpty, observation.loop.count >= 2 {
+            let same = before.sharing(loop: observation.loop)
+            let inKey = before.inKey(observation.key)
+            let keyed = inKey >= Harmonist.sameKeyWorthSaying
+                ? " \(observation.key.name) is the key of \(inKey) of the last \(before.entries.count) songs here." : ""
+            notes.append(PersonaReading(
+                rule: "harmonist.not-the-last-song-again", feature: .harmonyRepeats, value: Double(same.count),
+                holds: Double(same.count) <= Harmonist.repeatsCeiling,
+                says: same.isEmpty
+                    ? "No other song here goes round these chords." + keyed
+                    : "\(observation.numerals.joined(separator: "–")) is the loop of \(SongsBefore.list(same)) too." + keyed))
+        }
 
         return notes
     }

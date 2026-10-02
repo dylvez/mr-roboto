@@ -204,8 +204,10 @@ public struct WriteMelodyTool: DirectorTool {
         let version = parent.map { $0.deriving(.melody(melody), by: author, operation: Operation.written, note: note) }
             ?? PartVersion(partID: PartID(), kind: .melody(melody), author: author, operation: Operation.written, note: note)
 
-        let observation = MelodyObservation.of(melody, label: note, key: key, progression: progression, beatsPerBar: beatsPerBar)
-        let readings = GenreLens.judge(Melodist().read(observation), by: Melodist.bible, in: await workspace.genreLens)
+        var observation = MelodyObservation.of(melody, label: note, key: key, progression: progression, beatsPerBar: beatsPerBar)
+        observation.before = SongsBefore.of(await workspace.library, besides: song.id)
+        let readings = (await workspace.houseBook).settle(
+            GenreLens.judge(Melodist().read(observation), by: Melodist.bible, in: await workspace.genreLens), by: Melodist.bible)
         let flags = readings.filter { !$0.holds }
         let chords = progression.map { "read over \($0.symbols(preferring: spelling))" } ?? "none stated, so it was read against the key alone"
 

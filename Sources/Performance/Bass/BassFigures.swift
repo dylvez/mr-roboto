@@ -40,14 +40,14 @@ enum BassFigures {
                 let pitch: Int
                 switch note.tone {
                 case .interval(let interval):
-                    let root = BassWriter.place(chord.root, near: last, in: lineage)
+                    let root = BassWriter.place(chord.bass, near: last, in: lineage)
                     pitch = BassWriter.clampToRegister(root + chordTone(chord, interval), lineage)
                 case .octaveUp:
-                    pitch = BassWriter.clampToRegister(BassWriter.place(chord.root, near: nil, in: lineage) + 12, lineage)
+                    pitch = BassWriter.clampToRegister(BassWriter.place(chord.bass, near: nil, in: lineage) + 12, lineage)
                 case .chordTone:
                     // One of the two chord tones nearest the last note, never the same note again:
                     // a line that moves by the shortest way, the seed choosing which way.
-                    let root = BassWriter.place(chord.root, near: last, in: lineage)
+                    let root = BassWriter.place(chord.bass, near: last, in: lineage)
                     let tones = chord.intervals.map { BassWriter.clampToRegister(root + $0, lineage) }
                     let near = last ?? tones[0]
                     let moving = tones.filter { $0 != near }
@@ -56,7 +56,7 @@ enum BassFigures {
                 case .approach:
                     // A half-step into the next beat's root, from below or above as the seed says.
                     let next = harmony.chord(at: min(total - 0.001, onset + 1))
-                    let target = BassWriter.place(next.root, near: last, in: lineage)
+                    let target = BassWriter.place(next.bass, near: last, in: lineage)
                     pitch = BassWriter.clampToRegister(target + (rng.unit() < 0.6 ? -1 : 1), lineage)
                 }
                 last = pitch
@@ -196,7 +196,7 @@ enum BassFigures {
         var out = drafts
         for change in harmony.changes where change > 0 {
             guard let i = out.firstIndex(where: { abs($0.start - (change - 1)) < 1e-6 }) else { continue }
-            let target = BassWriter.place(harmony.chord(at: change).root, near: out[i].pitch, in: lineage)
+            let target = BassWriter.place(harmony.chord(at: change).bass, near: out[i].pitch, in: lineage)
             out[i].pitch = BassWriter.clampToRegister(target - 1, lineage)
         }
         return out

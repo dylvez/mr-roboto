@@ -34,7 +34,8 @@ extension AppState {
         // decides only whether the drums are dance music's.
         let reading = GenreBook.standard.genre(of: song)
         let set = reading.flatMap { $0.source == .set ? $0.profile : nil }
-        return Develop.plan(for: song, form: form, genre: set, electronic: Develop.isElectronic(reading?.profile), by: author)
+        return Develop.plan(for: song, form: form, genre: set, electronic: Develop.isElectronic(reading?.profile),
+                            harmony: .varied(seed: Develop.seed(for: song)), by: author)
     }
 
     /// Whether there is a loop to develop: something that plays.

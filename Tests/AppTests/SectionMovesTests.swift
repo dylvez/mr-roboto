@@ -312,7 +312,7 @@ struct DirectorSectionToolTests {
 
     @Test("the two are the forty-eighth and forty-ninth, said in the prompt, and take a section and a number")
     func appended() throws {
-        #expect(Array(DirectorTools.names.suffix(2)) == ["set_intensity", "compare_section"])
+        #expect(Array(DirectorTools.names[47...48]) == ["set_intensity", "compare_section"])
         #expect(DirectorPrompt.system.contains("set_intensity") && DirectorPrompt.system.contains("compare_section"))
         #expect(DirectorPrompt.system.contains("A section that reads the same is not quieter"))
         #expect(DirectorSession.activity(for: "set_intensity") == "Bringing the section up or down…")

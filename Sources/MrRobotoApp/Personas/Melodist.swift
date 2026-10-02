@@ -68,6 +68,10 @@ public struct Melodist: Persona {
     public static let rewrittenFor: Set<String> = ["melodist.lands-on-the-chord", "melodist.a-figure-comes-back"]
     /// A climax is one note, not a ceiling the tune keeps touching.
     public static let peakCeiling = 3.0
+    /// Things about a tune that are not the default, at least this many.
+    public static let surprisesFloor = 1.0
+    /// Other recent tunes coming in on the same degree in the same place, at most this many.
+    public static let openingRepeatsCeiling = 1.0
 
     // MARK: - The bible
 
@@ -106,6 +110,8 @@ public struct Melodist: Persona {
                            features: [.motifRatio, .peakCount]),
             ListeningPoint(4, "Whether it breathes, and how busy it is.",
                            features: [.restRatio, .notesPerBar, .stepwiseRatio]),
+            ListeningPoint(5, "Whether anything in it is this tune's own, and whether the last tunes came in the same way.",
+                           features: [.melodySurprises, .melodyOpeningRepeats]),
         ],
 
         vocabulary: [
@@ -125,8 +131,8 @@ public struct Melodist: Persona {
                               noticeable: 0.1,
                               evidence: .cited([contour, yesterday])),
             FeatureDefinition(.chordToneRatio, unit: "fraction",
-                              meaning: "notes sounding a note of the chord under them, over the notes with a chord under them",
-                              engineField: "SongGraph.Melody.notes against MusicTheory.Chord.pitchClasses of SongGraph.Progression",
+                              meaning: "how much of the tune's sounding time is on a note of the chord under it; a passing note counts for as long as it lasts",
+                              engineField: "SongGraph.Melody.notes, by SongGraph.NoteEvent.duration, against MusicTheory.Chord.pitchClasses of SongGraph.Progression",
                               noticeable: 0.1,
                               evidence: .cited([superstition])),
             FeatureDefinition(.notesPerBar, unit: "notes per bar",
@@ -149,6 +155,16 @@ public struct Melodist: Persona {
                               engineField: "SongGraph.Melody.notes, the moves covered by a run of three that comes again, over all the moves",
                               noticeable: 0.1,
                               evidence: .cited([motif, goodBadUgly])),
+            FeatureDefinition(.melodySurprises, unit: "surprises",
+                              meaning: "how many things about the tune are not the default: a note from outside the key (a minor key's raised seventh aside), a note off the eighth or tied over a bar line, a leap of a fifth or more, a long note leaning on the chord",
+                              engineField: "SongGraph.Melody.notes: SongGraph.NoteEvent.start against the beat, MusicTheory.Key.pitchClasses, consecutive intervals, MusicTheory.Chord.pitchClasses",
+                              noticeable: 1,
+                              evidence: .cited([superstition, contour])),
+            FeatureDefinition(.melodyOpeningRepeats, unit: "songs",
+                              meaning: "how many of the library's other recent tunes come in on the same degree at the same place in the bar",
+                              engineField: "SongGraph.Library.songs, each main SongGraph.Melody's first SongGraph.NoteEvent",
+                              noticeable: 1,
+                              evidence: .inferred("a count of this library's own songs: nothing outside it bears on it")),
         ],
 
         ranges: [
@@ -188,7 +204,7 @@ public struct Melodist: Persona {
                         engineAction: "SongGraph.Melody.notes, passing notes added between leaps",
                         evidence: .cited([contour, yesterday])),
             PersonaRule("melodist.lands-on-the-chord",
-                        when: "fewer than three in five notes belong to the chord under them",
+                        when: "less than three fifths of the tune, by length, is on the chord under it",
                         then: "land the long notes on chord tones and pass through the rest; the Harmonist says which they are",
                         threshold: .atLeast(.chordToneRatio, chordToneFloor, unit: "fraction"),
                         engineAction: "SongGraph.Melody.notes against MusicTheory.Chord.pitchClasses of SongGraph.Progression",
@@ -217,6 +233,18 @@ public struct Melodist: Persona {
                         threshold: .atMost(.notesPerBar, notesPerBarCeiling, unit: "notes per bar"),
                         engineAction: "SongGraph.Melody.notes reduced within SongGraph.Song.timeSignature",
                         evidence: .inferred("eight a bar is a note every eighth: past that it reads as a run")),
+            PersonaRule("melodist.something-of-its-own",
+                        when: "every note is on a beat or its half, from the key, a fourth or less from the last, and every long note is a note of the chord",
+                        then: "say so, and offer two ways to hear it otherwise — pushed over a bar line, a second ending; a tune with nothing in it to remember it by is a scale exercise that happens to fit",
+                        threshold: .atLeast(.melodySurprises, surprisesFloor, unit: "surprises"),
+                        engineAction: "Performance.TuneVariation.vary on SongGraph.Melody, two offered",
+                        evidence: .cited([superstition, contour])),
+            PersonaRule("melodist.not-the-same-opening-again",
+                        when: "two or more of the library's recent tunes come in on the same degree in the same place in the bar",
+                        then: "name the songs; three tunes that start on the fifth after the beat are one habit, and the house should hear that it has one",
+                        threshold: .atMost(.melodyOpeningRepeats, openingRepeatsCeiling, unit: "songs"),
+                        engineAction: "SongGraph.Library.songs read for each main SongGraph.Melody's first note",
+                        evidence: .inferred("a count of this library's own songs")),
             PersonaRule("melodist.the-tune-is-yours",
                         when: "asked to write the tune",
                         then: "say what would make it singable and let the user draw it; nothing in this app writes a melody, and inventing one silently would be the worst thing here to get wrong",
@@ -457,6 +485,15 @@ public struct Melodist: Persona {
                                     + "read the part's instrument and relax when nothing has to breathe.",
                          affects: ["melodist.it-breathes", "melodist.singable-range"],
                          evidence: .inferred("the tension between the cited lineages and this app's first idiom")),
+            OpenQuestion("melodist.oq.say-the-usual",
+                         question: "Should the Melodist say when a tune has nothing of its own in it, or comes in as the last ones did?",
+                         encoded: "Yes. Every other rule here keeps a tune singable, and a tune can pass all of them by "
+                                + "being the plainest one possible; something should say so, once, with another way to hear it.",
+                         alternative: "No. Plain is a style, the eighth-note grid is most of pop, and a house that "
+                                    + "writes that way on purpose does not need telling each time — the readings stay, "
+                                    + "and stop being flags.",
+                         affects: ["melodist.something-of-its-own", "melodist.not-the-same-opening-again"],
+                         evidence: .inferred("the tension between a critic that only guards singability and a tune worth remembering")),
             OpenQuestion("melodist.oq.chord-tone-window",
                          question: "Should a note be judged against the chord it starts on, or the one it is sounding over?",
                          encoded: "The chord under its start.",
@@ -512,14 +549,14 @@ public struct Melodist: Persona {
 
         if !observation.chords.isEmpty {
             let landing = observation.chordToneRatio
-            let clash = observation.firstClash
+            let clash = observation.longestClash
             notes.append(PersonaReading(
                 rule: "melodist.lands-on-the-chord", feature: .chordToneRatio, value: landing,
                 holds: landing >= Melodist.chordToneFloor,
                 says: landing >= Melodist.chordToneFloor
-                    ? String(format: "%.0f%% of the notes land on the chord under them.", landing * 100)
-                    : String(format: "Only %.0f%% land on the chord under them", landing * 100)
-                        + (clash.map { ", starting with the \(observation.key.tonic.pitchClass.distance(to: $0.note.pitch.pitchClass) < 12 ? MelodyObservation.degreeNames[observation.key.tonic.pitchClass.distance(to: $0.note.pitch.pitchClass)] : "note") over \($0.chord.description)" } ?? "")
+                    ? String(format: "%.0f%% of the tune, by length, is on the chord under it.", landing * 100)
+                    : String(format: "Only %.0f%% of the tune, by length, is on the chord under it", landing * 100)
+                        + (clash.map { ": the longest note off it is the \(MelodyObservation.degreeNames[observation.key.tonic.pitchClass.distance(to: $0.note.pitch.pitchClass) % 12]) over \($0.chord.description)" } ?? "")
                         + ". Land the long notes and pass through the rest."))
         }
 
@@ -560,6 +597,34 @@ public struct Melodist: Persona {
             says: String(format: perBar <= Melodist.notesPerBarCeiling
                 ? "%.1f notes a bar."
                 : "%.1f notes a bar. Past eight it is a texture, not a tune.", perBar)))
+
+        // What in it is this tune's own. Only a line with room for a figure is read for it.
+        if observation.hasRoomForAFigure {
+            let own = observation.surprises
+            var plain = "Every note is on a beat or halfway to the next, from \(observation.key.name), and within a fourth of the last: "
+                + "nothing in it is wrong, and nothing in it is this tune's yet."
+            if !observation.alternatives.isEmpty {
+                plain += " Two ways to hear it otherwise: " + observation.alternatives.joined(separator: "; or ") + "."
+            }
+            notes.append(PersonaReading(
+                rule: "melodist.something-of-its-own", feature: .melodySurprises, value: Double(own.count),
+                holds: Double(own.count) >= Melodist.surprisesFloor,
+                says: own.isEmpty ? plain : "Its own: " + own.joined(separator: "; ") + "."))
+        }
+
+        // And how the tunes before it came in, when they are in view.
+        if let before = observation.before, let opening = observation.opening, before.entries.contains(where: { $0.opening != nil }) {
+            let same = before.sharing(opening: opening)
+            let degree = MelodyObservation.degreeNames[opening.degree % 12]
+            let place = opening.beat == 0 ? "on the first beat" : opening.beat == opening.beat.rounded()
+                ? "on beat \(Int(opening.beat) + 1)" : "after beat \(Int(opening.beat) + 1)"
+            notes.append(PersonaReading(
+                rule: "melodist.not-the-same-opening-again", feature: .melodyOpeningRepeats, value: Double(same.count),
+                holds: Double(same.count) <= Melodist.openingRepeatsCeiling,
+                says: Double(same.count) <= Melodist.openingRepeatsCeiling
+                    ? "It comes in on the \(degree), \(place)."
+                    : "It comes in on the \(degree), \(place), as the tunes of \(SongsBefore.list(same)) do."))
+        }
 
         return notes
     }

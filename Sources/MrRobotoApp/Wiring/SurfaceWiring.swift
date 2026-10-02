@@ -304,6 +304,8 @@ final class SurfaceWiring {
                           density: levers.first { $0.quantity == .density }?.value)
         bassAdapters[item.id] = adapter
         model.genre = { [weak app] in GenreLens.of(app?.song) }
+        model.before = { [weak app] in app.map { SongsBefore.of($0.library, besides: $0.song?.id) } }
+        model.house = { [weak app] in app?.houseBook }
         rolls[item.id] = model
         return model
     }
@@ -337,6 +339,8 @@ final class SurfaceWiring {
                                 progression: bound, surfaceID: item.id)
         chordsAdapters[item.id] = adapter
         model.genre = { [weak app] in GenreLens.of(app?.song) }
+        model.before = { [weak app] in app.map { SongsBefore.of($0.library, besides: $0.song?.id) } }
+        model.house = { [weak app] in app?.houseBook }
         chordSheets[item.id] = model
         return model
     }

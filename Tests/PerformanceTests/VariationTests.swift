@@ -268,4 +268,73 @@ struct VariationTests {
         #expect(sparse.notes.allSatisfy { $0.velocity == 80 })
         #expect(sparse.lengthInBars == 2)
     }
+
+    // MARK: A second ending, a push, a sequence, an answer
+
+    /// Four bars in D minor that end on the fifth, with a rest of two beats after the second bar.
+    static let phrase = Melody(notes: [
+        n(69, 0.5, 0.5), n(72, 1, 0.5), n(74, 1.5, 1.5),
+        n(77, 4, 1), n(76, 5, 0.5), n(74, 5.5, 0.5),
+        n(72, 8, 1), n(70, 9, 1), n(69, 10, 1.5),
+        n(67, 12, 1), n(69, 13, 1),
+    ], lengthInBars: 4)
+    static let dMinor = Key(parsing: "D minor")!
+
+    @Test("answered is the tune twice: left as it was the first time, brought home and held the second")
+    func answered() throws {
+        let twice = try #require(TuneVariation.vary(Self.phrase, as: .answered, bars: 8, beatsPerBar: 4, key: Self.dMinor))
+        #expect(twice.lengthInBars == 8 && twice.notes.count == 22)
+        #expect(Array(twice.notes.prefix(11)) == Self.phrase.notes, "the first time is the tune")
+        let last = try #require(twice.notes.last)
+        #expect(last.pitch.midi == 74 && last.start == 29 && last.duration == 2.75, "\(last)")
+        #expect(twice.notes[20].pitch.midi == 67, "only the last note moved")
+
+        // A tune that already ends at home is left open the first time instead: on the second degree.
+        var home = Self.phrase
+        home.notes[10] = Self.n(74, 13, 1)
+        let other = try #require(TuneVariation.vary(home, as: .answered, bars: 8, beatsPerBar: 4, key: Self.dMinor))
+        #expect(other.notes[10].pitch.midi == 76 && other.notes.last?.pitch.midi == 74)
+    }
+
+    @Test("pushed pulls every note on a bar line an eighth early and ties it over; the first note stays")
+    func pushed() throws {
+        let pushed = try #require(TuneVariation.vary(Self.phrase, as: .pushed, bars: 4, beatsPerBar: 4))
+        #expect(pushed.notes.map(\.start) == [0.5, 1, 1.5, 3.5, 5, 5.5, 7.5, 9, 10, 11.5, 13])
+        #expect(pushed.notes.map(\.pitch.midi) == Self.phrase.notes.map(\.pitch.midi), "the same notes")
+        #expect(pushed.notes[3].duration == 1.5 && pushed.notes[3].velocity == 106)
+        #expect(pushed.notes[8].duration == 1.5, "the note before the last push ends where the push begins")
+        #expect(pushed.lengthInBars == 4)
+        // A tune with nothing on a bar line has nothing to push.
+        let off = Melody(notes: [Self.n(72, 0.5, 1), Self.n(74, 2, 1), Self.n(76, 4.5, 1)], lengthInBars: 2)
+        #expect(TuneVariation.vary(off, as: .pushed, bars: 4, beatsPerBar: 4) == nil)
+    }
+
+    @Test("sequenced says the opening two bars again on another degree, where bars three and four were")
+    func sequenced() throws {
+        let stepped = try #require(TuneVariation.vary(Self.phrase, as: .sequenced, bars: 4, beatsPerBar: 4, key: Self.dMinor))
+        #expect(Array(stepped.notes.prefix(6)) == Array(Self.phrase.notes.prefix(6)))
+        // A step up in D minor: A C D F E D becomes B-flat D E G F E.
+        #expect(stepped.notes.dropFirst(6).map(\.pitch.midi) == [70, 74, 76, 79, 77, 76])
+        #expect(stepped.notes.dropFirst(6).map(\.start) == [8.5, 9, 9.5, 12, 13, 13.5])
+        // Over chords, it goes to the degree that sits on them: G minor under bars three and four
+        // takes the figure down a third, where its long notes are B-flat and D.
+        let chords = [ChordSpan(Chord(parsing: "Dm")!, beats: 8), ChordSpan(Chord(parsing: "Gm")!, beats: 8)]
+        let fitted = try #require(TuneVariation.vary(Self.phrase, as: .sequenced, bars: 4, beatsPerBar: 4, key: Self.dMinor, chords: chords))
+        #expect(fitted.notes.dropFirst(6).map(\.pitch.midi) == [65, 69, 70, 74, 72, 70], "\(fitted.notes.dropFirst(6).map(\.pitch.midi))")
+        #expect(TuneVariation.vary(Self.tune, as: .sequenced, bars: 2, beatsPerBar: 4, key: Self.dMinor) != nil, "two bars: a bar is the unit")
+    }
+
+    @Test("the answering line says a phrase's last notes again in the rest after it, an octave up and quieter")
+    func answers() throws {
+        let line = try #require(TuneVariation.answers(to: Self.phrase, beatsPerBar: 4))
+        #expect(line.notes.map(\.pitch.midi) == [88, 86] && line.notes.map(\.start) == [6.5, 7])
+        #expect(line.notes.allSatisfy { $0.velocity == 75 && $0.duration == 0.5 })
+        #expect(line.lengthInBars == 4)
+        // It never sounds while the tune does.
+        for answer in line.notes {
+            #expect(!Self.phrase.notes.contains { $0.start < answer.start + answer.duration && answer.start < $0.start + $0.duration })
+        }
+        // A tune that never rests for two beats has nowhere to be answered.
+        #expect(TuneVariation.answers(to: Self.tune, beatsPerBar: 4) == nil)
+    }
 }

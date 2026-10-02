@@ -432,6 +432,14 @@
       ],
       "priority" : 4,
       "what" : "Which chords the key does not own, and whether the phrases land."
+    },
+    {
+      "features" : [
+        "harmony.departures",
+        "harmony.library.repeats"
+      ],
+      "priority" : 5,
+      "what" : "Whether anything in it is this song's own, and whether the last song did the same."
     }
   ],
   "name" : "Harmonist",
@@ -490,6 +498,19 @@
       },
       "id" : "harmonist.oq.bass-at-the-change",
       "question" : "Is the note sounding at the change the right one to judge the bass by?"
+    },
+    {
+      "affects" : [
+        "harmonist.something-of-its-own",
+        "harmonist.not-the-last-song-again"
+      ],
+      "alternative" : "No. A loop is a loop, half the records this app is for are four chords in a minor key on purpose, and a house that chooses them does not need telling each time — the readings stay, and stop being flags.",
+      "encoded" : "Yes. Every other rule here keeps a progression from straying, and a loop that passes all of them can be the commonest four chords there are; something should say so, once, with a way out to hear.",
+      "evidence" : {
+        "inferred" : "the tension between a critic that only guards the centre and an idiom that lives there"
+      },
+      "id" : "harmonist.oq.say-the-usual",
+      "question" : "Should the Harmonist say when a progression is the usual one, or the last song's again?"
     },
     {
       "affects" : [
@@ -849,6 +870,40 @@
       "when" : "roots almost never move by a fourth or a fifth"
     },
     {
+      "engineAction" : "Performance.Reharmonize.options(for:) on SongGraph.Progression, two offered",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Borrowed_chord",
+          "https://en.wikipedia.org/wiki/Alfie_(Burt_Bacharach_song)",
+          "https://en.wikipedia.org/wiki/God_Only_Knows"
+        ]
+      },
+      "id" : "harmonist.something-of-its-own",
+      "then" : "say so, and offer two ways out to hear — a bass that moves, a chord borrowed, a bar shared; the usual loop is not wrong and it is nobody's",
+      "threshold" : {
+        "comparison" : "atLeast",
+        "feature" : "harmony.departures",
+        "unit" : "departures",
+        "value" : 1
+      },
+      "when" : "every chord is from the key, in root position, the same length, and the loop opens at home"
+    },
+    {
+      "engineAction" : "SongGraph.Library.songs read for each main SongGraph.Progression's roots",
+      "evidence" : {
+        "inferred" : "a count of this library's own songs"
+      },
+      "id" : "harmonist.not-the-last-song-again",
+      "then" : "name the songs; the same roots in the same order twice running is a habit, and the house should hear that it has one",
+      "threshold" : {
+        "comparison" : "atMost",
+        "feature" : "harmony.library.repeats",
+        "unit" : "songs",
+        "value" : 0
+      },
+      "when" : "another recent song in the library goes round the same loop"
+    },
+    {
       "engineAction" : "MusicTheory.Key.romanNumeral(for:) nil, named in the SongGraph.PartVersion note",
       "evidence" : {
         "cited" : [
@@ -973,6 +1028,30 @@
       "meaning" : "chord changes where the bass line is sounding a note of that chord, over the changes it played under",
       "noticeable" : 0.1,
       "unit" : "fraction"
+    },
+    {
+      "engineField" : "SongGraph.Progression: MusicTheory.Chord.inversion, SongGraph.ChordSpan.beats, MusicTheory.Key.pitchClasses",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Borrowed_chord",
+          "https://en.wikipedia.org/wiki/Alfie_(Burt_Bacharach_song)",
+          "https://en.wikipedia.org/wiki/God_Only_Knows"
+        ]
+      },
+      "feature" : "harmony.departures",
+      "meaning" : "how many things about the progression are not the default: a chord from outside the key (the major five of a minor key aside), a bass that is not the root, chords of different lengths, not opening at home, more than four roots",
+      "noticeable" : 1,
+      "unit" : "departures"
+    },
+    {
+      "engineField" : "SongGraph.Library.songs, each main SongGraph.Progression's roots above its tonic",
+      "evidence" : {
+        "inferred" : "a count of this library's own songs: nothing outside it bears on it"
+      },
+      "feature" : "harmony.library.repeats",
+      "meaning" : "how many of the library's other recent songs go round the same roots in the same order",
+      "noticeable" : 1,
+      "unit" : "songs"
     }
   ],
   "voice" : {

@@ -79,6 +79,23 @@ extension ChordsSurfaceView {
                     }
                     .padding(.top, 2)
                 }
+                // The same sheet said another way, a move a press away: what the Harmonist's
+                // "nothing of its own" points at.
+                let ways = model.anotherWays
+                if !ways.isEmpty {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text("ANOTHER WAY").font(Design.Typography.label).tracking(1.1)
+                            .foregroundStyle(Design.Palette.inkTertiary)
+                        FlowRow(spacing: 4) {
+                            ForEach(ways, id: \.move) { way in
+                                FormChip(way.move.name, isOn: false) { model.use(way: way) }
+                                    .help("\(way.progression.symbols()) — \(way.says) ⌘Z puts it back.")
+                                    .accessibilityLabel("Another way: \(way.move.name)")
+                            }
+                        }
+                    }
+                    .padding(.top, 2)
+                }
                 // What voices them. Chords used to play on the bass sampler, an octave below where
                 // they were written; now they go through whatever this names.
                 InstrumentPicker(selected: model.instrument, choose: { model.setInstrument($0) }, label: "Voiced on")

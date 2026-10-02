@@ -111,6 +111,9 @@ public struct CompareCandidate: Identifiable, Sendable {
     /// A whole section as it stood, when the row is one: every lane at the version it played and
     /// every strip at its level. Played through the mix, and taking it puts the section back.
     public var state: SectionState?
+    /// What is kept with `version` when the row is taken: the bass line written to follow a
+    /// candidate's chords. Chords taken without it would be heard against the old bass.
+    public var companions: [PartVersion] = []
 
     public init(id: String, title: String, proposedBy: PersonaID? = nil, rationale: String = "",
                 readings: [CompareReading] = [], version: PartVersion? = nil,

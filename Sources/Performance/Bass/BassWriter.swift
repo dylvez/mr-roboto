@@ -300,7 +300,7 @@ public enum BassWriter {
             let sorted = onsets.sorted()
             for (i, onset) in sorted.enumerated() {
                 let chord = harmony.chord(at: onset)
-                let pitch = place(chord.root, near: lastPitch, in: request.lineage)
+                let pitch = place(chord.bass, near: lastPitch, in: request.lineage)
                 lastPitch = pitch
                 let nextOnset = i + 1 < sorted.count ? sorted[i + 1] : barEnd
                 // R8: end on the first beat line after a minimum sounding length, never past the
@@ -324,7 +324,7 @@ public enum BassWriter {
             let busy = drafts.contains { $0.start <= slot && $0.end > slot }
             guard !busy, slot < barStart + beatsPerBar else { continue }
             let chord = harmony.chord(at: slot)
-            drafts.append(Draft(pitch: place(chord.root, near: lastPitch, in: .palladino), start: slot,
+            drafts.append(Draft(pitch: place(chord.bass, near: lastPitch, in: .palladino), start: slot,
                                 end: slot + 0.12, velocity: 42, displaced: false))
         }
         return drafts
@@ -362,7 +362,7 @@ public enum BassWriter {
                 let tones = chord.intervals
                 let interval = isChange ? 0 : tones[min(tones.count - 1, 1 + (tone % max(1, tones.count - 1)))]
                 if !isChange { tone += 1 }
-                let root = place(chord.root, near: lastPitch, in: .thundercat)
+                let root = place(chord.bass, near: lastPitch, in: .thundercat)
                 let pitch = clampToRegister(root + interval, .thundercat)
                 lastPitch = root
                 let nextOnset = i + 1 < onsets.count ? onsets[i + 1] : barEnd
@@ -395,7 +395,7 @@ public enum BassWriter {
         var drafts: [Draft] = []
         for (i, onset) in onsets.enumerated() {
             let chord = harmony.chord(at: onset)
-            let pitch = place(chord.root, near: nil, in: .programmed)
+            let pitch = place(chord.bass, near: nil, in: .programmed)
             let next = i + 1 < onsets.count ? onsets[i + 1] : totalBeats
             let end = max(onset + 0.25, onset + (next - onset) * 0.92)
             drafts.append(Draft(pitch: pitch, start: onset, end: end, velocity: 110))
@@ -443,9 +443,9 @@ public enum BassWriter {
     static func approaches(harmony: HarmonyMap, lineage: BassLineage, minimumMove: Int,
                            totalBeats: Double) -> [Draft] {
         var drafts: [Draft] = []
-        var previous = harmony.chord(at: 0).root
+        var previous = harmony.chord(at: 0).bass
         for change in harmony.changes where change > 0 {
-            let next = harmony.chord(at: change).root
+            let next = harmony.chord(at: change).bass
             let move = abs(((next.rawValue - previous.rawValue + 18) % 12) - 6)
             if move >= minimumMove {
                 let target = place(next, near: nil, in: lineage)
@@ -455,7 +455,7 @@ public enum BassWriter {
             previous = next
         }
         // The loop's own wrap: the last chord back to the first.
-        let first = harmony.chord(at: 0).root
+        let first = harmony.chord(at: 0).bass
         let move = abs(((first.rawValue - previous.rawValue + 18) % 12) - 6)
         if move >= minimumMove, totalBeats >= 1 {
             let target = place(first, near: nil, in: lineage)

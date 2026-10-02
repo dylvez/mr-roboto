@@ -408,6 +408,8 @@ public actor Director {
         case "write_groove": return "wrote a beat"
         case "set_intensity": return many ? "moved a section's intensity \(times) times" : "moved a section's intensity"
         case "compare_section": return "set a section beside how it stood"
+        case "reharmonize": return many ? "said the chords another way \(times) times" : "said the chords another way"
+        case "vary_tune": return many ? "played the tune another way \(times) times" : "played the tune another way"
         case "open_surface": return many ? "opened \(times) surfaces" : "opened a surface"
         case "propose": return many ? "offered \(times) suggestions" : "offered a suggestion"
         default: return many ? "\(tool) ×\(times)" : tool

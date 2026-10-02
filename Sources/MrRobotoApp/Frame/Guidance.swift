@@ -603,7 +603,8 @@ public enum Guidance {
     /// loop is what all of those mean. So the variations go first, and "the newest" is the newest
     /// part of its own.
     static func mainsLast(_ versions: [PartVersion], in song: Song) -> [PartVersion] {
-        let varied = Set(song.versions.lazy.filter { $0.variation != nil }.map(\.partID))
+        // A line that answers the tune goes with them: it is newer than the tune, and is not it.
+        let varied = Set(song.versions.lazy.filter { $0.variation != nil || Develop.isAnswer($0) }.map(\.partID))
         guard !varied.isEmpty else { return versions }
         return versions.filter { varied.contains($0.partID) } + versions.filter { !varied.contains($0.partID) }
     }

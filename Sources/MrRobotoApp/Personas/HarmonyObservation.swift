@@ -1,5 +1,6 @@
 import Foundation
 import MusicTheory
+import Performance
 import SongGraph
 
 /// A progression as the Harmonist reads it: the chords in the key, how often they change, how far
@@ -23,6 +24,11 @@ public struct HarmonyObservation: Hashable, Sendable {
     public var bassChanges: Int
     /// The first chord the bass disagrees with, for the sentence that names it.
     public var firstBassClash: (chord: Chord, bass: Pitch)?
+    /// Two other ways to say the progression, each as a move's name and what it makes of the
+    /// sheet, for the reading that finds it the usual one. Empty when it was read with no sheet.
+    public var alternatives: [String] = []
+    /// What the library's other songs did. Nil reads the progression alone.
+    public var before: SongsBefore?
 
     public static func == (a: HarmonyObservation, b: HarmonyObservation) -> Bool {
         a.label == b.label && a.key == b.key && a.beatsPerBar == b.beatsPerBar && a.chords == b.chords
@@ -153,6 +159,51 @@ public struct HarmonyObservation: Hashable, Sendable {
         chords.map { key.romanNumeral(for: $0)?.description ?? "\($0.root.description)\($0.quality.symbol)" }
     }
 
+    // MARK: What is its own
+
+    /// How long each chord lasts, a chord held over a bar line counted once.
+    public var lengths: [Double] {
+        var out: [Double] = []
+        var last: Chord?
+        for (index, chord) in chords.enumerated() {
+            let end = index + 1 < starts.count ? starts[index + 1] : beats
+            let length = end - starts[index]
+            if chord == last, !out.isEmpty { out[out.count - 1] += length } else { out.append(length) }
+            last = chord
+        }
+        return out
+    }
+
+    /// Whether the key is a minor one, by its own tonic chord.
+    var isMinor: Bool { key.scale.diatonicChord(degree: 1, root: key.tonic.pitchClass)?.quality.hasMinorThird ?? false }
+
+    /// The major chord on the fifth of a minor key: outside the scale and inside every minor song
+    /// ever written. Not counted as leaving the key.
+    func isTheFive(_ chord: Chord) -> Bool {
+        isMinor && key.tonic.pitchClass.distance(to: chord.root) == 7 && (chord.quality.third == 4 || chord.quality.isSuspended)
+    }
+
+    /// What about the progression is not the default, each in a few words. The default is the
+    /// loop every songwriting tool hands you: chords from the key, home first, a root in every
+    /// bass, each chord as long as the last, four of them or fewer.
+    public var departures: [String] {
+        var out: [String] = []
+        let outside = borrowed.filter { !isTheFive($0) }
+        if !outside.isEmpty {
+            out.append("\(outside.map { key.symbol(of: $0) }.joined(separator: ", ")) \(outside.count == 1 ? "is" : "are") from outside the key")
+        }
+        if chords.contains(where: { $0.inversion > 0 }) { out.append("the bass is not always the root") }
+        let lengths = Set(self.lengths.map { ($0 * 4).rounded() / 4 })
+        if lengths.count > 1 { out.append("the chords are not all one length") }
+        if let first = chords.first, first.root != key.tonic.pitchClass { out.append("it does not open at home") }
+        let roots = Set(chords.map(\.root)).count
+        if roots > 4 { out.append("it has \(roots) different roots") }
+        return out
+    }
+
+    /// The loop as the library's memory keeps it.
+    public var loop: [Int] { SongsBefore.loop(of: chords, key: key) }
+
     // MARK: Reading a song
 
     /// A progression as a part, with the newest bass line under it when the song has one.
@@ -168,6 +219,9 @@ public struct HarmonyObservation: Hashable, Sendable {
         }
         var observation = HarmonyObservation(label: label, key: progression.key, beatsPerBar: beatsPerBar,
                                              chords: chords, starts: starts, beats: beat)
+        observation.alternatives = Reharmonize.options(for: progression).prefix(2).map {
+            "\($0.move.name.lowercased()) (\($0.progression.symbols()))"
+        }
         guard let bassline, !bassline.notes.isEmpty else { return observation }
 
         // At each change, what is the bass sounding? The note under the change if one is held, else

@@ -254,11 +254,12 @@ public struct ConveneTool: DirectorTool {
                         if case .progression(let p) = version.kind { return p }
                         return nil
                     }
-                    let observation = MelodyObservation.of(melody, label: PartLabel.title(of: version),
+                    var observation = MelodyObservation.of(melody, label: PartLabel.title(of: version),
                                                            key: song.key ?? Key(tonic: NoteName(.c)),
                                                            progression: progression,
                                                            beatsPerBar: song.timeSignature.beatsPerBar)
-                    readings += Melodist().read(observation).map { (id, $0) }
+                    observation.before = SongsBefore.of(await workspace.library, besides: song.id)
+                    readings += (await workspace.houseBook).settle(Melodist().read(observation), by: Melodist.bible).map { (id, $0) }
                 } else {
                     notes.append("No tune yet for the Melodist to read.")
                 }
@@ -269,9 +270,10 @@ public struct ConveneTool: DirectorTool {
                         if case .bassline(let bassline) = version.kind { return bassline }
                         return nil
                     }
-                    let observation = HarmonyObservation.of(progression, label: PartLabel.title(of: version), bassline: line,
+                    var observation = HarmonyObservation.of(progression, label: PartLabel.title(of: version), bassline: line,
                                                             beatsPerBar: song.timeSignature.beatsPerBar)
-                    readings += Harmonist().read(observation).map { (id, $0) }
+                    observation.before = SongsBefore.of(await workspace.library, besides: song.id)
+                    readings += (await workspace.houseBook).settle(Harmonist().read(observation), by: Harmonist.bible).map { (id, $0) }
                 } else {
                     notes.append("No chords yet for the Harmonist to read.")
                 }

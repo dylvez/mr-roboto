@@ -25,9 +25,11 @@ extension Progression {
 
     /// The progression as a typed line, bars separated by `|`.
     public func symbols(preferring preference: SpellingPreference? = nil) -> String {
-        let spelling = preference ?? key.signature.preference
-        return bars.map { bar in bar.chords.map { $0.chord.symbol(preferring: spelling) }.joined(separator: " ") }
-            .joined(separator: " | ")
+        // Spelled in the sheet's own key when nobody asks otherwise: the diminished chord between
+        // G and A is G♯dim7 whatever the key signature prefers, because that is what it is.
+        return bars.map { bar in
+            bar.chords.map { span in preference.map { span.chord.symbol(preferring: $0) } ?? key.symbol(of: span.chord) }.joined(separator: " ")
+        }.joined(separator: " | ")
     }
 
     /// The chords as spans in order, ignoring bar boundaries — what the bass writer takes.

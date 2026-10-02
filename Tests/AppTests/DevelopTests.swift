@@ -611,7 +611,8 @@ struct DevelopAppTests {
         #expect(names(playing: loop.tune.partID) == ["Verse", "Hook", "Verse", "Hook", "Hook"])
         // Developing again plays each of them its own way.
         let again = try #require(app.develop())
-        #expect(again.written == ["First phrase of The hook", "Bridge bass", "Lift of The hook", "Lighter bass"])
+        #expect(again.written == ["First phrase of The hook", "Second ending of The hook", "Bridge bass", "Last chorus bass",
+                                  "Lift of The hook", "Lighter bass"])
     }
 
     @Test("a section held at versions of its own is left exactly as it was")
@@ -685,5 +686,125 @@ struct DevelopStructureTests {
         #expect(model.sections.first { $0.id == verse.id }?.stitch.map(\.part) == verse.stitch.map(\.part))
         // A new section plays the loop, not the variation written last.
         #expect(model.defaultStitch.map(\.part) == [loop.drums, loop.bass, loop.chords, loop.tune].map(\.partID))
+    }
+}
+
+// MARK: - Varied
+
+@Suite("Develop: varied, so two songs are not arranged the same way") @MainActor
+struct DevelopVariedTests {
+
+    /// A loop with four chords and a tune that rests: Dm7 Bbmaj7 Gm7 A7, four bars.
+    static func loop() throws -> DevelopFixture.Loop {
+        let key = Key(parsing: "D minor")!
+        var song = Song.new(title: "Borrowed Light", key: key, tempo: 96)
+        func n(_ midi: Int, _ start: Double, _ duration: Double) -> NoteEvent { DevelopFixture.n(midi, start, duration) }
+        let drums = PartVersion(partID: PartID(), kind: .groove(DevelopFixture.groove), author: .user, operation: Operation.written, note: "The beat")
+        let bass = PartVersion(partID: PartID(), kind: .bassline(Bassline(
+            notes: [n(38, 0, 1.5), n(38, 2, 1), n(34, 4, 1.5), n(34, 6, 1), n(31, 8, 1.5), n(31, 10, 1), n(33, 12, 1.5), n(33, 14, 1)],
+            sound: "finger", key: key, lengthInBars: 4)), author: .user, operation: Operation.written, note: "My line")
+        let chords = PartVersion(partID: PartID(), kind: .progression(try Progression.parse("Dm7 | Bbmaj7 | Gm7 | A7", key: key).get()),
+                                 author: .user, operation: Operation.written, note: "Dm7 Bbmaj7 Gm7 A7")
+        let tune = PartVersion(partID: PartID(), kind: .melody(Melody(notes: [
+            n(69, 0.5, 0.5), n(72, 1, 0.5), n(74, 1.5, 1.5), n(77, 4, 1), n(74, 5, 0.5), n(70, 5.5, 0.5),
+            n(74, 8, 1), n(70, 9, 1), n(67, 10, 1.5), n(69, 12, 1), n(73, 13, 1),
+        ], lengthInBars: 4)), author: .user, operation: Operation.written, note: "The tune")
+        try song.append(contentsOf: [drums, bass, chords, tune])
+        for index in song.sections.indices { song.sections[index].stitch = [drums, bass, chords, tune].lanes }
+        return DevelopFixture.Loop(song: song, drums: drums, bass: bass, chords: chords, tune: tune)
+    }
+
+    private func chords(_ name: String, _ development: Development, _ song: Song, nth: Int = 0) throws -> String {
+        let section = try #require(development.sections.filter { $0.name == name }.dropFirst(nth).first)
+        for lane in section.stitch {
+            let version = development.versions.last { $0.partID == lane.part } ?? song.latestVersion(of: lane.part)
+            if case .progression(let sheet)? = version?.kind { return sheet.symbols() }
+        }
+        return ""
+    }
+
+    @Test("plain is what developing always was: one bridge, the last chorus on the verse's chords")
+    func plain() throws {
+        let loop = try Self.loop()
+        let development = try #require(Develop.plan(for: loop.song))
+        #expect(try chords("Bridge", development, loop.song) == "Bbmaj7 | C7 | Gm7 | A7")
+        #expect(try chords("Hook", development, loop.song, nth: 2) == "Dm7 | Bbmaj7 | Gm7 | A7")
+        #expect(!development.written.contains { $0.contains("Answers") || $0.contains("Last chorus") || $0.contains("Push") })
+    }
+
+    @Test("varied: the seed picks the bridge, and a song gets the same one every time")
+    func bridges() throws {
+        let loop = try Self.loop()
+        var seen = Set<String>()
+        for seed in UInt64(0)..<5 {
+            let development = try #require(Develop.plan(for: loop.song, harmony: .varied(seed: seed)))
+            let bridge = try chords("Bridge", development, loop.song)
+            seen.insert(bridge)
+            #expect(bridge.hasSuffix("A7") && !bridge.hasPrefix("Dm7"), "leads back, and does not open where the loop does: \(bridge)")
+            #expect(try chords("Bridge", try #require(Develop.plan(for: loop.song, harmony: .varied(seed: seed))), loop.song) == bridge)
+        }
+        #expect(seen.count == 5, "five seeds, five bridges: \(seen.sorted())")
+        #expect(Develop.seed(for: loop.song) == Develop.seed(for: loop.song))
+        #expect(Develop.seed(for: loop.song) != Develop.seed(for: try Self.loop().song))
+    }
+
+    @Test("varied: the last chorus says its chords another way, and the bass follows them in its own rhythm")
+    func lastChorus() throws {
+        let loop = try Self.loop()
+        // Seed 0 starts from the bass line: the bass holds D, then steps down to C sharp.
+        let development = try #require(Develop.plan(for: loop.song, harmony: .varied(seed: 0)))
+        #expect(try chords("Hook", development, loop.song, nth: 2) == "Dm7 | Bbmaj7/D | Gm7/D | A7/C#")
+        #expect(try chords("Hook", development, loop.song) == "Dm7 | Bbmaj7 | Gm7 | A7", "the first hook is the loop's")
+        let last = try #require(development.sections.filter { $0.name == "Hook" }.last)
+        let bass = try #require(last.stitch.compactMap { lane in development.versions.last { $0.partID == lane.part && $0.type == .bassline } }.first)
+        guard case .bassline(let line) = bass.kind, case .bassline(let own) = loop.bass.kind else { return }
+        #expect(bass.variation?.of == loop.bass.partID && bass.variation?.name == "last-bass-line")
+        #expect(line.notes.map(\.start) == own.notes.map(\.start) && line.notes.map(\.duration) == own.notes.map(\.duration), "its rhythm is its own")
+        #expect(line.notes.map(\.pitch.midi) == [38, 38, 38, 38, 38, 38, 37, 37], "D under all of it, then C sharp")
+        #expect(development.plays.last { $0.name == "Hook" }?.parts.contains { $0.hasPrefix("chords, a bass line") } == true)
+
+        // Another seed starts from another move; whatever it is, the tune still sits on it.
+        let other = try #require(Develop.plan(for: loop.song, harmony: .varied(seed: 97)))
+        let sheet = try chords("Hook", other, loop.song, nth: 2)
+        #expect(sheet != "Dm7 | Bbmaj7 | Gm7 | A7" && sheet != "Dm7 | Bbmaj7/D | Gm7/D | A7/C#", "\(sheet)")
+    }
+
+    @Test("varied: the middle chorus leans on its bar lines, and a line answers the tune the last time")
+    func tunes() throws {
+        let loop = try Self.loop()
+        let development = try #require(Develop.plan(for: loop.song, harmony: .varied(seed: 0)))
+        let hooks = development.sections.filter { $0.name == "Hook" }
+        func tune(_ section: SongGraph.Section) -> PartVersion? {
+            section.stitch.compactMap { lane in development.versions.last { $0.partID == lane.part && $0.type == .melody && $0.variation != nil } }.first
+        }
+        #expect(tune(hooks[0]) == nil, "the first hook plays the tune as written")
+        // Eight bars and a four-bar tune: room to say it twice, the second time brought home.
+        #expect(tune(hooks[1])?.variation?.name == "answered")
+        #expect(tune(hooks[2])?.variation?.name == "lift")
+
+        let answers = try #require(development.versions.first { ($0.note ?? "").hasPrefix("Answers to The tune") })
+        #expect(answers.variation == nil && answers.type == .melody, "a line of its own, not the tune played another way")
+        #expect(hooks[2].stitch.contains(part: answers.partID) && !hooks[1].stitch.contains(part: answers.partID))
+        #expect(development.mix?.gainDB(for: answers.partID, in: hooks[2].id) == Develop.answeringLevel)
+        #expect(development.plays.last { $0.name == "Hook" }?.parts.contains("a line answering the tune") == true)
+
+        // Developed again, nothing is written twice: the same line, the same variations.
+        let song = try DevelopFixture.developed(loop.song, development)
+        let again = try #require(Develop.plan(for: song, harmony: .varied(seed: 0)))
+        #expect(again.versions.isEmpty, "\(again.written)")
+        #expect(again.sections.map(\.stitch) == development.sections.map(\.stitch))
+    }
+
+    @Test("a bass line follows other chords without being written again")
+    func refit() throws {
+        let key = Key(parsing: "D minor")!
+        let old = try Progression.parse("Dm7 | Gm7", key: key).get()
+        let new = try Progression.parse("Dm7 | Gm7 G#dim7", key: key).get()
+        func n(_ midi: Int, _ start: Double, _ duration: Double) -> NoteEvent { DevelopFixture.n(midi, start, duration) }
+        let line = Bassline(notes: [n(38, 0, 2), n(41, 2, 1), n(31, 4, 2), n(31, 6, 1), n(34, 7, 1)], key: key, lengthInBars: 2)
+        let followed = try #require(Develop.refit(line, from: old, to: new, beatsPerBar: 4))
+        #expect(followed.notes.map(\.pitch.midi) == [38, 41, 31, 32, 35], "the root moves to the new root, the third to the nearest note of the new chord")
+        #expect(followed.notes.map(\.start) == line.notes.map(\.start))
+        #expect(Develop.refit(line, from: old, to: old, beatsPerBar: 4) == nil)
     }
 }

@@ -474,6 +474,14 @@
       ],
       "priority" : 4,
       "what" : "Whether it breathes, and how busy it is."
+    },
+    {
+      "features" : [
+        "melody.surprises",
+        "melody.library.opening.repeats"
+      ],
+      "priority" : 5,
+      "what" : "Whether anything in it is this tune's own, and whether the last tunes came in the same way."
     }
   ],
   "name" : "Melodist",
@@ -520,6 +528,19 @@
       },
       "id" : "melodist.oq.instrumental-tunes",
       "question" : "Should an instrumental line be held to singable limits at all?"
+    },
+    {
+      "affects" : [
+        "melodist.something-of-its-own",
+        "melodist.not-the-same-opening-again"
+      ],
+      "alternative" : "No. Plain is a style, the eighth-note grid is most of pop, and a house that writes that way on purpose does not need telling each time — the readings stay, and stop being flags.",
+      "encoded" : "Yes. Every other rule here keeps a tune singable, and a tune can pass all of them by being the plainest one possible; something should say so, once, with another way to hear it.",
+      "evidence" : {
+        "inferred" : "the tension between a critic that only guards singability and a tune worth remembering"
+      },
+      "id" : "melodist.oq.say-the-usual",
+      "question" : "Should the Melodist say when a tune has nothing of its own in it, or comes in as the last ones did?"
     },
     {
       "affects" : [
@@ -814,7 +835,7 @@
         "unit" : "fraction",
         "value" : 0.6
       },
-      "when" : "fewer than three in five notes belong to the chord under them"
+      "when" : "less than three fifths of the tune, by length, is on the chord under it"
     },
     {
       "engineAction" : "SongGraph.Melody.notes, an interval figure repeated at a new degree",
@@ -884,6 +905,39 @@
         "value" : 8
       },
       "when" : "a bar carries more than eight notes"
+    },
+    {
+      "engineAction" : "Performance.TuneVariation.vary on SongGraph.Melody, two offered",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Superstition_(song)",
+          "https://en.wikipedia.org/wiki/Melodic_motion"
+        ]
+      },
+      "id" : "melodist.something-of-its-own",
+      "then" : "say so, and offer two ways to hear it otherwise — pushed over a bar line, a second ending; a tune with nothing in it to remember it by is a scale exercise that happens to fit",
+      "threshold" : {
+        "comparison" : "atLeast",
+        "feature" : "melody.surprises",
+        "unit" : "surprises",
+        "value" : 1
+      },
+      "when" : "every note is on a beat or its half, from the key, a fourth or less from the last, and every long note is a note of the chord"
+    },
+    {
+      "engineAction" : "SongGraph.Library.songs read for each main SongGraph.Melody's first note",
+      "evidence" : {
+        "inferred" : "a count of this library's own songs"
+      },
+      "id" : "melodist.not-the-same-opening-again",
+      "then" : "name the songs; three tunes that start on the fifth after the beat are one habit, and the house should hear that it has one",
+      "threshold" : {
+        "comparison" : "atMost",
+        "feature" : "melody.library.opening.repeats",
+        "unit" : "songs",
+        "value" : 1
+      },
+      "when" : "two or more of the library's recent tunes come in on the same degree in the same place in the bar"
     },
     {
       "engineAction" : "SongGraph.Melody left to the Piano roll's melody mode",
@@ -956,14 +1010,14 @@
       "unit" : "fraction"
     },
     {
-      "engineField" : "SongGraph.Melody.notes against MusicTheory.Chord.pitchClasses of SongGraph.Progression",
+      "engineField" : "SongGraph.Melody.notes, by SongGraph.NoteEvent.duration, against MusicTheory.Chord.pitchClasses of SongGraph.Progression",
       "evidence" : {
         "cited" : [
           "https://en.wikipedia.org/wiki/Superstition_(song)"
         ]
       },
       "feature" : "melody.chord.tone.ratio",
-      "meaning" : "notes sounding a note of the chord under them, over the notes with a chord under them",
+      "meaning" : "how much of the tune's sounding time is on a note of the chord under it; a passing note counts for as long as it lasts",
       "noticeable" : 0.1,
       "unit" : "fraction"
     },
@@ -1013,6 +1067,29 @@
       "meaning" : "the share of the tune's moves that lie in a figure heard twice — four notes or more, in the same rhythm and the same shape, at any pitch",
       "noticeable" : 0.1,
       "unit" : "fraction"
+    },
+    {
+      "engineField" : "SongGraph.Melody.notes: SongGraph.NoteEvent.start against the beat, MusicTheory.Key.pitchClasses, consecutive intervals, MusicTheory.Chord.pitchClasses",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Superstition_(song)",
+          "https://en.wikipedia.org/wiki/Melodic_motion"
+        ]
+      },
+      "feature" : "melody.surprises",
+      "meaning" : "how many things about the tune are not the default: a note from outside the key (a minor key's raised seventh aside), a note off the eighth or tied over a bar line, a leap of a fifth or more, a long note leaning on the chord",
+      "noticeable" : 1,
+      "unit" : "surprises"
+    },
+    {
+      "engineField" : "SongGraph.Library.songs, each main SongGraph.Melody's first SongGraph.NoteEvent",
+      "evidence" : {
+        "inferred" : "a count of this library's own songs: nothing outside it bears on it"
+      },
+      "feature" : "melody.library.opening.repeats",
+      "meaning" : "how many of the library's other recent tunes come in on the same degree at the same place in the bar",
+      "noticeable" : 1,
+      "unit" : "songs"
     }
   ],
   "voice" : {

@@ -32,6 +32,8 @@ public struct SetProgressionTool: DirectorTool {
         public var numerals: [String]
         public var bars: Int
         public var recorded: Bool
+        /// What the Harmonist would say first about the sheet: the readings that did not hold.
+        public var flags: [String]
     }
 
     let workspace: any DirectorWorkspace
@@ -47,7 +49,9 @@ public struct SetProgressionTool: DirectorTool {
         "State the song's harmony as a lead sheet does and record it as a progression version: "
         + "\"Dm7 G7 | Cmaj7\" is two chords over bar one and one over bar two. Bars are separated by "
         + "|, and the chords in a bar share its beats. write_bassline reads the newest progression; "
-        + "with none, it writes to the key."
+        + "with none, it writes to the key. The Harmonist's flags on the sheet come back: among them, "
+        + "that the loop is the usual one, or the one another song here goes round. Those are not "
+        + "errors; reharmonize offers ways out to hear."
     }
     public var schema: DirectorJSON {
         Schema.object([
@@ -86,12 +90,17 @@ public struct SetProgressionTool: DirectorTool {
             ?? PartVersion(partID: PartID(), kind: .progression(progression), author: .persona(acting),
                            operation: Operation.written, note: note)
         let recorded = await workspace.record(version)
+        var observation = HarmonyObservation.of(progression, label: PartLabel.title(of: version), beatsPerBar: beatsPerBar)
+        observation.before = SongsBefore.of(await workspace.library, besides: await workspace.song?.id)
+        let flags = (await workspace.houseBook).settle(
+            GenreLens.judge(Harmonist().read(observation), by: Harmonist.bible, in: await workspace.genreLens),
+            by: Harmonist.bible).filter { !$0.holds }
         return Output(version: version.id.description, part: version.partID.description, key: "\(key)",
                       chords: progression.symbols(),
                       numerals: progression.chords.map { chord in
                           key.romanNumeral(for: chord).map { "\($0)" } ?? chord.symbol(preferring: key.signature.preference)
                       },
-                      bars: progression.bars.count, recorded: recorded)
+                      bars: progression.bars.count, recorded: recorded, flags: flags.map(\.says))
     }
 }
 

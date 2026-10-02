@@ -354,6 +354,11 @@ public final class PianoRollModel {
     /// Reads again, for a genre that changed under an open roll.
     public func genreChanged() { refreshReadings() }
 
+    /// What the library's other songs did, for the Melodist's reading against them, and the
+    /// house's calls, which can turn that reading off. Asked each time, like the genre.
+    public var before: @MainActor () -> SongsBefore? = { nil }
+    public var house: @MainActor () -> HouseBook? = { nil }
+
     // MARK: Init
 
     public init(host: any PianoRollHosting,
@@ -653,6 +658,38 @@ public final class PianoRollModel {
         refreshReadings()
     }
 
+    // MARK: Another way
+
+    /// The treatments offered on a tune, the ones that change what it says first.
+    static let tuneWaysOffered: [TuneTreatment] = [.pushed, .sequenced, .answered, .lift, .sparse]
+
+    /// The treatments the tune on the roll has room for: pushed over its bar lines, its opening
+    /// again on another degree, twice with a second ending. Empty on a bass line.
+    public var tuneWays: [TuneTreatment] {
+        guard mode == .melody, notes.count >= 2 else { return [] }
+        return Self.tuneWaysOffered.filter { treated($0) != nil }
+    }
+
+    private func treated(_ treatment: TuneTreatment) -> Melody? {
+        let tune = Melody(notes: sounding, lengthInBars: lengthInBars)
+        guard let varied = TuneVariation.vary(tune, as: treatment, bars: lengthInBars * 2, beatsPerBar: beatsPerBar,
+                                              key: key, chords: chords),
+              varied.loopBars(beatsPerBar: beatsPerBar) <= Self.longestLine, varied.notes != tune.notes else { return nil }
+        return varied
+    }
+
+    /// The tune on the roll played another way, as one edit: ⌘Z puts it back.
+    public func play(as treatment: TuneTreatment) {
+        guard mode == .melody, let varied = treated(treatment) else { return }
+        willEdit("way-\(treatment.rawValue)-\(notes.count)")
+        defer { didEdit() }
+        notes = varied.notes.sorted { ($0.start, $0.pitch.midi) < ($1.start, $1.pitch.midi) }
+        lengthInBars = varied.loopBars(beatsPerBar: beatsPerBar)
+        isHandEdited = true
+        selectedNote = nil
+        refreshReadings()
+    }
+
     /// Whether Tighten would move anything. Never on the writer's own line: the writer put each
     /// note where the levers say, and moving them would be arguing with the levers.
     public var canTighten: Bool {
@@ -809,11 +846,16 @@ public final class PianoRollModel {
 
     private func refreshReadings() {
         guard mode == .bass else {
-            let melodyObservation = MelodyObservation(label: title, key: key, beatsPerBar: beatsPerBar,
+            var melodyObservation = MelodyObservation(label: title, key: key, beatsPerBar: beatsPerBar,
                                                       notes: notes, chords: chords.enumerated().map { index, span in
                                                           (span.chord, chords.prefix(index).reduce(0) { $0 + $1.beats })
                                                       })
-            readings = notes.count >= 2 ? GenreLens.judge(Melodist().read(melodyObservation), by: Melodist.bible, in: genre()) : []
+            guard notes.count >= 2 else { readings = []; return }
+            melodyObservation.alternatives = MelodyObservation.alternatives(to: Melody(notes: notes), key: key,
+                                                                            beatsPerBar: beatsPerBar, chords: chords)
+            melodyObservation.before = before()
+            let judged = GenreLens.judge(Melodist().read(melodyObservation), by: Melodist.bible, in: genre())
+            readings = house()?.settle(judged, by: Melodist.bible) ?? judged
             return
         }
         guard let observation else { readings = []; return }

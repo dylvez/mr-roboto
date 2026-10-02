@@ -157,6 +157,18 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     /// A Compare opened on a section as it is and as it stood before. Nil when it has not changed
     /// since the song was opened, or this workspace has no frame to open one in.
     func compareSection(_ section: SectionID) async -> AppState.SectionComparison?
+
+    // Another way: a part played another way in the sections named, and options to hear.
+
+    /// Versions, the form and the section levels kept as one move: a variation written for a
+    /// section and the section that now plays it. Nothing joins the form by itself. False when
+    /// no song is open or it would not take them.
+    @discardableResult
+    func keep(_ versions: [PartVersion], arranged sections: [Section], mix: Mix?, saying: String, detail: String?) -> Bool
+    /// A Compare opened on a question, its rows the candidates. False when this workspace has no
+    /// bench to open one on.
+    @discardableResult
+    func openCompare(_ brief: CompareBrief) -> Bool
 }
 
 extension DirectorWorkspace {
@@ -214,6 +226,25 @@ public final class AppStateWorkspace: DirectorWorkspace {
 
     public func compareSection(_ section: SectionID) async -> AppState.SectionComparison? {
         await app.compareSection(section)
+    }
+
+    public func keep(_ versions: [PartVersion], arranged sections: [Section], mix: Mix?, saying: String, detail: String?) -> Bool {
+        app.keepSurfaceWork()
+        guard let song = app.song else { return false }
+        var versions = versions
+        if let mix { versions.append(app.mixVersion(mix, in: song, by: .persona("Director"), note: saying)) }
+        guard app.keep(versions, arranged: sections) else { return false }
+        app.refreshSurfaces(of: mix == nil ? [.structure] : [.structure, .mixer, .master])
+        app.note(.director, saying, detail: detail)
+        return true
+    }
+
+    public func openCompare(_ brief: CompareBrief) -> Bool {
+        let surface = app.openSurface(.compare, title: brief.title, bound: brief.reference.version.map { [$0] } ?? [])
+        app.file(.compare(brief), for: surface)
+        // The bench holds one Compare: this is a new question on it.
+        SurfaceWiring.shared.discardModel(for: surface)
+        return true
     }
 
     public func version(_ id: VersionID) -> PartVersion? { app.version(id) }
@@ -462,6 +493,22 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
     public func loudness(section: SectionID) async -> Double? { nil }
 
     public func compareSection(_ section: SectionID) async -> AppState.SectionComparison? { nil }
+
+    public func keep(_ versions: [PartVersion], arranged sections: [Section], mix: Mix?, saying: String, detail: String?) -> Bool {
+        guard var current = song, (try? current.append(contentsOf: versions)) != nil else { return false }
+        current.sections = sections
+        song = current
+        if let mix { _ = recordMix(mix, note: saying) }
+        return true
+    }
+
+    /// Every Compare a tool asked for. Nothing opens: there is no bench.
+    public private(set) var compares: [CompareBrief] = []
+
+    public func openCompare(_ brief: CompareBrief) -> Bool {
+        compares.append(brief)
+        return false
+    }
 
     @discardableResult
     public func putBackDevelopment() -> Bool {

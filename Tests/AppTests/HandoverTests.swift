@@ -156,7 +156,7 @@ struct HandoverTests {
         // The figure, a semitone off the chord all the way through.
         let out = await write(rig, "Bb4 0.5 0.5, Bb4 1 0.5, C#5 1.5 0.5, F5 2 1.5, Bb4 4.5 0.5, Bb4 5 0.5, C#5 5.5 0.5, F#5 6 1.5", draft: 1)
         #expect(out["recorded"] as? Bool == false)
-        #expect((out["detail"] as? String)?.contains("land on the chord") == true, "\(out["detail"] ?? "")")
+        #expect((out["detail"] as? String)?.contains("by length, is on the chord under it: the longest note off it is") == true, "\(out["detail"] ?? "")")
     }
 
     @Test("a rewrite of a tune the song holds goes back the same way, and is kept as its next version")

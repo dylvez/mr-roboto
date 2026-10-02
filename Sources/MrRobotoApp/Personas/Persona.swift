@@ -188,6 +188,11 @@ public struct Feature: RawRepresentable, Hashable, Sendable, Codable, CustomStri
     public static let rootMotionFifths = Feature("harmony.root.motion.fifths")
     /// Chord changes where the bass line sounds a note of that chord, over changes, 0…1.
     public static let bassAgreement = Feature("harmony.bass.agreement")
+    /// How many things about the progression are not the default: a chord outside the key, a bass
+    /// that is not the root, chords of different lengths, not opening at home, more than four roots.
+    public static let harmonyDepartures = Feature("harmony.departures")
+    /// How many of the library's other recent songs go round the same loop.
+    public static let harmonyRepeats = Feature("harmony.library.repeats")
 
     // The Melodist's: the tune.
     /// Lowest note to highest, in semitones.
@@ -204,6 +209,11 @@ public struct Feature: RawRepresentable, Hashable, Sendable, Codable, CustomStri
     public static let restRatio = Feature("melody.rest.ratio")
     /// How many times the highest note is struck.
     public static let peakCount = Feature("melody.peak.count")
+    /// How many things about the tune are not the default: a note outside the key, a note off the
+    /// eighth or tied over a bar line, a leap of a fifth or more, a long note leaning on the chord.
+    public static let melodySurprises = Feature("melody.surprises")
+    /// How many of the library's other recent tunes come in on the same degree in the same place.
+    public static let melodyOpeningRepeats = Feature("melody.library.opening.repeats")
     /// The longest repeated interval figure, as a share of the tune's moves, 0…1.
     public static let motifRatio = Feature("melody.motif.ratio")
 
