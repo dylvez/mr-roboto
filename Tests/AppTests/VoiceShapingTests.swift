@@ -31,6 +31,21 @@ private enum VoiceFixture {
         return PartVersion(partID: PartID(), kind: .sound(state.sound), author: .user, operation: Operation.written)
     }
 
+    /// A voice kept with a chain on it, its knobs where the preset has them.
+    static func dusted(_ machine: String, _ voice: SynthVoiceKind, _ preset: DegradeSettings.Preset) -> PartVersion {
+        let state = SoundState(machine: machine, voice: voice, degrade: DegradeSettings(preset: preset), chainBase: preset)
+        return PartVersion(partID: PartID(), kind: .sound(state.sound), author: .user, operation: Operation.written)
+    }
+
+    /// The files a built kit plays a voice from, by name, with their bytes.
+    static func files(of kind: SynthVoiceKind, in kit: LoadedKit) throws -> [String: Data] {
+        var out: [String: Data] = [:]
+        for zone in kit.manifest.zones where zone.key.noteRange.contains(kind.generalMIDINote) {
+            out[(zone.sample as NSString).lastPathComponent] = try Data(contentsOf: kit.url(for: zone))
+        }
+        return out
+    }
+
     /// A burst of noise that dies away.
     static func hit(seed: UInt64, level: Float = 0.5) -> [Float] {
         var state = seed &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
@@ -232,5 +247,81 @@ struct VoiceShapingTests {
         }
         #expect(gain(presetKit, .snare) == gain(shapedKit, .snare))
         #expect(!snare.samples.isEmpty)
+    }
+
+    @Test("a chain kept on one voice is in the kit the song plays: that voice through it, every other as it was")
+    func chainOnAVoice() throws {
+        let directory = WiringFixture.temporaryDirectory("voice-chain")
+        defer { WiringFixture.remove(directory) }
+        var (song, _) = try VoiceFixture.song(on: "linn")
+        let preset = try #require(SynthMachine.preset(id: "linn"))
+        try song.append(VoiceFixture.dusted("linn", .kick, .sp1200))
+        let machine = SongPlayback.machine(in: song)
+        #expect(machine.spec(for: .kick)?.dust == DegradeSettings(preset: .sp1200))
+        #expect(machine.spec(for: .kick)?.controls == preset.spec(for: .kick)?.controls, "the knobs did not move")
+        #expect(machine.spec(for: .snare)?.dust == nil)
+        #expect(SynthesizedKit.folderName(for: machine) != SynthesizedKit.folderName(for: preset), "a kit of its own")
+
+        let dry = try SynthesizedKit.build(preset, in: directory.appendingPathComponent("dry"), recorded: nil)
+        let dusty = try SynthesizedKit.build(machine, in: directory.appendingPathComponent("dusty"), recorded: nil)
+        #expect(dusty.validate().isClean, "\(dusty.validate().findings.map(\.description))")
+        let kick = try VoiceFixture.files(of: .kick, in: dusty), was = try VoiceFixture.files(of: .kick, in: dry)
+        #expect(!kick.isEmpty && Set(kick.keys) == Set(was.keys))
+        for (name, data) in kick { #expect(data != was[name], "\(name) is the kick as it was") }
+        for kind in [SynthVoiceKind.snare, .closedHat, .clap] {
+            #expect(try VoiceFixture.files(of: kind, in: dusty) == VoiceFixture.files(of: kind, in: dry), "\(kind.rawValue) changed")
+        }
+        // The same chain kept again is the same kit; the chain taken off is the preset's.
+        try song.append(VoiceFixture.dusted("linn", .kick, .sp1200))
+        #expect(SynthesizedKit.folderName(for: SongPlayback.machine(in: song)) == SynthesizedKit.folderName(for: machine))
+        try song.append(VoiceFixture.dusted("linn", .kick, .clean))
+        #expect(SongPlayback.machine(in: song) == preset)
+
+        // A preset says nothing of a chain when it is written, so no kit built before has moved;
+        // and a spec with one reads back with it.
+        let encoder = JSONEncoder()
+        #expect(try !String(decoding: encoder.encode(preset), as: UTF8.self).contains("dust"))
+        #expect(try JSONDecoder().decode(SynthMachine.self, from: encoder.encode(machine)) == machine)
+    }
+
+    @Test("a chain on a recorded voice is rendered into the recording the kit plays, at the level it plays it")
+    func chainOnARecording() async throws {
+        let directory = WiringFixture.temporaryDirectory("recorded-chain")
+        defer { WiringFixture.remove(directory) }
+        let kit = try VoiceFixture.recordedKit(in: directory)
+        defer { RecordedKits.unregister(id: kit.id) }
+        let (song, _) = try VoiceFixture.song(on: kit.id)
+        let app = WiringFixture.app(in: directory.appendingPathComponent("Library"), song: song)
+        let service = AuditionService(engine: { throw NoAudioDevice() }, kitsDirectory: directory.appendingPathComponent("built"))
+        let adapter = SoundAdapter(app: app, service: service)
+        let machine = try #require(SynthMachine.preset(id: kit.id))
+        let before = try await adapter.kitHit(of: .kick, on: machine)
+
+        // Kept from the surface, as a knob let go keeps it.
+        let surface = SoundSurface(host: adapter)
+        surface.apply(.sp1200)
+        let kept = try #require(surface.lastKept)
+        #expect(SoundState(kept)?.degrade == DegradeSettings(preset: .sp1200))
+        let shaped = SongPlayback.machine(in: try #require(app.song))
+        #expect(shaped.spec(for: .kick)?.dust == DegradeSettings(preset: .sp1200))
+
+        let built = try SynthesizedKit.build(shaped, in: directory.appendingPathComponent("dusty"), recorded: nil)
+        let plain = try SynthesizedKit.build(machine, in: directory.appendingPathComponent("plain"), recorded: nil)
+        func zones(_ kit: LoadedKit, _ kind: SynthVoiceKind) -> [Zone] { kit.manifest.zones.filter { $0.key.noteRange.contains(kind.generalMIDINote) } }
+        let kick = try #require(zones(built, .kick).first), was = try #require(zones(plain, .kick).first)
+        #expect(kick.sample.hasSuffix(".dust.wav") && kick.gainDB == 0, "\(kick.sample), \(kick.gainDB) dB")
+        #expect(!was.sample.hasSuffix(".dust.wav") && was.gainDB != 0)
+        #expect(FileManager.default.fileExists(atPath: built.url(for: kick).path))
+        // The recording at the level the kit plays it, through the chain: as loud as it was, near enough.
+        let dusty = try #require(KitLevel.heard(built.url(for: kick))), dry = try #require(KitLevel.heard(plain.url(for: was)))
+        let played = SoundFixture.peak(dry.mono) * Float(pow(10, Double(was.gainDB) / 20))
+        #expect(SoundFixture.peak(dusty.mono) > played * 0.5 && SoundFixture.peak(dusty.mono) < played * 1.5,
+                "\(SoundFixture.peak(dusty.mono)) against \(played)")
+        #expect(zones(built, .snare).map(\.sample) == zones(plain, .snare).map(\.sample), "the snare is the snare")
+        #expect(zones(built, .snare).map(\.gainDB) == zones(plain, .snare).map(\.gainDB))
+
+        // What the surface is handed to put its chain on is still the recording with none.
+        let after = try await adapter.kitHit(of: .kick, on: machine)
+        #expect(after.samples == before.samples, "the hit came back through the chain it is about to be put through")
     }
 }

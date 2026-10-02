@@ -571,6 +571,10 @@ public struct SynthVoiceSpec: Codable, Sendable, Hashable, Identifiable {
     public var durationSeconds: Double
     /// Seed for every stochastic element. Part of the spec — that is the whole determinism story.
     public var seed: UInt64
+    /// A degradation chain of the voice's own — this kick through an SP-1200, and nothing else in
+    /// the kit — which a kit renders into the voice. No preset has one, and nil is omitted when a
+    /// spec is written, so every kit built before voices had chains has the fingerprint it had.
+    public var dust: DegradeSettings?
 
     public var id: SynthVoiceKind { kind }
 
@@ -581,7 +585,7 @@ public struct SynthVoiceSpec: Codable, Sendable, Hashable, Identifiable {
                 click: SynthClick = SynthClick(), burst: SynthBurst? = nil,
                 output: SynthOutput = SynthOutput(), velocity: SynthVelocity = SynthVelocity(),
                 sampled: SynthSampled? = nil,
-                durationSeconds: Double = 1.0, seed: UInt64 = 1) {
+                durationSeconds: Double = 1.0, seed: UInt64 = 1, dust: DegradeSettings? = nil) {
         self.kind = kind
         self.engine = engine
         self.machine = machine
@@ -596,11 +600,12 @@ public struct SynthVoiceSpec: Codable, Sendable, Hashable, Identifiable {
         self.sampled = sampled
         self.durationSeconds = durationSeconds
         self.seed = seed
+        self.dust = dust
     }
 
     private enum CodingKeys: String, CodingKey {
         case kind, engine, machine, controls, toneControl, tone, noise, click, burst, output, velocity
-        case sampled, durationSeconds, seed
+        case sampled, durationSeconds, seed, dust
     }
 
     public init(from decoder: Decoder) throws {
@@ -619,5 +624,6 @@ public struct SynthVoiceSpec: Codable, Sendable, Hashable, Identifiable {
         sampled = try c.decodeIfPresent(SynthSampled.self, forKey: .sampled)
         durationSeconds = c.value(.durationSeconds, 1.0)
         seed = c.value(.seed, UInt64(1))
+        dust = try c.decodeIfPresent(DegradeSettings.self, forKey: .dust)
     }
 }

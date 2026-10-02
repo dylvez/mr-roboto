@@ -941,8 +941,8 @@ public struct SongPlayback: Equatable, Sendable {
     }
 
     /// `machine` with the song's voice edits on it. The Sound surface keeps a voice as a `.sound`
-    /// called `"drum.<machine>.<voice>"` carrying its knob positions; the newest of each voice is
-    /// the one in effect, and one kept for another machine is that machine's. A kit is built from
+    /// called `"drum.<machine>.<voice>"` carrying its knob positions and its chain; the newest of
+    /// each voice is the one in effect, and one kept for another machine is that machine's. A kit is built from
     /// the machine's voices, so this is what makes a kept knob something the song plays — before
     /// it, a voice was kept in the ledger and heard nowhere but on the surface.
     static func shaped(_ machine: SynthMachine, in song: Song) -> SynthMachine {
@@ -953,6 +953,7 @@ public struct SongPlayback: Equatable, Sendable {
                   state.machine == machine.id, seen.insert(state.voice).inserted,
                   let index = shaped.voices.firstIndex(where: { $0.kind == state.voice }) else { continue }
             shaped.voices[index].controls = state.controls
+            shaped.voices[index].dust = state.degrade.isBypass ? nil : state.degrade
         }
         return shaped
     }

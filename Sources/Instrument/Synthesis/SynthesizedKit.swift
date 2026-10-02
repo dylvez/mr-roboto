@@ -109,8 +109,12 @@ public enum SynthesizedKit {
         // exactly what comes out.
         var rendered: [(spec: SynthVoiceSpec, layer: SynthVelocityLayer, samples: [Float])] = []
         var peak: Float = 0
-        func render(_ spec: SynthVoiceSpec, _ layer: SynthVelocityLayer) -> [Float] {
+        func render(_ spec: SynthVoiceSpec, _ layer: SynthVelocityLayer) throws -> [Float] {
             var samples = DrumSynthesizer.render(spec, velocity: layer.velocity, sampleRate: sampleRate)
+            // The voice's own chain, on the hit at the level it is played at, which is how the
+            // Sound surface plays it when the chain is chosen: a saturator and a twelve-bit
+            // converter do not sound the same on a hit that is 12 dB down.
+            if let dust = spec.dust { samples = try dusted([samples], through: dust, sampleRate: sampleRate)[0] }
             // Strip the level part of velocity: the kit's `velocityCurve` applies it once, on
             // playback. What is left in the layer is the *timbral* difference between a soft
             // and a hard hit, which is the reason to pre-render layers at all.
@@ -122,7 +126,7 @@ public enum SynthesizedKit {
         }
         for spec in machine.voices {
             for layer in layers {
-                let samples = render(spec, layer)
+                let samples = try render(spec, layer)
                 peak = Swift.max(peak, SynthMeasure.peak(samples))
                 rendered.append((spec, layer, samples))
             }
@@ -139,7 +143,7 @@ public enum SynthesizedKit {
                 if machine.voices.contains(spec) {
                     for entry in rendered where entry.spec == spec { reference = Swift.max(reference, SynthMeasure.peak(entry.samples)) }
                 } else {
-                    for layer in layers { reference = Swift.max(reference, SynthMeasure.peak(render(spec, layer))) }
+                    for layer in layers { reference = Swift.max(reference, SynthMeasure.peak(try render(spec, layer))) }
                 }
             }
         }
@@ -161,11 +165,11 @@ public enum SynthesizedKit {
             // level into a saturator, where half the knob is nothing like half as loud; so a voice
             // somebody turned is measured as the preset has it, and the turn is applied as gain.
             if let was = preset?.voices.first(where: { $0.kind == spec.kind }), was != spec, was.controls.level > 0 {
-                loudness = KitLevel.loudness(render(was, loudest.layer).map { $0 * scale }, sampleRate: sampleRate)
+                loudness = KitLevel.loudness(try render(was, loudest.layer).map { $0 * scale }, sampleRate: sampleRate)
                     * spec.controls.level / was.controls.level
             }
             guard let replacing = try RecordedPercussion.zones(for: spec.kind, from: recorded, note: spec.kind.generalMIDINote,
-                                                              loudness: loudness, in: folder) else { continue }
+                                                              loudness: loudness, dust: spec.dust, in: folder) else { continue }
             zones += replacing
             voiceNotes[spec.kind.drumVoice] = spec.kind.generalMIDINote
             fromRecordings.insert(spec.kind)
@@ -238,8 +242,27 @@ public enum SynthesizedKit {
     /// the bytes the synthesizer produced — no resampling, no quantisation, no drift between a
     /// render today and the same render tomorrow.
     static func writeWAV(_ samples: [Float], to url: URL, sampleRate: Double) throws {
+        try writeWAV(planar: [samples], to: url, sampleRate: sampleRate)
+    }
+
+    /// Audio through a voice's chain, and brought to nothing over its last few milliseconds: the
+    /// chain's hiss runs to the end of whatever it is given, and a hit that stops on hiss clicks.
+    static func dusted(_ planar: [[Float]], through dust: DegradeSettings, sampleRate: Double) throws -> [[Float]] {
+        guard !dust.isBypass else { return planar }
+        var out = try DegradeChain.rendered(planar: planar, sampleRate: sampleRate, settings: dust)
+        let fade = Swift.min(Int(0.005 * sampleRate), out.first?.count ?? 0)
+        for channel in out.indices {
+            let count = out[channel].count
+            for i in 0..<Swift.min(fade, count) { out[channel][count - 1 - i] *= Float(i) / Float(fade) }
+        }
+        return out
+    }
+
+    /// The same for any number of channels: a recording keeps the image it was recorded with.
+    static func writeWAV(planar: [[Float]], to url: URL, sampleRate: Double) throws {
+        let samples = planar.first ?? []
         guard let format = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: sampleRate,
-                                         channels: 1, interleaved: false) else {
+                                         channels: AVAudioChannelCount(Swift.max(1, planar.count)), interleaved: false) else {
             throw KitError.writeFailed(path: url.path, reason: "unsupported format at \(sampleRate) Hz")
         }
         do {
@@ -256,7 +279,9 @@ public enum SynthesizedKit {
             }
             buffer.frameLength = frames
             if let data = buffer.floatChannelData {
-                for i in 0..<Int(frames) { data[0][i] = i < samples.count ? samples[i] : 0 }
+                for (channel, samples) in planar.enumerated() {
+                    for i in 0..<Int(frames) { data[channel][i] = i < samples.count ? samples[i] : 0 }
+                }
             }
             try file.write(from: buffer)
             // Not optional: until the file is closed the header is not finalised, and a read that

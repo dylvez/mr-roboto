@@ -164,23 +164,17 @@ public struct RecordedPercussion: Codable, Hashable, Sendable {
     /// `kind`'s recorded zones for a kit being built in `folder`, each layer at `loudness` (the
     /// synthesized voice's, as the kit plays it) and on `note`. The samples are copied into the kit,
     /// so a kit never reaches outside its own folder. Nil when no recording plays `kind`.
+    ///
+    /// - Parameter dust: the voice's own chain, when it has one. The recording is put through it
+    ///   at the level the kit plays it and written into the kit as it comes out.
     static func zones(for kind: SynthVoiceKind, from resolved: Resolved, note: Int, loudness: Double,
-                      in folder: URL) throws -> [Zone]? {
+                      dust: DegradeSettings? = nil, in folder: URL) throws -> [Zone]? {
         guard let recording = recording(for: kind, in: resolved) else { return nil }
         let fm = FileManager.default
         var out: [Zone] = []
         for (index, zone) in recording.zones.enumerated() {
             let from = KitPath.resolve(zone.sample, in: recording.kit.folder)
-            let relative = "samples/recorded/\(recording.assignment.source)/\((from.path as NSString).lastPathComponent)"
-            let to = KitPath.resolve(relative, in: folder)
-            if !fm.fileExists(atPath: to.path) {
-                do {
-                    try fm.createDirectory(at: to.deletingLastPathComponent(), withIntermediateDirectories: true)
-                    try fm.copyItem(at: from, to: to)
-                } catch {
-                    throw KitError.writeFailed(path: relative, reason: "\(error)")
-                }
-            }
+            var relative = "samples/recorded/\(recording.assignment.source)/\((from.path as NSString).lastPathComponent)"
             // Every layer to the voice's loudness, as the synthesized layers are; never over the
             // kit's ceiling.
             var gain: Float = 1
@@ -189,6 +183,30 @@ public struct RecordedPercussion: Codable, Hashable, Sendable {
                 let peak = Double(file.peak)
                 if own > 1e-6, peak > 0 {
                     gain = Float(min(loudness / own, pow(10, KitLevel.ceilingDBFS / 20) / peak))
+                }
+            }
+            if let dust, !dust.isBypass {
+                // Through the chain at the level it is played at, and the level written into the
+                // file: a quiet recording crushed to twelve bits and raised afterwards is the
+                // converter's noise raised with it, which is not what the chain sounds like on a drum.
+                relative = "samples/recorded/\(recording.assignment.source)/\(from.deletingPathExtension().lastPathComponent).dust.wav"
+                let to = KitPath.resolve(relative, in: folder)
+                if !fm.fileExists(atPath: to.path) {
+                    let decoded = try SampleCache.decodeFile(from, ImportedInstruments.playingRate)
+                    let played = decoded.channels.map { channel in channel.map { $0 * gain } }
+                    try SynthesizedKit.writeWAV(planar: try SynthesizedKit.dusted(played, through: dust, sampleRate: decoded.sampleRate),
+                                                to: to, sampleRate: decoded.sampleRate)
+                }
+                gain = 1
+            } else {
+                let to = KitPath.resolve(relative, in: folder)
+                if !fm.fileExists(atPath: to.path) {
+                    do {
+                        try fm.createDirectory(at: to.deletingLastPathComponent(), withIntermediateDirectories: true)
+                        try fm.copyItem(at: from, to: to)
+                    } catch {
+                        throw KitError.writeFailed(path: relative, reason: "\(error)")
+                    }
                 }
             }
             var placed = zone

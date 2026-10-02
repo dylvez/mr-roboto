@@ -25,7 +25,6 @@ struct SoundSurfaceView: View {
                 if layout.showsVoiceReadout { VoiceReadout(surface: surface, layout: layout) }
                 if surface.subject.isPart { partStatus }
                 if surface.panel == .voice, let recording = surface.recordedAs { recordedNote(recording) }
-                if surface.panel == .chain, !surface.subject.isPart { voiceChainNote }
                 if surface.panel == .chain { chainPresets }
                 controls(layout)
                 if !surface.chainFindings.isEmpty { findings }
@@ -134,22 +133,12 @@ struct SoundSurfaceView: View {
             Text("A recording: \(recording)")
                 .font(Design.Typography.ui(12.5, weight: .medium))
                 .foregroundStyle(Design.Palette.ink)
-            Text("Tune, decay and tone are a synthesizer's knobs, and this is not one. Its level is here; dust goes on the groove that plays it.")
+            Text("Tune, decay and tone are a synthesizer's knobs, and this is not one. Its level is here, and Chain puts dust on it as on any voice.")
                 .font(Design.Typography.prose(12))
                 .foregroundStyle(Design.Palette.inkSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: SoundLayout.maximumControlWidth, alignment: .leading)
-    }
-
-    /// A single voice's chain is an audition: the song takes dust on a groove or a chop, where the
-    /// chain is applied to what is played. Said, so nobody keeps one expecting to hear it.
-    private var voiceChainNote: some View {
-        Text("A chain on one voice is heard here and not in the song. For dust the song plays, open Sound on the groove.")
-            .font(Design.Typography.prose(12))
-            .foregroundStyle(Design.Palette.inkSecondary)
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: SoundLayout.maximumControlWidth, alignment: .leading)
     }
 
     private var voicePicker: some View {

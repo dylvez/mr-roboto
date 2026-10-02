@@ -91,6 +91,30 @@ extension DegradeChain {
         return buffer
     }
 
+    /// One chain over planar floats at one rate: what a kit puts a drum voice through when the voice
+    /// has a chain of its own. Bypass returns the samples as they came.
+    public static func rendered(planar: [[Float]], sampleRate: Double, settings: DegradeSettings) throws -> [[Float]] {
+        guard !settings.isBypass else { return planar }
+        let channels = planar.count
+        let frames = planar.map(\.count).min() ?? 0
+        guard frames > 0 else { return planar }
+        guard channels > 0,
+              let format = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: sampleRate,
+                                         channels: AVAudioChannelCount(channels), interleaved: false),
+              let source = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(frames)),
+              let input = source.floatChannelData else {
+            throw Failure.couldNotCreate(sampleRate: sampleRate, channelCount: channels)
+        }
+        source.frameLength = AVAudioFrameCount(frames)
+        for channel in 0..<channels {
+            planar[channel].withUnsafeBufferPointer { input[channel].update(from: $0.baseAddress!, count: frames) }
+        }
+        let processed = try rendered(source, settings: settings)
+        guard let output = processed.floatChannelData else { return planar }
+        let count = Int(processed.frameLength)
+        return (0..<channels).map { Array(UnsafeBufferPointer(start: output[$0], count: count)) }
+    }
+
     /// The same over planar floats at one rate, for callers that hold samples rather than buffers.
     public static func rendered(planar: [[Float]], sampleRate: Double,
                                 passes: [Degradation]) throws -> [[Float]] {

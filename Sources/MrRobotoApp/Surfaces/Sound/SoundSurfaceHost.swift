@@ -71,7 +71,8 @@ public protocol SoundSurfaceHost: AnyObject {
     func recording(of voice: SynthVoiceKind, on machine: String) -> String?
 
     /// One hit of a voice as the song's kit plays it — `machine` shaped as the song has kept it —
-    /// which for a recorded voice is the recording at the level the kit brings it to.
+    /// which for a recorded voice is the recording at the level the kit brings it to. Dry: with
+    /// no chain of the voice's own on it, because the surface puts the draft's chain on.
     /// Asynchronous because it builds the kit when nobody has yet. A host with no kit throws.
     func kitHit(of voice: SynthVoiceKind, on machine: SynthMachine) async throws -> SoundAudition
 }

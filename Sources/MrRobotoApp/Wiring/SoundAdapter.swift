@@ -115,9 +115,11 @@ final class SoundAdapter: SoundSurfaceHost {
         SynthMachine.preset(id: machine).flatMap { RecordedKits.recordedVoices(of: $0)[voice] }
     }
 
-    /// One hit, bounced on the kit the song plays: the same folder the transport's sampler holds.
+    /// One hit, bounced on the kit the song plays with this voice's chain taken off: the chain is
+    /// the surface's to put on, and a hit that came with it would go through it twice.
     func kitHit(of voice: SynthVoiceKind, on machine: SynthMachine) async throws -> SoundAudition {
-        let shaped = app.song.map { SongPlayback.shaped(machine, in: $0) } ?? machine
+        var shaped = app.song.map { SongPlayback.shaped(machine, in: $0) } ?? machine
+        if let index = shaped.voices.firstIndex(where: { $0.kind == voice }) { shaped.voices[index].dust = nil }
         let hit = VoiceSampler.Hit(voice.drumVoice, velocity: 100, at: 0)
         let bounce = try await service.bounce([hit], machine: shaped, seconds: Self.longestHit)
         // To where it has died away: a kick is not four seconds of audition.

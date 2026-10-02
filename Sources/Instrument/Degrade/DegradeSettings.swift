@@ -12,7 +12,7 @@ import Foundation
 ///
 /// Decoding is tolerant: every field falls back to its clean-preset value when absent, so a stored
 /// settings blob written before a field existed still loads. Encoding always writes every field.
-public struct DegradeSettings: Codable, Sendable, Equatable {
+public struct DegradeSettings: Codable, Sendable, Hashable {
 
     /// The saturation curve. See `dg_sat` for the shapes; all of them are monotonic and finite at
     /// any drive.
