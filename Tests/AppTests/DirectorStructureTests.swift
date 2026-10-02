@@ -141,6 +141,50 @@ struct DirectorFormToolTests {
         #expect(rig.app.playback.mix?.gainDB(for: rig.bassPart, in: now[1].id) == -5, "the bass is still down in the hook")
     }
 
+    @Test("a standing section restitched is the same section: its place, its bars, its level in the mix and its intensity")
+    func restitched() async throws {
+        let rig = try FormToolFixture.rig()
+        defer { rig.clean() }
+        _ = await rig.toolbox.run(ClaudeToolUse(id: "a", name: "arrange", input: .object([
+            .init("form", .string("verse 16 | bridge 8 | outro 4")),
+        ])))
+        var sections = try #require(rig.app.song?.sections)
+        sections[1].intensity = 0.5
+        #expect(rig.app.arrange(sections))
+        let bridge = sections[1].id
+        var mix = Mix.unity
+        mix.strips = [Strip(part: rig.groovePart, label: "Drums", gainDB: 0)]
+        mix.sectionGains = [SectionGain(section: bridge, part: rig.groovePart, gainDB: -1)]
+        #expect(rig.app.record(PartVersion(partID: PartID(), kind: .mix(mix), author: .user, operation: Operation.mix)))
+
+        // The bridge with no bass, by its id.
+        let result = await rig.toolbox.run(ClaudeToolUse(id: "r", name: "stitch_section", input: .object([
+            .init("name", .string("")), .init("bars", .int(0)),
+            .init("versions", .array([.string(rig.groove.description)])), .init("position", .int(0)),
+            .init("section", .string(bridge.description)),
+        ])))
+        #expect(!result.isError, "\(result.content)")
+        let now = try #require(rig.app.song?.sections)
+        #expect(now.map(\.id) == sections.map(\.id) && now.map(\.name) == ["Verse", "Bridge", "Outro"])
+        #expect(now[1].lengthInBars == 8 && now[1].intensity == 0.5)
+        #expect(now[1].stitch == [rig.groovePart].lanes)
+        #expect(now[0].stitch == sections[0].stitch, "the verse was not touched")
+        #expect(rig.app.playback.mix?.gainDB(for: rig.groovePart, in: bridge) == -1, "the drums are still down in the bridge")
+
+        // A name and a length given are taken; a section the song does not have is refused.
+        _ = await rig.toolbox.run(ClaudeToolUse(id: "n", name: "stitch_section", input: .object([
+            .init("name", .string("Middle eight")), .init("bars", .int(6)),
+            .init("versions", .array([])), .init("position", .int(9)), .init("section", .string(bridge.description)),
+        ])))
+        #expect(rig.app.song?.sections[1].name == "Middle eight" && rig.app.song?.sections[1].lengthInBars == 6)
+        #expect(rig.app.song?.sections[1].id == bridge && rig.app.song?.sections.count == 3)
+        let nobody = await rig.toolbox.run(ClaudeToolUse(id: "x", name: "stitch_section", input: .object([
+            .init("name", .string("")), .init("bars", .int(0)), .init("versions", .array([])), .init("position", .int(0)),
+            .init("section", .string(UUID().uuidString)),
+        ])))
+        #expect(nobody.isError && nobody.content.contains("no section"))
+    }
+
     @Test("the Director stitches the chords too: a form it writes has harmony in it")
     func arrangesWithChords() async throws {
         let rig = try FormToolFixture.rig()

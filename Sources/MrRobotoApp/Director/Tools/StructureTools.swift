@@ -4,7 +4,8 @@ import SongGraph
 
 // The form. Two tools, appended after `write_bassline` so every schema before them keeps its
 // bytes: `arrange` states the whole form the way a lead sheet states chords — a line of sections
-// with their bars — and `stitch_section` adds one section with what it names.
+// with their bars — and `stitch_section` adds one section with what it names, or changes what a
+// section the song already has is stitched from.
 //
 // Sections are the one thing in a song that is edited in place: a form is an ordering of *parts*,
 // not a version, and the parts it names are never touched. A section plays each part's newest
@@ -229,7 +230,8 @@ public struct ArrangeTool: DirectorTool {
 
 // MARK: - stitch_section
 
-/// Adds one section with the versions it names, at a position in the form.
+/// Adds one section with the versions it names, at a position in the form — or, given a section
+/// the song already has, changes what that section plays and leaves it the section it was.
 public struct StitchSectionTool: DirectorTool {
 
     public struct Input: Decodable, Sendable {
@@ -237,6 +239,28 @@ public struct StitchSectionTool: DirectorTool {
         public var bars: Int
         public var versions: [String]
         public var position: Int
+        /// The id of a section the song already has, to restitch it in place; empty adds one.
+        public var section: String
+
+        enum CodingKeys: String, CodingKey { case name, bars, versions, position, section }
+
+        public init(name: String, bars: Int, versions: [String], position: Int, section: String = "") {
+            self.name = name
+            self.bars = bars
+            self.versions = versions
+            self.position = position
+            self.section = section
+        }
+
+        public init(from decoder: any Decoder) throws {
+            let values = try decoder.container(keyedBy: CodingKeys.self)
+            name = try values.decode(String.self, forKey: .name)
+            bars = try values.decode(Int.self, forKey: .bars)
+            versions = try values.decode([String].self, forKey: .versions)
+            position = try values.decode(Int.self, forKey: .position)
+            // Absent in every call written before a standing section could be restitched.
+            section = try values.decodeIfPresent(String.self, forKey: .section) ?? ""
+        }
     }
 
     public typealias Output = FormReport
@@ -252,21 +276,27 @@ public struct StitchSectionTool: DirectorTool {
         + "it as the part is worked on — naming a version id here names its part. Use it when a section "
         + "plays something other than the newest of everything: a verse with no bass, a hook with a "
         + "second groove over the first. With versions empty it plays the newest groove, bass line, "
-        + "progression, melody and chop. To state the whole form at once, arrange."
+        + "progression, melody and chop. To change what a section the song already has plays — the "
+        + "bridge with the original bass line instead of the one written for it — name that section's id: "
+        + "it stays the same section, in its place, with its levels in the mix, its intensity and its way "
+        + "in. Adding a new one and arranging the old one away loses all of those. To state the whole form "
+        + "at once, arrange."
     }
     public var schema: DirectorJSON {
         Schema.object([
-            ("name", Schema.string("The section's name: Intro, Verse, Hook, Bridge, Outro, or your own.")),
-            ("bars", Schema.integer("Its length in bars.", minimum: 1, maximum: 128)),
+            ("name", Schema.string("The section's name: Intro, Verse, Hook, Bridge, Outro, or your own. Empty keeps the name of a section being restitched.")),
+            ("bars", Schema.integer("Its length in bars, 1 to 128. 0 keeps the length of a section being restitched.", minimum: 0, maximum: 128)),
             ("versions", Schema.array(
                 "Ids of what plays in it, from read_song: grooves, bass lines, progressions, melodies "
                 + "and chops, dry or dusty. A section follows the part an id belongs to, so it keeps playing that "
                 + "part as newer versions of it are made. Empty for the newest of each kind.",
                 of: Schema.string("A version id, or the id of the part it belongs to."))),
             ("position", Schema.integer(
-                "Where it goes: 0 is first, 1 after the first section, and any number past the end appends.",
+                "Where it goes: 0 is first, 1 after the first section, and any number past the end appends. "
+                + "A section being restitched stays where it is.",
                 minimum: 0)),
-        ], required: ["name", "bars", "versions", "position"])
+            ("section", Schema.string("The id of a section the song already has, from read_song, to change what it plays; empty to add a new section.")),
+        ], required: ["name", "bars", "versions", "position", "section"])
     }
 
     public func run(_ input: Input) async throws -> Output {
@@ -274,6 +304,8 @@ public struct StitchSectionTool: DirectorTool {
             throw DirectorToolFailure(tool: name, reason: "No song is open to add a section to.")
         }
         let trimmed = input.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let standing = input.section.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !standing.isEmpty { return try await restitch(standing, named: trimmed, input: input, in: song) }
         guard !trimmed.isEmpty else {
             throw DirectorToolFailure(tool: name, reason: "A section with no name is a block nobody can point at.")
         }
@@ -294,5 +326,32 @@ public struct StitchSectionTool: DirectorTool {
         let after = await workspace.song ?? song
         return FormReport(song: after, recorded: recorded,
                           detail: recorded ? FormTools.where_ : "No song is open, so nothing was arranged.")
+    }
+
+    /// A section the song has, playing what is named now. Its id is its own, so everything that
+    /// names it still does: the mix's levels for it, its intensity, its transitions, its place.
+    private func restitch(_ id: String, named: String, input: Input, in song: Song) async throws -> Output {
+        guard let uuid = UUID(uuidString: id), let index = song.sections.firstIndex(where: { $0.id.rawValue == uuid }) else {
+            throw DirectorToolFailure(tool: name, reason: "This song has no section \(id).",
+                                      suggestion: "Take a section's id from read_song; leave it empty to add a new section.")
+        }
+        guard input.bars == 0 || (1...128).contains(input.bars) else {
+            throw DirectorToolFailure(tool: name, reason: "\(input.bars) bars is not a section's length; 1 to 128 is, and 0 keeps the length it has.")
+        }
+        let stitch = input.versions.isEmpty ? FormTools.defaultStitch(in: song)
+                                            : try FormTools.stitch(input.versions, in: song, tool: name)
+        guard !stitch.isEmpty else {
+            throw DirectorToolFailure(tool: name, reason: "Nothing was named for \(song.sections[index].name) to play.",
+                                      suggestion: "Name the versions it plays; a section with nothing in it is silent.")
+        }
+        var sections = song.sections
+        sections[index].stitch = stitch
+        if !named.isEmpty { sections[index].name = named }
+        if input.bars > 0 { sections[index].lengthInBars = input.bars }
+        let recorded = await workspace.arrange(sections)
+        let after = await workspace.song ?? song
+        return FormReport(song: after, recorded: recorded,
+                          detail: recorded ? "\(sections[index].name) is the same section, playing what was named. " + FormTools.where_
+                                           : "No song is open, so nothing was arranged.")
     }
 }

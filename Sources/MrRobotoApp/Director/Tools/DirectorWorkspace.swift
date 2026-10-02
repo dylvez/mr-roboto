@@ -147,6 +147,16 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     func develop(form: [(name: String, bars: Int)]?) async -> DevelopmentResult?
     /// The song as it was before it was last developed. False when there is nothing to put back.
     @discardableResult func putBackDevelopment() -> Bool
+
+    // One section at a time.
+
+    /// A section taken to another intensity, kept. Nil when the song has no such section.
+    func shade(section: SectionID, to intensity: Double) -> Shading?
+    /// A section bounced through the mix and read, LUFS. Nil when this workspace cannot render.
+    func loudness(section: SectionID) async -> Double?
+    /// A Compare opened on a section as it is and as it stood before. Nil when it has not changed
+    /// since the song was opened, or this workspace has no frame to open one in.
+    func compareSection(_ section: SectionID) async -> AppState.SectionComparison?
 }
 
 extension DirectorWorkspace {
@@ -188,6 +198,23 @@ public final class AppStateWorkspace: DirectorWorkspace {
 
     @discardableResult
     public func putBackDevelopment() -> Bool { app.putBackDevelopment(by: .director) }
+
+    public func shade(section: SectionID, to intensity: Double) -> Shading? {
+        app.shade(section, to: intensity, by: .director)
+    }
+
+    public func loudness(section: SectionID) async -> Double? {
+        let plan = app.playback
+        guard plan.isPlayable,
+              let stems = try? await SectionBounce.render(plan, section: section, kitsDirectory: AuditionService.defaultKitsDirectory,
+                                                          onlyTheMix: true) else { return nil }
+        let lufs = MixMeter.integratedLoudness(stems.mix, sampleRate: stems.sampleRate)
+        return lufs.isFinite ? lufs : nil
+    }
+
+    public func compareSection(_ section: SectionID) async -> AppState.SectionComparison? {
+        await app.compareSection(section)
+    }
 
     public func version(_ id: VersionID) -> PartVersion? { app.version(id) }
 
@@ -420,6 +447,21 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
         beforeDevelopment = before
         return DevelopmentResult(development: development, loudness: nil)
     }
+
+    /// Kept, with nothing to render through: the lanes, the intensity and the levels.
+    public func shade(section: SectionID, to intensity: Double) -> Shading? {
+        guard var current = song, let index = current.sections.firstIndex(where: { $0.id == section }),
+              let shading = Develop.shade(section, to: intensity, in: current) else { return nil }
+        guard (try? current.append(contentsOf: shading.versions)) != nil else { return nil }
+        current.sections[index] = shading.section
+        song = current
+        if let mix = shading.mix { _ = recordMix(mix, note: "\(shading.section.name)'s levels") }
+        return shading
+    }
+
+    public func loudness(section: SectionID) async -> Double? { nil }
+
+    public func compareSection(_ section: SectionID) async -> AppState.SectionComparison? { nil }
 
     @discardableResult
     public func putBackDevelopment() -> Bool {

@@ -77,14 +77,17 @@ public struct CompareReference: Identifiable, Sendable {
     public var readings: [Feature: CompareReading]
     /// The version this is, when it is one.
     public var version: VersionID?
+    /// A whole section as it stands, when that is what the candidates are judged against.
+    public var state: SectionState?
 
     public init(id: String = "reference", title: String, kind: String,
-                readings: [CompareReading] = [], version: VersionID? = nil) {
+                readings: [CompareReading] = [], version: VersionID? = nil, state: SectionState? = nil) {
         self.id = id
         self.title = title
         self.kind = kind
         self.readings = Dictionary(readings.map { ($0.feature, $0) }, uniquingKeysWith: { _, b in b })
         self.version = version
+        self.state = state
     }
 
     public func reading(_ feature: Feature) -> CompareReading? { readings[feature] }
@@ -105,10 +108,13 @@ public struct CompareCandidate: Identifiable, Sendable {
     /// What the critics said about *this* candidate. Surfaced on the row as a count; the finding
     /// itself opens in a Check.
     public var findings: [Finding]
+    /// A whole section as it stood, when the row is one: every lane at the version it played and
+    /// every strip at its level. Played through the mix, and taking it puts the section back.
+    public var state: SectionState?
 
     public init(id: String, title: String, proposedBy: PersonaID? = nil, rationale: String = "",
                 readings: [CompareReading] = [], version: PartVersion? = nil,
-                findings: [Finding] = []) {
+                findings: [Finding] = [], state: SectionState? = nil) {
         self.id = id
         self.title = title
         self.proposedBy = proposedBy
@@ -116,6 +122,7 @@ public struct CompareCandidate: Identifiable, Sendable {
         self.readings = Dictionary(readings.map { ($0.feature, $0) }, uniquingKeysWith: { _, b in b })
         self.version = version
         self.findings = findings
+        self.state = state
     }
 
     public func reading(_ feature: Feature) -> CompareReading? { readings[feature] }

@@ -480,6 +480,7 @@ final class SurfaceWiring {
         takeSheets[id] = nil
         mixers[id] = nil
         masters[id] = nil
+        compares[id] = nil; compareAdapters[id] = nil
     }
 
     func prune(_ app: AppState) {

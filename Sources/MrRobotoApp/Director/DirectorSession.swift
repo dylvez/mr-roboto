@@ -389,6 +389,8 @@ public final class DirectorSession {
         case "set_genre": return "Placing the song in its genre…"
         case "develop": return "Arranging the loop into a song…"
         case "play_chords": return "Playing the chords…"
+        case "set_intensity": return "Bringing the section up or down…"
+        case "compare_section": return "Setting the section beside how it stood…"
         case "open_surface": return "Opening a surface…"
         case "propose": return "Writing a suggestion…"
         default: return "\(tool)…"

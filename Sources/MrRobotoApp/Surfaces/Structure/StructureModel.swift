@@ -43,6 +43,12 @@ public protocol StructureHosting: AnyObject {
     /// Whether the song's last development can be put back.
     var canPutBackDevelopment: Bool { get }
     func putBackDevelopment()
+    /// One section taken to another intensity: what it plays and its levels, moved together.
+    func shade(_ section: SectionID, to intensity: Double)
+    /// Whether a section has stood another way since the song was opened.
+    func hasEarlier(_ section: SectionID) -> Bool
+    /// Opens a Compare on a section as it is and as it stood before.
+    func compare(_ section: SectionID)
 }
 
 public extension StructureHosting {
@@ -53,6 +59,9 @@ public extension StructureHosting {
     var isMastering: Bool { false }
     var canPutBackDevelopment: Bool { false }
     func putBackDevelopment() {}
+    func shade(_ section: SectionID, to intensity: Double) {}
+    func hasEarlier(_ section: SectionID) -> Bool { false }
+    func compare(_ section: SectionID) {}
 }
 
 /// The Structure surface's model: the sections as a working copy, edited in place and kept as
@@ -370,6 +379,28 @@ public final class StructureModel {
         autoKeep.cancel()
         revert()
         host.putBackDevelopment()
+    }
+
+    // MARK: One section, more or less
+
+    /// How far one press of Less or More takes a section: a step a listener hears.
+    public static let intensityStep = 0.2
+
+    /// A section's intensity, as developing would have it when nobody has said.
+    public func intensity(of section: Section) -> Double { Develop.intensity(of: section) }
+
+    /// Keeps the form as it stands, then takes one section a step up or down: what it plays and
+    /// its levels together, the rest of the song as it was.
+    public func shade(_ id: SectionID, by step: Double) {
+        guard keep(), let section = sections.first(where: { $0.id == id }) else { return }
+        host.shade(id, to: min(1, max(0, intensity(of: section) + step)))
+    }
+
+    public func hasEarlier(_ id: SectionID) -> Bool { host.hasEarlier(id) }
+
+    public func compare(_ id: SectionID) {
+        guard keep() else { return }
+        host.compare(id)
     }
 
     /// The song's genre, asked when the form is offered: its typical arrangement is one press away.

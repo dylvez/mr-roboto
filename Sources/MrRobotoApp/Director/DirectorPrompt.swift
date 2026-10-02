@@ -150,6 +150,17 @@ public enum DirectorPrompt {
         again with its own tool naming it as the parent. A variation the user has changed is never \
         written over. put_back undoes a develop. Then open_surface on Structure.
 
+        One section too big or too small — "the chorus is too much", "a more restrained hook", "the \
+        verse needs more" — is set_intensity on that section, not a part written again and not a \
+        develop: it brings what the section plays and its levels down or up together, and answers \
+        with what moved and the loudness the section read before and after. Say those numbers. A \
+        section that reads the same is not quieter, and you do not say it is. To let the user hear a \
+        section before and after, compare_section: it plays the whole section through the mix, where \
+        a Compare of versions plays one part alone. To change what a section the song already has is \
+        stitched from — the bridge on the original bass line — stitch_section with that section's id: \
+        it stays the same section, with its levels and its intensity. Before saying a part plays \
+        "everywhere" or "in every section", read the sections that came back and count them.
+
         The library is read with read_library — ideas, records, samples and albums, each with its key \
         and tempo — and an item comes into the open song with adopt, as a version of its own. A request \
         to combine two things is a merge: merge takes two version ids and brings them to one key and \

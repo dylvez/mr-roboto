@@ -94,6 +94,9 @@ public enum DirectorTools {
             DevelopTool(workspace: workspace).erased(),
             // The keys player, appended after the forty-six: how the chords are played.
             PlayChordsTool(workspace: workspace).erased(),
+            // One section at a time, appended after the forty-seven: its intensity, and it against how it stood.
+            SetIntensityTool(workspace: workspace).erased(),
+            CompareSectionTool(workspace: workspace).erased(),
         ]
         if let stage {
             let pad = pad ?? DirectorStagePad()
@@ -167,6 +170,9 @@ public enum DirectorTools {
         "develop",
         // The keys player, appended: the rhythm the chords are struck in, and how they are voiced.
         "play_chords",
+        // One section at a time, appended: made more or less intense, and heard against how it stood.
+        "set_intensity",
+        "compare_section",
     ]
 
     /// The two the frame adds. Appended after `names`, never among them: a session with no frame

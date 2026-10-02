@@ -35,4 +35,16 @@ final class StructureAdapter: StructureHosting {
     var canPutBackDevelopment: Bool { app.canPutBackDevelopment }
 
     func putBackDevelopment() { app.putBackDevelopment() }
+
+    func shade(_ section: SectionID, to intensity: Double) { app.shade(section, to: intensity) }
+
+    func hasEarlier(_ section: SectionID) -> Bool { !app.earlierStates(of: section).isEmpty }
+
+    func compare(_ section: SectionID) {
+        Task { [app] in
+            if await app.compareSection(section) == nil {
+                app.note(.session, "Nothing to compare it with yet", detail: "The section has not changed since the song was opened.")
+            }
+        }
+    }
 }

@@ -232,7 +232,19 @@ public final class AppState {
     // MARK: Song
 
     /// The song in the frame. Nil before one is opened; the header, ledger and transport all read it.
-    public private(set) var song: Song?
+    public private(set) var song: Song? {
+        didSet { rememberSections(after: oldValue) }
+    }
+
+    /// How each section stood before it last changed, the newest last (`SectionState`). In memory
+    /// only: it is what "the chorus before" means while the song is open.
+    public internal(set) var sectionHistory: [SectionID: [SectionState]] = [:]
+    /// How each section stands now, and since when.
+    @ObservationIgnored var sectionStanding: [SectionID: SectionState] = [:]
+    /// How long a section has to stand a way for that way to be remembered, seconds.
+    @ObservationIgnored public var sectionSettle: TimeInterval = 1
+    /// Section states already bounced, for a Compare to play at once.
+    @ObservationIgnored var sectionBounces: [UUID: Bounce] = [:]
 
     /// The accented row in the parts ledger, and what most surfaces open against.
     public private(set) var selectedVersion: VersionID?

@@ -282,6 +282,21 @@ private struct SectionDetail: View {
                     }
                 }
             }
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                FormLabel("Intensity")
+                FormChip("Less", isOn: false) { disarm(); model.shade(section.id, by: -StructureModel.intensityStep) }
+                    .help("\(section.name) brought down a step: the drums a rung, then the bass and the tune, and its levels with them. The rest of the song is not touched.")
+                Text("\(Int((model.intensity(of: section) * 100).rounded()))%")
+                    .font(Design.Typography.numeric(12))
+                    .foregroundStyle(Design.Palette.inkSecondary)
+                    .frame(minWidth: 36)
+                FormChip("More", isOn: false) { disarm(); model.shade(section.id, by: StructureModel.intensityStep) }
+                    .help("\(section.name) brought up a step: what it plays and its levels together.")
+                if model.hasEarlier(section.id) {
+                    FormChip("Compare with before", isOn: false) { disarm(); model.compare(section.id) }
+                        .help("Hear \(section.name) as it is against how it stood before it last changed, each through the mix. Taking the earlier one puts it back.")
+                }
+            }
             VStack(alignment: .leading, spacing: 8) {
                 FormLabel("Plays")
                 if model.layers.isEmpty {

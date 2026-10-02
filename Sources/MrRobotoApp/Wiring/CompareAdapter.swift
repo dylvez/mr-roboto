@@ -54,6 +54,10 @@ final class CompareAdapter: CompareHosting {
     // MARK: Playing
 
     func audition(_ candidate: CompareCandidate, levers: [CompareLever: Double]) async {
+        if let state = candidate.state {
+            await playSection(state, named: candidate.title)
+            return
+        }
         guard let version = candidate.version else {
             app.note(.session, "\(candidate.title) has no version behind it, so there is nothing to play",
                      detail: "A candidate that is only a label is a row you cannot judge.")
@@ -63,6 +67,10 @@ final class CompareAdapter: CompareHosting {
     }
 
     func auditionReference(_ reference: CompareReference, levers: [CompareLever: Double]) async {
+        if let state = reference.state {
+            await playSection(state, named: reference.title)
+            return
+        }
         guard let id = reference.version, let version = app.version(id) else {
             app.note(.session, "There is nothing behind \(reference.title) to play",
                      detail: "The reference is what the song already has; this one is not in the graph.")
@@ -75,8 +83,29 @@ final class CompareAdapter: CompareHosting {
         Task { [service] in await service.stop() }
     }
 
+    /// A whole section as it stood, through the mix: bounced the first time and kept.
+    private func playSection(_ state: SectionState, named name: String) async {
+        guard let bounce = await app.audio(of: state) else {
+            app.note(.session, "\(name) could not be played", detail: "Nothing in it sounds, or the section is no longer in the song.")
+            return
+        }
+        let frames = min(bounce.planar.first?.count ?? 0, Int(CompareAdapter.maximumSectionSeconds * bounce.sampleRate))
+        await service.play(planar: bounce.planar.map { Array($0.prefix(frames)) }, sampleRate: bounce.sampleRate)
+    }
+
+    /// The longest a section plays: long enough for eight bars at a slow tempo.
+    static let maximumSectionSeconds: Double = 32
+
     @discardableResult
     func choose(_ candidate: CompareCandidate) async -> Bool {
+        if let state = candidate.state {
+            // The row that is the section as it is: taking it is leaving it.
+            if app.standing(state.section)?.sounds(like: state) == true {
+                app.note(.you, "\(state.name) stays as it is")
+                return true
+            }
+            return app.restore(state)
+        }
         guard let version = candidate.version else { return false }
         if chosen == version.id { return true }
         // The candidate is already a version in the song — the Director made it with
