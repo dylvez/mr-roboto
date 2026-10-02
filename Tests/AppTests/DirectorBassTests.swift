@@ -174,6 +174,40 @@ struct DirectorBassToolTests {
         #expect(BassToolFixture.json(sub)["sound"] as? String == "sub")
     }
 
+    @Test("a line is put on the bass that is named, a recording among them; one nobody has is refused")
+    func sound() async throws {
+        let rig = BassToolFixture.rig()
+        defer { rig.clean() }
+        let spec = InstrumentVoiceSpec(id: "sfz-test-jazz-bass-\(UUID().uuidString.prefix(6).lowercased())", name: "Jazz Bass",
+                                       family: "bass", engine: .sampled, summary: "Sampled, from Jazz Bass.sfz.", sampledKit: "/nonexistent")
+        ImportedInstruments.register(spec)
+        defer { ImportedInstruments.unregister(id: spec.id) }
+        func write(_ sound: String) async -> ClaudeToolResult {
+            await rig.toolbox.run(ClaudeToolUse(id: "s", name: "write_bassline", input: .object([
+                .init("groove", .string(rig.groove.description)), .init("hands", .string("palladino")),
+                .init("lag_ms", .double(40)), .init("density", .double(0.5)), .init("seed", .int(7)),
+                .init("sound", .string(sound)),
+            ])))
+        }
+        let own = await write("")
+        #expect(BassToolFixture.json(own)["sound"] as? String == "finger", "empty is the player's own: \(own.content)")
+        let upright = await write("upright")
+        #expect(BassToolFixture.json(upright)["sound"] as? String == "upright")
+        let recorded = await write(spec.id)
+        #expect(!recorded.isError, "\(recorded.content)")
+        #expect(BassToolFixture.json(recorded)["sound"] as? String == spec.id)
+        #expect((BassToolFixture.json(recorded)["note"] as? String)?.contains("Jazz Bass") == true, "said by its name")
+        let line = rig.app.song?.versions.last { $0.type == .bassline }
+        guard case .bassline(let written)? = line?.kind else {
+            Issue.record("no bass line was recorded")
+            return
+        }
+        #expect(written.sound == spec.id)
+        let nobody = await write("sfz-nobody")
+        #expect(nobody.isError)
+        #expect(nobody.content.contains("no bass called") && nobody.content.contains("upright"))
+    }
+
     @Test("bad arguments are refused with a way forward")
     func badArguments() async {
         let rig = BassToolFixture.rig()

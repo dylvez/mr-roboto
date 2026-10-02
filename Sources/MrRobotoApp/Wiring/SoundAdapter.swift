@@ -83,7 +83,7 @@ final class SoundAdapter: SoundSurfaceHost {
             }
             return SoundAudition(planar: span.planar, sampleRate: span.sampleRate, label: label, isDry: true)
         case .groove(let groove):
-            let machine = SynthMachine.preset(id: app.playback.machine) ?? .tr808
+            let machine = app.song.map { SongPlayback.machine(for: version.partID, in: $0) } ?? .tr808
             let tempo = app.song?.tempo ?? 90
             let meter = app.song?.timeSignature ?? .fourFour
             let hits = Dust.hits(for: groove, tempo: tempo, timeSignature: meter)
@@ -101,8 +101,43 @@ final class SoundAdapter: SoundSurfaceHost {
         app.song?.versions.last { $0.partID == part }
     }
 
+    // MARK: A drum voice, as the song has it
+
+    var songMachine: String? {
+        app.song.map { SongPlayback.machineID(in: $0) }
+    }
+
+    func keptVoice(_ voice: SynthVoiceKind, on machine: String) -> PartVersion? {
+        app.song.flatMap { SongPlayback.voiceEdit(of: voice, on: machine, in: $0) }
+    }
+
+    func recording(of voice: SynthVoiceKind, on machine: String) -> String? {
+        SynthMachine.preset(id: machine).flatMap { RecordedKits.recordedVoices(of: $0)[voice] }
+    }
+
+    /// One hit, bounced on the kit the song plays: the same folder the transport's sampler holds.
+    func kitHit(of voice: SynthVoiceKind, on machine: SynthMachine) async throws -> SoundAudition {
+        let shaped = app.song.map { SongPlayback.shaped(machine, in: $0) } ?? machine
+        let hit = VoiceSampler.Hit(voice.drumVoice, velocity: 100, at: 0)
+        let bounce = try await service.bounce([hit], machine: shaped, seconds: Self.longestHit)
+        // To where it has died away: a kick is not four seconds of audition.
+        let floor: Float = 1e-4
+        let end = bounce.planar.map { channel in (channel.lastIndex { abs($0) > floor } ?? 0) + 1 }.max() ?? 0
+        guard end > 1 else {
+            throw SoundSurfaceUnavailable(what: "\(shaped.name) played nothing for its \(voice.rawValue)")
+        }
+        return SoundAudition(planar: bounce.planar.map { Array($0.prefix(end)) }, sampleRate: bounce.sampleRate,
+                             label: "\(shaped.name) \(voice.rawValue)", isDry: true)
+    }
+
+    /// As long as a recorded crash is given to ring.
+    static let longestHit: Double = 6
+
     func record(_ version: PartVersion) -> Bool {
         guard app.record(version) else { return false }
+        // A drum voice kept is a different kit: the samplers holding the old one load the new on
+        // their next use, and the transport plays the voice as it was kept.
+        if SoundState(version) != nil { Task { [service] in await service.drumKitsChanged() } }
         for finding in Dust.findings(for: version) {
             let persona = Cast.standard.persona(finding.persona)?.bible.name ?? finding.persona.rawValue.capitalized
             app.note(.persona(persona), finding.headline, detail: "\(finding.why) \(finding.measurement.description)")

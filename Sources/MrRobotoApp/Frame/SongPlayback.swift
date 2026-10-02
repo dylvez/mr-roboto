@@ -170,12 +170,15 @@ public struct SongPlayback: Equatable, Sendable {
         /// The chop a groove plays on instead of a machine: its steps land on the chop's own
         /// slices, the way the Chop lane re-grooved them. `sound` is then `ChopSound.id` of it.
         public var kit: ChopTrack?
+        /// A groove's machine as the song has shaped it (`SongPlayback.shaped`): `sound`'s preset
+        /// with the voice edits the song has kept. Nil plays the preset.
+        public var machine: SynthMachine?
 
         public var id: VersionID { version }
 
         public init(play: Play, version: VersionID = VersionID(), part: PartID? = nil,
                     name: String = "", sound: String = "", chain: [Degradation] = [],
-                    kit: ChopTrack? = nil) {
+                    kit: ChopTrack? = nil, machine: SynthMachine? = nil) {
             self.play = play
             self.version = version
             self.part = part
@@ -183,7 +186,11 @@ public struct SongPlayback: Equatable, Sendable {
             self.sound = sound
             self.chain = chain
             self.kit = kit
+            self.machine = machine
         }
+
+        /// The machine a groove plays on: the shaped one the plan resolved, or `sound`'s preset.
+        public var drumMachine: SynthMachine { machine ?? SynthMachine.preset(id: sound) ?? .tr808 }
 
         /// Whether this is played as audio on a player node rather than live on a sampler: a chop,
         /// a groove through dust — the chain is applied to audio — and a groove on a chop, whose
@@ -207,10 +214,10 @@ public struct SongPlayback: Equatable, Sendable {
 
         public static func groove(_ groove: Groove, version: VersionID = VersionID(), part: PartID? = nil,
                                   name: String = "Groove", sound: String = SynthMachine.tr808.id,
-                                  kit: ChopTrack? = nil) -> Voice {
+                                  kit: ChopTrack? = nil, machine: SynthMachine? = nil) -> Voice {
             Voice(play: .groove(groove), version: version, part: part, name: name,
                   sound: kit.flatMap { $0.part.map(ChopSound.id(for:)) } ?? sound,
-                  chain: groove.degradation, kit: kit)
+                  chain: groove.degradation, kit: kit, machine: kit == nil ? machine : nil)
         }
 
         public static func bassline(_ line: Bassline, version: VersionID = VersionID(), part: PartID? = nil,
@@ -886,7 +893,8 @@ public struct SongPlayback: Equatable, Sendable {
             return .groove(groove, version: version.id, part: part,
                            name: PartLabel.title(of: version),
                            sound: machineID(for: part, in: song),
-                           kit: kit(for: part, in: song, mediaURL: mediaURL))
+                           kit: kit(for: part, in: song, mediaURL: mediaURL),
+                           machine: machine(for: part, in: song))
         case .bassline(let line) where !line.notes.isEmpty:
             return .bassline(line, version: version.id, part: part,
                              name: PartLabel.title(of: version), sound: line.sound)
@@ -919,6 +927,42 @@ public struct SongPlayback: Equatable, Sendable {
     static func machineID(for part: PartID?, in song: Song) -> String {
         sound(in: song, for: part, recognisedBy: { SynthMachine.preset(id: $0) != nil })
             ?? machineID(in: song)
+    }
+
+    /// The machine a groove part plays on, as the song has shaped it: the pick (`machineID`), with
+    /// every voice the Sound surface has kept an edit of at the knob positions it was kept at.
+    static func machine(for part: PartID?, in song: Song) -> SynthMachine {
+        shaped(SynthMachine.preset(id: machineID(for: part, in: song)) ?? .tr808, in: song)
+    }
+
+    /// The song's own machine, shaped the same way.
+    static func machine(in song: Song) -> SynthMachine {
+        shaped(SynthMachine.preset(id: machineID(in: song)) ?? .tr808, in: song)
+    }
+
+    /// `machine` with the song's voice edits on it. The Sound surface keeps a voice as a `.sound`
+    /// called `"drum.<machine>.<voice>"` carrying its knob positions; the newest of each voice is
+    /// the one in effect, and one kept for another machine is that machine's. A kit is built from
+    /// the machine's voices, so this is what makes a kept knob something the song plays — before
+    /// it, a voice was kept in the ledger and heard nowhere but on the surface.
+    static func shaped(_ machine: SynthMachine, in song: Song) -> SynthMachine {
+        var shaped = machine
+        var seen = Set<SynthVoiceKind>()
+        for version in song.versions.reversed() {
+            guard case .sound(let sound) = version.kind, let state = SoundState(sound),
+                  state.machine == machine.id, seen.insert(state.voice).inserted,
+                  let index = shaped.voices.firstIndex(where: { $0.kind == state.voice }) else { continue }
+            shaped.voices[index].controls = state.controls
+        }
+        return shaped
+    }
+
+    /// The newest edit of one voice of a machine the song has kept, if it has kept one.
+    static func voiceEdit(of voice: SynthVoiceKind, on machine: String, in song: Song) -> PartVersion? {
+        song.versions.last { version in
+            guard case .sound(let sound) = version.kind, let state = SoundState(sound) else { return false }
+            return state.machine == machine && state.voice == voice
+        }
     }
 
     /// What a groove part's drums are, by its newest pick: a machine's id, or `ChopSound.id` of a

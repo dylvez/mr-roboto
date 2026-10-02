@@ -137,7 +137,7 @@ public struct ArrangeTool: DirectorTool {
         "Arrange the song into sections and replace its form: \"intro 4 | verse 16 | hook 8 | verse 16 | "
         + "hook 8 | outro 4\" is six sections with their bars. Each plays the song's newest groove, bass "
         + "line and chop; a repeated name plays the same stitch as its first; a section already in "
-        + "the song by that name keeps what it was stitched from. Bars come from the tempo: a bar of 4/4 "
+        + "the song by that name keeps what it was stitched from and the levels the mix gives it. Bars come from the tempo: a bar of 4/4 "
         + "at 92 bpm is 2.6 seconds, so two minutes is 46 bars. Nothing is versioned — the form is the "
         + "song's — and the transport plays the sections in order."
     }
@@ -164,9 +164,22 @@ public struct ArrangeTool: DirectorTool {
         for section in song.sections where !section.stitch.isEmpty {
             byName[section.name.lowercased()] = byName[section.name.lowercased()] ?? section.stitch
         }
+        // A section the song already has stays that section: its id, and with it the levels a mix
+        // sets there, its intensity and its transitions. A form stated again used to be all new
+        // sections, and every section level of the mix was left naming one that was gone.
+        var standing = song.sections
         var sections: [Section] = []
         for (rawName, bars) in parsed {
             let key = rawName.lowercased()
+            if let index = standing.firstIndex(where: { $0.name.lowercased() == key }) {
+                var kept = standing.remove(at: index)
+                kept.name = rawName
+                kept.lengthInBars = bars
+                if kept.stitch.isEmpty { kept.stitch = byName[key] ?? stitch }
+                byName[key] = byName[key] ?? kept.stitch
+                sections.append(kept)
+                continue
+            }
             let layers = byName[key] ?? stitch
             byName[key] = layers
             sections.append(Section(name: rawName, stitch: layers, lengthInBars: bars))

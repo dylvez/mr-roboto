@@ -45,7 +45,9 @@ public final class AuditionService {
 
     private let provideEngine: EngineProvider
     private let kitsDirectory: URL
-    private let cache = SampleCache()
+    /// The kits rendered into `kitsDirectory` are this engine's; recordings are the process's, so
+    /// a bounce does not read from disk the piano the transport is already holding.
+    private let cache: SampleCache
 
     private var engine: Engine?
     private var player: AVAudioPlayerNode?
@@ -110,6 +112,7 @@ public final class AuditionService {
                             kitsDirectory: URL = AuditionService.defaultKitsDirectory) {
         self.provideEngine = engine
         self.kitsDirectory = kitsDirectory
+        self.cache = SampleCache.sharingRecordings(besides: kitsDirectory)
     }
 
     /// `~/Library/Caches/MrRoboto/audition`. Deleting it costs one re-render, never a version.

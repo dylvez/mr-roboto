@@ -48,6 +48,19 @@ extension AppState {
         return true
     }
 
+    /// Writes the song's brief: what it is about, in a sentence. The Producer holds every part to
+    /// it and says "No brief" until there is one. Empty clears it.
+    @discardableResult
+    public func setBrief(_ brief: String, by source: SessionEntry.Source = .you) -> Bool {
+        guard let current = song else { return false }
+        var changed = current
+        guard changed.setBrief(brief) else { return false }
+        updateSong { $0 = changed }
+        if let song { library.upsert(song) }
+        note(source, changed.brief.map { "The brief: “\($0)”" } ?? "Cleared the brief")
+        return true
+    }
+
     /// Turns the arranged drums' fills into each section, and the crash out of it, on or off.
     @discardableResult
     public func setFills(_ on: Bool, by source: SessionEntry.Source = .you) -> Bool {
@@ -500,5 +513,43 @@ extension AppState {
             note(.session, "Could not keep \(PartLabel.title(of: version)) in \(target.title)", detail: "\(error)")
             return false
         }
+    }
+}
+
+// MARK: - The brief
+
+extension Song {
+    /// What the song is about, in a sentence: the newest brief among its seeds, or nil when nobody
+    /// has written one.
+    public var brief: String? {
+        let text = seeds.compactMap { seed -> String? in
+            if case .brief(let text) = seed.kind { return text }
+            return nil
+        }.last?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return text.flatMap { $0.isEmpty ? nil : $0 }
+    }
+
+    /// Writes the brief, or clears it when `text` is empty. A song has one: the newest brief seed
+    /// is rewritten where there is one, so a seed a part grew from keeps its id. False when the
+    /// brief already says that.
+    @discardableResult
+    public mutating func setBrief(_ text: String) -> Bool {
+        let words = text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        guard words != (brief ?? "") else { return false }
+        func isBrief(_ seed: Seed) -> Bool {
+            if case .brief = seed.kind { return true }
+            return false
+        }
+        if let index = seeds.lastIndex(where: isBrief) {
+            let grewFrom = Set(versions.compactMap(\.origin))
+            if words.isEmpty, !grewFrom.contains(seeds[index].id) {
+                seeds.removeAll { isBrief($0) && !grewFrom.contains($0.id) }
+            } else {
+                seeds[index].kind = .brief(words)
+            }
+        } else {
+            seeds.append(Seed(kind: .brief(words)))
+        }
+        return true
     }
 }

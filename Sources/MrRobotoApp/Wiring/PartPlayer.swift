@@ -169,7 +169,7 @@ public final class PartPlayer {
                let seconds = await play(groove, on: track, clock: clock) {
                 return seconds
             }
-            return await play(groove, machine: SynthMachine.preset(id: SongPlayback.machineID(for: version.partID, in: song)) ?? .tr808,
+            return await play(groove, machine: SongPlayback.machine(for: version.partID, in: song),
                               clock: clock)
         case .bassline(let line):
             return await play(line.notes, sound: line.sound, clock: clock)

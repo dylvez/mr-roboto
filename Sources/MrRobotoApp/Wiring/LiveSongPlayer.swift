@@ -401,7 +401,7 @@ final class LiveSongPlayer: SongPlaybackHost {
 
         switch voice.play {
         case .groove(let groove):
-            let machine = SynthMachine.preset(id: voice.sound) ?? .tr808
+            let machine = voice.drumMachine
             let key = AuditionService.SamplerKey(.drums, part: voice.part)
             let sampler = try await service.playbackSampler(machine: machine, for: voice.part)
             try Self.route(sampler.node, part: voice.part, on: graph)
@@ -621,7 +621,7 @@ final class LiveSongPlayer: SongPlaybackHost {
                                                   sampleRate: format.sampleRate, channels: channels)
             return (bounce, hits.count)
         }
-        let machine = SynthMachine.preset(id: voice.sound) ?? .tr808
+        let machine = voice.drumMachine
         let all = Dust.hits(for: groove, tempo: clock.tempo, timeSignature: clock.timeSignature, repeats: passes)
         let hits = cutoff.map { end in all.filter { $0.time < end } } ?? all
         let bounce = try await service.bounce(hits, machine: machine, seconds: seconds,

@@ -181,7 +181,9 @@ public final class MIDIControl {
         do {
             switch voice {
             case .kit(let id):
-                if let machine = SynthMachine.preset(id: id) { try await service.prepare(machine: machine) }
+                if let machine = SynthMachine.preset(id: id) {
+                    try await service.prepare(machine: app.song.map { SongPlayback.shaped(machine, in: $0) } ?? machine)
+                }
             case .bass(let id):
                 if let spec = BassVoiceSpec.resolve(id: id) { try await service.prepare(bass: spec) }
             case .keys(let id):

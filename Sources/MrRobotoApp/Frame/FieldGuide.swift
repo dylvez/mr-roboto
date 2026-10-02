@@ -56,6 +56,7 @@ enum FieldGuide {
         Entry(word: "Voice", meaning: "The lyrics this house has written, imported once (File ▸ Import Voice…). The Lyricist reads new words against them and names the images that repeat."),
         Entry(word: "Bible", meaning: "Everything a persona knows, as data: named lineages, measurable features, cited rules with thresholds, refusals, goldens and open questions. A document the method checks."),
         Entry(word: "Genre", meaning: "What the song is — house, boom-bap, salsa — set in the song's settings (the title in the header) or guessed from the feel its newest groove was written in. Each genre is a researched profile: its tempo, the numbers the band judges it by, the feels, bass players and sounds that fit, a typical form, and the records it comes from. The band then says both numbers: its own, and the genre's."),
+        Entry(word: "Brief", meaning: "What the song is about, in a sentence, written in the song's settings (the title in the header) or told to the Director. The Producer holds every part to it, and says “No brief” until there is one."),
         Entry(word: "House call", meaning: "What this house decided on a persona's open question, by ear — the snare late, not early. Kept for every song, unless a song keeps its own, and apart from the evidence."),
         Entry(word: "Critic", meaning: "A rule that looks for one kind of problem. It flags and never fixes."),
         Entry(word: "Lever", meaning: "At most two controls the Director puts on a surface, so you can move the one thing it is asking about."),

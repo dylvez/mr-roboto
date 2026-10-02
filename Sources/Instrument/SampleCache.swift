@@ -127,6 +127,21 @@ public final class SampleBuffer: @unchecked Sendable, Identifiable {
 /// plain lock around a dictionary is the right shape: the lock is held only while looking up or
 /// inserting a reference, never while decoding, and never by the render thread — which does not
 /// touch the cache at all, only the raw pointers it handed out earlier.
+///
+/// ## Sharing
+///
+/// A cache can stand in front of another (`backing`): files `sharing` says yes to are looked up
+/// and kept there instead of here. That is how every engine in the process — the one the transport
+/// plays through and the offline one each bounce builds and throws away — holds one decode of a
+/// recorded piano between them (`SampleCache.recordings`). Before it, each bounce had a cache of
+/// its own and read the piano from disk again: twelve to seventeen seconds a section, and a
+/// reading of a whole mix was mostly that.
+///
+/// A shared cache outlives what it was filled for, so it does two things a private one need not:
+/// it **checks the file** (`checksFiles`), so an instrument imported again over itself is decoded
+/// again rather than heard as it was; and it is **bounded** (`byteLimit`), letting go of what was
+/// used longest ago. Letting go is safe: a sampler holds its own reference to every buffer it
+/// plays (`VoiceSampler`), so a buffer the cache drops lives until the sampler is done with it.
 public final class SampleCache: @unchecked Sendable {
     /// What identifies a cached decode.
     public struct Key: Hashable, Sendable {
@@ -161,8 +176,81 @@ public final class SampleCache: @unchecked Sendable {
     private var owners: [KitID: Set<Key>] = [:]
     private var decodes = 0
 
-    public init(decode: @escaping Decode = SampleCache.decodeFile) {
+    /// The cache shared files are kept in, and which files those are (all of them when nil).
+    private let backing: SampleCache?
+    private let sharing: (@Sendable (URL) -> Bool)?
+    /// The most sample bytes held, past which the buffers used longest ago are let go. Nil holds
+    /// everything until it is evicted.
+    private let byteLimit: Int?
+    private let checksFiles: Bool
+    /// A file as it was when it was decoded: its size and when it was last written.
+    private struct Stamp: Equatable {
+        var size: UInt64
+        var modified: Date?
+    }
+    private var stamps: [Key: Stamp] = [:]
+    /// When each buffer was last asked for, on a counter.
+    private var used: [Key: UInt64] = [:]
+    private var tick: UInt64 = 0
+
+    /// - Parameters:
+    ///   - backing: a cache to keep shared files in instead of this one.
+    ///   - sharing: which files go to `backing`; every file when nil.
+    ///   - byteLimit: the most sample bytes to hold. The newest buffer is always kept.
+    ///   - checksFiles: decode a file again when its size or date has changed since it was cached.
+    public init(decode: @escaping Decode = SampleCache.decodeFile, backing: SampleCache? = nil,
+                sharing: (@Sendable (URL) -> Bool)? = nil, byteLimit: Int? = nil, checksFiles: Bool = false) {
         self.decode = decode
+        self.backing = backing
+        self.sharing = sharing
+        self.byteLimit = byteLimit
+        self.checksFiles = checksFiles
+    }
+
+    /// The recordings the process has decoded — imported instruments, the pieces of a recorded
+    /// kit — shared by every engine, live or offline. Bounded to a quarter of the machine's
+    /// memory, and never under a gigabyte: one grand piano at three layers is half of that.
+    public static let recordings = SampleCache(
+        byteLimit: max(1 << 30, Int(clamping: ProcessInfo.processInfo.physicalMemory / 4)), checksFiles: true)
+
+    /// A cache for one engine whose kits are built in `kitsDirectory`: what is rendered there is
+    /// its own, and recordings — files anywhere else, and the copies a kit keeps of its recorded
+    /// pieces — are `recordings`'.
+    public static func sharingRecordings(besides kitsDirectory: URL) -> SampleCache {
+        let own = kitsDirectory.standardizedFileURL.path + "/"
+        return SampleCache(backing: .recordings, sharing: { url in
+            let path = url.standardizedFileURL.path
+            return !path.hasPrefix(own) || path.contains("/samples/recorded/")
+        })
+    }
+
+    private func shares(_ url: URL) -> SampleCache? {
+        guard let backing, sharing?(url) ?? true else { return nil }
+        return backing
+    }
+
+    private static func stamp(of url: URL) -> Stamp? {
+        guard let attributes = try? FileManager.default.attributesOfItem(atPath: url.path) else { return nil }
+        return Stamp(size: (attributes[.size] as? NSNumber)?.uint64Value ?? 0, modified: attributes[.modificationDate] as? Date)
+    }
+
+    /// Lets go of the buffers used longest ago until what is held fits. Called with the lock held.
+    private func trim(keeping key: Key) {
+        guard let byteLimit else { return }
+        var held = entries.values.reduce(0) { $0 + $1.byteCount }
+        while held > byteLimit, entries.count > 1,
+              let oldest = entries.keys.filter({ $0 != key }).min(by: { used[$0, default: 0] < used[$1, default: 0] }) {
+            held -= entries[oldest]?.byteCount ?? 0
+            forget(oldest)
+        }
+    }
+
+    /// Called with the lock held.
+    private func forget(_ key: Key) {
+        entries[key] = nil
+        stamps[key] = nil
+        used[key] = nil
+        for kit in owners.keys { owners[kit]?.remove(key) }
     }
 
     // MARK: Loading
@@ -173,12 +261,20 @@ public final class SampleCache: @unchecked Sendable {
     ///   A buffer used by two kits is kept until both are evicted.
     @discardableResult
     public func buffer(for url: URL, sampleRate: Double, kit: KitID? = nil) throws -> SampleBuffer {
+        if let shared = shares(url) { return try shared.buffer(for: url, sampleRate: sampleRate, kit: kit) }
         let key = Key(url: url, sampleRate: sampleRate)
+        let stamp = checksFiles ? Self.stamp(of: url) : nil
         lock.lock()
         if let existing = entries[key] {
-            if let kit { owners[kit, default: []].insert(key) }
-            lock.unlock()
-            return existing
+            if !checksFiles || stamps[key] == stamp {
+                if let kit { owners[kit, default: []].insert(key) }
+                tick += 1
+                used[key] = tick
+                lock.unlock()
+                return existing
+            }
+            // Written again since it was decoded: what is cached is the file as it was.
+            forget(key)
         }
         lock.unlock()
 
@@ -194,8 +290,12 @@ public final class SampleCache: @unchecked Sendable {
         defer { lock.unlock() }
         decodes += 1
         if let kit { owners[kit, default: []].insert(key) }
+        tick += 1
+        used[key] = tick
         if let winner = entries[key] { return winner }
         entries[key] = buffer
+        stamps[key] = stamp
+        trim(keeping: key)
         return buffer
     }
 
@@ -223,6 +323,7 @@ public final class SampleCache: @unchecked Sendable {
 
     /// The buffer already cached for `url` at `sampleRate`, without decoding.
     public func cached(url: URL, sampleRate: Double) -> SampleBuffer? {
+        if let shared = shares(url) { return shared.cached(url: url, sampleRate: sampleRate) }
         lock.lock()
         defer { lock.unlock() }
         return entries[Key(url: url, sampleRate: sampleRate)]
@@ -266,6 +367,8 @@ public final class SampleCache: @unchecked Sendable {
         var freed = 0
         for key in keys where !stillUsed.contains(key) {
             if entries.removeValue(forKey: key) != nil { freed += 1 }
+            stamps[key] = nil
+            used[key] = nil
         }
         return freed
     }
@@ -273,11 +376,13 @@ public final class SampleCache: @unchecked Sendable {
     /// Drops one buffer regardless of owners.
     @discardableResult
     public func remove(url: URL, sampleRate: Double) -> Bool {
+        if let shared = shares(url) { return shared.remove(url: url, sampleRate: sampleRate) }
         let key = Key(url: url, sampleRate: sampleRate)
         lock.lock()
         defer { lock.unlock() }
-        for kit in owners.keys { owners[kit]?.remove(key) }
-        return entries.removeValue(forKey: key) != nil
+        let held = entries[key] != nil
+        forget(key)
+        return held
     }
 
     /// Empties the cache. Same warning as `evict(kit:)`.
@@ -286,6 +391,8 @@ public final class SampleCache: @unchecked Sendable {
         defer { lock.unlock() }
         entries.removeAll()
         owners.removeAll()
+        stamps.removeAll()
+        used.removeAll()
     }
 
     // MARK: Default decoder

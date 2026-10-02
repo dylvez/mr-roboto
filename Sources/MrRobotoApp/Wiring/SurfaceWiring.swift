@@ -181,7 +181,7 @@ final class SurfaceWiring {
         let signature = app.song?.timeSignature ?? .fourFour
         let bound = boundGroove(for: item, app: app)
         // The machine the song plays this groove on — the grid always opened on the 808.
-        let machine = app.song.flatMap { SynthMachine.preset(id: SongPlayback.machineID(for: bound?.partID, in: $0)) } ?? .tr808
+        let machine = app.song.map { SongPlayback.machine(for: bound?.partID, in: $0) } ?? .tr808
         // A groove on a chop opens on the chop's slices. One made from a chop and since put on a
         // machine is still offered its chop, one pick away.
         let playing = app.song.flatMap { song in
@@ -453,8 +453,8 @@ final class SurfaceWiring {
     nonisolated static func kickDecay(in song: Song?) -> Double {
         guard let song else { return 0 }
         for version in song.versions.reversed() {
-            guard case .sound(let sound) = version.kind, let machine = SynthMachine.preset(id: sound.instrument),
-                  let kick = machine.voices.first(where: { $0.kind == .kick }) else { continue }
+            guard case .sound(let sound) = version.kind, let preset = SynthMachine.preset(id: sound.instrument),
+                  let kick = SongPlayback.shaped(preset, in: song).voices.first(where: { $0.kind == .kick }) else { continue }
             return kick.tone.decaySeconds(decay: kick.controls.decay)
         }
         return 0

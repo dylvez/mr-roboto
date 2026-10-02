@@ -478,10 +478,32 @@ public struct SetSongTool: DirectorTool {
         public var tempo: Double
         public var key: String
         public var timeSignature: String
+        /// What the song is about, in a sentence; empty keeps it, "none" clears it.
+        public var brief: String
 
         enum CodingKeys: String, CodingKey {
-            case title, artist, tempo, key
+            case title, artist, tempo, key, brief
             case timeSignature = "time_signature"
+        }
+
+        public init(title: String, artist: String, tempo: Double, key: String, timeSignature: String, brief: String = "") {
+            self.title = title
+            self.artist = artist
+            self.tempo = tempo
+            self.key = key
+            self.timeSignature = timeSignature
+            self.brief = brief
+        }
+
+        public init(from decoder: any Decoder) throws {
+            let values = try decoder.container(keyedBy: CodingKeys.self)
+            title = try values.decode(String.self, forKey: .title)
+            artist = try values.decode(String.self, forKey: .artist)
+            tempo = try values.decode(Double.self, forKey: .tempo)
+            key = try values.decode(String.self, forKey: .key)
+            timeSignature = try values.decode(String.self, forKey: .timeSignature)
+            // Absent in every call written before the song's brief could be set here.
+            brief = try values.decodeIfPresent(String.self, forKey: .brief) ?? ""
         }
     }
 
@@ -501,10 +523,11 @@ public struct SetSongTool: DirectorTool {
         public var tempo: Double
         public var key: String?
         public var timeSignature: String
+        public var brief: String?
         public var detail: String
 
         enum CodingKeys: String, CodingKey {
-            case changed, unchanged, refused, title, artist, tempo, key, detail
+            case changed, unchanged, refused, title, artist, tempo, key, brief, detail
             case timeSignature = "time_signature"
         }
     }
@@ -515,9 +538,11 @@ public struct SetSongTool: DirectorTool {
 
     public let name = "set_song"
     public var purpose: String {
-        "Set the open song's title, artist, tempo, key or meter — any of them, the rest left as they are. Nothing already "
+        "Set the open song's title, artist, tempo, key, meter or brief — any of them, the rest left as they are. Nothing already "
         + "written moves: a key or a meter is what the next part is written to, and a tempo only changes how fast the beats "
-        + "go by — sung takes follow it, stretched with their pitch kept. Says what changed and what was refused."
+        + "go by — sung takes follow it, stretched with their pitch kept. The brief is what the song is about, in one "
+        + "sentence of the user's: the Producer holds every part to it and flags a song with none. Write it down when the "
+        + "user says what the song is about; do not invent one. Says what changed and what was refused."
     }
     public var schema: DirectorJSON {
         Schema.object([
@@ -526,7 +551,8 @@ public struct SetSongTool: DirectorTool {
             ("tempo", Schema.number("Beats per minute, 20 to 300; 0 keeps it.", minimum: 0, maximum: 300)),
             ("key", Schema.string("Like \"D minor\", \"Bb major\", \"F# dorian\" or \"Am\"; \"none\" clears it; empty keeps it.")),
             ("time_signature", Schema.string("Like \"4/4\", \"3/4\", \"6/8\" or \"7/8\"; empty keeps it.")),
-        ], required: ["title", "artist", "tempo", "key", "time_signature"])
+            ("brief", Schema.string("What the song is about, in one sentence, three to forty words; \"none\" clears it; empty keeps it.")),
+        ], required: ["title", "artist", "tempo", "key", "time_signature", "brief"])
     }
 
     /// A key as a person or a lead sheet writes it: "D minor", "E♭ major", "F# dorian", "Am".
@@ -553,9 +579,10 @@ public struct SetSongTool: DirectorTool {
         let artist = input.artist.trimmingCharacters(in: .whitespacesAndNewlines)
         let keyText = input.key.trimmingCharacters(in: .whitespacesAndNewlines)
         let meterText = input.timeSignature.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !title.isEmpty || !artist.isEmpty || input.tempo != 0 || !keyText.isEmpty || !meterText.isEmpty else {
+        let briefText = input.brief.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        guard !title.isEmpty || !artist.isEmpty || input.tempo != 0 || !keyText.isEmpty || !meterText.isEmpty || !briefText.isEmpty else {
             throw DirectorToolFailure(tool: name, reason: "Nothing was asked to change.",
-                                      suggestion: "Give a title, an artist, a tempo, a key or a time signature; the rest can be empty or 0.")
+                                      suggestion: "Give a title, an artist, a tempo, a key, a time signature or a brief; the rest can be empty or 0.")
         }
         var changed: [String] = []
         var unchanged: [String] = []
@@ -570,6 +597,24 @@ public struct SetSongTool: DirectorTool {
             if artist == before.artist { unchanged.append("artist") }
             else if workspace.setArtist(artist) { changed.append(before.artist.isEmpty ? "artist \"\(artist)\"" : "artist \"\(before.artist)\" → \"\(artist)\"") }
             else { refused.append(.init(field: "artist", value: artist, reason: "The song would not take that artist.")) }
+        }
+        if !briefText.isEmpty {
+            let words = briefText.split(separator: " ").count
+            if ["none", "no brief", "clear"].contains(briefText.lowercased()) {
+                if before.brief == nil { unchanged.append("brief") }
+                else if workspace.setBrief("") { changed.append("brief cleared") }
+            } else if briefText == before.brief {
+                unchanged.append("brief")
+            } else if words < Self.briefWords.lowerBound || words > Self.briefWords.upperBound {
+                refused.append(.init(field: "brief", value: briefText,
+                                     reason: words < Self.briefWords.lowerBound
+                                         ? "A brief of \(words) word\(words == 1 ? "" : "s") does not say what the song is about; the Producer wants a sentence."
+                                         : "A brief of \(words) words is past the Producer's forty: cut it to one sentence."))
+            } else if workspace.setBrief(briefText) {
+                changed.append("brief \"\(briefText)\"")
+            } else {
+                refused.append(.init(field: "brief", value: briefText, reason: "The song would not take that brief."))
+            }
         }
         if !keyText.isEmpty {
             let clearing = ["none", "no key", "clear"].contains(keyText.lowercased())
@@ -640,8 +685,11 @@ public struct SetSongTool: DirectorTool {
         }
         return Output(changed: changed, unchanged: unchanged, refused: refused, title: after.title,
                       artist: after.artist.isEmpty ? nil : after.artist, tempo: after.tempo, key: after.key?.name,
-                      timeSignature: "\(after.timeSignature)", detail: sentences.joined(separator: " "))
+                      timeSignature: "\(after.timeSignature)", brief: after.brief, detail: sentences.joined(separator: " "))
     }
+
+    /// The Producer's own limits on a brief: three words is one, past forty is not a sentence.
+    static let briefWords = 3...40
 }
 
 // MARK: - set_instrument

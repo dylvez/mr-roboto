@@ -132,10 +132,32 @@ public struct WriteBasslineTool: DirectorTool {
         /// 0 draws one nobody chose. Asked to pick "any number", a model picks the same few, and
         /// the same seed is the same line: a year of songs would have had four bass lines.
         public var seed: Int
+        /// The bass it is played on; empty is the hands' own.
+        public var sound: String
 
         enum CodingKeys: String, CodingKey {
-            case groove, hands, density, seed
+            case groove, hands, density, seed, sound
             case lagMS = "lag_ms"
+        }
+
+        public init(groove: String, hands: String, lagMS: Double, density: Double, seed: Int, sound: String = "") {
+            self.groove = groove
+            self.hands = hands
+            self.lagMS = lagMS
+            self.density = density
+            self.seed = seed
+            self.sound = sound
+        }
+
+        public init(from decoder: any Decoder) throws {
+            let values = try decoder.container(keyedBy: CodingKeys.self)
+            groove = try values.decode(String.self, forKey: .groove)
+            hands = try values.decode(String.self, forKey: .hands)
+            lagMS = try values.decode(Double.self, forKey: .lagMS)
+            density = try values.decode(Double.self, forKey: .density)
+            seed = try values.decode(Int.self, forKey: .seed)
+            // Absent in every call written before the tool took one.
+            sound = try values.decodeIfPresent(String.self, forKey: .sound) ?? ""
         }
     }
 
@@ -178,8 +200,14 @@ public struct WriteBasslineTool: DirectorTool {
         + "the Bassist. Say whose hands — the genre's profile (read_genre) names the ones that fit: "
         + BassLineage.allCases.map { "\($0.rawValue) (\($0.about))" }.joined(separator: "; ")
         + ". The Bassist refuses when nothing is straight, when pushed ahead of the kick, and when a played bass "
-        + "would sit under a kick that rings past 400 ms; its reason comes back as the error."
+        + "would sit under a kick that rings past 400 ms; its reason comes back as the error. Each player has a "
+        + "bass of their own; name a sound to put the line on another, and where the song's instruments are "
+        + "recordings, on a recorded bass (an id beginning sfz-) rather than a synthesized one."
     }
+
+    /// The basses a line can be put on: the presets, then the recorded basses in the library.
+    static var sounds: [BassVoiceSpec] { BassVoiceSpec.all + PianoRollModel.importedBasses }
+
     public var schema: DirectorJSON {
         Schema.object([
             ("groove", Schema.string("The groove version the line sits under, by id from read_song or create_part_version.")),
@@ -189,7 +217,10 @@ public struct WriteBasslineTool: DirectorTool {
                 + "every other player sits on the kick, 0; negative is ahead of it and refused.", maximum: 90)),
             ("density", Schema.number("How busy, 0 (bare) to 1 (every attack the budget allows).", maximum: 1)),
             ("seed", Schema.integer("0 for a new line, which is nearly always. Only to write a line again: the seed an earlier write_bassline returned.")),
-        ], required: ["groove", "hands", "lag_ms", "density", "seed"])
+            ("sound", Schema.string("The bass it plays on; empty for the player's own. "
+                                    + Self.sounds.map { "\($0.id) (\($0.name))" }.joined(separator: ", ") + ".",
+                                    enum: [""] + Self.sounds.map(\.id))),
+        ], required: ["groove", "hands", "lag_ms", "density", "seed", "sound"])
     }
 
     public func run(_ input: Input) async throws -> Output {
@@ -217,13 +248,19 @@ public struct WriteBasslineTool: DirectorTool {
         var chords: [ChordSpan] = []
         if let chordVersion, case .progression(let p) = chordVersion.kind { chords = p.spans }
         let kickDecay = SurfaceWiring.kickDecay(in: song)
-        let sound = lineage.defaultSound
+        let asked = input.sound.trimmingCharacters(in: .whitespaces).lowercased()
+        guard asked.isEmpty || BassVoiceSpec.resolve(id: asked) != nil else {
+            throw DirectorToolFailure(tool: name, reason: "There is no bass called \"\(input.sound)\".",
+                                      suggestion: "One of: \(Self.sounds.map(\.id).joined(separator: ", ")); or empty for \(lineage.name)'s own.")
+        }
+        let sound = asked.isEmpty ? lineage.defaultSound : asked
 
         // The Bassist first.
         let lens = await workspace.genreLens
         let proposal = PersonaProposal.writeBassline(lineage: lineage.rawValue, lagMS: input.lagMS, tempo: tempo,
                                                         hatLagMS: 0, kickLagMS: 0, kickDecaySeconds: kickDecay,
-                                                        sound: sound)
+                                                        sound: BassVoiceSpec.preset(id: sound) == nil
+                                                            ? BassVoiceSpec.resolve(id: sound)?.name ?? sound : sound)
         let verdict = GenreLens.judge(Bassist().consider(proposal), on: proposal, by: Bassist.bible, in: lens)
         if case .refuse(let rule, let because, let counter) = verdict {
             // The reason first and on its own: the rail keeps a failure's first sentence, and a

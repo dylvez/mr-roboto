@@ -110,6 +110,21 @@ public enum RecordedKits {
                                            fingerprint: KitFingerprint.of(assignments, salt: "recorded-kit-2"))  // bump when how a kit is built changes
     }
 
+    /// The voices of `machine` a recording plays rather than the synthesizer, each with what the
+    /// recording is called: a recorded kit's own pieces, and the hand percussion in use. A voice
+    /// that is not here is synthesized, and its knobs are the synthesizer's.
+    public static func recordedVoices(of machine: SynthMachine,
+                                      beside percussion: RecordedPercussion.Resolved? = RecordedPercussion.inUse) -> [SynthVoiceKind: String] {
+        guard let resolved = recordings(for: machine, beside: percussion) else { return [:] }
+        var out: [SynthVoiceKind: String] = [:]
+        for spec in machine.voices {
+            if let recording = RecordedPercussion.recording(for: spec.kind, in: resolved) {
+                out[spec.kind] = recording.assignment.label
+            }
+        }
+        return out
+    }
+
     // MARK: On disk
 
     /// Registers every kit in `directory` and returns them. A folder that does not load is skipped.

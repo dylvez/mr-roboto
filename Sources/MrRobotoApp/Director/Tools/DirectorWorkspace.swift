@@ -113,6 +113,8 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     /// same value, a value the setter will not take, or no song open.
     @discardableResult func setTitle(_ title: String) -> Bool
     @discardableResult func setArtist(_ artist: String) -> Bool
+    /// What the song is about, in a sentence; empty clears it.
+    @discardableResult func setBrief(_ brief: String) -> Bool
     @discardableResult func setTempo(_ bpm: Double) -> Bool
     @discardableResult func setKey(_ key: Key?) -> Bool
     @discardableResult func setTimeSignature(_ signature: TimeSignature) -> Bool
@@ -289,6 +291,7 @@ public final class AppStateWorkspace: DirectorWorkspace {
     // the ledger who picked the instrument.
     @discardableResult public func setTitle(_ title: String) -> Bool { app.setTitle(title, by: .director) }
     @discardableResult public func setArtist(_ artist: String) -> Bool { app.setArtist(artist, by: .director) }
+    @discardableResult public func setBrief(_ brief: String) -> Bool { app.setBrief(brief, by: .director) }
     @discardableResult public func setTempo(_ bpm: Double) -> Bool { app.setTempo(bpm, by: .director) }
     @discardableResult public func setKey(_ key: Key?) -> Bool { app.setKey(key, by: .director) }
     @discardableResult public func setTimeSignature(_ signature: TimeSignature) -> Bool { app.setTimeSignature(signature, by: .director) }
@@ -595,6 +598,13 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
         let name = artist.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let current = song, name != current.artist else { return false }
         song?.artist = name
+        return true
+    }
+
+    @discardableResult
+    public func setBrief(_ brief: String) -> Bool {
+        guard var current = song, current.setBrief(brief) else { return false }
+        song = current
         return true
     }
 

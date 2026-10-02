@@ -110,6 +110,37 @@ struct DirectorFormToolTests {
         #expect(rig.app.song?.sections[1].stitch.contains(part: rig.bassPart) == true)
     }
 
+    @Test("a section arranged again is the same section: the mix's level there, its intensity and its way in still hold")
+    func arrangedAgainIsTheSameSection() async throws {
+        let rig = try FormToolFixture.rig()
+        defer { rig.clean() }
+        _ = await rig.toolbox.run(ClaudeToolUse(id: "a", name: "arrange", input: .object([
+            .init("form", .string("intro 4 | verse 16 | hook 8 | verse 16")),
+        ])))
+        var sections = try #require(rig.app.song?.sections)
+        sections[2].intensity = 0.9
+        sections[2].transitionIn = Transition(kind: .cut)
+        #expect(rig.app.arrange(sections))
+        let hook = sections[2].id, verses = [sections[1].id, sections[3].id]
+        // The mix turns the bass down in the hook.
+        var mix = Mix.unity
+        mix.strips = [Strip(part: rig.bassPart, label: "Bass", gainDB: 0)]
+        mix.sectionGains = [SectionGain(section: hook, part: rig.bassPart, gainDB: -5)]
+        #expect(rig.app.record(PartVersion(partID: PartID(), kind: .mix(mix), author: .user, operation: Operation.mix)))
+
+        // The form stated again, a verse longer, an outro added and the intro gone.
+        let again = await rig.toolbox.run(ClaudeToolUse(id: "b", name: "arrange", input: .object([
+            .init("form", .string("verse 12 | hook 8 | verse 16 | outro 4")),
+        ])))
+        #expect(!again.isError, "\(again.content)")
+        let now = try #require(rig.app.song?.sections)
+        #expect(now.map(\.name) == ["Verse", "Hook", "Verse", "Outro"] && now.map(\.lengthInBars) == [12, 8, 16, 4])
+        #expect(now[1].id == hook && [now[0].id, now[2].id] == verses, "each is the section it was, in the order they stood")
+        #expect(now[1].intensity == 0.9 && now[1].transitionIn?.kind == .cut)
+        #expect(!sections.map(\.id).contains(now[3].id), "the outro is new")
+        #expect(rig.app.playback.mix?.gainDB(for: rig.bassPart, in: now[1].id) == -5, "the bass is still down in the hook")
+    }
+
     @Test("the Director stitches the chords too: a form it writes has harmony in it")
     func arrangesWithChords() async throws {
         let rig = try FormToolFixture.rig()

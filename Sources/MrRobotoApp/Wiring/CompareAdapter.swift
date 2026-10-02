@@ -179,7 +179,7 @@ final class CompareAdapter: CompareHosting {
         // The groove, when the song has one and it is dry: the reference the lag is against.
         if let song = app.song, let grooveVersion = Guidance.grooves(in: song).last,
            case .groove(let groove) = grooveVersion.kind, groove.degradation.isEmpty {
-            let machine = SynthMachine.preset(id: app.playback.machine) ?? .tr808
+            let machine = app.song.map { SongPlayback.machine(in: $0) } ?? .tr808
             var drumLevers = levers
             drumLevers[.lag] = nil
             let drumHits = CompareAdapter.hits(for: groove, levers: drumLevers, tempo: tempo, timeSignature: signature)
@@ -222,7 +222,7 @@ final class CompareAdapter: CompareHosting {
     /// shared sampler when it is dry, bounced and put through its chain when it is not.
     private func playGroove(_ groove: Groove, levers: [CompareLever: Double],
                             through passes: [Degradation]) async {
-        let machine = SynthMachine.preset(id: app.playback.machine) ?? .tr808
+        let machine = app.song.map { SongPlayback.machine(in: $0) } ?? .tr808
         let hits = CompareAdapter.hits(for: groove, levers: levers,
                                        tempo: app.song?.tempo ?? 90,
                                        timeSignature: app.song?.timeSignature ?? .fourFour)

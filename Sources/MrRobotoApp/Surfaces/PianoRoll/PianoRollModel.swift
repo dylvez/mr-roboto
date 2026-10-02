@@ -561,17 +561,24 @@ public final class PianoRollModel {
     /// that are basses — called one, or a tuba — and reach down to the E a bass guitar's lowest
     /// string is tuned to. A piano reaches as low and is not a bass.
     public var importedSounds: [BassVoiceSpec] {
-        ImportedInstruments.all.filter { spec in
-            if spec.id == sound { return true }
-            guard Self.isCalledABass(spec) else { return false }
-            return ImportedInstruments.lowestNote(of: spec).map { $0 <= 40 } == true
-        }.map(BassVoiceSpec.init(imported:))
+        ImportedInstruments.all.filter { $0.id == sound || Self.isABass($0) }.map(BassVoiceSpec.init(imported:))
+    }
+
+    /// The imported instruments that are basses, whatever a line plays on now: what the Director's
+    /// write_bassline is offered beside the presets.
+    public nonisolated static var importedBasses: [BassVoiceSpec] {
+        ImportedInstruments.all.filter(isABass).map(BassVoiceSpec.init(imported:))
+    }
+
+    /// Called a bass, and reaching down to a bass guitar's low E.
+    nonisolated static func isABass(_ spec: InstrumentVoiceSpec) -> Bool {
+        isCalledABass(spec) && ImportedInstruments.lowestNote(of: spec).map { $0 <= 40 } == true
     }
 
     /// Whether an imported instrument is one a bass line would reach for: placed among the
     /// basses, or called a bass, a contrabass or a tuba. By the word, not the letters: a bassoon
     /// is not a bass.
-    public static func isCalledABass(_ spec: InstrumentVoiceSpec) -> Bool {
+    public nonisolated static func isCalledABass(_ spec: InstrumentVoiceSpec) -> Bool {
         if spec.family == "bass" { return true }
         let words = Set(spec.name.lowercased().split { !$0.isLetter }.map(String.init))
         return !words.isDisjoint(with: ["bass", "contrabass", "tuba"])

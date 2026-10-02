@@ -159,6 +159,22 @@ public extension SoundControl {
         return promoting(preferred(for: spec), in: controls)
     }
 
+    /// The controls of a voice a recording plays: LEVEL, and nothing else.
+    ///
+    /// TUNE, DECAY, TONE, SNAPPY and ATTACK are the synthesizer's circuits, and a recording has
+    /// none of them. LEVEL is real: a kit brings each recording to the loudness of the voice it
+    /// stands in for, so the voice's fader is the recording's.
+    static func recordedControls(for spec: SynthVoiceSpec) -> [SoundControl] {
+        var level = SoundControl(
+            .machine(.level),
+            name: MachineControl.level.panelName,
+            honestly: "how loud the kit plays the recording; never past the kit's ceiling",
+            value: spec.controls.level, range: 0...1.5,
+            readout: SoundUnit.decibels(spec.controls.level, signed: true))
+        level.isProminent = true
+        return [level]
+    }
+
     private static func toneControl(for spec: SynthVoiceSpec) -> SoundControl? {
         let tone = spec.controls.tone
         switch spec.toneControl {

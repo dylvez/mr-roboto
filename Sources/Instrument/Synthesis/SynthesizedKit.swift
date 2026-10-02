@@ -109,21 +109,42 @@ public enum SynthesizedKit {
         // exactly what comes out.
         var rendered: [(spec: SynthVoiceSpec, layer: SynthVelocityLayer, samples: [Float])] = []
         var peak: Float = 0
+        func render(_ spec: SynthVoiceSpec, _ layer: SynthVelocityLayer) -> [Float] {
+            var samples = DrumSynthesizer.render(spec, velocity: layer.velocity, sampleRate: sampleRate)
+            // Strip the level part of velocity: the kit's `velocityCurve` applies it once, on
+            // playback. What is left in the layer is the *timbral* difference between a soft
+            // and a hard hit, which is the reason to pre-render layers at all.
+            let velocityGain = Float(pow(10, spec.velocity.rangeDB * (Double(layer.velocity) / 127 - 1) / 20))
+            if velocityGain > 0 {
+                for i in samples.indices { samples[i] /= velocityGain }
+            }
+            return samples
+        }
         for spec in machine.voices {
             for layer in layers {
-                var samples = DrumSynthesizer.render(spec, velocity: layer.velocity, sampleRate: sampleRate)
-                // Strip the level part of velocity: the kit's `velocityCurve` applies it once, on
-                // playback. What is left in the layer is the *timbral* difference between a soft
-                // and a hard hit, which is the reason to pre-render layers at all.
-                let velocityGain = Float(pow(10, spec.velocity.rangeDB * (Double(layer.velocity) / 127 - 1) / 20))
-                if velocityGain > 0 {
-                    for i in samples.indices { samples[i] /= velocityGain }
-                }
+                let samples = render(spec, layer)
                 peak = Swift.max(peak, SynthMeasure.peak(samples))
                 rendered.append((spec, layer, samples))
             }
         }
-        let scale = peak > 0 ? Float(pow(10, headroomDBFS / 20)) / peak : 1
+        // The one factor is the preset's. A machine whose voices somebody has turned (a kick's
+        // LEVEL brought down on the Sound surface) is scaled as the machine was before they did,
+        // so the kick is quieter. Scaled by its own peak, the kick stayed where it was and every
+        // other voice came up. Never past full scale, when a voice was turned up instead.
+        var reference = peak
+        let preset = SynthMachine.preset(id: machine.id)
+        if let preset, preset.voices != machine.voices {
+            reference = 0
+            for spec in preset.voices {
+                if machine.voices.contains(spec) {
+                    for entry in rendered where entry.spec == spec { reference = Swift.max(reference, SynthMeasure.peak(entry.samples)) }
+                } else {
+                    for layer in layers { reference = Swift.max(reference, SynthMeasure.peak(render(spec, layer))) }
+                }
+            }
+        }
+        var scale: Float = reference > 0 ? Float(pow(10, headroomDBFS / 20)) / reference : 1
+        if peak > 0 { scale = Swift.min(scale, 1 / peak) }
 
         var zones: [Zone] = []
         var voiceNotes: [DrumVoice: Int] = [:]
@@ -135,7 +156,14 @@ public enum SynthesizedKit {
         let recorded = RecordedKits.recordings(for: machine, beside: recorded)
         for spec in machine.voices {
             guard let recorded, let loudest = rendered.last(where: { $0.spec.kind == spec.kind }) else { continue }
-            let loudness = KitLevel.loudness(loudest.samples.map { $0 * scale }, sampleRate: sampleRate)
+            var loudness = KitLevel.loudness(loudest.samples.map { $0 * scale }, sampleRate: sampleRate)
+            // A recording's LEVEL is a fader. The synthesized voice it stands in for may run its
+            // level into a saturator, where half the knob is nothing like half as loud; so a voice
+            // somebody turned is measured as the preset has it, and the turn is applied as gain.
+            if let was = preset?.voices.first(where: { $0.kind == spec.kind }), was != spec, was.controls.level > 0 {
+                loudness = KitLevel.loudness(render(was, loudest.layer).map { $0 * scale }, sampleRate: sampleRate)
+                    * spec.controls.level / was.controls.level
+            }
             guard let replacing = try RecordedPercussion.zones(for: spec.kind, from: recorded, note: spec.kind.generalMIDINote,
                                                               loudness: loudness, in: folder) else { continue }
             zones += replacing

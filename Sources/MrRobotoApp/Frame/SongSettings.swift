@@ -2,7 +2,7 @@ import MusicTheory
 import SongGraph
 import SwiftUI
 
-/// The song's own settings — title, artist, tempo, key, meter — in a popover off the header's
+/// The song's own settings — title, artist, brief, tempo, key, meter — in a popover off the header's
 /// title and off the transport's key and tempo, which is where you look for them.
 ///
 /// Edits land as you make them, not on a button: the tempo readout and the key in the transport
@@ -12,6 +12,7 @@ struct SongSettingsPopover: View {
     let app: AppState
     @State private var title = ""
     @State private var artist = ""
+    @State private var brief = ""
     @State private var tempoText = ""
     @State private var keyText = ""
     @State private var meterText = ""
@@ -22,12 +23,13 @@ struct SongSettingsPopover: View {
     /// Applies the tapped tempo once the tapping stops, so the rail gets one line, not one a tap.
     @State private var tapSettles: Task<Void, Never>?
 
-    private enum Field: Hashable { case title, artist, tempo, key, meter }
+    private enum Field: Hashable { case title, artist, brief, tempo, key, meter }
 
     /// The settings, together, so a change to any of them can be put back as one.
     struct Settings: Equatable {
         var title: String
         var artist: String
+        var brief: String
         var tempo: Double
         var key: Key?
         var meter: TimeSignature
@@ -37,6 +39,7 @@ struct SongSettingsPopover: View {
         init(_ song: Song) {
             title = song.title
             artist = song.artist
+            brief = song.brief ?? ""
             tempo = song.tempo
             key = song.key
             meter = song.timeSignature
@@ -49,6 +52,7 @@ struct SongSettingsPopover: View {
             var parts: [String] = []
             if title != now.title { parts.append("“\(title)”") }
             if artist != now.artist { parts.append(artist.isEmpty ? "no artist" : artist) }
+            if brief != now.brief { parts.append(brief.isEmpty ? "no brief" : "the brief as it was") }
             if tempo != now.tempo { parts.append("\(SongSettingsPopover.tempoText(tempo)) bpm") }
             if key != now.key { parts.append(key?.name ?? "no key") }
             if meter != now.meter { parts.append(meter.description) }
@@ -63,6 +67,11 @@ struct SongSettingsPopover: View {
             SmallLabel("Song")
             field("Title", text: $title, focus: .title, prompt: "What the song is called") { app.setTitle(title) }
             field("Artist", text: $artist, focus: .artist, prompt: "Who it is by") { app.setArtist(artist) }
+            VStack(alignment: .leading, spacing: 4) {
+                field("Brief", text: $brief, focus: .brief, prompt: "What the song is about, in a sentence", lines: 1...3) { applyBrief() }
+                problem(briefProblem)
+            }
+            .help("The Producer holds every part to the brief, and says so until there is one")
             HStack(alignment: .top, spacing: 14) {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(alignment: .bottom, spacing: 6) {
@@ -119,6 +128,7 @@ struct SongSettingsPopover: View {
         if opened == nil { opened = Settings(song) }
         title = song.title
         artist = song.artist
+        brief = song.brief ?? ""
         tempoText = Self.tempoText(song.tempo)
         keyText = song.key?.name ?? ""
         meterText = song.timeSignature.description
@@ -144,6 +154,7 @@ struct SongSettingsPopover: View {
     private func putBack(_ settings: Settings) {
         app.setTitle(settings.title)
         app.setArtist(settings.artist)
+        app.setBrief(settings.brief)
         app.setTempo(settings.tempo)
         app.setKey(settings.key)
         app.setTimeSignature(settings.meter)
@@ -156,6 +167,10 @@ struct SongSettingsPopover: View {
     /// the field disagree with the clock by half a beat a minute.
     static func tempoText(_ tempo: Double) -> String {
         tempo.rounded() == tempo ? String(Int(tempo)) : String(format: "%.1f", tempo)
+    }
+
+    private func applyBrief() {
+        if app.setBrief(brief), let song = app.song { brief = song.brief ?? "" }
     }
 
     private func applyTempo() {
@@ -173,6 +188,14 @@ struct SongSettingsPopover: View {
     }
 
     // MARK: What is wrong with a field, said next to it
+
+    /// The Producer's limits, said here before the Producer says them: the brief is kept either way.
+    private var briefProblem: String? {
+        let words = brief.split(whereSeparator: \.isWhitespace).count
+        if words > 0, words < SetSongTool.briefWords.lowerBound { return "The Producer reads fewer than three words as no brief." }
+        if words > SetSongTool.briefWords.upperBound { return "\(words) words. The Producer wants one sentence, forty words at most." }
+        return nil
+    }
 
     private var tempoProblem: String? {
         let text = tempoText.trimmingCharacters(in: .whitespaces)
@@ -207,10 +230,11 @@ struct SongSettingsPopover: View {
     }
 
     private func field(_ label: String, text: Binding<String>, focus which: Field, prompt: String,
-                       width: CGFloat? = nil, commit: @escaping () -> Void) -> some View {
+                       width: CGFloat? = nil, lines: ClosedRange<Int> = 1...1, commit: @escaping () -> Void) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             SmallLabel(label, color: Design.Palette.inkTertiary)
-            TextField(prompt, text: text)
+            TextField(prompt, text: text, axis: lines.upperBound > 1 ? .vertical : .horizontal)
+                .lineLimit(lines)
                 .textFieldStyle(.roundedBorder)
                 .font(Design.Typography.ui(13, weight: .regular))
                 .focused($focus, equals: which)

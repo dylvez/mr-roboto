@@ -75,7 +75,14 @@ final class GridAdapter: GridHosting {
         if let part { app.setChop(chopPart, for: part) }
     }
 
-    func loadMachine(_ newMachine: SynthMachine) async throws {
+    /// `machine` with the voice edits the song has kept, so a step touched on the grid sounds as
+    /// the transport will play it.
+    private func shaped(_ machine: SynthMachine) async -> SynthMachine {
+        await MainActor.run { app.song.map { SongPlayback.shaped(machine, in: $0) } ?? machine }
+    }
+
+    func loadMachine(_ picked: SynthMachine) async throws {
+        let newMachine = await shaped(picked)
         machine.withLock { $0 = newMachine }
         // The audible path first: if this fails the surface should say so, because it is what a
         // step touch plays.
@@ -106,8 +113,9 @@ final class GridAdapter: GridHosting {
             await ensureChop(part)
             return
         }
-        let wanted = machine.withLock { $0 }
-        guard await service.currentKitID != wanted.id else { return }
+        let held = machine.withLock { $0 }
+        guard await service.currentKitID != held.id else { return }
+        let wanted = await shaped(held)
         do {
             try await service.prepare(machine: wanted)
         } catch {

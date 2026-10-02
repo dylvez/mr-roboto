@@ -197,7 +197,7 @@ public final class SoundSurface {
         self.host = host
         self.sampleRate = sampleRate
         self.auditionVelocity = auditionVelocity
-        let state = host.selectedPart.flatMap(SoundState.init) ?? SoundState()
+        let state = host.selectedPart.flatMap(SoundState.init) ?? Self.opening(on: host)
         self.draft = state
         self.committed = state
         self.boundVersion = host.selectedPart
@@ -208,13 +208,40 @@ public final class SoundSurface {
     /// changes under the surface.
     public func reload() {
         let version = host?.selectedPart
-        let state = version.flatMap(SoundState.init) ?? SoundState()
+        let state = version.flatMap(SoundState.init) ?? host.map(Self.opening(on:)) ?? SoundState()
         boundVersion = version
+        recordedHit = nil
         draft = state
         committed = state
         chainFailure = nil
         bindPart(version, lever: nil)
     }
+
+    /// What a surface opened on no drum voice opens on: the kick of the machine the song plays —
+    /// or of the machine that was picked, when the pick is what is bound — as the song has kept it.
+    /// With no song, the TR-808's. It used to be the 808's whatever the song played.
+    private static func opening(on host: any SoundSurfaceHost) -> SoundState {
+        var machine = host.songMachine
+        if case .sound(let sound)? = host.selectedPart?.kind, SynthMachine.preset(id: sound.instrument) != nil {
+            machine = sound.instrument
+        }
+        guard let machine, let preset = SynthMachine.preset(id: machine) else { return SoundState() }
+        let voice = preset.voices.first { $0.kind == .kick }?.kind ?? preset.voices.first?.kind ?? .kick
+        return host.keptVoice(voice, on: machine).flatMap(SoundState.init) ?? SoundState(machine: machine, voice: voice)
+    }
+
+    /// What the recording playing the voice in front of you is called, when one does. Then the
+    /// voice has no circuits to turn: LEVEL is its only knob, and what plays on touch is the
+    /// recording as the kit plays it.
+    public var recordedAs: String? {
+        guard !subject.isPart else { return nil }
+        return host?.recording(of: draft.voice, on: draft.machine)
+    }
+
+    /// The recording's hit as the host's kit played it, and the LEVEL the kit was built at, so a
+    /// turn of LEVEL is a gain on what was fetched rather than another kit on disk.
+    @ObservationIgnored private var recordedHit: (machine: String, voice: SynthVoiceKind, level: Double, audition: SoundAudition)?
+    @ObservationIgnored private var recordedLoad: Task<Void, Never>?
 
     /// Opens onto a sample or a groove, when that is what is bound: chain panel only, the draft at
     /// the part's top pass, and the dry part asked for from the host.
@@ -287,7 +314,10 @@ public final class SoundSurface {
 
     public func controls(for panel: SoundPanel) -> [SoundControl] {
         switch panel {
-        case .voice: subject.isPart ? [] : SoundControl.voiceControls(for: draft.spec)
+        case .voice:
+            if subject.isPart { [] }
+            else if recordedAs != nil { SoundControl.recordedControls(for: draft.spec) }
+            else { SoundControl.voiceControls(for: draft.spec) }
         case .chain: SoundControl.chainControls(for: draft.degrade)
         }
     }
@@ -326,7 +356,9 @@ public final class SoundSurface {
     public func select(_ voice: SynthVoiceKind) {
         guard !subject.isPart, voice != draft.voice, draft.availableVoices.contains(voice) else { return }
         draft.voice = voice
-        draft.controls = SoundState.factorySpec(machine: draft.machine, voice: voice).controls
+        // As the song has kept it, when it has; the machine preset's otherwise.
+        draft.controls = host?.keptVoice(voice, on: draft.machine).flatMap(SoundState.init)?.controls
+            ?? SoundState.factorySpec(machine: draft.machine, voice: voice).controls
         panel = .voice
         audition()
     }
@@ -386,7 +418,7 @@ public final class SoundSurface {
     /// `.dry` is a true bypass — the synthesizer's own output, not the chain set to clean.
     public func rendered(_ monitor: SoundMonitor) -> [Float] {
         if subject.isPart { return renderedPart(monitor).first ?? [] }
-        let dry = DrumSynthesizer.render(draft.spec, velocity: auditionVelocity, sampleRate: sampleRate)
+        let dry = recordedDry()?.samples ?? DrumSynthesizer.render(draft.spec, velocity: auditionVelocity, sampleRate: sampleRate)
         guard monitor == .chain, !draft.degrade.isBypass else { return dry }
         do {
             return try Self.throughChain(dry, settings: draft.degrade, sampleRate: sampleRate)
@@ -399,6 +431,10 @@ public final class SoundSurface {
     public func audition() {
         if subject.isPart {
             auditionPart()
+            return
+        }
+        if recordedAs != nil {
+            auditionRecording()
             return
         }
         let dry = DrumSynthesizer.render(draft.spec, velocity: auditionVelocity, sampleRate: sampleRate)
@@ -417,6 +453,63 @@ public final class SoundSurface {
         }
         host?.audition(SoundAudition(samples: samples, sampleRate: sampleRate,
                                      label: draft.label, isDry: isDry))
+    }
+
+    /// The recording in front of you at the draft's LEVEL, when it has been fetched for this voice.
+    private func recordedDry() -> SoundAudition? {
+        guard recordedAs != nil, let hit = recordedHit, hit.machine == draft.machine, hit.voice == draft.voice else { return nil }
+        let gain = hit.level > 0 ? Float(draft.controls.level / hit.level) : 1
+        var audition = hit.audition
+        if gain != 1 { audition.planar = audition.planar.map { $0.map { $0 * gain } } }
+        return audition
+    }
+
+    /// Plays the recording a voice is, through the chain when that is the side you are on. The
+    /// first touch of a voice asks the host for the hit, which builds the kit if nobody has; every
+    /// touch after is the same hit at the draft's LEVEL.
+    private func auditionRecording() {
+        guard let dry = recordedDry() else {
+            let machine = draft.machine, voice = draft.voice
+            // The kit the song plays, not one built for the draft: the host shapes the machine as
+            // its song has, and that is the LEVEL the hit comes back at.
+            let preset = draft.synthMachine
+            let level = host?.keptVoice(voice, on: machine).flatMap(SoundState.init)?.controls.level
+                ?? draft.factorySpec.controls.level
+            recordedLoad?.cancel()
+            recordedLoad = Task { [weak self] in
+                guard let host = self?.host else { return }
+                do {
+                    let hit = try await host.kitHit(of: voice, on: preset)
+                    guard let self, !Task.isCancelled, self.draft.machine == machine, self.draft.voice == voice else { return }
+                    self.recordedHit = (machine, voice, level, hit)
+                    self.chainFailure = nil
+                    self.auditionRecording()
+                } catch {
+                    guard !Task.isCancelled else { return }
+                    self?.chainFailure = "\(error)"
+                }
+            }
+            return
+        }
+        var planar = dry.planar
+        var isDry = true
+        if monitor == .chain, !draft.degrade.isBypass {
+            do {
+                planar = try planar.map { try Self.throughChain($0, settings: draft.degrade, sampleRate: dry.sampleRate) }
+                isDry = false
+                chainFailure = nil
+            } catch {
+                chainFailure = "\(error)"
+            }
+        } else {
+            chainFailure = nil
+        }
+        host?.audition(SoundAudition(planar: planar, sampleRate: dry.sampleRate, label: draft.label, isDry: isDry))
+    }
+
+    /// Waits for the recording a voice is to arrive from the host. Tests use this.
+    public func waitForRecording() async {
+        await recordedLoad?.value
     }
 
     private func auditionPart() {
@@ -474,7 +567,14 @@ public final class SoundSurface {
         guard isDirty else { return nil }
         if subject.isPart { return commitPart(note: note) }
         let kind = PartKind.sound(draft.sound)
-        let version = boundVersion?.deriving(kind, by: .user, operation: Operation.edit, note: note)
+        // A voice is a part of its own: the next version of what the song has kept of it, or of
+        // what is bound when that is this voice, and a new part otherwise. An edit of the snare
+        // used to go on whatever was bound — the kick's part, or the pick of the machine itself.
+        let bound = boundVersion.flatMap { version in
+            SoundState(version).flatMap { $0.machine == draft.machine && $0.voice == draft.voice ? version : nil }
+        }
+        let parent = host?.keptVoice(draft.voice, on: draft.machine) ?? bound
+        let version = parent?.deriving(kind, by: .user, operation: Operation.edit, note: note)
             ?? PartVersion(partID: PartID(), kind: kind, author: .user,
                            operation: Operation.written, note: note)
         guard host?.record(version) == true else {

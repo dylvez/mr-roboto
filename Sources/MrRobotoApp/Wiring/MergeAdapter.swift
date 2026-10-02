@@ -61,7 +61,7 @@ final class MergeAdapter: MergeHosting {
             let timeline = GrooveTimeline.tempo(tempo, timeSignature: signature)
             await service.playBass(BasslinePlayer.hits(for: moved, on: timeline, offsetBeats: 0))
         case .groove(let groove):
-            let machine = song.flatMap { SynthMachine.preset(id: SongPlayback.machineID(in: $0)) } ?? .tr808
+            let machine = song.map { SongPlayback.machine(in: $0) } ?? .tr808
             do { try await service.prepare(machine: machine) } catch {
                 app.note(.session, "Could not load \(machine.name) to play that", detail: "\(error)")
                 return

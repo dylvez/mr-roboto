@@ -310,6 +310,49 @@ struct DirectorSetSongTests {
         #expect(rig.app.song?.key == nil && cleared["unchanged"] as? [String] == ["title"])
     }
 
+    @Test("the brief is written down, read by the Producer, rewritten in place and cleared; too short or too long is refused")
+    func brief() async throws {
+        let rig = WritingFixture.rig(Song.new(title: "Untitled", tempo: 120))
+        defer { rig.clean() }
+        func set(_ brief: String) async -> [String: Any] {
+            WritingFixture.json(await WritingFixture.run(rig.box, "set_song",
+                #"{"title":"","artist":"","tempo":0,"key":"","time_signature":"","brief":"\#(brief)"}"#))
+        }
+        func producerSays() throws -> String {
+            let song = try #require(rig.app.song)
+            return Producer().read(SongObservation.of(song)).first { $0.rule == "producer.brief-first" }?.says ?? ""
+        }
+        #expect(try producerSays().contains("No brief"))
+
+        let written = await set("  The last bus home,   and who is not on it ")
+        #expect(rig.app.song?.brief == "The last bus home, and who is not on it", "\(written)")
+        #expect(written["brief"] as? String == "The last bus home, and who is not on it")
+        #expect(try producerSays().contains("The last bus home"))
+        #expect(rig.app.hasUnsavedChanges)
+
+        // Written again, it is the same seed: a song has one brief.
+        let seed = try #require(rig.app.song?.seeds.first).id
+        _ = await set("Waiting for someone who already left")
+        #expect(rig.app.song?.seeds.count == 1 && rig.app.song?.seeds.first?.id == seed)
+        #expect(rig.app.song?.brief == "Waiting for someone who already left")
+        #expect((await set("Waiting for someone who already left"))["unchanged"] as? [String] == ["brief"])
+
+        let short = await set("Sad song")
+        #expect(((short["refused"] as? [[String: Any]])?.first?["field"] as? String) == "brief", "\(short)")
+        let long = await set(Array(repeating: "word", count: 41).joined(separator: " "))
+        #expect(((long["refused"] as? [[String: Any]])?.first?["reason"] as? String)?.contains("forty") == true, "\(long)")
+        #expect(rig.app.song?.brief == "Waiting for someone who already left", "a refused brief changes nothing")
+
+        _ = await set("none")
+        #expect(rig.app.song?.brief == nil && rig.app.song?.seeds.isEmpty == true)
+        #expect(try producerSays().contains("No brief"))
+
+        // The frame's own setter takes what the user types, whatever its length, and says so on the rail.
+        #expect(rig.app.setBrief("Two words"))
+        #expect(rig.app.song?.brief == "Two words")
+        #expect(!rig.app.setBrief("Two words"), "the same brief is not a change")
+    }
+
     @Test("a key that does not parse, a tempo out of range and a meter that is not one are refused; the rest still lands")
     func refusals() async throws {
         let rig = WritingFixture.rig(Song.new(title: "Untitled", tempo: 120))

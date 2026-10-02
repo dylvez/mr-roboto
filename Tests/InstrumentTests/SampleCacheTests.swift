@@ -234,6 +234,108 @@ final class DecodeCounter: @unchecked Sendable {
     }
 }
 
+@Suite("A cache shared between engines")
+struct SharedSampleCacheTests {
+
+    @Test("two engines' caches hold one decode of a recording between them, and each its own rendered kit")
+    func sharedBetweenTwo() throws {
+        let temp = TempDirectory()
+        defer { temp.remove() }
+        let piano = try AudioFixtures.writeWAV(at: temp.file("library/piano.wav"), sampleRate: 48_000, channels: 2, frames: 2_000)
+        let rendered = try AudioFixtures.writeWAV(at: temp.file("kits/tr808/kick.wav"), sampleRate: 48_000, channels: 1, frames: 500)
+        let counter = DecodeCounter()
+        let shared = SampleCache(decode: counter.decoder(), checksFiles: true)
+        let kits = temp.url.appendingPathComponent("kits").standardizedFileURL.path + "/"
+        func engine() -> SampleCache {
+            SampleCache(decode: counter.decoder(), backing: shared, sharing: { !$0.standardizedFileURL.path.hasPrefix(kits) })
+        }
+        // A bounce's cache and the transport's: the second does not read the piano again.
+        let live = engine(), bounce = engine()
+        let first = try live.buffer(for: piano, sampleRate: 48_000)
+        let second = try bounce.buffer(for: piano, sampleRate: 48_000)
+        #expect(first === second && counter.count == 1)
+        #expect(shared.count == 1 && live.count == 0 && bounce.count == 0)
+        #expect(bounce.cached(url: piano, sampleRate: 48_000) === first)
+        // What an engine rendered is its own.
+        let mine = try live.buffer(for: rendered, sampleRate: 48_000)
+        let theirs = try bounce.buffer(for: rendered, sampleRate: 48_000)
+        #expect(mine !== theirs && counter.count == 3)
+        #expect(shared.count == 1 && live.count == 1)
+        // A bounce is thrown away, and the recording is still held for the next one.
+        #expect(try engine().buffer(for: piano, sampleRate: 48_000) === first)
+        #expect(counter.count == 3)
+    }
+
+    @Test("a recording written again is decoded again; one left alone is not")
+    func checksTheFile() throws {
+        let temp = TempDirectory()
+        defer { temp.remove() }
+        let url = temp.file("cello.wav")
+        try AudioFixtures.writeWAV(at: url, sampleRate: 48_000, channels: 1, frames: 1_000)
+        let counter = DecodeCounter()
+        let cache = SampleCache(decode: counter.decoder(), checksFiles: true)
+        let before = try cache.buffer(for: url, sampleRate: 48_000)
+        #expect(try cache.buffer(for: url, sampleRate: 48_000) === before)
+        #expect(counter.count == 1)
+        // Imported again over itself: another recording at the same path.
+        try FileManager.default.removeItem(at: url)
+        try AudioFixtures.writeWAV(at: url, sampleRate: 48_000, channels: 1, frames: 1_500)
+        let after = try cache.buffer(for: url, sampleRate: 48_000)
+        #expect(after !== before && after.frameCount == 1_500 && counter.count == 2)
+        #expect(before.frameCount == 1_000, "whoever held the old one still has it whole")
+        #expect(cache.count == 1)
+        // A cache that does not check is the cache it always was.
+        let trusting = SampleCache(decode: counter.decoder())
+        let held = try trusting.buffer(for: url, sampleRate: 48_000)
+        try FileManager.default.removeItem(at: url)
+        try AudioFixtures.writeWAV(at: url, sampleRate: 48_000, channels: 1, frames: 700)
+        #expect(try trusting.buffer(for: url, sampleRate: 48_000) === held)
+    }
+
+    @Test("past its limit a cache lets go of what was used longest ago, never of the newest")
+    func bounded() throws {
+        let temp = TempDirectory()
+        defer { temp.remove() }
+        let files = try (0..<4).map { try AudioFixtures.writeWAV(at: temp.file("s\($0).wav"), sampleRate: 48_000, channels: 1, frames: 1_000) }
+        let one = 1_000 * MemoryLayout<Float>.size
+        let cache = SampleCache(byteLimit: 2 * one + one / 2)
+        let first = try cache.buffer(for: files[0], sampleRate: 48_000)
+        _ = try cache.buffer(for: files[1], sampleRate: 48_000)
+        // The first is asked for again, so the second is the oldest when a third comes in.
+        _ = try cache.buffer(for: files[0], sampleRate: 48_000)
+        _ = try cache.buffer(for: files[2], sampleRate: 48_000)
+        #expect(cache.count == 2 && cache.residentByteCount == 2 * one)
+        #expect(cache.cached(url: files[0], sampleRate: 48_000) === first)
+        #expect(cache.cached(url: files[1], sampleRate: 48_000) == nil)
+        #expect(cache.cached(url: files[2], sampleRate: 48_000) != nil)
+        // One bigger than the limit is still held: it is what is about to be played.
+        let small = SampleCache(byteLimit: one / 2)
+        _ = try small.buffer(for: files[3], sampleRate: 48_000)
+        #expect(small.count == 1)
+        // And what was let go is whole for whoever still holds it.
+        #expect(first.frameCount == 1_000)
+    }
+
+    @Test("the engine's cache shares what is outside its kits and the recorded pieces inside them")
+    func whatAnEngineShares() throws {
+        let temp = TempDirectory()
+        defer { temp.remove() }
+        let kits = temp.url.appendingPathComponent("audition \(UUID().uuidString)", isDirectory: true)
+        let piano = try AudioFixtures.writeWAV(at: temp.file("Instruments/piano/samples/c4.wav"), sampleRate: 48_000, channels: 1, frames: 300)
+        let synthesized = try AudioFixtures.writeWAV(at: kits.appendingPathComponent("tr808-0123/samples/kick_v1_63.wav"), sampleRate: 48_000, channels: 1, frames: 300)
+        let recorded = try AudioFixtures.writeWAV(at: kits.appendingPathComponent("kit-room-0123/samples/recorded/room/kick.wav"), sampleRate: 48_000, channels: 1, frames: 300)
+        defer { for url in [piano, recorded] { SampleCache.recordings.remove(url: url, sampleRate: 48_000) } }
+        let cache = SampleCache.sharingRecordings(besides: kits)
+        _ = try cache.buffer(for: piano, sampleRate: 48_000)
+        _ = try cache.buffer(for: synthesized, sampleRate: 48_000)
+        _ = try cache.buffer(for: recorded, sampleRate: 48_000)
+        #expect(cache.count == 1, "the synthesized kick is the engine's own")
+        #expect(SampleCache.recordings.cached(url: piano, sampleRate: 48_000) != nil)
+        #expect(SampleCache.recordings.cached(url: recorded, sampleRate: 48_000) != nil)
+        #expect(SampleCache.recordings.cached(url: synthesized, sampleRate: 48_000) == nil)
+    }
+}
+
 @Suite("readAll bounds")
 struct SampleCacheReadAllBoundsTests {
 

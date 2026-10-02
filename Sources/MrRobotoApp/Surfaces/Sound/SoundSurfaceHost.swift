@@ -1,4 +1,5 @@
 import Foundation
+import Instrument
 import SongGraph
 
 /// What the Sound surface needs from whatever is hosting it — and nothing else.
@@ -13,8 +14,13 @@ import SongGraph
 /// the stand-in, and `SoundSurfaceStub` in the tests stays the offline host.
 ///
 /// Note what is *not* here: re-rendering the kit on disk. A knob turn renders one voice with
-/// `DrumSynthesizer.render`; catching the kit folder up with `SynthesizedKit.rerender` is the
-/// host's business when it sees a new version, because the host is what owns the kit.
+/// `DrumSynthesizer.render`; catching the kit up is the host's business when it sees a new
+/// version, because the host is what owns the kit. The app's host does it by building every kit
+/// from the machine as the song has shaped it (`SongPlayback.shaped`).
+///
+/// The four members after `dustLever` are the song's side of a drum voice: which machine the song
+/// plays, what it has kept of a voice, and whether a voice is a recording. Each has a default that
+/// says "no song", so a host with none is still the whole of the first three.
 @MainActor
 public protocol SoundSurfaceHost: AnyObject {
 
@@ -51,10 +57,33 @@ public protocol SoundSurfaceHost: AnyObject {
     /// opened on a sample or a groove with a lever starts its draft at `Dust.lever(amount)` — the same
     /// pass the Compare's `dust` lever plays at that amount.
     var dustLever: Double? { get }
+
+    /// The drum machine the song plays, by id: what a surface opened on no voice opens on. Nil
+    /// when there is no song, and the surface opens on the TR-808.
+    var songMachine: String? { get }
+
+    /// The newest edit of this voice of this machine the song has kept, when it has kept one. A
+    /// voice opens at it, and the next edit is its next version.
+    func keptVoice(_ voice: SynthVoiceKind, on machine: String) -> PartVersion?
+
+    /// What the recording that plays this voice is called, when one does: a recorded kit's kick,
+    /// a conga from the hand percussion in use. Nil is a synthesized voice.
+    func recording(of voice: SynthVoiceKind, on machine: String) -> String?
+
+    /// One hit of a voice as the song's kit plays it — `machine` shaped as the song has kept it —
+    /// which for a recorded voice is the recording at the level the kit brings it to.
+    /// Asynchronous because it builds the kit when nobody has yet. A host with no kit throws.
+    func kitHit(of voice: SynthVoiceKind, on machine: SynthMachine) async throws -> SoundAudition
 }
 
 public extension SoundSurfaceHost {
     public func newest(of part: PartID) -> PartVersion? { nil }
+    var songMachine: String? { nil }
+    func keptVoice(_ voice: SynthVoiceKind, on machine: String) -> PartVersion? { nil }
+    func recording(of voice: SynthVoiceKind, on machine: String) -> String? { nil }
+    func kitHit(of voice: SynthVoiceKind, on machine: SynthMachine) async throws -> SoundAudition {
+        throw SoundSurfaceUnavailable(what: "this host has no kit to play the \(voice.rawValue) on")
+    }
     func dryAudio(of version: PartVersion) async throws -> SoundAudition {
         throw SoundSurfaceUnavailable(what: "this host cannot render a \(version.type.rawValue) to put through the chain")
     }
