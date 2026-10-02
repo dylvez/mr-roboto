@@ -849,7 +849,7 @@ public final class PianoRollModel {
             var melodyObservation = MelodyObservation(label: title, key: key, beatsPerBar: beatsPerBar,
                                                       notes: notes, chords: chords.enumerated().map { index, span in
                                                           (span.chord, chords.prefix(index).reduce(0) { $0 + $1.beats })
-                                                      })
+                                                      }, chordsLength: chords.isEmpty ? nil : chords.reduce(0) { $0 + $1.beats })
             guard notes.count >= 2 else { readings = []; return }
             melodyObservation.alternatives = MelodyObservation.alternatives(to: Melody(notes: notes), key: key,
                                                                             beatsPerBar: beatsPerBar, chords: chords)

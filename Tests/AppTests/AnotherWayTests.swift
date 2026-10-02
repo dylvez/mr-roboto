@@ -263,6 +263,39 @@ struct DirectorAnotherWayTests {
         #expect(chords(rig.app, in: try #require(rig.app.song?.sections.first { $0.id == last.id })) == "Dm7 | Bbmaj7 | G7 | A7")
     }
 
+    @Test("every player on the song's chords follows a move, in the song and in one section, each played its own way")
+    func everyPlayerFollows() async throws {
+        let (rig, loop) = try rig()
+        defer { rig.clean() }
+        guard case .progression(var held) = loop.chords.kind else { return }
+        held.playing = ChordPlaying(.held, .rootless)
+        let pad = PartVersion(partID: PartID(), kind: .progression(held), author: .user, operation: Operation.written, note: "Pad: held")
+        var sections = try #require(rig.app.song).sections
+        for index in sections.indices { sections[index].stitch.append(Lane(part: pad.partID)) }
+        #expect(rig.app.keep([pad], arranged: sections))
+        #expect(rig.app.record(loop.chords.deriving(loop.chords.kind, by: .user, operation: Operation.written, note: loop.chords.note), joiningForm: false))
+
+        let whole = await WritingFixture.run(rig.box, "reharmonize", #"{"move":"borrowed","section":"","variant":0}"#)
+        #expect(!whole.isError, "\(whole.content)")
+        var song = try #require(rig.app.song)
+        guard case .progression(let padNow)? = song.latestVersion(of: pad.partID)?.kind else { Issue.record("no pad"); return }
+        #expect(padNow.symbols() == "Dm7 | Bbmaj7 | G7 | A7" && padNow.playing?.keysPattern == .held, "\(padNow.symbols())")
+        #expect(Guidance.progressions(in: song).last?.partID == loop.chords.partID, "the song's chords are still the song's")
+        #expect(chords(rig.app) == "Dm7 | Bbmaj7 | G7 | A7")
+
+        let verse = try #require(song.sections.first { $0.name == "Verse" })
+        let one = await WritingFixture.run(rig.box, "reharmonize", #"{"move":"tritone","section":"\#(verse.id)","variant":0}"#)
+        #expect(!one.isError, "\(one.content)")
+        song = try #require(rig.app.song)
+        let section = try #require(song.sections.first { $0.id == verse.id })
+        let sheets = section.stitch.compactMap { lane -> Progression? in
+            if case .progression(let sheet)? = song.version(playing: lane)?.kind { return sheet }
+            return nil
+        }
+        #expect(sheets.count == 2 && sheets[0].bars == sheets[1].bars && sheets[0].symbols().hasSuffix("A7 Eb7"), "\(sheets.map { $0.symbols() })")
+        #expect(Set(sheets.map { $0.playing?.keysPattern ?? .held }).count >= 1)
+    }
+
     @Test("no move: a Compare of the ways, each with its bass, and taking a row keeps both")
     func compare() async throws {
         let (rig, loop) = try rig()

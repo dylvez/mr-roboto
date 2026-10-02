@@ -270,6 +270,15 @@ public struct ReharmonizeTool: DirectorTool {
             guard await workspace.record(version) else {
                 throw DirectorToolFailure(tool: name, reason: "The song would not take it.")
             }
+            // Every other player on the same chords goes with them, each played its own way: a
+            // guitar left on the old sheet under the keys' new one is two harmonies at once.
+            for other in Develop.loop(of: song) where other.partID != root.partID {
+                guard case .progression(let theirs) = other.kind, theirs.bars == sheet.bars else { continue }
+                var followed = made.progression
+                followed.playing = theirs.playing
+                _ = await workspace.record(other.deriving(.progression(followed), by: author, operation: Operation.reharmonize,
+                                                          note: PartLabel.title(of: other) + ": \(now)"))
+            }
             var bassSays = Self.noBass
             if let bass = Guidance.basslines(in: song).last, case .bassline(let line) = bass.kind {
                 bassSays = Self.bassFits
@@ -278,6 +287,10 @@ public struct ReharmonizeTool: DirectorTool {
                                                         note: "Follows \(now)")) {
                     bassSays = Self.bassMoved
                 }
+            }
+            // The keys are the song's chords: kept last, so they are still what a surface opens on.
+            if Guidance.progressions(in: await workspace.song ?? song).last?.partID != version.partID {
+                _ = await workspace.record(version.deriving(version.kind, by: author, operation: Operation.reharmonize, note: note))
             }
             await workspace.speak(Self.author, made.says, detail: move.name)
             // What was written from the old sheet and still plays it.
@@ -310,6 +323,17 @@ public struct ReharmonizeTool: DirectorTool {
                                             note: "\(way.progression.symbols()) in \(key): \(move.name.lowercased())", by: author, in: working)
             if let version = made.version { versions.append(version); try? working.append(version) }
             arranged[index].stitch = arranged[index].stitch.map { $0.part == chords.lane.part ? Lane(part: made.part) : $0 }
+            // And whoever else plays those chords there, each its own way.
+            for lane in arranged[index].stitch where lane.part != made.part {
+                guard let version = working.version(playing: lane), case .progression(let theirs) = version.kind, theirs.bars == own.bars,
+                      let theirRoot = working.latestVersion(of: working.variation(of: lane.part)?.of ?? lane.part) else { continue }
+                var followed = way.progression
+                followed.playing = theirs.playing
+                let also = AnotherWay.variation(of: theirRoot, named: move.rawValue, kind: .progression(followed),
+                                                note: "\(PartLabel.title(of: theirRoot)): \(way.progression.symbols())", by: author, in: working)
+                if let version = also.version { versions.append(version); try? working.append(version) }
+                arranged[index].stitch = arranged[index].stitch.map { $0.part == lane.part ? Lane(part: also.part) : $0 }
+            }
             if let bass = AnotherWay.lane(of: .bassline, in: arranged[index], of: working), case .bassline(let line) = bass.version.kind {
                 if bassSays == Self.noBass { bassSays = Self.bassFits }
                 if let followed = Develop.refit(line, from: own, to: way.progression, beatsPerBar: beats),
@@ -471,7 +495,7 @@ public struct VaryTuneTool: DirectorTool {
             let shown = Array(options.prefix(CompareModel.maximumCandidates))
             func readings(_ melody: Melody) -> [CompareReading] {
                 let read = MelodyObservation(label: "", key: key ?? Key.cMajor, beatsPerBar: beats, notes: melody.notes,
-                                             chords: Self.starts(of: spans))
+                                             chords: Self.starts(of: spans), chordsLength: spans.isEmpty ? nil : spans.reduce(0) { $0 + $1.beats })
                 return [CompareReading(.melodySurprises, Double(read.surprises.count), unit: "of its own"),
                         CompareReading(.chordToneRatio, read.chordToneRatio, unit: "on the chords")]
             }

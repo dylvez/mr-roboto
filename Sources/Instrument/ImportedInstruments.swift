@@ -269,6 +269,13 @@ public enum ImportedInstruments {
         return kit.manifest.zones.map(\.key.noteRange.lowerBound).min()
     }
 
+    /// The highest key any of an instrument's recordings plays, or nil when its kit does not load.
+    public static func highestNote(of spec: InstrumentVoiceSpec) -> Int? {
+        guard let folder = spec.sampledKit,
+              let kit = try? KitStore.load(from: URL(fileURLWithPath: folder, isDirectory: true)) else { return nil }
+        return kit.manifest.zones.map(\.key.noteRange.upperBound).max()
+    }
+
     /// Takes an imported instrument out of the app: its folder, copies and all. The pack it came
     /// from is not touched.
     public static func remove(id: String) throws {

@@ -400,7 +400,12 @@ public enum Develop {
                     }
                 case .progression(let sheet):
                     if opens || closes { continue }
-                    if leaves, let elsewhere, part.partID == chords?.partID {
+                    // Every player on the song's chords goes where the song goes: a guitar and a
+                    // horn section left on the verse's chords under a bridge's are two harmonies at
+                    // once. Each keeps how it plays; only what it plays changes.
+                    let onTheSongsChords = part.partID == chords?.partID || (harmony.map { sheet.bars == $0.bars } ?? false)
+                    if leaves, var elsewhere, onTheSongsChords {
+                        if part.partID != chords?.partID { elsewhere.playing = sheet.playing }
                         let id = variation(of: part, named: bridgeName, kind: .progression(elsewhere),
                                            note: "\(label("Bridge chords", part)): \(elsewhere.symbols()), somewhere else for the bridge to go")
                         lanes.append(Lane(part: id))
@@ -411,8 +416,9 @@ public enum Develop {
                         continue
                     }
                     let family = InstrumentVoiceSpec.preset(id: SongPlayback.instrumentID(for: part.partID, in: song))?.family ?? "keys"
-                    if let lastWay, part.partID == chords?.partID {
+                    if let lastWay, onTheSongsChords {
                         var played = lastWay.progression
+                        played.playing = sheet.playing
                         if let treatment = chordsTreatment(for: role, playing: sheet.playing, lifted: lifted, family: family) {
                             played.playing = treatment.isPlain ? nil : treatment
                         }
@@ -444,6 +450,15 @@ public enum Develop {
                     if varying.seed != nil, case .plain = choice, role.isPeak, index != peaks.first, index != lastPeak {
                         let loop = tune.loopBars(beatsPerBar: beats)
                         choice = .vary(entry.bars >= loop * 2 ? .answered : .pushed)
+                    }
+                    // An octave above what a recorded instrument has recordings of is silence: a
+                    // tenor is not lifted past its top note. It leans on its bar lines instead, or
+                    // is said twice with a second ending.
+                    if case .vary(.lift) = choice, let top = tune.notes.map(\.pitch.midi).max(),
+                       let reach = ImportedInstruments.spec(id: SongPlayback.instrumentID(for: part.partID, in: song)).flatMap(ImportedInstruments.highestNote(of:)),
+                       top + 12 > reach {
+                        let loop = tune.loopBars(beatsPerBar: beats)
+                        choice = varying.seed != nil ? .vary(entry.bars >= loop * 2 ? .answered : .pushed) : .plain
                     }
                     if case .vary(let treatment) = choice,
                        let varied = TuneVariation.vary(tune, as: treatment, bars: entry.bars, beatsPerBar: beats,

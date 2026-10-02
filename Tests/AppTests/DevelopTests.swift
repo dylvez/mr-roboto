@@ -795,6 +795,35 @@ struct DevelopVariedTests {
         #expect(again.sections.map(\.stitch) == development.sections.map(\.stitch))
     }
 
+    @Test("two players on the song's chords both go where the bridge and the last chorus go, each played its own way")
+    func everyChordPlayerFollows() throws {
+        var loop = try Self.loop()
+        guard case .progression(var held) = loop.chords.kind else { return }
+        held.playing = ChordPlaying(.held, .rootless)
+        var keys = held
+        keys.playing = ChordPlaying(.pushes, .led, seed: 3)
+        // The song's chords twice: a pad that holds them and keys that push them.
+        let pad = PartVersion(partID: PartID(), kind: .progression(held), author: .user, operation: Operation.written, note: "Pad: held")
+        let pushed = loop.chords.deriving(.progression(keys), by: .user, operation: Operation.written, note: "Keys: pushes")
+        try loop.song.append(contentsOf: [pushed, pad])
+        for index in loop.song.sections.indices { loop.song.sections[index].stitch.append(Lane(part: pad.partID)) }
+
+        let development = try #require(Develop.plan(for: loop.song, harmony: .varied(seed: 0)))
+        func sheets(_ section: SongGraph.Section) -> [Progression] {
+            section.stitch.compactMap { lane in
+                let version = development.versions.last { $0.partID == lane.part } ?? loop.song.latestVersion(of: lane.part)
+                if case .progression(let sheet)? = version?.kind { return sheet }
+                return nil
+            }
+        }
+        let bridge = sheets(try #require(development.sections.first { $0.name == "Bridge" }))
+        #expect(bridge.count == 2 && bridge[0].bars == bridge[1].bars, "\(bridge.map { $0.symbols() })")
+        #expect(bridge[0].symbols() != "Dm7 | Bbmaj7 | Gm7 | A7")
+        #expect(Set(bridge.compactMap { $0.playing?.keysPattern }) == [.held, .pushes], "each still plays its own way")
+        let last = sheets(try #require(development.sections.last { $0.name == "Hook" }))
+        #expect(last.count == 2 && last[0].bars == last[1].bars && last[0].symbols() != "Dm7 | Bbmaj7 | Gm7 | A7", "\(last.map { $0.symbols() })")
+    }
+
     @Test("a bass line follows other chords without being written again")
     func refit() throws {
         let key = Key(parsing: "D minor")!

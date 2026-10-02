@@ -16,6 +16,10 @@ public struct MelodyObservation: Hashable, Sendable {
     public var notes: [NoteEvent]
     /// The chords underneath, each with the beat it starts on. Empty when the song states none.
     public var chords: [(chord: Chord, start: Double)]
+    /// How long the chords run before they come round again, in beats. A tune twice the length
+    /// of its loop is heard over the loop twice; without this every note past the sheet's end was
+    /// read against its last chord. Nil reads the chords once.
+    public var chordsLength: Double?
     /// Two other ways to play the tune, each in a few words, for the reading that finds nothing
     /// in it its own. Empty when it was read with no melody behind it.
     public var alternatives: [String] = []
@@ -32,12 +36,13 @@ public struct MelodyObservation: Hashable, Sendable {
     }
 
     public init(label: String, key: Key, beatsPerBar: Int = 4, notes: [NoteEvent],
-                chords: [(chord: Chord, start: Double)] = []) {
+                chords: [(chord: Chord, start: Double)] = [], chordsLength: Double? = nil) {
         self.label = label
         self.key = key
         self.beatsPerBar = beatsPerBar
         self.notes = notes.sorted { $0.start < $1.start }
         self.chords = chords
+        self.chordsLength = chordsLength
     }
 
     // MARK: The numbers
@@ -106,7 +111,10 @@ public struct MelodyObservation: Hashable, Sendable {
     }
 
     func chord(at beat: Double) -> Chord? {
-        chords.last { $0.start <= beat + 1e-9 }?.chord
+        var beat = beat
+        // The chords come round again under a tune longer than they are.
+        if let length = chordsLength, length > 0, beat >= length - 1e-9 { beat = beat.truncatingRemainder(dividingBy: length) }
+        return chords.last { $0.start <= beat + 1e-9 }?.chord
     }
 
     public var lengthInBeats: Double {
@@ -268,7 +276,8 @@ public struct MelodyObservation: Hashable, Sendable {
             chords.append((span.chord, beat))
             beat += span.beats
         }
-        var observation = MelodyObservation(label: label, key: key, beatsPerBar: beatsPerBar, notes: melody.notes, chords: chords)
+        var observation = MelodyObservation(label: label, key: key, beatsPerBar: beatsPerBar, notes: melody.notes, chords: chords,
+                                            chordsLength: beat > 0 ? beat : nil)
         observation.alternatives = alternatives(to: melody, key: key, beatsPerBar: beatsPerBar, chords: progression?.spans ?? [])
         return observation
     }

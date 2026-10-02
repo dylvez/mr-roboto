@@ -139,4 +139,17 @@ struct PersonaMelodistTests {
         }
         #expect(to == .beatmaker)
     }
+
+    @Test("a tune twice as long as its chords is read over them twice, not over the last one from there on")
+    func theLoopComesRound() throws {
+        let key = Key(parsing: "F minor")!
+        let sheet = try Progression.parse("Fm | Bb7", key: key).get()
+        // Two bars of chords, four of tune: F then D natural, twice. D is the third of Bb7 and no note of Fm.
+        func n(_ midi: Int, _ start: Double) -> NoteEvent { NoteEvent(pitch: Pitch(midi: midi), start: start, duration: 4, velocity: 90) }
+        let tune = Melody(notes: [n(65, 0), n(62, 4), n(65, 8), n(62, 12)], lengthInBars: 4)
+        let observation = MelodyObservation.of(tune, label: "T", key: key, progression: sheet)
+        #expect(observation.chordsLength == 8)
+        #expect(observation.chordToneRatio == 1, "the second F is over F minor again: it read \(observation.chordToneRatio)")
+        #expect(observation.longestClash == nil)
+    }
 }
