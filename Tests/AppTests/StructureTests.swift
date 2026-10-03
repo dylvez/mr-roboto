@@ -106,7 +106,7 @@ struct StructureModelTests {
     func layersAndDefaultStitch() throws {
         let (model, built) = model()
         let types = Set(model.layers.map(\.type))
-        #expect(types.isSubset(of: Set(StructureModel.playableTypes)))
+        #expect(types.isSubset(of: Set(StructureModel.rowTypes)))
         #expect(model.layers.contains { $0.id == built.groove && $0.plays })
         #expect(model.layers.contains { $0.id == built.bass && $0.plays })
         #expect(model.layers.contains { $0.id == built.progression && $0.plays },
@@ -138,9 +138,10 @@ struct StructureModelTests {
         let verse = model.add(.verse)
         let choices = model.choices(for: verse)
 
-        #expect(choices.map(\.type) == [.groove, .bassline, .progression, .melody, .sample],
-                "one row per kind the song has, in stitch order")
-        #expect(choices.map { StructureModel.name(of: $0.type) } == ["Groove", "Bass", "Chords", "Tune", "Chop"])
+        #expect(choices.map(\.type) == [.groove, .bassline, .progression, .melody, .sample, .audio],
+                "one row per kind the song has, in stitch order, then the record's stems")
+        #expect(choices.map { StructureModel.name(of: $0.type) } == ["Groove", "Bass", "Chords", "Tune", "Chop", "Stems"])
+        #expect(choices.last?.layers.allSatisfy { !verse.stitch.contains(part: $0.id) } == true, "a new section does not start the record's stems")
         #expect(model.kinds(of: verse) == ["Groove", "Bass", "Chords", "Chop"],
                 "what the block says it plays, in words rather than anonymous dots")
         #expect(try #require(model.layer(built.dryChop)).silentReason == nil, "a dry chop plays")

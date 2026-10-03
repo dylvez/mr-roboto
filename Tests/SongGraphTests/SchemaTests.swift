@@ -75,7 +75,7 @@ let schema2SongFixture = """
     @Test("schema 2 to 3: a stitch of versions becomes a stitch of parts, following them")
     func schema2SongRestitches() throws {
         let song = try SongGraphCodec.decodeSong(from: Data(schema2SongFixture.utf8))
-        #expect(song.schemaVersion == 3)
+        #expect(song.schemaVersion == 4)
         let verse = try #require(song.sections.first)
 
         let melodyPart = try #require(song.versions.first).partID
@@ -93,7 +93,7 @@ let schema2SongFixture = """
 
     @Test func schema1SongMigratesToTheCurrentSchema() throws {
         let song = try SongGraphCodec.decodeSong(from: Data(schema1SongFixture.utf8))
-        #expect(song.schemaVersion == 3)
+        #expect(song.schemaVersion == 4)
         #expect(song.title == "Arrival")
         #expect(song.key == Fixtures.dMajor)
         #expect(song.versions.count == 2)
@@ -106,7 +106,7 @@ let schema2SongFixture = """
         #expect(song.version(playing: song.sections[0].stitch[0])?.id == song.versions[1].id)
         // Re-encoding writes the current schema.
         let json = try SongGraphCodec.decode(JSONValue.self, from: try SongGraphCodec.encodeSong(song))
-        #expect(json["schemaVersion"]?.intValue == 3)
+        #expect(json["schemaVersion"]?.intValue == 4)
         #expect(json["sections"]?[0]?["stitch"]?[0]?["pin"] == nil, "a following lane writes no pin")
         #expect(json["versions"]?[0]?["operation"]?.stringValue == "unknown")
     }
@@ -116,7 +116,7 @@ let schema2SongFixture = """
         #expect(SchemaMigrator.schemaVersion(of: document) == 1)
         #expect(!SchemaMigrator.song.isCurrent(document))
         let upgraded = try SchemaMigrator.song.upgrade(document)
-        #expect(upgraded["schemaVersion"]?.intValue == 3)
+        #expect(upgraded["schemaVersion"]?.intValue == 4)
         #expect(upgraded["versions"]?[0]?["operation"]?.stringValue == "unknown")
         #expect(upgraded["versions"]?[1]?["operation"]?.stringValue == "transpose")
         #expect(SchemaMigrator.song.isCurrent(upgraded))
@@ -137,15 +137,47 @@ let schema2SongFixture = """
         #expect(upgraded["records"]?[0]?["analysis"]?["operation"]?.stringValue == "unknown")
         #expect(upgraded["records"]?[1]?["analysis"]?.isNull == true)
         #expect(upgraded["records"]?[2]?["analysis"] == nil)
-        #expect(upgraded["schemaVersion"]?.intValue == 3)
+        #expect(upgraded["schemaVersion"]?.intValue == 4)
+    }
+
+    @Test func mashupStemsAreNamedInEverySectionAndOtherStemsAreNot() throws {
+        func version(_ id: String, part: String, operation: String, kind: [String: JSONValue]) -> JSONValue {
+            .object(["id": .string(id), "partID": .string(part), "operation": .string(operation), "kind": .object(kind)])
+        }
+        let stem: [String: JSONValue] = ["type": .string("audio"), "role": .string("stem")]
+        let document: JSONValue = .object([
+            "schemaVersion": .integer(3),
+            "versions": .array([
+                version("v1", part: "vocals", operation: Operation.mashup, kind: stem),
+                version("v2", part: "drums", operation: Operation.mashup, kind: stem),
+                version("v3", part: "own", operation: Operation.separate, kind: stem),
+                version("v4", part: "groove", operation: Operation.written, kind: ["type": .string("groove")]),
+                version("v5", part: "take", operation: Operation.mashup, kind: ["type": .string("audio"), "role": .string("take")]),
+            ]),
+            "sections": .array([
+                .object(["name": .string("Intro"), "stitch": .array([])]),
+                .object(["name": .string("Verse"), "stitch": .array([.object(["part": .string("groove")]), .object(["part": .string("drums")])])]),
+            ]),
+        ])
+        let upgraded = try SchemaMigrator.song.upgrade(document)
+        func parts(_ index: Int) -> [String] { upgraded["sections"]?[index]?["stitch"]?.arrayValue?.compactMap { $0["part"]?.stringValue } ?? [] }
+        #expect(upgraded["schemaVersion"]?.intValue == 4)
+        #expect(parts(0) == ["vocals", "drums"], "a section that named nothing plays the mashup's stems, as it did")
+        #expect(parts(1) == ["groove", "drums", "vocals"], "one already named is not named twice")
+        #expect(try SchemaMigrator.song.upgrade(upgraded) == upgraded)
+
+        // A song with no mashup in it is not touched.
+        let flip: JSONValue = .object(["schemaVersion": .integer(3), "versions": .array([version("v3", part: "own", operation: Operation.separate, kind: stem)]),
+                                       "sections": .array([.object(["name": .string("Verse"), "stitch": .array([])])])])
+        #expect(try SchemaMigrator.song.upgrade(flip)["sections"]?[0]?["stitch"]?.arrayValue?.isEmpty == true)
     }
 
     @Test func newerDocumentsAreRefused() throws {
         let document: JSONValue = .object(["schemaVersion": .integer(99)])
-        #expect(throws: SongGraphError.unsupportedSchemaVersion(found: 99, supported: 3)) {
+        #expect(throws: SongGraphError.unsupportedSchemaVersion(found: 99, supported: 4)) {
             try SchemaMigrator.song.upgrade(document)
         }
-        #expect(throws: SongGraphError.migrationFailed(from: 0, to: 3, reason: "document is not a JSON object")) {
+        #expect(throws: SongGraphError.migrationFailed(from: 0, to: 4, reason: "document is not a JSON object")) {
             try SchemaMigrator.song.upgrade(.array([]))
         }
     }

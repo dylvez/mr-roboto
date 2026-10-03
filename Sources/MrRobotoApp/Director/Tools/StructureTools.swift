@@ -83,7 +83,9 @@ enum FormTools {
             if type == .sample, lanes.contains(where: { SongPlayback.chop(under: $0.part, in: song)?.partID == newest.partID }) { continue }
             lanes.append(Lane(part: newest.partID))
         }
-        return lanes
+        // And every stem the form is playing: a section written without saying what it plays is
+        // not a section with the record taken out.
+        return lanes + song.seatedStems.map { Lane(part: $0) }
     }
 
     /// Resolves the ids a section names into lanes, refusing anything the transport cannot sound.
@@ -101,11 +103,13 @@ enum FormTools {
                 throw DirectorToolFailure(tool: tool, reason: "This song holds no version \(raw).",
                                           suggestion: "Take version ids from read_song.")
             }
+            // A stem is named like anything else: the section plays its stretch of it.
+            if StructureModel.isStem(version) { return Lane(part: version.partID) }
             guard StructureModel.playableTypes.contains(version.type) else {
                 throw DirectorToolFailure(
                     tool: tool, reason: "A \(version.type.rawValue) is not something a section plays.",
-                    suggestion: "Stitch grooves, bass lines, progressions, melodies and chops; "
-                        + "a lyric, an analysis and a sound pick are read elsewhere.")
+                    suggestion: "Stitch grooves, bass lines, progressions, melodies, chops and stems; "
+                        + "the record itself, a take, a lyric, an analysis and a sound pick are read elsewhere.")
             }
             guard StructureModel.plays(version) else {
                 throw DirectorToolFailure(
@@ -280,7 +284,9 @@ public struct StitchSectionTool: DirectorTool {
         + "it as the part is worked on — naming a version id here names its part. Use it when a section "
         + "plays something other than the newest of everything: a verse with no bass, a hook with a "
         + "second groove over the first. With versions empty it plays the newest groove, bass line, "
-        + "progression, melody and chop. To change what a section the song already has plays — the "
+        + "progression, melody and chop, and every stem the form is playing. A stem is named like any part: a "
+        + "section plays the stretch of it that falls there, and leaving it out of a section is silence there, not a level. "
+        + "Name everything the section plays, its stems included. To change what a section the song already has plays — the "
         + "bridge with the original bass line instead of the one written for it — name that section's id: "
         + "it stays the same section, in its place, with its levels in the mix, its intensity and its way "
         + "in. Adding a new one and arranging the old one away loses all of those. To state the whole form "
@@ -357,5 +363,59 @@ public struct StitchSectionTool: DirectorTool {
         return FormReport(song: after, recorded: recorded,
                           detail: recorded ? "\(sections[index].name) is the same section, playing what was named. " + FormTools.where_
                                            : "No song is open, so nothing was arranged.")
+    }
+}
+
+// MARK: - split_section
+
+/// Cuts a section in two at a bar, so a part can come in or go out part-way through it.
+public struct SplitSectionTool: DirectorTool {
+    public struct Input: Decodable, Sendable {
+        /// The section: its id from read_song, or its name.
+        public var section: String
+        public var afterBar: Int
+        enum CodingKeys: String, CodingKey { case section; case afterBar = "after_bar" }
+    }
+
+    public typealias Output = FormReport
+
+    let workspace: any DirectorWorkspace
+
+    public init(workspace: any DirectorWorkspace) { self.workspace = workspace }
+
+    public let name = "split_section"
+    public var purpose: String {
+        "Cut a section in two after one of its bars. Both halves play what it played and keep its name; the first keeps "
+        + "its id, the seam is a cut with no fill and no crash, and the song's length does not change. This is how a part "
+        + "comes in or drops out part-way: \"the drums from bar 3\" is the first section split after bar 2, then "
+        + "stitch_section on the first half without the drums. Never resize two sections to do it, and never use a level."
+    }
+    public var schema: DirectorJSON {
+        Schema.object([
+            ("section", Schema.string("The section's id from read_song, or its name when only one section has it.")),
+            ("after_bar", Schema.integer("The bar of the section the first half ends on: 2 splits a section into its first two bars and the rest.", minimum: 1, maximum: 127)),
+        ], required: ["section", "after_bar"])
+    }
+
+    public func run(_ input: Input) async throws -> Output {
+        guard let song = await workspace.song else {
+            throw DirectorToolFailure(tool: name, reason: "No song is open.")
+        }
+        let asked = input.section.trimmingCharacters(in: .whitespacesAndNewlines)
+        let named = song.sections.filter { $0.name.caseInsensitiveCompare(asked) == .orderedSame }
+        guard let section = song.sections.first(where: { $0.id.description == asked }) ?? (named.count == 1 ? named.first : nil) else {
+            throw DirectorToolFailure(tool: name, reason: named.count > 1 ? "\(named.count) sections are called \(asked)." : "This song has no section \(asked).",
+                                      suggestion: "Name it by its id from read_song.")
+        }
+        guard let cut = StructureModel.splitting(song.sections, section.id, afterBar: input.afterBar) else {
+            throw DirectorToolFailure(tool: name, reason: "\(section.name) is \(section.lengthInBars) bars, so it cannot be split after bar \(input.afterBar).",
+                                      suggestion: section.lengthInBars > 1 ? "A bar from 1 to \(section.lengthInBars - 1)." : "A one-bar section has no bar to split at.")
+        }
+        let recorded = await workspace.arrange(cut.sections)
+        let after = await workspace.song ?? song
+        return FormReport(song: after, recorded: recorded,
+                          detail: recorded ? "\(section.name) is two sections now: \(input.afterBar) bars, then \(section.lengthInBars - input.afterBar). "
+                              + "The second half's id is \(cut.second.id). Both play what it played; restitch either to change that."
+                              : "No song is open, so nothing was split.")
     }
 }

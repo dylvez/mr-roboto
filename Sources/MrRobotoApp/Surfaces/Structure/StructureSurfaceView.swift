@@ -223,6 +223,8 @@ private struct SectionDetail: View {
     /// the panel, or selecting another section, puts it back. Keep and Revert are still there,
     /// so one question is enough and a sheet would be too much.
     @State private var armedRemove: SectionID?
+    /// The bar Split cuts after, for the section it was set on. Half way until it is moved.
+    @State private var splitAfter: (section: SectionID, bar: Int)?
 
     private static let lengths = [1, 2, 4, 8, 16, 32]
 
@@ -297,6 +299,7 @@ private struct SectionDetail: View {
                         .help("Hear \(section.name) as it is against how it stood before it last changed, each through the mix. Taking the earlier one puts it back.")
                 }
             }
+            if section.lengthInBars > 1 { splitRow }
             VStack(alignment: .leading, spacing: 8) {
                 FormLabel("Plays")
                 if model.layers.isEmpty {
@@ -392,6 +395,32 @@ private struct SectionDetail: View {
                         .help("Open the Lyrics surface and put [\(name)] above the stanza this section sings")
                 }
             }
+        }
+    }
+
+    /// The bar the split falls after: the one set for this section, or half way.
+    private var splitBar: Int {
+        let set = splitAfter.flatMap { $0.section == section.id ? $0.bar : nil } ?? section.lengthInBars / 2
+        return max(1, min(section.lengthInBars - 1, set))
+    }
+
+    /// Cut the section in two. How "the drums from bar 3" is said: an intro of two bars without
+    /// them, and the rest with.
+    private var splitRow: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            FormLabel("Split")
+            FormChip("−", isOn: false) { disarm(); splitAfter = (section.id, splitBar - 1) }
+                .help("Split a bar earlier")
+                .accessibilityLabel("Split a bar earlier")
+            Text("after bar \(splitBar)")
+                .font(Design.Typography.numeric(12))
+                .foregroundStyle(Design.Palette.inkSecondary)
+                .frame(minWidth: 76)
+            FormChip("+", isOn: false) { disarm(); splitAfter = (section.id, splitBar + 1) }
+                .help("Split a bar later")
+                .accessibilityLabel("Split a bar later")
+            FormChip("Split", isOn: false) { disarm(); model.split(section.id, afterBar: splitBar) }
+                .help("\(section.name) becomes two sections, \(splitBar) and \(section.lengthInBars - splitBar) bars, both playing what it plays now. Take a part out of the first and it comes in at bar \(splitBar + 1).")
         }
     }
 

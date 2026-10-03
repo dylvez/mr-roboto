@@ -277,6 +277,9 @@ extension AppState {
             let version = PartVersion(partID: PartID(), kind: .audio(audio), author: .user, operation: Operation.mashup,
                                       note: "\(what) of \(pick.songTitle). \(pick.move.sentence)")
             try mashup.append(version)
+            // Seated in every section: a mashup begins with all of it playing, and the form is
+            // where a stem is then taken out of a section or brought in late.
+            for index in mashup.sections.indices { mashup.sections[index].stitch.append(Lane(part: version.partID)) }
         }
         } catch {
             // Nothing half-made is left behind. The song was written before the render so its

@@ -143,6 +143,7 @@ public final class StructureModel {
         case .progression: return "Chords"
         case .melody: return "Tune"
         case .sample: return "Chop"
+        case .audio: return "Stems"
         default: return type.rawValue.capitalized
         }
     }
@@ -303,7 +304,7 @@ public final class StructureModel {
     /// one row per kind, so "what does this section play" is answered by reading down a column
     /// rather than by recognising version titles.
     public func choices(for section: Section) -> [(type: PartType, layers: [Layer])] {
-        Self.playableTypes.compactMap { type in
+        Self.rowTypes.compactMap { type in
             let matching = layers.filter { $0.row == type }
             return matching.isEmpty ? nil : (type, matching)
         }
@@ -311,7 +312,7 @@ public final class StructureModel {
 
     /// The kinds a section actually sounds, in order: "Groove · Bass · Chords".
     public func kinds(of section: Section) -> [String] {
-        Self.playableTypes.compactMap { type in
+        Self.rowTypes.compactMap { type in
             layers(of: section).contains { $0.row == type && $0.plays } ? Self.name(of: type) : nil
         }
     }
@@ -394,6 +395,9 @@ public final class StructureModel {
         }
         if layer.type == .sample, let groove = layers(of: section).first(where: { $0.plays && $0.kit?.part == layer.id }) {
             return "\(layer.title) — the bar looped as it was cut. \(groove.title) already plays its slices."
+        }
+        if layer.type == .audio {
+            return "\(layer.title) — runs along the song. On, this section plays the stretch of it that falls here; off, it is silent here and carries on underneath."
         }
         return layer.title
     }
@@ -525,6 +529,13 @@ public final class StructureModel {
             if type == .sample, out.contains(where: { layer($0.part)?.kit?.part == found.id }) { continue }
             out.append(Lane(part: found.id))
         }
+        // And the stems the section beside it plays. A stem runs along the form, so a section put
+        // into the middle of a vocal carries the vocal on; one the song has but that section does
+        // not play is not started here.
+        let beside = selected.flatMap { id in sections.first { $0.id == id } } ?? sections.last
+        for lane in beside?.stitch ?? [] where layer(lane.part)?.type == .audio && !out.contains(part: lane.part) {
+            out.append(Lane(part: lane.part))
+        }
         return out
     }
 
@@ -538,6 +549,35 @@ public final class StructureModel {
         guard let index = sections.firstIndex(where: { $0.id == id }) else { return }
         edit("remove") { _ = sections.remove(at: index) }
         if selected == id { selected = sections.isEmpty ? nil : sections[min(index, sections.count - 1)].id }
+    }
+
+    /// Cuts a section in two after its `bar`-th bar. Both halves play what it played, the second
+    /// under a new id, and the seam is a cut: no fill into it and no crash out of it. What a
+    /// part coming in at bar 3 takes is a section that ends at bar 2.
+    @discardableResult
+    public func split(_ id: SectionID, afterBar bar: Int) -> Section? {
+        guard let cut = Self.splitting(sections, id, afterBar: bar) else { return nil }
+        edit("split") { sections = cut.sections }
+        selected = cut.second.id
+        return cut.second
+    }
+
+    /// The form with one section cut in two, and the half that is new. Nil when the section is
+    /// not there or the bar is not inside it.
+    nonisolated static func splitting(_ sections: [Section], _ id: SectionID, afterBar bar: Int) -> (sections: [Section], second: Section)? {
+        guard let index = sections.firstIndex(where: { $0.id == id }) else { return nil }
+        let original = sections[index]
+        guard bar >= 1, bar < original.lengthInBars else { return nil }
+        var first = original
+        first.lengthInBars = bar
+        first.transitionOut = Transition(kind: .cut)
+        let second = Section(name: original.name, stitch: original.stitch, lengthInBars: original.lengthInBars - bar,
+                             intensity: original.intensity, transitionIn: Transition(kind: .cut),
+                             transitionOut: original.transitionOut)
+        var out = sections
+        out[index] = first
+        out.insert(second, at: index + 1)
+        return (out, second)
     }
 
     /// A copy with a new id, right after the original.
@@ -723,6 +763,19 @@ public final class StructureModel {
     /// that the transport ignores is a section that looks like it plays and does not.
     nonisolated static let playableTypes: [PartType] = [.groove, .bassline, .progression, .melody, .sample]
 
+    /// The rows a section's detail draws: the playable kinds, then the stems. A stem is not in
+    /// `playableTypes` on purpose. That list is what a new section plays, what a new part joins
+    /// and what a section is told it is missing, and a record's stems are none of those: a flip
+    /// is arranged from its chops with the record off, and a stem is in a section because
+    /// somebody put it there.
+    nonisolated static let rowTypes: [PartType] = playableTypes + [.audio]
+
+    /// A stem: a record's separated part, or one a mashup laid. The audio a section can name.
+    nonisolated static func isStem(_ version: PartVersion) -> Bool {
+        guard case .audio(let audio) = version.kind else { return false }
+        return audio.role == .stem
+    }
+
     /// The newest version of every part that can play on the transport, oldest part first, plus
     /// any older version a section already names.
     static func layers(in song: Song) -> [Layer] {
@@ -730,13 +783,13 @@ public final class StructureModel {
         // *version* — the newest of each part plus any older one a section still named — because a
         // stitch chose between versions. Nothing chooses now: a lane follows its part.
         song.partIDs.compactMap { partID in
-            guard let newest = song.latestVersion(of: partID), playableTypes.contains(newest.type) else { return nil }
+            guard let newest = song.latestVersion(of: partID), playableTypes.contains(newest.type) || isStem(newest) else { return nil }
             let root = song.strip(of: partID)
             let kit = newest.type == .groove ? SongPlayback.chop(under: partID, in: song).map {
                 Layer.Kit(part: $0.partID, name: PartLabel.title(of: $0), hasDrums: Guidance.hasDrums($0, in: song))
             } : nil
             return Layer(id: partID, version: newest.id, title: PartLabel.title(of: newest),
-                         type: newest.type, plays: plays(newest), varies: root == partID ? nil : root, kit: kit)
+                         type: newest.type, plays: plays(newest) || isStem(newest), varies: root == partID ? nil : root, kit: kit)
         }
     }
 

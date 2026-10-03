@@ -102,6 +102,8 @@ public enum DirectorTools {
             VaryTuneTool(workspace: workspace).erased(),
             // A chop's own level, appended after the fifty-one: a quiet bar brought up at its source.
             LevelChopTool(workspace: workspace).erased(),
+            // A section cut in two, appended after the fifty-two: how a part comes in part-way.
+            SplitSectionTool(workspace: workspace).erased(),
         ]
         if let stage {
             let pad = pad ?? DirectorStagePad()
@@ -183,6 +185,8 @@ public enum DirectorTools {
         "vary_tune",
         // A chop's own level, appended.
         "level_chop",
+        // A section cut in two, appended.
+        "split_section",
     ]
 
     /// The two the frame adds. Appended after `names`, never among them: a session with no frame

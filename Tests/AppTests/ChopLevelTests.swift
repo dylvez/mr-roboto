@@ -282,6 +282,6 @@ struct ChopLevelTests {
 
         await #expect(throws: DirectorToolFailure.self) { _ = try await tool.run(.init(part: "bar 1 of other stem", asRecorded: false)) }
         #expect(try await tool.run(.init(part: old.partID.description, asRecorded: true)).gainDB == 0)
-        #expect(DirectorTools.names.last == "level_chop" && DirectorPrompt.system.contains("level_chop"))
+        #expect(DirectorTools.names.contains("level_chop") && DirectorPrompt.system.contains("level_chop"))
     }
 }

@@ -131,7 +131,14 @@ enum SectionBounce {
             moved.segments = moved.segments.filter { $0.section == section }
             moved.lengthInBars = segment.lengthInBars
             let end = TransportClock(tempo: max(1, plan.tempo), timeSignature: plan.timeSignature).seconds(forBar: segment.lengthInBars)
-            moved.tracks = moved.tracks.filter { $0.startsAt < end }
+            // And a stem's windows with it: the one section's worth, and none of the next.
+            moved.tracks = moved.tracks.compactMap { track in
+                guard track.startsAt < end else { return nil }
+                guard let windows = track.windows else { return track }
+                var cut = track
+                cut.windows = windows.compactMap { $0.lowerBound < end ? $0.lowerBound..<min($0.upperBound, end) : nil }
+                return cut.windows?.isEmpty == false ? cut : nil
+            }
             return (moved, segment.name, segment.lengthInBars)
         }
         guard section == nil else { throw Failure.nothingToBounce("the song is not arranged") }

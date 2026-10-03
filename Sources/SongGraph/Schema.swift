@@ -119,10 +119,10 @@ public struct SchemaMigrator: Sendable {
     }
 
     /// The migrator for `song.json`.
-    public static let song = SchemaMigrator(migrations: [.songOperationsV1ToV2, .songStitchV2ToV3])
+    public static let song = SchemaMigrator(migrations: [.songOperationsV1ToV2, .songStitchV2ToV3, .songStemLanesV3ToV4])
 
     /// The migrator for `library.json`.
-    public static let library = SchemaMigrator(migrations: [.libraryOperationsV1ToV2, .libraryStitchV2ToV3])
+    public static let library = SchemaMigrator(migrations: [.libraryOperationsV1ToV2, .libraryStitchV2ToV3, .libraryStemLanesV3ToV4])
 
     /// The schema version a document declares (1 when absent).
     public static func schemaVersion(of document: JSONValue) -> Int {
@@ -225,6 +225,44 @@ extension SchemaMigration {
     /// exists only so the two documents keep the same version number.
     public static let libraryStitchV2ToV3 = SchemaMigration(
         from: 2, to: 3, summary: "No change; the library holds no sections."
+    ) { $0 }
+
+    /// A mashup's stems, named in every section.
+    ///
+    /// Through schema 3 a stem was not something a section named: a mashup's stems played under
+    /// the whole form, and nothing else's did. From schema 4 a section plays the stems it names,
+    /// so a stem can be left out of an intro or brought in at the hook. A mashup written before
+    /// that has to go on sounding as it did, which is every one of its stems in every section.
+    ///
+    /// Only a mashup's. A record's own stems were silent in an arranged song and stay unnamed.
+    static func seatMashupStems(_ song: JSONValue) -> JSONValue {
+        var stems: [String] = []
+        for version in song["versions"]?.arrayValue ?? [] {
+            guard version["operation"]?.stringValue == Operation.mashup,
+                  version["kind"]?["type"]?.stringValue == "audio", version["kind"]?["role"]?.stringValue == "stem",
+                  let part = version["partID"]?.stringValue, !stems.contains(part) else { continue }
+            stems.append(part)
+        }
+        guard !stems.isEmpty else { return song }
+        return song.mappingArray(at: "sections") { section in
+            var lanes = section["stitch"]?.arrayValue ?? []
+            let named = Set(lanes.compactMap { $0["part"]?.stringValue })
+            for part in stems where !named.contains(part) { lanes.append(.object(["part": .string(part)])) }
+            var updated = section
+            updated["stitch"] = .array(lanes)
+            return updated
+        }
+    }
+
+    /// song.json 3 → 4: a section names the stems it plays.
+    public static let songStemLanesV3ToV4 = SchemaMigration(
+        from: 3, to: 4,
+        summary: "Sections name the stems they play; a mashup's stems are named in every section, so it sounds as it did."
+    ) { seatMashupStems($0) }
+
+    /// library.json 3 → 4: nothing to do, as for 2 → 3.
+    public static let libraryStemLanesV3ToV4 = SchemaMigration(
+        from: 3, to: 4, summary: "No change; the library holds no sections."
     ) { $0 }
 
     public static let libraryOperationsV1ToV2 = SchemaMigration(

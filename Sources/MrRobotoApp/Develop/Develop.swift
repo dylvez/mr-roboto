@@ -508,7 +508,10 @@ public enum Develop {
             var section = entry.existing ?? Section(name: entry.name, stitch: [], lengthInBars: entry.bars)
             section.name = entry.name
             section.lengthInBars = max(1, entry.bars)
-            section.stitch = lanes
+            // The stems stay: a section that stood keeps the ones it played, a new one takes every
+            // stem the form has. Developing arranges what is written and leaves the record be.
+            let stems = entry.existing.map(song.stemLanes(in:)) ?? song.seatedStems.map { Lane(part: $0) }
+            section.stitch = lanes + stems.filter { !lanes.contains(part: $0.part) }
             section.intensity = (intensity * 100).rounded() / 100
             // A build runs to the bar line: its roll is the way in, and a fill over it would stop it.
             section.transitionOut = rolls ? Transition(kind: .riser) : nil

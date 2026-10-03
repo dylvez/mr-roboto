@@ -81,7 +81,7 @@ struct DrumsUnderChopTests {
         #expect(offer.groove == groove.partID)
         #expect(offer.text == "This section has no drums: its groove plays Bar 1 of other stem's slices.")
         // It sits with the chop, so the row called Groove is the drums: none yet.
-        #expect(model.choices(for: intro).map(\.type) == [.sample])
+        #expect(model.choices(for: intro).map(\.type) == [.sample, .audio], "and the stem it was cut from, off, in a row of its own")
         #expect(model.choices(for: intro).first?.layers.map(\.id) == [chop.partID, groove.partID])
         #expect(model.kinds(of: intro) == ["Chop"] && model.isRegrooved(model.layer(chop.partID)!))
         #expect(offer.help.contains("TR-808"), "\(offer.help)")
@@ -105,7 +105,7 @@ struct DrumsUnderChopTests {
         // Said once: the drums have a chip now, and that is how a section takes or leaves them.
         model.sync(with: song)
         #expect(model.drumsOffer(for: model.sections[0]) == nil)
-        #expect(model.choices(for: model.sections[0]).map { $0.layers.map(\.id) } == [[drums.partID], [chop.partID, groove.partID]],
+        #expect(model.choices(for: model.sections[0]).filter { $0.type != .audio }.map { $0.layers.map(\.id) } == [[drums.partID], [chop.partID, groove.partID]],
                 "Groove is the drums; turning the Chop row off leaves only the beat")
         #expect(model.kinds(of: model.sections[0]) == ["Groove", "Chop"])
         model.toggle(drums.partID, in: model.sections[0].id)

@@ -290,7 +290,10 @@ final class LiveSongPlayer: SongPlaybackHost {
             }
             let node = try engine.player(next)
             try Self.route(node, part: track.part, on: graph)
-            let source = SequenceTrackSource(player: node, events: [(buffer, track.startsAt)], cycle: cycleSeconds)
+            // A stem the form names is heard in the sections that name it: the pieces of it
+            // those sections cover, each at its own second, on the one node.
+            let source = SequenceTrackSource(player: node, events: Self.events(of: buffer, startingAt: track.startsAt, in: track.windows),
+                                             cycle: cycleSeconds)
             engine.add(source)
             sequences.append(source)
             next += 1
@@ -498,6 +501,44 @@ final class LiveSongPlayer: SongPlaybackHost {
     /// The buffer from `seconds` in: what a take that was already sounding at the bar the
     /// transport started from plays. The whole buffer when there is nothing to skip; an empty
     /// one when the skip is past its end, which the plan already declines to schedule.
+    /// How long a stem takes to come in or go out where a section cuts it: short enough to land
+    /// on the bar, long enough that a held note does not click.
+    nonisolated static let windowFade = 0.008
+
+    /// A track's buffer as the form lets it be heard: the pieces its windows cover, each with the
+    /// transport second it sounds on. `buffer`'s first frame sounds at `startsAt`. With no windows
+    /// it is the whole buffer, as a take is.
+    ///
+    /// Cut here, into buffers, rather than faded on a strip as the transport passes a section:
+    /// the strip is moved from a polling loop and arrives late, and a bounce steps it between
+    /// renders. A buffer starts on its sample, live and in an export alike.
+    nonisolated static func events(of buffer: AVAudioPCMBuffer, startingAt startsAt: Double,
+                       in windows: [Range<Double>]?) -> [(AVAudioPCMBuffer, Double)] {
+        guard let windows else { return [(buffer, startsAt)] }
+        let rate = buffer.format.sampleRate, frames = Int(buffer.frameLength)
+        guard rate > 0, frames > 0, let from = buffer.floatChannelData else { return [] }
+        let fade = max(1, Int(windowFade * rate))
+        var out: [(AVAudioPCMBuffer, Double)] = []
+        for window in windows {
+            let first = max(0, Int(((window.lowerBound - startsAt) * rate).rounded()))
+            let last = min(frames, Int(((window.upperBound - startsAt) * rate).rounded()))
+            guard last > first, let piece = AVAudioPCMBuffer(pcmFormat: buffer.format, frameCapacity: AVAudioFrameCount(last - first)),
+                  let into = piece.floatChannelData else { continue }
+            let count = last - first
+            piece.frameLength = AVAudioFrameCount(count)
+            let ramp = min(fade, count / 2)
+            for channel in 0..<Int(buffer.format.channelCount) {
+                into[channel].update(from: from[channel] + first, count: count)
+                // Only where the cut is in the middle of the file: its own first and last frames
+                // are how it was recorded.
+                if first > 0 { for i in 0..<ramp { into[channel][i] *= Float(i) / Float(ramp) } }
+                if last < frames { for i in 0..<ramp { into[channel][count - 1 - i] *= Float(i) / Float(ramp) } }
+            }
+            out.append((piece, max(startsAt, window.lowerBound)))
+        }
+        return out
+    }
+
     static func skipping(_ buffer: AVAudioPCMBuffer, seconds: Double) -> AVAudioPCMBuffer {
         guard seconds > 0, buffer.format.sampleRate > 0 else { return buffer }
         let skip = AVAudioFrameCount(min(Double(buffer.frameLength), (seconds * buffer.format.sampleRate).rounded()))

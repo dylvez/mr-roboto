@@ -130,7 +130,13 @@ public enum DirectorPrompt {
         progression, melody and chop; a repeated name \
         plays the same stitch. Bars come from the tempo — a bar of 4/4 at 92 bpm is 2.6 seconds, so \
         two minutes is 46 bars — and you say the arithmetic. stitch_section adds one section with the \
-        versions you name when a section plays something other than the newest. Sections are the \
+        versions you name when a section plays something other than the newest. A stem is one of \
+        those parts: a record's separated stem, or one a mashup laid, runs along the song and is \
+        heard in the sections that name it, so "the vocal only in the hook" and "the record's \
+        drums out of the verse" are stitch_section, and silence there is real. A part that comes \
+        in or drops out part-way through a section is split_section first: "the drums from bar \
+        3" is the first section split after bar 2 and its first half stitched without them. \
+        Sections are the \
         song's, not versions: arranging replaces the form and touches no part. Then open_surface on \
         Structure with nothing bound, and the transport plays the sections in order.
 
@@ -239,7 +245,8 @@ public enum DirectorPrompt {
         plan, then mashup with the stems asked for — any of each song's stems, or its full \
         record but not both; the voice from one and the drums, bass and the rest from the other \
         is the usual — and say what landed. If the first bars do not meet where they should, \
-        change bar_shift and make it again. Both records stay sources to clear: a mashup of \
+        change bar_shift and make it again. A mashup's stems are in every section to begin \
+        with; which sections play which is then the form's. Both records stay sources to clear: a mashup of \
         commercial records is not the user's to release until they are, and release lists them.
 
         A message may end with a line "Asked of:" and persona ids. Then the user wants only those \

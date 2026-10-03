@@ -56,6 +56,10 @@ public struct SongPlayback: Equatable, Sendable {
         /// How much longer the file plays than it is: a take sung at another tempo, played at the
         /// song's (`Audio.stretch(in:)`). `duration` and `skip` are in the stretched file's seconds.
         public var stretch: Double
+        /// The transport seconds the file is heard in, in order: a stem a form names sounds in the
+        /// sections that name it and is silent in the rest, while its place along the song runs on.
+        /// Nil is the whole file — a take, and everything in a song with no form.
+        public var windows: [Range<Double>]? = nil
 
         public var id: VersionID { version }
 
@@ -469,6 +473,15 @@ public struct SongPlayback: Equatable, Sendable {
             } else {
                 moved.startsAt = startsAt
             }
+            // The sections it sounds in move with it; one over by `bar` is gone, and a stem with
+            // none left has nothing to play.
+            if let windows = track.windows {
+                moved.windows = windows.compactMap { window in
+                    let end = window.upperBound - offset
+                    return end > 0 ? max(0, window.lowerBound - offset)..<end : nil
+                }
+                guard moved.windows?.isEmpty == false else { return nil }
+            }
             return moved
         }
         // Before the song's first bar there is nothing to play: an unarranged song's loops wait
@@ -589,6 +602,10 @@ public struct SongPlayback: Equatable, Sendable {
             let busiest = segments.max { $0.voices.count < $1.voices.count }?.voices ?? []
             pieces += kinds(busiest)
             if let chop = segments.compactMap({ $0.chop }).first { pieces.append(chop.name) }
+            // The stems the form names: they are tracks, not a section's voices, and a song that
+            // is mostly a record's stems said only "Groove".
+            let stems = tracks.filter { $0.windows != nil }
+            if stems.count == 1 { pieces.append(stems[0].name) } else if stems.count > 1 { pieces.append("\(stems.count) stems") }
             return pieces.joined(separator: " · ")
         }
         if groove != nil {
@@ -658,7 +675,7 @@ public struct SongPlayback: Equatable, Sendable {
             // A mashup's stems are the song itself, laid on its grid when it was made: they play
             // under the form as takes do. A part added to a mashup used to arrange it, and the
             // arranged plan silenced every stem — the vocal and the backing it was made from.
-            plan.tracks = Array((mashupTracks(in: song, mediaURL: mediaURL, missingMedia: &missingMedia)
+            plan.tracks = Array((stemTracks(in: song, mediaURL: mediaURL, missingMedia: &missingMedia)
                                  + takeTracks(in: song, mediaURL: mediaURL, missingMedia: &missingMedia))
                                     .prefix(max(0, maximumTracks - bounced - 1)))
             if !plan.isPlayable {
@@ -769,13 +786,56 @@ public struct SongPlayback: Equatable, Sendable {
         return out
     }
 
-    /// The stems a mashup was made of, each where it was laid.
-    static func mashupTracks(in song: Song, mediaURL: (MediaRef) -> URL?, missingMedia: inout Bool) -> [Track] {
-        Guidance.stems(in: song).filter { $0.operation == Operation.mashup }.compactMap { version in
+    /// The stems the form names, each laid along the form and heard in the sections that name it.
+    ///
+    /// A stem runs with the song rather than starting again in each section: a vocal over three
+    /// verses is one vocal, and the second verse is where the record had got to. So it is placed
+    /// once — a mashup's stem where the mashup laid it, a record's own stem with its first bar on
+    /// the form's first, at the song's tempo — and its `windows` are the sections that play it,
+    /// neighbours joined so a stem that carries on has no seam.
+    ///
+    /// A mashup's stems used to play under every section whatever the form said, and a record's
+    /// own stems under none: "the drums from bar 3" and "the voice only in the hook" could not be
+    /// said, only approached with a level.
+    static func stemTracks(in song: Song, mediaURL: (MediaRef) -> URL?, missingMedia: inout Bool) -> [Track] {
+        let clock = TransportClock(tempo: max(1, song.tempo), timeSignature: song.timeSignature)
+        var order: [PartVersion] = []
+        var windows: [PartID: [Range<Double>]] = [:]
+        var bar = 0
+        for section in song.sections {
+            let start = clock.seconds(forBar: bar), end = clock.seconds(forBar: bar + section.lengthInBars)
+            bar += section.lengthInBars
+            for lane in section.stitch {
+                guard let version = song.version(playing: lane), Guidance.audio(of: version)?.role == .stem else { continue }
+                if windows[version.partID] == nil { order.append(version) }
+                var spans = windows[version.partID] ?? []
+                if let last = spans.last, abs(last.upperBound - start) < 1e-6 {
+                    spans[spans.count - 1] = last.lowerBound..<end
+                } else if end > start {
+                    spans.append(start..<end)
+                }
+                windows[version.partID] = spans
+            }
+        }
+        return order.compactMap { version in
             guard let audio = Guidance.audio(of: version) else { return nil }
             guard let url = mediaURL(audio.media) else { missingMedia = true; return nil }
-            return Track(version: version.id, name: PartLabel.title(of: version), url: url,
-                         startsAt: audio.alignmentOffset ?? 0, duration: audio.duration, part: version.partID)
+            var track: Track
+            if version.operation == Operation.mashup {
+                track = Track(version: version.id, name: PartLabel.title(of: version), url: url,
+                              startsAt: audio.alignmentOffset ?? 0, duration: audio.duration, part: version.partID)
+            } else {
+                // A record's own stem: its first analysed bar on the form's first bar, at the
+                // song's tempo, as its chops are.
+                let stretch = recordStretch(of: version, in: song)
+                let analysis = Guidance.analysis(for: version, in: song)
+                let lead = analysis?.bars.first?.start ?? analysis?.downbeats.first ?? 0
+                track = Track(version: version.id, name: PartLabel.title(of: version), url: url,
+                              startsAt: (audio.alignmentOffset ?? 0) * stretch, duration: audio.duration * stretch,
+                              part: version.partID, skip: lead * stretch, stretch: stretch)
+            }
+            track.windows = windows[version.partID]
+            return track
         }
     }
 
@@ -832,8 +892,8 @@ public struct SongPlayback: Equatable, Sendable {
     /// The sections as segments. Each section's stitch is read for the grooves, bass lines,
     /// chords, tunes and dirtied chops it names — the five things the transport can sound. Anything
     /// else in it, an analysis or a sound pick, is not a thing that sounds and is left to the
-    /// surfaces that draw it. A stem in a stitch is not played either: the record does not run to
-    /// the form.
+    /// surfaces that draw it. A stem in a stitch is not a voice of its section: it runs along the
+    /// form on a track of its own, heard where it is named (`stemTracks`).
     ///
     /// A section that names two of a kind now sounds both. It used to sound the last of them, and
     /// say nothing about the others — which is what made stitching a second bass line look like it
@@ -1113,4 +1173,23 @@ extension SongPlaybackHost {
     public func mixChanged(_ mix: Mix?, section: SectionID?) async {}
     public func unmixedParts() async -> [PartID] { [] }
     public func chopFailures() async -> [String] { [] }
+}
+
+extension Song {
+    /// The stems the form plays: every stem some section names, in the order the form meets them.
+    /// What a form written again carries over, so rewriting the sections does not take the record
+    /// out of the song.
+    var seatedStems: [PartID] {
+        var seen = Set<PartID>()
+        return sections.flatMap(\.stitch).compactMap { lane in
+            guard let version = latestVersion(of: lane.part), StructureModel.isStem(version),
+                  seen.insert(lane.part).inserted else { return nil }
+            return lane.part
+        }
+    }
+
+    /// The stem lanes one section holds, in its own order.
+    func stemLanes(in section: Section) -> [Lane] {
+        section.stitch.filter { lane in latestVersion(of: lane.part).map(StructureModel.isStem) ?? false }
+    }
 }

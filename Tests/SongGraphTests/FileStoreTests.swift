@@ -141,11 +141,11 @@ import Testing
         try FileManager.default.createDirectory(at: store.packageURL, withIntermediateDirectories: true)
         try Data(schema1SongFixture.utf8).write(to: store.documentURL)
         let song = try store.load()
-        #expect(song.schemaVersion == 3)
+        #expect(song.schemaVersion == 4)
         #expect(song.versions[0].operation == "unknown")
         try store.save(song)
         let json = try SongGraphCodec.decode(JSONValue.self, from: try Data(contentsOf: store.documentURL))
-        #expect(json["schemaVersion"]?.intValue == 3)
+        #expect(json["schemaVersion"]?.intValue == 4)
         #expect(try store.load() == song)
     }
 
@@ -162,7 +162,7 @@ import Testing
         #expect(!FileManager.default.fileExists(atPath: backup.path))
 
         let song = try store.load()
-        #expect(song.schemaVersion == 3)
+        #expect(song.schemaVersion == 4)
         #expect(FileManager.default.fileExists(atPath: backup.path), "the old document was not kept")
 
         // It holds the *old* shape — a stitch of version-id strings — which is the point: it is

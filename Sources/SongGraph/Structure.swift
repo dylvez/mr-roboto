@@ -3,7 +3,7 @@ import MusicTheory
 
 /// The schema version of documents this build reads and writes.
 public enum SongGraphSchema {
-    public static let current = 3
+    public static let current = 4
 }
 
 // `TimeSignature` comes from MusicTheory (shared with analysis and the engine).
