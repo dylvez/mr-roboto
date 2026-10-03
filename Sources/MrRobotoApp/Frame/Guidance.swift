@@ -713,9 +713,10 @@ public enum Guidance {
     /// The bar "chop a bar of this" means.
     ///
     /// Not bar one: the first bar of a record is usually an intro the stem is silent through, and a
-    /// chop lane that opens on two seconds of nothing is the Komma failure again. So the analysis's
-    /// own instrument-activity ranges pick the first bar where this stem's instrument is actually
-    /// playing; with no activity reported, the first bar the analysis found.
+    /// chop lane that opens on two seconds of nothing is the Komma failure again. A stem the crate
+    /// has read bar by bar opens on the first bar it plays at something like its usual level;
+    /// otherwise the analysis's own instrument-activity ranges pick the first bar where this stem's
+    /// instrument is actually playing; with no activity reported, the first bar the analysis found.
     ///
     /// Returns nil when the song has no analysed bars, which is the honest reason a "chop a bar"
     /// suggestion must not appear.
@@ -728,7 +729,10 @@ public enum Guidance {
         guard !bars.isEmpty else { return nil }
 
         var index = 0
-        if let instrument = PartLabel.instrument(of: audio),
+        if audio.role == .stem, let levels = StemPresenceIndex.levels(of: audio.media), levels.count == bars.count,
+           let played = RecordStems.firstPlayedBar(levels) {
+            index = played
+        } else if let instrument = PartLabel.instrument(of: audio),
            let activity = analysis.instruments.first(where: { $0.instrument == instrument }),
            let entry = activity.ranges.map(\.start).min() {
             // The first bar the instrument plays *all* of, not the one it happens to come in during:

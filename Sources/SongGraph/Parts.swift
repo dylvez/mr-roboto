@@ -709,6 +709,9 @@ public struct SourceFit: Hashable, Codable, Sendable {
     public var media: MediaRef
     /// The library song whose package holds `media`, when it is a song's.
     public var song: SongID?
+    /// The record on the library's shelf whose stem or mix `media` is, when it came from there
+    /// rather than from a song.
+    public var record: RecordID?
     /// "vocals", "drums", "bass", "other", or "record" for the full mix.
     public var stem: String
     /// The source second the fit is anchored on: a whole stem's first downbeat, a clip's first bar.
@@ -741,10 +744,11 @@ public struct SourceFit: Hashable, Codable, Sendable {
     public init(label: String, media: MediaRef, song: SongID? = nil, stem: String, start: Double, end: Double? = nil,
                 fromBar: Int? = nil, toBar: Int? = nil, atBar: Int? = nil, semitones: Int = 0, byEar: Bool = false,
                 ratio: Double = 1, tightened: Bool = false, key: Key? = nil, tempo: Double? = nil,
-                recordLUFS: Double? = nil, gainDB: Double? = nil) {
+                recordLUFS: Double? = nil, gainDB: Double? = nil, record: RecordID? = nil) {
         self.label = label
         self.media = media
         self.song = song
+        self.record = record
         self.stem = stem
         self.start = start
         self.end = end

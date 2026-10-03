@@ -21,6 +21,7 @@ enum FieldGuide {
     /// The words that are not steps or surfaces, in the order you tend to meet them.
     static let words: [Entry] = [
         Entry(word: "Library", meaning: "Everything saved: songs, albums, imported records, your samples, and ideas that belong to no song yet."),
+        Entry(word: "Crate", meaning: "The library's Records: audio brought in as raw material, and no song made of it. File ▸ Import Records… (⌘I) takes any number of files; each is read for its key, tempo and bars and, if you ask, separated into its stems, one at a time in the background while you work — the header says how far. A record's row opens to its stems, each with how much of the record it is and where in it it plays; drag one onto the song or a section to bring it in through Sources, or start a song from the record."),
         Entry(word: "Song", meaning: "The document you work in. It keeps every version ever made for it, and its sections in order."),
         Entry(word: "Part", meaning: "One musical thing that changes over time — the drums stem, a chop, a groove. The Parts region lists them by stage, and each surface's title is a menu of the parts it works on: pick another groove in the Grid, or the tune in the Piano roll, and the surface turns to it, keeping what you did first. New groove, New bass line, New melody, New progression and New lyric start one from nothing."),
         Entry(word: "Version", meaning: "A snapshot of a part that never changes. It records who made it, from what, and how. An edit adds one; nothing is overwritten."),

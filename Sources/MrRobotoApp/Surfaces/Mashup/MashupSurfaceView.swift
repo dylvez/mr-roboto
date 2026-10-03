@@ -105,7 +105,7 @@ struct MashupSurfaceView: View {
                 Button("Import a Record…") { model.importRecord() }
                     .font(Design.Typography.ui(12))
                     .controlSize(.small)
-                    .help("File ▸ Import Record… (⌘I): choose an audio file, and the Record surface reads its bars and key.")
+                    .help("File ▸ Flip a Record…: choose an audio file, and the Record surface makes a song of it that knows its bars and key.")
             }
         }
         .padding(12)

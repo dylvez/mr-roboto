@@ -72,6 +72,29 @@ struct HeaderBar: View {
                 }
                 .help("Working. The rail says what happened when it is done.")
             }
+            // The crate's work runs beside anything else, so it has a line of its own.
+            if let crate = app.crate.line {
+                HStack(spacing: 6) {
+                    if Design.isOffscreenRender {
+                        // A render draws AppKit's progress views as a prohibited block.
+                        Circle().fill(Design.Palette.accent).frame(width: 6, height: 6)
+                    } else if let fraction = app.crate.step?.fraction, app.crate.running?.kind == .separate {
+                        ProgressView(value: fraction)
+                            .progressViewStyle(.linear)
+                            .frame(width: 60)
+                            .tint(Design.Palette.accent)
+                    } else {
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(Design.Palette.accent)
+                    }
+                    Text(crate)
+                        .font(Design.Typography.ui(12, weight: .regular))
+                        .foregroundStyle(Design.Palette.inkSecondary)
+                        .lineLimit(1)
+                }
+                .help("The crate, reading and separating records in the background. Close what you like; it carries on.")
+            }
             if let failure = app.lastSaveError {
                 // A save that failed in a folded rail is a save you believe happened. Said here,
                 // beside the button that failed.

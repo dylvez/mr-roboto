@@ -195,7 +195,7 @@
         640
       ],
       "cutout": true,
-      "where": "Record surface, unbound",
+      "where": "Record surface, unbound; Sources, with no record in the crate read yet",
       "brief": "A vinyl record hovering above an open slot shaped like an audio waveform, the slot drawn with a dashed outline."
     },
     {
@@ -312,7 +312,7 @@
         24
       ],
       "where": "Path strip, Parts groups, crumbs, library",
-      "brief": "Record, four stems, chop, groove, feel, dust, sound, section, song, album, version, idea, seed, compare, check."
+      "brief": "Record, four stems, chop, groove, feel, dust, sound, section, song, album, version, idea, seed, compare, check; and sources, a stem curving in with an arrowhead toward a bar drawn as a box, for the Sources surface."
     },
     {
       "name": "wordmark",

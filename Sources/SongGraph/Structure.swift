@@ -508,18 +508,62 @@ public struct Record: Identifiable, Hashable, Codable, Sendable {
     /// An `.analysis` version describing the record, when analyzed.
     public var analysis: PartVersion?
     public let importedAt: Date
+    /// Its stems, separated once and kept beside it in the library's `records/`, so every song
+    /// takes from the same files. Nil until it is separated; optional so a library from before it
+    /// round-trips byte for byte.
+    public var stems: [RecordStem]?
 
     public init(id: RecordID = RecordID(), title: String, artist: String = "", media: MediaRef,
-                analysis: PartVersion? = nil, importedAt: Date = Date()) {
+                analysis: PartVersion? = nil, importedAt: Date = Date(), stems: [RecordStem]? = nil) {
         self.id = id
         self.title = title
         self.artist = artist
         self.media = media
         self.analysis = analysis
         self.importedAt = importedAt.graphPrecision
+        self.stems = stems
     }
 
-    public var mediaReferences: [MediaRef] { [media] + (analysis?.mediaReferences ?? []) }
+    public var mediaReferences: [MediaRef] { [media] + (stems ?? []).map(\.media) + (analysis?.mediaReferences ?? []) }
+
+    /// The stem by that name, when it has been separated.
+    public func stem(named name: String) -> RecordStem? { stems?.first { $0.name == name } }
+
+    /// The analysis it carries, when it has been analysed.
+    public var reading: MusicAnalysis? {
+        if let analysis, case .analysis(let reading) = analysis.kind { return reading }
+        return nil
+    }
+}
+
+/// One stem of a record: its audio, and how much of the record it is.
+public struct RecordStem: Hashable, Codable, Sendable {
+    /// "vocals", "drums", "bass" or "other".
+    public var name: String
+    public var media: MediaRef
+    public var sampleRate: Double
+    public var channelCount: Int
+    public var duration: Double
+    /// Integrated loudness, LUFS. Nil when it is too quiet to read: a stem the record hardly has.
+    public var lufs: Double?
+    /// Its loudness against the whole record's, dB: near zero when it is nearly all of the record,
+    /// far below when it is hardly there.
+    public var relativeDB: Double?
+    /// Its level in each of the record's analysed bars, dBFS RMS to a tenth: where it plays and
+    /// where it rests. Nil when the record had no bars when it was read.
+    public var barLevels: [Double]?
+
+    public init(name: String, media: MediaRef, sampleRate: Double, channelCount: Int, duration: Double,
+                lufs: Double? = nil, relativeDB: Double? = nil, barLevels: [Double]? = nil) {
+        self.name = name
+        self.media = media
+        self.sampleRate = sampleRate
+        self.channelCount = channelCount
+        self.duration = duration
+        self.lufs = lufs
+        self.relativeDB = relativeDB
+        self.barLevels = barLevels
+    }
 }
 
 /// One lyric of the house's own, kept whole: a title and its lines.

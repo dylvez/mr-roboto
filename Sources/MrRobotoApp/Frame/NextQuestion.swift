@@ -43,6 +43,8 @@ public enum NextMove: Equatable, Sendable {
     case surface(SurfaceAction)
     case openSong(SongID)
     case newSong
+    /// A new song, and Sources open on it: File ▸ New Song from Records.
+    case songFromRecords
     case importRecord
     case mashup
     case play
@@ -66,6 +68,7 @@ public enum NextMove: Equatable, Sendable {
         case .surface(let action): return action.identity
         case .openSong(let id): return "open|\(id.rawValue)"
         case .newSong: return "new"
+        case .songFromRecords: return "fromRecords"
         case .importRecord: return "import"
         case .mashup: return "mashup"
         case .play: return "play"
@@ -176,6 +179,15 @@ enum NextAdvisor {
         candidates.append(Candidate(option: NextOption(
             kind: "newSong", title: "Start a new song",
             rationale: "A title, a tempo and a key first: every writer in the band reads them.", move: .newSong), score: 8))
+        let crate = Sources.records(in: app.library)
+        if !crate.isEmpty {
+            let names = crate.prefix(2).map(\.title).joined(separator: " and ")
+            candidates.append(Candidate(option: NextOption(
+                kind: "songFromRecords", title: "Build a song from the crate",
+                rationale: "\(Guidance.count(crate.count, "record")) read and waiting\(crate.count > 2 ? ", \(names) among them" : ": \(names)"). "
+                    + "Sources takes a stem, or a few bars, from any of them, fitted to one key and tempo.",
+                move: .songFromRecords), score: app.library.songs.isEmpty ? 9 : 7.5))
+        }
         candidates.append(Candidate(option: NextOption(
             kind: "importRecord", title: "Flip a record",
             rationale: "Drop in an audio file: its bars, tempo, key and form are read, and a bar of it becomes a groove.",
@@ -195,6 +207,8 @@ enum NextAdvisor {
         let observation: String
         if let last {
             observation = app.lastOpenedSong != nil ? "Last time you were in \(last.title)." : "\(Guidance.count(app.library.songs.count, "song")) in the library."
+        } else if !app.library.records.isEmpty {
+            observation = "No songs yet; \(Guidance.count(app.library.records.count, "record")) in the crate."
         } else {
             observation = "The library is empty."
         }
@@ -611,6 +625,9 @@ extension AppState {
         case .newSong:
             open(Song.new(title: MrRobotoApp.untitledName()))
             wantsSongSettings = true
+        case .songFromRecords:
+            open(Song.new(title: MrRobotoApp.untitledName()))
+            openSurface(.sources, title: "Sources")
         case .importRecord:
             MrRobotoApp.importRecord(self)
         case .mashup:

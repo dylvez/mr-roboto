@@ -211,10 +211,15 @@ public final class AppState {
     // MARK: Library
 
     /// The library as last read from disk. Replaced wholesale by `reloadLibrary()`; never mutated in place.
-    public internal(set) var library: Library
+    public internal(set) var library: Library {
+        didSet { StemPresenceIndex.remember(library) }
+    }
 
     /// Whether the library directory had anything in it. The sidebar's empty state reads this.
     public internal(set) var libraryStatus: LibraryStatus
+
+    /// The crate's background work: records brought in, read and separated, one at a time.
+    public let crate = CrateWork()
 
     /// The store the library was read from, and that `save()` writes back to. Nil in tests and previews.
     @ObservationIgnored public let store: LibraryStore?
@@ -281,6 +286,10 @@ public final class AppState {
     /// is naming it and giving it a tempo and a key, so the header opens the song's settings
     /// unasked. The header takes it, so it fires once.
     public var wantsSongSettings = false
+
+    /// A stem dropped on the song or asked for from the crate, waiting for the Sources surface to
+    /// choose it. The surface takes it, so it is chosen once.
+    public var askedSource: AskedSource?
 
     // MARK: Bench
 
@@ -459,6 +468,7 @@ public final class AppState {
                 primers: PrimerStore? = nil,
                 defaults: UserDefaults = .standard) {
         self.library = library
+        StemPresenceIndex.remember(library)
         self.store = store
         self.sessions = store.map { SessionRecorder(libraryDirectory: $0.directoryURL) }
         self.transportHost = transportHost
@@ -467,6 +477,7 @@ public final class AppState {
         self.primers = primers ?? PrimerStore()
         self.defaults = defaults
         self.libraryStatus = status ?? store.map { library.isEmpty ? .empty($0.directoryURL) : .loaded($0.directoryURL) } ?? .unset
+        crate.app = self
         if let song {
             openSongWithoutLogging(song)
         } else {
@@ -519,6 +530,9 @@ public final class AppState {
         // persona's opinion is a pure function of a proposal, and a critic's is a pure function of
         // a measurement.
         state.attach(conductor: BandDirector(app: state))
+        // The crate reads and separates with what the Record surface does, through the app's one
+        // separator.
+        state.crate.makeHost = { LiveImportHost(library: store) }
         Task { await band.refreshKeyStatus() }
         // The inbox: captures from the phone, and anything dropped in the folder.
         let inbox = InboxWatcher(folders: InboxWatcher.defaultFolders) { [weak state] url in

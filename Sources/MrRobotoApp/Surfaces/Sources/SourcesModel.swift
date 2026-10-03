@@ -2,7 +2,8 @@ import Foundation
 import Performance
 import SongGraph
 
-/// The Sources surface's model: a song from the library, one of its stems, all of it or some bars,
+/// The Sources surface's model: a record from the crate or a song from the library, one of its
+/// stems, all of it or some bars,
 /// where it lands, how far it moves, and which sections play it — and the sources the open song
 /// already holds, each of which can be fitted again. The plan is read again on every change, so the
 /// sentences and the numbers cannot disagree.
@@ -11,8 +12,8 @@ import SongGraph
 public final class SourcesModel {
 
     public let surfaceID: SurfaceID
-    /// The song the stem comes from.
-    public var from: SongID? { didSet { if from != oldValue { chooseDefaults() } } }
+    /// The record or song the stem comes from.
+    public var from: SourceOrigin? { didSet { if from != oldValue { chooseDefaults() } } }
     public var stem: String?
     /// Some bars, looped like a chop, rather than the whole stem along the song.
     public var isClip = false { didSet { if isClip != oldValue { chooseSections() } } }
@@ -49,30 +50,51 @@ public final class SourcesModel {
         self.app = app
         self.service = service
         self.surfaceID = surfaceID
-        from = candidates.first?.id
+        from = origins.first
         chooseDefaults()
+        takeAsked()
     }
 
     // MARK: Reading
 
     public var song: Song? { app.song }
+    /// Records in the crate that have been read.
+    public var records: [Record] { Sources.records(in: app.library) }
     /// Library songs with something to give.
     public var candidates: [Song] { Sources.candidates(in: app.library, open: app.song) }
-    public var source: Song? { from.flatMap { app.librarySong($0) } }
-    public var available: [String] { source.map(Mashups.stems(of:)) ?? [] }
+    /// Everything there is to take from: the crate's records, then songs.
+    public var origins: [SourceOrigin] { records.map { .record($0.id) } + candidates.map { .song($0.id) } }
+    public var source: Song? { from?.songID.flatMap { app.librarySong($0) } }
+    public var record: Record? { from?.recordID.flatMap { app.library.record($0) } }
+    /// What the chosen source is called.
+    public var sourceTitle: String? { record?.title ?? source?.title }
+    public func title(of origin: SourceOrigin) -> String {
+        switch origin {
+        case .record(let id): return app.library.record(id)?.title ?? "A record"
+        case .song(let id): return app.librarySong(id)?.title ?? "A song"
+        }
+    }
+    public var available: [String] { record.map(Sources.stems(of:)) ?? source.map(Mashups.stems(of:)) ?? [] }
     /// The record's bars, as its analysis counts them.
     public var barsInRecord: Int {
-        guard let source, let stem, let (material, _, _, _) = Sources.material(of: source, stem: stem) else { return 0 }
+        guard let stem else { return 0 }
+        if let record { return Sources.material(of: record, stem: stem)?.material.bars.count ?? 0 }
+        guard let source, let (material, _, _, _) = Sources.material(of: source, stem: stem) else { return 0 }
         return material.bars.count
     }
     public var sourceLine: String? {
+        if let record, let reading = record.reading {
+            return "\(reading.dominantKey?.name ?? "no key") · \(Int((reading.dominantTempo ?? 120).rounded())) bpm · \(barsInRecord) bars · \(StructureModel.clock(reading.duration))"
+        }
         guard let source, let found = Mashups.source(for: source) else { return nil }
         return "\(found.key?.name ?? "no key") · \(Int((found.tempo ?? source.tempo).rounded())) bpm · \(barsInRecord) bars · \(StructureModel.clock(found.duration))"
     }
+    /// How loud each of a record's stems is against the record, for the chips.
+    public func share(of stem: String) -> Double? { record?.stem(named: stem)?.relativeDB }
 
     public var request: SourceRequest? {
         guard let from, let stem else { return nil }
-        return SourceRequest(song: from, stem: stem, bars: isClip ? (fromBar - 1)..<toBar : nil, atBar: atBar - 1,
+        return SourceRequest(from, stem: stem, bars: isClip ? (fromBar - 1)..<toBar : nil, atBar: atBar - 1,
                              semitones: semitones, sections: Array(sections), takesItsGrid: takesItsGrid, tighten: tighten)
     }
 
@@ -92,7 +114,7 @@ public final class SourcesModel {
     public var unheard: String? {
         guard app.song != nil else { return SourceError.noSong.description }
         guard app.store != nil else { return SourceError.noLibrary.description }
-        guard let request else { return candidates.isEmpty ? "No other song in the library has a record and its analysis to take from." : "Choose a song and a stem." }
+        guard let request else { return origins.isEmpty ? "No record in the crate has been read yet, and no other song holds one to take from." : "Choose a record and a stem." }
         do { _ = try app.sourcePick(request) } catch { return "\(error)" }
         return nil
     }
@@ -183,7 +205,19 @@ public final class SourcesModel {
         let ids = Set(songSections.map(\.id))
         sections = sections.intersection(ids)
         if sections.isEmpty { chooseSections() }
-        if from == app.song?.id || (from != nil && source == nil) { from = candidates.first?.id }
+        if from == nil || !origins.contains(from!) { from = origins.first }
+    }
+
+    /// What a drop or a row has asked this surface to choose, not yet taken.
+    public var asked: AskedSource? { app.askedSource }
+
+    /// A stem dropped on the song, or asked for from the crate: chosen here, to be heard and added.
+    public func takeAsked() {
+        guard let asked = app.askedSource else { return }
+        app.askedSource = nil
+        from = asked.origin
+        if let stem = asked.stem, available.contains(stem) { choose(stem: stem) }
+        if let section = asked.section, songSections.contains(where: { $0.id == section }) { sections = [section] }
     }
 
     // MARK: Hearing it, adding it
@@ -203,6 +237,9 @@ public final class SourcesModel {
     }
 
     public func stopPreview() { Task { await service?.stop() } }
+
+    /// File ▸ Import Records, from the surface that has nothing to offer until a record is read.
+    public func importRecords() { MrRobotoApp.importRecords(app) }
 
     @discardableResult
     public func add() async -> PartVersion? {

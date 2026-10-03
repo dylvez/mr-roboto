@@ -255,8 +255,9 @@ struct SourcesSurfaceTests {
         defer { WiringFixture.remove(directory) }
         let model = SourcesModel(app: app)
         #expect(model.candidates.map(\.title) == ["Arrival", "Exit Interview"])
-        #expect(model.from == a.id && model.stem == "bass", "Arrival has no voice: its first stem")
-        model.from = b.id
+        #expect(model.records.isEmpty, "the fixture's records were never read, so the crate offers none")
+        #expect(model.from == .song(a.id) && model.stem == "bass", "Arrival has no voice: its first stem")
+        model.from = .song(b.id)
         #expect(model.stem == "vocals" && model.sections.count == 3 && model.blocker == nil)
         #expect(model.sentences.first?.contains("down 2 semitones to D major") == true, "\(model.sentences)")
         model.nudge(by: 1)
@@ -264,7 +265,7 @@ struct SourcesSurfaceTests {
         model.resetSemitones()
 
         // Some bars of Arrival's bass for the Verse: the sections with no chop are all of them, until one has one.
-        model.from = a.id
+        model.from = .song(a.id)
         model.choose(stem: "bass")
         model.isClip = true
         model.fromBar = 2
@@ -286,7 +287,7 @@ struct SourcesSurfaceTests {
         // Nothing to choose sections for in a song whose form names nothing.
         app.open(try #require(app.library.song(a.id)))
         model.follow()
-        #expect(!model.choosesSections && model.from == b.id)
+        #expect(!model.choosesSections && model.from == .song(b.id))
     }
 }
 

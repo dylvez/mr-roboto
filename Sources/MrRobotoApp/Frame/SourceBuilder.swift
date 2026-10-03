@@ -3,14 +3,42 @@ import MusicTheory
 import Performance
 import SongGraph
 
-// Sources: a stem, or a few bars, of a song in the library pulled into the open song, fitted to its
-// key, tempo and bars. Any number of them, one at a time, whenever you like. A mashup is two records
-// made into a third song; this is the open song taking from as many records as it wants.
+// Sources: a stem, or a few bars, of a record in the crate or a song in the library pulled into the
+// open song, fitted to its key, tempo and bars. Any number of them, one at a time, whenever you
+// like. A mashup is two records made into a third song; this is the open song taking from as many
+// records as it wants.
+
+/// Where a source is taken from: a record on the library's shelf, its stems kept beside it, or a
+/// song that holds a record and the stems separated in it.
+public enum SourceOrigin: Hashable, Sendable {
+    case record(RecordID)
+    case song(SongID)
+
+    public var recordID: RecordID? { if case .record(let id) = self { return id }; return nil }
+    public var songID: SongID? { if case .song(let id) = self { return id }; return nil }
+}
+
+/// What a drop or a row asked the Sources surface to choose: the record, maybe a stem of it, and
+/// the section it was dropped on.
+public struct AskedSource: Equatable, Sendable {
+    public var origin: SourceOrigin
+    public var stem: String?
+    public var section: SectionID?
+
+    public init(origin: SourceOrigin, stem: String? = nil, section: SectionID? = nil) {
+        self.origin = origin
+        self.stem = stem
+        self.section = section
+    }
+}
 
 /// What to pull in: whose stem, all of it or some bars, where, how far moved, and where it plays.
 public struct SourceRequest: Equatable, Sendable {
-    /// The library song the stem comes from.
-    public var song: SongID
+    public var origin: SourceOrigin
+    /// The library song the stem comes from, when it is a song's.
+    public var song: SongID? { origin.songID }
+    /// The record on the shelf the stem comes from, when it is a record's.
+    public var record: RecordID? { origin.recordID }
     /// "vocals", "drums", "bass", "other", or `Mashups.full` for the whole record.
     public var stem: String
     /// Bars of the record, 0-based, the end not included: a clip that loops like a chop. Nil is
@@ -31,9 +59,9 @@ public struct SourceRequest: Equatable, Sendable {
     /// so many of its bars would be held that its bar lines look misread (`TightenMap.mostHeld`).
     public var tighten: Bool?
 
-    public init(song: SongID, stem: String, bars: Range<Int>? = nil, atBar: Int = 0, semitones: Int? = nil,
+    public init(_ origin: SourceOrigin, stem: String, bars: Range<Int>? = nil, atBar: Int = 0, semitones: Int? = nil,
                 sections: [SectionID]? = nil, takesItsGrid: Bool? = nil, tighten: Bool? = nil) {
-        self.song = song
+        self.origin = origin
         self.stem = stem
         self.bars = bars
         self.atBar = atBar
@@ -43,6 +71,18 @@ public struct SourceRequest: Equatable, Sendable {
         self.tighten = tighten
     }
 
+    public init(song: SongID, stem: String, bars: Range<Int>? = nil, atBar: Int = 0, semitones: Int? = nil,
+                sections: [SectionID]? = nil, takesItsGrid: Bool? = nil, tighten: Bool? = nil) {
+        self.init(.song(song), stem: stem, bars: bars, atBar: atBar, semitones: semitones, sections: sections,
+                  takesItsGrid: takesItsGrid, tighten: tighten)
+    }
+
+    public init(record: RecordID, stem: String, bars: Range<Int>? = nil, atBar: Int = 0, semitones: Int? = nil,
+                sections: [SectionID]? = nil, takesItsGrid: Bool? = nil, tighten: Bool? = nil) {
+        self.init(.record(record), stem: stem, bars: bars, atBar: atBar, semitones: semitones, sections: sections,
+                  takesItsGrid: takesItsGrid, tighten: tighten)
+    }
+
     public var isClip: Bool { bars != nil }
 }
 
@@ -50,6 +90,8 @@ public enum SourceError: Error, CustomStringConvertible, Equatable {
     case noSong
     case noLibrary
     case noSuchSong
+    case noSuchRecord
+    case notRead(String)
     case sameSong
     case notAnalysed(String)
     case noStem(String, String)
@@ -63,9 +105,11 @@ public enum SourceError: Error, CustomStringConvertible, Equatable {
         case .noSong: return "No song is open to bring a source into."
         case .noLibrary: return "There is no library to render into."
         case .noSuchSong: return "That song is not in the library."
+        case .noSuchRecord: return "That record is not in the crate any more."
+        case .notRead(let title): return "\(title) has not been read yet, so its bars and key are not known. It is read as it comes into the crate; read it again from its row."
         case .sameSong: return "That is the open song; its own stems are already in it."
         case .notAnalysed(let title): return "\(title) has no analysis — import it as a record first, so its bars and key are known."
-        case .noStem(let stem, let title): return "\(title) has no \(stem) stem — separate its stems on its Record surface, or take the full record."
+        case .noStem(let stem, let title): return "\(title) has no \(stem) stem — separate it from its row in the library, or take the full record."
         case .noBars(let title, let bars): return "\(title) has \(bars) bars; choose bars inside them."
         case .missingMedia(let what): return "The audio for \(what) is not on disk."
         case .notFitted: return "That part was not pulled in from another record, so there is nothing to fit again."
@@ -86,6 +130,9 @@ struct SourcePick: Sendable {
     /// Left as recorded unasked because tightened, this many of its bars of so many would have been
     /// held: its bar lines look misread.
     var declined: (held: Int, bars: Int)?
+    /// The source's own meter and reading: what a blank song takes from it.
+    var meter: TimeSignature
+    var analysis: MusicAnalysis?
 }
 
 enum Sources {
@@ -102,17 +149,61 @@ enum Sources {
         library.songs.filter { $0.id != open?.id && Mashups.source(for: $0) != nil && !Mashups.stems(of: $0).isEmpty }
     }
 
+    /// Records on the shelf with something to give: read, so their bars and key are known.
+    static func records(in library: Library) -> [Record] {
+        library.records.filter { $0.reading != nil }
+    }
+
+    /// The stems a record can give: those separated, in the usual order, and always the whole record.
+    static func stems(of record: Record) -> [String] {
+        (record.stems ?? []).map(\.name).sorted { RecordStems.order($0) < RecordStems.order($1) } + [Mashups.full]
+    }
+
+    /// A record's stem as the fit reads it: its bars, key and tempo from the record's reading.
+    static func material(of record: Record, stem: String) -> (material: SourceMaterial, media: MediaRef, analysis: MusicAnalysis)? {
+        guard let analysis = record.reading else { return nil }
+        let media: MediaRef, duration: Double
+        if stem == Mashups.full || stem == "record" {
+            media = record.media
+            duration = analysis.duration
+        } else {
+            guard let found = record.stem(named: stem) else { return nil }
+            media = found.media
+            duration = found.duration > 0 ? found.duration : analysis.duration
+        }
+        let material = SourceMaterial(label: label(stem: stem, of: record.title), key: analysis.dominantKey, tempo: analysis.dominantTempo,
+                                      bars: bars(of: analysis), duration: duration, isDrums: stem == "drums")
+        return (material, media, analysis)
+    }
+
+    /// The analysis's bars; with none found but downbeats, a bar from each to the next.
+    static func bars(of analysis: MusicAnalysis) -> [SongGraph.TimeRange] {
+        guard analysis.bars.isEmpty else { return analysis.bars }
+        let downbeats = analysis.downbeats
+        return zip(downbeats, downbeats.dropFirst()).map { SongGraph.TimeRange(start: $0, end: $1) }
+    }
+
+    /// The beats in a bar as the record's own beats count them: the commonest count from one
+    /// downbeat to the next, four when it cannot say.
+    static func beatsPerBar(in analysis: MusicAnalysis) -> Int {
+        var counts: [Int: Int] = [:], since: Int?
+        for beat in analysis.beats {
+            if beat.isDownbeat {
+                if let since, since > 1, since < 13 { counts[since, default: 0] += 1 }
+                since = 1
+            } else if since != nil {
+                since! += 1
+            }
+        }
+        return counts.max { ($0.value, -$0.key) < ($1.value, -$1.key) }?.key ?? 4
+    }
+
     /// A song's stem as the fit reads it: its bars, key and tempo from the analysis of the record
     /// it was separated from.
     static func material(of song: Song, stem: String) -> (material: SourceMaterial, version: PartVersion, audio: Audio, analysis: MusicAnalysis)? {
         guard let version = Mashups.version(named: stem, in: song), let audio = Guidance.audio(of: version),
               let analysis = Guidance.analysis(for: version, in: song) ?? Guidance.analysis(in: song) else { return nil }
-        var bars = analysis.bars
-        if bars.isEmpty {
-            // No bars found, but downbeats: a bar from each to the next.
-            let downbeats = analysis.downbeats
-            bars = zip(downbeats, downbeats.dropFirst()).map { SongGraph.TimeRange(start: $0, end: $1) }
-        }
+        let bars = bars(of: analysis)
         let duration = audio.duration > 0 ? audio.duration : analysis.duration
         let material = SourceMaterial(label: label(stem: stem, of: song.title), key: analysis.dominantKey ?? song.key,
                                       tempo: analysis.dominantTempo ?? song.tempo, bars: bars, duration: duration,
@@ -255,8 +346,26 @@ extension AppState {
     func sourcePick(_ request: SourceRequest) throws -> SourcePick {
         guard let song else { throw SourceError.noSong }
         guard let store else { throw SourceError.noLibrary }
-        guard request.song != song.id else { throw SourceError.sameSong }
-        guard let source = librarySong(request.song) else { throw SourceError.noSuchSong }
+        let sourceID: SongID
+        switch request.origin {
+        case .record(let id):
+            guard let record = library.record(id) else { throw SourceError.noSuchRecord }
+            guard record.reading != nil else { throw SourceError.notRead(record.title) }
+            guard let (material, media, analysis) = Sources.material(of: record, stem: request.stem) else {
+                throw SourceError.noStem(request.stem, record.title)
+            }
+            guard let url = try? store.mediaURL(for: media) else { throw SourceError.missingMedia(material.label) }
+            if let bars = request.bars, material.bars.count > 0, bars.lowerBound >= material.bars.count || bars.isEmpty {
+                throw SourceError.noBars(record.title, material.bars.count)
+            }
+            return try pick(material, url: url, media: media, origin: request.origin, stem: request.stem, title: record.title,
+                            record: record.id, lufs: analysis.loudness?.integrated, request: request,
+                            meter: TimeSignature(beatsPerBar: Sources.beatsPerBar(in: analysis)), analysis: analysis)
+        case .song(let id):
+            sourceID = id
+        }
+        guard sourceID != song.id else { throw SourceError.sameSong }
+        guard let source = librarySong(sourceID) else { throw SourceError.noSuchSong }
         guard Mashups.source(for: source) != nil else { throw SourceError.notAnalysed(source.title) }
         guard let (material, version, audio, _) = Sources.material(of: source, stem: request.stem) else {
             throw SourceError.noStem(request.stem, source.title)
@@ -270,17 +379,19 @@ extension AppState {
         let fallback = Guidance.take(in: source).flatMap { Guidance.audio(of: $0) }.flatMap { library.record(forMedia: $0.media)?.id }
         let record = audio.sourceRecord ?? Guidance.sourceRecord(of: version, in: source) ?? fallback
         let analysis = Guidance.analysis(for: version, in: source) ?? Guidance.analysis(in: source)
-        return try pick(material, url: url, media: audio.media, song: source.id, stem: request.stem, title: source.title,
-                        record: record, lufs: analysis?.loudness?.integrated, request: request)
+        return try pick(material, url: url, media: audio.media, origin: request.origin, stem: request.stem, title: source.title,
+                        record: record, lufs: analysis?.loudness?.integrated, request: request,
+                        meter: source.timeSignature, analysis: analysis)
     }
 
     /// The plan for a material against the open song's grid (or its own, when the song takes it).
-    private func pick(_ material: SourceMaterial, url: URL, media: MediaRef, song sourceID: SongID?, stem: String, title: String,
-                      record: RecordID?, lufs: Double?, request: SourceRequest) throws -> SourcePick {
+    private func pick(_ material: SourceMaterial, url: URL, media: MediaRef, origin: SourceOrigin?, stem: String, title: String,
+                      record: RecordID?, lufs: Double?, request: SourceRequest, meter own: TimeSignature?,
+                      analysis: MusicAnalysis?) throws -> SourcePick {
         guard let song else { throw SourceError.noSong }
         let ownGrid = takesGrid(request)
         let target = ownGrid ? MergeTarget(key: material.key, tempo: material.tempo) : MergeTarget(key: song.key, tempo: song.tempo)
-        let meter = (ownGrid ? (librarySong(request.song)?.timeSignature ?? song.timeSignature) : song.timeSignature).beatsPerBar
+        let meter = (ownGrid ? (own ?? song.timeSignature) : song.timeSignature).beatsPerBar
         let shape: SourceShape = request.bars.map { .clip(from: $0.lowerBound, to: $0.upperBound) } ?? .whole(atBar: request.atBar)
         func planned(tightened: Bool) -> SourcePlan {
             SourceFitting.plan(material, into: target, beatsPerBar: meter, shape: shape, semitones: request.semitones, tighten: tightened)
@@ -297,14 +408,21 @@ extension AppState {
         // too, or a clip of a hot record came in 7 dB over the same record's whole stem. It is in the
         // render; a clip of a quiet bar is then brought up like any chop (`ChopLevel`) as it comes in.
         let gain = SourceFitting.level(record: lufs, toward: Sources.levelTarget(in: song, library: library))
-        let fit = SourceFit(label: title, media: media, song: sourceID, stem: Sources.stored(stem),
+        var sourceSong: SongID?, sourceRecord: RecordID?
+        switch origin {
+        case .song(let id): sourceSong = id
+        case .record(let id): sourceRecord = id
+        case nil: break
+        }
+        let fit = SourceFit(label: title, media: media, song: sourceSong, stem: Sources.stored(stem),
                             start: plan.isClip ? plan.region.start : material.firstDownbeat, end: plan.isClip ? plan.region.end : nil,
                             fromBar: request.bars?.lowerBound, toBar: request.bars?.upperBound,
                             atBar: plan.isClip ? nil : request.atBar,
                             semitones: plan.move.semitones, byEar: request.semitones != nil, ratio: plan.move.ratio,
                             tightened: plan.isTightened, key: material.key, tempo: material.tempo, recordLUFS: lufs,
-                            gainDB: gain.flatMap { $0 == 0 ? nil : $0 })
-        return SourcePick(url: url, material: material, plan: plan, fit: fit, record: record, title: title, declined: declined)
+                            gainDB: gain.flatMap { $0 == 0 ? nil : $0 }, record: sourceRecord)
+        return SourcePick(url: url, material: material, plan: plan, fit: fit, record: record, title: title, declined: declined,
+                          meter: own ?? song.timeSignature, analysis: analysis)
     }
 
     /// The plan's sentences with the level and the grid said, the way the surface and the Director
@@ -366,11 +484,11 @@ extension AppState {
         guard song?.id == opened.id else { throw SourceError.noSong }
         progress?("Seating it", 1)
 
-        if ownGrid, let source = librarySong(request.song) {
+        if ownGrid {
             updateSong { song in
                 song.tempo = pick.material.tempo ?? song.tempo
                 song.key = pick.material.key ?? song.key
-                song.timeSignature = source.timeSignature
+                song.timeSignature = pick.meter
             }
         }
         let version = PartVersion(partID: PartID(), kind: kind(for: pick, media: media), author: author,
@@ -389,7 +507,8 @@ extension AppState {
         guard let opened = song else { throw SourceError.noSong }
         guard let current = opened.latestVersion(of: part), let fit = SourceFitting.fit(of: current) else { throw SourceError.notFitted }
         guard let url = try? store.mediaURL(for: fit.media, song: fit.song) else { throw SourceError.sourceGone(Sources.label(stem: fit.stem, of: fit.label)) }
-        let request = SourceRequest(song: fit.song ?? SongID(), stem: fit.stem == "record" ? Mashups.full : fit.stem,
+        let origin: SourceOrigin = fit.record.map { .record($0) } ?? .song(fit.song ?? SongID())
+        let request = SourceRequest(origin, stem: fit.stem == "record" ? Mashups.full : fit.stem,
                                     bars: fit.fromBar.flatMap { from in fit.toBar.map { from..<$0 } },
                                     atBar: atBar ?? fit.atBar ?? 0, semitones: semitones, takesItsGrid: false,
                                     tighten: tighten ?? fit.tightened)
@@ -405,8 +524,10 @@ extension AppState {
             case .sample(let sample): sample.sourceRecord
             default: nil
             }
-            pick = try self.pick(Self.material(from: fit, duration: info.duration), url: url, media: fit.media, song: fit.song,
-                                 stem: request.stem, title: fit.label, record: record, lufs: fit.recordLUFS, request: request)
+            pick = try self.pick(Self.material(from: fit, duration: info.duration), url: url, media: fit.media,
+                                 origin: fit.record.map { .record($0) } ?? fit.song.map { .song($0) },
+                                 stem: request.stem, title: fit.label, record: record, lufs: fit.recordLUFS, request: request,
+                                 meter: nil, analysis: nil)
         }
         if (try? store.songStore(for: opened.id)) == nil || hasUnsavedChanges { save() }
         let media = try await renderedMedia(pick, into: try store.songStore(for: opened.id))
@@ -482,9 +603,8 @@ extension AppState {
             if pick.plan.isClip {
                 let repeats = max(1, Int((8.0 / Double(pick.plan.bars)).rounded(.up)))
                 sections = [Section(name: "Loop", stitch: [], lengthInBars: pick.plan.bars * repeats)]
-            } else if let source = librarySong(request.song),
-                      let (material, _, _, analysis) = Sources.material(of: source, stem: request.stem) {
-                sections = Sources.sections(for: pick.plan, analysis: analysis, downbeat: material.firstDownbeat)
+            } else if let analysis = pick.analysis {
+                sections = Sources.sections(for: pick.plan, analysis: analysis, downbeat: pick.material.firstDownbeat)
             }
             chosen = Set(sections.map(\.id))
         } else if !current.isArranged {

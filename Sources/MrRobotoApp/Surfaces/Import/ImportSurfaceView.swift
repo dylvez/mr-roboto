@@ -84,13 +84,12 @@ private struct DropWell: View {
                 .font(Design.Typography.ui(12.5, weight: .regular))
                 .foregroundStyle(Design.Palette.inkSecondary)
                 .multilineTextAlignment(.center)
-            // ⌘I, the same key File ▸ Import Record answers to, so the two ways in agree.
+            // Not ⌘I: that is File ▸ Import Records, which takes files into the crate and makes no song.
             Button("Choose a File…") {
                 if let url = FilePanels.chooseAudio() { model.drop(url) }
             }
             .font(Design.Typography.ui(12.5))
-            .keyboardShortcut("i", modifiers: .command)
-            .help("Choose an audio file to import (⌘I)")
+            .help("Choose an audio file to make a song of. File ▸ Import Records… (⌘I) takes records into the crate instead.")
             // The toggle sits where the drop happens: it arms separation for the file about to be
             // dropped, and a switch you cannot reach until the drop is over is not a switch.
             ImportToggleChip("Separate stems", isOn: $model.separatesStems,

@@ -105,6 +105,10 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     /// A library song's stem, or some of its bars, fitted to the open song and added to it; with the
     /// plan's sentences and flags.
     func addSource(_ request: SourceRequest) async throws -> (version: PartVersion, sentences: [String], flags: [String])
+    /// What the crate is doing to a record, or why it last failed.
+    func crateStatus(of record: RecordID) -> String?
+    /// Queues a record's separation in the crate. False when it cannot be.
+    func separateRecord(_ record: RecordID) -> Bool
     /// A source the open song holds, fitted again from its untouched record.
     func refitSource(_ part: PartID, semitones: Int?, atBar: Int?, tighten: Bool?) async throws -> PartVersion
     /// A song from an idea: an empty open song set up in place, or a new one opened. Nil when there is nowhere to.
@@ -180,6 +184,13 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
 }
 
 extension DirectorWorkspace {
+    /// What the crate is doing to a record, or why it last failed. Nil when nothing, and where
+    /// there is no crate.
+    public func crateStatus(of record: RecordID) -> String? { nil }
+
+    /// Queues a record's separation in the crate. False where there is no crate.
+    public func separateRecord(_ record: RecordID) -> Bool { false }
+
     /// The house calls in force for the open song.
     public var houseBook: HouseBook { HouseBook.of(library, song: song) }
 
@@ -352,6 +363,14 @@ public final class AppStateWorkspace: DirectorWorkspace {
 
     public func refitSource(_ part: PartID, semitones: Int?, atBar: Int?, tighten: Bool?) async throws -> PartVersion {
         try await app.refitSource(part, semitones: semitones, atBar: atBar, tighten: tighten, by: .persona("Director"))
+    }
+
+    public func crateStatus(of record: RecordID) -> String? { app.crate.status(of: record) ?? app.crate.failures[record] }
+
+    public func separateRecord(_ record: RecordID) -> Bool {
+        guard app.library.record(record) != nil, app.crate.canRead else { return false }
+        app.separateRecord(record)
+        return app.crate.isQueued(.separate, for: record)
     }
 
     public func startSong(title: String, tempo: Double, key: Key?, machine: String) -> Song? {

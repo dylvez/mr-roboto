@@ -131,7 +131,22 @@ extension AppState {
             return record(version, joiningForm: joiningForm) ? version.id : nil
         case .record:
             return adoptRecord(RecordID(rawValue: payload.id), into: song)
+        case .stem:
+            askForSource(AskedSource(origin: .record(RecordID(rawValue: payload.id)), stem: payload.stem))
+            return nil
         }
+    }
+
+    /// The Sources surface, open on a record of the crate — a stem of it, a section for it —
+    /// chosen there to be heard against the song and added. A stem is fitted to the song, never
+    /// adopted as it is, so a drop lands here rather than in the song.
+    public func askForSource(_ asked: AskedSource) {
+        guard song != nil else {
+            note(.session, "Open a song first", detail: "A stem is fitted into the open song. Start one from the record's row, or open one.")
+            return
+        }
+        askedSource = asked
+        openSurface(.sources, title: "Sources")
     }
 
     /// A record adopted into a song brings its take and its analysis, stamped with one seed, so a
@@ -175,6 +190,11 @@ extension AppState {
             return true
         case .album:
             return openAlbum(AlbumID(rawValue: payload.id)) != nil
+        case .stem:
+            var section: SectionID?
+            if case .section(let id) = drop { section = id }
+            askForSource(AskedSource(origin: .record(RecordID(rawValue: payload.id)), stem: payload.stem, section: section))
+            return song != nil
         case .idea, .sample, .record:
             break
         }
@@ -210,8 +230,8 @@ extension AppState {
 
     // MARK: Records, again
 
-    /// A new song from a record already in the library: its analysis and its take, referenced
-    /// where they already are, and no re-import.
+    /// A new song from a record already in the library: its analysis, its take and its stems,
+    /// referenced where they already are in `records/`, and no re-import.
     @discardableResult
     public func flipAgain(_ id: RecordID) -> Bool {
         guard let record = library.record(id) else {
@@ -235,8 +255,18 @@ extension AppState {
         }
         let take = Audio(media: record.media, role: .take, stem: nil, sampleRate: info.sampleRate,
                          channelCount: info.channelCount, duration: info.duration)
-        try? song.append(PartVersion(partID: PartID(), kind: .audio(take), author: .user, operation: Operation.imported,
-                                     note: "the record, from the library", origin: seed.id))
+        let takeVersion = PartVersion(partID: PartID(), kind: .audio(take), author: .user, operation: Operation.imported,
+                                      note: "the record, from the library", origin: seed.id)
+        try? song.append(takeVersion)
+        // Its stems as the crate keeps them, the same files every song takes from: a song started
+        // from a separated record is a song with its stems, as an import with them is.
+        for stem in record.stems ?? [] {
+            let audio = Audio(media: stem.media, role: .stem, stem: stem.name, sampleRate: stem.sampleRate,
+                              channelCount: stem.channelCount, duration: stem.duration)
+            try? song.append(PartVersion(partID: PartID(), kind: .audio(audio), author: .user, parents: [takeVersion.id],
+                                         operation: Operation.separate, note: "\(stem.name) stem of \(record.title), from the crate",
+                                         origin: seed.id))
+        }
         open(song)
         return true
     }

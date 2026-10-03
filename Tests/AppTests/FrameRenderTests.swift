@@ -442,10 +442,54 @@ extension FrameRenderTests {
         _ = try await app.addSource(SourceRequest(song: a.id, stem: "bass", bars: 1..<3))
         let id = app.openSurface(.sources, title: "Sources")
         let model = SurfaceWiring.shared.sourcesModel(for: app.bench.items.first { $0.id == id }!, app: app)
-        model.from = b.id
+        model.from = .song(b.id)
         model.atBar = 2
         #expect(model.stem == "vocals" && model.blocker == nil && !model.sentences.isEmpty)
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-sources")
+    }
+
+    @Test("Sources with nothing to take from: the record picture, where records come from, and Import Records")
+    func sourcesEmpty() throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        let root = WiringFixture.temporaryDirectory("render-sources-empty")
+        defer { WiringFixture.remove(root) }
+        let store = LibraryStore(directoryURL: root)
+        let app = AppState(library: Library(), store: store, status: .empty(root), transportHost: StubTransportHost())
+        app.open(Song.new(title: "From nothing", tempo: 96))
+        let id = app.openSurface(.sources, title: "Sources")
+        let model = SurfaceWiring.shared.sourcesModel(for: app.bench.items.first { $0.id == id }!, app: app)
+        #expect(model.origins.isEmpty && model.unheard?.hasPrefix("No record in the crate") == true)
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-sources-empty")
+    }
+
+    @Test("the crate in the sidebar: one record separating, one read and opened on its stems; the header says how far")
+    func crate() async throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        let root = WiringFixture.temporaryDirectory("render-crate")
+        defer { WiringFixture.remove(root) }
+        let (app, files, stub) = try CrateFixture.app(in: root, records: 2)
+        app.importRecords([files[0]], separating: true)
+        await app.crate.waitUntilIdle()
+        var host = stub
+        host.separationHold = .seconds(30)
+        app.crate.host = host
+        app.importRecords([files[1]], separating: true)
+        while app.crate.running?.kind != .separate { await Task.yield() }
+        let rows = VStack(alignment: .leading, spacing: 6) {
+            ForEach(Array(app.library.records.enumerated()), id: \.offset) { index, record in
+                RecordRowView(record: record, app: app, startsOpen: index == 0)
+            }
+        }
+        .padding(Design.Metric.inset)
+        .background(Design.Palette.panelAlt)
+        #expect(app.crate.status(of: app.library.records[1].id) == "separating…")
+        #expect(app.crate.line == "Separating Record 2")
+        try write(rows, size: CGSize(width: FrameLayout.librarySidebarWidth, height: 260), name: "sidebar-crate")
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-crate")
+        app.crate.cancel(app.library.records[1].id)
+        await app.crate.waitUntilIdle()
     }
 }
 

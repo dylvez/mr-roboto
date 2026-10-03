@@ -74,6 +74,15 @@ struct ImportAdapter: ImportHosting {
         await MainActor.run { app.song?.id == song }
     }
 
+    /// The record's stems, separated into its song, kept with the record too: the crate takes them
+    /// from the song once the frame's library has the record and the song.
+    func didSeparate(_ record: RecordID, in song: Song) async {
+        await MainActor.run {
+            if app.library.record(record) == nil || app.librarySong(song.id) == nil { app.reloadLibrary() }
+            app.gatherStems(of: record, from: song.id)
+        }
+    }
+
     /// The provenance form was kept. The record row is library-level and goes to `library.json`
     /// whichever song is open. The seed lives in the song: when that song is the one the frame has
     /// open, the frame's copy is the truth — it may hold versions the package does not yet — so

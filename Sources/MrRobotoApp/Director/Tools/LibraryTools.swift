@@ -29,8 +29,26 @@ public struct ReadLibraryTool: DirectorTool {
             public var bars: Int?
             /// Whether the open song already holds this record.
             public var inSong: Bool
+            /// Its stems as the crate keeps them, each with how much of the record it is; "full" is
+            /// always there for the whole record. Empty until it has been read.
+            public var stems: [StemEntry]
+            /// What the crate is doing to it, or why it last failed. Nil when nothing.
+            public var status: String?
 
-            enum CodingKeys: String, CodingKey { case id, title, artist, key, tempo, bars; case inSong = "in_song" }
+            enum CodingKeys: String, CodingKey { case id, title, artist, key, tempo, bars, stems, status; case inSong = "in_song" }
+        }
+        public struct StemEntry: Encodable, Sendable {
+            public var name: String
+            /// Its loudness against the whole record, dB: near 0 is most of the record.
+            public var dbAgainstRecord: Double?
+            /// The record's bar, 1-based, it first plays in at its usual level.
+            public var comesInAtBar: Int?
+
+            enum CodingKeys: String, CodingKey {
+                case name
+                case dbAgainstRecord = "db_against_record"
+                case comesInAtBar = "comes_in_at_bar"
+            }
         }
         public struct SampleEntry: Encodable, Sendable {
             public var id: String
@@ -87,10 +105,11 @@ public struct ReadLibraryTool: DirectorTool {
 
     public let name = "read_library"
     public var purpose: String {
-        "Read the library: ideas (parts kept with no song), records (imported, analysed), samples (chops "
-        + "saved with their slices and chain), albums and songs — each with its key and tempo where it has "
-        + "one, and for each song the stems its record gives and its record's bars. Ids here go to adopt, "
-        + "which brings an item, or a song's stem, into the open song."
+        "Read the library: ideas (parts kept with no song), records (the crate: each record read for its key, "
+        + "tempo and bars, and its stems kept with it, each with how much of the record it is and the bar it "
+        + "comes in at), samples (chops saved with their slices and chain), albums and songs — each with its "
+        + "key and tempo where it has one, and for each song the stems its record gives and its record's bars. "
+        + "Ids here go to adopt, which brings an item, or a record's or a song's stem, into the open song."
     }
     public var schema: DirectorJSON { Schema.object([], required: []) }
 
@@ -109,15 +128,24 @@ public struct ReadLibraryTool: DirectorTool {
             Output.Idea(id: idea.id.description, title: PartLabel.title(of: idea), type: idea.type.rawValue,
                         key: ReadSongTool.key(of: idea).map { "\($0)" }, note: idea.note)
         }
-        let records = library.records.map { record -> Output.RecordEntry in
+        var records: [Output.RecordEntry] = []
+        for record in library.records {
             var key: Key?, tempo: Double?, bars: Int?
-            if let version = record.analysis, case .analysis(let analysis) = version.kind {
+            if let analysis = record.reading {
                 key = analysis.dominantKey
                 tempo = analysis.dominantTempo
                 bars = analysis.bars.isEmpty ? nil : analysis.bars.count
             }
-            return Output.RecordEntry(id: record.id.description, title: record.title, artist: record.artist,
-                                      key: key.map { "\($0)" }, tempo: tempo, bars: bars, inSong: media.contains(record.media))
+            let stems: [Output.StemEntry] = record.reading == nil ? [] : Sources.stems(of: record).map { name in
+                let stem = record.stem(named: name)
+                return Output.StemEntry(name: name, dbAgainstRecord: stem?.relativeDB,
+                                        comesInAtBar: stem?.barLevels.flatMap(RecordStems.firstPlayedBar).map { $0 + 1 })
+            }
+            let held = Set([record.media] + (record.stems ?? []).map(\.media))
+            records.append(Output.RecordEntry(id: record.id.description, title: record.title, artist: record.artist,
+                                              key: key.map { "\($0)" }, tempo: tempo, bars: bars,
+                                              inSong: !media.isDisjoint(with: held), stems: stems,
+                                              status: await workspace.crateStatus(of: record.id)))
         }
         let samples = library.samples.map { entry in
             Output.SampleEntry(id: entry.id.description, name: entry.name, key: entry.sample.key.map { "\($0)" },
@@ -142,7 +170,7 @@ public struct ReadLibraryTool: DirectorTool {
         return Output(ideas: ideas, records: records, samples: samples, albums: albums, songs: songs,
                       detail: song == nil ? "\(counts). No song is open, so nothing can be adopted yet."
                                           : "\(counts). adopt brings an idea, a sample or a record into \(song!.title), "
-                                              + "or a song's stem — whole, or some bars — fitted to it.")
+                                              + "or a record's or a song's stem — whole, or some bars — fitted to it.")
     }
 }
 
@@ -198,11 +226,12 @@ public struct AdoptTool: DirectorTool {
     public var purpose: String {
         "Bring a library item into the open song as a new version: an idea as the part it is, a sample as "
         + "a chop, a record as its take and analysis (chop a bar of it afterwards). The library keeps its "
-        + "copy; the song gets its own, audio and all. kind song brings a library song's stem in, fitted "
-        + "to the open song: the song's key, tempo and bars stand and the record is moved onto them — the "
-        + "whole stem laid along the song from at_bar, or bars of the record fitted to whole bars and "
-        + "looped like a chop in the sections with none. Into a song with nothing in it, the first stem "
-        + "brings its key, tempo and form. kind fitted takes a source the song already holds (a version "
+        + "copy; the song gets its own, audio and all. kind record with a stem, or kind song, brings a "
+        + "record's stem (from the crate) or a library song's stem in, fitted to the open song: the song's "
+        + "key, tempo and bars stand and the record is moved onto them — the whole stem laid along the song "
+        + "from at_bar, or bars of the record fitted to whole bars and looped like a chop in the sections "
+        + "with none. Into a song with nothing in it, the first stem brings its key, tempo and form. A record "
+        + "not yet separated is queued for separation and the call says so; adopt again once it is. kind fitted takes a source the song already holds (a version "
         + "or part id from read_song) and fits it again from the untouched record: other semitones, "
         + "another at_bar, tightened or let loose, or the song's key and tempo as they are now. Tightened, "
         + "each of the record's bars is stretched onto one of the song's so it keeps time with a programmed "
@@ -214,9 +243,10 @@ public struct AdoptTool: DirectorTool {
             ("id", Schema.string("The item's id from read_library; for fitted, the source's version or part id from read_song.")),
             // Required with an empty answer rather than optional: the API allows twenty-four
             // optional parameters across the toolbox, and these three would have spent the last.
-            ("stem", Schema.string("For song: which stem, as read_library lists them; full is the whole record. Empty for any other kind.",
+            ("stem", Schema.string("For song, or record: which stem, as read_library lists them; full is the whole record. Empty for "
+                                   + "any other kind, and for a record adopted as its take and analysis.",
                                    enum: ["", "vocals", "drums", "bass", "other", Mashups.full])),
-            ("bars", Schema.array("For song: the record's first and last bar to take, 1-based, both included, as [9, 10]. "
+            ("bars", Schema.array("With a stem: the record's first and last bar to take, 1-based, both included, as [9, 10]. "
                                   + "Empty for the whole stem, and for any other kind.", of: Schema.integer("A bar of the record.", minimum: 1))),
             ("at_bar", Schema.integer("For a whole stem: the song bar its bar 1 lands on, 1 for the first; below 0, already that "
                                       + "many bars under way when the song starts. 0 is bar 1 for a new stem and where it is for fitted.",
@@ -231,6 +261,7 @@ public struct AdoptTool: DirectorTool {
 
     public func run(_ input: Input) async throws -> Output {
         if input.kind == "song" { return try await source(input) }
+        if input.kind == "record", input.stem?.isEmpty == false { return try await crateSource(input) }
         if input.kind == "fitted" { return try await refit(input) }
         guard let kind = LibraryDragPayload.Kind(rawValue: input.kind), [.idea, .sample, .record].contains(kind) else {
             throw DirectorToolFailure(tool: name, reason: "\"\(input.kind)\" is not something adopt brings in.",
@@ -285,6 +316,46 @@ public struct AdoptTool: DirectorTool {
         }
         return await output(added.version, sentences: added.sentences, flags: added.flags,
                             detail: "\(PartLabel.title(of: added.version)) is in \(open.title)\(range == nil ? ", laid along the song" : ", looped like a chop"). ")
+    }
+
+    /// A record's stem from the crate, fitted to the open song. A record not yet separated is
+    /// queued for it.
+    private func crateSource(_ input: Input) async throws -> Output {
+        guard let open = await workspace.song else { throw DirectorToolFailure(tool: name, reason: "No song is open to bring a stem into.") }
+        let library = await workspace.library
+        guard let record = library.records.first(where: { $0.id.description == input.id || $0.title.caseInsensitiveCompare(input.id) == .orderedSame }) else {
+            throw DirectorToolFailure(tool: name, reason: "The crate holds no record \(input.id).", suggestion: "Take record ids from read_library.")
+        }
+        guard record.reading != nil else {
+            throw DirectorToolFailure(tool: name, reason: SourceError.notRead(record.title).description,
+                                      suggestion: (await workspace.crateStatus(of: record.id)).map { "The crate says: \($0)." } ?? "Try again shortly.")
+        }
+        let stem = (input.stem ?? "").lowercased()
+        let offers = Sources.stems(of: record)
+        guard offers.contains(stem) else {
+            let queued = await workspace.separateRecord(record.id)
+            throw DirectorToolFailure(tool: name, reason: SourceError.noStem(stem, record.title).description,
+                                      suggestion: queued ? "Its separation is queued in the crate; adopt it again once read_library lists its stems, or take full now."
+                                                         : "One of: \(offers.joined(separator: ", ")).")
+        }
+        let request = SourceRequest(record: record.id, stem: stem, bars: try Self.range(input.bars, tool: name),
+                                    atBar: Self.atBar(input.atBar) ?? 0, semitones: input.semitones, tighten: input.tightens)
+        let added: (version: PartVersion, sentences: [String], flags: [String])
+        do { added = try await workspace.addSource(request) } catch let failure as DirectorToolFailure { throw failure } catch {
+            throw DirectorToolFailure(tool: name, reason: "\(error)")
+        }
+        return await output(added.version, sentences: added.sentences, flags: added.flags,
+                            detail: "\(PartLabel.title(of: added.version)) is in \(open.title)\(request.isClip ? ", looped like a chop" : ", laid along the song"). ")
+    }
+
+    /// `bars` as a range of the record's bars, 0-based, the end not included; nil for none.
+    static func range(_ bars: [Int]?, tool: String) throws -> Range<Int>? {
+        guard let bars, !bars.isEmpty else { return nil }
+        let first = bars[0], last = bars.count > 1 ? bars[1] : bars[0]
+        guard first >= 1, last >= first else {
+            throw DirectorToolFailure(tool: tool, reason: "Bars \(bars) are not a first and a last bar.", suggestion: "As [9, 10]: 1-based, both included.")
+        }
+        return (first - 1)..<last
     }
 
     /// A source the song holds, fitted again from its untouched record.

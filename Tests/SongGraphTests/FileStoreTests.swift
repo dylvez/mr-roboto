@@ -188,6 +188,39 @@ import Testing
 }
 
 @Suite struct LibraryStoreTests {
+    @Test("a record's stems live in records/ beside it, resolve for any song, and a record from before reads and writes back byte for byte")
+    func recordStems() throws {
+        let root = try Fixtures.temporaryDirectory("record-stems")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = LibraryStore(directoryURL: root.appendingPathComponent("Library"))
+        let recordMedia = try store.addMedia(Fixtures.mediaData(70), fileExtension: "mp3", kind: .record)
+        let vocals = try store.addMedia(Fixtures.mediaData(71), fileExtension: "wav", kind: .record)
+
+        // Written by a build before stems: no key for them, and none written back.
+        let before = Record(title: "victor2", media: recordMedia)
+        let old = try SongGraphCodec.encode(before)
+        #expect(!String(decoding: old, as: UTF8.self).contains("stems"))
+        #expect(try SongGraphCodec.encode(try SongGraphCodec.decode(Record.self, from: old)) == old)
+
+        var record = before
+        record.stems = [RecordStem(name: "vocals", media: vocals, sampleRate: 44_100, channelCount: 2, duration: 180,
+                                   lufs: -15.2, relativeDB: -1.8, barLevels: [-90, -21.5, -18.2])]
+        #expect(record.mediaReferences == [recordMedia, vocals])
+        #expect(record.stem(named: "vocals")?.relativeDB == -1.8 && record.stem(named: "drums") == nil)
+
+        // A song that takes the stem holds no copy of it; it resolves through records/.
+        var song = Song(title: "Taker")
+        try song.append(PartVersion(partID: PartID(), kind: .audio(Audio(media: vocals, role: .stem, stem: "vocals", sampleRate: 44_100,
+                                                                         channelCount: 2, duration: 180)),
+                                    author: .user, operation: Operation.separate))
+        let library = Library(songs: [song], records: [record])
+        try store.save(library)
+        #expect(try store.load() == library)
+        #expect(try store.mediaURL(for: vocals, song: song.id) == store.recordsDirectoryURL.appendingPathComponent(vocals.fileName))
+        #expect(try store.songStore(for: song.id).storedMedia().isEmpty)
+        #expect(store.missingMedia(in: library).isEmpty)
+    }
+
     @Test func twoSongsShareMediaStoredOnce() throws {
         let root = try Fixtures.temporaryDirectory("library")
         defer { try? FileManager.default.removeItem(at: root) }

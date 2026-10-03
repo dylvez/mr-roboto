@@ -76,6 +76,11 @@ final class ImportHostLog: @unchecked Sendable {
     private var _finished: [SongID] = []
     var finished: [SongID] { lock.withLock { _finished } }
     func finish(_ song: SongID) { lock.withLock { _finished.append(song) } }
+    private var _separated: [(record: RecordID, song: SongID, stems: Int)] = []
+    var separated: [(record: RecordID, song: SongID, stems: Int)] { lock.withLock { _separated } }
+    func separate(_ record: RecordID, _ song: Song) {
+        lock.withLock { _separated.append((record, song.id, Guidance.stems(in: song).count)) }
+    }
 
     var auditions: [(url: URL, start: Double, end: Double)] { lock.withLock { _auditions } }
     var committed: [PartVersion] { lock.withLock { _committed } }
@@ -133,6 +138,10 @@ struct StubImportHost: ImportHosting {
 
     func didFinishImport(_ song: SongID) async {
         log.finish(song)
+    }
+
+    func didSeparate(_ record: RecordID, in song: Song) async {
+        log.separate(record, song)
     }
 }
 

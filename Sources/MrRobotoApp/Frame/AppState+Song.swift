@@ -317,6 +317,7 @@ extension AppState {
     @discardableResult
     public func removeRecord(_ id: RecordID) -> Bool {
         guard let record = library.record(id) else { return false }
+        crate.cancel(id)
         var updated = library
         updated.records.removeAll { $0.id == id }
         guard writeLibrary(updated) else { return false }

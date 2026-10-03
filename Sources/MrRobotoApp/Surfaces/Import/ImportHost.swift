@@ -66,6 +66,10 @@ public protocol ImportHosting: Sendable {
     /// saving to the frame rather than writing an older copy over it.
     func isOpen(_ song: SongID) async -> Bool
 
+    /// Stems were separated from a record into its song and written there. The frame keeps them
+    /// with the record as well, so every song can take them.
+    func didSeparate(_ record: RecordID, in song: Song) async
+
     /// The provenance form was kept. `record` is the library row with its title and artist as the
     /// form has them; `seed` is the song's seed with the whole form in its note; `song` is the
     /// draft's song holding that seed. The host writes them where the library keeps them.
@@ -77,6 +81,7 @@ extension ImportHosting {
     public func didCommit(_ version: PartVersion, in song: Song) async {}
     public func didFinishImport(_ song: SongID) async {}
     public func isOpen(_ song: SongID) async -> Bool { false }
+    public func didSeparate(_ record: RecordID, in song: Song) async {}
 
     /// Straight to `library`: the row into `library.json`, the seed into the song's package. The
     /// app's host does the second half through the frame instead, because the frame may hold the

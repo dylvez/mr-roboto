@@ -96,10 +96,13 @@ struct FrameCommands: Commands {
             Button("Put the Song Back as It Was") { app.putBackDevelopment() }
                 .disabled(!app.canPutBackDevelopment || app.isDeveloping || app.isMastering)
             Divider()
-            // The dialog first: cancelling it opens nothing, and choosing a file opens the Record
-            // surface already importing it. The surface's own well still takes a drop.
-            Button("Import Record…") { MrRobotoApp.importRecord(app) }
+            // Into the crate: any number of files, read and separated in the background, and no
+            // song made. A song is started from a record's row, or a stem brought into one.
+            Button("Import Records…") { MrRobotoApp.importRecords(app) }
                 .keyboardShortcut("i", modifiers: .command)
+                .disabled(app.store == nil)
+            // One file as a song of its own, on the Record surface: the flip.
+            Button("Flip a Record…") { MrRobotoApp.importRecord(app) }
             Button("New Mashup…") { app.openSurface(.mashup, title: "Mashup") }
                 .keyboardShortcut("n", modifiers: [.command, .shift])
                 .disabled(app.store == nil)
@@ -316,8 +319,17 @@ private func themeShortcutNumber(_ theme: Design.Theme) -> Int {
 
 extension MrRobotoApp {
     /// "Untitled, Sept 17" — the same shape the mockups use.
-    /// File ▸ Import Record and the empty bench's button: the open dialog, then the Record surface
-    /// already importing what was chosen. Cancelling opens nothing.
+    /// File ▸ Import Records: the open dialog, then each file into the crate. Cancelling brings
+    /// nothing in.
+    @MainActor
+    static func importRecords(_ app: AppState) {
+        guard let (files, separating) = FilePanels.chooseRecords() else { return }
+        app.importRecords(files, separating: separating)
+        app.regions.setCollapsed(false, for: .library)
+    }
+
+    /// File ▸ Flip a Record and the empty bench's button: the open dialog, then the Record surface
+    /// already importing what was chosen, as a song of its own. Cancelling opens nothing.
     @MainActor
     static func importRecord(_ app: AppState) {
         guard let url = FilePanels.chooseAudio() else { return }

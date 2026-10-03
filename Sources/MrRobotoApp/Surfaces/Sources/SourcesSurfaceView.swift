@@ -27,6 +27,8 @@ struct SourcesSurfaceView: View {
         // A section split or removed in Structure, or the open song changed: let go of what went.
         .onChange(of: model.songSections.map(\.id)) { model.follow() }
         .onChange(of: model.song?.id) { model.follow() }
+        // A stem dropped on the song while the surface is open.
+        .onChange(of: model.asked) { model.takeAsked() }
     }
 
     private var header: some View {
@@ -46,25 +48,35 @@ struct SourcesSurfaceView: View {
     private var picker: some View {
         VStack(alignment: .leading, spacing: 8) {
             BoothLabel("From")
-            Picker("Song", selection: Binding(get: { model.from?.description ?? "" },
-                                              set: { id in model.from = model.candidates.first { $0.id.description == id }?.id })) {
-                Text("Choose a song…").tag("")
-                ForEach(model.candidates) { candidate in Text(candidate.title).tag(candidate.id.description) }
+            Picker("From", selection: $model.from) {
+                Text("Choose a record…").tag(SourceOrigin?.none)
+                if !model.records.isEmpty {
+                    Section("Records") {
+                        ForEach(model.records) { record in Text(record.title).tag(SourceOrigin?.some(.record(record.id))) }
+                    }
+                }
+                if !model.candidates.isEmpty {
+                    Section("Songs") {
+                        ForEach(model.candidates) { song in Text(song.title).tag(SourceOrigin?.some(.song(song.id))) }
+                    }
+                }
             }
             .labelsHidden()
             .frame(maxWidth: 320, alignment: .leading)
-            .help("A song in the library that holds a record and its analysis. Choosing another picks its stem afresh.")
+            .help("A record in the crate, or a song that holds one. Choosing another picks its stem afresh.")
 
             if let line = model.sourceLine {
                 Text(line).font(Design.Typography.numeric(11.5)).foregroundStyle(Design.Palette.inkSecondary)
                 FlowRow(spacing: 6) {
                     ForEach(model.available, id: \.self) { stem in
-                        BoothChip(stem == Mashups.full ? "Full record" : stem.capitalized, isOn: model.stem == stem) { model.choose(stem: stem) }
+                        BoothChip(chipTitle(stem), isOn: model.stem == stem) { model.choose(stem: stem) }
                             .help(stem == Mashups.full ? "The whole record, as it was imported" : "The \(stem) stem on its own")
                     }
                 }
                 if model.available == [Mashups.full] {
-                    Text("No stems yet, so this song can only give the whole record. Separate its stems on its Record surface to take the voice or the drums alone.")
+                    Text(model.record != nil
+                         ? "No stems yet, so this record can only give the whole of it. Separate it from its row in the library to take the voice or the drums alone."
+                         : "No stems yet, so this song can only give the whole record. Separate its stems on its Record surface to take the voice or the drums alone.")
                         .font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.inkTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -88,16 +100,28 @@ struct SourcesSurfaceView: View {
                     Text("Drums are stretched to the song's tempo and never pitch-shifted.")
                         .font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.inkTertiary)
                 }
-            } else if model.candidates.isEmpty {
-                Text("No other song in the library has been analysed yet. Import a record first; it becomes a song that knows its bars and key, and its stems can be separated there.")
+            } else if model.origins.isEmpty {
+                ArtImage("empty-drop-record", width: 150, height: 100)
+                Text("No record in the crate has been read yet. File ▸ Import Records… brings records in; each is read for its bars and key, and separated, in the background.")
                     .font(Design.Typography.ui(12)).foregroundStyle(Design.Palette.inkSecondary)
                     .fixedSize(horizontal: false, vertical: true)
+                Button("Import Records…") { model.importRecords() }
+                    .font(Design.Typography.ui(12))
+                    .controlSize(.small)
+                    .help("File ▸ Import Records… (⌘I): records into the crate, read and separated in the background.")
             }
         }
         .padding(12)
         .frame(maxWidth: .infinity, minHeight: 170, alignment: .topLeading)
         .background(Design.Palette.panelAlt, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
         .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.line, lineWidth: Design.Metric.hairline))
+    }
+
+    /// "Vocals −2 dB": the stem, and how much of the record it is.
+    private func chipTitle(_ stem: String) -> String {
+        guard stem != Mashups.full else { return "Full record" }
+        guard let share = model.share(of: stem) else { return stem.capitalized }
+        return "\(stem.capitalized) \(String(format: "%+.0f", share)) dB"
     }
 
     private var semitoneLine: String {

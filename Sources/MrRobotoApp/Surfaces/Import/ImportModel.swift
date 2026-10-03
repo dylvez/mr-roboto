@@ -490,7 +490,7 @@ public final class ImportModel {
                                 info: AudioFileInfo(sampleRate: take.sampleRate,
                                                     channelCount: take.channelCount,
                                                     duration: take.duration))
-            adoptStems(of: song, in: package)
+            adoptStems(of: song, in: package, library: library)
             transition(to: .ready(songID), detail: "ready", fraction: 1)
         } catch is CancellationError {
             cancelled()
@@ -500,15 +500,18 @@ public final class ImportModel {
         }
     }
 
-    /// Stem lanes for the stems the song already holds. A stem whose media the package has lost is
-    /// left out rather than drawn as a lane that will not play.
-    private func adoptStems(of song: Song, in package: SongStore?) {
-        guard let package else { return }
+    /// Stem lanes for the stems the song already holds: in its package, or kept with its record in
+    /// the library's `records/`. A stem whose media is lost is left out rather than drawn as a lane
+    /// that will not play.
+    private func adoptStems(of song: Song, in package: SongStore?, library: LibraryStore) {
         var lanes: [StemLane] = []
         for version in song.versions {
-            guard let audio = Self.audio(version), audio.role == .stem,
-                  let name = audio.stem.flatMap({ StemName(rawValue: $0) }),
-                  let url = try? package.mediaURL(for: audio.media) else { continue }
+            guard let audio = Self.audio(version), audio.role == .stem, audio.fit == nil,
+                  let name = audio.stem.flatMap({ StemName(rawValue: $0) }) else { continue }
+            let shared = library.recordsDirectoryURL.appendingPathComponent(audio.media.fileName)
+            guard let url = (try? package?.mediaURL(for: audio.media))
+                    ?? (FileManager.default.fileExists(atPath: shared.path) ? shared : nil) else { continue }
+            lanes.removeAll { $0.name == name }
             lanes.append(StemLane(name: name, url: url, duration: audio.duration))
         }
         stems = lanes.sorted { $0.name.rawValue < $1.name.rawValue }
@@ -620,6 +623,7 @@ public final class ImportModel {
         }
         stems = lanes
         self.draft = draft
+        await host.didSeparate(draft.record.id, in: draft.song)
     }
 
     /// The whole import, start to finish. Every long call is `await`ed off this actor; nothing here
@@ -1100,6 +1104,8 @@ public final class ImportModel {
             try draft.song.append(contentsOf: stemVersions)
             let withStems = draft.song
             try await offMainActor { _ = try library.saveSong(withStems) }
+            self.draft = draft
+            await host.didSeparate(draft.record.id, in: withStems)
         }
 
         self.draft = draft
