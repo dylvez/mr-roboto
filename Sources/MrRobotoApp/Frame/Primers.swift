@@ -91,6 +91,12 @@ public enum Primer {
                         + "section's words in view, and the take lands on the bar you sang it on, latency taken out. Keep going "
                         + "sings the section pass after pass, each a take. Every take stays, lane by "
                         + "lane below, where the band flags bars and you make the comp.")
+        case .sources:
+            return ("Sources",
+                    "A stem of a record in the library, or a few of its bars, brought into the open song. The song's key, "
+                        + "tempo and bars stand: the record is moved to meet them, its first bar on the bar you choose, or its bars "
+                        + "fitted to whole bars and looped like a chop. Preview eight bars against the song, add it, and fit it "
+                        + "again later from the untouched record — another semitone, another bar.")
         case .mashup:
             return ("Mashup",
                     "Two songs from the library on one grid. One keeps its tempo and key — usually the instrumental — and the "

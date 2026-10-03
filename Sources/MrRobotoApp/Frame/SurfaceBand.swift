@@ -31,6 +31,7 @@ struct SurfaceBand: View {
             case .mixer: mixer(context, size, ink)
             case .master: master(context, size, ink)
             case .mashup: mashup(context, size, ink)
+            case .sources: sources(context, size, ink)
             case .compare: compare(context, size, ink)
             case .check: check(context, size, ink)
             }
@@ -209,6 +210,21 @@ struct SurfaceBand: View {
                 index += 1
             }
         }
+    }
+
+    /// Three rows of strokes on their own spacings, one stroke of each brought onto a shared line.
+    private func sources(_ context: GraphicsContext, _ size: CGSize, _ ink: Color) {
+        let rows = 3
+        let height = (size.height - 4) / CGFloat(rows)
+        for (row, spacing) in [CGFloat(11), CGFloat(7), CGFloat(15)].enumerated() {
+            var x: CGFloat = 2 + CGFloat(row) * 3
+            let y = 2 + CGFloat(row) * height
+            while x < size.width {
+                context.fill(Path(CGRect(x: x, y: y + 1, width: 2, height: height - 2)), with: .color(ink))
+                x += spacing
+            }
+        }
+        context.fill(Path(CGRect(x: size.width * 0.62, y: 1, width: 2, height: size.height - 2)), with: .color(Design.Palette.accent.opacity(0.7)))
     }
 
     /// Faders at their heights, one in the accent.

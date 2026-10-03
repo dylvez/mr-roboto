@@ -56,8 +56,21 @@ public struct ReadLibraryTool: DirectorTool {
             public var tempo: Double
             public var bars: Int
             public var isOpen: Bool
+            /// What the song can give another: its stems by name, and "full" for its record. Empty
+            /// when it has no analysed record.
+            public var stems: [String]
+            /// Its record as the analysis read it: what adopt's `bars` count in.
+            public var recordKey: String?
+            public var recordTempo: Double?
+            public var recordBars: Int?
 
-            enum CodingKeys: String, CodingKey { case id, title, key, tempo, bars; case isOpen = "is_open" }
+            enum CodingKeys: String, CodingKey {
+                case id, title, key, tempo, bars, stems
+                case isOpen = "is_open"
+                case recordKey = "record_key"
+                case recordTempo = "record_tempo"
+                case recordBars = "record_bars"
+            }
         }
 
         public var ideas: [Idea]
@@ -76,7 +89,8 @@ public struct ReadLibraryTool: DirectorTool {
     public var purpose: String {
         "Read the library: ideas (parts kept with no song), records (imported, analysed), samples (chops "
         + "saved with their slices and chain), albums and songs — each with its key and tempo where it has "
-        + "one. Ids here go to adopt, which brings an item into the open song as a version."
+        + "one, and for each song the stems its record gives and its record's bars. Ids here go to adopt, "
+        + "which brings an item, or a song's stem, into the open song."
     }
     public var schema: DirectorJSON { Schema.object([], required: []) }
 
@@ -117,23 +131,39 @@ public struct ReadLibraryTool: DirectorTool {
                               songs: album.songs.compactMap { library.song($0)?.title })
         }
         let songs = library.songs.map { entry in
-            Output.SongEntry(id: entry.id.description, title: entry.title, key: entry.key.map { "\($0)" },
-                             tempo: entry.tempo, bars: entry.lengthInBars, isOpen: entry.id == song?.id)
+            let record = Mashups.source(for: entry)
+            let bars = Mashups.stems(of: entry).first.flatMap { Sources.material(of: entry, stem: $0)?.material.bars.count }
+            return Output.SongEntry(id: entry.id.description, title: entry.title, key: entry.key.map { "\($0)" },
+                                    tempo: entry.tempo, bars: entry.lengthInBars, isOpen: entry.id == song?.id,
+                                    stems: record == nil ? [] : Mashups.stems(of: entry), recordKey: record?.key.map { "\($0)" },
+                                    recordTempo: record?.tempo.map { ($0 * 10).rounded() / 10 }, recordBars: record == nil ? nil : bars)
         }
         let counts = "\(ideas.count) ideas, \(records.count) records, \(samples.count) samples, \(albums.count) albums, \(songs.count) songs"
         return Output(ideas: ideas, records: records, samples: samples, albums: albums, songs: songs,
                       detail: song == nil ? "\(counts). No song is open, so nothing can be adopted yet."
-                                          : "\(counts). adopt brings an idea, a sample or a record into \(song!.title).")
+                                          : "\(counts). adopt brings an idea, a sample or a record into \(song!.title), "
+                                              + "or a song's stem — whole, or some bars — fitted to it.")
     }
 }
 
 // MARK: - adopt
 
-/// Brings a library item into the open song as a version of its own.
+/// Brings a library item into the open song as a version of its own; or a library song's stem —
+/// the whole of it, or some bars — fitted to the open song's key, tempo and bars; or fits again a
+/// source the song already holds.
 public struct AdoptTool: DirectorTool {
     public struct Input: Decodable, Sendable {
         public var kind: String
         public var id: String
+        public var stem: String?
+        public var bars: [Int]?
+        public var atBar: Int?
+        public var semitones: Int?
+
+        enum CodingKeys: String, CodingKey {
+            case kind, id, stem, bars, semitones
+            case atBar = "at_bar"
+        }
     }
 
     public struct Output: Encodable, Sendable {
@@ -142,6 +172,11 @@ public struct AdoptTool: DirectorTool {
         public var key: String?
         public var tempo: Double?
         public var note: String?
+        /// For a stem brought in: how it was moved, and anything flagged.
+        public var sentences: [String]?
+        public var flags: [String]?
+        /// The sections that play it.
+        public var sections: [String]?
         public var detail: String
     }
 
@@ -153,19 +188,38 @@ public struct AdoptTool: DirectorTool {
     public var purpose: String {
         "Bring a library item into the open song as a new version: an idea as the part it is, a sample as "
         + "a chop, a record as its take and analysis (chop a bar of it afterwards). The library keeps its "
-        + "copy; the song gets its own, audio and all."
+        + "copy; the song gets its own, audio and all. kind song brings a library song's stem in, fitted "
+        + "to the open song: the song's key, tempo and bars stand and the record is moved onto them — the "
+        + "whole stem laid along the song from at_bar, or bars of the record fitted to whole bars and "
+        + "looped like a chop in the sections with none. Into a song with nothing in it, the first stem "
+        + "brings its key, tempo and form. kind fitted takes a source the song already holds (a version "
+        + "or part id from read_song) and fits it again from the untouched record: other semitones, "
+        + "another at_bar, or the song's key and tempo as they are now."
     }
     public var schema: DirectorJSON {
         Schema.object([
-            ("kind", Schema.string("What the id names.", enum: ["idea", "sample", "record"])),
-            ("id", Schema.string("The item's id from read_library.")),
-        ], required: ["kind", "id"])
+            ("kind", Schema.string("What the id names.", enum: ["idea", "sample", "record", "song", "fitted"])),
+            ("id", Schema.string("The item's id from read_library; for fitted, the source's version or part id from read_song.")),
+            // Required with an empty answer rather than optional: the API allows twenty-four
+            // optional parameters across the toolbox, and these three would have spent the last.
+            ("stem", Schema.string("For song: which stem, as read_library lists them; full is the whole record. Empty for any other kind.",
+                                   enum: ["", "vocals", "drums", "bass", "other", Mashups.full])),
+            ("bars", Schema.array("For song: the record's first and last bar to take, 1-based, both included, as [9, 10]. "
+                                  + "Empty for the whole stem, and for any other kind.", of: Schema.integer("A bar of the record.", minimum: 1))),
+            ("at_bar", Schema.integer("For a whole stem: the song bar its bar 1 lands on, 1 for the first; below 0, already that "
+                                      + "many bars under way when the song starts. 0 is bar 1 for a new stem and where it is for fitted.",
+                                      minimum: -63, maximum: 256)),
+            ("semitones", Schema.optional(Schema.integer("Semitones by ear in place of the key arithmetic; left out, by the key.",
+                                                         minimum: -12, maximum: 12))),
+        ], required: ["kind", "id", "stem", "bars", "at_bar", "semitones"])
     }
 
     public func run(_ input: Input) async throws -> Output {
+        if input.kind == "song" { return try await source(input) }
+        if input.kind == "fitted" { return try await refit(input) }
         guard let kind = LibraryDragPayload.Kind(rawValue: input.kind), [.idea, .sample, .record].contains(kind) else {
             throw DirectorToolFailure(tool: name, reason: "\"\(input.kind)\" is not something adopt brings in.",
-                                      suggestion: "One of: idea, sample, record.")
+                                      suggestion: "One of: idea, sample, record, song, fitted.")
         }
         guard let uuid = UUID(uuidString: input.id) else {
             throw DirectorToolFailure(tool: name, reason: "\"\(input.id)\" is not an id.", suggestion: "Take ids from read_library.")
@@ -184,6 +238,73 @@ public struct AdoptTool: DirectorTool {
                       detail: version.type == .audio
                           ? "The record's take and analysis are in the song; chop a bar of it with the Chop lane, or merge it."
                           : "In the song as \(PartLabel.title(of: version)); merge it, stitch it, or open it on its surface.")
+    }
+
+    /// A library song's stem, fitted to the open song.
+    private func source(_ input: Input) async throws -> Output {
+        guard let open = await workspace.song else { throw DirectorToolFailure(tool: name, reason: "No song is open to bring a stem into.") }
+        let library = await workspace.library
+        guard let from = library.songs.first(where: { $0.id.description == input.id || $0.title.caseInsensitiveCompare(input.id) == .orderedSame }) else {
+            throw DirectorToolFailure(tool: name, reason: "The library holds no song \(input.id).", suggestion: "Take song ids from read_library.")
+        }
+        let offers = Mashups.stems(of: from)
+        let stem = (input.stem.flatMap { $0.isEmpty ? nil : $0 } ?? (offers.contains("vocals") ? "vocals" : offers.first) ?? "").lowercased()
+        guard Mashups.source(for: from) != nil, offers.contains(stem) else {
+            throw DirectorToolFailure(tool: name, reason: Mashups.source(for: from) == nil ? SourceError.notAnalysed(from.title).description
+                                                                                          : SourceError.noStem(stem, from.title).description,
+                                      suggestion: offers.isEmpty ? "Choose a song read_library lists stems for." : "One of: \(offers.joined(separator: ", ")).")
+        }
+        var range: Range<Int>?
+        if let bars = input.bars, !bars.isEmpty {
+            let first = bars[0], last = bars.count > 1 ? bars[1] : bars[0]
+            guard first >= 1, last >= first else {
+                throw DirectorToolFailure(tool: name, reason: "Bars \(bars) are not a first and a last bar.", suggestion: "As [9, 10]: 1-based, both included.")
+            }
+            range = (first - 1)..<last
+        }
+        let request = SourceRequest(song: from.id, stem: stem, bars: range, atBar: Self.atBar(input.atBar) ?? 0, semitones: input.semitones)
+        let added: (version: PartVersion, sentences: [String], flags: [String])
+        do { added = try await workspace.addSource(request) } catch let failure as DirectorToolFailure { throw failure } catch {
+            throw DirectorToolFailure(tool: name, reason: "\(error)")
+        }
+        return await output(added.version, sentences: added.sentences, flags: added.flags,
+                            detail: "\(PartLabel.title(of: added.version)) is in \(open.title)\(range == nil ? ", laid along the song" : ", looped like a chop"). ")
+    }
+
+    /// A source the song holds, fitted again from its untouched record.
+    private func refit(_ input: Input) async throws -> Output {
+        guard let song = await workspace.song else { throw DirectorToolFailure(tool: name, reason: "No song is open.") }
+        let part = VersionID(uuidString: input.id).flatMap(song.version)?.partID ?? PartID(uuidString: input.id)
+        guard let part, let current = song.latestVersion(of: part), let fit = SourceFitting.fit(of: current) else {
+            throw DirectorToolFailure(tool: name, reason: "\(input.id) is not a source this song pulled in from another record.",
+                                      suggestion: "Take the id of a fitted stem or clip from read_song.")
+        }
+        let version: PartVersion
+        do {
+            version = try await workspace.refitSource(part, semitones: input.semitones ?? (fit.byEar ? fit.semitones : nil),
+                                                      atBar: Self.atBar(input.atBar) ?? fit.atBar)
+        } catch let failure as DirectorToolFailure { throw failure } catch {
+            throw DirectorToolFailure(tool: name, reason: "\(error)")
+        }
+        return await output(version, sentences: [version.note ?? ""].filter { !$0.isEmpty }, flags: [],
+                            detail: "Fitted again from the untouched record, as a new version of the same part; every section that played it plays this. ")
+    }
+
+    /// `at_bar` as the song counts from zero: 1 is bar 0, −2 is two bars under way, 0 is "not said".
+    static func atBar(_ said: Int?) -> Int? {
+        guard let said, said != 0 else { return nil }
+        return said > 0 ? said - 1 : said
+    }
+
+    private func output(_ version: PartVersion, sentences: [String], flags: [String], detail: String) async -> Output {
+        let sections = (await workspace.song?.sections ?? []).filter { $0.stitch.contains(part: version.partID) }.map(\.name)
+        let placed = sections.isEmpty ? "No section names it: the song's form names nothing yet, so it plays along with everything; "
+                                        + "the form it is given later carries it."
+                                      : "It plays in \(sections.joined(separator: ", ")); stitch_section takes it out of one or brings it into another."
+        return Output(version: version.id.description, type: version.type.rawValue,
+                      key: ReadSongTool.key(of: version).map { "\($0)" }, tempo: ReadSongTool.tempo(of: version), note: version.note,
+                      sentences: sentences, flags: flags.isEmpty ? nil : flags, sections: sections,
+                      detail: detail + placed)
     }
 }
 

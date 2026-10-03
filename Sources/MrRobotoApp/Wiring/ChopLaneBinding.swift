@@ -113,7 +113,10 @@ final class ChopLaneBinding {
                                             planar: playing,
                                             sampleRate: span.sampleRate,
                                             sourceOffset: region.start,
-                                            grid: analysis.flatMap(Self.grid(of:)),
+                                            grid: sample.span != nil
+                                                ? Self.grid(span: region, tempo: sample.detectedTempo ?? song?.tempo,
+                                                            beatsPerBar: song?.timeSignature.beatsPerBar ?? 4)
+                                                : analysis.flatMap(Self.grid(of:)),
                                             tempo: sample.detectedTempo ?? song?.tempo,
                                             label: label)
                 let lane = ChopLaneSurface(id: self.item.id, source: source,
@@ -187,6 +190,19 @@ final class ChopLaneBinding {
         }
         let barLength = 4 * 60 / max(20, tempo ?? 120)
         return SongGraph.TimeRange(start: first, end: last + barLength)
+    }
+
+    /// The grid of a chop that is its own bars — a merge's render, bars pulled in from another
+    /// record — from its first frame at its own tempo. The record's grid is in the record's
+    /// seconds, which this media is not in: the lane used to snap a clip's markers to beats of
+    /// whatever record the song held.
+    nonisolated static func grid(span: SongGraph.TimeRange, tempo: Double?, beatsPerBar: Int) -> BeatGrid? {
+        guard let tempo, tempo > 0, span.duration > 0 else { return nil }
+        let beat = 60 / tempo
+        let count = Int((span.duration / beat).rounded())
+        guard count > 0 else { return nil }
+        let beats = (0..<count).map { span.start + Double($0) * beat }
+        return BeatGrid(beats: beats, bars: stride(from: 0, to: count, by: max(1, beatsPerBar)).map { beats[$0] }, bpm: tempo)
     }
 
     /// The record's beat grid, in the record's own time — what the lane snaps to.

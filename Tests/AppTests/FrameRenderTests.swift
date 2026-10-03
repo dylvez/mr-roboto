@@ -433,6 +433,23 @@ extension FrameRenderTests {
 }
 
 extension FrameRenderTests {
+    @Test("the Sources surface on a mashup: a third record's vocal planned, a clip already in the song")
+    func sources() async throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        let (app, directory, a, b) = try await SourcesFixture.mashup("render-sources")
+        defer { WiringFixture.remove(directory) }
+        _ = try await app.addSource(SourceRequest(song: a.id, stem: "bass", bars: 1..<3))
+        let id = app.openSurface(.sources, title: "Sources")
+        let model = SurfaceWiring.shared.sourcesModel(for: app.bench.items.first { $0.id == id }!, app: app)
+        model.from = b.id
+        model.atBar = 2
+        #expect(model.stem == "vocals" && model.blocker == nil && !model.sentences.isEmpty)
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-sources")
+    }
+}
+
+extension FrameRenderTests {
     @Test("the Piano roll in melody mode: the instrument picker, and the Melodist reading the tune")
     func melodyMode() throws {
         FontRegistration.registerBundledFonts()

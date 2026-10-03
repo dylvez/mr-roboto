@@ -588,10 +588,13 @@ public struct Sample: Hashable, Sendable {
     /// groove on its slices alike. Set when a quiet bar is cut, so the chop sits where an
     /// instrument does and nothing downstream has to make it up. Nil plays it as recorded.
     public var gainDB: Double?
+    /// How these bars of another record were fitted to the song, when they were pulled in from one
+    /// (`SourceFit`). Nil for a chop cut here.
+    public var fit: SourceFit?
 
     public init(media: MediaRef, slices: [SliceMarker] = [], rootPitch: Pitch? = nil, detectedTempo: Double? = nil,
                 sourceRecord: RecordID? = nil, degradation: [Degradation] = [], key: Key? = nil, span: TimeRange? = nil,
-                pads: [PadTrim] = [], gainDB: Double? = nil) {
+                pads: [PadTrim] = [], gainDB: Double? = nil, fit: SourceFit? = nil) {
         self.media = media
         self.slices = slices
         self.rootPitch = rootPitch
@@ -602,11 +605,12 @@ public struct Sample: Hashable, Sendable {
         self.span = span
         self.pads = pads
         self.gainDB = gainDB
+        self.fit = fit
     }
 }
 
 extension Sample: Codable {
-    private enum CodingKeys: String, CodingKey { case media, slices, rootPitch, detectedTempo, sourceRecord, degradation, key, span, pads, gainDB }
+    private enum CodingKeys: String, CodingKey { case media, slices, rootPitch, detectedTempo, sourceRecord, degradation, key, span, pads, gainDB, fit }
 
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -619,12 +623,13 @@ extension Sample: Codable {
                   key: try c.decodeIfPresent(Key.self, forKey: .key),
                   span: try c.decodeIfPresent(TimeRange.self, forKey: .span),
                   pads: try c.decodeIfPresent([PadTrim].self, forKey: .pads) ?? [],
-                  gainDB: try c.decodeIfPresent(Double.self, forKey: .gainDB))
+                  gainDB: try c.decodeIfPresent(Double.self, forKey: .gainDB),
+                  fit: try c.decodeIfPresent(SourceFit.self, forKey: .fit))
     }
 
     /// A dry sample writes exactly what it always wrote; see `Groove.encode(to:)`. `key` and
     /// `span` are omitted when nil for the same reason, `pads` when there are none, and `gainDB`
-    /// when the chop plays as recorded.
+    /// when the chop plays as recorded. `fit` only for bars pulled in from another record.
     public func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(media, forKey: .media)
@@ -637,6 +642,7 @@ extension Sample: Codable {
         try c.encodeIfPresent(span, forKey: .span)
         if !pads.isEmpty { try c.encode(pads, forKey: .pads) }
         try c.encodeIfPresent(gainDB, forKey: .gainDB)
+        try c.encodeIfPresent(fit, forKey: .fit)
     }
 }
 
@@ -667,9 +673,13 @@ public struct Audio: Hashable, Codable, Sendable {
     /// The record this audio was taken from when it came out of another song — a mashup's stems —
     /// so the album's clearances can name it. Nil for audio made here.
     public var sourceRecord: RecordID?
+    /// How this stem of another record was fitted to the song, when it was pulled in from one
+    /// (`SourceFit`). Nil for audio made or separated here, and for a mashup's stems.
+    public var fit: SourceFit?
 
     public init(media: MediaRef, role: AudioRole, stem: String? = nil, sampleRate: Double, channelCount: Int, duration: Double,
-                alignmentOffset: Double? = nil, take: Take? = nil, comp: CompPlan? = nil, sourceRecord: RecordID? = nil) {
+                alignmentOffset: Double? = nil, take: Take? = nil, comp: CompPlan? = nil, sourceRecord: RecordID? = nil,
+                fit: SourceFit? = nil) {
         self.media = media
         self.role = role
         self.stem = stem
@@ -680,7 +690,79 @@ public struct Audio: Hashable, Codable, Sendable {
         self.take = take
         self.comp = comp
         self.sourceRecord = sourceRecord
+        self.fit = fit
     }
+}
+
+/// How a stem, or a few bars, of another record were fitted to a song: what was read and what was
+/// done to it.
+///
+/// The fitted audio is a render — moved to the song's key, stretched to its tempo, levelled — and a
+/// render cannot be moved again without moving it twice. So the fit keeps the untouched source and
+/// the numbers, and a re-pitch or a re-time renders the next version from the source, not from the
+/// last render. The source media is another package's (`song`), or the library's records, and is
+/// not one of this version's media references: it is read, never held.
+public struct SourceFit: Hashable, Codable, Sendable {
+    /// What the source is called where it is read: the song or record it came from.
+    public var label: String
+    /// The untouched audio the fit reads: a stem as it was separated, or the record.
+    public var media: MediaRef
+    /// The library song whose package holds `media`, when it is a song's.
+    public var song: SongID?
+    /// "vocals", "drums", "bass", "other", or "record" for the full mix.
+    public var stem: String
+    /// The source second the fit is anchored on: a whole stem's first downbeat, a clip's first bar.
+    public var start: Double
+    /// Where a clip ends in the source's seconds. Nil for a whole stem, which runs to its end.
+    public var end: Double?
+    /// A clip's bars of the source, 0-based from its first, the end not included. Nil for a whole stem.
+    public var fromBar: Int?
+    public var toBar: Int?
+    /// The song bar, 0-based, a whole stem's first bar lands on. Nil for a clip, which loops in
+    /// each section that plays it.
+    public var atBar: Int?
+    /// Semitones the source was moved, and whether by ear rather than by the key arithmetic.
+    public var semitones: Int
+    public var byEar: Bool
+    /// Output over input duration: one constant stretch, or a clip fitted to whole bars.
+    public var ratio: Double
+    /// Each bar stretched onto a bar of the song rather than one ratio for all. False until a
+    /// source is tightened.
+    public var tightened: Bool
+    /// The source's key and tempo as read when it was fitted, so a re-fit moves from the same place.
+    public var key: Key?
+    public var tempo: Double?
+    /// The record's integrated loudness, and the gain given to it so two records sit together: in
+    /// the render, the same for every stem and every clip of one record. Nil when the record's
+    /// loudness was never read.
+    public var recordLUFS: Double?
+    public var gainDB: Double?
+
+    public init(label: String, media: MediaRef, song: SongID? = nil, stem: String, start: Double, end: Double? = nil,
+                fromBar: Int? = nil, toBar: Int? = nil, atBar: Int? = nil, semitones: Int = 0, byEar: Bool = false,
+                ratio: Double = 1, tightened: Bool = false, key: Key? = nil, tempo: Double? = nil,
+                recordLUFS: Double? = nil, gainDB: Double? = nil) {
+        self.label = label
+        self.media = media
+        self.song = song
+        self.stem = stem
+        self.start = start
+        self.end = end
+        self.fromBar = fromBar
+        self.toBar = toBar
+        self.atBar = atBar
+        self.semitones = semitones
+        self.byEar = byEar
+        self.ratio = ratio
+        self.tightened = tightened
+        self.key = key
+        self.tempo = tempo
+        self.recordLUFS = recordLUFS
+        self.gainDB = gainDB
+    }
+
+    /// Whether this is a few bars that loop, rather than a stem that runs along the song.
+    public var isClip: Bool { end != nil }
 }
 
 /// Where and how a take was recorded: the section it was sung to, the bar and beat the transport

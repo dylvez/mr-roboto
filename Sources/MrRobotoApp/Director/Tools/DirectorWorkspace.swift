@@ -102,6 +102,11 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     func release(album: AlbumID) async throws -> (URL, Export.AlbumReport)
     /// Two library songs on one grid, rendered and saved as a new song, which is opened.
     func makeMashup(_ request: MashupRequest) async throws -> Song
+    /// A library song's stem, or some of its bars, fitted to the open song and added to it; with the
+    /// plan's sentences and flags.
+    func addSource(_ request: SourceRequest) async throws -> (version: PartVersion, sentences: [String], flags: [String])
+    /// A source the open song holds, fitted again from its untouched record.
+    func refitSource(_ part: PartID, semitones: Int?, atBar: Int?) async throws -> PartVersion
     /// A song from an idea: an empty open song set up in place, or a new one opened. Nil when there is nowhere to.
     func startSong(title: String, tempo: Double, key: Key?, machine: String) -> Song?
     /// Plays a version for the user, now. False when this workspace has nothing to play through.
@@ -337,6 +342,17 @@ public final class AppStateWorkspace: DirectorWorkspace {
     }
 
     public func makeMashup(_ request: MashupRequest) async throws -> Song { try await app.makeMashup(request) }
+
+    public func addSource(_ request: SourceRequest) async throws -> (version: PartVersion, sentences: [String], flags: [String]) {
+        let pick = try app.sourcePick(request)
+        let sentences = app.sentences(for: pick, request: request)
+        let version = try await app.addSource(request, by: .persona("Director"))
+        return (version, sentences, pick.plan.flags)
+    }
+
+    public func refitSource(_ part: PartID, semitones: Int?, atBar: Int?) async throws -> PartVersion {
+        try await app.refitSource(part, semitones: semitones, atBar: atBar, by: .persona("Director"))
+    }
 
     public func startSong(title: String, tempo: Double, key: Key?, machine: String) -> Song? {
         app.startSong(title: title, tempo: tempo, key: key, machine: machine)
@@ -661,6 +677,14 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
 
     public func makeMashup(_ request: MashupRequest) async throws -> Song {
         throw DirectorToolFailure(tool: "mashup", reason: "This workspace has nowhere to render audio into.")
+    }
+
+    public func addSource(_ request: SourceRequest) async throws -> (version: PartVersion, sentences: [String], flags: [String]) {
+        throw DirectorToolFailure(tool: "adopt", reason: "This workspace has nowhere to render audio into.")
+    }
+
+    public func refitSource(_ part: PartID, semitones: Int?, atBar: Int?) async throws -> PartVersion {
+        throw DirectorToolFailure(tool: "adopt", reason: "This workspace has nowhere to render audio into.")
     }
 
     public func startSong(title: String, tempo: Double, key: Key?, machine: String) -> Song? {

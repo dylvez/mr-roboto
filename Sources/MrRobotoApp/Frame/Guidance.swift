@@ -127,7 +127,12 @@ enum PartLabel {
                 if audio.comp != nil { return "Comp" }
                 if let take = audio.take { return "Take \(take.pass)" }
                 return "Record"
-            case .stem: return "\((audio.stem ?? "unnamed").capitalized) stem"
+            case .stem:
+                // A stem of another record says which: two records' vocals in one song were both
+                // "Vocals stem", on every chip, strip and ledger row.
+                if let fit = audio.fit { return Sources.label(stem: fit.stem, of: fit.label) }
+                if version.operation == Operation.mashup, let note = note(of: version), note.contains(" of ") { return note }
+                return "\((audio.stem ?? "unnamed").capitalized) stem"
             }
         case .sample:
             return note(of: version) ?? "Chop"
@@ -456,6 +461,8 @@ public enum Guidance {
             return SurfaceAction(surface: kind, title: song.title)
         case .mashup:
             return SurfaceAction(surface: kind, title: "Mashup")
+        case .sources:
+            return SurfaceAction(surface: kind, title: "Sources")
         case .mixer, .master:
             // Bound to the newest mix version when there is one; a song at unity opens on nothing
             // and the first move makes the mix.
@@ -603,6 +610,9 @@ public enum Guidance {
     /// "chop" that were the same strings twice, and nothing anywhere said there were no drums.
     static func hasDrums(_ chop: PartVersion, in song: Song) -> Bool {
         guard case .sample(let sample) = chop.kind else { return false }
+        // Bars of another record say which stem they are: a rendered clip shares its media with
+        // no stem of this song, and used to be called drums whatever it was.
+        if let fit = sample.fit { return fit.stem == "drums" || fit.stem == "record" }
         guard let name = stems(in: song).last(where: { audio(of: $0)?.media == sample.media })
             .flatMap({ audio(of: $0)?.stem }) else { return true }
         return name.lowercased() == "drums"
@@ -710,6 +720,9 @@ public enum Guidance {
     /// Returns nil when the song has no analysed bars, which is the honest reason a "chop a bar"
     /// suggestion must not appear.
     public static func barToChop(of version: PartVersion, in song: Song) -> Bar? {
+        // A stem laid on the song's grid is not in any analysis's seconds: bars of its record are
+        // pulled in as a clip from Sources instead.
+        guard !SongPlayback.isPlaced(version) else { return nil }
         guard let audio = audio(of: version), let analysis = analysis(for: version, in: song) else { return nil }
         let bars = analysis.bars
         guard !bars.isEmpty else { return nil }

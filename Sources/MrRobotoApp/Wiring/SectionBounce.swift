@@ -46,15 +46,18 @@ enum SectionBounce {
     /// Renders one section of an arranged plan, or the whole song (every section in order, or the
     /// flat plan) when `section` is nil. The tail is half a second past the last bar, so a ringing
     /// kick is counted.
+    /// - Parameter upTo: render no more than this many bars of it.
     /// - Parameter onlyTheMix: skip the drums-only and bass-only renders. The Engineer's reading of
     ///   who owns the low end needs them; a loudness reading, an export and a strip solo do not,
     ///   and a whole song rendered three times over was most of what a master reading cost.
     @AudioActor
     static func render(_ plan: SongPlayback, section: SectionID? = nil, kitsDirectory: URL,
                        sampleRate: Double = 48_000, tailSeconds: Double = 0.5,
-                       onlyTheMix: Bool = false, mastered: Bool = true) async throws -> Stems {
+                       onlyTheMix: Bool = false, mastered: Bool = true, upTo limit: Int? = nil) async throws -> Stems {
         let clock = TransportClock(tempo: plan.tempo, timeSignature: plan.timeSignature, sampleRate: sampleRate)
-        let (base, label, bars) = try isolate(plan, section: section)
+        let (base, label, whole) = try isolate(plan, section: section)
+        // A few bars of it, for hearing something against the song: not the whole record.
+        let bars = limit.map { min(whole, max(1, $0)) } ?? whole
         let seconds = clock.seconds(forBeat: Double(bars * plan.timeSignature.beatsPerBar)) + tailSeconds
         let frames = AVAudioFramePosition((seconds * sampleRate).rounded())
 

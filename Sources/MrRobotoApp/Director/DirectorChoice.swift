@@ -45,7 +45,7 @@ extension SurfaceKind {
         // A tune too: the roll has drawn one since it could write one, and the Director, which
         // writes them, was the one thing that could not open it on what it had written.
         case .pianoRoll: return [.bassline, .melody, .groove]
-        case .structure, .album, .cast, .booth, .mashup: return []
+        case .structure, .album, .cast, .booth, .mashup, .sources: return []
         case .lyrics: return [.lyric]
         case .takes: return [.audio]
         case .mixer, .master: return [.mix]
@@ -216,7 +216,7 @@ public enum DirectorFill: Sendable, Equatable, Hashable {
         switch self {
         // The dock's surfaces, and the two the library adds: an album opens on nothing, a merge on
         // two versions; both are "parts" fills as far as a shape goes.
-        case .parts: return Set(SurfaceKind.gateA).union([.album, .merge, .booth, .takes, .mixer, .master, .mashup])
+        case .parts: return Set(SurfaceKind.gateA).union([.album, .merge, .booth, .takes, .mixer, .master, .mashup, .sources])
         case .compare: return [.compare]
         case .check: return [.check]
         }
@@ -447,6 +447,7 @@ public struct DirectorSurfaceChoice: Sendable, Equatable, Hashable, Identifiable
         case .mixer: return "the mix version, or nothing for a song mixed at unity"
         case .master: return "the mix version, or nothing for a song mixed at unity"
         case .mashup: return "nothing bound: it draws two library songs and makes a new one"
+        case .sources: return "nothing bound: it draws the library's records and pulls a stem or some bars into the open song"
         }
     }
 

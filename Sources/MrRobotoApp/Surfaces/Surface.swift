@@ -76,6 +76,10 @@ public enum SurfaceKind: String, CaseIterable, Sendable {
     /// Two songs from the library on one grid: whose tempo and key stand, which stems each gives,
     /// where they meet. Bound to nothing; it draws the library, and what it makes is a new song.
     case mashup = "Mashup"
+    /// A stem, or some bars, of a record in the library pulled into the open song and fitted to its
+    /// key, tempo and bars; and the sources the song already holds, fitted again. Bound to nothing:
+    /// it draws the library and the open song.
+    case sources = "Sources"
 
     // The two answer surfaces. They are in the catalog because the Director has to be able to
     // *name* one — a question with alternatives gets a Compare, a question with one finding gets a
@@ -93,7 +97,7 @@ public enum SurfaceKind: String, CaseIterable, Sendable {
 
     /// The surfaces that draw the song or the library rather than a version of a part, and so
     /// open on nothing.
-    public var isUnbound: Bool { self == .structure || self == .album || self == .cast || self == .booth || self == .mashup }
+    public var isUnbound: Bool { self == .structure || self == .album || self == .cast || self == .booth || self == .mashup || self == .sources }
 
     /// The two the Director opens to answer with. You do not pick these off a shelf — a Compare
     /// with nothing to compare is not a surface, it is an empty promise — so they are deliberately
@@ -107,7 +111,7 @@ public enum SurfaceKind: String, CaseIterable, Sendable {
     public var owner: PersonaID? {
         switch self {
         case .grid, .sound: return PersonaID("beatmaker")
-        case .chopLane, .importRecord, .merge, .mashup: return PersonaID("sampler")
+        case .chopLane, .importRecord, .merge, .mashup, .sources: return PersonaID("sampler")
         case .pianoRoll: return PersonaID("bassist")
         case .chords: return PersonaID("harmonist")
         case .lyrics: return PersonaID("lyricist")

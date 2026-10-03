@@ -631,7 +631,7 @@ public struct SongPlayback: Equatable, Sendable {
 
     /// The player nodes the transport's engine has, and a bounce's: one per strip the mix graph
     /// can seat (`MixGraph.slotCount`), so a form never has a part it can mix and not play.
-    public static let playerNodes = 16
+    public static let playerNodes = 24
 
     /// Reads the song graph and says what the transport would play.
     ///
@@ -719,17 +719,20 @@ public struct SongPlayback: Equatable, Sendable {
             }
         }
 
-        // Stems rather than the take when both exist: the stems *are* the take.
-        let stems = Guidance.stems(in: song)
+        // Stems rather than the take when both exist: the stems *are* the take. A stem pulled in
+        // from another record is not the take, and plays beside whichever of them does, where its
+        // fit laid it.
+        let stems = Guidance.stems(in: song).filter { !isPlaced($0) }
+        let placed = Guidance.stems(in: song).filter(isPlaced)
         let audioVersions = (stems.isEmpty ? [Guidance.take(in: song)].compactMap { $0 } : stems)
-            .filter { Guidance.audio(of: $0)?.media != shadowed }
+            .filter { Guidance.audio(of: $0)?.media != shadowed } + placed
         for version in audioVersions.prefix(max(0, maximumTracks - plan.dustyPlayers)) {
             guard let audio = Guidance.audio(of: version) else { continue }
             guard let url = mediaURL(audio.media) else { missingMedia = true; continue }
             // At the song's tempo, as its chops are: a tempo set since the import used to leave the
             // record and its stems at their own while the chops, grooves and bass moved, and eight
-            // bars in they were two beats apart.
-            let stretch = recordStretch(of: version, in: song)
+            // bars in they were two beats apart. A placed stem was rendered at it.
+            let stretch = isPlaced(version) ? 1 : recordStretch(of: version, in: song)
             plan.tracks.append(Track(version: version.id,
                                      name: PartLabel.title(of: version),
                                      url: url,
@@ -821,7 +824,7 @@ public struct SongPlayback: Equatable, Sendable {
             guard let audio = Guidance.audio(of: version) else { return nil }
             guard let url = mediaURL(audio.media) else { missingMedia = true; return nil }
             var track: Track
-            if version.operation == Operation.mashup {
+            if Self.isPlaced(version) {
                 track = Track(version: version.id, name: PartLabel.title(of: version), url: url,
                               startsAt: audio.alignmentOffset ?? 0, duration: audio.duration, part: version.partID)
             } else {
@@ -837,6 +840,14 @@ public struct SongPlayback: Equatable, Sendable {
             track.windows = windows[version.partID]
             return track
         }
+    }
+
+    /// A stem laid on the song's grid when it came in — a mashup's, or one pulled in from another
+    /// record — rather than a stem of the song's own record: it plays at its `alignmentOffset`, as
+    /// rendered, and no analysis of this song's describes it.
+    static func isPlaced(_ version: PartVersion) -> Bool {
+        guard let audio = Guidance.audio(of: version), audio.role == .stem else { return false }
+        return version.operation == Operation.mashup || audio.fit != nil
     }
 
     /// How much longer the record (or a stem of it) plays in the song than it is: the tempo it was
@@ -1179,8 +1190,14 @@ extension Song {
     /// The stems the form plays: every stem some section names, in the order the form meets them.
     /// What a form written again carries over, so rewriting the sections does not take the record
     /// out of the song.
+    ///
+    /// A song whose form names nothing yet plays every stem laid on its grid — a source pulled in
+    /// before there was a form — and those are what its first form carries.
     var seatedStems: [PartID] {
         var seen = Set<PartID>()
+        guard sections.contains(where: { !$0.stitch.isEmpty }) else {
+            return partIDs.filter { part in latestVersion(of: part).map(SongPlayback.isPlaced) ?? false }
+        }
         return sections.flatMap(\.stitch).compactMap { lane in
             guard let version = latestVersion(of: lane.part), StructureModel.isStem(version),
                   seen.insert(lane.part).inserted else { return nil }

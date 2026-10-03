@@ -114,6 +114,9 @@ public final class SurfaceRegistry {
         registry.register(.mashup) { item, app in
             MashupSurfaceView(model: SurfaceWiring.shared.mashupModel(for: item, app: app))
         }
+        registry.register(.sources) { item, app in
+            SourcesSurfaceView(model: SurfaceWiring.shared.sourcesModel(for: item, app: app))
+        }
         registry.register(.booth) { item, app in
             BoothSurfaceView(model: SurfaceWiring.shared.boothModel(for: item, app: app))
         }

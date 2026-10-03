@@ -88,6 +88,10 @@ public enum Operation {
     public static let mix = "mix"
     /// A stem of another record, moved to this song's key and tempo and set on its bar grid.
     public static let mashup = "mashup"
+    /// A stem, or a few bars, of another record pulled into a song and fitted to its key, tempo and
+    /// bars. Its `fit` says from what and how; fitted again, it is a new version of the same part
+    /// whose parent is the one it replaces, rendered from the untouched source.
+    public static let fitted = "fitted"
     /// Played in on a controller while the song ran — a groove, a bass line or a tune as the hands put it.
     public static let played = "played"
     /// A part written for a section from the part the loop plays: the kit thinned for an intro, the

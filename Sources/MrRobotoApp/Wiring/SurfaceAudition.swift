@@ -103,6 +103,12 @@ extension SurfaceWiring {
             return SurfaceAudition(id: id, label: "both, as planned") { player in
                 await player.play(id: id, label: item.title, seconds: nil) { model.playBoth() }
             }
+        case .sources:
+            let model = sourcesModel(for: item, app: app)
+            guard model.unheard == nil else { return nil }
+            return SurfaceAudition(id: id, label: "8 bars from bar \(model.previewBar)") { player in
+                await player.play(id: id, label: "Sources preview", seconds: nil) { await model.preview() }
+            }
         case .mashup:
             let model = mashupModel(for: item, app: app)
             guard model.blocker == nil else { return nil }

@@ -244,10 +244,21 @@ public enum DirectorPrompt {
         instrumental, and the plan says how far the other moves and what is flagged. Say the \
         plan, then mashup with the stems asked for — any of each song's stems, or its full \
         record but not both; the voice from one and the drums, bass and the rest from the other \
-        is the usual — and say what landed. If the first bars do not meet where they should, \
-        change bar_shift and make it again. A mashup's stems are in every section to begin \
+        is the usual — and say what landed. A mashup's stems are in every section to begin \
         with; which sections play which is then the form's. Both records stay sources to clear: a mashup of \
         commercial records is not the user's to release until they are, and release lists them.
+
+        A song can take from any number of records, not only two. "Bring her vocal into this", \
+        "loop bars 9 and 10 of that record under the verse" is adopt with kind song: read_library \
+        lists each song's stems and its record's bars, and the open song's key, tempo and bars \
+        stand while the record is moved onto them. A whole stem is laid along the song from at_bar \
+        and plays in every section; some bars are fitted to whole bars and loop like a chop in the \
+        sections that have none. Say the sentences it returns and anything flagged. Into a song \
+        with nothing in it, the first stem brings its key, tempo and form: that is how a song made \
+        of records starts. When it lands in the wrong place or key, do not bring it in again: adopt \
+        with kind fitted and the source's id fits it again from the untouched record — at_bar a \
+        bar later, semitones by ear, or neither to follow the song's key and tempo as they are now. \
+        Which sections play it is the form's, as for any stem. Every record stays a source to clear.
 
         A message may end with a line "Asked of:" and persona ids. Then the user wants only those \
         members: pass exactly those ids to convene as personas, voice only their readings, and do \

@@ -75,6 +75,13 @@ struct FrameCommands: Commands {
                 app.wantsSongSettings = true
             }
             .keyboardShortcut("n", modifiers: .command)
+            // A song made of records: a blank song, and Sources open on it. The first stem brought
+            // in sets its key, its tempo and its form.
+            Button("New Song from Records…") {
+                app.open(Song.new(title: MrRobotoApp.untitledName()))
+                app.openSurface(.sources, title: "Sources")
+            }
+            .disabled(app.store == nil)
             Button("Song Settings…") { app.wantsSongSettings = true }
                 .keyboardShortcut(",", modifiers: [.command, .shift])
                 .disabled(app.song == nil)
@@ -96,6 +103,9 @@ struct FrameCommands: Commands {
             Button("New Mashup…") { app.openSurface(.mashup, title: "Mashup") }
                 .keyboardShortcut("n", modifiers: [.command, .shift])
                 .disabled(app.store == nil)
+            Button("Bring In a Stem…") { app.openSurface(.sources, title: "Sources") }
+                .keyboardShortcut("i", modifiers: [.command, .shift])
+                .disabled(app.store == nil || app.song == nil)
             Button("New Album") {
                 if let id = app.createAlbum(title: "New album") { app.openAlbum(id) }
             }

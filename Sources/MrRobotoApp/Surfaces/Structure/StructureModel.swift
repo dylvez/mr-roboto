@@ -177,6 +177,9 @@ public final class StructureModel {
     public private(set) var lastError: String?
     /// The song's newest lyric, for the words each section sings.
     public private(set) var lyric: Lyric?
+    /// The stems a song with no form yet plays along its grid — sources pulled in before there was
+    /// a form — which its first sections carry.
+    private var formless: [PartID] = []
 
     private let host: any StructureHosting
 
@@ -190,6 +193,7 @@ public final class StructureModel {
         let built = song.map(Self.layers(in:)) ?? []
         layers = built
         lyric = Self.lyric(in: song)
+        formless = song.map { $0.isArranged ? [] : $0.seatedStems } ?? []
         // The working copy is tidied; `committed` is the song's own, so a form that named two of a
         // kind shows as dirty and Keep writes back the one that was sounding.
         sections = current.map { Self.normalised($0) }
@@ -207,6 +211,7 @@ public final class StructureModel {
     public func sync(with song: Song?) {
         layers = song.map(Self.layers(in:)) ?? []
         lyric = Self.lyric(in: song)
+        formless = song.map { $0.isArranged ? [] : $0.seatedStems } ?? []
         if let song {
             tempo = song.tempo
             timeSignature = song.timeSignature
@@ -535,6 +540,10 @@ public final class StructureModel {
         let beside = selected.flatMap { id in sections.first { $0.id == id } } ?? sections.last
         for lane in beside?.stitch ?? [] where layer(lane.part)?.type == .audio && !out.contains(part: lane.part) {
             out.append(Lane(part: lane.part))
+        }
+        // The first form of a song that has been playing stems along its grid keeps playing them.
+        if sections.allSatisfy({ $0.stitch.isEmpty }) {
+            for part in formless where !out.contains(part: part) { out.append(Lane(part: part)) }
         }
         return out
     }

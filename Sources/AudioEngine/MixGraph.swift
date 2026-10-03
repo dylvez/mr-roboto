@@ -84,9 +84,11 @@ public final class MixGraph {
     ///
     /// Sixteen rather than eight because a section may now play several parts of a kind — two
     /// grooves, a pad and a lead — and eight was already tight for a groove, a bass, a chop and
-    /// four stems. An unclaimed slot costs four silent nodes and, since the meter tap moved to
-    /// `strip(for:)`, nothing at all on the render thread.
-    public nonisolated static let slotCount = 16
+    /// four stems. Twenty-four rather than sixteen because a song can now take stems from any
+    /// number of records: three records' stems and the parts written over them came to sixteen,
+    /// and the seventeenth played unmixed. An unclaimed slot costs four silent nodes and, since
+    /// the meter tap moved to `strip(for:)`, nothing at all on the render thread.
+    public nonisolated static let slotCount = 24
 
     public let engine: Engine
     /// The pool, in slot order.

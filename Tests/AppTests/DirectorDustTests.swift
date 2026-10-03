@@ -319,8 +319,9 @@ struct DirectorDustToolboxTests {
         // M5 (Booth, Takes) and M6 (Mixer, Master) joined `SurfaceKind`, so the two schemas that enumerate it changed bytes again.
         // And once on 2026-09-29, on purpose: its sentence still said the bench holds three and
         // retires the oldest, which stopped being true when the bench became one of each kind.
-        ("open_surface", "240f1ecab4bc1a1801fe3fcb6129f6f3bd443f8ca498662e068709aa7e1c945d"),
-        ("propose", "73b187c5950d5b6591791c0f66b0b45e6343337a630be23e6879859b8ee7c44f"),
+        // And on 2026-10-03, when Sources joined `SurfaceKind`.
+        ("open_surface", "6eb77f1ea096bd263f11c7463625005a90fe0b2ce29eb93d577540e8cd41f23d"),
+        ("propose", "8be80e43f81d84baed351fdc1df79c7af8f4e6e223c560df0227e9e27607644b"),
     ]
 
     static func digest(_ definition: ClaudeToolDefinition) throws -> String {
