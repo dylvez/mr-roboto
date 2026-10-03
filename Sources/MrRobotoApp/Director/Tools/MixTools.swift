@@ -106,7 +106,8 @@ public struct ReadMixTool: DirectorTool {
         "Read the mix: every strip's level, pan, EQ and send, its level in any section where it differs, the master's gain, "
         + "ceiling and target, and the song bounced "
         + "through it — integrated LUFS, true peak, crest, tilt — with every strip bounced apart for the masking pairs and the "
-        + "Engineer's flags. Nothing is changed. Read before a move; read again after."
+        + "Engineer's flags. A chop that is quiet at its source is flagged first, and is answered with level_chop, not with "
+        + "the master. Nothing is changed. Read before a move; read again after."
     }
     public var schema: DirectorJSON {
         Schema.object([
@@ -131,7 +132,7 @@ public struct ReadMixTool: DirectorTool {
             reading = Output.Reading(integratedLUFS: (observation.integratedLUFS * 10).rounded() / 10, truePeakDBTP: observation.truePeakDBTP.map { ($0 * 10).rounded() / 10 },
                                      crestDB: (observation.crestDB * 10).rounded() / 10, tiltDB: observation.tiltDB.rounded(), bandwidthHz: observation.bandwidthHz.rounded())
             pairs = observation.masking.map { Output.Pair(a: $0.aLabel, b: $0.bLabel, band: $0.bandName + " Hz", gapDB: ($0.gapDB * 10).rounded() / 10, louder: $0.louderLabel) }
-            let findings = board.review(MixReview(observation: observation, master: mix.master))
+            let findings = board.review(MixReview(observation: observation, master: mix.master, quietChops: ChopLevel.quiet(in: plan)))
             flags = findings.map { Output.Flag(critic: $0.criticName, headline: $0.headline, offered: $0.fixes.first?.title ?? "", otherwise: $0.fixes.dropFirst().first?.title ?? "") }
             engineer = GenreLens.judge(Engineer().read(observation), by: Engineer.bible, in: await workspace.genreLens).map(\.says)
             detail += String(format: ", bounced: %.1f LUFS against %.0f, true peak %.1f against %.1f; %d masking pair%@, %d flag%@.",
@@ -347,5 +348,66 @@ public struct MasterTool: DirectorTool {
         }
         return Output(version: version.id.description, note: note, verdict: verdict.spoken,
                       detail: "Recorded as \(PartLabel.title(of: version)). The ceiling is over every bounce and export; read the mix to see the loudness land.")
+    }
+}
+
+// MARK: - level_chop
+
+/// A chop given a level of its own, or put back as recorded.
+public struct LevelChopTool: DirectorTool {
+    public struct Input: Decodable, Sendable {
+        /// The chop: its part id, a version id of it, or its name as read_song and read_mix print it.
+        public var part: String
+        public var asRecorded: Bool
+        enum CodingKeys: String, CodingKey { case part; case asRecorded = "as_recorded" }
+    }
+
+    public struct Output: Encodable, Sendable {
+        public var part: String
+        public var gainDB: Double
+        public var detail: String
+        enum CodingKeys: String, CodingKey { case part, detail; case gainDB = "gain_db" }
+    }
+
+    let workspace: any DirectorWorkspace
+
+    public init(workspace: any DirectorWorkspace) { self.workspace = workspace }
+
+    public let name = "level_chop"
+    public var purpose: String {
+        "Give a chop a level of its own. Its bar is measured and brought up to where an instrument sits, as the chop's next "
+        + "version, so its loop, its pads and every groove on its slices come up together wherever they are heard, and the "
+        + "mix does not move. This is the answer when read_mix flags a chop as quiet at its source, or the user cannot hear "
+        + "a chop or the groove on it: never the master, which makes everything added afterwards too loud. as_recorded "
+        + "true puts it back. A chop cut from now on is levelled as it is cut, so this is for one that was not."
+    }
+    public var schema: DirectorJSON {
+        Schema.object([
+            ("part", Schema.string("The chop: its part id, a version id of it, or its name as read_song prints it.")),
+            ("as_recorded", Schema.boolean("True to play it as its recording has it again; false to measure the bar and level it.")),
+        ], required: ["part", "as_recorded"])
+    }
+
+    public func run(_ input: Input) async throws -> Output {
+        guard let song = await workspace.song else {
+            throw DirectorToolFailure(tool: name, reason: "No song is open.")
+        }
+        let chops = song.partIDs.compactMap { song.latestVersion(of: $0) }.filter { $0.type == .sample }
+        let asked = input.part.trimmingCharacters(in: .whitespaces)
+        let found = chops.first { $0.partID.description == asked }
+            ?? VersionID(uuidString: asked).flatMap(song.version).flatMap { version in chops.first { $0.partID == version.partID } }
+            ?? chops.last { PartLabel.title(of: $0).caseInsensitiveCompare(asked) == .orderedSame }
+        guard let chop = found else {
+            throw DirectorToolFailure(tool: name, reason: "\"\(input.part)\" is not a chop in this song.",
+                                      suggestion: chops.isEmpty ? "The song holds no chop." : "One of: " + chops.map { "\(PartLabel.title(of: $0)) \($0.partID)" }.joined(separator: ", ") + ".")
+        }
+        guard let level = await workspace.levelChop(chop.partID, asRecorded: input.asRecorded) else {
+            throw DirectorToolFailure(tool: name, reason: input.asRecorded ? "\(PartLabel.title(of: chop)) already plays as recorded."
+                                          : "\(PartLabel.title(of: chop)) did not move: it is loud enough as recorded, it is already levelled, or its audio could not be read.",
+                                      suggestion: "Read the mix: if the song is still under its target, that is the master's.")
+        }
+        return Output(part: chop.partID.description, gainDB: level,
+                      detail: level == 0 ? "\(PartLabel.title(of: chop)) plays as recorded again."
+                          : "\(PartLabel.title(of: chop)) plays \(ChopLevel.spoken(level)) at its source: its loop and every groove on its slices. Read the mix again; the master may now be over.")
     }
 }

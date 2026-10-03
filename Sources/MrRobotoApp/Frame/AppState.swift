@@ -903,6 +903,9 @@ public final class AppState {
             note(.session, "No song open; nothing to record into")
             return false
         }
+        // A quiet bar is brought up as it is cut, the way a recorded instrument is levelled as it
+        // is imported (`ChopLevel`).
+        let (version, reading) = levelledAsItComesIn(version)
         do {
             try current.append(version)
             // A part you have just made is in the song. Before this it was not: the form named
@@ -924,6 +927,7 @@ public final class AppState {
             }
             note(SessionEntry.Source(version.author), "\(version.operation.capitalized) → \(version.type.rawValue)\(versionNumber(of: version.id).map { " v\($0)" } ?? "")",
                  detail: provenanceLine(for: version))
+            if let reading { noteLevelled(version, reading: reading) }
             if joined > 0 {
                 note(.session, "\(PartLabel.title(of: version)) plays in the song",
                      detail: "Added to \(count(joined, "section")). Open Structure to take it out of one.")

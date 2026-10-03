@@ -637,7 +637,7 @@ final class LiveSongPlayer: SongPlaybackHost {
     /// the record's tempo keeps time with a song at another.
     static func dustyChop(_ chop: SongPlayback.ChopTrack, format: AVAudioFormat, clock: TransportClock? = nil,
                           repeatedTo seconds: Double? = nil) throws -> AVAudioPCMBuffer {
-        let span = try AudioRegion.read(chop.url, from: chop.region.start, to: chop.region.end)
+        let span = try AudioRegion.read(chop.url, from: chop.region.start, to: chop.region.end).levelled(by: chop.gainDB)
         guard !span.planar.isEmpty, span.planar[0].count > 0 else {
             throw EngineError.invalidRegion("\(chop.name) is empty between "
                 + String(format: "%.2f s and %.2f s", chop.region.start, chop.region.end))

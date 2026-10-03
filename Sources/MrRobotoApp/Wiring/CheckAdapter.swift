@@ -125,6 +125,9 @@ final class CheckAdapter: CheckHosting {
         case .mixMaster(let gainDB, let ceilingDBTP):
             if let gainDB { moved.master.gainDB = max(-24, min(24, moved.master.gainDB + gainDB)) }
             if let ceilingDBTP { moved.master.ceilingDBTP = max(-12, min(0, ceilingDBTP)) }
+        case .levelChop(let part, let gainDB):
+            // A version of the chop, not of the mix: the mix does not move.
+            return app.levelChop(part, to: gainDB) == nil ? .refused("The chop did not move: it already plays at that level.") : .resolved
         case .accept:
             return .resolved
         default:
@@ -352,6 +355,8 @@ final class CheckAdapter: CheckHosting {
             return
         }
         let songID = app.song?.id
+        var gainDB: Double?
+        if case .sample(let sample)? = subjectKind { gainDB = sample.gainDB }
         // A finding with no extent is still a thing you want to hear: half a second around it.
         let from = max(0, start)
         let to = max(from + 0.5, min(end, from + CompareAdapter.maximumSeconds))
@@ -359,7 +364,7 @@ final class CheckAdapter: CheckHosting {
         do {
             let url = try store.mediaURL(for: media, song: songID)
             span = try await Task.detached(priority: .userInitiated) {
-                try AudioRegion.read(url, from: from, to: to)
+                try AudioRegion.read(url, from: from, to: to).levelled(by: gainDB)
             }.value
         } catch {
             app.note(.session, "\(name) could not be read", detail: "\(error)")

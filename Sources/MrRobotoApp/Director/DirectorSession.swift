@@ -355,6 +355,7 @@ public final class DirectorSession {
         case "set_swing": return "Moving the swing…"
         case "set_velocity": return "Moving the velocities…"
         case "audition": return "Listening back…"
+        case "level_chop": return "Levelling the chop…"
         case "create_part_version": return "Recording it into the song…"
         case "degrade_part": return "Putting it through the machine…"
         case "set_progression": return "Writing the chords down…"

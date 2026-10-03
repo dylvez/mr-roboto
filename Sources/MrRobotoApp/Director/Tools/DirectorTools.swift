@@ -100,6 +100,8 @@ public enum DirectorTools {
             // Another way, appended after the forty-nine: the chords and the tune the song has, said differently.
             ReharmonizeTool(workspace: workspace).erased(),
             VaryTuneTool(workspace: workspace).erased(),
+            // A chop's own level, appended after the fifty-one: a quiet bar brought up at its source.
+            LevelChopTool(workspace: workspace).erased(),
         ]
         if let stage {
             let pad = pad ?? DirectorStagePad()
@@ -179,6 +181,8 @@ public enum DirectorTools {
         // Another way, appended: the chords by a named move, the tune by a named treatment.
         "reharmonize",
         "vary_tune",
+        // A chop's own level, appended.
+        "level_chop",
     ]
 
     /// The two the frame adds. Appended after `names`, never among them: a session with no frame

@@ -61,6 +61,9 @@ public enum Operation {
     public static let separate = "separate"
     public static let regroove = "regroove"
     public static let edit = "edit"
+    /// A chop given a level of its own, or put back as recorded: a new version of the same part
+    /// whose `Sample.gainDB` is the only thing that moved.
+    public static let level = "level"
     /// A sample or a groove put through a degradation chain: a new version of the same part whose
     /// parent is the version it dirtied. See `Degradation`.
     public static let degrade = "degrade"

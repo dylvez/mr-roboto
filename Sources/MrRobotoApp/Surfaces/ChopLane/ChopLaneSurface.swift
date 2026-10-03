@@ -871,10 +871,12 @@ public final class ChopLaneSurface: Surface {
         var chain: [Degradation] = []
         var key: Key?
         var span: SongGraph.TimeRange?
-        if case .sample(let previous)? = parent?.kind { chain = previous.degradation; key = previous.key; span = previous.span }
+        // Its level too: the lane is playing the bar at it.
+        var gain: Double?
+        if case .sample(let previous)? = parent?.kind { chain = previous.degradation; key = previous.key; span = previous.span; gain = previous.gainDB }
         let sample = Sample(media: source.media, slices: sliceMarkers,
                             detectedTempo: chop.detectedTempo, sourceRecord: source.record,
-                            degradation: chain, key: key, span: span, pads: padTrims)
+                            degradation: chain, key: key, span: span, pads: padTrims, gainDB: gain)
         let version = parent.map {
             $0.deriving(.sample(sample), by: .user, operation: Operation.chop, note: note)
         } ?? PartVersion(partID: partID, kind: .sample(sample), author: .user,

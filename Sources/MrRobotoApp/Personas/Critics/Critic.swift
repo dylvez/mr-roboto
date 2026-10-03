@@ -46,6 +46,7 @@ public struct CriticID: RawRepresentable, Hashable, Sendable, Codable, CustomStr
     public static let masking = CriticID("mix.masking")
     public static let overCeiling = CriticID("mix.over-ceiling")
     public static let hotMaster = CriticID("mix.hot-master")
+    public static let quietSource = CriticID("mix.quiet-source")
 }
 
 // MARK: - Where a finding is
@@ -180,6 +181,9 @@ public enum EngineChange: Hashable, Sendable {
     case mixStrip(part: PartID, gainDB: Double?, bandHz: Double?, bandDB: Double?)
     /// M6: the master's gain and/or ceiling.
     case mixMaster(gainDB: Double?, ceilingDBTP: Double?)
+    /// A chop played at a level of its own, in dB over its recording: a version of the chop, not
+    /// a mix move.
+    case levelChop(part: PartID, gainDB: Double)
     case accept
 }
 
@@ -438,7 +442,7 @@ public struct CriticBoard: Sendable {
         grooveCritics: [SwingClashCritic(), SliceClashCritic()],
         mergeCritics: [TooFarTransposedCritic(), TwoDrumSourcesCritic()],
         takeCritics: [PitchDriftCritic(), TimingCritic()],
-        mixCritics: [MaskingCritic(), OverCeilingCritic(), HotMasterCritic()])
+        mixCritics: [QuietSourceCritic(), MaskingCritic(), OverCeilingCritic(), HotMasterCritic()])
 
     public var all: [any Critic] {
         (chopCritics as [any Critic]) + (grooveCritics as [any Critic]) + (mergeCritics as [any Critic]) + (takeCritics as [any Critic])

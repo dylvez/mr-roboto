@@ -124,6 +124,9 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     /// A groove made from a chop, put on the chop's slices and in its place in the form, as the
     /// Chop lane's Make the groove does. The names of the sections it took over.
     @discardableResult func playGroove(_ groove: PartID, onChop chop: PartID) -> [String]
+    /// A chop levelled at its source, or put back as recorded (`AppState.levelChop`). The level
+    /// it now plays at, or nil when nothing moved.
+    func levelChop(_ chop: PartID, asRecorded: Bool) -> Double?
     /// Rendered audio kept in the open song's package, for a version to point at. Nil, with the
     /// reason in the rail, when there is nowhere to keep it.
     func keepAudio(_ planar: [[Float]], sampleRate: Double) -> MediaRef?
@@ -356,6 +359,11 @@ public final class AppStateWorkspace: DirectorWorkspace {
     @discardableResult public func setInstrument(_ id: String, for part: PartID?) -> Bool {
         app.setInstrument(id, for: part, by: .persona("Director"))
     }
+    public func levelChop(_ chop: PartID, asRecorded: Bool) -> Double? {
+        app.keepSurfaceWork()
+        return app.levelChop(chop, to: asRecorded ? 0 : nil, by: .persona("Director"))
+    }
+
     @discardableResult public func playGroove(_ groove: PartID, onChop chop: PartID) -> [String] {
         app.keepSurfaceWork()
         return app.playGroove(groove, onChop: chop, by: .persona("Director"), source: .director)
@@ -720,6 +728,9 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
         song?.timeSignature = signature
         return true
     }
+
+    /// A scratch workspace reads no audio, so it has no bar to measure.
+    public func levelChop(_ chop: PartID, asRecorded: Bool) -> Double? { nil }
 
     /// As the frame does it: the pick, then the chop's place in the form.
     @discardableResult

@@ -44,7 +44,9 @@ public enum DirectorPrompt {
         is the chop in a rhythm, and drums only if the chop was cut from drums. When the user \
         cannot hear the beat over one, or wants the beat and the chop together, the answer is a \
         second groove on the drum machine (write_groove, then stitch_section beside the first), \
-        never a level, an EQ or the master. \
+        never a level, an EQ or the master. A chop that is quiet at its source — a bar of a stem \
+        the separator left nearly empty — is levelled at the chop with level_chop, which read_mix \
+        flags; the master is for the whole song once its parts are where they should be. \
         Either way the result is recorded into the song as an immutable part version, a new part \
         plays in the form at once, and develop arranges the loop into a whole song.
 

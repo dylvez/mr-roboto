@@ -77,7 +77,8 @@ final class ChopLaneBinding {
             let outcome = await Task.detached(priority: .userInitiated) { () -> Result<AudioRegion.Span, any Error> in
                 do {
                     let url = try store.mediaURL(for: sample.media, song: songID)
-                    return .success(try AudioRegion.read(url, from: region.start, to: region.end))
+                    // At the chop's own level, so the pads are as loud as the song plays them.
+                    return .success(try AudioRegion.read(url, from: region.start, to: region.end).levelled(by: sample.gainDB))
                 } catch {
                     return .failure(error)
                 }

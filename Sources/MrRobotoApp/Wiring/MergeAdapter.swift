@@ -94,7 +94,7 @@ final class MergeAdapter: MergeHosting {
         do {
             let url = try store.mediaURL(for: sample.media, song: songID)
             let span = try await Task.detached(priority: .userInitiated) {
-                try AudioRegion.read(url, from: region.start, to: max(region.start, region.end))
+                try AudioRegion.read(url, from: region.start, to: max(region.start, region.end)).levelled(by: sample.gainDB)
             }.value
             guard !span.planar.isEmpty, span.planar[0].count > 0 else {
                 app.note(.session, "\(name) is empty between \(String(format: "%.2f s and %.2f s", region.start, region.end))")
@@ -162,7 +162,8 @@ final class MergeAdapter: MergeHosting {
                                             tempo: sample.detectedTempo ?? song.tempo)
         let url = try store.mediaURL(for: sample.media, song: song.id)
         let (media, seconds): (MediaRef, Double) = try await Task.detached(priority: .userInitiated) {
-            let span = try AudioRegion.read(url, from: region.start, to: max(region.start, region.end))
+            // At the chop's level: the render is then a bar that needs none of its own.
+            let span = try AudioRegion.read(url, from: region.start, to: max(region.start, region.end)).levelled(by: sample.gainDB)
             guard !span.planar.isEmpty, span.planar[0].count > 0 else { throw Failure.unreadable(name) }
             let out = try MergeRender.audio(span.planar, sampleRate: span.sampleRate, move: move)
             let scratch = FileManager.default.temporaryDirectory

@@ -192,7 +192,9 @@ public final class PartPlayer {
                 let (whole, rate) = try BoothAdapter.planar(url)
                 let frames = whole.first?.count ?? 0
                 let lower = min(frames, max(0, Int(region.start * rate))), upper = min(frames, max(lower, Int(region.end * rate)))
-                return (upper > lower ? whole.map { Array($0[lower..<upper]) } : whole, rate)
+                // At the chop's level, as the song plays it.
+                let span = AudioRegion.Span(planar: upper > lower ? whole.map { Array($0[lower..<upper]) } : whole, sampleRate: rate)
+                return (span.levelled(by: sample.gainDB).planar, rate)
             }.value
             await service.play(planar: planar, sampleRate: rate, through: sample.degradation)
             return Double(planar.first?.count ?? 0) / rate

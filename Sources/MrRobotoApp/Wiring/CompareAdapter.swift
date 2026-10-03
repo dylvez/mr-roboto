@@ -141,7 +141,7 @@ final class CompareAdapter: CompareHosting {
                                                 tempo: sample.detectedTempo ?? app.song?.tempo)
             await playAudio(sample.media, from: region.start,
                             to: min(region.end, region.start + CompareAdapter.maximumSeconds),
-                            named: name, through: passes)
+                            named: name, through: passes, gainDB: sample.gainDB)
         case .audio(let audio):
             await playAudio(audio.media, from: 0, to: CompareAdapter.maximumSeconds, named: name, through: passes)
         case .bassline(let line):
@@ -286,7 +286,7 @@ final class CompareAdapter: CompareHosting {
 
     /// A chop or a stem, read off disk and played as samples, through its chain.
     private func playAudio(_ media: MediaRef, from start: Double, to end: Double, named name: String,
-                           through passes: [Degradation]) async {
+                           through passes: [Degradation], gainDB: Double? = nil) async {
         guard let store = app.store else {
             app.note(.session, "This session has no library directory, so \(name) cannot be read")
             return
@@ -296,7 +296,7 @@ final class CompareAdapter: CompareHosting {
         do {
             let url = try store.mediaURL(for: media, song: songID)
             span = try await Task.detached(priority: .userInitiated) {
-                try AudioRegion.read(url, from: start, to: max(start, end))
+                try AudioRegion.read(url, from: start, to: max(start, end)).levelled(by: gainDB)
             }.value
         } catch {
             app.note(.session, "\(name) could not be read", detail: "\(error)")

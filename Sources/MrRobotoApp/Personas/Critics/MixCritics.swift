@@ -4,6 +4,25 @@ import SongGraph
 
 // M6 X7: the three critics that read a mix. Masking between two strips, a true peak over the
 // ceiling, a master off its target. Every fix is a mix move the Check records as a version.
+// A fourth reads what the mix is made of: a chop that is quiet at its source.
+
+/// A chop the song plays whose bar is far under where an instrument sits, and that has no level
+/// of its own yet (`ChopLevel`).
+public struct QuietChop: Hashable, Sendable {
+    public var part: PartID
+    public var label: String
+    /// Its bar's loudest tenth of a second, dBFS.
+    public var loudnessDBFS: Double
+    /// What levelling it would bring it up by.
+    public var gainDB: Double
+
+    public init(part: PartID, label: String, loudnessDBFS: Double, gainDB: Double) {
+        self.part = part
+        self.label = label
+        self.loudnessDBFS = loudnessDBFS
+        self.gainDB = gainDB
+    }
+}
 
 /// A mix reading, as the critics are handed it.
 public struct MixReview: Sendable {
@@ -14,18 +33,57 @@ public struct MixReview: Sendable {
     /// The loudness window either side of the target.
     public var windowLU: Double
     public var limit: Int
+    /// The chops the song plays that are quiet at their source.
+    public var quietChops: [QuietChop]
 
-    public init(observation: MixObservation, master: Master, noticeableDB: Double = 6, windowLU: Double = 2, limit: Int = 4) {
+    public init(observation: MixObservation, master: Master, noticeableDB: Double = 6, windowLU: Double = 2, limit: Int = 4,
+                quietChops: [QuietChop] = []) {
         self.observation = observation
         self.master = master
         self.noticeableDB = noticeableDB
         self.windowLU = windowLU
         self.limit = limit
+        self.quietChops = quietChops
     }
 }
 
 public protocol MixCritic: Critic {
     func review(_ input: MixReview) -> [Finding]
+}
+
+/// A chop quiet at its source: levelled at the chop, not made up in the mix.
+///
+/// The session that asked for this: a bar of a stem the separator had left nearly empty, played
+/// as recorded. The song bounced 19 LU under its target, the only fix on offer was the master, and
+/// the master went up 18.8 dB — after which every drum machine added to the song was that much
+/// too loud. The cause was one part, and it has a level of its own.
+public struct QuietSourceCritic: MixCritic {
+    public init() {}
+    public var id: CriticID { .quietSource }
+    public var name: String { "Quiet at its source" }
+    public var persona: PersonaID { .engineer }
+    public var checks: String { "every chop the song plays, by its bar's loudest moment, against where an instrument sits" }
+
+    public func review(_ input: MixReview) -> [Finding] {
+        input.quietChops.prefix(input.limit).map { chop in
+            Finding(
+                critic: id, criticName: name, persona: persona,
+                subject: .mix("\(chop.label), at its source"),
+                locus: Locus(bar: nil, beat: nil, start: 0, end: 0),
+                headline: String(format: "%@ is quiet at its source: %.0f dBFS at its loudest", chop.label, chop.loudnessDBFS),
+                why: String(format: "An instrument's loudest moment sits at %.0f dBFS. Made up on the master, everything added to the song afterwards is that much too loud; made up on a strip, the next chop of the same bar is quiet again.",
+                            ChopLevel.targetDBFS),
+                severity: .warn,
+                measurement: Measurement(.peakDBFS, measured: chop.loudnessDBFS,
+                                         threshold: .atLeast(.peakDBFS, ChopLevel.targetDBFS - ChopLevel.leastDB, unit: "dBFS"), unit: "dBFS"),
+                first: Fix("level-chop", title: String(format: "Level %@ %+.0f dB, at the chop", chop.label, chop.gainDB),
+                           detail: "A version of the chop: its loop, its pads and every groove on its slices come up together. The mix does not move.",
+                           change: .levelChop(part: chop.part, gainDB: chop.gainDB)),
+                second: Fix("leave", title: "Leave it as recorded",
+                            detail: "A quiet bar under everything else is a choice.",
+                            change: .accept))
+        }
+    }
 }
 
 /// Two strips within the noticeable gap in a band: one of them owns it, and the other moves.
@@ -101,6 +159,9 @@ public struct HotMasterCritic: MixCritic {
         let lufs = input.observation.integratedLUFS
         guard lufs.isFinite, abs(lufs - input.master.targetLUFS) > input.windowLU else { return [] }
         let gap = input.master.targetLUFS - lufs
+        // Under the target with a chop quiet at its source: that is the cause, and the master is
+        // read again once it is levelled. One move at a time.
+        if gap > 0, !input.quietChops.isEmpty { return [] }
         return [Finding(
             critic: id, criticName: name, persona: persona,
             subject: .mix("the master's loudness"),

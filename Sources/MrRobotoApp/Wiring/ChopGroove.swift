@@ -41,7 +41,7 @@ enum ChopGroove {
 
     /// The chop, read from its media and cut the way it was kept.
     static func prepare(_ track: SongPlayback.ChopTrack) throws -> Prepared {
-        let span = try AudioRegion.read(track.url, from: track.region.start, to: track.region.end)
+        let span = try AudioRegion.read(track.url, from: track.region.start, to: track.region.end).levelled(by: track.gainDB)
         return try prepare(track, dry: span.planar, sampleRate: span.sampleRate)
     }
 

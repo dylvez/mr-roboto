@@ -199,7 +199,7 @@ struct DirectorAnotherWayTests {
 
     @Test("the two are appended after compare_section, and the prompt says when")
     func appended() {
-        #expect(Array(DirectorTools.names.suffix(2)) == ["reharmonize", "vary_tune"])
+        #expect(Array(DirectorTools.names.suffix(3).prefix(2)) == ["reharmonize", "vary_tune"])
         #expect(DirectorPrompt.system.contains("reharmonize") && DirectorPrompt.system.contains("vary_tune"))
     }
 

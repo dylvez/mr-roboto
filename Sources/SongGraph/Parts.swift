@@ -584,10 +584,14 @@ public struct Sample: Hashable, Sendable {
     /// The pads' trims, one per slice that has any, in slice order. Empty plays every slice as it
     /// was cut.
     public var pads: [PadTrim]
+    /// The level the chop is played at, in dB over its media's own: its loop, its pads and a
+    /// groove on its slices alike. Set when a quiet bar is cut, so the chop sits where an
+    /// instrument does and nothing downstream has to make it up. Nil plays it as recorded.
+    public var gainDB: Double?
 
     public init(media: MediaRef, slices: [SliceMarker] = [], rootPitch: Pitch? = nil, detectedTempo: Double? = nil,
                 sourceRecord: RecordID? = nil, degradation: [Degradation] = [], key: Key? = nil, span: TimeRange? = nil,
-                pads: [PadTrim] = []) {
+                pads: [PadTrim] = [], gainDB: Double? = nil) {
         self.media = media
         self.slices = slices
         self.rootPitch = rootPitch
@@ -597,11 +601,12 @@ public struct Sample: Hashable, Sendable {
         self.key = key
         self.span = span
         self.pads = pads
+        self.gainDB = gainDB
     }
 }
 
 extension Sample: Codable {
-    private enum CodingKeys: String, CodingKey { case media, slices, rootPitch, detectedTempo, sourceRecord, degradation, key, span, pads }
+    private enum CodingKeys: String, CodingKey { case media, slices, rootPitch, detectedTempo, sourceRecord, degradation, key, span, pads, gainDB }
 
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -613,11 +618,13 @@ extension Sample: Codable {
                   degradation: try c.decodeIfPresent([Degradation].self, forKey: .degradation) ?? [],
                   key: try c.decodeIfPresent(Key.self, forKey: .key),
                   span: try c.decodeIfPresent(TimeRange.self, forKey: .span),
-                  pads: try c.decodeIfPresent([PadTrim].self, forKey: .pads) ?? [])
+                  pads: try c.decodeIfPresent([PadTrim].self, forKey: .pads) ?? [],
+                  gainDB: try c.decodeIfPresent(Double.self, forKey: .gainDB))
     }
 
     /// A dry sample writes exactly what it always wrote; see `Groove.encode(to:)`. `key` and
-    /// `span` are omitted when nil for the same reason, and `pads` when there are none.
+    /// `span` are omitted when nil for the same reason, `pads` when there are none, and `gainDB`
+    /// when the chop plays as recorded.
     public func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(media, forKey: .media)
@@ -629,6 +636,7 @@ extension Sample: Codable {
         try c.encodeIfPresent(key, forKey: .key)
         try c.encodeIfPresent(span, forKey: .span)
         if !pads.isEmpty { try c.encode(pads, forKey: .pads) }
+        try c.encodeIfPresent(gainDB, forKey: .gainDB)
     }
 }
 

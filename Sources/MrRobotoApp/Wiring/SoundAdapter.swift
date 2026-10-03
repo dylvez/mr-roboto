@@ -75,7 +75,7 @@ final class SoundAdapter: SoundSurfaceHost {
                                                 tempo: sample.detectedTempo ?? app.song?.tempo)
             let url = try store.mediaURL(for: sample.media, song: app.song?.id)
             let span = try await Task.detached(priority: .userInitiated) {
-                try AudioRegion.read(url, from: region.start, to: region.end)
+                try AudioRegion.read(url, from: region.start, to: region.end).levelled(by: sample.gainDB)
             }.value
             guard let first = span.planar.first, !first.isEmpty else {
                 throw SoundSurfaceUnavailable(what: "\(label) is empty between "
