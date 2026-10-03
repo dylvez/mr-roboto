@@ -130,6 +130,45 @@ public struct BeatGrid: Hashable, Codable, Sendable {
         BeatGrid(beats: beats.map { $0 + offset }, bars: bars.map { $0 + offset }, bpm: bpm, timeSignature: timeSignature)
     }
 
+    // MARK: Correcting a misread grid
+
+    /// The beat the first bar starts on: where every correction counts from.
+    private var firstDownbeatIndex: Int { bars.first.flatMap(nearestBeatIndex(to:)) ?? 0 }
+
+    /// The same beats with a bar starting on every `beatsPerBar`-th one, counted from beat `phase`.
+    private func barred(_ times: [Double], from phase: Int, bpm: Double?) -> BeatGrid {
+        let perBar = max(1, timeSignature.beatsPerBar)
+        let starts = times.indices.filter { (($0 - phase) % perBar + perBar) % perBar == 0 }.map { times[$0] }
+        return BeatGrid(beats: times, bars: starts, bpm: bpm, timeSignature: timeSignature)
+    }
+
+    /// The grid at half the tempo, for a tracker that counted twice the beats there are: every other
+    /// beat, the first bar's downbeat kept, and bars of as many beats as before, so each is two of
+    /// the old.
+    public func halved() -> BeatGrid {
+        let first = firstDownbeatIndex
+        let kept = beats.indices.filter { ($0 - first) % 2 == 0 }
+        let phase = kept.firstIndex(of: first) ?? 0
+        return barred(kept.map { beats[$0] }, from: phase, bpm: bpm.map { $0 / 2 })
+    }
+
+    /// The grid at twice the tempo, for a tracker that heard half the beats there are: a beat
+    /// between every two, and bars of as many beats as before, so each old bar is two.
+    public func doubled() -> BeatGrid {
+        var times: [Double] = []
+        for (index, beat) in beats.enumerated() {
+            times.append(beat)
+            if index + 1 < beats.count { times.append((beat + beats[index + 1]) / 2) }
+        }
+        return barred(times, from: 2 * firstDownbeatIndex, bpm: bpm.map { $0 * 2 })
+    }
+
+    /// The bars starting `count` beats later (earlier when negative), every bar the same number of
+    /// beats; the beats stay where they are.
+    public func movingDownbeat(by count: Int) -> BeatGrid {
+        barred(beats, from: firstDownbeatIndex + count, bpm: bpm)
+    }
+
     // MARK: Estimation helpers
 
     /// Tempo from the median inter-beat interval.

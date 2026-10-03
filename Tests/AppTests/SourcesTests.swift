@@ -456,7 +456,7 @@ struct SourcesTightenTests {
         let pick = try app.sourcePick(request)
         let declined = try #require(pick.declined)
         #expect(!pick.plan.isTightened && declined.held > 2)
-        #expect(app.sentences(for: pick, request: request).contains { $0.contains("look misread") && $0.contains("Tighten it to try anyway") })
+        #expect(app.sentences(for: pick, request: request).contains { $0.contains("look misread") && $0.contains("tighten it to try anyway") && $0.contains("Correct its grid") })
         var asked = request
         asked.tighten = true
         let forced = try app.sourcePick(asked)

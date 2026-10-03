@@ -34,8 +34,22 @@ public struct ReadLibraryTool: DirectorTool {
             public var stems: [StemEntry]
             /// What the crate is doing to it, or why it last failed. Nil when nothing.
             public var status: String?
+            /// The correction its grid is read through, when there is one: what key, tempo and bars
+            /// above are read through.
+            public var grid: String?
+            /// How far the two beat trackers agreed, 0…1: well under 0.8 and its bar lines may be misread.
+            public var trackersAgree: Double?
+            /// The second tracker's tempo, and whether its beats are kept for fix_grid to take.
+            public var secondTrackerTempo: Double?
+            public var secondTrackerKept: Bool
 
-            enum CodingKeys: String, CodingKey { case id, title, artist, key, tempo, bars, stems, status; case inSong = "in_song" }
+            enum CodingKeys: String, CodingKey {
+                case id, title, artist, key, tempo, bars, stems, status, grid
+                case inSong = "in_song"
+                case trackersAgree = "trackers_agree"
+                case secondTrackerTempo = "second_tracker_tempo"
+                case secondTrackerKept = "second_tracker_kept"
+            }
         }
         public struct StemEntry: Encodable, Sendable {
             public var name: String
@@ -142,10 +156,14 @@ public struct ReadLibraryTool: DirectorTool {
                                         comesInAtBar: stem?.barLevels.flatMap(RecordStems.firstPlayedBar).map { $0 + 1 })
             }
             let held = Set([record.media] + (record.stems ?? []).map(\.media))
+            let check = record.readingAsRead?.beatCheck
             records.append(Output.RecordEntry(id: record.id.description, title: record.title, artist: record.artist,
                                               key: key.map { "\($0)" }, tempo: tempo, bars: bars,
                                               inSong: !media.isDisjoint(with: held), stems: stems,
-                                              status: await workspace.crateStatus(of: record.id)))
+                                              status: await workspace.crateStatus(of: record.id), grid: record.grid?.description,
+                                              trackersAgree: check?.agreement.map { ($0 * 100).rounded() / 100 },
+                                              secondTrackerTempo: check?.checkerBPM.map { ($0 * 10).rounded() / 10 },
+                                              secondTrackerKept: !(record.readingAsRead?.checkerBeats?.isEmpty ?? true)))
         }
         let samples = library.samples.map { entry in
             Output.SampleEntry(id: entry.id.description, name: entry.name, key: entry.sample.key.map { "\($0)" },
@@ -560,5 +578,79 @@ public struct MergeTool: DirectorTool {
                           ? "Stitched as \(section.name), \(bars) bars; the transport plays it and Structure shows it. "
                               + "Open the Merge surface on the two originals to let the user hear the move."
                           : "Rendered, but the song refused the section.")
+    }
+}
+
+// MARK: - fix_grid
+
+/// A record's beat grid corrected in the crate, for bar lines a tracker misread.
+public struct FixGridTool: DirectorTool {
+    public struct Input: Decodable, Sendable {
+        public var record: String
+        public var move: String
+    }
+
+    public struct Output: Encodable, Sendable {
+        public var record: String
+        public var grid: String
+        public var tempo: Double?
+        public var bars: Int
+        /// The open song's sources fitted to the old bar lines: adopt kind fitted on each.
+        public var fitAgain: [String]
+        public var detail: String
+
+        enum CodingKeys: String, CodingKey { case record, grid, tempo, bars, detail; case fitAgain = "fit_again" }
+    }
+
+    let workspace: any DirectorWorkspace
+
+    public init(workspace: any DirectorWorkspace) { self.workspace = workspace }
+
+    public let name = "fix_grid"
+    public var purpose: String {
+        "Correct a record's beat grid in the crate when its bar lines are misread. The tells: read_library's trackers_agree "
+        + "well under 0.8, a second tracker's tempo half or twice the record's, or adopt leaving a source as recorded because "
+        + "its bar lines look misread. half halves the tempo (the tracker counted double time), double doubles it, later and "
+        + "earlier move the downbeat by a beat, second_tracker takes the second tracker's beats in bars of the record's meter "
+        + "(or goes back to the first's; a record read before they were kept is listened to first), as_read undoes every correction. The analysis itself is never rewritten. Sources the open "
+        + "song fitted from the record are listed: adopt kind fitted on each fits it to the new bar lines, tightened unless they "
+        + "still look misread."
+    }
+    public var schema: DirectorJSON {
+        Schema.object([
+            ("record", Schema.string("The record's id from read_library, or its title.")),
+            ("move", Schema.string("The correction.", enum: GridMove.allCases.map(\.rawValue))),
+        ], required: ["record", "move"])
+    }
+
+    public func run(_ input: Input) async throws -> Output {
+        let library = await workspace.library
+        guard let found = library.records.first(where: { $0.id.description == input.record || $0.title.caseInsensitiveCompare(input.record) == .orderedSame }) else {
+            throw DirectorToolFailure(tool: name, reason: "The crate holds no record \(input.record).", suggestion: "Take record ids from read_library.")
+        }
+        guard let move = GridMove(rawValue: input.move) else {
+            throw DirectorToolFailure(tool: name, reason: "\"\(input.move)\" is not a correction.",
+                                      suggestion: "One of: \(GridMove.allCases.map(\.rawValue).joined(separator: ", ")).")
+        }
+        let record: Record
+        do { record = try await workspace.correctGrid(found.id, move) } catch GridError.noSecondTracker(let title) {
+            let queued = await workspace.listenForSecondTracker(found.id)
+            throw DirectorToolFailure(tool: name, reason: "\(title) was read before the second tracker's beats were kept.",
+                                      suggestion: queued ? "The second tracker is listening to it now, its reading kept as it is; fix_grid again once read_library says second_tracker_kept."
+                                                         : "There is no second tracker here to listen.")
+        } catch {
+            throw DirectorToolFailure(tool: name, reason: "\(error)")
+        }
+        let song = await workspace.song
+        let stale = (song?.fittedSources ?? []).filter { version in
+            guard let fit = SourceFitting.fit(of: version) else { return false }
+            return fit.record == record.id && (fit.grid ?? RecordGrid()) != (record.grid ?? RecordGrid())
+        }
+        let reading = record.reading
+        return Output(record: record.title, grid: record.grid?.description ?? "as read",
+                      tempo: reading?.dominantTempo.map { ($0 * 10).rounded() / 10 }, bars: reading?.bars.count ?? 0,
+                      fitAgain: stale.map(\.partID.description),
+                      detail: stale.isEmpty ? "\(record.title) reads through it now; anything fitted from it next is fitted to these bars."
+                                            : "\(stale.count) source\(stale.count == 1 ? "" : "s") in \(song?.title ?? "the song") \(stale.count == 1 ? "was" : "were") fitted to its old bar lines; adopt kind fitted on each part id fits it again.")
     }
 }

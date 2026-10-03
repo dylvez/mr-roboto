@@ -151,6 +151,7 @@ public final class SourcesModel {
         if abs(fit.ratio - 1) > 1e-3 { pieces.append(String(format: "×%.3f", fit.ratio)) }
         pieces.append(fit.tightened ? "tight to the grid" : "as recorded")
         if let gain = fit.gainDB { pieces.append(String(format: "%+.1f dB", gain)) }
+        if app.readsAnOlderGrid(fit) { pieces.append("its record's grid corrected since: fit again") }
         let sections = app.song?.sections.filter { $0.stitch.contains(part: version.partID) }.count ?? 0
         if app.song?.isArranged == true { pieces.append("in \(sections) section\(sections == 1 ? "" : "s")") }
         return pieces.joined(separator: " · ")

@@ -70,6 +70,10 @@ public protocol ImportHosting: Sendable {
     /// with the record as well, so every song can take them.
     func didSeparate(_ record: RecordID, in song: Song) async
 
+    /// The second beat tracker alone on a file, and its name: for a record read before its beats
+    /// were kept, without reading the record again. Nil when there is no second tracker here.
+    func checkBeats(_ url: URL) async throws -> (checker: String, beats: BeatTrackingResult)?
+
     /// The provenance form was kept. `record` is the library row with its title and artist as the
     /// form has them; `seed` is the song's seed with the whole form in its note; `song` is the
     /// draft's song holding that seed. The host writes them where the library keeps them.
@@ -82,6 +86,7 @@ extension ImportHosting {
     public func didFinishImport(_ song: SongID) async {}
     public func isOpen(_ song: SongID) async -> Bool { false }
     public func didSeparate(_ record: RecordID, in song: Song) async {}
+    public func checkBeats(_ url: URL) async throws -> (checker: String, beats: BeatTrackingResult)? { nil }
 
     /// Straight to `library`: the row into `library.json`, the seed into the song's package. The
     /// app's host does the second half through the frame instead, because the frame may hold the
@@ -254,6 +259,7 @@ public struct LiveImportHost: ImportHosting {
                     let (beats, check) = BeatCheck.reconcile(primary: report.beats, checker: checker.providerName, checked: checked)
                     report.beats = beats
                     report.beatCheck = check
+                    if check?.usedChecker == false { report.checkerBeats = checked }
                     if check?.usedChecker == true {
                         provider = checker
                         report.notes.append("\(checker.providerName) supplied the beat grid: the selected tracker found none")
@@ -276,6 +282,12 @@ public struct LiveImportHost: ImportHosting {
         let elapsed = start.duration(to: .now)
         report.wallTime = Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) / 1e18
         return report
+    }
+
+    public func checkBeats(_ url: URL) async throws -> (checker: String, beats: BeatTrackingResult)? {
+        guard providers.selection[.beats] != Self.beatChecker,
+              let checker = providers.provider(named: Self.beatChecker, for: .beats) as? any BeatTracker else { return nil }
+        return (checker.providerName, try await checker.trackBeats(url: url))
     }
 
     public func separate(_ url: URL, into directory: URL,

@@ -105,6 +105,8 @@ struct StubImportHost: ImportHosting {
     var separationHold: Duration? = nil
     /// What separation fails with, when it is meant to fail.
     var separationFailure: String? = nil
+    /// What the second beat tracker hears when it listens alone; nil when there is none.
+    var checked: BeatTrackingResult? = nil
     let log = ImportHostLog()
 
     func analyze(_ url: URL, progress: @escaping @Sendable (ImportStep) -> Void) async throws -> AnalysisReport {
@@ -142,6 +144,10 @@ struct StubImportHost: ImportHosting {
 
     func didSeparate(_ record: RecordID, in song: Song) async {
         log.separate(record, song)
+    }
+
+    func checkBeats(_ url: URL) async throws -> (checker: String, beats: BeatTrackingResult)? {
+        checked.map { ("beat-this", $0) }
     }
 }
 

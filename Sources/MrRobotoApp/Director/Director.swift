@@ -383,6 +383,7 @@ public actor Director {
         case "audition": return many ? "listened back \(times) times" : "listened back"
         case "level_chop": return "levelled the chop at its source"
         case "split_section": return "split a section"
+        case "fix_grid": return many ? "corrected \(times) grids" : "corrected a record's grid"
         case "create_part_version":
             return many ? "recorded \(times) versions into the song" : "recorded one version into the song"
         case "degrade_part":

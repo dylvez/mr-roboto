@@ -37,6 +37,10 @@ struct ImportAdapter: ImportHosting {
         try await live.analyze(url, progress: progress)
     }
 
+    func checkBeats(_ url: URL) async throws -> (checker: String, beats: BeatTrackingResult)? {
+        try await live.checkBeats(url)
+    }
+
     func separate(_ url: URL, into directory: URL,
                   progress: @escaping @Sendable (ImportStep) -> Void,
                   stemDidLand: @escaping @Sendable (StemName, URL) -> Void) async throws -> [StemName: URL] {

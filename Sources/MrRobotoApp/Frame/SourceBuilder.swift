@@ -360,15 +360,22 @@ extension AppState {
             }
             return try pick(material, url: url, media: media, origin: request.origin, stem: request.stem, title: record.title,
                             record: record.id, lufs: analysis.loudness?.integrated, request: request,
-                            meter: TimeSignature(beatsPerBar: Sources.beatsPerBar(in: analysis)), analysis: analysis)
+                            meter: TimeSignature(beatsPerBar: Sources.beatsPerBar(in: analysis)), analysis: analysis, grid: record.grid)
         case .song(let id):
             sourceID = id
         }
         guard sourceID != song.id else { throw SourceError.sameSong }
         guard let source = librarySong(sourceID) else { throw SourceError.noSuchSong }
         guard Mashups.source(for: source) != nil else { throw SourceError.notAnalysed(source.title) }
-        guard let (material, version, audio, _) = Sources.material(of: source, stem: request.stem) else {
+        guard var (material, version, audio, _) = Sources.material(of: source, stem: request.stem) else {
             throw SourceError.noStem(request.stem, source.title)
+        }
+        // The song's record, its grid corrected in the crate: its bars are read through that.
+        let corrected = Guidance.take(in: source).flatMap(Guidance.audio(of:)).flatMap { library.record(forMedia: $0.media) }
+            .flatMap { record in record.grid == nil ? nil : record }
+        if let corrected, let reading = corrected.reading {
+            material.bars = Sources.bars(of: reading)
+            material.tempo = reading.dominantTempo ?? material.tempo
         }
         guard let url = try? store.mediaURL(for: audio.media, song: source.id) else {
             throw SourceError.missingMedia(material.label)
@@ -378,16 +385,16 @@ extension AppState {
         }
         let fallback = Guidance.take(in: source).flatMap { Guidance.audio(of: $0) }.flatMap { library.record(forMedia: $0.media)?.id }
         let record = audio.sourceRecord ?? Guidance.sourceRecord(of: version, in: source) ?? fallback
-        let analysis = Guidance.analysis(for: version, in: source) ?? Guidance.analysis(in: source)
+        let analysis = corrected?.reading ?? Guidance.analysis(for: version, in: source) ?? Guidance.analysis(in: source)
         return try pick(material, url: url, media: audio.media, origin: request.origin, stem: request.stem, title: source.title,
                         record: record, lufs: analysis?.loudness?.integrated, request: request,
-                        meter: source.timeSignature, analysis: analysis)
+                        meter: source.timeSignature, analysis: analysis, grid: corrected?.grid)
     }
 
     /// The plan for a material against the open song's grid (or its own, when the song takes it).
     private func pick(_ material: SourceMaterial, url: URL, media: MediaRef, origin: SourceOrigin?, stem: String, title: String,
                       record: RecordID?, lufs: Double?, request: SourceRequest, meter own: TimeSignature?,
-                      analysis: MusicAnalysis?) throws -> SourcePick {
+                      analysis: MusicAnalysis?, grid: RecordGrid? = nil) throws -> SourcePick {
         guard let song else { throw SourceError.noSong }
         let ownGrid = takesGrid(request)
         let target = ownGrid ? MergeTarget(key: material.key, tempo: material.tempo) : MergeTarget(key: song.key, tempo: song.tempo)
@@ -420,7 +427,7 @@ extension AppState {
                             atBar: plan.isClip ? nil : request.atBar,
                             semitones: plan.move.semitones, byEar: request.semitones != nil, ratio: plan.move.ratio,
                             tightened: plan.isTightened, key: material.key, tempo: material.tempo, recordLUFS: lufs,
-                            gainDB: gain.flatMap { $0 == 0 ? nil : $0 }, record: sourceRecord)
+                            gainDB: gain.flatMap { $0 == 0 ? nil : $0 }, record: sourceRecord, grid: grid)
         return SourcePick(url: url, material: material, plan: plan, fit: fit, record: record, title: title, declined: declined,
                           meter: own ?? song.timeSignature, analysis: analysis)
     }
@@ -444,7 +451,8 @@ extension AppState {
         guard let declined = pick.declined else { return nil }
         return "Played as recorded, drift and all: tightened, \(declined.held) of its \(declined.bars) bars would hit the "
             + "\(Int(TightenMap.limit * 100))% limit on a bar's stretch, so its bar lines look misread rather than played, and "
-            + "tightening to them would lurch. Tighten it to try anyway."
+            + "tightening to them would lurch. Correct its grid from its row in the library (half or double the tempo, move the "
+            + "downbeat, or take the second tracker's), or tighten it to try anyway."
     }
 
     /// Some bars of the source as the song would have them, rendered off the main actor. With the
@@ -508,10 +516,12 @@ extension AppState {
         guard let current = opened.latestVersion(of: part), let fit = SourceFitting.fit(of: current) else { throw SourceError.notFitted }
         guard let url = try? store.mediaURL(for: fit.media, song: fit.song) else { throw SourceError.sourceGone(Sources.label(stem: fit.stem, of: fit.label)) }
         let origin: SourceOrigin = fit.record.map { .record($0) } ?? .song(fit.song ?? SongID())
+        // Its record's grid corrected since: whether it is tightened is decided again, against the
+        // new bar lines, unless asked; it may have been left loose only because the old ones were wrong.
         let request = SourceRequest(origin, stem: fit.stem == "record" ? Mashups.full : fit.stem,
                                     bars: fit.fromBar.flatMap { from in fit.toBar.map { from..<$0 } },
                                     atBar: atBar ?? fit.atBar ?? 0, semitones: semitones, takesItsGrid: false,
-                                    tighten: tighten ?? fit.tightened)
+                                    tighten: tighten ?? (readsAnOlderGrid(fit) ? nil : fit.tightened))
         // From the record as the library has it now — a corrected grid is read — or, with its song
         // gone, from what the fit kept.
         let pick: SourcePick

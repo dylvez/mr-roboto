@@ -1222,14 +1222,15 @@ public enum ImportAnalysisMapping {
             SongGraph.KeyRange(start: $0.start, end: $0.end, key: $0.key)
         }
 
+        func markers(_ grid: BeatGrid) -> [BeatMarker] {
+            let downbeatIndices = grid.downbeatIndices()
+            return grid.beats.enumerated().map { BeatMarker(time: $0.element, isDownbeat: downbeatIndices.contains($0.offset)) }
+        }
         var beats: [BeatMarker] = []
         var bars: [SongGraph.TimeRange] = []
         var tempo: [TempoRange] = []
         if let grid {
-            let downbeatIndices = grid.downbeatIndices()
-            beats = grid.beats.enumerated().map {
-                BeatMarker(time: $0.element, isDownbeat: downbeatIndices.contains($0.offset))
-            }
+            beats = markers(grid)
             bars = (0..<grid.barCount).compactMap { index in
                 grid.bounds(ofBar: index).map { SongGraph.TimeRange(start: $0.start, end: $0.end) }
             }
@@ -1266,7 +1267,8 @@ public enum ImportAnalysisMapping {
 
         return MusicAnalysis(duration: duration, keys: keys, beats: beats, bars: bars, tempo: tempo,
                              sections: sections, instruments: instruments, loudness: loudness,
-                             analyzer: analyzer, beatCheck: check)
+                             analyzer: analyzer, beatCheck: check,
+                             checkerBeats: report.checkerBeats.map { markers($0.grid) })
     }
 }
 

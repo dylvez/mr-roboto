@@ -72,4 +72,35 @@ struct BeatGridTests {
         #expect(result.grid.bpm == 121)
         #expect(result.grid.barCount == 2)
     }
+
+    // Correcting a misread grid: the tempo halved or doubled, the downbeat moved by whole beats.
+
+    @Test func halvedKeepsTheDownbeatAndMakesEachBarTwo() {
+        let half = grid.halved()
+        #expect(half.beats == [1, 2, 3, 4, 5, 6, 7, 8])
+        #expect(half.bars == [1, 5])
+        #expect(half.bpm == 60 && half.timeSignature == .fourFour)
+        // Beats before the first bar: the ones in step with its downbeat stay.
+        let pickup = BeatGrid(beats: [0, 0.5] + grid.beats, bars: grid.bars, bpm: 120)
+        #expect(pickup.halved().beats.prefix(2) == [0, 1])
+        #expect(pickup.halved().bars == [1, 5])
+    }
+
+    @Test func doubledPutsABeatBetweenEveryTwo() {
+        let double = grid.doubled()
+        #expect(double.beatCount == 31 && double.beats.prefix(3) == [1, 1.25, 1.5] && double.beats.last == 8.5)
+        #expect(double.bars == [1, 2, 3, 4, 5, 6, 7, 8])
+        #expect(double.bpm == 240)
+        #expect(double.halved().beats == grid.beats && double.halved().bars == grid.bars, "halving undoes doubling")
+    }
+
+    @Test func movingTheDownbeatKeepsTheBeats() {
+        #expect(grid.movingDownbeat(by: 1).bars == [1.5, 3.5, 5.5, 7.5])
+        #expect(grid.movingDownbeat(by: -1).bars == [2.5, 4.5, 6.5, 8.5])
+        #expect(grid.movingDownbeat(by: 4).bars == grid.bars)
+        #expect(grid.movingDownbeat(by: 1).beats == grid.beats)
+        // Bars the tracker placed unevenly come back every four beats.
+        let uneven = BeatGrid(beats: grid.beats, bars: [1, 2.5, 5, 7], timeSignature: .fourFour)
+        #expect(uneven.movingDownbeat(by: 0).bars == [1, 3, 5, 7])
+    }
 }

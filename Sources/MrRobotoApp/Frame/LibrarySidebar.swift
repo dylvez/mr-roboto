@@ -438,6 +438,8 @@ struct RecordRowView: View {
     let app: AppState
     @State private var isOpen: Bool
     @State private var isConfirmingDelete = false
+    @State private var isRenaming = false
+    @State private var newTitle = ""
 
     init(record: Record, app: AppState, startsOpen: Bool = false) {
         self.record = record
@@ -496,7 +498,7 @@ struct RecordRowView: View {
                         .font(Design.Typography.ui(11, weight: .regular))
                         .foregroundStyle(app.crate.failures[record.id] != nil ? Design.Palette.warn : Design.Palette.inkSecondary)
                         .lineLimit(1)
-                        .help(app.crate.failures[record.id] ?? "")
+                        .help(app.crate.failures[record.id] ?? record.grid.map { "Its grid: \($0.description)." } ?? "")
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
@@ -542,6 +544,13 @@ struct RecordRowView: View {
         } message: {
             Text("Its audio and its stems stay in the library folder, so songs made from it still play. Only the row goes.")
         }
+        .alert("Rename", isPresented: $isRenaming) {
+            TextField("Title", text: $newTitle)
+            Button("Rename") { app.renameRecord(record.id, to: newTitle) }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("A new name for the record. Sources already fitted from it keep the name they were fitted under.")
+        }
     }
 
     @ViewBuilder
@@ -567,11 +576,34 @@ struct RecordRowView: View {
         }
         Button(record.reading == nil ? "Read It" : "Read It Again") { app.analyseRecord(record.id) }
             .disabled(app.crate.isQueued(.analyse, for: record.id))
+        if record.readingAsRead != nil {
+            Menu("Its Grid") {
+                ForEach(GridMove.allCases, id: \.self) { move in
+                    if move == .secondTracker, app.refusal(of: move, for: record.id) == .noSecondTracker(record.title) {
+                        Button("Listen with the Second Tracker") { app.listenForSecondTracker(record.id) }
+                            .disabled(app.crate.isQueued(.listen, for: record.id))
+                    } else {
+                        Button(gridTitle(move)) { app.correctGridAsked(record.id, move) }
+                            .disabled(app.refusal(of: move, for: record.id) != nil)
+                    }
+                }
+            }
+        }
         if app.crate.status(of: record.id) != nil {
             Button("Stop") { app.crate.cancel(record.id) }
         }
         Divider()
+        Button("Rename…") { newTitle = app.suggestedName(for: record.id); isRenaming = true }
         Button("Remove from Library…") { isConfirmingDelete = true }
+    }
+
+    /// The menu's words for a correction, with what it would make of the tempo.
+    private func gridTitle(_ move: GridMove) -> String {
+        if move == .secondTracker, record.grid?.secondTracker == true { return "The First Tracker's Grid" }
+        guard move != .asRead, let now = record.reading?.dominantTempo, let read = record.readingAsRead else { return move.title }
+        let next = move.applied(to: record.grid, beatsPerBar: Sources.beatsPerBar(in: record.reading ?? read))
+        guard let then = read.regridded(next).dominantTempo, abs(then - now) > 0.05 else { return move.title }
+        return String(format: "%@ (%.1f → %.1f bpm)", move.title, now, then)
     }
 }
 

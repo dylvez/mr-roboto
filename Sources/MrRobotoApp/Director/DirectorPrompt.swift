@@ -249,8 +249,9 @@ public enum DirectorPrompt {
         commercial records is not the user's to release until they are, and release lists them.
 
         A song can take from any number of records, not only two. "Bring her vocal into this", \
-        "loop bars 9 and 10 of that record under the verse" is adopt with kind song: read_library \
-        lists each song's stems and its record's bars, and the open song's key, tempo and bars \
+        "loop bars 9 and 10 of that record under the verse" is adopt with kind record and a stem for \
+        a record in the crate, or kind song for a song's: read_library lists each record's stems and \
+        bars, and each song's, and the open song's key, tempo and bars \
         stand while the record is moved onto them. A whole stem is laid along the song from at_bar \
         and plays in every section; some bars are fitted to whole bars and loop like a chop in the \
         sections that have none. Say the sentences it returns and anything flagged. Into a song \
@@ -262,7 +263,10 @@ public enum DirectorPrompt {
         a record played by people pushes and drags, a programmed kit does not. Fit it again with \
         tighten on, and each of its bars is stretched onto one of the song's. It is on unasked unless \
         so many of its bars would be held that its bar lines look misread; then the plan says so, and \
-        tightening anyway can make a bar lurch: say that before you turn it on. \
+        tightening anyway can make a bar lurch: say that before you turn it on. Misread bar lines are \
+        the record's, corrected with fix_grid — half or double the tempo, move the downbeat, or the \
+        second tracker's grid when read_library says its trackers disagree — then adopt kind fitted \
+        on each source it lists fits it to the new bars. \
         Which sections play it is the form's, as for any stem. Every record stays a source to clear.
 
         A message may end with a line "Asked of:" and persona ids. Then the user wants only those \

@@ -109,6 +109,10 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     func crateStatus(of record: RecordID) -> String?
     /// Queues a record's separation in the crate. False when it cannot be.
     func separateRecord(_ record: RecordID) -> Bool
+    /// Corrects a record's beat grid in the crate, and returns the record as corrected.
+    func correctGrid(_ record: RecordID, _ move: GridMove) throws -> Record
+    /// Queues the second beat tracker on a record read before its beats were kept. False when it cannot be.
+    func listenForSecondTracker(_ record: RecordID) -> Bool
     /// A source the open song holds, fitted again from its untouched record.
     func refitSource(_ part: PartID, semitones: Int?, atBar: Int?, tighten: Bool?) async throws -> PartVersion
     /// A song from an idea: an empty open song set up in place, or a new one opened. Nil when there is nowhere to.
@@ -190,6 +194,11 @@ extension DirectorWorkspace {
 
     /// Queues a record's separation in the crate. False where there is no crate.
     public func separateRecord(_ record: RecordID) -> Bool { false }
+
+    /// Where there is no crate, no grid is corrected.
+    public func correctGrid(_ record: RecordID, _ move: GridMove) throws -> Record { throw CrateError.noLibrary }
+
+    public func listenForSecondTracker(_ record: RecordID) -> Bool { false }
 
     /// The house calls in force for the open song.
     public var houseBook: HouseBook { HouseBook.of(library, song: song) }
@@ -366,6 +375,16 @@ public final class AppStateWorkspace: DirectorWorkspace {
     }
 
     public func crateStatus(of record: RecordID) -> String? { app.crate.status(of: record) ?? app.crate.failures[record] }
+
+    public func correctGrid(_ record: RecordID, _ move: GridMove) throws -> Record {
+        try app.correctGrid(record, move, by: .director)
+    }
+
+    public func listenForSecondTracker(_ record: RecordID) -> Bool {
+        guard app.crate.canRead else { return false }
+        app.listenForSecondTracker(record)
+        return app.crate.isQueued(.listen, for: record)
+    }
 
     public func separateRecord(_ record: RecordID) -> Bool {
         guard app.library.record(record) != nil, app.crate.canRead else { return false }

@@ -180,3 +180,55 @@ import Testing
         #expect(song.mediaReferences == [ref, Fixtures.mediaRef(6)])
     }
 }
+
+@Suite struct RecordGridTests {
+    /// 120 bpm read at 240: beats every 0.25 s from 0.5, a downbeat every four.
+    static func doubleTime() -> MusicAnalysis {
+        let beats = (0..<64).map { BeatMarker(time: 0.5 + Double($0) * 0.25, isDownbeat: $0 % 4 == 0) }
+        let bars = stride(from: 0, to: 64, by: 4).map { TimeRange(start: 0.5 + Double($0) * 0.25, end: 0.5 + Double($0 + 4) * 0.25) }
+        let checker = (0..<32).map { BeatMarker(time: 0.5 + Double($0) * 0.5, isDownbeat: $0 % 4 == 0) }
+        return MusicAnalysis(duration: 17, beats: beats, bars: bars, tempo: [TempoRange(start: 0, end: 17, bpm: 240)],
+                             sections: [SectionRange(start: 0, end: 17, label: "song")], checkerBeats: checker)
+    }
+
+    @Test("as read is the analysis untouched; halved is half the bars at half the tempo, everything in seconds kept")
+    func regridded() {
+        let read = Self.doubleTime()
+        #expect(read.regridded(RecordGrid()) == read)
+        let half = read.regridded(RecordGrid(tempo: 0.5))
+        #expect(half.bars.count == 8 && half.bars[0] == TimeRange(start: 0.5, end: 2.5))
+        #expect(half.dominantTempo == 120 && half.beats.count == 32 && half.downbeats.prefix(2) == [0.5, 2.5])
+        #expect(half.sections == read.sections && half.checkerBeats == read.checkerBeats)
+        let second = read.regridded(RecordGrid(secondTracker: true))
+        #expect(second.beats == read.checkerBeats && second.bars.count == 8 && second.dominantTempo == 120)
+        let later = read.regridded(RecordGrid(secondTracker: true, downbeat: 1))
+        #expect(later.downbeats.first == 1.0)
+        #expect(RecordGrid(secondTracker: true, tempo: 0.5, downbeat: -1).description == "the second tracker's, halved, downbeat a beat earlier")
+    }
+
+    @Test("the second tracker's beats, its wandering downbeats ignored: bars of the record's meter from the first's downbeat")
+    func secondTrackersBeatsNotItsBars() {
+        var read = Self.doubleTime()
+        // Downbeats where no bar line is: every beat, then none, then two in a row.
+        read.checkerBeats = (0..<32).map { BeatMarker(time: 0.5 + Double($0) * 0.5, isDownbeat: [0, 1, 2, 3, 9, 10, 21].contains($0)) }
+        read.beatCheck = BeatGridCheck(checker: "beat-this", agreement: 0.4, primaryBPM: 240, checkerBPM: 121, usedChecker: false)
+        let second = read.regridded(RecordGrid(secondTracker: true))
+        #expect(second.bars.count == 8 && second.downbeats == stride(from: 0.5, to: 16, by: 2).map { $0 })
+        #expect(second.dominantTempo == 121, "the tracker's own figure")
+        #expect(read.regridded(RecordGrid(downbeat: 1)).tempo == read.tempo, "a downbeat moved is no change of tempo")
+        #expect(read.regridded(RecordGrid(tempo: 0.5)).dominantTempo == 120 && read.regridded(RecordGrid(secondTracker: true, tempo: 0.5)).dominantTempo == 60.5)
+    }
+
+    @Test("a record keeps its correction and reads through it; from before, it round-trips with neither")
+    func record() throws {
+        let analysis = PartVersion(partID: PartID(), kind: .analysis(Self.doubleTime()), author: .user, operation: Operation.imported)
+        var record = Record(title: "Twice", media: Fixtures.mediaRef(90), analysis: analysis)
+        let old = try SongGraphCodec.encode(record)
+        #expect(!String(decoding: old, as: UTF8.self).contains("\"grid\""))
+        #expect(record.reading?.bars.count == 16 && record.reading == record.readingAsRead)
+        record.grid = RecordGrid(tempo: 0.5)
+        #expect(record.reading?.bars.count == 8 && record.readingAsRead?.bars.count == 16)
+        let decoded = try SongGraphCodec.decode(Record.self, from: try SongGraphCodec.encode(record))
+        #expect(decoded == record && decoded.reading?.dominantTempo == 120)
+    }
+}

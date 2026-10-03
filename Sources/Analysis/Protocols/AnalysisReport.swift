@@ -29,6 +29,9 @@ public struct AnalysisReport: Hashable, Codable, Sendable {
     public var notes: [String]
     /// A second beat tracker's check of `beats`, when one ran.
     public var beatCheck: BeatCheck?
+    /// The second tracker's own beats, when it checked rather than stood in: a grid to take in
+    /// place of the first's when the first misread the bars.
+    public var checkerBeats: BeatTrackingResult?
 
     public init(sourcePath: String, duration: Double? = nil, key: KeyEstimate? = nil, beats: BeatTrackingResult? = nil,
                 structure: StructureAnalysis? = nil, loudness: LoudnessAnalysis? = nil, instruments: InstrumentActivity? = nil,

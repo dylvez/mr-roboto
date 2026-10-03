@@ -204,7 +204,7 @@ struct StemLanesTests {
         await #expect(throws: DirectorToolFailure.self) {
             _ = try await SplitSectionTool(workspace: workspace).run(.init(section: verse.id.description, afterBar: 1))
         }
-        #expect(DirectorTools.names.last == "split_section" && DirectorPrompt.system.contains("split_section"))
+        #expect(DirectorTools.names.contains("split_section") && DirectorPrompt.system.contains("split_section"))
     }
 
     @Test("a record's own stems stay out of an arranged song until a section names one, and a new stem never joins by itself")

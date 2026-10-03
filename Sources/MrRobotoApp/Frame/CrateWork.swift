@@ -16,6 +16,10 @@ public struct CrateJob: Identifiable, Sendable, Equatable {
         case bring
         /// Key, beats and bars, form, loudness and who plays when.
         case analyse
+        /// The second beat tracker alone, its beats added to the reading the record has.
+        case listen
+        /// Its stems' bar levels measured again, against bars its corrected grid reads.
+        case measure
         /// The stems a song separated from it, kept beside it too, for every song to take.
         case gather
         /// Its stems, into `records/`, each read for its level.
@@ -49,6 +53,8 @@ public struct CrateJob: Identifiable, Sendable, Equatable {
         switch kind {
         case .bring: return "Bringing in \(title)"
         case .analyse: return "Reading \(title)"
+        case .listen: return "Listening to \(title) with the second beat tracker"
+        case .measure: return "Measuring \(title)'s stems against its new bars"
         case .gather: return "Keeping \(title)'s stems with it"
         case .separate: return "Separating \(title)"
         }
@@ -105,6 +111,8 @@ public final class CrateWork {
             switch running.kind {
             case .bring: return "coming in"
             case .analyse: return "reading…"
+            case .listen: return "the second tracker listening…"
+            case .measure: return "measuring its stems…"
             case .gather: return "taking its stems…"
             case .separate: return step?.fraction.map { "separating · \(Int(($0 * 100).rounded()))%" } ?? "separating…"
             }
@@ -112,6 +120,8 @@ public final class CrateWork {
         if let job = waiting.first(where: { $0.record == record }) {
             switch job.kind {
             case .bring, .analyse: return "waiting to be read"
+            case .listen: return "waiting for the second tracker"
+            case .measure: return "waiting to measure its stems"
             case .gather: return "waiting for its stems"
             case .separate: return "waiting to separate"
             }
@@ -128,7 +138,10 @@ public final class CrateWork {
 
     func enqueue(_ job: CrateJob) {
         if let record = job.record {
-            guard !isQueued(job.kind, for: record) else { return }
+            // Measuring again is asked after every correction, and one running was measuring
+            // against the bars before it: only a waiting one stands for another.
+            let asked = job.kind == .measure ? waiting.contains { $0.kind == .measure && $0.record == record } : isQueued(job.kind, for: record)
+            guard !asked else { return }
             failures[record] = nil
         }
         waiting.append(job)
@@ -183,6 +196,8 @@ public final class CrateWork {
             switch job.kind {
             case .bring: try await bring(job, app: app)
             case .analyse: try await analyse(job, app: app)
+            case .listen: try await listen(job, app: app)
+            case .measure: try await measure(job, app: app)
             case .gather: try await gather(job, app: app)
             case .separate: try await separate(job, app: app)
             }
@@ -249,6 +264,11 @@ public final class CrateWork {
         var reading = [analysis.dominantKey?.name, analysis.dominantTempo.map { "\(Int($0.rounded())) bpm" },
                        analysis.bars.isEmpty ? nil : "\(analysis.bars.count) bars"].compactMap { $0 }
         if let agreement = analysis.beatCheck?.agreement, agreement < 0.8 { reading.append("the two beat trackers disagree") }
+        // Read again, a reading can come back different: said, so a grid that was good is not lost unnoticed.
+        if let before = record.readingAsRead, AppState.gridLine(before) != AppState.gridLine(analysis) {
+            reading.append("it was \(AppState.gridLine(before)) before")
+        }
+        if let grid = record.grid { reading.append("still read through its correction, \(grid.description)") }
         app.note(.session, "\(record.title) is read", detail: reading.joined(separator: " · "))
     }
 
@@ -307,6 +327,32 @@ public final class CrateWork {
                  detail: "From \(song.title): \(RecordStems.line(stems)). Any song can take them now.")
     }
 
+    /// The second tracker's beats added to the record's reading, and how far the two agree; the
+    /// first tracker's grid stays exactly as it was read.
+    private func listen(_ job: CrateJob, app: AppState) async throws {
+        guard let id = job.record, let host = reader else { throw CrateError.noReader }
+        let store = try store(app)
+        guard let record = app.library.record(id), let read = record.readingAsRead else { return }
+        let url = try store.mediaURL(for: record.media)
+        guard let (checker, checked) = try await host.checkBeats(url) else { throw CrateError.noSecondTracker }
+        try Task.checkCancellation()
+        let first = BeatTrackingResult(beats: read.beats.map(\.time), downbeats: read.downbeats, bpm: read.dominantTempo)
+        guard let check = BeatCheck.reconcile(primary: first, checker: checker, checked: checked).check, !check.usedChecker else {
+            throw CrateError.noSecondTracker
+        }
+        var heard = read
+        heard.beatCheck = BeatGridCheck(checker: check.checker, agreement: check.agreement, primaryBPM: check.primaryBPM,
+                                        checkerBPM: check.checkerBPM, usedChecker: false)
+        let grid = checked.grid, downbeats = grid.downbeatIndices()
+        heard.checkerBeats = grid.beats.enumerated().map { BeatMarker(time: $1, isDownbeat: downbeats.contains($0)) }
+        let version = PartVersion(partID: record.analysis?.partID ?? PartID(), kind: .analysis(heard), author: .user,
+                                  operation: Operation.imported, note: record.analysis?.note ?? "analysis of \(record.title)")
+        try keep(id, app: app) { $0.analysis = version }
+        app.note(.session, "\(record.title)'s second beat tracker has listened",
+                 detail: String(format: "%.1f bpm against %.1f; %.0f%% of their beats agree. Its grid can be taken from the record's row now.",
+                                check.checkerBPM ?? 0, read.dominantTempo ?? 0, (check.agreement ?? 0) * 100))
+    }
+
     /// Changes the record as the library has it now and writes `library.json` alone.
     private func keep(_ id: RecordID, app: AppState, _ change: (inout Record) -> Void) throws {
         var library = app.library
@@ -326,6 +372,7 @@ public enum CrateError: Error, CustomStringConvertible, Equatable {
     case noReader
     case noStems
     case noStemsIn(String)
+    case noSecondTracker
     case gone
 
     public var description: String {
@@ -335,6 +382,7 @@ public enum CrateError: Error, CustomStringConvertible, Equatable {
         case .noReader: return "Nothing here can read or separate a record."
         case .noStems: return "The separator gave back no stems."
         case .noStemsIn(let title): return "\(title) holds no stems separated from this record."
+        case .noSecondTracker: return "There is no second beat tracker here, or it found no beats in this record."
         case .gone: return "The record left the library while it was being worked on."
         }
     }
@@ -476,6 +524,37 @@ extension AppState {
     public func analyseRecord(_ id: RecordID) {
         guard let record = library.record(id) else { return }
         crate.enqueue(CrateJob(kind: .analyse, record: id, title: record.title))
+    }
+
+    /// A record in the crate called something else: its row, Sources and the band say the new name.
+    /// Sources already fitted from it keep the name they were fitted under.
+    @discardableResult
+    public func renameRecord(_ id: RecordID, to title: String) -> Bool {
+        let name = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, let record = library.record(id), record.title != name else { return false }
+        var updated = library
+        guard let index = updated.records.firstIndex(where: { $0.id == id }) else { return false }
+        updated.records[index].title = name
+        guard writeLibrary(updated) else { return false }
+        note(.you, "Renamed \(record.title) to \(name)")
+        return true
+    }
+
+    /// A name for a record whose title is still its file's: the song first made from it, when that
+    /// was called something else.
+    public func suggestedName(for id: RecordID) -> String {
+        guard let record = library.record(id) else { return "" }
+        let made = library.songs.first { song in
+            song.seeds.contains { if case .importedRecord(id) = $0.kind { return true }; return false }
+                || Guidance.take(in: song).flatMap(Guidance.audio(of:))?.media == record.media
+        }
+        return made.map(\.title).flatMap { $0 == record.title ? nil : $0 } ?? record.title
+    }
+
+    /// The second beat tracker on a record read before its beats were kept, its reading kept.
+    public func listenForSecondTracker(_ id: RecordID) {
+        guard let record = library.record(id), record.readingAsRead != nil else { return }
+        crate.enqueue(CrateJob(kind: .listen, record: id, title: record.title))
     }
 
     /// A record in the crate separated, its stems kept beside it.

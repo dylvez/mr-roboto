@@ -104,6 +104,8 @@ public enum DirectorTools {
             LevelChopTool(workspace: workspace).erased(),
             // A section cut in two, appended after the fifty-two: how a part comes in part-way.
             SplitSectionTool(workspace: workspace).erased(),
+            // A record's grid corrected, appended after the fifty-three: bar lines a tracker misread.
+            FixGridTool(workspace: workspace).erased(),
         ]
         if let stage {
             let pad = pad ?? DirectorStagePad()
@@ -187,6 +189,8 @@ public enum DirectorTools {
         "level_chop",
         // A section cut in two, appended.
         "split_section",
+        // A record's grid corrected, appended.
+        "fix_grid",
     ]
 
     /// The two the frame adds. Appended after `names`, never among them: a session with no frame

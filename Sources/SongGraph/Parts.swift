@@ -712,6 +712,8 @@ public struct SourceFit: Hashable, Codable, Sendable {
     /// The record on the library's shelf whose stem or mix `media` is, when it came from there
     /// rather than from a song.
     public var record: RecordID?
+    /// The correction the record's grid was read through when this was fitted. Nil: as read.
+    public var grid: RecordGrid?
     /// "vocals", "drums", "bass", "other", or "record" for the full mix.
     public var stem: String
     /// The source second the fit is anchored on: a whole stem's first downbeat, a clip's first bar.
@@ -744,11 +746,12 @@ public struct SourceFit: Hashable, Codable, Sendable {
     public init(label: String, media: MediaRef, song: SongID? = nil, stem: String, start: Double, end: Double? = nil,
                 fromBar: Int? = nil, toBar: Int? = nil, atBar: Int? = nil, semitones: Int = 0, byEar: Bool = false,
                 ratio: Double = 1, tightened: Bool = false, key: Key? = nil, tempo: Double? = nil,
-                recordLUFS: Double? = nil, gainDB: Double? = nil, record: RecordID? = nil) {
+                recordLUFS: Double? = nil, gainDB: Double? = nil, record: RecordID? = nil, grid: RecordGrid? = nil) {
         self.label = label
         self.media = media
         self.song = song
         self.record = record
+        self.grid = grid
         self.stem = stem
         self.start = start
         self.end = end
@@ -1057,10 +1060,14 @@ public struct MusicAnalysis: Hashable, Codable, Sendable {
     public var analyzer: String?
     /// A second beat tracker's check of `beats`. Nil in analyses made before there was one.
     public var beatCheck: BeatGridCheck?
+    /// The second tracker's own beats, kept so its grid can be taken in place of the first's
+    /// (`RecordGrid.secondTracker`). Nil when it stood in, or for analyses made before they were kept.
+    public var checkerBeats: [BeatMarker]?
 
     public init(duration: Double, keys: [KeyRange] = [], beats: [BeatMarker] = [], bars: [TimeRange] = [],
                 tempo: [TempoRange] = [], sections: [SectionRange] = [], instruments: [InstrumentActivity] = [],
-                loudness: Loudness? = nil, analyzer: String? = nil, beatCheck: BeatGridCheck? = nil) {
+                loudness: Loudness? = nil, analyzer: String? = nil, beatCheck: BeatGridCheck? = nil,
+                checkerBeats: [BeatMarker]? = nil) {
         self.duration = duration
         self.keys = keys
         self.beats = beats
@@ -1071,6 +1078,37 @@ public struct MusicAnalysis: Hashable, Codable, Sendable {
         self.loudness = loudness
         self.analyzer = analyzer
         self.beatCheck = beatCheck
+        self.checkerBeats = checkerBeats
+    }
+
+    /// The analysis read through a correction of its grid: the second tracker's beats in place of
+    /// the first's, halved or doubled, its downbeat moved; bars and tempo made again from them.
+    /// Everything read in seconds (keys, sections, who plays when, loudness) stands.
+    public func regridded(_ grid: RecordGrid) -> MusicAnalysis {
+        guard !grid.isAsRead else { return self }
+        // The record's meter as the first tracker counted it: bars the corrections make are that long.
+        let first = BeatGrid(beats: beats.map(\.time), bars: downbeats)
+        var read = first
+        var bpm = dominantTempo
+        if grid.secondTracker, let checked = checkerBeats, checked.count >= 2 {
+            // Its beats, not its bar lines: a second tracker's downbeats wander where its beats do not.
+            // Bars of the record's meter from the beat nearest the first tracker's first downbeat.
+            let times = checked.map(\.time)
+            let anchor = first.bars.first.flatMap { BeatGrid.nearestIndex(in: times, to: $0) }.map { times[$0] } ?? times[0]
+            read = BeatGrid(beats: times, bars: [anchor], timeSignature: first.timeSignature).movingDownbeat(by: 0)
+            bpm = beatCheck?.checkerBPM ?? read.bpm
+        }
+        if grid.tempo < 1 { read = read.halved() } else if grid.tempo > 1 { read = read.doubled() }
+        if grid.downbeat != 0 { read = read.movingDownbeat(by: grid.downbeat) }
+        var out = self
+        let downbeats = read.downbeatIndices()
+        out.beats = read.beats.enumerated().map { BeatMarker(time: $1, isDownbeat: downbeats.contains($0)) }
+        out.bars = (0..<read.barCount).compactMap { read.bounds(ofBar: $0).map { TimeRange(start: $0.start, end: $0.end) } }
+        // The tracker's own figure, halved or doubled with its beats; a downbeat moved is no change of tempo.
+        if grid.secondTracker || grid.tempo != 1, let bpm {
+            out.tempo = [TempoRange(start: 0, end: duration, bpm: bpm * grid.tempo)]
+        }
+        return out
     }
 
     /// The key holding for the longest time, if any.

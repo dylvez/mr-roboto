@@ -512,9 +512,11 @@ public struct Record: Identifiable, Hashable, Codable, Sendable {
     /// takes from the same files. Nil until it is separated; optional so a library from before it
     /// round-trips byte for byte.
     public var stems: [RecordStem]?
+    /// A correction of the grid its analysis read: what `reading` reads it through. Nil: as read.
+    public var grid: RecordGrid?
 
     public init(id: RecordID = RecordID(), title: String, artist: String = "", media: MediaRef,
-                analysis: PartVersion? = nil, importedAt: Date = Date(), stems: [RecordStem]? = nil) {
+                analysis: PartVersion? = nil, importedAt: Date = Date(), stems: [RecordStem]? = nil, grid: RecordGrid? = nil) {
         self.id = id
         self.title = title
         self.artist = artist
@@ -522,6 +524,7 @@ public struct Record: Identifiable, Hashable, Codable, Sendable {
         self.analysis = analysis
         self.importedAt = importedAt.graphPrecision
         self.stems = stems
+        self.grid = grid
     }
 
     public var mediaReferences: [MediaRef] { [media] + (stems ?? []).map(\.media) + (analysis?.mediaReferences ?? []) }
@@ -529,10 +532,48 @@ public struct Record: Identifiable, Hashable, Codable, Sendable {
     /// The stem by that name, when it has been separated.
     public func stem(named name: String) -> RecordStem? { stems?.first { $0.name == name } }
 
-    /// The analysis it carries, when it has been analysed.
+    /// The analysis it carries, read through its grid's correction, when it has been analysed.
     public var reading: MusicAnalysis? {
+        guard let grid else { return readingAsRead }
+        return readingAsRead?.regridded(grid)
+    }
+
+    /// The analysis as the trackers read it, before any correction.
+    public var readingAsRead: MusicAnalysis? {
         if let analysis, case .analysis(let reading) = analysis.kind { return reading }
         return nil
+    }
+}
+
+/// A correction of a record's beat grid, for bar lines a tracker misread: the second tracker's
+/// beats in place of the first's, the tempo halved for a tracker that counted double time or
+/// doubled for one that counted half, the downbeat moved by whole beats. Kept on the record; the
+/// analysis itself is never rewritten, so "as read" is always one step away.
+public struct RecordGrid: Hashable, Codable, Sendable {
+    public var secondTracker: Bool
+    /// 0.5 halved, 1 as read, 2 doubled.
+    public var tempo: Double
+    /// Beats the downbeat moves, later when positive.
+    public var downbeat: Int
+
+    public init(secondTracker: Bool = false, tempo: Double = 1, downbeat: Int = 0) {
+        self.secondTracker = secondTracker
+        self.tempo = tempo
+        self.downbeat = downbeat
+    }
+
+    public var isAsRead: Bool { !secondTracker && tempo == 1 && downbeat == 0 }
+
+    /// "the second tracker's, halved, downbeat a beat later"; "as read" when nothing is changed.
+    public var description: String {
+        var pieces: [String] = []
+        if secondTracker { pieces.append("the second tracker's") }
+        if tempo < 1 { pieces.append("halved") } else if tempo > 1 { pieces.append("doubled") }
+        if downbeat != 0 {
+            let beats = abs(downbeat) == 1 ? "a beat" : "\(abs(downbeat)) beats"
+            pieces.append("downbeat \(beats) \(downbeat > 0 ? "later" : "earlier")")
+        }
+        return pieces.isEmpty ? "as read" : pieces.joined(separator: ", ")
     }
 }
 
