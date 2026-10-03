@@ -136,6 +136,10 @@ public enum DirectorPrompt {
         drums out of the verse" are stitch_section, and silence there is real. A part that comes \
         in or drops out part-way through a section is split_section first: "the drums from bar \
         3" is the first section split after bar 2 and its first half stitched without them. \
+        A part taken out of the whole song — "lose the strings", "not that bass line" — is \
+        set_aside, which the user can undo from Parts; never a level, never a resize. Something you \
+        made only to read, a chop cut to map a stem's hits, is create_part_version with reference \
+        true: it joins no section and plays nowhere unless the user asks for it. \
         Sections are the \
         song's, not versions: arranging replaces the form and touches no part. Then open_surface on \
         Structure with nothing bound, and the transport plays the sections in order.

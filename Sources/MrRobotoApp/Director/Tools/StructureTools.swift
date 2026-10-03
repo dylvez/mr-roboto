@@ -74,6 +74,7 @@ enum FormTools {
     /// on naming only those three after the transport learned to play the chords and the tune — so
     /// every form the Director wrote came out without harmony in it.
     static func defaultStitch(in song: Song) -> [Lane] {
+        let song = song.withoutAsides
         // The loop, not a variation of it written since for one section.
         var lanes: [Lane] = []
         for type in StructureModel.playableTypes {

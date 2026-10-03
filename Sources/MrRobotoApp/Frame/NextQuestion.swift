@@ -158,7 +158,8 @@ enum NextAdvisor {
     }
 
     static func question(for app: AppState) -> NextQuestion {
-        guard let song = app.song else { return launch(app) }
+        // The band asks about what is in the song: a part set aside is out of it until it is back.
+        guard let song = app.song?.withoutAsides else { return launch(app) }
         guard !song.versions.isEmpty else { return starting(song, app) }
         return working(song, app)
     }
@@ -237,6 +238,15 @@ enum NextAdvisor {
             kind: "chords", title: "Start from chords",
             rationale: "Type a lead sheet — Dm7 G7 | Cmaj7 — and the bass is written to it.",
             move: .surface(Guidance.dockAction(for: .chords, in: song))), score: 6))
+        // Records waiting in the crate: a song can start as one of them, its key, tempo and form.
+        let crate = Sources.records(in: app.library)
+        if !crate.isEmpty {
+            candidates.append(Candidate(option: NextOption(
+                kind: "sources", title: "Start from a record in the crate",
+                rationale: "\(Guidance.count(crate.count, "record")) read and waiting. The first stem brought in gives the song "
+                    + "its key, tempo and form; drums, chords and a bass line are written to it after.",
+                move: .surface(Guidance.dockAction(for: .sources, in: song))), score: 9.5))
+        }
         candidates.append(Candidate(option: NextOption(
             kind: "askBand", title: "Ask the Beatmaker for a groove",
             rationale: "Say the feel in words; the band writes it onto a drum machine for you to change.",
@@ -300,6 +310,30 @@ enum NextAdvisor {
                 rationale: "\(PartLabel.title(of: found.groove)) plays \(PartLabel.title(of: found.chop))'s own slices, and that stem has no drums in it. "
                     + "This is the same pattern on the \(SongPlayback.machine(in: song).name), beside the slices, each on a strip of its own.",
                 move: .addDrums(found.groove.partID)), score: 16))
+        }
+        // A song made of records: another stem or some bars of another record, and drums under
+        // them when nothing in it keeps time.
+        let others = Sources.records(in: app.library).filter { record in
+            !song.fittedSources.contains { SourceFitting.fit(of: $0)?.record == record.id }
+        }
+        if !fromTheBand, path == .assembled, !others.isEmpty {
+            let names = others.prefix(2).map(\.title).joined(separator: " or ")
+            candidates.append(Candidate(option: NextOption(
+                kind: "sources", title: "Bring in a stem from another record",
+                rationale: "\(names)\(others.count > 2 ? ", or \(others.count - 2) more in the crate" : ""): a stem or a few bars, "
+                    + "fitted to \(song.key?.name ?? "the song's key") at \(Int(song.tempo.rounded())) bpm.",
+                move: .surface(Guidance.dockAction(for: .sources, in: song))), score: 5))
+        }
+        if !fromTheBand, path == .assembled, Guidance.grooves(in: song).isEmpty, !Self.keepsTime(song) {
+            let action = SurfaceAction(surface: .grid, title: "New groove")
+            if !app.isShowing(action) {
+                candidates.append(Candidate(option: NextOption(
+                    kind: "groove", title: "Add drums",
+                    rationale: "\(Guidance.count(song.fittedSources.count, "source")) from other records and nothing keeping time under "
+                        + "\(song.fittedSources.count == 1 ? "it" : "them"). A groove on a feel at \(Int(song.tempo.rounded())) bpm, "
+                        + "on the \(SongPlayback.machine(in: song).name); tightened sources stay with it bar for bar.",
+                    move: .surface(action)), score: 12))
+            }
         }
         // The loop, arranged: offered once there is a loop worth arranging and until it has been.
         // Two parts that play is a loop; three is one that is waiting to be a song.
@@ -428,6 +462,8 @@ enum NextAdvisor {
         case .words: return ["words"]
         case .sing: return ["sing", "comp"]
         case .mix: return ["mix", "master"]
+        case .sources: return ["sources"]
+        case .tune: return ["tune"]
         }
     }
 
@@ -465,10 +501,17 @@ enum NextAdvisor {
         }
     }
 
+    /// Whether something in an assembled song keeps time: a drums stem, its own or a source's.
+    static func keepsTime(_ song: Song) -> Bool {
+        Guidance.stems(in: song).contains { Guidance.audio(of: $0)?.stem == "drums" }
+            || song.fittedSources.contains { SourceFitting.fit(of: $0)?.stem == "drums" }
+    }
+
     /// Whose work a kind of move is.
     static func owner(of kind: String?) -> String {
         switch kind {
-        case "stems", "chop", "regroove", "record": return "Sampler"
+        case "stems", "chop", "regroove", "record", "sources": return "Sampler"
+        case "tune": return "Melodist"
         case "groove", "sound", "drums": return "Beatmaker"
         case "bass": return "Bassist"
         case "chords", "playing": return "Harmonist"
@@ -501,6 +544,8 @@ enum NextAdvisor {
         case "master": return "master it"
         case "sound": return "shape the sound"
         case "record": return "back to the record"
+        case "sources": return "another record's stem"
+        case "tune": return "a tune"
         case "play": return "hear it through"
         case "export": return "export the master"
         case "album": return "put it on the album"
@@ -550,6 +595,11 @@ enum NextAdvisor {
     /// Where the song stands, as the member asking sees it.
     static func observe(_ kind: String?, in song: Song, app: AppState) -> String {
         let played = song.sections.filter { !$0.stitch.isEmpty }
+        if kind == "sources" {
+            let records = Set(song.fittedSources.compactMap { SourceFitting.fit(of: $0).map { $0.record?.description ?? $0.label } }).count
+            return song.fittedSources.isEmpty ? "The crate has records to take from."
+                : "\(Guidance.count(song.fittedSources.count, "source")) from \(Guidance.count(records, "record")) in it."
+        }
         switch owner(of: kind) {
         case "Sampler":
             if let take = Guidance.take(in: song), Guidance.stems(in: song).isEmpty {

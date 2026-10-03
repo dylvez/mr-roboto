@@ -134,7 +134,7 @@ public final class SourcesModel {
     public var isBlankSong: Bool { app.song?.isBlank ?? false }
 
     /// The sources already in the song, newest version of each.
-    public var inSong: [PartVersion] { app.song?.fittedSources ?? [] }
+    public var inSong: [PartVersion] { app.song?.withoutAsides.fittedSources ?? [] }
 
     public func fit(of version: PartVersion) -> SourceFit? { SourceFitting.fit(of: version) }
 

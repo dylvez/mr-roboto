@@ -69,9 +69,14 @@ public struct ReadSongTool: DirectorTool {
             /// master 18.8 dB and cut 85 Hz on "the sample" to let "the kick" through. There was
             /// no kick. Nothing it could read said so.
             public var playsOn: String?
+            /// Set aside: in no section and not playing, until set_aside brings it back. And why.
+            public var setAside: Bool?
+            public var asideBecause: String?
 
             enum CodingKeys: String, CodingKey {
                 case id, part, type, operation, author, note, key, tempo, variation
+                case setAside = "set_aside"
+                case asideBecause = "aside_because"
                 case mediaPath = "media_path"
                 case variationOf = "variation_of"
                 case playsOn = "plays_on"
@@ -144,7 +149,9 @@ public struct ReadSongTool: DirectorTool {
                                                                      store: store),
                                          variationOf: song.variation(of: version.partID)?.of.description,
                                          variation: song.variation(of: version.partID)?.name,
-                                         playsOn: ReadSongTool.playsOn(version, in: song))
+                                         playsOn: ReadSongTool.playsOn(version, in: song),
+                                         setAside: song.isAside(version.partID) ? true : nil,
+                                         asideBecause: song.aside(version.partID)?.note)
                       },
                       note: nil)
     }
@@ -191,6 +198,8 @@ public struct CreatePartVersionTool: DirectorTool {
         public var persona: String?
         /// Derive from an existing version rather than starting a new part.
         public var parent: String?
+        /// Made only to be read, not to play: joins no section and is set aside.
+        public var reference: Bool?
     }
 
     public struct Output: Encodable, Sendable {
@@ -201,6 +210,8 @@ public struct CreatePartVersionTool: DirectorTool {
         public var author: String
         public var note: String
         public var recorded: Bool
+        /// Set aside as reference, joining no section.
+        public var reference: Bool?
         public var detail: String?
     }
 
@@ -239,7 +250,10 @@ public struct CreatePartVersionTool: DirectorTool {
     public var purpose: String {
         "Record something the band made into the song as a new, immutable part version — a groove "
         + "from regroove_chop, or a chop's slice markers from chop_bar. Nothing is ever edited in "
-        + "place; this appends. The note is what the user will read in the ledger, so write it for them."
+        + "place; this appends. The note is what the user will read in the ledger, so write it for them. "
+        + "A new part joins the sections that play none of its kind; with reference true it joins none and "
+        + "is set aside, for a chop cut only to read — a stem's hits mapped to write a kit from — that the "
+        + "user did not ask to hear."
     }
     public var schema: DirectorJSON {
         Schema.object([
@@ -247,7 +261,8 @@ public struct CreatePartVersionTool: DirectorTool {
             ("note", Schema.string("One line saying what this is and why, in the user's language rather than the tool's.")),
             ("persona", Schema.optional(Schema.string("Which member of the band made it, by name. Leave it out and the version is signed by the Director, which is who made it — a version is never attributed to the user, because the user does not call this tool."))),
             ("parent", Schema.optional(Schema.string("A version id this derives from, from read_song. Omit to start a new part."))),
-        ], required: ["from", "note", "persona", "parent"])
+            ("reference", Schema.boolean("True for something made only to be read, not played: it joins no section and is set aside. False for a part the song plays.")),
+        ], required: ["from", "note", "persona", "parent", "reference"])
     }
 
     public func run(_ input: Input) async throws -> Output {
@@ -287,8 +302,9 @@ public struct CreatePartVersionTool: DirectorTool {
         } ?? PartVersion(partID: PartID(), kind: kind, author: author,
                          operation: operation, note: input.note)
 
-        let recorded = await workspace.record(version)
-        if recorded {
+        let reference = input.reference == true
+        let recorded = reference ? await workspace.recordReference(version, note: input.note) : await workspace.record(version)
+        if recorded, !reference {
             await workspace.note(input.note, detail: "\(operation) · \(author.description)")
             // A groove re-grooved from a chop the song holds plays that chop's slices, where the
             // chop played: what the Chop lane's Make the groove does.
@@ -303,7 +319,9 @@ public struct CreatePartVersionTool: DirectorTool {
                       author: author.description,
                       note: input.note,
                       recorded: recorded,
-                      detail: recorded ? nil : "No song is open, so this was not recorded anywhere.")
+                      reference: reference ? true : nil,
+                      detail: !recorded ? "No song is open, so this was not recorded anywhere."
+                          : reference ? "Set aside as reference: in no section, and not playing. set_aside with back true brings it into the song." : nil)
     }
 
     private func resolveParent(_ id: String?) async throws -> PartVersion? {
@@ -328,5 +346,65 @@ public struct CreatePartVersionTool: DirectorTool {
         }
         if let percent = plan.swingPercent { feel = feel.swung(percent: percent) }
         return feel.groove
+    }
+}
+
+// MARK: - set_aside
+
+/// A part taken out of the song without deleting it, or brought back.
+public struct SetAsideTool: DirectorTool {
+    public struct Input: Decodable, Sendable {
+        public var part: String
+        public var back: Bool
+        public var reason: String
+    }
+
+    public struct Output: Encodable, Sendable {
+        public var part: String
+        public var title: String
+        public var setAside: Bool
+        /// The sections it plays in now.
+        public var sections: [String]
+        public var detail: String
+
+        enum CodingKeys: String, CodingKey { case part, title, sections, detail; case setAside = "set_aside" }
+    }
+
+    let workspace: any DirectorWorkspace
+
+    public init(workspace: any DirectorWorkspace) { self.workspace = workspace }
+
+    public let name = "set_aside"
+    public var purpose: String {
+        "Take a part out of the song without deleting it: out of every section that plays it, and out of what plays, "
+        + "the Mixer and Structure, until it is brought back with back true, into the sections it left. This is how a "
+        + "part is taken away — \"lose the strings\", \"I don't want the second bass line\" — rather than resizing sections "
+        + "or turning it down. Nothing made is ever deleted; the user brings it back from Parts as easily."
+    }
+    public var schema: DirectorJSON {
+        Schema.object([
+            ("part", Schema.string("A version or part id from read_song.")),
+            ("back", Schema.boolean("True brings a part set aside back into the sections it left; false sets it aside.")),
+            ("reason", Schema.string("Why, in a few words, shown beside it in Parts; empty for none.")),
+        ], required: ["part", "back", "reason"])
+    }
+
+    public func run(_ input: Input) async throws -> Output {
+        guard let song = await workspace.song else { throw DirectorToolFailure(tool: name, reason: "No song is open.") }
+        let part = VersionID(uuidString: input.part).flatMap(song.version)?.partID ?? PartID(uuidString: input.part)
+        guard let part, let version = song.latestVersion(of: part) else {
+            throw DirectorToolFailure(tool: name, reason: "This song has no part \(input.part).", suggestion: "Take a version or part id from read_song.")
+        }
+        let reason = input.reason.trimmingCharacters(in: .whitespacesAndNewlines)
+        let done = input.back ? await workspace.bringBack(part) : await workspace.setAside(part, note: reason.isEmpty ? nil : reason)
+        guard done else {
+            throw DirectorToolFailure(tool: name, reason: input.back ? "\(PartLabel.title(of: version)) is not set aside." : "\(PartLabel.title(of: version)) is set aside already.")
+        }
+        let after = await workspace.song ?? song
+        let sections = after.sections.filter { $0.stitch.contains(part: part) }.map(\.name)
+        return Output(part: part.description, title: PartLabel.title(of: version), setAside: !input.back, sections: sections,
+                      detail: input.back ? (sections.isEmpty ? "Back in the song; no section it played in is still in the form, so stitch_section puts it somewhere."
+                                                            : "Back in \(sections.joined(separator: ", ")).")
+                                         : "Out of the song and listed under Set aside in Parts; set_aside with back true brings it back.")
     }
 }

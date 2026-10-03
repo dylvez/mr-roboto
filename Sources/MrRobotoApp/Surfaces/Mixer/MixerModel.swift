@@ -95,7 +95,8 @@ public final class MixerModel {
         var seen: [PartID] = []
         var out: [Row] = []
         func add(_ part: PartID?, _ label: String) {
-            guard let part, !seen.contains(part) else { return }
+            // A part set aside has no fader; its strip is kept in the mix for when it comes back.
+            guard let part, !seen.contains(part), song?.isAside(part) != true else { return }
             seen.append(part)
             let title = song?.versions.last { $0.partID == part }.map(PartLabel.title(of:)) ?? label
             out.append(Row(part: part, label: title))

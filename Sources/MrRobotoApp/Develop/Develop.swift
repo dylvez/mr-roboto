@@ -122,7 +122,7 @@ public enum Develop {
     /// Every part of its own that plays: the loop, without the variations written from it.
     public static func loop(of song: Song) -> [PartVersion] {
         song.partIDs.compactMap { id in
-            guard !song.isVariation(id), let newest = song.latestVersion(of: id),
+            guard !song.isAside(id), !song.isVariation(id), let newest = song.latestVersion(of: id),
                   StructureModel.playableTypes.contains(newest.type), StructureModel.plays(newest) else { return nil }
             return newest
         }
@@ -187,6 +187,8 @@ public enum Develop {
     public static func plan(for song: Song, form given: [(name: String, bars: Int)]? = nil,
                             genre: GenreProfile? = nil, electronic: Bool? = nil, instrumental: Bool? = nil,
                             harmony varying: Harmony = .plain, by author: Author = Develop.author) -> Development? {
+        // What is set aside is not developed: it is not in the loop, and no section is written for it.
+        let song = song.withoutAsides
         let loop = loop(of: song)
         guard !loop.isEmpty else { return nil }
         let beats = song.timeSignature.beatsPerBar

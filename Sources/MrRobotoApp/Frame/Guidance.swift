@@ -233,7 +233,8 @@ public enum Guidance {
     /// Every proposal the song supports, in the path's order, before the rail's cut to four: the
     /// band's question ranks these against what you tend to choose (`NextAdvisor`).
     public static func allProposals(for song: Song?) -> [Proposal] {
-        guard let song, !song.versions.isEmpty else { return [] }
+        // What is set aside is not suggested.
+        guard let song = song?.withoutAsides, !song.versions.isEmpty else { return [] }
         var out: [Proposal] = []
 
         let analysis = self.analysis(in: song)

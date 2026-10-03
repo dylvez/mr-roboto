@@ -113,6 +113,12 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     func correctGrid(_ record: RecordID, _ move: GridMove) throws -> Record
     /// Queues the second beat tracker on a record read before its beats were kept. False when it cannot be.
     func listenForSecondTracker(_ record: RecordID) -> Bool
+    /// Sets a part aside, or brings it back. False when there is nothing to do.
+    func setAside(_ part: PartID, note: String?) -> Bool
+    func bringBack(_ part: PartID) -> Bool
+    /// Records something made only to be read — a chop cut to map a stem's hits — joining no
+    /// section and set aside. False when there is no song.
+    func recordReference(_ version: PartVersion, note: String) -> Bool
     /// A source the open song holds, fitted again from its untouched record.
     func refitSource(_ part: PartID, semitones: Int?, atBar: Int?, tighten: Bool?) async throws -> PartVersion
     /// A song from an idea: an empty open song set up in place, or a new one opened. Nil when there is nowhere to.
@@ -199,6 +205,12 @@ extension DirectorWorkspace {
     public func correctGrid(_ record: RecordID, _ move: GridMove) throws -> Record { throw CrateError.noLibrary }
 
     public func listenForSecondTracker(_ record: RecordID) -> Bool { false }
+
+    public func setAside(_ part: PartID, note: String?) -> Bool { false }
+    public func bringBack(_ part: PartID) -> Bool { false }
+
+    /// Where nothing can be set aside, a reference is recorded as any version is.
+    public func recordReference(_ version: PartVersion, note: String) -> Bool { record(version) }
 
     /// The house calls in force for the open song.
     public var houseBook: HouseBook { HouseBook.of(library, song: song) }
@@ -378,6 +390,14 @@ public final class AppStateWorkspace: DirectorWorkspace {
 
     public func correctGrid(_ record: RecordID, _ move: GridMove) throws -> Record {
         try app.correctGrid(record, move, by: .director)
+    }
+
+    public func setAside(_ part: PartID, note: String?) -> Bool { app.setAside(part, note: note, by: .director) }
+    public func bringBack(_ part: PartID) -> Bool { app.bringBack(part, by: .director) }
+
+    public func recordReference(_ version: PartVersion, note: String) -> Bool {
+        guard app.record(version, joiningForm: false) else { return false }
+        return app.setAside(version.partID, note: "reference: \(note)", by: .director)
     }
 
     public func listenForSecondTracker(_ record: RecordID) -> Bool {

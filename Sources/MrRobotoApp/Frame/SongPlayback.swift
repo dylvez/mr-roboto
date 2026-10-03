@@ -646,7 +646,8 @@ public struct SongPlayback: Equatable, Sendable {
     public static func plan(for song: Song?,
                             maximumTracks: Int = SongPlayback.playerNodes,
                             mediaURL: (MediaRef) -> URL?) -> SongPlayback {
-        guard let song else {
+        // A part set aside does not play, arranged or not, wherever a plan is made from.
+        guard let song = song?.withoutAsides else {
             return SongPlayback(silence: Silence(headline: "No song open",
                                                  detail: "Open a song from the library and the transport plays it."))
         }
@@ -1196,7 +1197,7 @@ extension Song {
     var seatedStems: [PartID] {
         var seen = Set<PartID>()
         guard sections.contains(where: { !$0.stitch.isEmpty }) else {
-            return partIDs.filter { part in latestVersion(of: part).map(SongPlayback.isPlaced) ?? false }
+            return partIDs.filter { part in !isAside(part) && (latestVersion(of: part).map(SongPlayback.isPlaced) ?? false) }
         }
         return sections.flatMap(\.stitch).compactMap { lane in
             guard let version = latestVersion(of: lane.part), StructureModel.isStem(version),

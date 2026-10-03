@@ -215,6 +215,11 @@ public struct Song: Identifiable, Hashable, Codable, Sendable {
     /// before genres round-trips byte for byte.
     public var genre: String?
 
+    /// Parts taken out of the song without being deleted: out of every section, and out of what
+    /// plays, is drawn and is suggested, until they are brought back. Optional so a song written
+    /// before it round-trips byte for byte.
+    public var asides: [Aside]?
+
     public init(id: SongID = SongID(), title: String, artist: String = "", key: Key? = nil, tempo: Double = 120,
                 timeSignature: TimeSignature = .fourFour, sections: [Section] = [], versions: [PartVersion] = [],
                 seeds: [Seed] = [], experiments: [Experiment] = [], createdAt: Date = Date()) {
@@ -289,6 +294,61 @@ public struct Song: Identifiable, Hashable, Codable, Sendable {
                     version(id).map { Lane(part: $0.partID, pin: id) }
                 },
                 lengthInBars: lengthInBars)
+    }
+
+    // MARK: Set aside
+
+    /// The parts set aside.
+    public var asideParts: Set<PartID> { Set((asides ?? []).map(\.part)) }
+
+    public func isAside(_ part: PartID) -> Bool { asides?.contains { $0.part == part } ?? false }
+
+    public func aside(_ part: PartID) -> Aside? { asides?.first { $0.part == part } }
+
+    /// Sets a part aside: out of every section that plays it, which are remembered, so bringing it
+    /// back puts it where it was. False when the song has no such part or it is aside already.
+    @discardableResult
+    public mutating func setAside(_ part: PartID, note: String? = nil) -> Bool {
+        guard latestVersion(of: part) != nil, !isAside(part) else { return false }
+        var places: [Aside.Place] = []
+        for section in sections {
+            for (index, lane) in section.stitch.enumerated() where lane.part == part {
+                places.append(Aside.Place(section: section.id, index: index, pin: lane.pin))
+            }
+        }
+        for index in sections.indices { sections[index].stitch.removeAll { $0.part == part } }
+        asides = (asides ?? []) + [Aside(part: part, places: places, note: note)]
+        return true
+    }
+
+    /// Brings a part back into the sections it was taken out of, those still in the form. Nil when
+    /// it was not aside; else the sections it plays in again.
+    @discardableResult
+    public mutating func bringBack(_ part: PartID) -> [SectionID]? {
+        guard let aside = aside(part) else { return nil }
+        asides?.removeAll { $0.part == part }
+        if asides?.isEmpty == true { asides = nil }
+        var back: [SectionID] = []
+        for index in sections.indices {
+            let places = aside.places.filter { $0.section == sections[index].id }.sorted { $0.index < $1.index }
+            guard !places.isEmpty, !sections[index].stitch.contains(part: part) else { continue }
+            for place in places {
+                sections[index].stitch.insert(Lane(part: part, pin: place.pin), at: min(place.index, sections[index].stitch.count))
+            }
+            back.append(sections[index].id)
+        }
+        return back
+    }
+
+    /// The song as what plays, what is drawn and what is suggested hear it: without its parts set
+    /// aside, their versions and any lane naming them left out.
+    public var withoutAsides: Song {
+        let set = asideParts
+        guard !set.isEmpty else { return self }
+        var copy = self
+        copy.versions = versions.filter { !set.contains($0.partID) }
+        for index in copy.sections.indices { copy.sections[index].stitch.removeAll { set.contains($0.part) } }
+        return copy
     }
 
     /// Every distinct part in the song, in order of first appearance.
@@ -497,6 +557,37 @@ public struct TrackRelease: Hashable, Codable, Sendable {
         self.trimDB = trimDB
         self.releasedAt = releasedAt.graphPrecision
     }
+}
+
+/// A part set aside, and the lanes it had when it was: where bringing it back puts it — the same
+/// sections, at the same place in each, held at the same version where one was held.
+public struct Aside: Hashable, Codable, Sendable {
+    /// One lane the part had: its section, its place in that section's stitch, and its pin.
+    public struct Place: Hashable, Codable, Sendable {
+        public var section: SectionID
+        public var index: Int
+        public var pin: VersionID?
+
+        public init(section: SectionID, index: Int, pin: VersionID? = nil) {
+            self.section = section
+            self.index = index
+            self.pin = pin
+        }
+    }
+
+    public var part: PartID
+    public var places: [Place]
+    /// Why, when it was said: "reference: the map the kick was written from".
+    public var note: String?
+
+    public init(part: PartID, places: [Place] = [], note: String? = nil) {
+        self.part = part
+        self.places = places
+        self.note = note
+    }
+
+    /// The sections it played in.
+    public var sections: [SectionID] { places.map(\.section) }
 }
 
 /// An imported record: media plus metadata and, once analyzed, an analysis part version.

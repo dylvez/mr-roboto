@@ -18,12 +18,16 @@ import SwiftUI
 public enum WorkPath: String, Sendable, Equatable {
     case flip
     case beat
+    /// A song made of other records: their stems and bars pulled in through Sources, with drums,
+    /// chords, a bass line and a tune written to them.
+    case assembled
 
     /// What the strip calls it, before the steps.
     public var title: String {
         switch self {
         case .flip: return "Flip"
         case .beat: return "Beat"
+        case .assembled: return "Assembled"
         }
     }
 
@@ -36,6 +40,9 @@ public enum WorkPath: String, Sendable, Equatable {
         case .beat:
             return "A beat from scratch: a groove painted on a feel, a kit to play it, dust, and then the "
                 + "parts arranged into sections."
+        case .assembled:
+            return "Records brought together: stems and bars of them pulled in through Sources, then drums, "
+                + "chords, a bass line and a tune written to them, arranged and mixed."
         }
     }
 
@@ -46,16 +53,20 @@ public enum WorkPath: String, Sendable, Equatable {
         // straight to the microphone, and the Lyrics surface was only in the dock.
         case .flip: return [.record, .stems, .chop, .groove, .chords, .bass, .dust, .arrange, .words, .sing, .mix]
         case .beat: return [.groove, .chords, .bass, .kit, .dust, .arrange, .words, .sing, .mix]
+        case .assembled: return [.sources, .groove, .chords, .bass, .tune, .arrange, .mix]
         }
     }
 
-    /// A song that grew from a record, or that holds one, is a flip. Everything else is a beat.
+    /// A song that grew from a record, or that holds one, is a flip. One that takes from other
+    /// records — a source pulled in, a mashup's stems — is assembled. Everything else is a beat.
     public static func of(_ song: Song) -> WorkPath {
         let seeded = song.seeds.contains {
             if case .importedRecord = $0.kind { return true }
             return false
         }
-        return seeded || Guidance.take(in: song) != nil ? .flip : .beat
+        if seeded || Guidance.take(in: song) != nil { return .flip }
+        let mashed = Guidance.stems(in: song).contains { $0.operation == Operation.mashup }
+        return !song.fittedSources.isEmpty || mashed ? .assembled : .beat
     }
 }
 
@@ -64,13 +75,17 @@ public struct PathStep: Identifiable, Sendable, Equatable {
 
     public enum Kind: String, Sendable, Equatable, CaseIterable {
         case record, stems, chop, groove, chords, bass, kit, dust, arrange, words, sing, mix
+        /// Stems and bars of other records, pulled in.
+        case sources
+        /// A melody written over it.
+        case tune
 
         /// A step the path passes through without insisting on: it is never "next". The chords are
         /// this — the bass writes to the key when none are stated — so the path does not stall on
         /// a lead sheet nobody needs yet. So are a kit and dust: they are choices about a sound, and
         /// a song that never takes them is finished, not stuck. The path used to say "Dust →"
         /// through arranging, singing and mixing.
-        public var isOptional: Bool { self == .chords || self == .kit || self == .dust }
+        public var isOptional: Bool { self == .chords || self == .kit || self == .dust || self == .tune }
 
         /// The idiom's own word, as the ledger groups and the field guide use it.
         public var title: String {
@@ -87,6 +102,8 @@ public struct PathStep: Identifiable, Sendable, Equatable {
             case .words: return "Words"
             case .sing: return "Sing"
             case .mix: return "Mix"
+            case .sources: return "Sources"
+            case .tune: return "Tune"
             }
         }
 
@@ -105,6 +122,8 @@ public struct PathStep: Identifiable, Sendable, Equatable {
             case .words: return "lyrics"
             case .sing: return "booth"
             case .mix: return "mixer"
+            case .sources: return "sources"
+            case .tune: return "stem-vocals"
             }
         }
 
@@ -123,6 +142,8 @@ public struct PathStep: Identifiable, Sendable, Equatable {
             case .words: return "text.quote"
             case .sing: return "mic"
             case .mix: return "slider.vertical.3"
+            case .sources: return "square.stack.3d.down.right"
+            case .tune: return "music.note"
             }
         }
 
@@ -141,6 +162,8 @@ public struct PathStep: Identifiable, Sendable, Equatable {
             case .words: return "The lyric, a stanza labelled for each section it is sung in, set to the tune when there is one; read by the Lyricist."
             case .sing: return "A take sung against the song as it plays, on the bar you sang it; takes comped into one."
             case .mix: return "A strip per part and a master: level, pan, EQ, compression, the limiter's ceiling and the loudness target."
+            case .sources: return "A stem, or some bars, of another record, fitted to the song's key, tempo and bars."
+            case .tune: return "A melody over it, in the Piano roll, read by the Melodist. Optional."
             }
         }
     }
@@ -204,10 +227,13 @@ extension WorkPath {
         case .chopLane: return .chop
         case .grid: return .groove
         case .chords: return .chords
-        case .pianoRoll: return .bass
+        case .pianoRoll:
+            let melody = bound.compactMap { song.version($0) }.contains { $0.type == .melody }
+            return melody && path.steps.contains(.tune) ? .tune : .bass
         case .structure: return .arrange
         case .lyrics: return .words
-        case .album, .merge, .cast, .mashup, .sources: return nil
+        case .sources: return path == .assembled ? .sources : nil
+        case .album, .merge, .cast, .mashup: return nil
         case .booth, .takes: return .sing
         case .mixer, .master: return .mix
         case .sound:
@@ -247,6 +273,10 @@ extension WorkPath {
             }.count
         case .sing: return Guidance.takes(in: song).count
         case .mix: return Guidance.mixes(in: song).count
+        case .sources:
+            let mashed = Guidance.stems(in: song).filter { $0.operation == Operation.mashup }
+            return song.fittedSources.count + Set(mashed.map(\.partID)).count
+        case .tune: return parts(Guidance.melodies(in: song))
         }
     }
 
@@ -264,6 +294,12 @@ extension WorkPath {
     /// What pressing a step opens: its newest part if it has one, otherwise the way to make one.
     static func action(_ kind: PathStep.Kind, in song: Song) -> SurfaceAction? {
         switch kind {
+        case .sources:
+            return SurfaceAction(surface: .sources, title: "Sources")
+        case .tune:
+            // An existing tune opens; a new one is started from the Piano roll's own menu.
+            guard let melody = Guidance.melodies(in: song).last else { return nil }
+            return SurfaceAction(surface: .pianoRoll, title: PartLabel.title(of: melody), bound: [melody.id])
         case .mix:
             // The Master once the song is arranged and mixed; the Mixer until then.
             if !song.sections.isEmpty, !Guidance.mixes(in: song).isEmpty { return Guidance.dockAction(for: .master, in: song) }

@@ -792,7 +792,9 @@ public final class StructureModel {
         // *version* — the newest of each part plus any older one a section still named — because a
         // stitch chose between versions. Nothing chooses now: a lane follows its part.
         song.partIDs.compactMap { partID in
-            guard let newest = song.latestVersion(of: partID), playableTypes.contains(newest.type) || isStem(newest) else { return nil }
+            // A part set aside has no row: it is listed in Parts, to be brought back from there.
+            guard !song.isAside(partID), let newest = song.latestVersion(of: partID),
+                  playableTypes.contains(newest.type) || isStem(newest) else { return nil }
             let root = song.strip(of: partID)
             let kit = newest.type == .groove ? SongPlayback.chop(under: partID, in: song).map {
                 Layer.Kit(part: $0.partID, name: PartLabel.title(of: $0), hasDrums: Guidance.hasDrums($0, in: song))

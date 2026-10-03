@@ -448,6 +448,25 @@ extension FrameRenderTests {
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-sources")
     }
 
+    @Test("Parts with a bass line set aside: under its own heading, with why, and Bring back")
+    func aside() throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        let directory = WiringFixture.temporaryDirectory("render-aside")
+        defer { WiringFixture.remove(directory) }
+        var built = FormFixture.build()
+        built.song.sections = [Section(name: "Verse", stitch: [Lane(part: built.groove), Lane(part: built.bass)], lengthInBars: 4)]
+        let defaults = UserDefaults(suiteName: "mrroboto.render.\(UUID().uuidString)")!
+        let app = AppState(library: Library(), song: nil, store: LibraryStore(directoryURL: directory), status: .empty(directory),
+                           transportHost: StubTransportHost(), regions: RegionVisibility(defaults: defaults), primers: PrimerStore(defaults: defaults))
+        app.open(built.song)
+        app.regions.setCollapsed(false, for: .ledger)
+        app.regions.setCollapsed(true, for: .rail)
+        #expect(app.setAside(built.bass, note: "too busy under the vocal"))
+        app.openSurface(.structure, title: built.song.title)
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-aside")
+    }
+
     @Test("Sources with nothing to take from: the record picture, where records come from, and Import Records")
     func sourcesEmpty() throws {
         FontRegistration.registerBundledFonts()

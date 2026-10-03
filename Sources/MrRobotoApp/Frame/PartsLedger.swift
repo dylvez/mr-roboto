@@ -77,12 +77,16 @@ struct PartsLedger: View {
     private func row(_ part: LedgerGroups.Part) -> some View {
         let version = part.newest
         let isSelected = part.versions.contains { $0.id == app.selectedVersion }
-        let action = app.song.flatMap { PartActions.primary(for: version, in: $0) }
+        let isAside = app.song?.isAside(part.id) == true
+        let action = isAside ? nil : app.song.flatMap { PartActions.primary(for: version, in: $0) }
         return VStack(alignment: .leading, spacing: 6) {
             Button {
+                // Set aside, the row's one verb is bringing it back.
+                if isAside {
+                    app.bringBack(part.id)
                 // Select either way — an inert kind still accents — but when the kind has a surface,
                 // selecting it is what opens it. `perform` selects as part of carrying the action out.
-                if let action, app.canPerform(action.action) {
+                } else if let action, app.canPerform(action.action) {
                     app.perform(action.action)
                 } else {
                     app.select(version.id)
@@ -99,7 +103,15 @@ struct PartsLedger: View {
                         .foregroundStyle(Design.Palette.inkSecondary)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
-                    if let action {
+                    if isAside {
+                        if let reason = app.song?.aside(part.id)?.note, !reason.isEmpty {
+                            Text(reason)
+                                .font(Design.Typography.ui(11.5, weight: .regular))
+                                .foregroundStyle(Design.Palette.inkTertiary)
+                                .lineLimit(2)
+                        }
+                        ActionTag(title: "Bring back", isSelected: isSelected)
+                    } else if let action {
                         ActionTag(title: action.title, isSelected: isSelected)
                     }
                 }
@@ -107,7 +119,8 @@ struct PartsLedger: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help(action.map { "\($0.title) — \($0.rationale)" } ?? "Nothing opens on this part; it is here for the history.")
+            .help(isAside ? "Back into the sections it played in when it was set aside."
+                  : action.map { "\($0.title) — \($0.rationale)" } ?? "Nothing opens on this part; it is here for the history.")
             // Beside the row's own button, not inside it: a button in a button's label gets no clicks.
             .overlay(alignment: .topTrailing) { PartPlayButton(version: version, app: app) }
             .contextMenu {
@@ -119,6 +132,13 @@ struct PartsLedger: View {
                     }
                     Divider()
                 }
+                if isAside {
+                    Button("Bring Back") { app.bringBack(part.id) }
+                } else if StructureModel.plays(version) || version.type == .audio {
+                    Button("Set Aside") { app.setAside(part.id) }
+                        .help("Out of every section and out of what plays, without deleting it. It waits under Set aside.")
+                }
+                Divider()
                 Button("Keep as idea") { app.keepAsIdea(version.id) }
                     .disabled(app.store == nil)
                 if version.type == .sample {
@@ -261,12 +281,18 @@ public enum LedgerGroups {
             if byPart[version.partID] == nil { partOrder.append(version.partID) }
             byPart[version.partID, default: []].append(version)
         }
-        let parts = partOrder.map { Part(id: $0, versions: byPart[$0]!) }
+        let all = partOrder.map { Part(id: $0, versions: byPart[$0]!) }
+        // A part set aside is listed under its own heading, last, to be brought back from there.
+        let parts = all.filter { !song.isAside($0.id) }
+        let aside = (song.asides ?? []).compactMap { entry in all.first { $0.id == entry.part } }
         return order.compactMap { stage in
             let members = parts.filter { self.stage(of: $0.versions[0]) == stage.title }
             return members.isEmpty ? nil : Group(title: stage.title, glyph: stage.glyph, symbol: stage.symbol, parts: members)
-        }
+        } + (aside.isEmpty ? [] : [Group(title: asideTitle, glyph: "version", symbol: "tray.and.arrow.down", parts: aside)])
     }
+
+    /// The heading parts set aside are listed under.
+    static let asideTitle = "Set aside"
 
     /// What set this version apart from the one before it.
     static func versionLabel(_ version: PartVersion, parent: PartVersion?) -> String {

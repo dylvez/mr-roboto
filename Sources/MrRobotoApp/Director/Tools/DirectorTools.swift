@@ -106,6 +106,8 @@ public enum DirectorTools {
             SplitSectionTool(workspace: workspace).erased(),
             // A record's grid corrected, appended after the fifty-three: bar lines a tracker misread.
             FixGridTool(workspace: workspace).erased(),
+            // A part set aside, appended after the fifty-four: how a part is taken away.
+            SetAsideTool(workspace: workspace).erased(),
         ]
         if let stage {
             let pad = pad ?? DirectorStagePad()
@@ -191,6 +193,8 @@ public enum DirectorTools {
         "split_section",
         // A record's grid corrected, appended.
         "fix_grid",
+        // A part set aside or brought back, appended.
+        "set_aside",
     ]
 
     /// The two the frame adds. Appended after `names`, never among them: a session with no frame
