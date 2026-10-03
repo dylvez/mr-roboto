@@ -106,7 +106,7 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     /// plan's sentences and flags.
     func addSource(_ request: SourceRequest) async throws -> (version: PartVersion, sentences: [String], flags: [String])
     /// A source the open song holds, fitted again from its untouched record.
-    func refitSource(_ part: PartID, semitones: Int?, atBar: Int?) async throws -> PartVersion
+    func refitSource(_ part: PartID, semitones: Int?, atBar: Int?, tighten: Bool?) async throws -> PartVersion
     /// A song from an idea: an empty open song set up in place, or a new one opened. Nil when there is nowhere to.
     func startSong(title: String, tempo: Double, key: Key?, machine: String) -> Song?
     /// Plays a version for the user, now. False when this workspace has nothing to play through.
@@ -350,8 +350,8 @@ public final class AppStateWorkspace: DirectorWorkspace {
         return (version, sentences, pick.plan.flags)
     }
 
-    public func refitSource(_ part: PartID, semitones: Int?, atBar: Int?) async throws -> PartVersion {
-        try await app.refitSource(part, semitones: semitones, atBar: atBar, by: .persona("Director"))
+    public func refitSource(_ part: PartID, semitones: Int?, atBar: Int?, tighten: Bool?) async throws -> PartVersion {
+        try await app.refitSource(part, semitones: semitones, atBar: atBar, tighten: tighten, by: .persona("Director"))
     }
 
     public func startSong(title: String, tempo: Double, key: Key?, machine: String) -> Song? {
@@ -683,7 +683,7 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
         throw DirectorToolFailure(tool: "adopt", reason: "This workspace has nowhere to render audio into.")
     }
 
-    public func refitSource(_ part: PartID, semitones: Int?, atBar: Int?) async throws -> PartVersion {
+    public func refitSource(_ part: PartID, semitones: Int?, atBar: Int?, tighten: Bool?) async throws -> PartVersion {
         throw DirectorToolFailure(tool: "adopt", reason: "This workspace has nowhere to render audio into.")
     }
 

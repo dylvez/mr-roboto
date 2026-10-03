@@ -31,6 +31,13 @@ public enum MergeRender {
             .stretch(planar: planar, sampleRate: sampleRate, ratio: move.ratio, pitchShift: Double(move.semitones))
     }
 
+    /// Planar audio moved along a time map: shifted by `semitones`, each stretch of it by its own
+    /// ratio between the anchors (`TightenMap`). No anchors is the one ratio of `audio(_:sampleRate:move:)`.
+    public static func audio(_ planar: [[Float]], sampleRate: Double, move: MergeMove, anchors: [StretchAnchor]?) throws -> [[Float]] {
+        guard let anchors, !anchors.isEmpty else { return try audio(planar, sampleRate: sampleRate, move: move) }
+        return try stretcher(for: move).stretch(planar: planar, sampleRate: sampleRate, anchors: anchors, pitchShift: Double(move.semitones))
+    }
+
     /// A chop's slice markers, re-timed with the stretch (T3) and re-based on a media that holds
     /// only the region: a marker at `position` inside `region` lands at `(position − region.start) × ratio`.
     public static func slices(_ slices: [SliceMarker], region: SongGraph.TimeRange, ratio: Double) -> [SliceMarker] {

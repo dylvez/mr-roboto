@@ -159,10 +159,20 @@ public struct AdoptTool: DirectorTool {
         public var bars: [Int]?
         public var atBar: Int?
         public var semitones: Int?
+        public var tighten: String?
 
         enum CodingKeys: String, CodingKey {
-            case kind, id, stem, bars, semitones
+            case kind, id, stem, bars, semitones, tighten
             case atBar = "at_bar"
+        }
+
+        /// "on", "off", or nil for as the record's beat trackers say (or, fitting again, as it was).
+        var tightens: Bool? {
+            switch tighten?.lowercased() {
+            case "on": return true
+            case "off": return false
+            default: return nil
+            }
         }
     }
 
@@ -194,7 +204,9 @@ public struct AdoptTool: DirectorTool {
         + "looped like a chop in the sections with none. Into a song with nothing in it, the first stem "
         + "brings its key, tempo and form. kind fitted takes a source the song already holds (a version "
         + "or part id from read_song) and fits it again from the untouched record: other semitones, "
-        + "another at_bar, or the song's key and tempo as they are now."
+        + "another at_bar, tightened or let loose, or the song's key and tempo as they are now. Tightened, "
+        + "each of the record's bars is stretched onto one of the song's so it keeps time with a programmed "
+        + "kit; it is unless its bar lines look misread, when tightening to them would lurch."
     }
     public var schema: DirectorJSON {
         Schema.object([
@@ -211,7 +223,10 @@ public struct AdoptTool: DirectorTool {
                                       minimum: -63, maximum: 256)),
             ("semitones", Schema.optional(Schema.integer("Semitones by ear in place of the key arithmetic; left out, by the key.",
                                                          minimum: -12, maximum: 12))),
-        ], required: ["kind", "id", "stem", "bars", "at_bar", "semitones"])
+            ("tighten", Schema.string("For song or fitted: on stretches each of its bars onto one of the song's, off keeps one "
+                                      + "stretch and the record's drift. Empty: on unless its bar lines look misread, or as it was.",
+                                      enum: ["", "on", "off"])),
+        ], required: ["kind", "id", "stem", "bars", "at_bar", "semitones", "tighten"])
     }
 
     public func run(_ input: Input) async throws -> Output {
@@ -262,7 +277,8 @@ public struct AdoptTool: DirectorTool {
             }
             range = (first - 1)..<last
         }
-        let request = SourceRequest(song: from.id, stem: stem, bars: range, atBar: Self.atBar(input.atBar) ?? 0, semitones: input.semitones)
+        let request = SourceRequest(song: from.id, stem: stem, bars: range, atBar: Self.atBar(input.atBar) ?? 0, semitones: input.semitones,
+                                    tighten: input.tightens)
         let added: (version: PartVersion, sentences: [String], flags: [String])
         do { added = try await workspace.addSource(request) } catch let failure as DirectorToolFailure { throw failure } catch {
             throw DirectorToolFailure(tool: name, reason: "\(error)")
@@ -282,7 +298,7 @@ public struct AdoptTool: DirectorTool {
         let version: PartVersion
         do {
             version = try await workspace.refitSource(part, semitones: input.semitones ?? (fit.byEar ? fit.semitones : nil),
-                                                      atBar: Self.atBar(input.atBar) ?? fit.atBar)
+                                                      atBar: Self.atBar(input.atBar) ?? fit.atBar, tighten: input.tightens)
         } catch let failure as DirectorToolFailure { throw failure } catch {
             throw DirectorToolFailure(tool: name, reason: "\(error)")
         }

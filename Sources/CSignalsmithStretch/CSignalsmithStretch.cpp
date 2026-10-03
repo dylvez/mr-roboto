@@ -102,4 +102,8 @@ int ss_stretch_exact_minimum_input(const ss_stretch_t *s, double playbackRate) {
     return s->impl.outputSeekLength(float(playbackRate));
 }
 
+void ss_stretch_output_seek(ss_stretch_t *s, const float *const *input, int inputLength) {
+    s->impl.outputSeek(input, inputLength);
+}
+
 } // extern "C"

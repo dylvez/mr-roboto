@@ -338,3 +338,161 @@ struct SourcesDirectorTests {
         #expect(wrong.isError && wrong.content.contains("no vocals stem"))
     }
 }
+
+@MainActor
+enum DriftFixture {
+    /// A library holding "Drifter": twenty bars of clicks, one on every beat from 0.5 s, each bar at
+    /// its own tempo between 95 and 105 bpm (100 on average), separated into a drums stem, its
+    /// analysis's bars on its real bar lines and a second tracker agreeing on `agreement` of its
+    /// beats. And "Kit", open: 100 bpm, one section of 24 bars playing a groove. A bar is 2.4 s.
+    ///   - misread: the analysis's bar lines wrong for eight bars in the middle — read at a tempo
+    ///     a fifth faster, then a long bar to catch up — as victor 1's are.
+    static func app(_ label: String, agreement: Double?, misread: Bool = false) throws -> (app: AppState, directory: URL, drifter: Song) {
+        let directory = WiringFixture.temporaryDirectory(label)
+        let store = LibraryStore(directoryURL: directory)
+        var library = Library()
+        var drifter = Song(title: "Drifter", key: Key(tonic: NoteName(.d)), tempo: 100)
+        library.upsert(drifter)
+        try store.save(library)
+        var beats: [BeatMarker] = [], bars: [SongGraph.TimeRange] = []
+        var time = 0.5
+        for bar in 0..<20 {
+            let beat = 60 / (100 + 5 * sin(Double(bar) * 0.9))
+            let start = time
+            for index in 0..<4 { beats.append(BeatMarker(time: time, isDownbeat: index == 0)); time += beat }
+            bars.append(SongGraph.TimeRange(start: start, end: time))
+        }
+        let seconds = time + 1
+        if misread {
+            for index in 5..<13 {
+                let start = index == 5 ? bars[5].start : bars[index - 1].end
+                bars[index] = SongGraph.TimeRange(start: start, end: start + 1.9)
+            }
+            bars[13].start = bars[12].end
+        }
+        var samples = [Float](repeating: 0, count: Int(seconds * MashupFixture.rate))
+        for beat in beats {
+            let at = Int(beat.time * MashupFixture.rate)
+            for i in 0..<240 where at + i < samples.count { samples[at + i] = Float(0.8 * sin(2 * .pi * 1_000 * Double(i) / MashupFixture.rate)) * Float(1 - Double(i) / 240) }
+        }
+        let package = try store.songStore(for: drifter.id)
+        let scratch = directory.appendingPathComponent("drifter.wav")
+        try BoothAdapter.write([samples], sampleRate: MashupFixture.rate, to: scratch)
+        let media = try package.addMedia(copying: scratch)
+        let take = PartVersion(partID: PartID(), kind: .audio(Audio(media: media, role: .take, sampleRate: MashupFixture.rate, channelCount: 1, duration: seconds)),
+                               author: .user, operation: Operation.imported, note: "Record")
+        try drifter.append(take)
+        let analysis = MusicAnalysis(duration: seconds, keys: [KeyRange(start: 0, end: seconds, key: drifter.key!)], beats: beats, bars: bars,
+                                     tempo: [TempoRange(start: 0, end: seconds, bpm: 100)],
+                                     beatCheck: agreement.map { BeatGridCheck(checker: "beat-this", agreement: $0, primaryBPM: 100, checkerBPM: 100, usedChecker: false) })
+        try drifter.append(PartVersion(partID: PartID(), kind: .analysis(analysis), author: .user, parents: [take.id], operation: Operation.analyzed))
+        try drifter.append(PartVersion(partID: PartID(), kind: .audio(Audio(media: media, role: .stem, stem: "drums", sampleRate: MashupFixture.rate, channelCount: 1, duration: seconds)),
+                                       author: .user, parents: [take.id], operation: Operation.separate, note: "drums stem"))
+        library.upsert(drifter)
+        library.records.append(Record(title: "Drifter", media: media))
+        var kit = Song(title: "Kit", key: Key(tonic: NoteName(.d)), tempo: 100)
+        let groove = TransportFixture.grooveVersion()
+        try kit.append(groove)
+        kit.sections = [Section(name: "Song", stitch: [Lane(part: groove.partID)], lengthInBars: 24)]
+        library.upsert(kit)
+        try store.save(library)
+        let app = AppState(library: try store.load(), store: store, transportHost: StubTransportHost())
+        app.autosaveDelay = nil
+        app.open(try #require(app.library.song(kit.id)))
+        return (app, directory, drifter)
+    }
+}
+
+@Suite("Sources: tightened to the grid", .serialized) @MainActor
+struct SourcesTightenTests {
+
+    @Test("tight: every click of a drifting record on the song's beat, twenty bars in; as recorded it drifts off")
+    func tight() async throws {
+        let (app, directory, drifter) = try DriftFixture.app("tighten-on", agreement: 0.92)
+        defer { WiringFixture.remove(directory) }
+        let request = SourceRequest(song: drifter.id, stem: "drums", atBar: 1)
+        let pick = try app.sourcePick(request)
+        #expect(pick.plan.isTightened && pick.plan.held == 0 && pick.declined == nil)
+        #expect(app.sentences(for: pick, request: request).contains { $0.hasPrefix("Tightened") })
+        let tight = try await app.addSource(request)
+        let audio = try #require(Guidance.audio(of: tight))
+        #expect(audio.fit?.tightened == true)
+        let store = try #require(app.store)
+        let song = try #require(app.song)
+        let (worst, count) = try SourcesFixture.worstOffBeat(try store.mediaURL(for: audio.media, song: song.id), laidAt: audio.alignmentOffset ?? 0)
+        #expect(count >= 76 && worst < 0.01, "\(count) clicks, the worst \(worst * 1000) ms off the beat")
+
+        // Let loose: the same record at one stretch wanders a good part of a beat off.
+        let loose = try await app.refitSource(tight.partID, semitones: nil, tighten: false)
+        let looseAudio = try #require(Guidance.audio(of: loose))
+        #expect(loose.parents == [tight.id] && looseAudio.fit?.tightened == false)
+        let (drift, _) = try SourcesFixture.worstOffBeat(try store.mediaURL(for: looseAudio.media, song: song.id), laidAt: looseAudio.alignmentOffset ?? 0)
+        #expect(drift > 0.05, "as recorded it drifts \(drift * 1000) ms")
+
+        // And tightened again, kept that way through "fit again".
+        let again = try await app.refitSource(tight.partID, semitones: nil, tighten: true)
+        let refit = try await app.refitSource(again.partID, semitones: nil)
+        #expect(SourceFitting.fit(of: refit)?.tightened == true)
+    }
+
+    @Test("bars of it tightened: a loop of exactly its bars whose clicks are on the song's beats")
+    func clip() async throws {
+        let (app, directory, drifter) = try DriftFixture.app("tighten-clip", agreement: 0.92)
+        defer { WiringFixture.remove(directory) }
+        let clip = try await app.addSource(SourceRequest(song: drifter.id, stem: "drums", bars: 2..<6))
+        guard case .sample(let sample) = clip.kind else { Issue.record("a clip is a chop"); return }
+        #expect(sample.fit?.tightened == true && sample.span?.duration == 4 * 2.4)
+        let url = try #require(app.store).mediaURL(for: sample.media, song: try #require(app.song).id)
+        let (worst, count) = try SourcesFixture.worstOffBeat(url, laidAt: 0)
+        #expect(count == 16 && worst < 0.01, "\(count) clicks, the worst \(worst * 1000) ms off")
+    }
+
+    @Test("bar lines that look misread leave it as recorded and say why; asked, it is tightened all the same; the trackers do not decide")
+    func misread() async throws {
+        let (app, directory, drifter) = try DriftFixture.app("tighten-misread", agreement: 0.92, misread: true)
+        defer { WiringFixture.remove(directory) }
+        let request = SourceRequest(song: drifter.id, stem: "drums")
+        let pick = try app.sourcePick(request)
+        let declined = try #require(pick.declined)
+        #expect(!pick.plan.isTightened && declined.held > 2)
+        #expect(app.sentences(for: pick, request: request).contains { $0.contains("look misread") && $0.contains("Tighten it to try anyway") })
+        var asked = request
+        asked.tighten = true
+        let forced = try app.sourcePick(asked)
+        #expect(forced.plan.isTightened && forced.plan.looksMisread && forced.plan.flags.contains { $0.contains("held") })
+
+        // A clean grid the trackers disagree on, as victor2's and russianfreedom's: tightened.
+        let (clean, cleanDirectory, cleanDrifter) = try DriftFixture.app("tighten-clean", agreement: 0.16)
+        defer { WiringFixture.remove(cleanDirectory) }
+        #expect(try clean.sourcePick(SourceRequest(song: cleanDrifter.id, stem: "drums")).plan.isTightened)
+    }
+}
+
+@Suite("Sources: tightened by the Director", .serialized) @MainActor
+struct SourcesTightenDirectorTests {
+
+    @Test("adopt with tighten on tightens a record its trackers disagree on; fitted with tighten off lets it loose")
+    func adopt() async throws {
+        let (app, directory, drifter) = try DriftFixture.app("tighten-director", agreement: 0.4)
+        defer { WiringFixture.remove(directory) }
+        let toolbox = DirectorTools.toolbox(workbench: DirectorWorkbench(engines: DirectorTestEngines.make(bars: 4)),
+                                            workspace: AppStateWorkspace(app))
+        let on = await toolbox.run(ClaudeToolUse(id: "t", name: "adopt", input: .object([
+            .init("kind", .string("song")), .init("id", .string(drifter.title)), .init("stem", .string("drums")),
+            .init("bars", .array([])), .init("at_bar", .int(0)), .init("tighten", .string("on")),
+        ])))
+        #expect(!on.isError, "\(on.content)")
+        let source = try #require(app.song?.fittedSources.first)
+        #expect(SourceFitting.fit(of: source)?.tightened == true)
+        #expect(on.content.contains("Tightened"))
+
+        let off = await toolbox.run(ClaudeToolUse(id: "o", name: "adopt", input: .object([
+            .init("kind", .string("fitted")), .init("id", .string(source.partID.description)), .init("stem", .string("")),
+            .init("bars", .array([])), .init("at_bar", .int(0)), .init("tighten", .string("off")),
+        ])))
+        #expect(!off.isError, "\(off.content)")
+        let loose = try #require(app.song?.latestVersion(of: source.partID))
+        #expect(loose.parents == [source.id] && SourceFitting.fit(of: loose)?.tightened == false)
+        #expect(SourceFitting.fit(of: loose)?.atBar == SourceFitting.fit(of: source)?.atBar, "at_bar 0 leaves it where it was")
+    }
+}

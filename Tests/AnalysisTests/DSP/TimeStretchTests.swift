@@ -275,6 +275,57 @@ struct TimeStretchTests {
         #expect(peak > 0.2)
     }
 
+    @Test("drifting clicks stretched along their anchors land on the grid within 5 ms", arguments: [1.0, 0.8])
+    func anchoredDrift(overall: Double) throws {
+        let sr = Self.sampleRate
+        // Forty clicks a beat apart at a tempo that wanders ±6% around 100 bpm, as an old record does.
+        var rng = LCG(seed: 11)
+        var times: [Double] = [0.3]
+        var beat = 0.6
+        for _ in 1..<40 {
+            beat = min(0.6 * 1.06, max(0.6 * 0.94, beat + Double(rng.next()) * 0.02))
+            times.append(times.last! + beat)
+        }
+        let n = Int((times.last! + 1) * sr)
+        var signal = (0..<n).map { _ in rng.next() * 1e-4 }
+        for t in times {
+            let at = Int(t * sr)
+            for i in 0..<64 where at + i < n { signal[at + i] += Float(0.9 * exp(-Double(i) / 12) * sin(Double(i) * 0.9)) }
+        }
+        // Played as recorded, the clicks wander well off a steady line through the first and last.
+        let steady = (times.last! - times[0]) / Double(times.count - 1)
+        #expect(times.indices.map { abs(times[$0] - times[0] - Double($0) * steady) }.max()! > 0.05)
+        // Each click onto a steady grid a beat of 0.6 × overall apart.
+        let grid = times.indices.map { 0.3 * overall + Double($0) * 0.6 * overall }
+        let anchors = zip(times, grid).map { StretchAnchor(input: $0, output: $1) }
+        let out = try SignalsmithTimeStretcher(preset: .percussive).stretch(planar: [signal], sampleRate: sr, anchors: anchors)
+        // The second after the last click carries on at the last line's slope.
+        #expect(abs(Double(out[0].count) / sr - (grid.last! + 0.6 * overall / beat)) < 0.001, "\(Double(out[0].count) / sr) s")
+        var worst = 0.0
+        for expected in grid.dropFirst().dropLast() {
+            let lower = Int((expected - 0.03) * sr), upper = Int((expected + 0.03) * sr)
+            let window = out[0][lower..<upper]
+            let peak = window.indices.max { abs(window[$0]) < abs(window[$1]) }!
+            // The click's attack, not its loudest wiggle: the first sample over half the peak.
+            let onset = window.indices.first { abs(window[$0]) > abs(window[peak]) * 0.5 }!
+            worst = max(worst, abs(Double(onset) / sr - expected))
+        }
+        print(String(format: "anchored ×%.2f: worst click %.2f ms off the grid", overall, worst * 1000))
+        #expect(worst <= 0.005)
+    }
+
+    @Test("a map that is one straight line is the constant stretch")
+    func anchoredStraight() throws {
+        let short = (0..<44_100).map { Float(sin(Double($0) * 0.05)) }
+        let stretcher = SignalsmithTimeStretcher()
+        let plain = try stretcher.stretch(planar: [short], sampleRate: Self.sampleRate, ratio: 1.2)
+        let mapped = try stretcher.stretch(planar: [short], sampleRate: Self.sampleRate, anchors: [StretchAnchor(input: 0.5, output: 0.6)])
+        #expect(plain == mapped)
+        #expect(throws: SignalsmithTimeStretcher.Error.self) {
+            _ = try stretcher.stretch(planar: [short], sampleRate: Self.sampleRate, anchors: [StretchAnchor(input: 0.5, output: 0.6), StretchAnchor(input: 0.7, output: 0.5)])
+        }
+    }
+
     @Test("inputs shorter than the pre-roll are padded and trimmed")
     func shortInput() throws {
         let stretcher = SignalsmithTimeStretcher()

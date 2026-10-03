@@ -85,6 +85,13 @@ bool ss_stretch_exact(ss_stretch_t *stretch,
 /// Smallest input `ss_stretch_exact` accepts for `playbackRate` = inSamples / outSamples.
 int ss_stretch_exact_minimum_input(const ss_stretch_t *stretch, double playbackRate);
 
+/// Resets, then moves the input position to the start of `input` *and* pre-computes output, so
+/// the next samples `ss_stretch_process` returns are aligned to the input's first sample. The
+/// playback rate is inferred from `inputLength`: hand it `inputLatency + rate × outputLatency`
+/// samples. What `ss_stretch_exact` does first; exported so a stretch whose rate varies can do
+/// the same and then feed `ss_stretch_process` at its own rate, chunk by chunk.
+void ss_stretch_output_seek(ss_stretch_t *stretch, const float *const *input, int inputLength);
+
 #ifdef __cplusplus
 }
 #endif

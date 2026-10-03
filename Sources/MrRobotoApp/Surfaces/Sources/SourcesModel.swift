@@ -25,6 +25,8 @@ public final class SourcesModel {
     public var sections: Set<SectionID> = []
     /// Whether a blank song takes the record's key and tempo.
     public var takesItsGrid = false
+    /// Each of its bars onto one of the song's. Nil: unless its bar lines look misread.
+    public var tighten: Bool?
     /// The bar the preview starts on, 1-based.
     public var previewBar = 1
     /// The preview with the song under it, rather than the source alone.
@@ -71,7 +73,7 @@ public final class SourcesModel {
     public var request: SourceRequest? {
         guard let from, let stem else { return nil }
         return SourceRequest(song: from, stem: stem, bars: isClip ? (fromBar - 1)..<toBar : nil, atBar: atBar - 1,
-                             semitones: semitones, sections: Array(sections), takesItsGrid: takesItsGrid)
+                             semitones: semitones, sections: Array(sections), takesItsGrid: takesItsGrid, tighten: tighten)
     }
 
     var pick: SourcePick? { request.flatMap { try? app.sourcePick($0) } }
@@ -82,6 +84,8 @@ public final class SourcesModel {
     }
     public var flags: [String] { pick?.plan.flags ?? [] }
     public var plannedSemitones: Int? { pick?.plan.move.semitones }
+    /// Whether what is chosen would be tightened, by the switch or by the trackers.
+    public var isTightened: Bool { pick?.plan.isTightened ?? (tighten ?? false) }
     public var isDrums: Bool { stem == "drums" }
 
     /// Why Preview is off, or nil when it is on.
@@ -123,6 +127,7 @@ public final class SourcesModel {
         }
         pieces.append(fit.semitones == 0 ? "pitch as it is" : String(format: "%+d st%@", fit.semitones, fit.byEar ? " by ear" : ""))
         if abs(fit.ratio - 1) > 1e-3 { pieces.append(String(format: "×%.3f", fit.ratio)) }
+        pieces.append(fit.tightened ? "tight to the grid" : "as recorded")
         if let gain = fit.gainDB { pieces.append(String(format: "%+.1f dB", gain)) }
         let sections = app.song?.sections.filter { $0.stitch.contains(part: version.partID) }.count ?? 0
         if app.song?.isArranged == true { pieces.append("in \(sections) section\(sections == 1 ? "" : "s")") }
@@ -149,11 +154,15 @@ public final class SourcesModel {
 
     public func resetSemitones() { semitones = nil }
 
+    /// The switch, flipped from what it would do now.
+    public func toggleTighten() { tighten = !isTightened }
+
     /// The usual: the voice when there is one, the whole of it, its bar 1 on the song's.
     private func chooseDefaults() {
         let stems = available
         stem = stems.first { $0 == "vocals" } ?? stems.first
         semitones = nil
+        tighten = nil
         isClip = false
         fromBar = 1
         toBar = 2
@@ -213,15 +222,16 @@ public final class SourcesModel {
         }
     }
 
-    /// Fits a source again: a semitone either way, a bar either way, or to the song as it is now.
-    public func refit(_ part: PartID, semitones step: Int = 0, bars move: Int = 0) async {
+    /// Fits a source again: a semitone either way, a bar either way, tightened or let loose, or to
+    /// the song as it is now.
+    public func refit(_ part: PartID, semitones step: Int = 0, bars move: Int = 0, tighten: Bool? = nil) async {
         guard refitting == nil, let version = app.song?.latestVersion(of: part), let fit = fit(of: version) else { return }
         refitting = part
         lastError = nil
         defer { refitting = nil }
         let pitch: Int? = step != 0 ? max(-12, min(12, fit.semitones + step)) : (fit.byEar ? fit.semitones : nil)
         do {
-            _ = try await app.refitSource(part, semitones: pitch, atBar: fit.atBar.map { $0 + move })
+            _ = try await app.refitSource(part, semitones: pitch, atBar: fit.atBar.map { $0 + move }, tighten: tighten)
         } catch {
             lastError = "\(error)"
         }

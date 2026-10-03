@@ -1,3 +1,4 @@
+import Analysis
 import Foundation
 import MusicTheory
 import SongGraph
@@ -65,8 +66,57 @@ public struct SourcePlan: Hashable, Sendable {
     public var secondsPerBar: Double
     public var sentences: [String]
     public var flags: [String]
+    /// Tightened: the region's moments pinned to the song's (`TightenMap`), in seconds from the
+    /// region's start and from the render's. Nil is one ratio for all of it, `move.ratio`.
+    public var anchors: [StretchAnchor]? = nil
+    /// Bars held to `TightenMap.limit` rather than pinned exactly.
+    public var held = 0
 
     public var isClip: Bool { if case .clip = shape { return true } else { return false } }
+    public var isTightened: Bool { anchors != nil }
+    /// The bar lines pinned, when tightened.
+    public var pinned: Int { anchors?.count ?? 0 }
+    /// Whether so many of its bars were held that its bar lines look misread (`TightenMap.mostHeld`).
+    public var looksMisread: Bool { isTightened && Double(held) > Double(pinned) * TightenMap.mostHeld }
+
+    /// Where a second of the region lands in the render, along the anchors or at the one ratio.
+    public func output(atSource seconds: Double) -> Double {
+        guard let anchors, !anchors.isEmpty else { return seconds * move.ratio }
+        var previous = StretchAnchor(input: 0, output: 0)
+        for anchor in anchors {
+            if seconds <= anchor.input || anchor == anchors.last! {
+                let slope = (anchor.output - previous.output) / max(1e-9, anchor.input - previous.input)
+                return previous.output + (seconds - previous.input) * slope
+            }
+            previous = anchor
+        }
+        return seconds * move.ratio
+    }
+
+    /// The second of the region that lands at a second of the render.
+    public func source(atOutput seconds: Double) -> Double {
+        guard let anchors, !anchors.isEmpty else { return seconds / move.ratio }
+        var previous = StretchAnchor(input: 0, output: 0)
+        for anchor in anchors {
+            if seconds <= anchor.output || anchor == anchors.last! {
+                let slope = (anchor.input - previous.input) / max(1e-9, anchor.output - previous.output)
+                return previous.input + (seconds - previous.output) * slope
+            }
+            previous = anchor
+        }
+        return seconds / move.ratio
+    }
+
+    /// The anchors for the stretch of the region from `from` to `to` (its own seconds), rebased
+    /// to start there: what a preview of a few bars renders with.
+    public func anchors(from: Double, to: Double) -> [StretchAnchor]? {
+        guard let anchors else { return nil }
+        let base = output(atSource: from)
+        var out = anchors.filter { $0.input > from + 1e-6 && $0.input < to - 1e-6 }
+            .map { StretchAnchor(input: $0.input - from, output: $0.output - base) }
+        out.append(StretchAnchor(input: to - from, output: output(atSource: to) - base))
+        return out
+    }
 }
 
 public enum SourceFitting {
@@ -78,8 +128,15 @@ public enum SourceFitting {
     /// - Parameters:
     ///   - target: the song's key and tempo. A song with no key leaves the pitch alone.
     ///   - semitones: an override of the key arithmetic, by ear.
+    ///   - tighten: each of the record's bars pinned to one of the song's (`TightenMap`), rather
+    ///     than one ratio for all of it.
     public static func plan(_ source: SourceMaterial, into target: MergeTarget, beatsPerBar: Int = 4,
-                            shape: SourceShape, semitones: Int? = nil) -> SourcePlan {
+                            shape: SourceShape, semitones: Int? = nil, tighten: Bool = false) -> SourcePlan {
+        // Tightened, every bar line is read where the smoothing put it: the region, bar 1 and the
+        // pins all agree.
+        var source = source
+        let tightens = tighten && source.bars.count >= 2
+        if tightens { source.bars = TightenMap.smoothed(source.bars) }
         var move = Merge.move(MergeFragment(label: source.label, kind: .sample, key: source.key, tempo: source.tempo,
                                             isDrums: source.isDrums),
                               to: target, semitones: source.isDrums ? 0 : semitones)
@@ -110,9 +167,21 @@ public enum SourceFitting {
             if cut > 0.05 {
                 sentences.append(String(format: "The first %.1f s are left out: they would sound before the song starts.", cut))
             }
-            return SourcePlan(shape: shape, move: move, region: SongGraph.TimeRange(start: start, end: source.duration),
-                              offset: offset, bars: max(1, Int(ceil(end / secondsPerBar - 1e-9))), cut: cut,
-                              secondsPerBar: secondsPerBar, sentences: sentences, flags: flags)
+            var plan = SourcePlan(shape: shape, move: move, region: SongGraph.TimeRange(start: start, end: source.duration),
+                                  offset: offset, bars: max(1, Int(ceil(end / secondsPerBar - 1e-9))), cut: cut,
+                                  secondsPerBar: secondsPerBar, sentences: sentences, flags: flags)
+            if tightens {
+                // Bar line k of the record on the song's bar `atBar` + k (two of its bars to one
+                // of the song's when its tempo was halved to meet it, and so on).
+                let lines = source.bars.map(\.start) + [source.bars.last!.end]
+                let pins = lines.enumerated().compactMap { index, line -> TightenMap.Pin? in
+                    let output = (Double(atBar) + Double(index) * move.tempoFactor) * secondsPerBar - offset
+                    guard line > start + 1e-6, line < source.duration, output > 0 else { return nil }
+                    return TightenMap.Pin(source: line - start, output: output)
+                }
+                pin(&plan, pins: pins, label: source.label)
+            }
+            return plan
 
         case .clip(let from, let to):
             let sourceBar = source.tempo.map { Double(max(1, beatsPerBar)) * 60 / max(1, $0) } ?? secondsPerBar / move.ratio
@@ -135,8 +204,32 @@ public enum SourceFitting {
             sentences.append("\(span) of \(source.label), fitted to \(bars) bar\(bars == 1 ? "" : "s") of the song.")
             sentences.append(move.sentence)
             sentences.append("Loops in each section that plays it.")
-            return SourcePlan(shape: shape, move: move, region: region, offset: 0, bars: bars, cut: region.start,
-                              secondsPerBar: secondsPerBar, sentences: sentences, flags: flags)
+            var plan = SourcePlan(shape: shape, move: move, region: region, offset: 0, bars: bars, cut: region.start,
+                                  secondsPerBar: secondsPerBar, sentences: sentences, flags: flags)
+            if tightens {
+                // Each of its bars an equal share of the song's bars it fills, its end on theirs.
+                let share = Double(bars) * secondsPerBar / Double(count)
+                var pins = (1..<count).map { step in
+                    TightenMap.Pin(source: clipRegion(of: source, from: from + step, to: from + step + 1, secondsPerBar: sourceBar).start - region.start,
+                                   output: Double(step) * share)
+                }
+                pins.append(TightenMap.Pin(source: region.duration, output: Double(bars) * secondsPerBar))
+                pin(&plan, pins: pins, label: source.label)
+            }
+            return plan
+        }
+    }
+
+    /// The plan's anchors from its pins, and what it says about them.
+    private static func pin(_ plan: inout SourcePlan, pins: [TightenMap.Pin], label: String) {
+        guard !pins.isEmpty else { return }
+        let (anchors, held) = TightenMap.anchors(pins, ratio: plan.move.ratio)
+        plan.anchors = anchors
+        plan.held = held
+        plan.sentences.append("Tightened: each of its bars stretched onto one of the song's, so it keeps time with what is programmed under it.")
+        if held > 0 {
+            plan.flags.append("\(held) of \(label)'s \(pins.count) bars are more than \(Int(TightenMap.limit * 100))% off its overall stretch; "
+                              + "each is held to that, and the bars after it catch up.")
         }
     }
 

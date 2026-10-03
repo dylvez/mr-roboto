@@ -258,6 +258,11 @@ public enum DirectorPrompt {
         of records starts. When it lands in the wrong place or key, do not bring it in again: adopt \
         with kind fitted and the source's id fits it again from the untouched record — at_bar a \
         bar later, semitones by ear, or neither to follow the song's key and tempo as they are now. \
+        "The beat drifts off the record", "it doesn't sit with the drums" after a while is drift: \
+        a record played by people pushes and drags, a programmed kit does not. Fit it again with \
+        tighten on, and each of its bars is stretched onto one of the song's. It is on unasked unless \
+        so many of its bars would be held that its bar lines look misread; then the plan says so, and \
+        tightening anyway can make a bar lurch: say that before you turn it on. \
         Which sections play it is the form's, as for any stem. Every record stays a source to clear.
 
         A message may end with a line "Asked of:" and persona ids. Then the user wants only those \

@@ -155,6 +155,83 @@ public struct SignalsmithTimeStretcher: TimeStretcher {
         }
     }
 
+    // MARK: A rate that varies
+
+    /// Stretches planar Float channels along a time map: `anchors` pin moments of the input
+    /// (seconds from its start) to moments of the output, joined by straight lines from (0, 0),
+    /// and the last line carries on to the input's end. What tightens a record onto a grid: each
+    /// of its bars stretched by its own amount, so its bar lines land on the grid's.
+    ///
+    /// Run the way `exact` runs a constant stretch — an output seek primes the library so the
+    /// first output sample is aligned to the first input sample, then the input is fed ahead of
+    /// the output by the library's latency — except that the input fed for each chunk of output
+    /// is read off the map, so the rate is the map's slope there. An anchored moment lands where
+    /// it was pinned to within a few milliseconds (`TimeStretchTests`). A map that is one straight
+    /// line is the constant stretch, bit for bit.
+    public func stretch(planar input: [[Float]], sampleRate: Double, anchors: [StretchAnchor], pitchShift semitones: Double = 0) throws -> [[Float]] {
+        guard sampleRate > 0 else { throw Error.invalidArgument("sample rate must be positive, got \(sampleRate)") }
+        guard semitones.isFinite else { throw Error.invalidArgument("pitch shift must be finite") }
+        let channels = input.count
+        guard channels > 0 else { throw Error.invalidArgument("no channels") }
+        let inFrames = input[0].count
+        guard input.allSatisfy({ $0.count == inFrames }) else { throw Error.invalidArgument("channels differ in length") }
+        let map = try StretchMap(anchors, sampleRate: sampleRate, inputFrames: inFrames)
+        if let ratio = map.constantRatio { return try stretch(planar: input, sampleRate: sampleRate, ratio: ratio, pitchShift: semitones) }
+        let outFrames = Int(map.output(Double(inFrames)).rounded())
+        guard inFrames > 0, outFrames > 0 else { return Array(repeating: [], count: channels) }
+
+        guard let handle = preset.makeHandle(channels: channels, sampleRate: sampleRate, seed: seed) else {
+            throw Error.allocationFailed("a \(channels)-channel stretcher at \(sampleRate) Hz with \(preset)")
+        }
+        defer { ss_stretch_destroy(handle) }
+        ss_stretch_set_time_factor(handle, Double(outFrames) / Double(inFrames))
+        if semitones != 0 {
+            ss_stretch_set_transpose_semitones(handle, semitones, tonalityLimitHz)
+            if preserveFormants { ss_stretch_set_formant_semitones(handle, 0, true) }
+        }
+        let inputLatency = Int(ss_stretch_input_latency(handle))
+        let outputLatency = Int(ss_stretch_output_latency(handle))
+        // The input the library has been fed once output `y` is out: the input `y` maps to,
+        // `outputLatency` of output further on, plus the input latency.
+        func fed(_ y: Int) -> Int { Int(map.input(Double(y + outputLatency)).rounded()) + inputLatency }
+
+        // Padded with silence past the end, for the latency's worth the tail reads.
+        let padded = max(inFrames, fed(outFrames)) + 1
+        var source = [Float](repeating: 0, count: channels * padded)
+        for c in 0..<channels {
+            input[c].withUnsafeBufferPointer { src in
+                source.withUnsafeMutableBufferPointer { dst in
+                    if inFrames > 0 { (dst.baseAddress! + c * padded).update(from: src.baseAddress!, count: inFrames) }
+                }
+            }
+        }
+        var result = [Float](repeating: 0, count: channels * outFrames)
+        let chunk = 256
+        source.withUnsafeBufferPointer { src in
+            result.withUnsafeMutableBufferPointer { dst in
+                func inputs(at frame: Int) -> [UnsafePointer<Float>?] { (0..<channels).map { src.baseAddress! + $0 * padded + frame } }
+                func outputs(at frame: Int) -> [UnsafeMutablePointer<Float>?] { (0..<channels).map { dst.baseAddress! + $0 * outFrames + frame } }
+                var done = fed(0)
+                inputs(at: 0).withUnsafeBufferPointer { ss_stretch_output_seek(handle, $0.baseAddress!, Int32(done)) }
+                var y = 0
+                while y < outFrames {
+                    let count = min(chunk, outFrames - y)
+                    let target = min(padded, max(done, fed(y + count)))
+                    inputs(at: done).withUnsafeBufferPointer { ip in
+                        outputs(at: y).withUnsafeBufferPointer { op in
+                            ss_stretch_process(handle, ip.baseAddress!, Int32(target - done), op.baseAddress!, Int32(count))
+                        }
+                    }
+                    done = target
+                    y += count
+                }
+            }
+        }
+        return (0..<channels).map { c in
+            result.withUnsafeBufferPointer { Array(UnsafeBufferPointer(start: $0.baseAddress! + c * outFrames, count: outFrames)) }
+        }
+    }
+
     // MARK: Helpers
 
     /// Float32 planar copies of every channel of `buffer`, converting from Int16/Int32/interleaved.
@@ -165,5 +242,51 @@ public struct SignalsmithTimeStretcher: TimeStretcher {
         let n = Int(float.frameLength)
         guard n > 0, let data = float.floatChannelData else { return Array(repeating: [], count: channels) }
         return (0..<channels).map { Array(UnsafeBufferPointer(start: data[$0], count: n)) }
+    }
+}
+
+/// A moment of the input pinned to a moment of the output, both in seconds from the start.
+public struct StretchAnchor: Hashable, Sendable {
+    public var input: Double
+    public var output: Double
+
+    public init(input: Double, output: Double) {
+        self.input = input
+        self.output = output
+    }
+}
+
+/// A piecewise-linear time map in frames: through (0, 0) and the anchors, the last line carried on.
+struct StretchMap {
+    private var inputs: [Double] = [0]
+    private var outputs: [Double] = [0]
+
+    init(_ anchors: [StretchAnchor], sampleRate: Double, inputFrames: Int) throws {
+        for anchor in anchors.sorted(by: { $0.input < $1.input }) {
+            let x = anchor.input * sampleRate, y = anchor.output * sampleRate
+            guard x.isFinite, y.isFinite else { throw SignalsmithTimeStretcher.Error.invalidArgument("an anchor is not finite") }
+            if x <= inputs.last! + 0.5 { continue }
+            guard y > outputs.last! else { throw SignalsmithTimeStretcher.Error.invalidArgument("anchors must move forward in time") }
+            inputs.append(x)
+            outputs.append(y)
+        }
+        guard inputs.count > 1 else { throw SignalsmithTimeStretcher.Error.invalidArgument("no anchor past the start") }
+    }
+
+    /// The ratio when the map is one straight line, else nil.
+    var constantRatio: Double? {
+        let first = outputs[1] / inputs[1]
+        for i in 1..<inputs.count where abs((outputs[i] - outputs[i - 1]) / (inputs[i] - inputs[i - 1]) - first) > 1e-9 { return nil }
+        return first
+    }
+
+    func output(_ x: Double) -> Double { Self.interpolate(x, from: inputs, to: outputs) }
+    func input(_ y: Double) -> Double { Self.interpolate(y, from: outputs, to: inputs) }
+
+    private static func interpolate(_ value: Double, from a: [Double], to b: [Double]) -> Double {
+        var index = 1
+        while index < a.count - 1, value > a[index] { index += 1 }
+        let slope = (b[index] - b[index - 1]) / (a[index] - a[index - 1])
+        return b[index - 1] + (value - a[index - 1]) * slope
     }
 }

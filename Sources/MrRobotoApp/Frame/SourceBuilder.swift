@@ -27,9 +27,12 @@ public struct SourceRequest: Equatable, Sendable {
     /// Whether the song takes the record's key and tempo rather than the record taking the song's.
     /// Nil: when the song has nothing in it yet.
     public var takesItsGrid: Bool?
+    /// Each of its bars stretched onto one of the song's, rather than one ratio for all. Nil: unless
+    /// so many of its bars would be held that its bar lines look misread (`TightenMap.mostHeld`).
+    public var tighten: Bool?
 
     public init(song: SongID, stem: String, bars: Range<Int>? = nil, atBar: Int = 0, semitones: Int? = nil,
-                sections: [SectionID]? = nil, takesItsGrid: Bool? = nil) {
+                sections: [SectionID]? = nil, takesItsGrid: Bool? = nil, tighten: Bool? = nil) {
         self.song = song
         self.stem = stem
         self.bars = bars
@@ -37,6 +40,7 @@ public struct SourceRequest: Equatable, Sendable {
         self.semitones = semitones
         self.sections = sections
         self.takesItsGrid = takesItsGrid
+        self.tighten = tighten
     }
 
     public var isClip: Bool { bars != nil }
@@ -79,6 +83,9 @@ struct SourcePick: Sendable {
     var fit: SourceFit
     var record: RecordID?
     var title: String
+    /// Left as recorded unasked because tightened, this many of its bars of so many would have been
+    /// held: its bar lines look misread.
+    var declined: (held: Int, bars: Int)?
 }
 
 enum Sources {
@@ -134,7 +141,7 @@ enum Sources {
     static func render(_ pick: SourcePick, to url: URL) throws -> (sampleRate: Double, channels: Int, duration: Double) {
         let span = try AudioRegion.read(pick.url, from: pick.plan.region.start, to: pick.plan.region.end)
         guard let first = span.planar.first, !first.isEmpty else { throw SourceError.missingMedia(pick.material.label) }
-        var moved = try MergeRender.audio(span.planar, sampleRate: span.sampleRate, move: pick.plan.move)
+        var moved = try MergeRender.audio(span.planar, sampleRate: span.sampleRate, move: pick.plan.move, anchors: pick.plan.anchors)
         if let gain = pick.fit.gainDB, gain != 0 {
             let factor = Float(pow(10, gain / 20))
             moved = moved.map { $0.map { $0 * factor } }
@@ -164,8 +171,8 @@ enum Sources {
         if plan.isClip {
             (from, to) = (plan.region.start, plan.region.end)
         } else {
-            from = max(plan.region.start, plan.region.start + (start - plan.offset) / plan.move.ratio)
-            to = min(plan.region.end, plan.region.start + (start + window - plan.offset) / plan.move.ratio)
+            from = max(plan.region.start, plan.region.start + plan.source(atOutput: start - plan.offset))
+            to = min(plan.region.end, plan.region.start + plan.source(atOutput: start + window - plan.offset))
         }
         var span = try AudioRegion.read(pick.url, from: from, to: max(from, to))
         let rate = span.sampleRate > 0 ? span.sampleRate : 48_000
@@ -176,8 +183,9 @@ enum Sources {
             let factor = Float(pow(10, gain / 20))
             span.planar = span.planar.map { $0.map { $0 * factor } }
         }
-        let moved = try MergeRender.audio(span.planar, sampleRate: rate, move: plan.move)
-        let landing = plan.isClip ? 0 : max(0, plan.offset + (from - plan.region.start) * plan.move.ratio - start)
+        let anchors = plan.anchors(from: from - plan.region.start, to: max(from, to) - plan.region.start)
+        let moved = try MergeRender.audio(span.planar, sampleRate: rate, move: plan.move, anchors: anchors)
+        let landing = plan.isClip ? 0 : max(0, plan.offset + plan.output(atSource: from - plan.region.start) - start)
         let loop = plan.isClip ? Int((Double(plan.bars) * plan.secondsPerBar * rate).rounded()) : Int.max
         for channel in 0..<2 {
             let source = moved[min(channel, moved.count - 1)]
@@ -196,7 +204,7 @@ enum Sources {
         var starts: [(bar: Int, name: String)] = []
         var counts: [String: Int] = [:]
         for range in analysis.sections {
-            let bar = Int(((plan.offset + (range.start - plan.region.start) * plan.move.ratio) / plan.secondsPerBar).rounded())
+            let bar = Int(((plan.offset + plan.output(atSource: range.start - plan.region.start)) / plan.secondsPerBar).rounded())
             guard bar < plan.bars, (starts.last?.bar ?? -1) < bar else { continue }
             let label = (range.label?.isEmpty == false ? range.label! : "Part").capitalized
             counts[label, default: 0] += 1
@@ -261,9 +269,9 @@ extension AppState {
         }
         let fallback = Guidance.take(in: source).flatMap { Guidance.audio(of: $0) }.flatMap { library.record(forMedia: $0.media)?.id }
         let record = audio.sourceRecord ?? Guidance.sourceRecord(of: version, in: source) ?? fallback
-        let lufs = (Guidance.analysis(for: version, in: source) ?? Guidance.analysis(in: source))?.loudness?.integrated
+        let analysis = Guidance.analysis(for: version, in: source) ?? Guidance.analysis(in: source)
         return try pick(material, url: url, media: audio.media, song: source.id, stem: request.stem, title: source.title,
-                        record: record, lufs: lufs, request: request)
+                        record: record, lufs: analysis?.loudness?.integrated, request: request)
     }
 
     /// The plan for a material against the open song's grid (or its own, when the song takes it).
@@ -274,7 +282,17 @@ extension AppState {
         let target = ownGrid ? MergeTarget(key: material.key, tempo: material.tempo) : MergeTarget(key: song.key, tempo: song.tempo)
         let meter = (ownGrid ? (librarySong(request.song)?.timeSignature ?? song.timeSignature) : song.timeSignature).beatsPerBar
         let shape: SourceShape = request.bars.map { .clip(from: $0.lowerBound, to: $0.upperBound) } ?? .whole(atBar: request.atBar)
-        let plan = SourceFitting.plan(material, into: target, beatsPerBar: meter, shape: shape, semitones: request.semitones)
+        func planned(tightened: Bool) -> SourcePlan {
+            SourceFitting.plan(material, into: target, beatsPerBar: meter, shape: shape, semitones: request.semitones, tighten: tightened)
+        }
+        // Tightened unless asked not to, or unless its bar lines look misread: bar lines that are
+        // wrong are worse to tighten to than none, each wrong one a bar sped up and the next slowed.
+        var declined: (held: Int, bars: Int)?
+        var plan = planned(tightened: request.tighten ?? true)
+        if request.tighten == nil, plan.looksMisread {
+            declined = (plan.held, plan.pinned)
+            plan = planned(tightened: false)
+        }
         // One level for every stem of a record, toward the records already in the song — bars of it
         // too, or a clip of a hot record came in 7 dB over the same record's whole stem. It is in the
         // render; a clip of a quiet bar is then brought up like any chop (`ChopLevel`) as it comes in.
@@ -284,8 +302,9 @@ extension AppState {
                             fromBar: request.bars?.lowerBound, toBar: request.bars?.upperBound,
                             atBar: plan.isClip ? nil : request.atBar,
                             semitones: plan.move.semitones, byEar: request.semitones != nil, ratio: plan.move.ratio,
-                            key: material.key, tempo: material.tempo, recordLUFS: lufs, gainDB: gain.flatMap { $0 == 0 ? nil : $0 })
-        return SourcePick(url: url, material: material, plan: plan, fit: fit, record: record, title: title)
+                            tightened: plan.isTightened, key: material.key, tempo: material.tempo, recordLUFS: lufs,
+                            gainDB: gain.flatMap { $0 == 0 ? nil : $0 })
+        return SourcePick(url: url, material: material, plan: plan, fit: fit, record: record, title: title, declined: declined)
     }
 
     /// The plan's sentences with the level and the grid said, the way the surface and the Director
@@ -298,7 +317,16 @@ extension AppState {
         if takesGrid(request) {
             out.append("The song takes its key and tempo: \(pick.material.key?.name ?? "no key"), \(Int((pick.material.tempo ?? song?.tempo ?? 120).rounded())) bpm.")
         }
+        if request.tighten == nil, let line = Self.tightenLine(pick) { out.append(line) }
         return out
+    }
+
+    /// Why a source was left as recorded unasked: its bar lines look misread.
+    static func tightenLine(_ pick: SourcePick) -> String? {
+        guard let declined = pick.declined else { return nil }
+        return "Played as recorded, drift and all: tightened, \(declined.held) of its \(declined.bars) bars would hit the "
+            + "\(Int(TightenMap.limit * 100))% limit on a bar's stretch, so its bar lines look misread rather than played, and "
+            + "tightening to them would lurch. Tighten it to try anyway."
     }
 
     /// Some bars of the source as the song would have them, rendered off the main actor. With the
@@ -356,14 +384,15 @@ extension AppState {
     /// key or tempo as they are now. A new version of the same part, so every section that plays
     /// it plays the new fit.
     @discardableResult
-    func refitSource(_ part: PartID, semitones: Int?, atBar: Int? = nil, by author: Author = .user) async throws -> PartVersion {
+    func refitSource(_ part: PartID, semitones: Int?, atBar: Int? = nil, tighten: Bool? = nil, by author: Author = .user) async throws -> PartVersion {
         guard let store, libraryIsWritable else { throw SourceError.noLibrary }
         guard let opened = song else { throw SourceError.noSong }
         guard let current = opened.latestVersion(of: part), let fit = SourceFitting.fit(of: current) else { throw SourceError.notFitted }
         guard let url = try? store.mediaURL(for: fit.media, song: fit.song) else { throw SourceError.sourceGone(Sources.label(stem: fit.stem, of: fit.label)) }
         let request = SourceRequest(song: fit.song ?? SongID(), stem: fit.stem == "record" ? Mashups.full : fit.stem,
                                     bars: fit.fromBar.flatMap { from in fit.toBar.map { from..<$0 } },
-                                    atBar: atBar ?? fit.atBar ?? 0, semitones: semitones, takesItsGrid: false)
+                                    atBar: atBar ?? fit.atBar ?? 0, semitones: semitones, takesItsGrid: false,
+                                    tighten: tighten ?? fit.tightened)
         // From the record as the library has it now — a corrected grid is read — or, with its song
         // gone, from what the fit kept.
         let pick: SourcePick

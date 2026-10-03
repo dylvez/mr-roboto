@@ -135,6 +135,9 @@ struct SourcesSurfaceView: View {
                 .help("Where the record's first bar lands. Zero and below: it is already under way when the song starts.")
             }
 
+            BoothChip(model.isTightened ? "Tight to the grid" : "As recorded, drift and all", isOn: model.isTightened) { model.toggleTighten() }
+                .help("Tight: each of its bars stretched onto one of the song's, so it keeps time with a programmed kit. As recorded: one stretch for all of it, the record's own drift kept. Unless you choose, it is tight unless its bar lines look misread.")
+
             if model.isBlankSong {
                 Toggle("The song takes its key and tempo", isOn: $model.takesItsGrid)
                     .toggleStyle(.checkbox)
@@ -217,6 +220,10 @@ struct SourcesSurfaceView: View {
                                 Button("bar ▶") { Task { await model.refit(version.partID, bars: 1) } }
                                     .help("Laid a bar later")
                             }
+                            let tight = model.fit(of: version)?.tightened ?? false
+                            Button(tight ? "Loosen" : "Tighten") { Task { await model.refit(version.partID, tighten: !tight) } }
+                                .help(tight ? "Fitted again with one stretch for all of it, the record's drift kept"
+                                            : "Fitted again with each of its bars stretched onto one of the song's")
                             Button("Fit again") { Task { await model.refit(version.partID) } }
                                 .help("Fitted again to the song's key and tempo as they are now, from the untouched record")
                         }
