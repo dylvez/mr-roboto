@@ -468,6 +468,12 @@ final class SurfaceWiring {
 
     /// Forget everything the bench no longer holds. Called on every lookup, which is at most three
     /// items, and is what makes a closed surface's engine work and its draft go away together.
+    /// Has a surface's model read its binding again, in place: a Chop lane whose chop was given
+    /// another level reads its bar at it. Nothing to do for a surface with no model built.
+    func reloadModel(for id: SurfaceID) {
+        chops[id]?.load()
+    }
+
     /// Lets go of a surface's model, so the next draw builds it again from its binding — after
     /// the frame changed what the surface is bound to (a version restored from Parts).
     func discardModel(for id: SurfaceID) {

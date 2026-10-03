@@ -59,7 +59,15 @@ extension AppState {
         sample.gainDB = level == 0 ? nil : level
         let name = PartLabel.title(of: version)
         let said = level == 0 ? "\(name), as recorded" : "\(name), \(ChopLevel.spoken(level))"
-        guard record(version.deriving(.sample(sample), by: author, operation: Operation.level, note: version.note)) else { return nil }
+        let levelled = version.deriving(.sample(sample), by: author, operation: Operation.level, note: version.note)
+        guard record(levelled) else { return nil }
+        // A Chop lane open on this chop is holding the bar at its old level: it follows the chop
+        // to this version and reads the bar again.
+        for item in bench.items where item.kind == .chopLane
+            && bound(for: item.id).contains(where: { song.version($0)?.partID == part }) {
+            surfaceKept(levelled, on: item.id)
+            reloadSurfaceModel(item.id)
+        }
         note(.session, level == 0 ? "\(name) plays as recorded" : "\(name) plays \(ChopLevel.spoken(level))",
              detail: "\(said): its pads, its loop and a groove on its slices, wherever they are heard. Nothing in the mix moved.")
         return level

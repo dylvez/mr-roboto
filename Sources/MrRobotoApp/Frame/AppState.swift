@@ -497,6 +497,7 @@ public final class AppState {
             SurfaceWiring.shared.finishRunningWork(on: state, keeping: keeping)
         }
         state.discardSurfaceModel = { SurfaceWiring.shared.discardModel(for: $0) }
+        state.reloadSurfaceModel = { SurfaceWiring.shared.reloadModel(for: $0) }
         state.startFreshPart = { [weak state] item, type in
             guard let state, type == .melody else { return }
             SurfaceWiring.shared.pianoRollModel(for: item, app: state).startFreshTune()
@@ -1069,6 +1070,8 @@ public final class AppState {
 
     /// Lets go of a surface's model so the next draw rebuilds it from its binding.
     @ObservationIgnored var discardSurfaceModel: (SurfaceID) -> Void = { _ in }
+    /// Has a surface read what it is bound to again, keeping the model it has while it does.
+    @ObservationIgnored var reloadSurfaceModel: (SurfaceID) -> Void = { _ in }
 
     /// Turns an open Mixer to its Master tab. The wiring installs it.
     @ObservationIgnored var showMasterTab: (SurfaceID) -> Void = { _ in }

@@ -56,10 +56,16 @@ public protocol ChopLaneHost: AnyObject {
     /// A groove this lane made from its chop has been recorded. The host puts the groove on the
     /// chop's own slices, so the song plays what the lane played.
     func madeGroove(_ groove: PartVersion, fromChop chop: PartID)
+
+    /// Gives a chop the song holds the level its bar asks for, or puts it back as recorded, as
+    /// the chop's next version. The level it now plays at in dB over its recording (0 as
+    /// recorded), or nil when nothing moved.
+    func levelChop(_ chop: PartID, asRecorded: Bool) -> Double?
 }
 
 extension ChopLaneHost {
     public func madeGroove(_ groove: PartVersion, fromChop chop: PartID) {}
+    public func levelChop(_ chop: PartID, asRecorded: Bool) -> Double? { nil }
 }
 
 /// The bar the Chop lane opens against: the audio, where it came from, and the grid it sits on.

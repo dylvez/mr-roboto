@@ -53,6 +53,7 @@ public struct ChopLaneView: View {
         // "Play this bar, chopped"; a second button here that did the same under another name was
         // one of three play buttons with three names.
         HStack(alignment: .firstTextBaseline, spacing: 10) {
+            levelControl
             Spacer()
             Button("Stop") { surface.stop() }
                 .buttonStyle(.plain)
@@ -62,6 +63,41 @@ public struct ChopLaneView: View {
             // The chop keeps itself a moment after the last edit, like every surface.
             surface.statusBar
                 .fixedSize()
+        }
+    }
+
+    /// The chop's level: what it plays at over its recording, with the way back; or, for a quiet
+    /// bar that plays as recorded, the one press that brings it up. Nothing for a bar that is loud
+    /// enough as it is, which is nearly every bar of a mastered record.
+    @ViewBuilder
+    private var levelControl: some View {
+        if let gain = surface.level.gainDB {
+            Text("LEVEL")
+                .font(Design.Typography.label)
+                .tracking(0.8)
+                .foregroundStyle(Design.Palette.inkTertiary)
+            Text(String(format: "%+.1f dB", gain))
+                .font(Design.Typography.numeric(12))
+                .foregroundStyle(Design.Palette.accent)
+                .help("The bar plays this much louder than it was recorded: its pads here, its loop and a groove on its slices in the song.")
+            Button("As recorded") { surface.playAsRecorded() }
+                .buttonStyle(.plain)
+                .font(Design.Typography.ui(12))
+                .foregroundStyle(Design.Palette.inkSecondary)
+                .help("Play the bar at its recording's own level again. A new version of the chop; the mix does not move.")
+        } else if let asks = surface.level.asks {
+            Text("LEVEL")
+                .font(Design.Typography.label)
+                .tracking(0.8)
+                .foregroundStyle(Design.Palette.inkTertiary)
+            Text("quiet as recorded")
+                .font(Design.Typography.ui(12))
+                .foregroundStyle(Design.Palette.inkSecondary)
+            Button(String(format: "Level it %+.1f dB", asks)) { surface.levelBar() }
+                .buttonStyle(.plain)
+                .font(Design.Typography.ui(12, weight: .semibold))
+                .foregroundStyle(Design.Palette.accent)
+                .help("Bring the bar up to where an instrument sits, at the chop: its pads here, its loop and a groove on its slices in the song. A new version of the chop; the mix does not move.")
         }
     }
 

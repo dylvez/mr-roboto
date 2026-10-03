@@ -968,6 +968,53 @@ public final class ChopLaneSurface: Surface {
         return nil
     }
 
+    // MARK: Level
+
+    /// How loud the chop plays against its recording, and what its bar asks for.
+    ///
+    /// A quiet bar is brought up as it is cut. One cut before that, or one whose level was taken
+    /// off, plays as recorded, and the lane is where that is seen and changed by hand.
+    public struct Level: Equatable, Sendable {
+        /// dB over the recording. Nil plays it as recorded.
+        public var gainDB: Double?
+        /// What the bar as recorded asks to be brought up by. Nil when it is loud enough.
+        public var asks: Double?
+
+        public init(gainDB: Double? = nil, asks: Double? = nil) {
+            self.gainDB = gainDB
+            self.asks = asks
+        }
+    }
+
+    /// Set by whatever loaded the bar, which read it as recorded. The lane itself hears the bar
+    /// at its level and cannot tell.
+    public var level = Level()
+
+    /// Brings a quiet bar up to where an instrument sits, as the chop's next version.
+    public func levelBar() { setLevel(asRecorded: false) }
+
+    /// Plays the chop at its recording's own level again.
+    public func playAsRecorded() { setLevel(asRecorded: true) }
+
+    private func setLevel(asRecorded: Bool) {
+        guard let host else {
+            lastError = ChopLaneError.noHost.description
+            return
+        }
+        // The cut as it stands first: the level is the chop's next version, over that cut.
+        guard keepNow() else { return }
+        guard let chop = parent?.partID else {
+            lastError = "The song does not hold this bar yet, so it has no level to set. Cut it first."
+            return
+        }
+        if host.levelChop(chop, asRecorded: asRecorded) == nil {
+            lastError = asRecorded ? "It already plays as recorded."
+                                   : "The bar did not move: it is loud enough as recorded, or its audio could not be read."
+        } else {
+            lastError = nil
+        }
+    }
+
     /// Keep the chop as a new version of this bar. The note is the bar's own label, which is what
     /// the lane will be titled by when it is reopened on the version.
     public func keepChop() {

@@ -171,6 +171,78 @@ struct ChopLevelTests {
         #expect(recut.parents == [levelled.id] && ChopLevelFixture.gain(of: recut) == 12)
     }
 
+    @Test("the lane's Level asks its host for the chop it has kept, keeping the cut first, and says when nothing moved")
+    func theLaneAsks() throws {
+        let (lane, host) = ChopLaneFixtures.cleanLane()
+        // Nothing kept yet: the lane keeps its cut, and the level is asked for that chop.
+        lane.levelBar()
+        let kept = try #require(host.madeVersions.last)
+        #expect(kept.type == .sample && host.levelled.map(\.chop) == [kept.partID] && host.levelled.last?.asRecorded == false)
+        #expect(lane.lastError == nil)
+
+        lane.playAsRecorded()
+        #expect(host.levelled.count == 2 && host.levelled.last?.asRecorded == true)
+        host.levelAnswer = nil
+        lane.levelBar()
+        #expect(lane.lastError?.contains("loud enough as recorded") == true)
+        lane.playAsRecorded()
+        #expect(lane.lastError == "It already plays as recorded.")
+    }
+
+    @Test("in the frame: a quiet chop's lane offers the level, pressing it levels the chop and the lane reads its bar again with the feel it had")
+    func theButton() async throws {
+        let (app, directory, media) = try ChopLevelFixture.app("level-lane", scale: 0.05)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        // A chop from before chops were levelled, with a lane open on it.
+        let old = ChopLevelFixture.chop(media)
+        #expect(app.keep([old], arranged: []))
+        let id = app.openSurface(.chopLane, title: "Bar 1", bound: [old.id])
+        let item = try #require(app.bench.items.first { $0.id == id })
+        let wiring = SurfaceWiring()
+        app.reloadSurfaceModel = { wiring.reloadModel(for: $0) }
+        let binding = wiring.chopBinding(for: item, app: app)
+        await binding.waitForLoad()
+        guard case .ready(let lane) = binding.state else { Issue.record("the lane never resolved: \(binding.state)"); return }
+
+        let asks = try #require(lane.level.asks)
+        #expect(lane.level.gainDB == nil && asks == app.chopReading(old)?.gainDB)
+        let quiet = ChopLevelFixture.rms(lane.source.planar)
+        lane.feelName = lane.suggestedFeels.first?.name
+        let feel = try #require(lane.feelName)
+
+        lane.levelBar()
+        #expect(lane.lastError == nil)
+        let levelled = try #require(app.song?.latestVersion(of: old.partID))
+        #expect(ChopLevelFixture.gain(of: levelled) == asks && levelled.operation == Operation.level)
+        #expect(app.bound(for: id) == [levelled.id], "the lane follows the chop to its levelled version")
+        #expect(binding.state.isReady, "and stays up while its bar is read again")
+
+        await binding.waitForLoad()
+        guard case .ready(let after) = binding.state else { Issue.record("the lane did not come back: \(binding.state)"); return }
+        #expect(after !== lane && after.level == ChopLaneSurface.Level(gainDB: asks, asks: asks))
+        #expect(abs(20 * log10(ChopLevelFixture.rms(after.source.planar) / quiet) - asks) < 0.1, "the pads are at the level the song plays")
+        #expect(after.feelName == feel && after.sliceCount == lane.sliceCount)
+
+        // And back: as recorded, by the same control.
+        after.playAsRecorded()
+        await binding.waitForLoad()
+        guard case .ready(let back) = binding.state else { Issue.record("the lane did not come back: \(binding.state)"); return }
+        #expect(back.level == ChopLaneSurface.Level(gainDB: nil, asks: asks))
+        #expect(ChopLevelFixture.gain(of: app.song?.latestVersion(of: old.partID)) == nil)
+
+        // A bar that is loud enough offers nothing.
+        let (loudApp, loudDirectory, loudMedia) = try ChopLevelFixture.app("level-lane-loud", scale: 1)
+        defer { try? FileManager.default.removeItem(at: loudDirectory) }
+        let loud = ChopLevelFixture.chop(loudMedia)
+        #expect(loudApp.record(loud))
+        let loudID = loudApp.openSurface(.chopLane, title: "Bar 1", bound: [loud.id])
+        let loudBinding = ChopLaneBinding(item: try #require(loudApp.bench.items.first { $0.id == loudID }), app: loudApp,
+                                          service: WiringFixture.silentService())
+        await loudBinding.waitForLoad()
+        guard case .ready(let loudLane) = loudBinding.state else { Issue.record("no lane"); return }
+        #expect(loudLane.level == ChopLaneSurface.Level())
+    }
+
     @Test("the Engineer answers a quiet chop at the chop: it is flagged first, and the master is not offered until it is levelled")
     func theEngineerFlagsIt() throws {
         let observation = MixObservation(label: "Quiet", integratedLUFS: -32.8, peakDBFS: -11.2, crestDB: 14, tiltDB: 0, bandwidthHz: 16_000)

@@ -95,6 +95,12 @@ final class ChopLaneAdapter: ChopLaneHost {
         openGrid(on: groove)
     }
 
+    /// The lane's Level control. The frame rebinds the lane to the levelled version and has it read
+    /// the bar again (`AppState.levelChop`), so the pads are at the level the song plays.
+    func levelChop(_ chop: PartID, asRecorded: Bool) -> Double? {
+        app.levelChop(chop, to: asRecorded ? 0 : nil)
+    }
+
     /// A re-groove opens the Grid on it: the second half of the Gate A workflow.
     private func openGrid(on groove: PartVersion) {
         let title = groove.note.map { String($0.prefix(60)) } ?? "Re-groove"

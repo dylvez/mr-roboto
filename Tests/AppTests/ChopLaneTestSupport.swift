@@ -216,6 +216,16 @@ final class ChopLaneHostStub: ChopLaneHost {
 
     func stopAudition() { stopCount += 1 }
 
+    /// Each level the lane asked for: the chop, and whether it was to play as recorded.
+    private(set) var levelled: [(chop: PartID, asRecorded: Bool)] = []
+    /// What `levelChop` answers. Nil is "nothing moved".
+    var levelAnswer: Double? = 12
+
+    func levelChop(_ chop: PartID, asRecorded: Bool) -> Double? {
+        levelled.append((chop, asRecorded))
+        return levelAnswer
+    }
+
     @discardableResult
     func record(_ version: PartVersion) -> Bool {
         guard !refuseVersions else { return false }

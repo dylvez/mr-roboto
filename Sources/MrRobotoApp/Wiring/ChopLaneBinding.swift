@@ -66,7 +66,11 @@ final class ChopLaneBinding {
         }
         let song = app.song
         let label = version.note.map { String($0.prefix(60)) } ?? item.title
-        state = .loading(label)
+        // The same chop at another level: the lane stays up while its bar is read again, and the
+        // feel it was being tried in comes with it.
+        var before: ChopLaneSurface?
+        if case .ready(let lane) = state, lane.partID == version.partID { before = lane }
+        if before == nil { state = .loading(label) }
 
         let songID = song?.id
         let analysis = Self.analysis(in: song)
@@ -74,11 +78,14 @@ final class ChopLaneBinding {
                                  tempo: sample.detectedTempo ?? song?.tempo)
 
         resolving = Task { [weak self] in
-            let outcome = await Task.detached(priority: .userInitiated) { () -> Result<AudioRegion.Span, any Error> in
+            let outcome = await Task.detached(priority: .userInitiated) { () -> Result<(AudioRegion.Span, Double?), any Error> in
                 do {
                     let url = try store.mediaURL(for: sample.media, song: songID)
-                    // At the chop's own level, so the pads are as loud as the song plays them.
-                    return .success(try AudioRegion.read(url, from: region.start, to: region.end).levelled(by: sample.gainDB))
+                    let recorded = try AudioRegion.read(url, from: region.start, to: region.end)
+                    // What the bar asks for as recorded, for the lane's Level control; then at the
+                    // chop's own level, so the pads are as loud as the song plays them.
+                    let asks = ChopLevel.read(recorded.planar, sampleRate: recorded.sampleRate)?.gainDB
+                    return .success((recorded.levelled(by: sample.gainDB), asks))
                 } catch {
                     return .failure(error)
                 }
@@ -87,7 +94,7 @@ final class ChopLaneBinding {
             switch outcome {
             case .failure(let error):
                 self.state = .failed("\(error)")
-            case .success(let span):
+            case .success(let (span, asks)):
                 // Analysis and drawing read the dry bar; the pads play it through the chop's own
                 // chain. A dusty chop's slices are found on the clean transients — the noise bed
                 // would otherwise read as onsets — and heard the way the version says it sounds.
@@ -114,6 +121,11 @@ final class ChopLaneBinding {
                 // The cut the version kept, not a fresh detection of it. A bar just promoted from
                 // the record holds no cut yet — one marker at its start — and is detected as before.
                 if sample.slices.count > 1 { lane.restore(sample.slices, pads: sample.pads) }
+                lane.level = ChopLaneSurface.Level(gainDB: sample.gainDB, asks: asks)
+                if let before {
+                    lane.feelName = before.feelName
+                    lane.tempo = before.tempo
+                }
                 self.state = .ready(lane)
                 self.app.retitleSurface(self.item.id, to: lane.headline)
             }
