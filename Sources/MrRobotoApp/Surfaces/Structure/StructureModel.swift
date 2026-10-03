@@ -49,6 +49,11 @@ public protocol StructureHosting: AnyObject {
     func hasEarlier(_ section: SectionID) -> Bool
     /// Opens a Compare on a section as it is and as it stood before.
     func compare(_ section: SectionID)
+    /// Drums under a groove that plays a chop's slices: the same pattern on the song's drum
+    /// machine, as a groove of its own, in every section that plays the first.
+    func addDrums(under groove: PartID)
+    /// The name of the machine those drums would play on.
+    var drumMachineName: String { get }
 }
 
 public extension StructureHosting {
@@ -62,6 +67,8 @@ public extension StructureHosting {
     func shade(_ section: SectionID, to intensity: Double) {}
     func hasEarlier(_ section: SectionID) -> Bool { false }
     func compare(_ section: SectionID) {}
+    func addDrums(under groove: PartID) {}
+    var drumMachineName: String { "drum machine" }
 }
 
 /// The Structure surface's model: the sections as a working copy, edited in place and kept as
@@ -97,6 +104,21 @@ public final class StructureModel {
         /// for a part of its own. A section plays one of a part and its variations: they are one
         /// player.
         public var varies: PartID?
+        /// The chop a groove plays on instead of a drum machine, when it plays on one. Its steps
+        /// land on that chop's slices: it is the chop in a rhythm, and drums only if the chop was.
+        public var kit: Kit? = nil
+
+        public struct Kit: Hashable, Sendable {
+            public var part: PartID
+            public var name: String
+            /// Whether the chop was cut from the record or its drums stem (`Guidance.hasDrums`).
+            public var hasDrums: Bool
+        }
+
+        /// The row this is drawn in: its kind, except a groove on the slices of a chop with no
+        /// drums in it. That is the chop in a rhythm, and it sits with the chop. Groove is the row
+        /// a person turns off to lose the drums, and it used to hold the strings.
+        public var row: PartType { type == .groove && kit?.hasDrums == false ? .sample : type }
 
         /// "Groove", "Bass", "Chords" — what this is, in one word, so a row of chips is readable
         /// without opening any of them. The version titles are sentences: a groove of this app's
@@ -282,7 +304,7 @@ public final class StructureModel {
     /// rather than by recognising version titles.
     public func choices(for section: Section) -> [(type: PartType, layers: [Layer])] {
         Self.playableTypes.compactMap { type in
-            let matching = layers.filter { $0.type == type }
+            let matching = layers.filter { $0.row == type }
             return matching.isEmpty ? nil : (type, matching)
         }
     }
@@ -290,7 +312,7 @@ public final class StructureModel {
     /// The kinds a section actually sounds, in order: "Groove · Bass · Chords".
     public func kinds(of section: Section) -> [String] {
         Self.playableTypes.compactMap { type in
-            layers(of: section).contains { $0.type == type && $0.plays } ? Self.name(of: type) : nil
+            layers(of: section).contains { $0.row == type && $0.plays } ? Self.name(of: type) : nil
         }
     }
 
@@ -300,7 +322,11 @@ public final class StructureModel {
     /// pad, and a form written before any of that was stitchable plays the drums and the bass and
     /// nothing else — silently, with no line anywhere saying the chords are sitting this one out.
     public func missing(from section: Section) -> [PartType] {
-        let present = Set(layers(of: section).filter(\.plays).map(\.type))
+        let playing = layers(of: section).filter(\.plays)
+        var present = Set(playing.map(\.type))
+        // A groove on a chop's slices is that chop, re-grooved: the section plays it. Its loop
+        // was called missing, over a button that put the same bar under itself.
+        if playing.contains(where: { $0.kit != nil }) { present.insert(.sample) }
         return Self.playableTypes.filter { type in
             !present.contains(type) && layers.contains { $0.type == type && $0.plays }
         }
@@ -322,6 +348,54 @@ public final class StructureModel {
                                           : "Nothing in it plays on the transport."
         }
         return nil
+    }
+
+    /// What a section's groove is, when it is a chop in a rhythm and the song has no drums: said
+    /// under what the section plays, with the one move that puts drums there.
+    public struct DrumsOffer: Equatable, Sendable {
+        public var groove: PartID
+        /// "This section has no drums: its groove plays Bar 1 of other stem's slices."
+        public var text: String
+        public var help: String
+    }
+
+    /// The offer for a section: it plays a groove on the slices of a chop cut from a stem with no
+    /// drums in it, and the song holds no groove on a machine. Once it holds one, that groove's own
+    /// chip is how a section takes it or leaves it, and a line here would only nag.
+    public func drumsOffer(for section: Section) -> DrumsOffer? {
+        guard !layers.contains(where: { $0.type == .groove && $0.plays && $0.kit == nil }),
+              let groove = layers(of: section).first(where: { $0.plays && $0.kit?.hasDrums == false }),
+              let kit = groove.kit else { return nil }
+        let machine = host.drumMachineName
+        return DrumsOffer(groove: groove.id,
+                          text: "This section has no drums: its groove plays \(kit.name)'s slices.",
+                          help: "The same pattern on the \(machine), as a groove of its own beside this one, in every section that plays it. "
+                              + "The slices keep playing; each has its own chip here and its own strip in the Mixer.")
+    }
+
+    /// Keeps the form as it stands, then puts drums under a groove that plays a chop's slices.
+    public func addDrums(under groove: PartID) {
+        guard keep() else { return }
+        host.addDrums(under: groove)
+    }
+
+    /// Whether a chop has a groove playing its slices: its own chip is then the bar looped, beside
+    /// the chip that is the bar in a rhythm, and says so.
+    public func isRegrooved(_ layer: Layer) -> Bool {
+        layer.type == .sample && layers.contains { $0.plays && $0.kit?.part == layer.id }
+    }
+
+    /// A chip's tooltip: the part's whole title, and what it is heard on when that is not what its
+    /// row's name says — a groove on a chop's slices, and the chop whose slices a groove plays.
+    public func help(for layer: Layer, in section: Section) -> String {
+        guard layer.plays else { return "\(layer.title) — \(layer.silentReason ?? "silent"), so it makes no sound on the transport" }
+        if let kit = layer.kit {
+            return "\(layer.title) — played on \(kit.name)'s slices\(kit.hasDrums ? "" : ", not on a drum machine")"
+        }
+        if layer.type == .sample, let groove = layers(of: section).first(where: { $0.plays && $0.kit?.part == layer.id }) {
+            return "\(layer.title) — the bar looped as it was cut. \(groove.title) already plays its slices."
+        }
+        return layer.title
     }
 
     // MARK: Editing
@@ -445,7 +519,11 @@ public final class StructureModel {
     public var defaultStitch: [Lane] {
         var out: [Lane] = []
         for type in Self.playableTypes {
-            if let layer = newest(of: type) { out.append(Lane(part: layer.id)) }
+            guard let found = newest(of: type) else { continue }
+            // The looped bar stays out from under its own re-groove, as it does in an unarranged
+            // song and where the groove was made (`AppState.sections(of:playing:inPlaceOf:)`).
+            if type == .sample, out.contains(where: { layer($0.part)?.kit?.part == found.id }) { continue }
+            out.append(Lane(part: found.id))
         }
         return out
     }
@@ -570,7 +648,9 @@ public final class StructureModel {
     /// used to be named here, over a button that fills only what is missing and so did nothing.
     public var orphanedText: String? {
         let named = Set(sections.flatMap(\.stitch).map(\.part))
-        let played = Set(layers.filter { named.contains($0.id) }.map(\.type))
+        var played = Set(layers.filter { named.contains($0.id) }.map(\.type))
+        // A chop some section plays re-grooved is played (`missing(from:)`).
+        if layers.contains(where: { named.contains($0.id) && $0.plays && $0.kit != nil }) { played.insert(.sample) }
         let kinds = Self.playableTypes.filter { type in
             !played.contains(type) && layers.contains { $0.type == type && $0.plays }
         }
@@ -652,8 +732,11 @@ public final class StructureModel {
         song.partIDs.compactMap { partID in
             guard let newest = song.latestVersion(of: partID), playableTypes.contains(newest.type) else { return nil }
             let root = song.strip(of: partID)
+            let kit = newest.type == .groove ? SongPlayback.chop(under: partID, in: song).map {
+                Layer.Kit(part: $0.partID, name: PartLabel.title(of: $0), hasDrums: Guidance.hasDrums($0, in: song))
+            } : nil
             return Layer(id: partID, version: newest.id, title: PartLabel.title(of: newest),
-                         type: newest.type, plays: plays(newest), varies: root == partID ? nil : root)
+                         type: newest.type, plays: plays(newest), varies: root == partID ? nil : root, kit: kit)
         }
     }
 

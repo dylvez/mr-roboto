@@ -81,10 +81,16 @@ final class ChopLaneAdapter: ChopLaneHost {
     /// where, because the form changed without a surface on it.
     func madeGroove(_ groove: PartVersion, fromChop chop: PartID) {
         let took = app.playGroove(groove.partID, onChop: chop)
+        let name = PartLabel.title(of: groove)
+        // A bar of a stem with no drums in it, in a feel, is not a beat. The lane calls what it
+        // makes a groove either way, so the rail says which this one is and where drums come from.
+        let drumless = app.song.flatMap { song in song.latestVersion(of: chop).map { !Guidance.hasDrums($0, in: song) } } ?? false
+        let drums = drumless ? " The stem it was cut from has no drums in it: the band's question, and Structure, add them under it." : ""
         if !took.isEmpty {
-            let name = PartLabel.title(of: groove)
             app.note(.session, "\(name) plays in \(AppState.listed(took)) in place of the looped bar",
-                     detail: "It plays the chop's own slices. Structure puts the loop back.")
+                     detail: "It plays the chop's own slices. Structure puts the loop back." + drums)
+        } else if drumless {
+            app.note(.session, "\(name) plays the chop's own slices", detail: "It is the chop in that feel, not a drum kit." + drums)
         }
         openGrid(on: groove)
     }

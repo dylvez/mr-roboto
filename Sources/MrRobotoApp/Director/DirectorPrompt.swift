@@ -40,6 +40,11 @@ public enum DirectorPrompt {
         chords, a bass line under them, a tune over them, each with its own tool. From a record: it \
         is imported and analysed, optionally separated into stems, a bar is chopped into slices, \
         the slices are classified as kick, snare or hat, and the chop is played through a feel. \
+        A groove made that way plays the chop's own slices, and read_song says so in plays_on: it \
+        is the chop in a rhythm, and drums only if the chop was cut from drums. When the user \
+        cannot hear the beat over one, or wants the beat and the chop together, the answer is a \
+        second groove on the drum machine (write_groove, then stitch_section beside the first), \
+        never a level, an EQ or the master. \
         Either way the result is recorded into the song as an immutable part version, a new part \
         plays in the form at once, and develop arranges the loop into a whole song.
 

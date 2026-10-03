@@ -595,6 +595,31 @@ public enum Guidance {
         song.versions.filter { $0.type == .sample }
     }
 
+    /// Whether a chop was cut from audio with drums in it: the record, or its drums stem.
+    ///
+    /// A bar of the other, bass or vocal stem has none. Its slices are still called kick, snare
+    /// and hat — by where their weight sits — and a groove played on them is that bar in a rhythm,
+    /// not a beat. The form called it Groove all the same, so a song could hold a "groove" and a
+    /// "chop" that were the same strings twice, and nothing anywhere said there were no drums.
+    static func hasDrums(_ chop: PartVersion, in song: Song) -> Bool {
+        guard case .sample(let sample) = chop.kind else { return false }
+        guard let name = stems(in: song).last(where: { audio(of: $0)?.media == sample.media })
+            .flatMap({ audio(of: $0)?.stem }) else { return true }
+        return name.lowercased() == "drums"
+    }
+
+    /// A groove with no drums in it or beside it: the song's newest groove, when it plays the
+    /// slices of a chop cut from a stem that has none and no groove in the song is on a machine.
+    static func drumless(in song: Song) -> (groove: PartVersion, chop: PartVersion)? {
+        guard let groove = grooves(in: song).last, StructureModel.plays(groove),
+              let chop = SongPlayback.chop(under: groove.partID, in: song), !hasDrums(chop, in: song) else { return nil }
+        let onAMachine = song.partIDs.contains { part in
+            guard let newest = song.latestVersion(of: part), newest.type == .groove, StructureModel.plays(newest) else { return false }
+            return SongPlayback.chop(under: part, in: song) == nil
+        }
+        return onAMachine ? nil : (groove, chop)
+    }
+
     /// Versions of one kind with the variations first, each group in the order the graph holds it.
     ///
     /// Nearly every caller of these lists takes the last: the newest groove is what a bass line is

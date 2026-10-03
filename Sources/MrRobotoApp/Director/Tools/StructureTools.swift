@@ -75,11 +75,15 @@ enum FormTools {
     /// every form the Director wrote came out without harmony in it.
     static func defaultStitch(in song: Song) -> [Lane] {
         // The loop, not a variation of it written since for one section.
-        StructureModel.playableTypes.compactMap { type in
-            (song.versions.last { $0.type == type && StructureModel.plays($0) && !song.isVariation($0.partID) }
-                ?? song.versions.last { $0.type == type && StructureModel.plays($0) })
-                .map { Lane(part: $0.partID) }
+        var lanes: [Lane] = []
+        for type in StructureModel.playableTypes {
+            guard let newest = song.versions.last(where: { $0.type == type && StructureModel.plays($0) && !song.isVariation($0.partID) })
+                ?? song.versions.last(where: { $0.type == type && StructureModel.plays($0) }) else { continue }
+            // The looped bar stays out from under its own re-groove, as `StructureModel` leaves it.
+            if type == .sample, lanes.contains(where: { SongPlayback.chop(under: $0.part, in: song)?.partID == newest.partID }) { continue }
+            lanes.append(Lane(part: newest.partID))
         }
+        return lanes
     }
 
     /// Resolves the ids a section names into lanes, refusing anything the transport cannot sound.

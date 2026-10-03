@@ -40,6 +40,10 @@ final class StructureAdapter: StructureHosting {
 
     func hasEarlier(_ section: SectionID) -> Bool { !app.earlierStates(of: section).isEmpty }
 
+    func addDrums(under groove: PartID) { app.addDrums(under: groove) }
+
+    var drumMachineName: String { app.song.map { SongPlayback.machine(in: $0).name } ?? "drum machine" }
+
     func compare(_ section: SectionID) {
         Task { [app] in
             if await app.compareSection(section) == nil {

@@ -54,6 +54,8 @@ public enum NextMove: Equatable, Sendable {
     case develop
     /// The song as it was before it was developed.
     case putBackDevelopment
+    /// Drums under a groove that plays a chop's slices (`AppState.addDrums(under:)`).
+    case addDrums(PartID)
     case addToAlbum(AlbumID)
     /// The band's field, with a sentence ready in it and the column open. Nothing is sent: the
     /// band costs a request, and sending is yours.
@@ -72,6 +74,7 @@ public enum NextMove: Equatable, Sendable {
         case .exportMaster: return "export"
         case .develop: return "develop"
         case .putBackDevelopment: return "putBack"
+        case .addDrums(let part): return "drums|\(part.rawValue)"
         case .addToAlbum(let id): return "album|\(id.rawValue)"
         case .askBand(let text): return "ask|\(text)"
         }
@@ -275,6 +278,15 @@ enum NextAdvisor {
                     move: .surface(action)), score: 3.5))
             }
         }
+        // A chop of a stem with no drums in it, played in a feel, is the only "groove" the song has:
+        // drums under it are what a beat still wants, before a bass line is written to it.
+        if !fromTheBand, let found = Guidance.drumless(in: song) {
+            candidates.append(Candidate(option: NextOption(
+                kind: "drums", title: "Add drums under it",
+                rationale: "\(PartLabel.title(of: found.groove)) plays \(PartLabel.title(of: found.chop))'s own slices, and that stem has no drums in it. "
+                    + "This is the same pattern on the \(SongPlayback.machine(in: song).name), beside the slices, each on a strip of its own.",
+                move: .addDrums(found.groove.partID)), score: 16))
+        }
         // The loop, arranged: offered once there is a loop worth arranging and until it has been.
         // Two parts that play is a loop; three is one that is waiting to be a song.
         if !fromTheBand, !app.isDeveloping, !app.isMastering, !Develop.isDeveloped(song), let development = app.development() {
@@ -335,6 +347,9 @@ enum NextAdvisor {
             let madeBy = owner(of: followers(of: justMade).isEmpty ? nil : kind(ofPart: justMade))
             observation = madeBy == owner(of: lead) || fromTheBand ? made : "\(made) \(own)"
         }
+        // Why drums are asked for is the observation: what was just made is the chop's kit pick,
+        // and "its slices are in" says nothing about there being no drums.
+        if lead == "drums", !fromTheBand { observation = own }
         return NextQuestion(asker: asker, observation: observation, question: ask(options), options: options, stage: stage)
     }
 
@@ -440,7 +455,7 @@ enum NextAdvisor {
     static func owner(of kind: String?) -> String {
         switch kind {
         case "stems", "chop", "regroove", "record": return "Sampler"
-        case "groove", "sound": return "Beatmaker"
+        case "groove", "sound", "drums": return "Beatmaker"
         case "bass": return "Bassist"
         case "chords", "playing": return "Harmonist"
         case "words": return "Lyricist"
@@ -458,6 +473,7 @@ enum NextAdvisor {
         case "chop": return "chop a bar"
         case "regroove": return "re-groove the chop"
         case "groove": return "work the groove"
+        case "drums": return "drums under it"
         case "bass": return "a bass line"
         case "chords": return "chords"
         case "playing": return "play the chords"
@@ -528,6 +544,9 @@ enum NextAdvisor {
             if let chop = Guidance.samples(in: song).last { return "\(PartLabel.title(of: chop)) is cut and waiting for a feel." }
             return "\(Guidance.count(Guidance.stems(in: song).count, "stem")) separated, nothing chopped yet."
         case "Beatmaker":
+            if let found = Guidance.drumless(in: song) {
+                return "\(PartLabel.title(of: found.groove)) is \(PartLabel.title(of: found.chop)) in a feel: there are no drums yet."
+            }
             if let groove = Guidance.grooves(in: song).last { return "\(PartLabel.title(of: groove)) is the groove." }
             return "No groove yet."
         case "Bassist":
@@ -608,6 +627,8 @@ extension AppState {
             Task { await developAndMaster() }
         case .putBackDevelopment:
             putBackDevelopment()
+        case .addDrums(let part):
+            addDrums(under: part)
         case .addToAlbum(let id):
             if addSong(song?.id ?? SongID(), to: id) { _ = openAlbum(id) }
         case .askBand(let text):

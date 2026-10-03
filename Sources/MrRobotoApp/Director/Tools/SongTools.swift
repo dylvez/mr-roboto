@@ -61,11 +61,20 @@ public struct ReadSongTool: DirectorTool {
             /// no kick — and the treatment. It plays through that part's strip and instrument.
             public var variationOf: String?
             public var variation: String?
+            /// What a groove is heard on: a drum machine, or a chop's own slices.
+            ///
+            /// A groove on a chop is that chop in a rhythm. In the live session that asked for
+            /// this, the song's only groove was a bar of the other stem played in a feel; the user
+            /// said they could not hear the beat, and the band, reading `type: groove`, raised the
+            /// master 18.8 dB and cut 85 Hz on "the sample" to let "the kick" through. There was
+            /// no kick. Nothing it could read said so.
+            public var playsOn: String?
 
             enum CodingKeys: String, CodingKey {
                 case id, part, type, operation, author, note, key, tempo, variation
                 case mediaPath = "media_path"
                 case variationOf = "variation_of"
+                case playsOn = "plays_on"
             }
         }
 
@@ -134,7 +143,8 @@ public struct ReadSongTool: DirectorTool {
                                          mediaPath: ReadSongTool.path(of: version, song: song.id,
                                                                      store: store),
                                          variationOf: song.variation(of: version.partID)?.of.description,
-                                         variation: song.variation(of: version.partID)?.name)
+                                         variation: song.variation(of: version.partID)?.name,
+                                         playsOn: ReadSongTool.playsOn(version, in: song))
                       },
                       note: nil)
     }
@@ -154,6 +164,19 @@ extension ReadSongTool {
     static func tempo(of version: PartVersion) -> Double? {
         if case .sample(let sample) = version.kind { return sample.detectedTempo }
         return nil
+    }
+
+    /// What a groove's part is heard on now, in words the band can act on. Nil for anything else.
+    static func playsOn(_ version: PartVersion, in song: Song) -> String? {
+        guard version.type == .groove else { return nil }
+        guard let chop = SongPlayback.chop(under: version.partID, in: song) else {
+            return "the \(SongPlayback.machine(for: version.partID, in: song).name) drum machine"
+        }
+        let slices = "the slices of chop \(chop.partID.description) (\(PartLabel.title(of: chop)))"
+        return Guidance.hasDrums(chop, in: song)
+            ? "\(slices): that chop re-grooved, not a drum machine"
+            : "\(slices), cut from a stem with no drums in it: this is that chop played in a rhythm, not drums. "
+                + "A beat under it is a second groove, from write_groove, stitched beside it."
     }
 }
 

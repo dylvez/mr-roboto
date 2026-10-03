@@ -980,6 +980,15 @@ public struct SongPlayback: Equatable, Sendable {
         SynthMachine.preset(id: id) != nil || ChopSound.part(of: id) != nil
     }
 
+    /// The chop a groove part plays on, as the song holds it now, or nil when it plays on a machine.
+    /// What the form, the band's question and the Director read to say what a groove is heard on:
+    /// a groove on a chop is that chop in a rhythm, and is drums only when the chop was.
+    static func chop(under part: PartID, in song: Song) -> PartVersion? {
+        guard let chop = ChopSound.part(of: drumSoundID(for: part, in: song)),
+              let version = song.versions.last(where: { $0.partID == chop }), version.type == .sample else { return nil }
+        return version
+    }
+
     /// The song's pitched instrument, from its newest `.sound` part that names one. A song that
     /// has never chosen gets the Rhodes, which is the one that suits this app's first idiom.
     static func instrumentID(in song: Song) -> String {

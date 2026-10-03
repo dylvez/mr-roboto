@@ -748,6 +748,52 @@ extension AppState {
         return (sections, took)
     }
 
+    /// Drums under a groove that plays a chop's slices: the same pattern as a groove of its own,
+    /// on the song's drum machine, in every section that plays the first. The slices keep playing.
+    /// The two are two chips in Structure and two strips in the mix, so either is heard alone.
+    ///
+    /// A groove on a chop is the chop in a rhythm. Cut from a stem with no drums in it, it was the
+    /// only thing in the song called a groove, and "the beat" was the strings again.
+    ///
+    /// - Returns: the drums' part, or nil when `groove` is not a groove on a chop.
+    @discardableResult
+    public func addDrums(under groove: PartID, by author: Author = .user,
+                         source: SessionEntry.Source = .you) -> PartID? {
+        guard let song else { return nil }
+        // A variation of the groove is the same player: the drums go under the part it varies.
+        let root = song.strip(of: groove)
+        guard let version = song.latestVersion(of: root), case .groove(let pattern) = version.kind,
+              let chop = SongPlayback.chop(under: root, in: song) else { return nil }
+        let family = song.family(of: root)
+        // Drums made for it before are put back rather than made again.
+        let ours = Set(song.versions.filter { $0.partID == root }.map(\.id))
+        let made = song.partIDs.first { part in
+            guard !family.contains(part), !song.isVariation(part), SongPlayback.chop(under: part, in: song) == nil,
+                  song.latestVersion(of: part)?.type == .groove else { return false }
+            return song.versions.contains { $0.partID == part && !ours.isDisjoint(with: $0.parents) }
+        }
+        let machine = SongPlayback.machine(in: song)
+        let title = PartLabel.title(of: version)
+        let suffix = " on \(PartLabel.title(of: chop))"
+        let name = title.hasSuffix(suffix) ? "\(title.dropLast(suffix.count)) drums" : "Drums under \(title)"
+        let drums = made.flatMap(song.latestVersion(of:))
+            ?? version.spawning(.groove(pattern), by: author, operation: Operation.written, note: name)
+        var took: [String] = []
+        let sections = song.sections.map { section -> Section in
+            guard !section.stitch.contains(part: drums.partID),
+                  let at = section.stitch.lastIndex(where: { family.contains($0.part) }) else { return section }
+            var section = section
+            section.stitch.insert(Lane(part: drums.partID), at: at + 1)
+            took.append(section.name)
+            return section
+        }
+        guard keep(made == nil ? [drums] : [], arranged: sections) else { return nil }
+        note(source, took.isEmpty ? "\(PartLabel.title(of: drums)) is in the song" : "\(PartLabel.title(of: drums)) plays in \(Self.listed(took))",
+             detail: "The same pattern on the \(machine.name), beside \(PartLabel.title(of: chop))'s slices. "
+                 + "Each has its own chip in Structure and its own strip in the Mixer.")
+        return drums.partID
+    }
+
     @discardableResult
     public func setInstrument(_ id: String, for part: PartID? = nil, by author: Author = .user) -> Bool {
         guard let spec = InstrumentVoiceSpec.preset(id: id), let song else { return false }

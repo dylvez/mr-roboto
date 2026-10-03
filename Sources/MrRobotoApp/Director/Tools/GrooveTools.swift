@@ -293,6 +293,14 @@ public struct AuditionTool: DirectorTool {
     }
 
     public func run(_ input: Input) async throws -> Output {
+        // A version id from read_song is not a handle. It used to fail as "there is no groove
+        // called 969F04C7-…, nothing of that kind has been made yet", about a groove in the song.
+        if UUID(uuidString: input.groove) != nil {
+            throw DirectorToolFailure(
+                tool: name,
+                reason: "\(input.groove) is a version in the song, and audition plays a groove handle from regroove_chop.",
+                suggestion: "The song's own parts are heard on the transport, by the user, and in compare_section. Say what to listen for instead.")
+        }
         let stored = try await workbench.groove(input.groove)
         let bars = input.bars.map { min($0, stored.plan.bars) } ?? stored.plan.bars
         guard let audition else {

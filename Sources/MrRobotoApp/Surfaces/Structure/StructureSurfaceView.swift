@@ -316,13 +316,12 @@ private struct SectionDetail: View {
                                 .frame(width: 48, alignment: .leading)
                             FlowRow(spacing: 4) {
                                 ForEach(choice.layers) { layer in
-                                    FormChip(Self.chipTitle(layer),
+                                    FormChip(Self.chipTitle(layer) + (model.isRegrooved(layer) ? " · loop" : ""),
                                              isOn: section.stitch.contains(part: layer.id)) {
                                         disarm()
                                         model.toggle(layer.id, in: section.id)
                                     }
-                                    .help(layer.plays ? layer.title
-                                                      : "\(layer.title) — \(layer.silentReason ?? "silent"), so it makes no sound on the transport")
+                                    .help(model.help(for: layer, in: section))
                                 }
                             }
                         }
@@ -334,6 +333,17 @@ private struct SectionDetail: View {
                             .font(Design.Typography.ui(11.5, weight: .regular))
                             .foregroundStyle(Design.Palette.inkSecondary)
                         FormChip("Add \(missing)", isOn: false) { disarm(); model.fill(section.id) }
+                    }
+                }
+                // A groove on the slices of a chop with no drums in it is not drums. Said here,
+                // because turning the chop's own chip off left "the groove", and it was the chop.
+                if let offer = model.drumsOffer(for: section) {
+                    HStack(spacing: 8) {
+                        Text(offer.text)
+                            .font(Design.Typography.ui(11.5, weight: .regular))
+                            .foregroundStyle(Design.Palette.inkSecondary)
+                        FormChip("Add drums", isOn: false) { disarm(); model.addDrums(under: offer.groove) }
+                            .help(offer.help)
                     }
                 }
                 if let silence = model.silence(of: section) {
