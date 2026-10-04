@@ -44,6 +44,17 @@ public struct ClaudeUsage: Sendable, Equatable, Hashable, Codable {
 
     public static func += (lhs: inout ClaudeUsage, rhs: ClaudeUsage) { lhs = lhs + rhs }
 
+    /// One reply's figures with a later reading of the same reply taken in. A stream counts
+    /// cumulatively, so a later figure replaces the earlier one where it has grown and a figure the
+    /// later event leaves out stands: nothing in one reply is ever added to itself.
+    public func broughtUpToDate(by later: ClaudeUsage) -> ClaudeUsage {
+        ClaudeUsage(inputTokens: max(inputTokens, later.inputTokens),
+                    outputTokens: max(outputTokens, later.outputTokens),
+                    cacheCreationTokens: max(cacheCreationTokens, later.cacheCreationTokens),
+                    cacheReadTokens: max(cacheReadTokens, later.cacheReadTokens),
+                    cacheCreation1hTokens: max(cacheCreation1hTokens, later.cacheCreation1hTokens))
+    }
+
     /// What this usage cost on a given model.
     public func cost(on model: ClaudeModel) -> Decimal {
         let price = model.pricing

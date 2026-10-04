@@ -223,7 +223,8 @@ public struct ClaudeMessageBuilder: Sendable {
         case .messageStart(let id, let model, let usage):
             self.id = id
             self.model = model
-            // `message_start` carries the input side of the bill; `message_delta` carries output.
+            // `message_start` carries the input side of the bill, and `message_delta` brings the
+            // whole of it up to date at the end.
             self.usage = usage
         case .contentBlockStart(let index, let kind):
             if blocks[index] == nil { order.append(index) }
@@ -257,7 +258,10 @@ public struct ClaudeMessageBuilder: Sendable {
         case .messageDelta(let stopReason, let refusal, let usage):
             if let stopReason { stopReasonRaw = stopReason }
             if let refusal { self.refusal = refusal }
-            self.usage += usage
+            // Its figures are running totals for the reply, and the API repeats the prompt's there
+            // beside the output: added to what `message_start` said, every request read as having
+            // sent its prompt twice and the session as costing about double.
+            self.usage = self.usage.broughtUpToDate(by: usage)
         case .messageStop:
             isComplete = true
         case .ping:

@@ -169,6 +169,21 @@ struct DirectorStreamTests {
         #expect(response.usage.promptTokens == 4700)
     }
 
+    @Test("A closing event that repeats the prompt's figures does not count the prompt twice")
+    func usageIsCumulative() throws {
+        // What the API sends now: the prompt's counts again at the end, beside the output.
+        let body = DirectorSSE.start(inputTokens: 4, cacheRead: 33_000, cacheCreation: 600)
+            + DirectorSSE.text("Done.")
+            + DirectorSSE.event("message_delta", """
+                {"type":"message_delta","delta":{"stop_reason":"end_turn","stop_sequence":null},\
+                "usage":{"input_tokens":4,"cache_creation_input_tokens":600,"cache_read_input_tokens":33000,"output_tokens":77}}
+                """)
+            + DirectorSSE.event("message_stop", #"{"type":"message_stop"}"#)
+        let response = try message(body)
+        #expect(response.usage == ClaudeUsage(inputTokens: 4, outputTokens: 77, cacheCreationTokens: 600, cacheReadTokens: 33_000))
+        #expect(response.usage.promptTokens == 33_604)
+    }
+
     @Test("A refusal's stop details come through whole")
     func refusalDetails() throws {
         let body = DirectorSSE.start() + DirectorSSE.refusal(category: "bio", explanation: "No.")
