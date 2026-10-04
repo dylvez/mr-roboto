@@ -78,6 +78,13 @@ struct LibrarySurfaceView: View {
             ForEach(LibraryShelf.allCases, id: \.self) { shelf in
                 shelfButton(shelf)
             }
+            if !model.saved.isEmpty {
+                SmallLabel("Saved")
+                    .padding(.horizontal, 8)
+                    .padding(.top, 14)
+                    .padding(.bottom, 4)
+                ForEach(model.saved) { search in savedButton(search) }
+            }
             Spacer(minLength: 12)
             ForEach(model.shelfActions) { action in
                 FrameButton(title: action.buttonTitle, emphasis: .quiet, isEnabled: action.isEnabled) {
@@ -114,11 +121,51 @@ struct LibrarySurfaceView: View {
         .accessibilityLabel("\(shelf.title), \(model.count(on: shelf))")
     }
 
+    private func savedButton(_ search: SavedSearch) -> some View {
+        let isOn = model.appliedSearch == search
+        return Button { model.apply(search) } label: {
+            HStack(spacing: 7) {
+                Image(systemName: "magnifyingglass").font(.system(size: 10, weight: .semibold))
+                Text(search.name).font(Design.Typography.ui(12.5, weight: isOn ? .semibold : .regular)).lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(isOn ? Design.Palette.accent : Design.Palette.inkSecondary)
+            .padding(.horizontal, 8)
+            .frame(height: 26)
+            .background(isOn ? Design.Palette.accentSoft : .clear, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help("\(search.query.shelf.title): \(Self.describe(search.query))")
+        .contextMenu { Button("Forget This Search") { model.forget(search) } }
+    }
+
+    /// "“dusty” · D minor or relative · with stems, by tempo": a saved search in words.
+    static func describe(_ query: LibraryQuery) -> String {
+        var pieces: [String] = []
+        if !query.text.isEmpty { pieces.append("“\(query.text)”") }
+        if query.goesWith == true { pieces.append("goes with the open song") }
+        if query.favourites == true { pieces.append("favourites") }
+        if let tag = query.tag { pieces.append("tagged \(tag)") }
+        if let key = query.key { pieces.append(keyLabel(key)) }
+        if let tempo = query.tempo { pieces.append(tempoLabel(tempo)) }
+        if let stems = query.hasStems { pieces.append(stems ? "with stems" : "no stems") }
+        if let usage = query.usage { pieces.append(usageLabel(usage, shelf: query.shelf).lowercased()) }
+        if let genre = query.genre { pieces.append(genre) }
+        if query.offPitch == true { pieces.append("off pitch") }
+        if let sort = query.sort { pieces.append("by \(sort.column.title(on: query.shelf).lowercased())\(sort.ascending ? "" : ", down")") }
+        return pieces.isEmpty ? "everything" : pieces.joined(separator: " · ")
+    }
+
     /// The shelves across the top, when the surface is narrow.
     private var shelfRow: some View {
         HStack(spacing: 6) {
             ForEach(LibraryShelf.allCases, id: \.self) { shelf in
                 BoothChip("\(shelf.title) \(model.count(on: shelf))", isOn: model.shelf == shelf) { model.choose(shelf) }
+            }
+            ForEach(model.saved) { search in
+                BoothChip("⌕ \(search.name)", isOn: model.appliedSearch == search) { model.apply(search) }
+                    .contextMenu { Button("Forget This Search") { model.forget(search) } }
             }
             Spacer(minLength: 8)
             ForEach(model.shelfActions) { action in
@@ -165,12 +212,16 @@ struct LibrarySurfaceView: View {
                     .lineLimit(1)
                     .fixedSize()
             }
-            if !model.filters.isEmpty {
+            if !model.filters.isEmpty || model.query.narrows {
                 FlowRow(spacing: 6) {
                     ForEach(model.filters, id: \.self) { filter in filterChip(filter) }
                     if model.query.narrows {
                         BoothChip("Clear") { model.clearFilters() }
                             .help("Take away the words and every filter; the order stays")
+                        if model.appliedSearch == nil {
+                            BoothChip("Save…") { LibraryActions.perform(model.saveSearchAction) { pending = $0 } }
+                                .help(model.saveSearchAction.help)
+                        }
                     }
                 }
             }
@@ -233,7 +284,12 @@ struct LibrarySurfaceView: View {
             .onKeyPress(.upArrow) { move(-1, reader); return .handled }
             .onKeyPress(.downArrow) { move(1, reader); return .handled }
             .onKeyPress(.return) {
-                if let id = model.selection, let action = model.primary(for: id) { LibraryActions.perform(action) { pending = $0 } }
+                if !model.isBatch, let id = model.selection, let action = model.primary(for: id) { LibraryActions.perform(action) { pending = $0 } }
+                return .handled
+            }
+            .onKeyPress(keys: ["a"]) { press in
+                guard press.modifiers.contains(.command) else { return .ignored }
+                model.chooseAll()
                 return .handled
             }
         }
@@ -259,7 +315,7 @@ struct LibrarySurfaceView: View {
     }
 
     private func row(_ facts: LibraryFacts, at index: Int, columns: [LibraryColumn], openRecords: Set<RecordID>) -> some View {
-        let isChosen = model.selection == facts.id
+        let isChosen = model.isChosen(facts.id)
         return HStack(spacing: Self.columnSpacing) {
             playCell(facts)
             ForEach(columns, id: \.self) { column in
@@ -289,7 +345,11 @@ struct LibrarySurfaceView: View {
             if let action = model.primary(for: facts.id) { LibraryActions.perform(action) { pending = $0 } }
         })
         .simultaneousGesture(TapGesture().onEnded {
-            model.select(facts.id)
+            // ⌘ adds or takes away, ⇧ runs from the last chosen: several chosen are a batch.
+            let keys = NSEvent.modifierFlags
+            if keys.contains(.command) { model.toggleChoice(facts.id) }
+            else if keys.contains(.shift) { model.extendChoice(to: facts.id) }
+            else { model.select(facts.id) }
             listHasFocus = true
         })
         .draggable(Self.payload(for: facts))
@@ -345,6 +405,10 @@ struct LibrarySurfaceView: View {
 
     private func titleCell(_ facts: LibraryFacts, isChosen: Bool, openRecords: Set<RecordID>) -> some View {
         HStack(spacing: 6) {
+            if facts.favourite {
+                Image(systemName: "star.fill").font(.system(size: 9)).foregroundStyle(Design.Palette.accent)
+                    .help("A favourite")
+            }
             Text(facts.title)
                 .font(Design.Typography.ui(13, weight: isChosen ? .semibold : .regular))
                 .foregroundStyle(isChosen ? Design.Palette.accent : Design.Palette.ink)
@@ -374,6 +438,14 @@ struct LibrarySurfaceView: View {
     private func filterChip(_ filter: LibraryBrowserModel.Filter) -> some View {
         let query = model.query
         switch filter {
+        case .favourites:
+            BoothChip("★ Favourites", isOn: query.favourites == true) { model.toggleFavourites() }
+                .help("Only what you starred")
+        case .tag:
+            menuChip(query.tag.map { "Tag: \($0)" } ?? "Tag", isOn: query.tag != nil) {
+                Button("Any tag") { model.setTag(nil) }
+                ForEach(model.tagsOnShelf, id: \.self) { tag in Button(tag) { model.setTag(tag) } }
+            }
         case .goesWith:
             BoothChip("Goes with \(model.index.fitTarget?.title ?? "this song")", isOn: query.goesWith == true) { model.toggleGoesWith() }
                 .help("Only what comes into the open song moved no further than a sample bears — four semitones — nearest first")
@@ -527,7 +599,14 @@ struct LibrarySurfaceView: View {
 
     @ViewBuilder
     private var detail: some View {
-        if let facts = model.selected {
+        if model.isBatch {
+            LibraryScroll {
+                LibraryBatchDetail(model: model, pending: $pending)
+                    .padding(Design.Metric.inset)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+            }
+            .background(Design.Palette.panel)
+        } else if let facts = model.selected {
             LibraryScroll {
                 LibraryDetail(facts: facts, model: model, pending: $pending)
                     .padding(Design.Metric.inset)
@@ -632,6 +711,16 @@ private struct LibraryDetail: View {
                 HStack(spacing: 6) {
                     Glyph(name: LibrarySidebar.glyphs[facts.id.shelf.title] ?? "song", symbol: "circle", size: 12)
                     SmallLabel(Self.kind(facts))
+                    Spacer(minLength: 0)
+                    Button { model.app.setFavourite(!facts.favourite, for: [facts.id]) } label: {
+                        Image(systemName: facts.favourite ? "star.fill" : "star")
+                            .font(.system(size: 13))
+                            .foregroundStyle(facts.favourite ? Design.Palette.accent : Design.Palette.inkTertiary)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .help(facts.favourite ? "A favourite: take the star off" : "Mark as a favourite")
+                    .accessibilityLabel(facts.favourite ? "Unmark favourite" : "Mark as favourite")
                 }
                 .foregroundStyle(Design.Palette.inkTertiary)
                 Text(facts.title)
@@ -658,6 +747,7 @@ private struct LibraryDetail: View {
                 LibraryListen(facts: facts, model: model)
             }
             factsGrid
+            tags
             relations
         }
         // The record chosen is the one whose bars and stems are drawn.
@@ -685,42 +775,41 @@ private struct LibraryDetail: View {
 
     // MARK: Actions
 
+    /// Its actions as buttons, but its star and its tags, which have their own places here.
     private var actions: some View {
-        let all = model.actions(for: facts.id)
-        return FlowRow(spacing: 6, lineSpacing: 6) {
-            ForEach(Array(all.enumerated()), id: \.element.id) { index, action in
-                button(action, leads: index == 0 && action.isEnabled)
-            }
-        }
+        LibraryActionButtons(actions: model.actions(for: facts.id).filter { !["favourite", "tag", "untag"].contains($0.id) },
+                             pending: $pending)
     }
 
-    @ViewBuilder
-    private func button(_ action: LibraryAction, leads: Bool) -> some View {
-        switch action.kind {
-        case .menu(let choices):
-            if Design.isOffscreenRender {
-                ActionChip(title: action.title + " ▾", isEnabled: action.isEnabled) {}
-            } else {
-                Menu {
-                    ForEach(choices) { choice in
-                        Button(choice.title) { LibraryActions.perform(choice) { pending = $0 } }.disabled(!choice.isEnabled)
+    // MARK: Tags
+
+    /// Its tags, each with a way off, and a way to add one.
+    private var tags: some View {
+        section("Tags") {
+            FlowRow(spacing: 6, lineSpacing: 6) {
+                ForEach(facts.tags, id: \.self) { tag in
+                    let removable = facts.markedTags.contains(tag)
+                    HStack(spacing: 4) {
+                        Text(tag).font(Design.Typography.ui(11.5)).foregroundStyle(Design.Palette.ink)
+                        if removable {
+                            Button { model.app.removeTag(tag, from: [facts.id]) } label: {
+                                Image(systemName: "xmark").font(.system(size: 8, weight: .bold)).foregroundStyle(Design.Palette.inkTertiary)
+                            }
+                            .buttonStyle(.plain)
+                            .help("Take \(tag) off")
+                        }
                     }
-                } label: {
-                    Text(action.title).font(Design.Typography.ui(12))
+                    .padding(.horizontal, 8)
+                    .frame(height: 22)
+                    .background(Design.Palette.panelAlt, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
+                    .help(removable ? "" : "It came with this tag")
                 }
-                .menuStyle(.borderlessButton)
-                .fixedSize()
-                .padding(.horizontal, 9)
-                .frame(height: Design.Metric.chipHeight)
-                .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.lineStrong, lineWidth: Design.Metric.hairline))
-                .disabled(!action.isEnabled)
-                .help(action.help)
+                BoothChip("Add a tag…") {
+                    if let add = LibraryActions.marks(for: [facts.id], in: model.app).first(where: { $0.id == "tag" }) {
+                        LibraryActions.perform(add) { pending = $0 }
+                    }
+                }
             }
-        default:
-            ActionChip(title: action.buttonTitle, leads: leads, isDestructive: action.isDestructive, isEnabled: action.isEnabled) {
-                LibraryActions.perform(action) { pending = $0 }
-            }
-            .help(action.help)
         }
     }
 
@@ -927,6 +1016,116 @@ private struct LibraryDetail: View {
         }
         .buttonStyle(.plain)
         .help("Show it in the Library")
+    }
+}
+
+/// Actions as buttons under a name: the first one that can be done filled, a choice among several
+/// as a menu, what asks first handed to `pending`.
+private struct LibraryActionButtons: View {
+    let actions: [LibraryAction]
+    @Binding var pending: LibraryAction?
+
+    var body: some View {
+        let leading = actions.first { $0.isEnabled && !$0.isDestructive }?.id
+        FlowRow(spacing: 6, lineSpacing: 6) {
+            ForEach(actions) { action in button(action, leads: action.id == leading && actions.first?.id == leading) }
+        }
+    }
+
+    @ViewBuilder
+    private func button(_ action: LibraryAction, leads: Bool) -> some View {
+        switch action.kind {
+        case .menu(let choices):
+            if Design.isOffscreenRender {
+                ActionChip(title: action.title + " ▾", isEnabled: action.isEnabled) {}
+            } else {
+                Menu {
+                    ForEach(choices) { choice in
+                        Button(choice.title) { LibraryActions.perform(choice) { pending = $0 } }.disabled(!choice.isEnabled)
+                    }
+                } label: {
+                    Text(action.title).font(Design.Typography.ui(12))
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+                .padding(.horizontal, 9)
+                .frame(height: Design.Metric.chipHeight)
+                .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.lineStrong, lineWidth: Design.Metric.hairline))
+                .disabled(!action.isEnabled)
+                .help(action.help)
+            }
+        default:
+            ActionChip(title: action.buttonTitle, leads: leads, isDestructive: action.isDestructive, isEnabled: action.isEnabled) {
+                LibraryActions.perform(action) { pending = $0 }
+            }
+            .help(action.help)
+        }
+    }
+}
+
+/// Several chosen: how many and which, what the crate or an export is doing to each and what went
+/// wrong with each, and what can be done to them all.
+private struct LibraryBatchDetail: View {
+    let model: LibraryBrowserModel
+    @Binding var pending: LibraryAction?
+
+    var body: some View {
+        let rows = model.chosenRows
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                SmallLabel("Chosen", color: Design.Palette.inkTertiary)
+                Text("\(rows.count) \(model.shelf.title.lowercased())")
+                    .font(Design.Typography.prose(19, weight: .medium))
+                    .foregroundStyle(Design.Palette.ink)
+                Text("⌘-click adds one or takes it away, ⇧-click runs from the last one chosen, ⌘A chooses everything showing.")
+                    .font(Design.Typography.ui(11.5, weight: .regular))
+                    .foregroundStyle(Design.Palette.inkTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            LibraryActionButtons(actions: model.batchActions, pending: $pending)
+            if let line = model.work.line {
+                HStack(spacing: 8) {
+                    Text(line).font(Design.Typography.ui(12)).foregroundStyle(Design.Palette.inkSecondary).lineLimit(2)
+                    Spacer(minLength: 0)
+                    BoothChip("Stop") { model.work.cancel() }
+                }
+            }
+            if model.shelf == .records, let line = model.app.crate.line {
+                Text(line).font(Design.Typography.ui(12)).foregroundStyle(Design.Palette.inkSecondary).lineLimit(2)
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(rows) { facts in
+                    VStack(alignment: .leading, spacing: 1) {
+                        Button { model.select(facts.id) } label: {
+                            Text(facts.title).font(Design.Typography.ui(12.5)).foregroundStyle(Design.Palette.accent).lineLimit(1)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Choose only this one")
+                        if let (line, isFailure) = status(of: facts) {
+                            Text(line).font(Design.Typography.ui(11, weight: .regular))
+                                .foregroundStyle(isFailure ? Design.Palette.warn : Design.Palette.inkTertiary)
+                                .lineLimit(2)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// What is being done to one of them, or what went wrong.
+    private func status(of facts: LibraryFacts) -> (String, Bool)? {
+        switch facts.id.shelf {
+        case .records:
+            let id = RecordID(rawValue: facts.id.id)
+            if let failure = model.app.crate.failures[id] { return (failure, true) }
+            return model.app.crate.status(of: id).map { ($0, false) }
+        case .songs:
+            let id = SongID(rawValue: facts.id.id)
+            if let failure = model.work.failures[id] { return (failure, true) }
+            return model.work.exported[id].map { ("exported to \($0.deletingLastPathComponent().lastPathComponent)", false) }
+        default:
+            return nil
+        }
     }
 }
 

@@ -113,12 +113,16 @@ public struct LibraryQuery: Hashable, Codable, Sendable {
     /// Only what goes with the open song: moved no further than a sample bears (`LibraryFit`).
     /// Holds nothing back while no song is open.
     public var goesWith: Bool?
+    /// Only favourites.
+    public var favourites: Bool?
+    /// Only what carries this tag, however it is cased.
+    public var tag: String?
     /// Nil keeps the library's own order.
     public var sort: Sort?
 
     public init(shelf: LibraryShelf, text: String = "", key: KeyFilter? = nil, tempo: TempoFilter? = nil,
                 hasStems: Bool? = nil, usage: Usage? = nil, genre: String? = nil, offPitch: Bool? = nil,
-                goesWith: Bool? = nil, sort: Sort? = nil) {
+                goesWith: Bool? = nil, favourites: Bool? = nil, tag: String? = nil, sort: Sort? = nil) {
         self.shelf = shelf
         self.text = text
         self.key = key
@@ -128,13 +132,15 @@ public struct LibraryQuery: Hashable, Codable, Sendable {
         self.genre = genre
         self.offPitch = offPitch
         self.goesWith = goesWith
+        self.favourites = favourites
+        self.tag = tag
         self.sort = sort
     }
 
     /// True when anything narrows the shelf: words, or a filter.
     public var narrows: Bool {
         !words.isEmpty || key != nil || tempo != nil || hasStems != nil || usage != nil || genre != nil || offPitch != nil
-            || goesWith != nil
+            || goesWith != nil || favourites != nil || tag != nil
     }
 
     /// The words typed, folded the way the index folds what it searches.
@@ -179,6 +185,8 @@ public struct LibraryQuery: Hashable, Codable, Sendable {
         if goesWith == true, fitting {
             guard let fit = facts.fit, fit.verdict <= .moves else { return false }
         }
+        if favourites == true, !facts.favourite { return false }
+        if let tag, !facts.tags.contains(where: { $0.caseInsensitiveCompare(tag) == .orderedSame }) { return false }
         return true
     }
 

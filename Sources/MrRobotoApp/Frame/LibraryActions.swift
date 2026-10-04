@@ -14,6 +14,8 @@ struct LibraryAction: Identifiable {
         case confirm(question: String, detail: String, verb: String, run: @MainActor () -> Void)
         /// A new name, asked for: the name it starts from, and what renaming does.
         case rename(current: String, message: String, run: @MainActor (String) -> Void)
+        /// A word asked for — a tag, a search's name — under its own title and button.
+        case text(title: String, current: String, message: String, verb: String, run: @MainActor (String) -> Void)
         /// A choice among several.
         case menu([LibraryAction])
     }
@@ -34,15 +36,44 @@ struct LibraryAction: Identifiable {
 @MainActor
 enum LibraryActions {
 
-    /// Everything that can be done to one item, grouped, in the order a menu lists it.
+    /// Everything that can be done to one item, grouped, in the order a menu lists it: its own
+    /// actions, then its favourite and tags, then what cannot be undone.
     static func actions(for item: LibraryItemID, in app: AppState) -> [LibraryAction] {
+        let own: [LibraryAction]
         switch item.shelf {
-        case .songs: return song(SongID(rawValue: item.id), app)
-        case .records: return record(RecordID(rawValue: item.id), app)
-        case .ideas: return idea(VersionID(rawValue: item.id), app)
-        case .samples: return sample(SampleID(rawValue: item.id), app)
-        case .albums: return album(AlbumID(rawValue: item.id), app)
+        case .songs: own = song(SongID(rawValue: item.id), app)
+        case .records: own = record(RecordID(rawValue: item.id), app)
+        case .ideas: own = idea(VersionID(rawValue: item.id), app)
+        case .samples: own = sample(SampleID(rawValue: item.id), app)
+        case .albums: own = album(AlbumID(rawValue: item.id), app)
         }
+        guard !own.isEmpty else { return [] }
+        return own.filter { !$0.isDestructive } + marks(for: [item], in: app) + own.filter(\.isDestructive)
+    }
+
+    /// A favourite and tags, for one item or several: one write of `library.json` each.
+    static func marks(for items: [LibraryItemID], in app: AppState) -> [LibraryAction] {
+        let marks = items.map { app.mark(of: $0) }
+        let all = marks.allSatisfy { $0?.isFavourite == true }
+        let some = items.count == 1 ? "it" : "them"
+        let tags = LibraryIndex.unique(marks.flatMap { $0?.tags ?? [] })
+        var actions = [
+            LibraryAction(id: "favourite", title: all ? "Unmark Favourite" : "Mark as Favourite",
+                          help: all ? "Take the star off" : "A star, and the Favourites filter finds \(some)", group: 3,
+                          kind: .run { app.setFavourite(!all, for: items) }),
+            LibraryAction(id: "tag", title: "Add a Tag…", help: "A word to find \(some) by: searched, and a filter of its own", group: 3,
+                          kind: .text(title: "Add a Tag", current: "",
+                                      message: items.count == 1 ? "A tag for it. Every tag is searched, and the Tag filter lists them."
+                                                                : "A tag for these \(items.count). Every tag is searched, and the Tag filter lists them.",
+                                      verb: "Add", run: { app.addTag($0, to: items) })),
+        ]
+        if !tags.isEmpty {
+            actions.append(LibraryAction(id: "untag", title: "Remove a Tag", group: 3,
+                                         kind: .menu(tags.map { tag in
+                                             LibraryAction(id: "untag-\(tag)", title: tag, kind: .run { app.removeTag(tag, from: items) })
+                                         })))
+        }
+        return actions
     }
 
     /// What a double-click does: open a song or an album, bring a record into the open song (or
@@ -276,7 +307,7 @@ extension LibraryActions {
         guard action.isEnabled else { return }
         switch action.kind {
         case .run(let run): run()
-        case .confirm, .rename: ask(action)
+        case .confirm, .rename, .text: ask(action)
         case .menu: break
         }
     }
@@ -300,10 +331,10 @@ struct LibraryActionPrompt: ViewModifier {
             } message: {
                 Text(confirmation(action)?.detail ?? "")
             }
-            .alert("Rename", isPresented: isAsking(confirming: false)) {
-                TextField("Title", text: $name)
+            .alert(renaming(action)?.title ?? "Rename", isPresented: isAsking(confirming: false)) {
+                TextField(renaming(action)?.title == "Rename" ? "Title" : "", text: $name)
                 if let asked = renaming(action) {
-                    Button("Rename") { asked.run(name) }
+                    Button(asked.verb) { asked.run(name) }
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
@@ -324,8 +355,13 @@ struct LibraryActionPrompt: ViewModifier {
         return nil
     }
 
-    private func renaming(_ action: LibraryAction?) -> (current: String, message: String, run: @MainActor (String) -> Void)? {
-        if case .rename(let current, let message, let run) = action?.kind { return (current, message, run) }
-        return nil
+    /// A rename, or any word asked for: the alert's title, where the field starts, what it is for
+    /// and the button that takes it.
+    private func renaming(_ action: LibraryAction?) -> (title: String, current: String, message: String, verb: String, run: @MainActor (String) -> Void)? {
+        switch action?.kind {
+        case .rename(let current, let message, let run)?: return ("Rename", current, message, "Rename", run)
+        case .text(let title, let current, let message, let verb, let run)?: return (title, current, message, verb, run)
+        default: return nil
+        }
     }
 }

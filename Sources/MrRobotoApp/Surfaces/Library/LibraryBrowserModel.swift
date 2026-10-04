@@ -47,6 +47,22 @@ struct LibraryBrowserMemory {
         kept.text = ""
         return kept
     }
+
+    /// The searches saved by name, words and all, in the order they were saved.
+    var saved: [SavedSearch] {
+        read("saved").flatMap { try? JSONDecoder().decode([SavedSearch].self, from: $0) } ?? []
+    }
+
+    func remember(saved: [SavedSearch]) {
+        if let data = try? JSONEncoder().encode(saved) { write("saved", data) }
+    }
+}
+
+/// A search kept by name: a shelf, its words, its filters and its order, one press away.
+struct SavedSearch: Codable, Hashable, Sendable, Identifiable {
+    var name: String
+    var query: LibraryQuery
+    var id: String { name }
 }
 
 /// The Library surface: one shelf at a time, searched, filtered and sorted from the library's
@@ -58,12 +74,19 @@ final class LibraryBrowserModel {
     @ObservationIgnored private let memory: LibraryBrowserMemory
     /// Hearing what is on the shelves.
     let preview: LibraryPreview
+    /// Exporting several songs' masters.
+    let work: LibraryBatchWork
+    /// The searches saved by name.
+    private(set) var saved: [SavedSearch]
     @ObservationIgnored private let listening: LibraryListeningHost
 
     private(set) var shelf: LibraryShelf
     private var queries: [LibraryShelf: LibraryQuery] = [:]
-    /// The item chosen on each shelf, kept while you look at another.
+    /// The item chosen on each shelf, kept while you look at another: the one the detail shows,
+    /// and where a ⇧-click runs from.
     private var selections: [LibraryShelf: LibraryItemID] = [:]
+    /// Everything chosen on each shelf, the item above among them: more than one is a batch.
+    private var chosen: [LibraryShelf: Set<LibraryItemID>] = [:]
 
     init(app: AppState, memory: LibraryBrowserMemory, listening: LibraryListeningHost? = nil) {
         self.app = app
@@ -72,6 +95,8 @@ final class LibraryBrowserModel {
         self.listening = listening
         let preview = LibraryPreview(app: app, host: listening)
         self.preview = preview
+        work = LibraryBatchWork(app: app)
+        saved = memory.saved
         // The song's transport starting is the end of anything heard from here.
         app.beforeTransportStarts = { [weak preview] in await preview?.yieldToTransport() }
         shelf = memory.shelf ?? .songs
@@ -132,19 +157,27 @@ final class LibraryBrowserModel {
     // MARK: Filters
 
     /// The filters a shelf offers, in the order its chips sit.
-    enum Filter: String, CaseIterable, Sendable { case goesWith, key, tempo, genre, stems, usage, offPitch }
+    enum Filter: String, CaseIterable, Sendable { case goesWith, favourites, tag, key, tempo, genre, stems, usage, offPitch }
 
     var filters: [Filter] {
-        // What goes with the open song, first, while there is one.
+        // What goes with the open song, first, while there is one; then what you marked.
         let fitting: [Filter] = index.fitTarget != nil ? [.goesWith] : []
+        let marked: [Filter] = [.favourites] + (index.tags(on: shelf).isEmpty && query.tag == nil ? [] : [.tag])
         switch shelf {
-        case .songs: return [.key, .tempo, .genre, .usage]
-        case .records: return fitting + [.key, .tempo, .stems, .usage, .offPitch]
-        case .ideas: return fitting + [.key, .usage]
-        case .samples: return fitting + [.key, .tempo, .usage]
-        case .albums: return []
+        case .songs: return marked + [.key, .tempo, .genre, .usage]
+        case .records: return fitting + marked + [.key, .tempo, .stems, .usage, .offPitch]
+        case .ideas: return fitting + marked + [.key, .usage]
+        case .samples: return fitting + marked + [.key, .tempo, .usage]
+        case .albums: return marked
         }
     }
+
+    func toggleFavourites() { query.favourites = query.favourites == true ? nil : true }
+
+    func setTag(_ tag: String?) { query.tag = tag }
+
+    /// The tags on the shelf showing, to filter by.
+    var tagsOnShelf: [String] { index.tags(on: shelf) }
 
     /// Only what goes with the open song, nearest first unless another order was chosen.
     func toggleGoesWith() {
@@ -216,14 +249,95 @@ final class LibraryBrowserModel {
 
     var selected: LibraryFacts? { selection.flatMap(index.facts) }
 
-    /// Chooses an item on its own shelf, turning to it.
+    /// Chooses an item on its own shelf, turning to it, and only it.
     func select(_ id: LibraryItemID?) {
         guard let id else {
             selections[shelf] = nil
+            chosen[shelf] = nil
             return
         }
         choose(id.shelf)
         selections[id.shelf] = id
+        chosen[id.shelf] = [id]
+    }
+
+    // MARK: Choosing several
+
+    /// What is chosen on the shelf showing, in the order the rows are, while the library holds it.
+    var chosenRows: [LibraryFacts] {
+        let set = chosen[shelf] ?? selection.map { [$0] } ?? []
+        return rows.filter { set.contains($0.id) }
+    }
+
+    /// More than one chosen: what the detail shows is what can be done to them all.
+    var isBatch: Bool { chosenRows.count > 1 }
+
+    func isChosen(_ id: LibraryItemID) -> Bool { (chosen[id.shelf] ?? selections[id.shelf].map { [$0] } ?? []).contains(id) }
+
+    /// ⌘-click: in or out of what is chosen.
+    func toggleChoice(_ id: LibraryItemID) {
+        guard id.shelf == shelf else { return select(id) }
+        var set = chosen[shelf] ?? selection.map { [$0] } ?? []
+        if set.contains(id) {
+            set.remove(id)
+            if selections[shelf] == id { selections[shelf] = rows.first { set.contains($0.id) }?.id }
+        } else {
+            set.insert(id)
+            selections[shelf] = id
+        }
+        chosen[shelf] = set
+    }
+
+    /// ⇧-click: every row from the one chosen last to this one.
+    func extendChoice(to id: LibraryItemID) {
+        let rows = rows
+        guard id.shelf == shelf, let anchor = selection, let from = rows.firstIndex(where: { $0.id == anchor }),
+              let to = rows.firstIndex(where: { $0.id == id }) else { return select(id) }
+        chosen[shelf] = Set(rows[min(from, to)...max(from, to)].map(\.id))
+    }
+
+    /// ⌘A: every row the shelf shows.
+    func chooseAll() {
+        let rows = rows
+        guard !rows.isEmpty else { return }
+        if selection.map({ id in rows.contains { $0.id == id } }) != true { selections[shelf] = rows.first?.id }
+        chosen[shelf] = Set(rows.map(\.id))
+    }
+
+    /// What can be done to everything chosen.
+    var batchActions: [LibraryAction] { LibraryActions.batch(chosenRows.map(\.id), in: app, work: work) }
+
+    // MARK: Saved searches
+
+    /// Keeps the search showing under a name; a name already kept is replaced.
+    func saveSearch(named name: String) {
+        let name = name.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        guard !name.isEmpty else { return }
+        saved.removeAll { $0.name.caseInsensitiveCompare(name) == .orderedSame }
+        saved.append(SavedSearch(name: name, query: query))
+        memory.remember(saved: saved)
+    }
+
+    /// Turns to a saved search's shelf with its words, filters and order.
+    func apply(_ search: SavedSearch) {
+        choose(search.query.shelf)
+        query = search.query
+    }
+
+    func forget(_ search: SavedSearch) {
+        saved.removeAll { $0.name == search.name }
+        memory.remember(saved: saved)
+    }
+
+    /// The saved search the shelf is showing now, word for word.
+    var appliedSearch: SavedSearch? { saved.first { $0.query == query } }
+
+    /// "Save This Search…": asks for a name.
+    var saveSearchAction: LibraryAction {
+        LibraryAction(id: "save-search", title: "Save This Search…", help: "Keep these words, filters and order under a name, beside the shelves",
+                      isEnabled: query.narrows,
+                      kind: .text(title: "Save This Search", current: "", message: "A name for it. It is kept beside the shelves, one press away.",
+                                  verb: "Save", run: { [weak self] in self?.saveSearch(named: $0) }))
     }
 
     /// Chooses an item and makes sure it is in view: a link to something the words or the filters

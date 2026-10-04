@@ -882,3 +882,68 @@ extension AppState {
         return keepMedia(copying: url, what: what)
     }
 }
+
+// MARK: - Favourites and tags
+
+extension LibraryItemID {
+    /// What `library.json` calls this kind of item in a mark.
+    var markKind: LibraryMark.Kind {
+        switch shelf {
+        case .songs: .song
+        case .records: .record
+        case .ideas: .idea
+        case .samples: .sample
+        case .albums: .album
+        }
+    }
+}
+
+extension AppState {
+    /// The mark on an item: a favourite, tags, both, or nil.
+    public func mark(of item: LibraryItemID) -> LibraryMark? { library.mark(item.markKind, item.id) }
+
+    /// Marks the items favourites, or not, in one write of `library.json`. Nothing in a song moves.
+    @discardableResult
+    public func setFavourite(_ on: Bool, for items: [LibraryItemID]) -> Bool {
+        changeMarks(of: items) { $0.favourite = on ? true : nil }
+    }
+
+    /// Tags the items, in one write. A tag is trimmed, and one that differs only in case from a tag
+    /// already on the item is that tag.
+    @discardableResult
+    public func addTag(_ tag: String, to items: [LibraryItemID]) -> Bool {
+        let tag = tag.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        guard !tag.isEmpty else { return false }
+        return changeMarks(of: items) { mark in
+            var tags = mark.tags ?? []
+            if !tags.contains(where: { $0.caseInsensitiveCompare(tag) == .orderedSame }) { tags.append(tag) }
+            mark.tags = tags
+        }
+    }
+
+    /// Takes a tag off the items, in one write.
+    @discardableResult
+    public func removeTag(_ tag: String, from items: [LibraryItemID]) -> Bool {
+        changeMarks(of: items) { mark in
+            let tags = (mark.tags ?? []).filter { $0.caseInsensitiveCompare(tag) != .orderedSame }
+            mark.tags = tags.isEmpty ? nil : tags
+        }
+    }
+
+    /// Every tag in the library, in the order first used.
+    public var allTags: [String] {
+        LibraryIndex.unique((library.marks ?? []).flatMap { $0.tags ?? [] })
+    }
+
+    private func changeMarks(of items: [LibraryItemID], _ change: (inout LibraryMark) -> Void) -> Bool {
+        guard !items.isEmpty else { return false }
+        var updated = library
+        for item in items {
+            var mark = updated.mark(item.markKind, item.id) ?? LibraryMark(kind: item.markKind, id: item.id)
+            change(&mark)
+            updated.setMark(mark)
+        }
+        guard updated.marks != library.marks else { return true }
+        return writeLibrary(updated)
+    }
+}

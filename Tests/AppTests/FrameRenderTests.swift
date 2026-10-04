@@ -265,6 +265,26 @@ struct FrameRenderTests {
         try writeDark(view, size: CGSize(width: 860, height: 640), name: "library-listening-dark")
     }
 
+    @Test("the Library with a favourite, tags, a saved search, and two records chosen together")
+    func libraryBatch() throws {
+        FontRegistration.registerBundledFonts()
+        let (app, shelf, directory) = try LibraryBrowserFixture.stored("render-batch")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        app.open(shelf.nightBus)
+        app.setFavourite(true, for: [.record(shelf.drifter.id)])
+        app.addTag("dusty", to: [.record(shelf.drifter.id), .record(shelf.brass.id)])
+        let model = LibraryBrowserModel(app: app, memory: .inMemory())
+        model.choose(.records)
+        model.cycleStems()
+        model.saveSearch(named: "Separated")
+        model.clearFilters()
+        model.select(.record(shelf.drifter.id))
+        let view = LibrarySurfaceView(model: model).background(Design.Palette.panel)
+        try write(view, size: CGSize(width: 1240, height: 720), name: "library-marks")
+        model.toggleChoice(.record(shelf.brass.id))
+        try write(view, size: CGSize(width: 1240, height: 720), name: "library-batch")
+    }
+
     @Test("the Merge surface on a chop and a bass line in different keys")
     func merge() throws {
         FontRegistration.registerBundledFonts()

@@ -77,10 +77,24 @@ public enum Export {
         // What is on screen is in the song before it leaves, as it is before the transport plays.
         app.keepSurfaceWork()
         guard let song = app.song else { throw Failure.noSong }
-        var plan = app.playback.looping(false)
+        return try await master(of: song, plan: app.playback, in: app, to: directory)
+    }
+
+    /// Any song in the library, open or not, exported the same way: its own plan, read from its own
+    /// package. `pacing` shares the audio actor while it renders, for a batch of them.
+    @MainActor
+    static func master(of song: Song, plan given: SongPlayback, in app: AppState, to directory: URL,
+                       pacing: SectionBounce.Pacing? = nil) async throws -> (wav: URL, report: URL, summary: MasterReport) {
+        var plan = given.looping(false)
         // A song never mixed goes out on the mix the Master tab reads it on — the album's target
         // and ceiling — not on none.
-        if plan.mix == nil { plan.mix = MasterModel.startingMix(host: MixAdapter(app: app), base: nil) }
+        if plan.mix == nil {
+            var unity = Mix.unity
+            if let album = app.library.albums.first(where: { $0.songs.contains(song.id) }) {
+                unity.master = Master(gainDB: 0, ceilingDBTP: album.targets.truePeakDBTP, targetLUFS: album.targets.integratedLUFS)
+            }
+            plan.mix = unity
+        }
         guard plan.isPlayable else { throw Failure.nothingToBounce }
         if plan.missingMedia {
             app.note(.session, "\(song.title) went out without some of its audio",
@@ -88,7 +102,7 @@ public enum Export {
         }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let stems = try await SectionBounce.render(plan, section: nil, kitsDirectory: AuditionService.defaultKitsDirectory,
-                                                   onlyTheMix: true)
+                                                   onlyTheMix: true, pacing: pacing)
         let planar = stems.mix
         let wav = unique(directory.appendingPathComponent("\(safe(song.title)) — master.wav"))
         try writeWAV24(planar, sampleRate: stems.sampleRate, to: wav)

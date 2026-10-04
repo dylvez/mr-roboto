@@ -89,6 +89,10 @@ public struct LibraryFacts: Hashable, Sendable, Identifiable {
     public var albums = 0
     /// How it goes with the open song: a record's, an idea's or a sample's, while a song is open.
     public var fit: LibraryFit?
+    /// Marked a favourite.
+    public var favourite = false
+    /// The tags put on it (its mark's), apart from the ones it came with (a sample's).
+    public var markedTags: [String] = []
     /// Everything the text search reads, folded (`LibraryIndex.fold`).
     public var searchText = ""
 
@@ -130,6 +134,8 @@ public struct LibraryIndex: Sendable {
 
     // What reading a song needs from the rest of the library.
     private var lookups = Lookups()
+    /// The library's marks, put back on a song read again.
+    private var marks: [LibraryMark] = []
     private let genres: GenreBook
 
     /// The open song's key, tempo and meter, which every record, idea and sample is fitted to.
@@ -173,6 +179,15 @@ public struct LibraryIndex: Sendable {
         all += library.ideas.map(ideaFacts)
         all += library.samples.map(sampleFacts)
         all += library.albums.map(albumFacts)
+        // What people put on things to find them again: a favourite, tags, searched like the rest.
+        for index in all.indices {
+            guard let mark = library.mark(all[index].id.markKind, all[index].id.id) else { continue }
+            all[index].favourite = mark.isFavourite
+            all[index].markedTags = mark.tags ?? []
+            all[index].tags = Self.unique(all[index].tags + all[index].markedTags)
+            if !all[index].markedTags.isEmpty { all[index].searchText += " · " + Self.fold(all[index].markedTags.joined(separator: " · ")) }
+        }
+        marks = library.marks ?? []
         items = all
         for (index, facts) in items.enumerated() { position[facts.id] = index }
         for index in items.indices { count(&items[index]) }
@@ -216,7 +231,13 @@ public struct LibraryIndex: Sendable {
         // What everything is fitted to follows the open song, saved or not.
         if FitTarget.of(song) != fitTarget { fit(to: FitTarget.of(song)) }
         guard let old = readings[song.id] else { return }
-        let new = read(song)
+        var new = read(song)
+        if let mark = marks.first(where: { $0.kind == .song && $0.id == song.id.rawValue }) {
+            new.facts.favourite = mark.isFavourite
+            new.facts.markedTags = mark.tags ?? []
+            new.facts.tags = new.facts.markedTags
+            if !new.facts.markedTags.isEmpty { new.facts.searchText += " · " + Self.fold(new.facts.markedTags.joined(separator: " · ")) }
+        }
         readings[song.id] = new
         if let index = position[.song(song.id)] { items[index] = new.facts }
 
@@ -250,6 +271,9 @@ public struct LibraryIndex: Sendable {
         /// Ideas and samples whose music it holds.
         var holds: [LibraryItemID]
     }
+
+    /// Every tag on a shelf, in the order the shelf first has them.
+    public func tags(on shelf: LibraryShelf) -> [String] { Self.unique(items(on: shelf).flatMap(\.tags)) }
 
     private func read(_ song: Song) -> SongReading {
         var facts = LibraryFacts(id: .song(song.id), title: song.title, changed: song.createdAt)

@@ -142,13 +142,13 @@ struct LibraryActionTests {
     @Test("each shelf offers what the strip's menus offered, as one list")
     func lists() {
         let (app, shelf) = LibraryBrowserFixture.app()
-        #expect(ids(LibraryActions.actions(for: .song(shelf.nightBus.id), in: app)) == ["open", "rename", "duplicate", "album", "finder", "trash"])
-        #expect(ids(LibraryActions.actions(for: .album(shelf.album.id), in: app)) == ["open", "rename", "delete"])
-        #expect(ids(LibraryActions.actions(for: .idea(shelf.idea.id), in: app)) == ["adopt", "remove"])
-        #expect(ids(LibraryActions.actions(for: .sample(shelf.chop.id), in: app)) == ["adopt", "remove"])
+        #expect(ids(LibraryActions.actions(for: .song(shelf.nightBus.id), in: app)) == ["open", "rename", "duplicate", "album", "finder", "favourite", "tag", "trash"])
+        #expect(ids(LibraryActions.actions(for: .album(shelf.album.id), in: app)) == ["open", "rename", "favourite", "tag", "delete"])
+        #expect(ids(LibraryActions.actions(for: .idea(shelf.idea.id), in: app)) == ["adopt", "favourite", "tag", "remove"])
+        #expect(ids(LibraryActions.actions(for: .sample(shelf.chop.id), in: app)) == ["adopt", "favourite", "tag", "remove"])
         #expect(ids(LibraryActions.actions(for: .record(shelf.drifter.id), in: app))
-                == ["start", "add", "adopt", "separate", "read", "grid", "rename", "remove"])
-        #expect(ids(LibraryActions.actions(for: .record(shelf.ferry.id), in: app)) == ["start", "add", "adopt", "separate", "read", "rename", "remove"],
+                == ["start", "add", "adopt", "separate", "read", "grid", "rename", "favourite", "tag", "remove"])
+        #expect(ids(LibraryActions.actions(for: .record(shelf.ferry.id), in: app)) == ["start", "add", "adopt", "separate", "read", "rename", "favourite", "tag", "remove"],
                 "no reading, no grid to correct")
         #expect(LibraryActions.actions(for: .song(SongID()), in: app).isEmpty, "gone from the library: nothing to do")
     }
@@ -187,7 +187,7 @@ struct LibraryActionTests {
         #expect(question(.record(shelf.drifter.id))?.1.contains("songs made from it still play") == true)
         #expect(question(.sample(shelf.chop.id))?.0 == "Remove “Drifter hit” from Samples?")
         var asked: [String] = []
-        for action in LibraryActions.actions(for: .album(shelf.album.id), in: app) where action.id != "open" {
+        for action in LibraryActions.actions(for: .album(shelf.album.id), in: app) where ["rename", "delete"].contains(action.id) {
             LibraryActions.perform(action) { asked.append($0.id) }
         }
         #expect(asked == ["rename", "delete"], "a rename and a delete are handed over to be asked, and neither ran")

@@ -739,6 +739,30 @@ public struct LibrarySample: Identifiable, Hashable, Codable, Sendable {
     public var media: MediaRef { sample.media }
 }
 
+/// A favourite and tags on something in the library: what a person put there to find it again.
+/// Kept in `library.json`, never in a song's package.
+public struct LibraryMark: Hashable, Codable, Sendable {
+    public enum Kind: String, Codable, Sendable, CaseIterable { case song, record, idea, sample, album }
+
+    public var kind: Kind
+    public var id: UUID
+    /// Omitted when false, so a mark with only tags says only that.
+    public var favourite: Bool?
+    /// Omitted when there are none.
+    public var tags: [String]?
+
+    public init(kind: Kind, id: UUID, favourite: Bool = false, tags: [String] = []) {
+        self.kind = kind
+        self.id = id
+        self.favourite = favourite ? true : nil
+        self.tags = tags.isEmpty ? nil : tags
+    }
+
+    public var isFavourite: Bool { favourite == true }
+    /// A mark with nothing on it, which is not kept.
+    public var isEmpty: Bool { !isFavourite && (tags ?? []).isEmpty }
+}
+
 /// The library: songs, albums, ideas (part versions belonging to no song), imported records and samples.
 public struct Library: Hashable, Codable, Sendable {
     public let schemaVersion: Int
@@ -755,6 +779,9 @@ public struct Library: Hashable, Codable, Sendable {
     public var houseCalls: [HouseCallRecord]?
     /// What the band has said, and how often. Optional for the same reason.
     public var said: [SaidRecord]?
+    /// Favourites and tags, one mark per item that has any. Optional for the same reason: a
+    /// library nobody marked writes exactly what it always wrote.
+    public var marks: [LibraryMark]?
 
     public init(songs: [Song] = [], albums: [Album] = [], ideas: [PartVersion] = [], records: [Record] = [],
                 samples: [LibrarySample] = [], voice: [VoiceLyric]? = nil) {
@@ -784,6 +811,16 @@ public struct Library: Hashable, Codable, Sendable {
 
     /// The record whose media this is, when the library holds one.
     public func record(forMedia media: MediaRef) -> Record? { records.first { $0.media == media } }
+
+    /// The mark on an item, when it has one.
+    public func mark(_ kind: LibraryMark.Kind, _ id: UUID) -> LibraryMark? { marks?.first { $0.kind == kind && $0.id == id } }
+
+    /// Puts a mark in place of the item's, or takes it away when it is empty; no marks at all is nil.
+    public mutating func setMark(_ mark: LibraryMark) {
+        var all = (marks ?? []).filter { !($0.kind == mark.kind && $0.id == mark.id) }
+        if !mark.isEmpty { all.append(mark) }
+        marks = all.isEmpty ? nil : all
+    }
 
     /// Media referenced at the library level (records, samples, ideas), deduplicated.
     public var mediaReferences: [MediaRef] {
