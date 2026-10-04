@@ -150,7 +150,8 @@ struct ReadLibrarySearchTests {
         #expect(titles(read, "records") == ["Brass Band 78"])
         let all = await run(app, Self.empty)
         let drifter = (all["records"] as? [[String: Any]])?.first { $0["title"] as? String == "Drifter" }
-        #expect((drifter?["fit"] as? String)?.hasPrefix("far: The record of Drifter down 5 semitones to A minor") == true)
+        #expect((drifter?["fit"] as? String)?.hasPrefix("far, into Night Bus: The record of Drifter down 5 semitones to A minor") == true,
+                "which song the move is into, said, so it is not read as another take of the record")
         let closed = await run(LibraryBrowserFixture.app().app, with([("goes_with_song", .bool(true))]))
         #expect(titles(closed, "records").count == 3, "no song open: nothing held back")
         #expect((closed["detail"] as? String)?.contains("No song is open, so nothing is held back") == true)

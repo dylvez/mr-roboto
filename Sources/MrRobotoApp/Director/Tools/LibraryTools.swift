@@ -147,7 +147,7 @@ public struct ReadLibraryTool: DirectorTool {
         + "tempo and bars, and its stems kept with it, each with how much of the record it is and the bar it "
         + "comes in at), samples (chops saved with their slices and chain), albums and songs — each with its "
         + "key and tempo where it has one, and for each song the stems its record gives and its record's bars. "
-        + "With a song open, each record, idea and sample says how it would come in: moved how far, as adopt would. "
+        + "With a song open, each record, idea and sample says how it would come into that song (fit): moved how far, as adopt would. "
         + "Search it as the Library surface does — a shelf, words, a key and how far from it, a tempo (half and "
         + "double time count), only what goes with the open song — and leave every field empty for all of it; show "
         + "opens the Library on the same search for the person. "
@@ -165,7 +165,7 @@ public struct ReadLibraryTool: DirectorTool {
             ("within", Schema.integer("Semitones from `key` that still count; 0 for the key or its relative.", minimum: 0, maximum: 6)),
             ("tempo", Schema.number("Beats per minute: only what is within 6% of it, or of half or double it. 0 for any tempo.")),
             ("goes_with_song", Schema.boolean("Only the records, ideas and samples that would come into the open song moved no "
-                                              + "further than a sample bears — four semitones — nearest first. False for all of them.")),
+                                              + "further than a sample bears — four semitones, and a stretch of 12% — nearest first. False for all of them.")),
             ("show", Schema.boolean("Also open the Library surface on this search, for the person to see and hear what it found.")),
         ], required: ["shelf", "words", "key", "within", "tempo", "goes_with_song", "show"])
     }
@@ -217,9 +217,11 @@ public struct ReadLibraryTool: DirectorTool {
         }
     }
 
-    /// "near: The record of Drifter stays in A minor at 85." — how it would come in, in Sources' words.
-    static func fitLine(_ fit: LibraryFit?) -> String? {
-        guard let fit, fit.verdict != .unknown else { return nil }
+    /// "near, into Night Bus: The record of Drifter stays in A minor at 85." — how it would come
+    /// into the open song, in Sources' words, and which song that is: said bare, a move into the
+    /// song read as a description of another take of the record.
+    static func fitLine(_ fit: LibraryFit?, into target: FitTarget?) -> String? {
+        guard let fit, let target, fit.verdict != .unknown else { return nil }
         let verdict: String = switch fit.verdict {
         case .asIs: "as it is"
         case .near: "near"
@@ -228,7 +230,7 @@ public struct ReadLibraryTool: DirectorTool {
         case .refused: "refused"
         case .unknown: ""
         }
-        return "\(verdict): " + (fit.sentences + fit.flags).joined(separator: " ")
+        return "\(verdict), into \(target.title): " + (fit.sentences + fit.flags).joined(separator: " ")
     }
 
     public func run(_ input: Input) async throws -> Output {
@@ -248,7 +250,7 @@ public struct ReadLibraryTool: DirectorTool {
         let ideas = search.pick(library.ideas, on: .ideas, index: index, id: \.id.rawValue).map { idea in
             Output.Idea(id: idea.id.description, title: PartLabel.title(of: idea), type: idea.type.rawValue,
                         key: ReadSongTool.key(of: idea).map { "\($0)" }, note: idea.note,
-                        fit: Self.fitLine(index.facts(.idea(idea.id))?.fit))
+                        fit: Self.fitLine(index.facts(.idea(idea.id))?.fit, into: index.fitTarget))
         }
         var records: [Output.RecordEntry] = []
         for record in search.pick(library.records, on: .records, index: index, id: \.id.rawValue) {
@@ -273,7 +275,7 @@ public struct ReadLibraryTool: DirectorTool {
                                               secondTrackerTempo: check?.checkerBPM.map { ($0 * 10).rounded() / 10 },
                                               secondTrackerKept: !(record.readingAsRead?.checkerBeats?.isEmpty ?? true),
                                               tuningCents: record.tuning.flatMap { abs($0) >= SourceFitting.leastCents ? $0 : nil },
-                                              fit: Self.fitLine(index.facts(.record(record.id))?.fit)))
+                                              fit: Self.fitLine(index.facts(.record(record.id))?.fit, into: index.fitTarget)))
         }
         let samples = search.pick(library.samples, on: .samples, index: index, id: \.id.rawValue).map { entry in
             Output.SampleEntry(id: entry.id.description, name: entry.name, key: entry.sample.key.map { "\($0)" },
@@ -281,7 +283,7 @@ public struct ReadLibraryTool: DirectorTool {
                                dusty: !entry.sample.degradation.isEmpty,
                                source: recordName(entry.sample.sourceRecord ?? library.record(forMedia: entry.sample.media)?.id),
                                sourceRecord: entry.sample.sourceRecord?.description,
-                               fit: Self.fitLine(index.facts(.sample(entry.id))?.fit))
+                               fit: Self.fitLine(index.facts(.sample(entry.id))?.fit, into: index.fitTarget))
         }
         let albums = search.pick(library.albums, on: .albums, index: index, id: \.id.rawValue).map { album in
             Output.AlbumEntry(id: album.id.description, title: album.title,

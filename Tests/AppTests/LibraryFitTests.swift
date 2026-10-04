@@ -39,9 +39,12 @@ struct LibraryFitTests {
 
         #expect(LibraryFitting.fit(shelf.ferry, into: song) == nil, "not read: nothing to fit")
 
-        // The chop has a tempo and no key: stretched, never moved.
+        // The chop has a tempo and no key: stretched, never moved; 18% is further than a merge
+        // stretches before it doubles or halves, so it is far.
         let chop = try #require(LibraryFitting.fit(shelf.chop, into: song))
-        #expect(chop.semitones == 0 && chop.verdict == .moves && abs(chop.cost - (100.0 / 85 - 1) * 100 / 3) < 1e-9)
+        #expect(chop.semitones == 0 && chop.verdict == .far && abs(chop.cost - (100.0 / 85 - 1) * 100 / 3) < 1e-9)
+        #expect(LibraryFitting.fit(shelf.chop, into: target(nil, 95))?.verdict == .near, "100 into 95: 5%")
+        #expect(LibraryFitting.fit(shelf.chop, into: target(nil, 90))?.verdict == .moves, "100 into 90: 11%, within what a merge stretches")
 
         // A written part moves by arithmetic, which costs its sound nothing.
         let idea = try #require(LibraryFitting.fit(shelf.idea, into: target("D major", 85)))
@@ -88,7 +91,7 @@ struct LibraryFitTests {
         moved.key = Key(parsing: "D minor")
         index.refresh(moved)
         #expect(index.facts(.record(shelf.drifter.id))?.fit?.semitones == 0, "Drifter's own key now")
-        #expect(index.facts(.record(shelf.drifter.id))?.fit?.verdict == .moves, "still stretched 100 to 85: 18%")
+        #expect(index.facts(.record(shelf.drifter.id))?.fit?.verdict == .far, "still stretched 100 to 85: 18%, past 12%")
         #expect(index.facts(.record(shelf.brass.id))?.fit?.semitones == 5)
 
         // A song not saved yet is still what everything is fitted to, once it holds something.
@@ -106,7 +109,7 @@ struct LibraryFitTests {
         let query = LibraryQuery(shelf: .records, goesWith: true, sort: .init(.fit))
         #expect(query.run(open).map(\.title) == ["Brass Band 78"], "Drifter is five semitones off; Ferry Bells has not been read")
         #expect(LibraryQuery(shelf: .records, sort: .init(.fit)).run(open).map(\.title) == ["Brass Band 78", "Drifter", "Ferry Bells"])
-        #expect(LibraryQuery(shelf: .samples, goesWith: true).run(open).map(\.title) == ["Drifter hit"])
+        #expect(LibraryQuery(shelf: .samples, goesWith: true).run(open).isEmpty, "the chop would be stretched 18%")
         #expect(query.run(LibraryIndex(library: shelf.library)).count == 3, "no song open: the filter means nothing")
         #expect(query.narrows)
     }

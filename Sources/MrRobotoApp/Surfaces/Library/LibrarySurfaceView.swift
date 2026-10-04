@@ -483,7 +483,7 @@ struct LibrarySurfaceView: View {
             }
         case .goesWith:
             BoothChip("Goes with \(model.index.fitTarget?.title ?? "this song")", isOn: query.goesWith == true) { model.toggleGoesWith() }
-                .help("Only what comes into the open song moved no further than a sample bears — four semitones — nearest first")
+                .help("Only what comes into the open song moved no further than a sample bears — four semitones, a 12% stretch — nearest first")
         case .key:
             menuChip(query.key.map(Self.keyLabel) ?? "Key", isOn: query.key != nil) { keyMenu }
         case .tempo:

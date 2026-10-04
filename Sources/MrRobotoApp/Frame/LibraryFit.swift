@@ -15,7 +15,8 @@ public struct LibraryFit: Hashable, Sendable {
         case near
         /// Moved, within what a sample bears.
         case moves
-        /// Past four semitones: the timbre will tell (the Sampler's flag).
+        /// Past four semitones — the timbre will tell (the Sampler's flag) — or stretched further
+        /// than a merge stretches before it doubles or halves (`Merge.stretchLimit`).
         case far
         /// Past seven: the Sampler will not call it the same recording.
         case refused
@@ -127,7 +128,7 @@ enum LibraryFitting {
             verdict = .unknown
         } else if distance > Sampler.transposeCeilingSemitones {
             verdict = .refused
-        } else if Double(distance) > Sampler.transposeFlagSemitones {
+        } else if Double(distance) > Sampler.transposeFlagSemitones || stretch > Merge.stretchLimit + 1e-9 {
             verdict = .far
         } else if distance == 0, stretch < 0.005, move.tempoFactor == 1 {
             verdict = .asIs
