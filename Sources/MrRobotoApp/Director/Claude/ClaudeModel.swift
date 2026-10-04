@@ -89,7 +89,8 @@ extension ClaudeModel {
 /// for the same tools as Opus 5 at two fifths of the price, once the tools' answers carried the
 /// numbers it is asked to say; Opus 5 is the more careful reporter, and one click away.
 public struct DirectorModelChoice {
-    private let defaults: UserDefaults
+    private let read: () -> String?
+    private let write: (String) -> Void
     static let key = "director.model"
 
     /// What the band runs on before anybody has chosen.
@@ -97,14 +98,24 @@ public struct DirectorModelChoice {
     /// The ones offered, the less expensive first.
     public static let offered: [ClaudeModel] = [.sonnet5, .opus5]
 
-    public init(defaults: UserDefaults = .standard) { self.defaults = defaults }
+    /// The choice as the app keeps it, in its defaults.
+    public init(defaults: UserDefaults = .standard) {
+        self.init(read: { defaults.string(forKey: Self.key) }, write: { defaults.set($0, forKey: Self.key) })
+    }
+
+    /// The choice kept wherever the caller says. A test keeps it in memory: defaults made for one
+    /// test leave a file in Preferences every run, whether or not the test takes them away again.
+    init(read: @escaping () -> String?, write: @escaping (String) -> Void) {
+        self.read = read
+        self.write = write
+    }
 
     public var model: ClaudeModel {
         get {
-            let kept = defaults.string(forKey: Self.key).flatMap(ClaudeModel.init(rawValue:))
+            let kept = read().flatMap(ClaudeModel.init(rawValue:))
             return kept.flatMap { Self.offered.contains($0) ? $0 : nil } ?? Self.standard
         }
-        nonmutating set { defaults.set(newValue.rawValue, forKey: Self.key) }
+        nonmutating set { write(newValue.rawValue) }
     }
 
     /// A model as the menu offers it: its name, and what it costs beside the least expensive one,

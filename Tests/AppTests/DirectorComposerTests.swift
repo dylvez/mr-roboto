@@ -20,11 +20,19 @@ struct DirectorEndingTests {
         func clean() { try? FileManager.default.removeItem(at: directory) }
     }
 
+    /// A model choice kept in memory, so a test leaves nothing in Preferences.
+    final class KeptModel { var raw: String? }
+    static func models(_ kept: KeptModel = KeptModel()) -> DirectorModelChoice {
+        DirectorModelChoice(read: { kept.raw }, write: { kept.raw = $0 })
+    }
+
     static func rig(_ replies: [DirectorScriptedTransport.Reply],
                     keySource: any ClaudeKeySource = DirectorTestClient.key,
                     transport: (any ClaudeTransport)? = nil,
                     maxRounds: Int = 12,
-                    models: DirectorModelChoice = DirectorModelChoice(defaults: UserDefaults(suiteName: "director-ending-tests")!)) -> Rig {
+                    models: DirectorModelChoice? = nil) -> Rig {
+        // Its own choice unless handed one, so a model chosen here is never the next test's.
+        let models = models ?? Self.models()
         let directory = GuidanceFixture.temporaryDirectory("director-ending")
         let app = AppState(library: Library(), song: nil,
                            store: LibraryStore(directoryURL: directory),
@@ -278,15 +286,16 @@ struct DirectorEndingTests {
 
     @Test("The band runs on Sonnet 5 until one is chosen; a choice is kept, and one no longer offered is the standard again")
     func modelChoice() throws {
-        let defaults = try #require(UserDefaults(suiteName: "director-model-\(UUID().uuidString)"))
-        let choice = DirectorModelChoice(defaults: defaults)
+        let kept = KeptModel()
+        let choice = Self.models(kept)
         #expect(choice.model == .sonnet5 && DirectorModelChoice.offered == [.sonnet5, .opus5])
         choice.model = .opus5
-        #expect(DirectorModelChoice(defaults: defaults).model == .opus5)
-        defaults.set(ClaudeModel.fable51.rawValue, forKey: DirectorModelChoice.key)
+        #expect(kept.raw == "claude-opus-5" && Self.models(kept).model == .opus5)
+        kept.raw = ClaudeModel.fable51.rawValue
         #expect(choice.model == .sonnet5)
-        defaults.set("claude-nobody", forKey: DirectorModelChoice.key)
+        kept.raw = "claude-nobody"
         #expect(choice.model == .sonnet5)
+        #expect(DirectorModelChoice.key == "director.model")
         // What the menu says, from the prices.
         #expect(DirectorModelChoice.line(for: .sonnet5) == "Sonnet 5, the less expensive")
         #expect(DirectorModelChoice.line(for: .opus5) == "Opus 5, 2.5 times the price")
@@ -296,14 +305,14 @@ struct DirectorEndingTests {
     func choosingAModel() async throws {
         let transport = DirectorScriptedTransport([.events(DirectorSSE.reply("One.")), .events(DirectorSSE.reply("Two.")),
                                                    .events(DirectorSSE.reply("Three."))])
-        let defaults = try #require(UserDefaults(suiteName: "director-model-\(UUID().uuidString)"))
-        let rig = Self.rig([], transport: transport, models: DirectorModelChoice(defaults: defaults))
+        let kept = KeptModel()
+        let rig = Self.rig([], transport: transport, models: Self.models(kept))
         defer { rig.clean() }
         #expect(rig.session.model == .opus5, "the model this rig's director was made on")
 
         await Self.send(rig, "first")
         rig.session.choose(.sonnet5)
-        #expect(rig.session.model == .sonnet5 && DirectorModelChoice(defaults: defaults).model == .sonnet5)
+        #expect(rig.session.model == .sonnet5 && kept.raw == "claude-sonnet-5")
         #expect(rig.app.log.last?.text == "The band runs on Sonnet 5 now")
         await Self.send(rig, "second")
         await Self.send(rig, "third")
