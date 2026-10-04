@@ -110,7 +110,13 @@ extension SurfaceWiring {
                 await player.play(id: id, label: "Sources preview", seconds: nil) { await model.preview() }
             }
         case .library:
-            return nil
+            // The item chosen, heard as its row's play button hears it.
+            let model = libraryModel(for: item, app: app)
+            guard let chosen = model.selection, model.preview.canHear(chosen) else { return nil }
+            let stem = chosen.shelf == .records && model.preview.record?.rawValue == chosen.id ? model.preview.stem : nil
+            return SurfaceAudition(id: LibraryPreview.id(chosen, stem: stem), label: "this \(LibraryText.noun(chosen.shelf))") { _ in
+                await model.preview.play(chosen)
+            }
         case .mashup:
             let model = mashupModel(for: item, app: app)
             guard model.blocker == nil else { return nil }

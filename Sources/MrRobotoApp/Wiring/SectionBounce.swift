@@ -29,6 +29,14 @@ enum SectionBounce {
         }
     }
 
+    /// How a long render shares the audio actor: in pieces this many frames long, yielding between
+    /// them so a sound asked for meanwhile is not kept waiting, saying how far it has got, and
+    /// stopping when its task is cancelled. Nil renders in one go, as an export does.
+    struct Pacing: Sendable {
+        var frames: AVAudioFramePosition
+        var progress: (@Sendable (Double) -> Void)?
+    }
+
     enum Part {
         case mix, drums, bass
 
@@ -53,7 +61,8 @@ enum SectionBounce {
     @AudioActor
     static func render(_ plan: SongPlayback, section: SectionID? = nil, kitsDirectory: URL,
                        sampleRate: Double = 48_000, tailSeconds: Double = 0.5,
-                       onlyTheMix: Bool = false, mastered: Bool = true, upTo limit: Int? = nil) async throws -> Stems {
+                       onlyTheMix: Bool = false, mastered: Bool = true, upTo limit: Int? = nil,
+                       pacing: Pacing? = nil) async throws -> Stems {
         let clock = TransportClock(tempo: plan.tempo, timeSignature: plan.timeSignature, sampleRate: sampleRate)
         let (base, label, whole) = try isolate(plan, section: section)
         // A few bars of it, for hearing something against the song: not the whole record.
@@ -63,7 +72,8 @@ enum SectionBounce {
 
         var stems = Stems(label: label, sampleRate: sampleRate, mix: [], drums: [], bass: [],
                           chainCornerHz: corner(of: base))
-        stems.mix = try await renderOne(base, part: .mix, clock: clock, frames: frames, kitsDirectory: kitsDirectory, sampleRate: sampleRate)
+        stems.mix = try await renderOne(base, part: .mix, clock: clock, frames: frames, kitsDirectory: kitsDirectory, sampleRate: sampleRate,
+                                        pacing: pacing)
         // A song never mixed has the default master, ceiling and all: it used to go out with no
         // ceiling, over 0 dBFS and hard-clipped, while the Master tab read a limited mix. A stem
         // (`mastered` false) goes out as its strip made it.
@@ -183,7 +193,7 @@ enum SectionBounce {
 
     @AudioActor
     private static func renderOne(_ plan: SongPlayback, part: Part, clock: TransportClock, frames: AVAudioFramePosition,
-                                  kitsDirectory: URL, sampleRate: Double) async throws -> [[Float]] {
+                                  kitsDirectory: URL, sampleRate: Double, pacing: Pacing? = nil) async throws -> [[Float]] {
         // As many nodes as the live graph: a bounce goes through the same `LiveSongPlayer`, so a
         // form it can play is a form this can render.
         let engine = try Engine(playerCount: SongPlayback.playerNodes, sampleRate: sampleRate, channels: 2)
@@ -203,15 +213,35 @@ enum SectionBounce {
         // overrides to the end.
         var planar: [[Float]] = []
         var rendered: AVAudioFramePosition = 0
-        for boundary in sectionBoundaries(of: rendering, clock: clock, sampleRate: sampleRate) where boundary.frame < frames {
-            if boundary.frame > rendered {
-                append(AuditionService.planar(try OfflineRenderer.renderBuffer(engine: engine, frames: boundary.frame - rendered)), to: &planar)
-                rendered = boundary.frame
+        /// The next `count` frames: at once, or a piece at a time when paced.
+        func render(_ count: AVAudioFramePosition) async throws {
+            guard let pacing, pacing.frames > 0 else {
+                append(AuditionService.planar(try OfflineRenderer.renderBuffer(engine: engine, frames: count)), to: &planar)
+                rendered += count
+                return
             }
-            await player.mixChanged(rendering.mix, section: boundary.section)
+            var left = count
+            while left > 0 {
+                let piece = min(left, pacing.frames)
+                append(AuditionService.planar(try OfflineRenderer.renderBuffer(engine: engine, frames: piece)), to: &planar)
+                left -= piece
+                rendered += piece
+                pacing.progress?(Double(rendered) / Double(max(1, frames)))
+                try Task.checkCancellation()
+                await Task.yield()
+            }
         }
-        if frames > rendered {
-            append(AuditionService.planar(try OfflineRenderer.renderBuffer(engine: engine, frames: frames - rendered)), to: &planar)
+        do {
+            for boundary in sectionBoundaries(of: rendering, clock: clock, sampleRate: sampleRate) where boundary.frame < frames {
+                if boundary.frame > rendered { try await render(boundary.frame - rendered) }
+                await player.mixChanged(rendering.mix, section: boundary.section)
+            }
+            if frames > rendered { try await render(frames - rendered) }
+        } catch {
+            // A render stopped part way still gives its kits back.
+            await player.end()
+            await service.shutdown()
+            throw error
         }
         await player.end()
         await service.shutdown()

@@ -307,6 +307,10 @@ public final class AppState {
     /// left — waiting for the surface to select it. The surface takes it, so it is shown once.
     public var libraryAsk: LibraryItemID?
 
+    /// Called as the transport starts: what is sounding outside the song's transport — a record
+    /// heard from the Library — gives way, so the song never plays over it.
+    @ObservationIgnored var beforeTransportStarts: (@MainActor () async -> Void)?
+
     // MARK: Bench
 
     /// One surface of each kind, open until you close it. Owned here, mutated through `openSurface`,
@@ -1443,6 +1447,7 @@ public final class AppState {
     /// of playback (the Booth's Click); nil leaves it to the transport's own toggle.
     public func startTransport(fromBar bar: Int, countIn: Int, click: Bool?, leavingOut silenced: PartID? = nil) async {
         guard transport != .playing, transport != .starting else { return }
+        await beforeTransportStarts?()
         if let pendingStop {
             self.pendingStop = nil
             await pendingStop.value

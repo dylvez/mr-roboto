@@ -115,7 +115,7 @@ struct LibraryBrowserTests {
     func columnsFit() {
         let narrow = LibrarySurfaceView.columns(for: .songs, width: Design.Metric.surfaceMinimumWidth)
         #expect(narrow.first == .title)
-        let used = narrow.dropFirst().reduce(LibrarySurfaceView.titleMinimum + 24) {
+        let used = narrow.dropFirst().reduce(LibrarySurfaceView.titleMinimum + 24 + LibrarySurfaceView.playWidth + LibrarySurfaceView.columnSpacing) {
             $0 + (LibrarySurfaceView.width(of: $1) ?? 0) + LibrarySurfaceView.columnSpacing
         }
         #expect(used <= Design.Metric.surfaceMinimumWidth)

@@ -104,6 +104,17 @@ extension LibraryColumn {
 }
 
 enum LibraryText {
+    /// "song", "record": one of a shelf.
+    static func noun(_ shelf: LibraryShelf) -> String {
+        switch shelf {
+        case .songs: "song"
+        case .records: "record"
+        case .ideas: "idea"
+        case .samples: "sample"
+        case .albums: "album"
+        }
+    }
+
     /// "1 song", "3 songs".
     static func count(_ n: Int, _ noun: String) -> String { "\(n) \(noun)\(n == 1 ? "" : "s")" }
 

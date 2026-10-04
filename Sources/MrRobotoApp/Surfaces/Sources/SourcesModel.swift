@@ -219,6 +219,12 @@ public final class SourcesModel {
         from = asked.origin
         if let stem = asked.stem, available.contains(stem) { choose(stem: stem) }
         if let section = asked.section, songSections.contains(where: { $0.id == section }) { sections = [section] }
+        // Some bars, as they were heard: a clip of just those.
+        if let bars = asked.bars, !bars.isEmpty {
+            isClip = true
+            toBar = bars.upperBound
+            fromBar = bars.lowerBound + 1
+        }
     }
 
     // MARK: Hearing it, adding it

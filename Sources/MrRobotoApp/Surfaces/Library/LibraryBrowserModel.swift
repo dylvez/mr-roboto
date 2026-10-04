@@ -56,15 +56,24 @@ struct LibraryBrowserMemory {
 final class LibraryBrowserModel {
     let app: AppState
     @ObservationIgnored private let memory: LibraryBrowserMemory
+    /// Hearing what is on the shelves.
+    let preview: LibraryPreview
+    @ObservationIgnored private let listening: LibraryListeningHost
 
     private(set) var shelf: LibraryShelf
     private var queries: [LibraryShelf: LibraryQuery] = [:]
     /// The item chosen on each shelf, kept while you look at another.
     private var selections: [LibraryShelf: LibraryItemID] = [:]
 
-    init(app: AppState, memory: LibraryBrowserMemory) {
+    init(app: AppState, memory: LibraryBrowserMemory, listening: LibraryListeningHost? = nil) {
         self.app = app
         self.memory = memory
+        let listening = listening ?? LiveLibraryListening(app: app)
+        self.listening = listening
+        let preview = LibraryPreview(app: app, host: listening)
+        self.preview = preview
+        // The song's transport starting is the end of anything heard from here.
+        app.beforeTransportStarts = { [weak preview] in await preview?.yieldToTransport() }
         shelf = memory.shelf ?? .songs
         for shelf in LibraryShelf.allCases { queries[shelf] = memory.query(on: shelf) ?? LibraryQuery(shelf: shelf) }
         // The open song, chosen on its shelf, so the surface opens on something you know.

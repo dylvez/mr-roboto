@@ -540,6 +540,8 @@ final class SurfaceWiring {
         mixers = mixers.filter { open.contains($0.key) }
         mashups = mashups.filter { open.contains($0.key) }
         sourceSheets = sourceSheets.filter { open.contains($0.key) }
+        // A record looping from a closed Library would go on with nothing on screen to stop it.
+        for (id, model) in libraries where !open.contains(id) { Task { await model.preview.stop() } }
         libraries = libraries.filter { open.contains($0.key) }
         masters = masters.filter { open.contains($0.key) }
         compares = compares.filter { open.contains($0.key) }

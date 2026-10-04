@@ -81,9 +81,20 @@ public final class PartPlayer {
 
     public func play(_ version: PartVersion) async {
         guard Self.canPlay(version), let song = app.song ?? app.library.songs.first(where: { $0.version(version.id) != nil }) else { return }
+        await play(version, in: song)
+    }
+
+    /// A version that belongs to no song — an idea, a sample on the library's shelf — played alone
+    /// against `song`, which says only its tempo and what it plays on, under the caller's name.
+    public func play(_ version: PartVersion, standingIn song: Song, as id: String, label: String) async {
+        guard Self.canPlay(version) else { return }
+        await play(version, in: song, inSong: false, as: NowPlaying(id: id, label: label))
+    }
+
+    private func play(_ version: PartVersion, in song: Song, inSong: Bool = true, as named: NowPlaying? = nil) async {
         await stopSounding()
         let label = PartLabel.title(of: version)
-        if mode == .inSong, app.song?.version(version.id) != nil {
+        if inSong, mode == .inSong, app.song?.version(version.id) != nil {
             await playSong(id: version.id.description, label: "\(label), in the song", from: version)
             return
         }
@@ -91,7 +102,7 @@ public final class PartPlayer {
         let clock = TransportClock(tempo: song.tempo, timeSignature: song.timeSignature)
         do {
             let seconds = try await sound(version, in: song, clock: clock)
-            began(NowPlaying(id: version.id.description, label: label), seconds: seconds)
+            began(named ?? NowPlaying(id: version.id.description, label: label), seconds: seconds)
         } catch {
             lastError = "\(error)"
             app.note(.session, "Could not play \(label)", detail: "\(error)")

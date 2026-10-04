@@ -138,7 +138,10 @@ public final class AuditionService {
     /// The rate and channel count are converted to the graph's on the way in, rather than
     /// reconnecting the node per audition: a 44.1 kHz record and a 48 kHz render of an 808 kick are
     /// both ordinary here.
-    public func play(planar: [[Float]], sampleRate: Double) async {
+    ///
+    /// - Parameter loops: round and round until the next audition or `stop()`: bars of a record
+    ///   heard as a loop in the Library.
+    public func play(planar: [[Float]], sampleRate: Double, loops: Bool = false) async {
         guard sampleRate > 0, let frames = planar.first?.count, frames > 0 else { return }
         do {
             let engine = try await running()
@@ -147,7 +150,7 @@ public final class AuditionService {
                 lastFailure = "could not build an audition buffer at \(sampleRate) Hz"
                 return
             }
-            try hand(buffer, to: node)
+            try hand(buffer, to: node, loops: loops)
             lastFailure = nil
         } catch {
             lastFailure = "\(error)"
@@ -518,12 +521,12 @@ public final class AuditionService {
     /// Not `async`, deliberately: `scheduleBuffer`'s async alternative waits for the buffer to
     /// finish playing, and an audition is fire-and-forget — it is interrupted by the next one, and
     /// nothing is waiting for it to end.
-    private func hand(_ buffer: AVAudioPCMBuffer, to node: AVAudioPlayerNode) throws {
+    private func hand(_ buffer: AVAudioPCMBuffer, to node: AVAudioPlayerNode, loops: Bool = false) throws {
         // Stop first: an audition is interrupted by the next one, and stopping also flushes the
         // node's scheduling hand-off, which offline can otherwise be overtaken by the render loop
         // and silently dropped (the reason `Engine.commitOfflineScheduling` exists).
         node.stop()
-        node.scheduleBuffer(buffer, at: nil, options: [], completionHandler: nil)
+        node.scheduleBuffer(buffer, at: nil, options: loops ? [.loops] : [], completionHandler: nil)
         try node.playAudio()
     }
 

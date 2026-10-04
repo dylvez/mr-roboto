@@ -193,6 +193,7 @@ struct LibrarySurfaceView: View {
 
     private func headerRow(_ columns: [LibraryColumn]) -> some View {
         HStack(spacing: Self.columnSpacing) {
+            Color.clear.frame(width: Self.playWidth, height: 1)
             ForEach(columns, id: \.self) { column in
                 Button { model.sort(by: column) } label: {
                     HStack(spacing: 3) {
@@ -260,6 +261,7 @@ struct LibrarySurfaceView: View {
     private func row(_ facts: LibraryFacts, at index: Int, columns: [LibraryColumn], openRecords: Set<RecordID>) -> some View {
         let isChosen = model.selection == facts.id
         return HStack(spacing: Self.columnSpacing) {
+            playCell(facts)
             ForEach(columns, id: \.self) { column in
                 if column == .title {
                     titleCell(facts, isChosen: isChosen, openRecords: openRecords)
@@ -294,6 +296,26 @@ struct LibrarySurfaceView: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isChosen ? .isSelected : [])
+    }
+
+    /// Hear it without choosing it: play, or stop when it is what is sounding.
+    @ViewBuilder
+    private func playCell(_ facts: LibraryFacts) -> some View {
+        if model.preview.canHear(facts.id) {
+            let sounding = model.preview.isSounding(facts.id)
+            Button { Task { await model.preview.toggle(facts.id) } } label: {
+                Image(systemName: sounding ? "stop.fill" : "play.fill")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(sounding ? Design.Palette.accent : Design.Palette.inkTertiary)
+                    .frame(width: Self.playWidth, height: 22)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(sounding ? "Stop" : facts.id.shelf == .songs ? "Hear \(facts.title): a preview, made the first time" : "Hear \(facts.title)")
+            .accessibilityLabel(sounding ? "Stop \(facts.title)" : "Play \(facts.title)")
+        } else {
+            Color.clear.frame(width: Self.playWidth, height: 1)
+        }
     }
 
     private func titleCell(_ facts: LibraryFacts, isChosen: Bool, openRecords: Set<RecordID>) -> some View {
@@ -498,6 +520,8 @@ struct LibrarySurfaceView: View {
 
     static let columnSpacing: CGFloat = 10
     static let titleMinimum: CGFloat = 170
+    /// The play button at the head of each row.
+    static let playWidth: CGFloat = 16
 
     /// A column's width; nil for the title, which takes what is left.
     static func width(of column: LibraryColumn) -> CGFloat? {
@@ -525,7 +549,7 @@ struct LibrarySurfaceView: View {
 
     /// The shelf's columns that fit, in order, the title always.
     static func columns(for shelf: LibraryShelf, width: CGFloat) -> [LibraryColumn] {
-        var room = width - 24 - titleMinimum
+        var room = width - 24 - titleMinimum - playWidth - columnSpacing
         var shown: [LibraryColumn] = [.title]
         for column in LibraryColumn.columns(for: shelf) where column != .title {
             let needs = (Self.width(of: column) ?? 0) + columnSpacing
@@ -598,8 +622,22 @@ private struct LibraryDetail: View {
                 }
             }
             actions
+            if model.preview.canHear(facts.id) {
+                LibraryListen(facts: facts, model: model)
+            }
             factsGrid
             relations
+        }
+        // The record chosen is the one whose bars and stems are drawn.
+        .task(id: facts.id) {
+            // Settled on, not passed over with the arrows: a record's file is read and a song's
+            // preview made only for what stays chosen a moment.
+            if !Design.isOffscreenRender {
+                do { try await Task.sleep(for: .milliseconds(300)) } catch { return }
+            }
+            // A song chosen is likely to be heard next: its preview starts being made.
+            if facts.id.shelf == .songs { model.preview.prepare(song: SongID(rawValue: facts.id.id)) }
+            await model.preview.show(record: facts.id.shelf == .records ? RecordID(rawValue: facts.id.id) : nil)
         }
     }
 

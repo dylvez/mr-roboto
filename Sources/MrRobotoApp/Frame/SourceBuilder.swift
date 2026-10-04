@@ -24,11 +24,15 @@ public struct AskedSource: Equatable, Sendable {
     public var origin: SourceOrigin
     public var stem: String?
     public var section: SectionID?
+    /// Bars of the record, 0-based, the end not included: some bars rather than the whole stem,
+    /// as heard looped in the Library.
+    public var bars: Range<Int>?
 
-    public init(origin: SourceOrigin, stem: String? = nil, section: SectionID? = nil) {
+    public init(origin: SourceOrigin, stem: String? = nil, section: SectionID? = nil, bars: Range<Int>? = nil) {
         self.origin = origin
         self.stem = stem
         self.section = section
+        self.bars = bars
     }
 }
 

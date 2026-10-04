@@ -250,6 +250,21 @@ struct FrameRenderTests {
         try writeDark(FrameView(app: app), size: minimum, name: "frame-library-minimum-dark")
     }
 
+    @Test("the Library listening to a record: its stems, its bars, three of them chosen to loop")
+    func libraryListening() async throws {
+        FontRegistration.registerBundledFonts()
+        let built = try ListeningFixture.built("render", open: Song(title: "Night Bus", key: Key(parsing: "C major"), tempo: 85))
+        defer { try? FileManager.default.removeItem(at: built.directory) }
+        built.model.choose(.records)
+        built.model.select(.record(built.record.id))
+        await built.model.preview.show(record: built.record.id)
+        built.model.preview.choose(bars: 2, through: 4)
+        await built.model.preview.play(.record(built.record.id), looping: true)
+        let view = LibrarySurfaceView(model: built.model).background(Design.Palette.panel)
+        try write(view, size: CGSize(width: 1180, height: 640), name: "library-listening")
+        try writeDark(view, size: CGSize(width: 860, height: 640), name: "library-listening-dark")
+    }
+
     @Test("the Merge surface on a chop and a bass line in different keys")
     func merge() throws {
         FontRegistration.registerBundledFonts()
