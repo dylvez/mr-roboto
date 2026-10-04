@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import SongGraph
 import SwiftUI
@@ -460,5 +461,44 @@ struct LayoutProposalTests {
         #expect(app.versions.count > 0)
         #expect(app.log.isEmpty == false)
         #expect(app.proposals.count > 0)
+    }
+}
+
+// MARK: - Every column fits between the header and the transport
+
+@Suite("Layout: the columns fit the window's minimum") @MainActor
+struct LayoutColumnFitTests {
+
+    /// How tall a column draws when offered `height`: more than it was offered is a column that
+    /// pushes the frame past the window, and the window crops the header and the transport.
+    private func drawn<V: View>(_ view: V, width: CGFloat, height: CGFloat) throws -> CGFloat {
+        let renderer = ImageRenderer(content: view)
+        renderer.proposedSize = ProposedViewSize(width: width, height: height)
+        return try #require(renderer.nsImage).size.height
+    }
+
+    @Test("At the minimum height with every region open, each column takes the height it is given and no more")
+    func columnsFit() throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        let directory = GuidanceFixture.temporaryDirectory("layout")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let song = GuidanceFixture.separated().song
+        // Each column is drawn on its own, so whether a region is folded away does not enter into
+        // it, and nothing here writes a preference.
+        let app = AppState(library: Library(songs: [song]), song: nil, store: LibraryStore(directoryURL: directory),
+                           status: .loaded(directory), transportHost: StubTransportHost())
+        app.open(song)
+
+        let column = FrameLayout.benchHeight(inWindowOfHeight: FrameLayout.minimumWindowHeight)
+        // The band's question card was a fixed 410 points, its default dragged height: with the
+        // column's header, the conversation and the composer the rail drew 678 points in 553, and
+        // the window cut the header and the transport off. The card now gives way first.
+        #expect(try drawn(ConversationRail(app: app), width: FrameLayout.conversationRailWidth, height: column) == column)
+        #expect(try drawn(LibrarySidebar(app: app), width: FrameLayout.librarySidebarWidth, height: column) == column)
+        #expect(try drawn(PartsLedger(app: app), width: FrameLayout.partsLedgerWidth, height: column) == column)
+        #expect(try drawn(BenchColumn(app: app, registry: .shared), width: FrameLayout.benchMinimumWidth, height: column) == column)
+        app.perform(SurfaceAction(surface: .library, title: "Library"))
+        #expect(try drawn(BenchColumn(app: app, registry: .shared), width: FrameLayout.benchMinimumWidth, height: column) == column)
     }
 }

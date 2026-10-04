@@ -39,7 +39,10 @@ struct ConversationRail: View {
             .frame(height: FrameLayout.headerHeight)
 
             Hairline()
+            // First call on the column's height, up to the height it was dragged to; the
+            // conversation takes the rest, and never less than `historyMinimum`.
             nextBlock
+                .layoutPriority(1)
             if !nextIsCollapsed { nextResizer } else { Hairline() }
             history
             Hairline()
@@ -77,10 +80,13 @@ struct ConversationRail: View {
                 // One line, so folding it away does not hide that something is being asked.
                 Text(question.question).font(Design.Typography.ui(12)).foregroundStyle(Design.Palette.inkSecondary).lineLimit(1)
             } else {
+                // The height it was dragged to when the column has it; less, scrolling inside, when
+                // it does not. A fixed height here made the column taller than a short window,
+                // and the frame pushed the header and the transport off its ends.
                 ScrollsInside {
                     NextQuestionCard(app: app, question: question)
                 }
-                .frame(height: CGFloat(min(max(nextHeight, 64), 480)))
+                .frame(minHeight: Self.cardMinimum, idealHeight: cardHeight, maxHeight: cardHeight)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -88,6 +94,13 @@ struct ConversationRail: View {
         .padding(.vertical, nextIsCollapsed ? 10 : 14)
         .background(Design.Palette.panelAlt)
     }
+
+    /// The height the question was dragged to, within what the handle allows.
+    private var cardHeight: CGFloat { CGFloat(min(max(nextHeight, Self.cardMinimum), 480)) }
+
+    /// The least the question shrinks to in a short column, and the least the conversation keeps.
+    static let cardMinimum: CGFloat = 64
+    static let historyMinimum: CGFloat = 72
 
     /// The edge between the suggestions and the conversation: drag it to give either more room.
     private var nextResizer: some View {
@@ -102,7 +115,7 @@ struct ConversationRail: View {
             .onChanged { value in
                 let start = dragStartHeight ?? nextHeight
                 dragStartHeight = start
-                nextHeight = min(max(start + Double(value.translation.height), 64), 480)
+                nextHeight = min(max(start + Double(value.translation.height), Double(Self.cardMinimum)), 480)
             }
             .onEnded { _ in dragStartHeight = nil })
         .help("Drag to resize the suggestions")
@@ -148,7 +161,7 @@ struct ConversationRail: View {
                 proxy.scrollTo(Self.draftID, anchor: .bottom)
             }
         }
-        .frame(maxHeight: .infinity)
+        .frame(minHeight: Self.historyMinimum, maxHeight: .infinity)
     }
 
     /// The anchor the reply-in-flight scrolls to. A constant rather than a `UUID()` in the body,
