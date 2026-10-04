@@ -42,6 +42,9 @@ public struct ReadLibraryTool: DirectorTool {
             /// The second tracker's tempo, and whether its beats are kept for fix_grid to take.
             public var secondTrackerTempo: Double?
             public var secondTrackerKept: Bool
+            /// Cents it sits above concert pitch (below when negative), when it is far enough off to
+            /// say: what adopt takes off as it fits a stem of it.
+            public var tuningCents: Double?
 
             enum CodingKeys: String, CodingKey {
                 case id, title, artist, key, tempo, bars, stems, status, grid
@@ -49,6 +52,7 @@ public struct ReadLibraryTool: DirectorTool {
                 case trackersAgree = "trackers_agree"
                 case secondTrackerTempo = "second_tracker_tempo"
                 case secondTrackerKept = "second_tracker_kept"
+                case tuningCents = "tuning_cents"
             }
         }
         public struct StemEntry: Encodable, Sendable {
@@ -163,7 +167,8 @@ public struct ReadLibraryTool: DirectorTool {
                                               status: await workspace.crateStatus(of: record.id), grid: record.grid?.description,
                                               trackersAgree: check?.agreement.map { ($0 * 100).rounded() / 100 },
                                               secondTrackerTempo: check?.checkerBPM.map { ($0 * 10).rounded() / 10 },
-                                              secondTrackerKept: !(record.readingAsRead?.checkerBeats?.isEmpty ?? true)))
+                                              secondTrackerKept: !(record.readingAsRead?.checkerBeats?.isEmpty ?? true),
+                                              tuningCents: record.tuning.flatMap { abs($0) >= SourceFitting.leastCents ? $0 : nil }))
         }
         let samples = library.samples.map { entry in
             Output.SampleEntry(id: entry.id.description, name: entry.name, key: entry.sample.key.map { "\($0)" },

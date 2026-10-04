@@ -260,9 +260,11 @@ public final class CrateWork {
         let analysis = ImportAnalysisMapping.musicAnalysis(from: report, fallbackDuration: info.duration)
         let version = PartVersion(partID: PartID(), kind: .analysis(analysis), author: .user, operation: Operation.imported,
                                   note: "analysis of \(record.title)")
-        try keep(id, app: app) { $0.analysis = version }
+        // And how far it sits from concert pitch, so whatever is taken from it is brought to pitch.
+        let tuning = (try? await Self.off { try RecordTuning.measure(url) }) ?? 0
+        try keep(id, app: app) { $0.analysis = version; $0.tuning = tuning }
         var reading = [analysis.dominantKey?.name, analysis.dominantTempo.map { "\(Int($0.rounded())) bpm" },
-                       analysis.bars.isEmpty ? nil : "\(analysis.bars.count) bars"].compactMap { $0 }
+                       analysis.bars.isEmpty ? nil : "\(analysis.bars.count) bars", RecordTuning.line(tuning)].compactMap { $0 }
         if let agreement = analysis.beatCheck?.agreement, agreement < 0.8 { reading.append("the two beat trackers disagree") }
         // Read again, a reading can come back different: said, so a grid that was good is not lost unnoticed.
         if let before = record.readingAsRead, AppState.gridLine(before) != AppState.gridLine(analysis) {
@@ -385,6 +387,21 @@ public enum CrateError: Error, CustomStringConvertible, Equatable {
         case .noSecondTracker: return "There is no second beat tracker here, or it found no beats in this record."
         case .gone: return "The record left the library while it was being worked on."
         }
+    }
+}
+
+/// How far a record sits from concert pitch, read once from the whole of it (`Tuning`).
+enum RecordTuning {
+    /// The record's cents above concert pitch; 0 when it is at pitch or has no pitch to read.
+    nonisolated static func measure(_ url: URL) throws -> Double {
+        let (planar, rate) = try BoothAdapter.planar(url)
+        return Tuning.read(ChopAudio.mono(planar), sampleRate: rate)?.cents ?? 0
+    }
+
+    /// "28 cents flat of concert pitch", or nil for a record near enough to pitch to leave alone.
+    static func line(_ cents: Double?) -> String? {
+        guard let cents, abs(cents) >= SourceFitting.leastCents else { return nil }
+        return String(format: "%.0f cents %@ of concert pitch", abs(cents), cents > 0 ? "sharp" : "flat")
     }
 }
 
@@ -577,5 +594,17 @@ extension AppState {
     public func gatherStems(of id: RecordID, from songID: SongID) {
         guard let record = library.record(id), record.stems == nil else { return }
         crate.enqueue(CrateJob(kind: .gather, record: id, song: songID, title: record.title))
+    }
+
+    /// A record read before tunings were kept is measured the first time something is taken from
+    /// it, and the reading kept on its row.
+    func tuneIfUnmeasured(_ origin: SourceOrigin) async {
+        guard case .record(let id) = origin, let record = library.record(id), record.tuning == nil, record.reading != nil,
+              let url = try? store?.mediaURL(for: record.media) else { return }
+        let cents = (try? await Task.detached(priority: .userInitiated) { try RecordTuning.measure(url) }.value) ?? 0
+        var updated = library
+        guard let index = updated.records.firstIndex(where: { $0.id == id }), updated.records[index].tuning == nil else { return }
+        updated.records[index].tuning = cents
+        _ = writeLibrary(updated)
     }
 }

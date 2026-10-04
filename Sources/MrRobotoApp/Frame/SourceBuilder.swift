@@ -172,7 +172,7 @@ enum Sources {
             duration = found.duration > 0 ? found.duration : analysis.duration
         }
         let material = SourceMaterial(label: label(stem: stem, of: record.title), key: analysis.dominantKey, tempo: analysis.dominantTempo,
-                                      bars: bars(of: analysis), duration: duration, isDrums: stem == "drums")
+                                      bars: bars(of: analysis), duration: duration, isDrums: stem == "drums", tuning: record.tuning)
         return (material, media, analysis)
     }
 
@@ -377,6 +377,8 @@ extension AppState {
             material.bars = Sources.bars(of: reading)
             material.tempo = reading.dominantTempo ?? material.tempo
         }
+        // And how far that record sits from concert pitch, when the crate has measured it.
+        material.tuning = Guidance.take(in: source).flatMap(Guidance.audio(of:)).flatMap { library.record(forMedia: $0.media) }?.tuning
         guard let url = try? store.mediaURL(for: audio.media, song: source.id) else {
             throw SourceError.missingMedia(material.label)
         }
@@ -392,11 +394,14 @@ extension AppState {
     }
 
     /// The plan for a material against the open song's grid (or its own, when the song takes it).
-    private func pick(_ material: SourceMaterial, url: URL, media: MediaRef, origin: SourceOrigin?, stem: String, title: String,
+    private func pick(_ given: SourceMaterial, url: URL, media: MediaRef, origin: SourceOrigin?, stem: String, title: String,
                       record: RecordID?, lufs: Double?, request: SourceRequest, meter own: TimeSignature?,
                       analysis: MusicAnalysis?, grid: RecordGrid? = nil) throws -> SourcePick {
         guard let song else { throw SourceError.noSong }
         let ownGrid = takesGrid(request)
+        // A song that takes the record's grid takes the record as it is, its pitch too: not moved.
+        var material = given
+        if ownGrid { material.tuning = nil }
         let target = ownGrid ? MergeTarget(key: material.key, tempo: material.tempo) : MergeTarget(key: song.key, tempo: song.tempo)
         let meter = (ownGrid ? (own ?? song.timeSignature) : song.timeSignature).beatsPerBar
         let shape: SourceShape = request.bars.map { .clip(from: $0.lowerBound, to: $0.upperBound) } ?? .whole(atBar: request.atBar)
@@ -427,7 +432,8 @@ extension AppState {
                             atBar: plan.isClip ? nil : request.atBar,
                             semitones: plan.move.semitones, byEar: request.semitones != nil, ratio: plan.move.ratio,
                             tightened: plan.isTightened, key: material.key, tempo: material.tempo, recordLUFS: lufs,
-                            gainDB: gain.flatMap { $0 == 0 ? nil : $0 }, record: sourceRecord, grid: grid)
+                            gainDB: gain.flatMap { $0 == 0 ? nil : $0 }, record: sourceRecord, grid: grid,
+                            cents: plan.move.cents == 0 ? nil : plan.move.cents)
         return SourcePick(url: url, material: material, plan: plan, fit: fit, record: record, title: title, declined: declined,
                           meter: own ?? song.timeSignature, analysis: analysis)
     }
@@ -458,6 +464,7 @@ extension AppState {
     /// Some bars of the source as the song would have them, rendered off the main actor. With the
     /// song, those bars of the song as it plays now are under it.
     func previewSource(_ request: SourceRequest, fromBar: Int, bars: Int, withSong: Bool = true) async throws -> (planar: [[Float]], sampleRate: Double) {
+        await tuneIfUnmeasured(request.origin)
         let pick = try sourcePick(request)
         var (mix, rate) = try await Task.detached(priority: .userInitiated) { try Sources.preview(pick, fromBar: fromBar, bars: bars) }.value
         guard withSong, !takesGrid(request), playback.isPlayable else { return (mix, rate) }
@@ -482,6 +489,7 @@ extension AppState {
                    progress: (@MainActor (String, Double) -> Void)? = nil) async throws -> PartVersion {
         guard let store, libraryIsWritable else { throw SourceError.noLibrary }
         guard let opened = song else { throw SourceError.noSong }
+        await tuneIfUnmeasured(request.origin)
         let pick = try sourcePick(request)
         let ownGrid = takesGrid(request)
         progress?(pick.material.label, 0)
@@ -524,6 +532,7 @@ extension AppState {
                                     tighten: tighten ?? (readsAnOlderGrid(fit) ? nil : fit.tightened))
         // From the record as the library has it now — a corrected grid is read — or, with its song
         // gone, from what the fit kept.
+        await tuneIfUnmeasured(origin)
         let pick: SourcePick
         if let fresh = try? sourcePick(request) {
             pick = fresh
@@ -567,7 +576,7 @@ extension AppState {
             bars = [SongGraph.TimeRange(start: fit.start, end: fit.start)]
         }
         return SourceMaterial(label: Sources.label(stem: fit.stem, of: fit.label), key: fit.key, tempo: fit.tempo, bars: bars,
-                              duration: duration, isDrums: fit.stem == "drums")
+                              duration: duration, isDrums: fit.stem == "drums", tuning: fit.cents.map { -$0 })
     }
 
     private func renderedMedia(_ pick: SourcePick, into package: SongStore) async throws -> (media: MediaRef, sampleRate: Double, channels: Int, duration: Double) {

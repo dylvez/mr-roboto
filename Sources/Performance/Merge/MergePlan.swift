@@ -61,6 +61,8 @@ public struct MergeMove: Hashable, Sendable {
     public var label: String
     /// Semitones up (positive) or down. 0 is untouched.
     public var semitones: Int
+    /// Cents on top of the semitones, for a record that sits between the keys (`SourceFitting`).
+    public var cents: Double = 0
     /// Output duration over input duration for the stretch. 1 is untouched. Written parts and
     /// grooves are never stretched: they play at the song's tempo already.
     public var ratio: Double
@@ -80,7 +82,9 @@ public struct MergeMove: Hashable, Sendable {
     /// The move in a sentence: "Horns up 2 semitones to D, stretched ×0.94 from 98 to 92."
     public var sentence: String
 
-    public var movesPitch: Bool { semitones != 0 }
+    public var movesPitch: Bool { semitones != 0 || abs(cents) > 1e-9 }
+    /// The whole pitch move in semitones, as the stretcher takes it.
+    public var pitchShift: Double { Double(semitones) + cents / 100 }
     public var movesTime: Bool { abs(ratio - 1) > 1e-9 }
     public var isUntouched: Bool { !movesPitch && !movesTime }
 

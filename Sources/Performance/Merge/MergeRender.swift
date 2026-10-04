@@ -23,19 +23,19 @@ public enum MergeRender {
                                  preserveFormants: move.preservesFormants, seed: 1)
     }
 
-    /// Planar audio moved as the plan says: shifted by `semitones`, stretched by `ratio`.
+    /// Planar audio moved as the plan says: shifted by `semitones` and `cents`, stretched by `ratio`.
     /// An untouched move returns the input as it is, bit for bit.
     public static func audio(_ planar: [[Float]], sampleRate: Double, move: MergeMove) throws -> [[Float]] {
         guard !move.isUntouched else { return planar }
         return try stretcher(for: move)
-            .stretch(planar: planar, sampleRate: sampleRate, ratio: move.ratio, pitchShift: Double(move.semitones))
+            .stretch(planar: planar, sampleRate: sampleRate, ratio: move.ratio, pitchShift: move.pitchShift)
     }
 
     /// Planar audio moved along a time map: shifted by `semitones`, each stretch of it by its own
     /// ratio between the anchors (`TightenMap`). No anchors is the one ratio of `audio(_:sampleRate:move:)`.
     public static func audio(_ planar: [[Float]], sampleRate: Double, move: MergeMove, anchors: [StretchAnchor]?) throws -> [[Float]] {
         guard let anchors, !anchors.isEmpty else { return try audio(planar, sampleRate: sampleRate, move: move) }
-        return try stretcher(for: move).stretch(planar: planar, sampleRate: sampleRate, anchors: anchors, pitchShift: Double(move.semitones))
+        return try stretcher(for: move).stretch(planar: planar, sampleRate: sampleRate, anchors: anchors, pitchShift: move.pitchShift)
     }
 
     /// A chop's slice markers, re-timed with the stretch (T3) and re-based on a media that holds

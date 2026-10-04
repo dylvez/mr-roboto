@@ -729,6 +729,9 @@ public struct SourceFit: Hashable, Codable, Sendable {
     /// Semitones the source was moved, and whether by ear rather than by the key arithmetic.
     public var semitones: Int
     public var byEar: Bool
+    /// Cents it was moved on top of the semitones, to bring a record that sits between the keys
+    /// to concert pitch. Nil when it was at pitch, or was never measured.
+    public var cents: Double?
     /// Output over input duration: one constant stretch, or a clip fitted to whole bars.
     public var ratio: Double
     /// Each bar stretched onto a bar of the song rather than one ratio for all. False until a
@@ -746,7 +749,8 @@ public struct SourceFit: Hashable, Codable, Sendable {
     public init(label: String, media: MediaRef, song: SongID? = nil, stem: String, start: Double, end: Double? = nil,
                 fromBar: Int? = nil, toBar: Int? = nil, atBar: Int? = nil, semitones: Int = 0, byEar: Bool = false,
                 ratio: Double = 1, tightened: Bool = false, key: Key? = nil, tempo: Double? = nil,
-                recordLUFS: Double? = nil, gainDB: Double? = nil, record: RecordID? = nil, grid: RecordGrid? = nil) {
+                recordLUFS: Double? = nil, gainDB: Double? = nil, record: RecordID? = nil, grid: RecordGrid? = nil,
+                cents: Double? = nil) {
         self.label = label
         self.media = media
         self.song = song
@@ -760,6 +764,7 @@ public struct SourceFit: Hashable, Codable, Sendable {
         self.atBar = atBar
         self.semitones = semitones
         self.byEar = byEar
+        self.cents = cents
         self.ratio = ratio
         self.tightened = tightened
         self.key = key

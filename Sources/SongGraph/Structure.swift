@@ -605,9 +605,14 @@ public struct Record: Identifiable, Hashable, Codable, Sendable {
     public var stems: [RecordStem]?
     /// A correction of the grid its analysis read: what `reading` reads it through. Nil: as read.
     public var grid: RecordGrid?
+    /// Cents the record sits above concert pitch (below when negative), read from its partials when
+    /// it was read: a 78 played at a speed nobody wrote down lands between the keys. Nil until it is
+    /// measured; 0 when it is at pitch or has no pitch to read.
+    public var tuning: Double?
 
     public init(id: RecordID = RecordID(), title: String, artist: String = "", media: MediaRef,
-                analysis: PartVersion? = nil, importedAt: Date = Date(), stems: [RecordStem]? = nil, grid: RecordGrid? = nil) {
+                analysis: PartVersion? = nil, importedAt: Date = Date(), stems: [RecordStem]? = nil, grid: RecordGrid? = nil,
+                tuning: Double? = nil) {
         self.id = id
         self.title = title
         self.artist = artist
@@ -616,6 +621,7 @@ public struct Record: Identifiable, Hashable, Codable, Sendable {
         self.importedAt = importedAt.graphPrecision
         self.stems = stems
         self.grid = grid
+        self.tuning = tuning
     }
 
     public var mediaReferences: [MediaRef] { [media] + (stems ?? []).map(\.media) + (analysis?.mediaReferences ?? []) }

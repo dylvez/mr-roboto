@@ -88,3 +88,59 @@ struct SourceFitTests {
         #expect(SourceFitting.level(record: -12.94, toward: nil) == nil)
     }
 }
+
+// A record between the keys is brought to concert pitch as it is fitted: the cents it sits off are
+// taken off on top of the semitones, and said.
+
+@Suite("Sources: a record brought to concert pitch")
+struct ConcertPitchTests {
+    private static let bar = 4 * 60 / 98.0
+    private func vocal(tuning: Double?, drums: Bool = false) -> SourceMaterial {
+        SourceMaterial(label: "Vocals of Deep River", key: Key(tonic: NoteName(.e)), tempo: 98,
+                       bars: (0..<40).map { SongGraph.TimeRange(start: 1.2 + Double($0) * Self.bar, end: 1.2 + Double($0 + 1) * Self.bar) },
+                       duration: 100, isDrums: drums, tuning: tuning)
+    }
+    private let song = MergeTarget(key: Key(tonic: NoteName(.d)), tempo: 92)
+
+    @Test("28 cents flat: up 28 cents on top of the semitones, a whole stem and a clip alike, and said")
+    func flat() {
+        for shape in [SourceShape.whole(atBar: 0), .clip(from: 4, to: 6)] {
+            let plan = SourceFitting.plan(vocal(tuning: -28), into: song, shape: shape)
+            #expect(plan.move.semitones == -2 && plan.move.cents == 28 && abs(plan.move.pitchShift + 1.72) < 1e-9)
+            #expect(plan.sentences.contains("Up 28 cents to concert pitch: the record sits that far flat."))
+        }
+        let sharp = SourceFitting.plan(vocal(tuning: 12), into: song, shape: .whole(atBar: 0))
+        #expect(sharp.move.cents == -12 && sharp.sentences.contains("Down 12 cents to concert pitch: the record sits that far sharp."))
+    }
+
+    @Test("within five cents, never measured, or drums: left where it is, and nothing said")
+    func left() {
+        for material in [vocal(tuning: 4), vocal(tuning: nil), vocal(tuning: -28, drums: true)] {
+            let plan = SourceFitting.plan(material, into: song, shape: .whole(atBar: 0))
+            #expect(plan.move.cents == 0 && !plan.sentences.contains { $0.contains("concert pitch") })
+        }
+    }
+
+    @Test("a record at the song's key and tempo, 30 cents flat, is still moved: the cents are a move of their own")
+    func onlyCents() throws {
+        var material = vocal(tuning: -30)
+        material.key = song.key
+        material.tempo = 92
+        let plan = SourceFitting.plan(material, into: song, shape: .whole(atBar: 0))
+        #expect(plan.move.semitones == 0 && !plan.move.movesTime && plan.move.movesPitch && !plan.move.isUntouched)
+        // Rendered, a tone 30 cents under A comes out on A.
+        let rate = 44_100.0
+        let hz = 440 * pow(2, -30.0 / 1200)
+        let tone = (0..<Int(rate * 3)).map { Float(sin(2 * Double.pi * hz * Double($0) / rate)) * 0.4 }
+        let moved = try MergeRender.audio([tone], sampleRate: rate, move: plan.move)
+        // Its pitch from the zero crossings of the middle second.
+        let middle = Array(moved[0][Int(rate)..<Int(rate * 2)])
+        var crossings: [Double] = []
+        for index in 1..<middle.count where middle[index - 1] < 0 && middle[index] >= 0 {
+            crossings.append(Double(index - 1) + Double(-middle[index - 1]) / Double(middle[index] - middle[index - 1]))
+        }
+        let period = (crossings.last! - crossings.first!) / Double(crossings.count - 1)
+        let cents = 1200 * log2(rate / period / 440)
+        #expect(abs(cents) < 4, "\(cents) cents from A")
+    }
+}

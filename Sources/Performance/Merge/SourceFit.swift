@@ -24,14 +24,19 @@ public struct SourceMaterial: Hashable, Sendable {
     public var duration: Double
     /// The drums stem: stretched, never shifted.
     public var isDrums: Bool
+    /// Cents the record sits above concert pitch (`Tuning`), when it has been measured. The fit
+    /// takes them off, so every record in a song is at the pitch the band plays at.
+    public var tuning: Double?
 
-    public init(label: String, key: Key? = nil, tempo: Double? = nil, bars: [SongGraph.TimeRange] = [], duration: Double, isDrums: Bool = false) {
+    public init(label: String, key: Key? = nil, tempo: Double? = nil, bars: [SongGraph.TimeRange] = [], duration: Double, isDrums: Bool = false,
+                tuning: Double? = nil) {
         self.label = label
         self.key = key
         self.tempo = tempo
         self.bars = bars
         self.duration = duration
         self.isDrums = isDrums
+        self.tuning = tuning
     }
 
     /// The second its first bar starts on: bar 1, which the song's bar grid is met on.
@@ -125,6 +130,19 @@ public enum SourceFitting {
     /// pushes or drags there, or the bar lines are off.
     public static let unevenBars = 0.03
 
+    /// A record within this many cents of concert pitch is left where it is: nobody hears five
+    /// cents, and the reading is no finer than that.
+    public static let leastCents = 5.0
+
+    /// The cents that bring a source to concert pitch, and the sentence that says so. Nothing for
+    /// drums, a record never measured, or one already at pitch.
+    static func concertPitch(_ source: SourceMaterial) -> (cents: Double, sentence: String)? {
+        guard !source.isDrums, let tuning = source.tuning, abs(tuning) >= leastCents else { return nil }
+        let cents = -tuning
+        return (cents, String(format: "%@ %.0f cents to concert pitch: the record sits that far %@.",
+                              cents > 0 ? "Up" : "Down", abs(cents), cents > 0 ? "flat" : "sharp"))
+    }
+
     /// - Parameters:
     ///   - target: the song's key and tempo. A song with no key leaves the pitch alone.
     ///   - semitones: an override of the key arithmetic, by ear.
@@ -150,6 +168,8 @@ public enum SourceFitting {
         let secondsPerBar = Double(max(1, beatsPerBar)) * 60 / max(1, tempo)
         var flags = move.flags
         var sentences: [String] = []
+        let tuned = concertPitch(source)
+        move.cents = tuned?.cents ?? 0
 
         switch shape {
         case .whole(let atBar):
@@ -162,6 +182,7 @@ public enum SourceFitting {
             let cut = start
             move.sentence = Merge.sentence(for: fragment(source), move: move, target: MergeTarget(key: target.key, tempo: tempo))
             sentences.append(move.sentence)
+            if let tuned { sentences.append(tuned.sentence) }
             sentences.append(atBar >= 0 ? "Its bar 1 on bar \(atBar + 1) of the song."
                                         : "Already \(-atBar) bar\(atBar == -1 ? "" : "s") in when the song starts.")
             if cut > 0.05 {
@@ -203,6 +224,7 @@ public enum SourceFitting {
             let span = count == 1 ? "Bar \(from + 1)" : "Bars \(from + 1)–\(from + count)"
             sentences.append("\(span) of \(source.label), fitted to \(bars) bar\(bars == 1 ? "" : "s") of the song.")
             sentences.append(move.sentence)
+            if let tuned { sentences.append(tuned.sentence) }
             sentences.append("Loops in each section that plays it.")
             var plan = SourcePlan(shape: shape, move: move, region: region, offset: 0, bars: bars, cut: region.start,
                                   secondsPerBar: secondsPerBar, sentences: sentences, flags: flags)

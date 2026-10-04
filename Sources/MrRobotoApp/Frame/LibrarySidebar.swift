@@ -1,4 +1,5 @@
 import AppKit
+import Performance
 import SongGraph
 import SwiftUI
 import UniformTypeIdentifiers
@@ -179,6 +180,10 @@ struct LibrarySidebar: View {
             if let key = analysis.dominantKey { pieces.append(key.name) }
             if let tempo = analysis.dominantTempo { pieces.append("\(Int(tempo.rounded())) bpm") }
             if !analysis.bars.isEmpty { pieces.append("\(analysis.bars.count) bars") }
+            // Only a record far enough off pitch to be moved when it is fitted.
+            if let cents = record.tuning, abs(cents) >= SourceFitting.leastCents {
+                pieces.append("\(Int(abs(cents).rounded()))¢ \(cents > 0 ? "sharp" : "flat")")
+            }
         }
         if showsStems, let stems = record.stems { pieces.append("\(stems.count) stem\(stems.count == 1 ? "" : "s")") }
         if pieces.isEmpty { pieces.append(record.artist.isEmpty ? record.media.fileExtension.uppercased() : record.artist) }
