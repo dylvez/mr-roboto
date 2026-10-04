@@ -170,6 +170,9 @@ struct DirectorFormToolTests {
         #expect(now[1].stitch == [rig.groovePart].lanes)
         #expect(now[0].stitch == sections[0].stitch, "the verse was not touched")
         #expect(rig.app.playback.mix?.gainDB(for: rig.groovePart, in: bridge) == -1, "the drums are still down in the bridge")
+        // What it took out is counted across the form, so nobody has to say "everywhere" from memory.
+        let bassTitle = PartLabel.title(of: try #require(rig.app.song?.latestVersion(of: rig.bassPart)))
+        #expect(result.content.contains("\(bassTitle) plays in 2 of 3 sections: not in Bridge."), "\(result.content)")
 
         // A name and a length given are taken; a section the song does not have is refused.
         _ = await rig.toolbox.run(ClaudeToolUse(id: "n", name: "stitch_section", input: .object([
@@ -183,6 +186,34 @@ struct DirectorFormToolTests {
             .init("section", .string(UUID().uuidString)),
         ])))
         #expect(nobody.isError && nobody.content.contains("no section"))
+    }
+
+    @Test("where a part plays is counted off the form: all, some with the ones without named, a few, none, and a variation is not the part")
+    func reach() throws {
+        let built = FormFixture.build(tempo: 92)
+        var song = built.song
+        let bass = try #require(song.latestVersion(of: built.bass))
+        let title = PartLabel.title(of: bass)
+        // A lighter bass for the outro: a part of its own, through the bass's strip.
+        let light = PartVersion(partID: PartID(), kind: bass.kind, author: .persona("develop"), operation: Operation.written, note: "lighter",
+                                variation: Variation(of: built.bass, name: "light"))
+        try song.append(light)
+        func section(_ name: String, _ parts: [PartID]) -> Section { Section(name: name, stitch: parts.lanes, lengthInBars: 4) }
+
+        song.sections = [section("Verse", [built.groove, built.bass]), section("Hook", [built.groove, built.bass])]
+        #expect(FormTools.reach(of: built.bass, in: song) == "\(title) plays in all 2 sections.")
+
+        song.sections = [section("Intro", [built.groove]), section("Verse", [built.groove, built.bass]),
+                         section("Hook", [built.groove, built.bass]), section("Verse", [built.groove, built.bass]),
+                         section("Outro", [built.groove, light.partID])]
+        #expect(FormTools.reach(of: built.bass, in: song)
+                == "\(title) plays in 3 of 5 sections: not in Intro; Outro, which plays a variation of it (light).")
+        #expect(FormTools.reach(of: light.partID, in: song)?.hasSuffix("plays in 1 of 5 sections: only in Outro.") == true)
+
+        song.sections = [section("Verse", [built.groove]), section("Verse", [built.groove, built.bass]), section("Verse", [built.groove])]
+        #expect(FormTools.reach(of: built.bass, in: song) == "\(title) plays in 1 of 3 sections: only in Verse (section 2).")
+        song.sections = [section("Verse", [built.groove])]
+        #expect(FormTools.reach(of: built.bass, in: song) == "\(title) plays in no section now.")
     }
 
     @Test("the Director stitches the chords too: a form it writes has harmony in it")

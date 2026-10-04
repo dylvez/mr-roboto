@@ -124,6 +124,34 @@ enum FormTools {
     }
 
     static let where_ = "Open the Structure surface with nothing bound to see the form; the transport plays the sections in order."
+
+    /// Where a part plays across the form, counted. "Everywhere" is a claim about every section, and
+    /// it is read off the song rather than left to whoever restitched three of them: a form whose
+    /// intro has no bass plays the bass line in seven sections of eight. A section playing a
+    /// variation of the part is not playing the part as written, and is named as that.
+    static func reach(of part: PartID, in song: Song) -> String? {
+        guard let version = song.latestVersion(of: part), !song.sections.isEmpty else { return nil }
+        let title = PartLabel.title(of: version)
+        let strip = song.strip(of: part)
+        func name(_ index: Int) -> String {
+            let section = song.sections[index]
+            return song.sections.filter { $0.name == section.name }.count > 1 ? "\(section.name) (section \(index + 1))" : section.name
+        }
+        let with = song.sections.indices.filter { index in song.sections[index].stitch.contains { $0.part == part } }
+        let without = song.sections.indices.filter { !with.contains($0) }
+        let total = song.sections.count
+        if with.isEmpty { return "\(title) plays in no section now." }
+        if without.isEmpty { return "\(title) plays in all \(total) sections." }
+        let count = "\(title) plays in \(with.count) of \(total) sections"
+        if with.count < without.count { return count + ": only in \(with.map(name).joined(separator: ", "))." }
+        let missing = without.map { index -> String in
+            // What sits on its strip there instead, when something does.
+            let other = song.sections[index].stitch.first { $0.part != part && song.strip(of: $0.part) == strip }
+            guard let variation = other.flatMap({ song.variation(of: $0.part) }) else { return name(index) }
+            return "\(name(index)), which plays a variation of it (\(variation.name))"
+        }
+        return count + ": not in \(missing.joined(separator: "; "))."
+    }
 }
 
 // MARK: - arrange
@@ -356,13 +384,20 @@ public struct StitchSectionTool: DirectorTool {
                                       suggestion: "Name the versions it plays; a section with nothing in it is silent.")
         }
         var sections = song.sections
+        let before = sections[index].stitch.map(\.part)
         sections[index].stitch = stitch
         if !named.isEmpty { sections[index].name = named }
         if input.bars > 0 { sections[index].lengthInBars = input.bars }
         let recorded = await workspace.arrange(sections)
         let after = await workspace.song ?? song
+        // What this call brought into the section and what it took out, each counted across the
+        // form: three sections restitched is not yet "everywhere".
+        let now = stitch.map(\.part)
+        let moved = now.filter { !before.contains($0) } + before.filter { !now.contains($0) }
+        let reach = moved.compactMap { FormTools.reach(of: $0, in: after) }
+        let counted = reach.isEmpty ? "" : reach.joined(separator: " ") + " Say a part plays in every section only when the count here says all of them. "
         return FormReport(song: after, recorded: recorded,
-                          detail: recorded ? "\(sections[index].name) is the same section, playing what was named. " + FormTools.where_
+                          detail: recorded ? "\(sections[index].name) is the same section, playing what was named. " + counted + FormTools.where_
                                            : "No song is open, so nothing was arranged.")
     }
 }
