@@ -63,7 +63,7 @@ final class LibraryPreview {
     @ObservationIgnored private var loaded: (media: MediaRef, planar: [[Float]], sampleRate: Double)?
 
     /// The song whose preview is being made, and how far it has got, 0…1.
-    private(set) var making: (song: SongID, progress: Double)?
+    fileprivate(set) var making: (song: SongID, progress: Double)?
     @ObservationIgnored private var makingTask: (song: SongID, task: Task<URL, Error>)?
 
     init(app: AppState, host: LibraryListeningHost) {
@@ -236,13 +236,10 @@ final class LibraryPreview {
     private func startMaking(_ song: Song) -> Task<URL, Error> {
         let id = song.id
         making = (id, 0)
-        let task = Task { [weak self, host] () throws -> URL in
+        let reporter = MakingReporter(preview: self, song: id)
+        let task = Task { [host] () throws -> URL in
             guard let host else { throw CancellationError() }
-            return try await host.songPreview(song) { fraction in
-                Task { @MainActor [weak self] in
-                    if let self, self.making?.song == id { self.making = (id, fraction) }
-                }
-            }
+            return try await host.songPreview(song, progress: reporter.report)
         }
         makingTask = (id, task)
         // Made, failed or let go of: it is no longer being made, whoever was waiting for it.
@@ -352,6 +349,26 @@ final class LibraryPreview {
 
 extension Array {
     subscript(safe index: Int) -> Element? { indices.contains(index) ? self[index] : nil }
+}
+
+/// How far a song's preview has got, said from the thread that renders it to the preview on the
+/// main actor, without keeping the preview alive.
+private final class MakingReporter: @unchecked Sendable {
+    // Read and written only on the main actor.
+    private weak var preview: LibraryPreview?
+    private let song: SongID
+
+    @MainActor init(preview: LibraryPreview, song: SongID) {
+        self.preview = preview
+        self.song = song
+    }
+
+    func report(_ fraction: Double) {
+        Task { @MainActor in
+            guard let preview = self.preview, preview.making?.song == self.song else { return }
+            preview.making = (self.song, fraction)
+        }
+    }
 }
 
 // MARK: - The app's side
