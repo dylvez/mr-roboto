@@ -12,14 +12,25 @@ struct SourcesSurfaceView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Design.Metric.gutter) {
             header
-            HStack(alignment: .top, spacing: Design.Metric.gutter) {
-                picker
-                placement
+            // What is chosen, its plan and what the song already holds scroll together, each at the
+            // height it needs, so the preview and Add stay in reach under them. Squeezed into a
+            // fixed column, a song with many sections ran "Plays in" out of its card and over the
+            // plan, and one with many sources pushed Add off the bottom of the surface.
+            scrolling {
+                VStack(alignment: .leading, spacing: Design.Metric.gutter) {
+                    HStack(alignment: .top, spacing: Design.Metric.gutter) {
+                        picker
+                        placement
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
+                    planLines
+                        .fixedSize(horizontal: false, vertical: true)
+                    inSong
+                }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
             }
-            planLines
-            inSong
-            Spacer(minLength: 0)
             footer
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(Design.Metric.inset)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -257,6 +268,19 @@ struct SourcesSurfaceView: View {
                     .controlSize(.small)
                 }
             }
+        }
+    }
+
+    /// The part of the surface that scrolls. A scroll view draws nothing in an offscreen render,
+    /// which shows as much of the content as there is room for instead.
+    @ViewBuilder
+    private func scrolling<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        if Design.isOffscreenRender {
+            content()
+                .frame(minHeight: 0, maxHeight: .infinity, alignment: .top)
+                .clipped()
+        } else {
+            ScrollView { content() }
         }
     }
 
