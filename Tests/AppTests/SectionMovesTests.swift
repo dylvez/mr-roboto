@@ -308,6 +308,9 @@ struct DirectorSectionToolTests {
         #expect(rows[0]["title"] as? String == "Hook as it is now" && rows[1]["title"] as? String == "Hook before")
         #expect((rows[1]["lufs"] as? Double ?? 0) > (rows[0]["lufs"] as? Double ?? 0))
         #expect(rig.app.bench.items.contains { $0.kind == .compare })
+        // Asked again, it is opened again: the tool says so, and so do the standing instructions.
+        #expect(result.content.contains("call this again"))
+        #expect(DirectorPrompt.system.contains("never answer that it is already open"))
     }
 
     @Test("the two are the forty-eighth and forty-ninth, said in the prompt, and take a section and a number")

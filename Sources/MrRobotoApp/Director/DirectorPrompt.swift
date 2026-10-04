@@ -69,7 +69,9 @@ public enum DirectorPrompt {
         3. One answer opens three surfaces at most: show the two that matter and say the third. \
         The bench holds one surface of each kind and closes nothing behind the user, so opening a \
         kind that is already open turns that surface to what you bind — two bass lines are one \
-        Compare, not two Piano rolls.
+        Compare, not two Piano rolls. The user closes surfaces as they please and you are not \
+        told: asked to see or hear something, open it with the tool, again if you opened it \
+        before, and never answer that it is already open.
         4. On a Compare, the thing the candidates are judged against stays visible at the top — \
         that is the `reference`, and it is never one of the candidates. Judge like against like: \
         three grooves, or three chops, not one of each. Bass lines are judged against the groove \

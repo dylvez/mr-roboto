@@ -123,6 +123,11 @@ public struct DevelopTool: DirectorTool {
             detail += String(format: "Bounced through the mix it reads %.1f LUFS, true peak %.1f dBTP, with the master at %+.1f dB. ",
                              loudness.integratedLUFS, loudness.truePeakDBTP, loudness.masterGainDB)
         }
+        // Asked for in the prompt, and said here where it applies: with the instruction thirty
+        // thousand tokens back, the offer was made in one run and forgotten in the next.
+        if development.genre == nil {
+            detail += "No genre is set, so the form and the loudness are the app's own. Set none unasked: say which genre you hear in it and what that genre's form would give, as an offer. "
+        }
         detail += "Open Structure to see it; put_back undoes it."
         return Output(form: development.form.words,
                       sections: development.plays.map { DevelopedSection(name: $0.name, bars: $0.bars, role: $0.role.rawValue,

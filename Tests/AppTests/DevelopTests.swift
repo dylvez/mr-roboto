@@ -545,6 +545,21 @@ struct DevelopTests {
 @Suite("Develop: in the app") @MainActor
 struct DevelopAppTests {
 
+    @Test("the develop tool's answer asks for a genre to be offered when none is set, and says nothing of it when one is")
+    func genreOffer() async throws {
+        let (app, directory, _) = CompletenessFixture.app("develop-offer")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        app.open(try DevelopFixture.loop().song)
+        let tool = DevelopTool(workspace: AppStateWorkspace(app))
+        let plain = try await tool.run(.init(form: "", putBack: false))
+        #expect(plain.genre == nil)
+        #expect(plain.detail.contains("No genre is set") && plain.detail.contains("as an offer"), "\(plain.detail)")
+
+        #expect(app.putBackDevelopment() && app.setGenre("house"))
+        let house = try await tool.run(.init(form: "", putBack: false))
+        #expect(house.genre != nil && !house.detail.contains("No genre is set"), "\(house.detail)")
+    }
+
     @Test("developing keeps the arrangement as one move, and putting it back brings the form and the mix back")
     func developAndPutBack() throws {
         let (app, directory, _) = CompletenessFixture.app("develop")

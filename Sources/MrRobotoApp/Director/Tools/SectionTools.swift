@@ -188,7 +188,8 @@ public struct CompareSectionTool: DirectorTool {
             let read = rows.compactMap { row in row.lufs.map { String(format: "%@ %.1f LUFS", row.title, $0) } }.joined(separator: "; ")
             return Output(title: comparison.title, rows: rows, opened: true,
                           detail: "The Compare is open on \(comparison.title): each row is the whole section through the mix. "
-                              + (read.isEmpty ? "" : read + ". ") + "Taking an earlier row puts the section back as it stood.")
+                              + (read.isEmpty ? "" : read + ". ") + "Taking an earlier row puts the section back as it stood. "
+                              + "Asked to hear them again, call this again: the surface may have been closed since.")
         }
         let names = sections.map(\.name).joined(separator: ", ")
         throw DirectorToolFailure(tool: name, reason: "\(names) has not changed since the song was opened, so there is no earlier one to play.",
