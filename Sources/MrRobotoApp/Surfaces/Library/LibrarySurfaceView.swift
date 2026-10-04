@@ -16,7 +16,7 @@ struct LibrarySurfaceView: View {
     static let wide: CGFloat = 1100
     /// From this width the list and the chosen item sit side by side, the shelves across the top.
     static let medium: CGFloat = 760
-    static let shelvesWidth: CGFloat = 156
+    static let shelvesWidth: CGFloat = 176
     static let detailWidth: CGFloat = 300
 
     var body: some View {
@@ -58,6 +58,7 @@ struct LibrarySurfaceView: View {
         .modifier(LibraryActionPrompt(pending: $pending))
         // An item asked for while the surface is showing, and one asked for while it was not.
         .onChange(of: model.app.libraryAsk) { model.takeAsk() }
+        .onChange(of: model.app.libraryQueryAsk) { model.takeAsk() }
         .onAppear { model.takeAsk() }
     }
 
@@ -75,7 +76,15 @@ struct LibrarySurfaceView: View {
             SmallLabel("Shelves")
                 .padding(.horizontal, 8)
                 .padding(.bottom, 6)
-            ForEach(LibraryShelf.allCases, id: \.self) { shelf in
+            ForEach(LibraryShelf.allCases.filter(\.isLibrary), id: \.self) { shelf in
+                shelfButton(shelf)
+            }
+            // What the parts play on, apart from what the house made and brought in.
+            SmallLabel("Sounds")
+                .padding(.horizontal, 8)
+                .padding(.top, 14)
+                .padding(.bottom, 4)
+            ForEach(LibraryShelf.allCases.filter { !$0.isLibrary }, id: \.self) { shelf in
                 shelfButton(shelf)
             }
             if !model.saved.isEmpty {
@@ -86,11 +95,13 @@ struct LibrarySurfaceView: View {
                 ForEach(model.saved) { search in savedButton(search) }
             }
             Spacer(minLength: 12)
-            ForEach(model.shelfActions) { action in
-                FrameButton(title: action.buttonTitle, emphasis: .quiet, isEnabled: action.isEnabled) {
-                    LibraryActions.perform(action) { pending = $0 }
+            FlowRow(spacing: 6, lineSpacing: 6) {
+                ForEach(model.shelfActions) { action in
+                    BoothChip(action.buttonTitle) { LibraryActions.perform(action) { pending = $0 } }
+                        .disabled(!action.isEnabled)
+                        .opacity(action.isEnabled ? 1 : 0.45)
+                        .help(action.help)
                 }
-                .help(action.help)
             }
         }
         .padding(12)
@@ -102,7 +113,7 @@ struct LibrarySurfaceView: View {
         let isOn = model.shelf == shelf
         return Button { model.choose(shelf) } label: {
             HStack(spacing: 7) {
-                Glyph(name: LibrarySidebar.glyphs[shelf.title] ?? "song", symbol: "circle", size: 13)
+                Glyph(name: Self.glyph(shelf), symbol: "circle", size: 13)
                 Text(shelf.title)
                     .font(Design.Typography.ui(13, weight: isOn ? .semibold : .regular))
                     .lineLimit(1)
@@ -141,7 +152,7 @@ struct LibrarySurfaceView: View {
     }
 
     /// "“dusty” · D minor or relative · with stems, by tempo": a saved search in words.
-    static func describe(_ query: LibraryQuery) -> String {
+    nonisolated static func describe(_ query: LibraryQuery) -> String {
         var pieces: [String] = []
         if !query.text.isEmpty { pieces.append("“\(query.text)”") }
         if query.goesWith == true { pieces.append("goes with the open song") }
@@ -155,6 +166,30 @@ struct LibrarySurfaceView: View {
         if query.offPitch == true { pieces.append("off pitch") }
         if let sort = query.sort { pieces.append("by \(sort.column.title(on: query.shelf).lowercased())\(sort.ascending ? "" : ", down")") }
         return pieces.isEmpty ? "everything" : pieces.joined(separator: " · ")
+    }
+
+    /// The parts of a song heard on an instrument or a drum kit, by name.
+    static func parts(playing code: String, shelf: LibraryShelf, in song: Song) -> [String] {
+        song.partIDs.compactMap { part -> String? in
+            guard let newest = song.latestVersion(of: part), !song.isVariation(part) else { return nil }
+            switch (shelf, newest.type) {
+            case (.instruments, .progression), (.instruments, .melody):
+                return SongPlayback.instrumentID(for: part, in: song) == code ? PartLabel.title(of: newest) : nil
+            case (.kits, .groove):
+                return SongPlayback.drumSoundID(for: part, in: song) == code ? PartLabel.title(of: newest) : nil
+            default:
+                return nil
+            }
+        }
+    }
+
+    /// Each shelf's glyph: the sidebar's for the library's own, a sound's and a groove's for the rest.
+    static func glyph(_ shelf: LibraryShelf) -> String {
+        switch shelf {
+        case .instruments: "sound"
+        case .kits: "groove"
+        default: LibrarySidebar.glyphs[shelf.title] ?? "song"
+        }
     }
 
     /// The shelves across the top, when the surface is narrow.
@@ -352,7 +387,7 @@ struct LibrarySurfaceView: View {
             else { model.select(facts.id) }
             listHasFocus = true
         })
-        .draggable(Self.payload(for: facts))
+        .modifier(DraggedAs(payload: Self.payload(for: facts)))
         .contextMenu {
             LibraryActionMenuItems(actions: model.actions(for: facts.id)) { pending = $0 }
         }
@@ -531,18 +566,18 @@ struct LibrarySurfaceView: View {
         ("Under 80", 1, 79.99), ("80 to 100", 80, 99.99), ("100 to 120", 100, 119.99), ("120 to 140", 120, 139.99), ("140 and over", 140, 400),
     ]
 
-    static func keyLabel(_ filter: LibraryQuery.KeyFilter) -> String {
+    nonisolated static func keyLabel(_ filter: LibraryQuery.KeyFilter) -> String {
         filter.within == 0 ? "\(filter.key.name) or relative" : "Within \(filter.within) of \(filter.key.name)"
     }
 
-    static func tempoLabel(_ filter: LibraryQuery.TempoFilter) -> String {
+    nonisolated static func tempoLabel(_ filter: LibraryQuery.TempoFilter) -> String {
         let range = filter.high >= 400 ? "\(LibraryText.tempo(filter.low))+ bpm"
             : filter.low <= 1 ? "under \(LibraryText.tempo(filter.high.rounded())) bpm"
             : "\(LibraryText.tempo(filter.low.rounded()))–\(LibraryText.tempo(filter.high.rounded())) bpm"
         return filter.halfAndDouble ? "\(range), ½ or 2×" : range
     }
 
-    static func usageLabel(_ usage: LibraryQuery.Usage?, shelf: LibraryShelf) -> String {
+    nonisolated static func usageLabel(_ usage: LibraryQuery.Usage?, shelf: LibraryShelf) -> String {
         switch (usage, shelf) {
         case (nil, .songs): "Albums"
         case (.used?, .songs): "On an album"
@@ -582,6 +617,8 @@ struct LibrarySurfaceView: View {
         case .ideas: "No ideas yet."
         case .samples: "No samples yet."
         case .albums: "No albums yet."
+        case .instruments: "No instruments."
+        case .kits: "No kits."
         }
     }
 
@@ -592,6 +629,8 @@ struct LibrarySurfaceView: View {
         case .ideas: "Audio dropped into the Mr. Roboto Inbox folder arrives here, and a part kept as an idea from a song's ledger."
         case .samples: "A chop saved from the Chop lane arrives here, ready to adopt into any song."
         case .albums: "An album is songs in order, delivered together. Make one and add songs to it."
+        case .instruments: "File ▸ Import Instrument… brings in an SFZ pack's samples, listed in its family beside the ones built in."
+        case .kits: "File ▸ Import Drum Kit… brings in an SFZ kit, listed beside the machines built in."
         }
     }
 
@@ -652,6 +691,9 @@ struct LibrarySurfaceView: View {
         case .slices: 48
         case .source: 150
         case .fit: 104
+        case .family: 118
+        case .range: 76
+        case .pack: 170
         }
     }
 
@@ -668,15 +710,28 @@ struct LibrarySurfaceView: View {
         return shown
     }
 
-    static func payload(for facts: LibraryFacts) -> LibraryDragPayload {
-        let kind: LibraryDragPayload.Kind = switch facts.id.shelf {
-        case .songs: .song
-        case .records: .record
-        case .ideas: .idea
-        case .samples: .sample
-        case .albums: .album
+    /// What a row carries when dragged onto the song or a surface; nothing for an instrument or a
+    /// kit, which a part is set to rather than given.
+    static func payload(for facts: LibraryFacts) -> LibraryDragPayload? {
+        let kind: LibraryDragPayload.Kind
+        switch facts.id.shelf {
+        case .songs: kind = .song
+        case .records: kind = .record
+        case .ideas: kind = .idea
+        case .samples: kind = .sample
+        case .albums: kind = .album
+        case .instruments, .kits: return nil
         }
         return LibraryDragPayload(kind: kind, id: facts.id.id, title: facts.title)
+    }
+}
+
+/// A row dragged out carries its item, when it has one to carry.
+private struct DraggedAs: ViewModifier {
+    let payload: LibraryDragPayload?
+
+    func body(content: Content) -> some View {
+        if let payload { content.draggable(payload) } else { content }
     }
 }
 
@@ -709,7 +764,7 @@ private struct LibraryDetail: View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
-                    Glyph(name: LibrarySidebar.glyphs[facts.id.shelf.title] ?? "song", symbol: "circle", size: 12)
+                    Glyph(name: LibrarySurfaceView.glyph(facts.id.shelf), symbol: "circle", size: 12)
                     SmallLabel(Self.kind(facts))
                     Spacer(minLength: 0)
                     Button { model.app.setFavourite(!facts.favourite, for: [facts.id]) } label: {
@@ -770,6 +825,8 @@ private struct LibraryDetail: View {
         case .ideas: facts.kind.map { "Idea · \(LibraryText.kind($0))" } ?? "Idea"
         case .samples: "Sample"
         case .albums: "Album"
+        case .instruments: facts.family.map { "Instrument · \($0)" } ?? "Instrument"
+        case .kits: facts.family.map { "Kit · \($0)" } ?? "Kit"
         }
     }
 
@@ -846,7 +903,7 @@ private struct LibraryDetail: View {
                         .foregroundStyle(Design.Palette.inkTertiary)
                         .gridColumnAlignment(.leading)
                     Text(row.value)
-                        .font(Design.Typography.numeric(12))
+                        .font(row.label == "Sound" ? Design.Typography.ui(12, weight: .regular) : Design.Typography.numeric(12))
                         .foregroundStyle(Design.Palette.ink)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -867,6 +924,13 @@ private struct LibraryDetail: View {
         if let root = facts.root { rows.append(("Root", "\(root)")) }
         if let slices = facts.slices, slices > 0 { rows.append(("Slices", "\(slices)")) }
         if facts.id.shelf == .samples, let note = facts.note { rows.append(("Dust", note)) }
+        if !facts.id.shelf.isLibrary {
+            // What it sounds like, the keys it reaches, where it came from; it has no date.
+            if let note = facts.note { rows.append(("Sound", note)) }
+            if let range = facts.range { rows.append(("Range", range)) }
+            if let pack = facts.pack { rows.append(("From", pack)) }
+            return rows
+        }
         if !facts.tags.isEmpty { rows.append(("Tags", facts.tags.joined(separator: ", "))) }
         rows.append((facts.id.shelf == .records ? "Imported" : facts.id.shelf == .songs ? "Worked on" : "Made",
                      facts.changed.formatted(date: .abbreviated, time: .shortened)))
@@ -882,8 +946,26 @@ private struct LibraryDetail: View {
         case .records: recordRelations(RecordID(rawValue: facts.id.id))
         case .ideas, .samples: takenRelations
         case .albums: albumRelations(AlbumID(rawValue: facts.id.id))
+        case .instruments, .kits: soundRelations
         }
     }
+
+    /// Which of the open song's parts play on it.
+    @ViewBuilder
+    private var soundRelations: some View {
+        if let song = model.app.song, let code = facts.code {
+            let parts = LibrarySurfaceView.parts(playing: code, shelf: facts.id.shelf, in: song)
+            section("In \(song.title)") {
+                if parts.isEmpty {
+                    Text("Nothing in it plays on this.").font(Design.Typography.ui(11.5)).foregroundStyle(Design.Palette.inkTertiary)
+                }
+                ForEach(parts, id: \.self) { title in
+                    Text(title).font(Design.Typography.ui(12, weight: .regular)).foregroundStyle(Design.Palette.ink)
+                }
+            }
+        }
+    }
+
 
     @ViewBuilder
     private func songRelations(_ id: SongID) -> some View {

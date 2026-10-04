@@ -168,7 +168,7 @@ final class LibraryBrowserModel {
         case .records: return fitting + marked + [.key, .tempo, .stems, .usage, .offPitch]
         case .ideas: return fitting + marked + [.key, .usage]
         case .samples: return fitting + marked + [.key, .tempo, .usage]
-        case .albums: return marked
+        case .albums, .instruments, .kits: return marked
         }
     }
 
@@ -359,8 +359,13 @@ final class LibraryBrowserModel {
         select(rows[min(max(0, at + step), rows.count - 1)].id)
     }
 
-    /// An item asked for from elsewhere (`AppState.showInLibrary`), taken once.
+    /// An item or a search asked for from elsewhere (`AppState.showInLibrary`), taken once.
     func takeAsk() {
+        if let query = app.libraryQueryAsk {
+            app.libraryQueryAsk = nil
+            choose(query.shelf)
+            self.query = query
+        }
         guard let asked = app.libraryAsk else { return }
         app.libraryAsk = nil
         show(asked)

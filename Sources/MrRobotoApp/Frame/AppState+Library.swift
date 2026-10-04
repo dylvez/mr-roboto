@@ -894,6 +894,8 @@ extension LibraryItemID {
         case .ideas: .idea
         case .samples: .sample
         case .albums: .album
+        case .instruments: .instrument
+        case .kits: .kit
         }
     }
 }

@@ -1,4 +1,5 @@
 import AppKit
+import Instrument
 import SongGraph
 import SwiftUI
 
@@ -46,6 +47,8 @@ enum LibraryActions {
         case .ideas: own = idea(VersionID(rawValue: item.id), app)
         case .samples: own = sample(SampleID(rawValue: item.id), app)
         case .albums: own = album(AlbumID(rawValue: item.id), app)
+        case .instruments: own = instrument(item, app)
+        case .kits: own = kit(item, app)
         }
         guard !own.isEmpty else { return [] }
         return own.filter { !$0.isDestructive } + marks(for: [item], in: app) + own.filter(\.isDestructive)
@@ -88,6 +91,7 @@ enum LibraryActions {
         case .songs, .albums: preferred = ["open"]
         case .records: preferred = ["add", "start"]
         case .ideas, .samples: preferred = ["adopt"]
+        case .instruments, .kits: preferred = ["use"]
         }
         return preferred.lazy.compactMap { id in all.first { $0.id == id && $0.isEnabled } }.first
     }
@@ -106,9 +110,101 @@ enum LibraryActions {
         case .albums:
             return [LibraryAction(id: "new-album", title: "New Album", help: "An empty album, opened to add songs to.",
                                   isEnabled: writable, kind: .run { if let id = app.createAlbum(title: "New album") { app.openAlbum(id) } })]
+        case .instruments:
+            return [LibraryAction(id: "import-instrument", title: "Import Instrument…",
+                                  help: "File ▸ Import Instrument…: an SFZ pack's samples copied into the library and listed in its family.",
+                                  isEnabled: writable, kind: .run { if let url = FilePanels.chooseSFZ() { app.importInstrument(from: url) } })]
+        case .kits:
+            var actions = [
+                LibraryAction(id: "import-kit", title: "Import Drum Kit…",
+                              help: "File ▸ Import Drum Kit…: an SFZ kit laid out as General MIDI has it, listed beside the machines.",
+                              isEnabled: writable, kind: .run {
+                                  if let url = FilePanels.chooseSFZ(message: "An SFZ drum kit laid out as General MIDI has it: kick on 36, snare on 38, hats on 42 and 46. Its samples are copied into the library and it is listed beside the machines.") {
+                                      app.importDrumKit(from: url)
+                                  }
+                              }),
+            ]
+            if let set = app.recordedPercussion {
+                actions.append(LibraryAction(id: "percussion", title: set.isOn ? "Recorded Percussion Off" : "Recorded Percussion On",
+                                             help: set.isOn ? "Every kit's congas, shaker and claves are \(set.name)'s recordings: go back to the synthesized ones."
+                                                            : "Play \(set.name)'s recordings in place of every kit's synthesized hand percussion.",
+                                             kind: .run { app.setRecordedPercussion(!set.isOn) }))
+            } else {
+                actions.append(LibraryAction(id: "import-percussion", title: "Import VCSL Percussion…",
+                                             help: "File ▸ Import VCSL Percussion…: congas, bongos, shaker, tambourine and claves every kit plays.",
+                                             isEnabled: writable, kind: .run {
+                                                 if let url = FilePanels.chooseFolder(message: "The Versilian Community Sample Library folder (its sfz branch). Its congas, bongos, shaker, tambourine and claves are copied into the library and every kit plays them.",
+                                                                                      prompt: "Bring In") {
+                                                     app.importVCSLPercussion(from: url)
+                                                 }
+                                             }))
+            }
+            return actions
         case .ideas, .samples:
             return []
         }
+    }
+
+    // MARK: Instruments and kits
+
+    /// An instrument: the chords and the tune play on it, or one part does; one brought in can go.
+    private static func instrument(_ item: LibraryItemID, _ app: AppState) -> [LibraryAction] {
+        guard let facts = app.libraryIndex.facts(item), let id = facts.code, let spec = InstrumentVoiceSpec.preset(id: id) else { return [] }
+        let parts = app.song.map { song in
+            song.partIDs.compactMap { part -> PartVersion? in
+                guard let newest = song.latestVersion(of: part), [.progression, .melody].contains(newest.type), !song.isVariation(part) else { return nil }
+                return newest
+            }
+        } ?? []
+        var actions = [
+            LibraryAction(id: "use", title: "Play the Chords and Tune on It",
+                          help: app.song.map { "\(spec.name) for \($0.title)'s chords and tune, where a part has not picked its own." } ?? "Open a song to play it on.",
+                          isEnabled: app.song != nil, kind: .run { app.setInstrument(id) }),
+            LibraryAction(id: "use-on", title: "Play One Part on It",
+                          help: parts.isEmpty ? "The open song has no chords or tune to give it." : "\(spec.name) for one part alone.",
+                          isEnabled: !parts.isEmpty,
+                          kind: .menu(parts.map { version in
+                              LibraryAction(id: "use-\(version.partID.rawValue)", title: PartLabel.title(of: version),
+                                            kind: .run { app.setInstrument(id, for: version.partID) })
+                          })),
+        ]
+        if facts.isImported {
+            actions.append(LibraryAction(id: "remove", title: "Remove from Library…", isDestructive: true, group: 2,
+                                         kind: .confirm(question: "Remove \(spec.name)?",
+                                                        detail: "Its copied samples are deleted from the library. The SFZ pack it came from is not touched, and a song that played it goes back to its own instrument.",
+                                                        verb: "Remove", run: { _ = app.removeImportedInstrument(id: id) })))
+        }
+        return actions
+    }
+
+    /// A drum machine or a recorded kit: the drums play on it, or one groove does; one brought in can go.
+    private static func kit(_ item: LibraryItemID, _ app: AppState) -> [LibraryAction] {
+        guard let facts = app.libraryIndex.facts(item), let id = facts.code, let machine = SynthMachine.preset(id: id) else { return [] }
+        let grooves = app.song.map { song in
+            song.partIDs.compactMap { part -> PartVersion? in
+                guard let newest = song.latestVersion(of: part), newest.type == .groove, !song.isVariation(part) else { return nil }
+                return newest
+            }
+        } ?? []
+        var actions = [
+            LibraryAction(id: "use", title: "Play the Drums on It",
+                          help: app.song.map { "\(machine.name) for \($0.title)'s drums, where a groove has not picked its own." } ?? "Open a song to play it on.",
+                          isEnabled: app.song != nil, kind: .run { app.setMachine(id) }),
+            LibraryAction(id: "use-on", title: "Play One Groove on It",
+                          help: grooves.isEmpty ? "The open song has no groove to give it." : "\(machine.name) for one groove alone.",
+                          isEnabled: !grooves.isEmpty,
+                          kind: .menu(grooves.map { version in
+                              LibraryAction(id: "use-\(version.partID.rawValue)", title: PartLabel.title(of: version),
+                                            kind: .run { app.setMachine(id, for: version.partID) })
+                          })),
+        ]
+        if facts.isImported {
+            actions.append(LibraryAction(id: "remove", title: "Remove from Library…", isDestructive: true, group: 2,
+                                         kind: .confirm(question: "Remove \(machine.name)?",
+                                                        detail: "Its copied samples are deleted from the library. The SFZ it came from is not touched, and a song that played on it goes back to its own machine.",
+                                                        verb: "Remove", run: { _ = app.removeRecordedKit(id: id) })))
+        }
+        return actions
     }
 
     // MARK: Songs

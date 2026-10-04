@@ -234,13 +234,17 @@ public final class AppState {
 
     /// The instruments imported into this library, as the pickers offer them. The registry
     /// `InstrumentVoiceSpec.preset(id:)` reads is process-wide; this is the observable copy.
-    public internal(set) var importedInstruments: [InstrumentVoiceSpec] = []
+    public internal(set) var importedInstruments: [InstrumentVoiceSpec] = [] {
+        didSet { indexCache = nil }
+    }
     /// The recordings that stand in for the kits' hand percussion, on or off; nil when none were
     /// ever brought in. `RecordedPercussion.current` is the process-wide copy kits are built with.
     public internal(set) var recordedPercussion: RecordedPercussion?
     /// The kits of recordings brought into this library, which the Grid lists beside the machines.
     /// `RecordedKits` is the process-wide copy a song's machine is looked up in.
-    public internal(set) var recordedKits: [RecordedKit] = []
+    public internal(set) var recordedKits: [RecordedKit] = [] {
+        didSet { indexCache = nil }
+    }
 
     // MARK: Song
 
@@ -306,6 +310,8 @@ public final class AppState {
     /// An item asked to be shown in the Library surface — from a row's menu in the strip on the
     /// left — waiting for the surface to select it. The surface takes it, so it is shown once.
     public var libraryAsk: LibraryItemID?
+    /// A search asked to be shown in the Library surface — by the band — taken by the surface once.
+    public var libraryQueryAsk: LibraryQuery?
 
     /// Called as the transport starts: what is sounding outside the song's transport — a record
     /// heard from the Library — gives way, so the song never plays over it.

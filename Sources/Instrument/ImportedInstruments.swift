@@ -69,6 +69,26 @@ public enum ImportedInstruments {
 
     public static func unregister(id: String) {
         registry.withLock { specs in specs.removeAll { $0.id == id } }
+        ranges.withLock { _ = $0.removeValue(forKey: id) }
+    }
+
+    /// The keys each imported instrument's recordings reach, noted as its kit is read at load, so
+    /// a list of them says their ranges without reading every kit again.
+    private static let ranges = Mutex<[String: ClosedRange<Int>]>([:])
+
+    /// The keys an imported instrument's recordings reach: noted at load, else read from its kit
+    /// once. Nil for an instrument with no recordings, or a kit that does not load.
+    public static func range(of spec: InstrumentVoiceSpec) -> ClosedRange<Int>? {
+        if let known = ranges.withLock({ $0[spec.id] }) { return known }
+        guard let low = lowestNote(of: spec), let high = highestNote(of: spec), low <= high else { return nil }
+        ranges.withLock { $0[spec.id] = low...high }
+        return low...high
+    }
+
+    static func noteRange(of manifest: KitManifest) -> ClosedRange<Int>? {
+        guard let low = manifest.zones.map(\.key.noteRange.lowerBound).min(),
+              let high = manifest.zones.map(\.key.noteRange.upperBound).max(), low <= high else { return nil }
+        return low...high
     }
 
     // MARK: On disk
@@ -95,6 +115,7 @@ public enum ImportedInstruments {
             // Brought in before imports were placed: placed now, by name, and only in memory.
             if spec.family == family { spec.family = family(named: spec.name) }
             register(spec)
+            if let range = noteRange(of: kit.manifest) { ranges.withLock { $0[spec.id] = range } }
             found.append(spec)
         }
         return found

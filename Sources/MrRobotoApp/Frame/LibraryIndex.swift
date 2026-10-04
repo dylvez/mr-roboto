@@ -1,4 +1,6 @@
+import CryptoKit
 import Foundation
+import Instrument
 import MusicTheory
 import Performance
 import SongGraph
@@ -15,8 +17,15 @@ import SongGraph
 /// The shelves of the library browser.
 public enum LibraryShelf: String, CaseIterable, Codable, Sendable {
     case songs, records, ideas, samples, albums
+    /// What the parts play on: the built-in instruments and those imported from SFZ packs.
+    case instruments
+    /// What the drums play on: the machines, and the kits of recordings brought in beside them.
+    case kits
 
     public var title: String { rawValue.capitalized }
+
+    /// The shelves that hold what the house made and brought in, as against what it plays on.
+    public var isLibrary: Bool { self != .instruments && self != .kits }
 }
 
 /// One item in the library, by its shelf and its id.
@@ -34,8 +43,20 @@ public struct LibraryItemID: Hashable, Codable, Sendable, CustomStringConvertibl
     public static func idea(_ id: VersionID) -> Self { Self(.ideas, id.rawValue) }
     public static func sample(_ id: SampleID) -> Self { Self(.samples, id.rawValue) }
     public static func album(_ id: AlbumID) -> Self { Self(.albums, id.rawValue) }
+    /// An instrument or a kit, by its own id: a UUID made from that, the same at every launch.
+    public static func instrument(_ id: String) -> Self { Self(.instruments, UUID(stableFrom: "instrument:" + id)) }
+    public static func kit(_ id: String) -> Self { Self(.kits, UUID(stableFrom: "kit:" + id)) }
 
     public var description: String { "\(shelf.rawValue):\(id.uuidString)" }
+}
+
+extension UUID {
+    /// A UUID made from text, the same for the same text: an instrument's id as an item's.
+    init(stableFrom text: String) {
+        let bytes = Array(SHA256.hash(data: Data(text.utf8)))
+        self.init(uuid: (bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
+                         bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]))
+    }
 }
 
 /// What the index knows about one item: enough to list it, search it, filter it and sort it. A
@@ -89,6 +110,17 @@ public struct LibraryFacts: Hashable, Sendable, Identifiable {
     public var albums = 0
     /// How it goes with the open song: a record's, an idea's or a sample's, while a song is open.
     public var fit: LibraryFit?
+    /// An instrument's or a kit's own id ("rhodes", "tr808"): what a part's pick names.
+    public var code: String?
+    /// An instrument's family ("Keys", "Pads & voices"), a kit's ("Drum machines").
+    public var family: String?
+    /// The keys an instrument's recordings reach ("E1–G4"), and the lowest of them, to sort by.
+    public var range: String?
+    public var rangeLow: Int?
+    /// Where an instrument or a kit comes from: "Built in", or the SFZ file it was imported from.
+    public var pack: String?
+    /// Brought in, so it can be taken out again.
+    public var isImported = false
     /// Marked a favourite.
     public var favourite = false
     /// The tags put on it (its mark's), apart from the ones it came with (a sample's).
@@ -143,8 +175,9 @@ public struct LibraryIndex: Sendable {
     public private(set) var fitTarget: FitTarget?
 
     /// The index of `library`, reading `openSong` in place of the library's copy of it. A song
-    /// the library does not hold yet is not listed, as the sidebar does not list it.
-    public init(library: Library, openSong: Song? = nil, genres: GenreBook = .standard) {
+    /// the library does not hold yet is not listed, as the sidebar does not list it. `sounds`: the
+    /// instruments and kits it lists beside the library.
+    public init(library: Library, openSong: Song? = nil, genres: GenreBook = .standard, sounds: LibrarySounds = .builtIn) {
         self.genres = genres
         lookups = Lookups(library)
 
@@ -179,6 +212,8 @@ public struct LibraryIndex: Sendable {
         all += library.ideas.map(ideaFacts)
         all += library.samples.map(sampleFacts)
         all += library.albums.map(albumFacts)
+        all += sounds.instruments.map(Self.facts(of:))
+        all += sounds.kits.map(Self.facts(of:))
         // What people put on things to find them again: a favourite, tags, searched like the rest.
         for index in all.indices {
             guard let mark = library.mark(all[index].id.markKind, all[index].id.id) else { continue }
@@ -409,7 +444,7 @@ public struct LibraryIndex: Sendable {
             case .records: items[index].fit = lookups.records[RecordID(rawValue: id.id)].flatMap { LibraryFitting.fit($0, into: target) }
             case .ideas: items[index].fit = lookups.ideas[VersionID(rawValue: id.id)].flatMap { LibraryFitting.fit($0, into: target) }
             case .samples: items[index].fit = lookups.samples[SampleID(rawValue: id.id)].flatMap { LibraryFitting.fit($0, into: target) }
-            case .songs, .albums: items[index].fit = nil
+            case .songs, .albums, .instruments, .kits: items[index].fit = nil
             }
         }
     }
@@ -427,7 +462,49 @@ public struct LibraryIndex: Sendable {
             facts.songs = songs(holding: facts.id).count
         case .albums:
             facts.songs = lookups.albums[AlbumID(rawValue: facts.id.id)]?.songs.count ?? 0
+        case .instruments, .kits:
+            break
         }
+    }
+
+    // MARK: Instruments and kits
+
+    /// An instrument as a shelf lists it: its family, the keys its recordings reach, where it
+    /// came from, and what it sounds like.
+    static func facts(of spec: InstrumentVoiceSpec) -> LibraryFacts {
+        var facts = LibraryFacts(id: .instrument(spec.id), title: spec.name, changed: .distantPast)
+        facts.code = spec.id
+        facts.family = InstrumentPicker.families.first { $0.id == spec.family }?.title ?? spec.family.capitalized
+        facts.note = InstrumentPicker.character(spec)
+        if spec.engine == .sampled {
+            let range = ImportedInstruments.range(of: spec)
+            facts.range = range.map { "\(Pitch(midi: $0.lowerBound))–\(Pitch(midi: $0.upperBound))" }
+            facts.rangeLow = range?.lowerBound
+            facts.pack = Self.sfz(in: spec.summary) ?? "Recorded"
+            facts.isImported = ImportedInstruments.spec(id: spec.id) != nil
+        } else {
+            facts.pack = "Built in"
+        }
+        facts.searchText = Self.searchText(facts, extra: [facts.family, facts.pack, spec.engine == .sampled ? "recorded" : "synthesized"].compactMap { $0 })
+        return facts
+    }
+
+    /// A drum machine or a recorded kit as a shelf lists it.
+    static func facts(of machine: SynthMachine) -> LibraryFacts {
+        var facts = LibraryFacts(id: .kit(machine.id), title: machine.name, changed: .distantPast)
+        facts.code = machine.id
+        facts.family = machine.family.title
+        facts.note = machine.summary
+        facts.isImported = machine.family == .recorded
+        facts.pack = facts.isImported ? "Recorded" : "Built in"
+        facts.searchText = Self.searchText(facts, extra: [facts.family, facts.pack].compactMap { $0 })
+        return facts
+    }
+
+    /// "Alto Recorder.sfz", from "Sampled, from Alto Recorder.sfz: 12 zones…".
+    static func sfz(in summary: String) -> String? {
+        guard let from = summary.range(of: "from "), let end = summary.range(of: ".sfz", range: from.upperBound..<summary.endIndex) else { return nil }
+        return String(summary[from.upperBound..<end.upperBound])
     }
 
     // MARK: Searching
@@ -455,6 +532,22 @@ public struct LibraryIndex: Sendable {
     static func unique<T: Hashable>(_ values: [T]) -> [T] {
         var seen = Set<T>()
         return values.filter { seen.insert($0).inserted }
+    }
+}
+
+/// The instruments and kits a library is listed with: process-wide, so passed in.
+public struct LibrarySounds: Sendable {
+    public var instruments: [InstrumentVoiceSpec]
+    public var kits: [SynthMachine]
+
+    public init(instruments: [InstrumentVoiceSpec] = [], kits: [SynthMachine] = []) {
+        self.instruments = instruments
+        self.kits = kits
+    }
+
+    /// The presets, the instruments imported and the kits brought in, as registered now.
+    public static var builtIn: LibrarySounds {
+        LibrarySounds(instruments: InstrumentVoiceSpec.all + ImportedInstruments.all, kits: SynthMachine.available)
     }
 }
 
@@ -562,12 +655,20 @@ extension AppState {
         showSurface(.library)
     }
 
+    /// Opens the Library surface, or brings it forward, on a search.
+    public func showInLibrary(_ query: LibraryQuery) {
+        libraryQueryAsk = query
+        showSurface(.library)
+    }
+
     /// The library as the browser reads it: every item's facts and how they are related, with the
     /// open song as it stands rather than as it was last saved. Built the first time it is read
     /// after the library changes; after a change to the open song, only that song is read again.
     public var libraryIndex: LibraryIndex {
         // Both read every time, so a view that reads the index follows the library and the song.
         let library = self.library, song = self.song
+        // And what it plays on, as the frame has it, so an import or a removal is listed at once.
+        _ = (importedInstruments, recordedKits)
         if var index = indexCache {
             if indexFollowsSong, let song {
                 index.refresh(song)

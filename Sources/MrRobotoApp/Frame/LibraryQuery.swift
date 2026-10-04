@@ -13,6 +13,8 @@ public enum LibraryColumn: String, CaseIterable, Codable, Sendable {
     case kind, note, root, slices, source
     /// How it goes with the open song.
     case fit
+    /// An instrument's or a kit's family, the keys an instrument reaches, where either came from.
+    case family, range, pack
 
     /// The columns a shelf shows, in order.
     public static func columns(for shelf: LibraryShelf) -> [LibraryColumn] {
@@ -22,6 +24,8 @@ public enum LibraryColumn: String, CaseIterable, Codable, Sendable {
         case .ideas: [.title, .kind, .key, .note]
         case .samples: [.title, .root, .tempo, .slices, .note, .source]
         case .albums: [.title, .songs, .length]
+        case .instruments: [.title, .family, .range, .pack, .note]
+        case .kits: [.title, .family, .pack, .note]
         }
     }
 
@@ -194,6 +198,7 @@ public struct LibraryQuery: Hashable, Codable, Sendable {
         switch facts.id.shelf {
         case .songs: facts.albums > 0
         case .records, .ideas, .samples, .albums: facts.songs > 0
+        case .instruments, .kits: false
         }
     }
 
@@ -231,6 +236,9 @@ public struct LibraryQuery: Hashable, Codable, Sendable {
         case .root: return number(a.root?.midi, b.root?.midi)
         case .slices: return number(a.slices, b.slices)
         case .fit: return number(a.fit.flatMap { $0.verdict == .unknown ? nil : $0.cost }, b.fit.flatMap { $0.verdict == .unknown ? nil : $0.cost })
+        case .family: return text(a.family, b.family)
+        case .range: return number(a.range.map { _ in a.rangeLow ?? 0 }, b.range.map { _ in b.rangeLow ?? 0 })
+        case .pack: return text(a.pack, b.pack)
         }
     }
 
@@ -253,6 +261,9 @@ public struct LibraryQuery: Hashable, Codable, Sendable {
         case .root: facts.root != nil
         case .slices: facts.slices != nil
         case .fit: facts.fit.map { $0.verdict != .unknown } ?? false
+        case .family: facts.family != nil
+        case .range: facts.range != nil
+        case .pack: facts.pack != nil
         }
     }
 

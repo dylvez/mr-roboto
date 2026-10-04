@@ -1,5 +1,6 @@
 import AVFAudio
 import Foundation
+import Instrument
 import MusicTheory
 import SongGraph
 import Testing
@@ -50,6 +51,19 @@ final class StubListening: LibraryListeningHost {
     }
 
     func isSounding(_ id: String) -> Bool { sounding == id }
+
+    var phrases: [(id: String, instrument: String, notes: [NoteEvent])] = []
+    var grooves: [(id: String, machine: String, tempo: Double)] = []
+
+    func play(phrase notes: [NoteEvent], instrument: String, tempo: Double, id: String, label: String) async {
+        phrases.append((id, instrument, notes))
+        sounding = id
+    }
+
+    func play(groove: Groove, machine: SynthMachine, tempo: Double, id: String, label: String) async {
+        grooves.append((id, machine.id, tempo))
+        sounding = id
+    }
 
     struct NoPreview: Error {}
 

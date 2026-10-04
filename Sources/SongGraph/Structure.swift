@@ -742,7 +742,7 @@ public struct LibrarySample: Identifiable, Hashable, Codable, Sendable {
 /// A favourite and tags on something in the library: what a person put there to find it again.
 /// Kept in `library.json`, never in a song's package.
 public struct LibraryMark: Hashable, Codable, Sendable {
-    public enum Kind: String, Codable, Sendable, CaseIterable { case song, record, idea, sample, album }
+    public enum Kind: String, Codable, Sendable, CaseIterable { case song, record, idea, sample, album, instrument, kit }
 
     public var kind: Kind
     public var id: UUID

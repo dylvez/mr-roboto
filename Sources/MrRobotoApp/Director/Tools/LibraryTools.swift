@@ -10,7 +10,21 @@ import SongGraph
 
 /// Everything the library holds, with the key and tempo of each thing so a merge can be planned.
 public struct ReadLibraryTool: DirectorTool {
-    public struct Input: Decodable, Sendable {}
+    /// A search, as the Library surface searches: every field empty is the whole library.
+    public struct Input: Decodable, Sendable {
+        public var shelf: String?
+        public var words: String?
+        public var key: String?
+        public var within: Int?
+        public var tempo: Double?
+        public var goesWithSong: Bool?
+        public var show: Bool?
+
+        enum CodingKeys: String, CodingKey {
+            case shelf, words, key, within, tempo, show
+            case goesWithSong = "goes_with_song"
+        }
+    }
 
     public struct Output: Encodable, Sendable {
         public struct Idea: Encodable, Sendable {
@@ -19,6 +33,8 @@ public struct ReadLibraryTool: DirectorTool {
             public var type: String
             public var key: String?
             public var note: String?
+            /// How it would come into the open song, when one is open.
+            public var fit: String?
         }
         public struct RecordEntry: Encodable, Sendable {
             public var id: String
@@ -45,9 +61,11 @@ public struct ReadLibraryTool: DirectorTool {
             /// Cents it sits above concert pitch (below when negative), when it is far enough off to
             /// say: what adopt takes off as it fits a stem of it.
             public var tuningCents: Double?
+            /// How it would come into the open song, when one is open: moved how far, said as Sources says it.
+            public var fit: String?
 
             enum CodingKeys: String, CodingKey {
-                case id, title, artist, key, tempo, bars, stems, status, grid
+                case id, title, artist, key, tempo, bars, stems, status, grid, fit
                 case inSong = "in_song"
                 case trackersAgree = "trackers_agree"
                 case secondTrackerTempo = "second_tracker_tempo"
@@ -77,8 +95,10 @@ public struct ReadLibraryTool: DirectorTool {
             public var dusty: Bool
             public var source: String?
             public var sourceRecord: String?
+            /// How it would come into the open song, when one is open.
+            public var fit: String?
 
-            enum CodingKeys: String, CodingKey { case id, name, key, tempo, slices, dusty, source; case sourceRecord = "source_record" }
+            enum CodingKeys: String, CodingKey { case id, name, key, tempo, slices, dusty, source, fit; case sourceRecord = "source_record" }
         }
         public struct AlbumEntry: Encodable, Sendable {
             public var id: String
@@ -127,13 +147,96 @@ public struct ReadLibraryTool: DirectorTool {
         + "tempo and bars, and its stems kept with it, each with how much of the record it is and the bar it "
         + "comes in at), samples (chops saved with their slices and chain), albums and songs — each with its "
         + "key and tempo where it has one, and for each song the stems its record gives and its record's bars. "
+        + "With a song open, each record, idea and sample says how it would come in: moved how far, as adopt would. "
+        + "Search it as the Library surface does — a shelf, words, a key and how far from it, a tempo (half and "
+        + "double time count), only what goes with the open song — and leave every field empty for all of it; show "
+        + "opens the Library on the same search for the person. "
         + "Ids here go to adopt, which brings an item, or a record's or a song's stem, into the open song."
     }
-    public var schema: DirectorJSON { Schema.object([], required: []) }
+    // Every field required, with an empty answer for none: the API allows twenty-four optional
+    // parameters across the toolbox, and these would have spent them all.
+    public var schema: DirectorJSON {
+        Schema.object([
+            ("shelf", Schema.string("The one shelf to search. Empty: every shelf.", enum: ["", "songs", "records", "ideas", "samples", "albums"])),
+            ("words", Schema.string("Words that must each be found in what an item says of itself: title, artist, key, genre, "
+                                    + "brief, tags, notes, a record's stems. Empty: no words.")),
+            ("key", Schema.string("A key, as \"D minor\": only what is in it or its relative, or within `within` semitones "
+                                  + "as a source would be moved to it. Empty: any key.")),
+            ("within", Schema.integer("Semitones from `key` that still count; 0 for the key or its relative.", minimum: 0, maximum: 6)),
+            ("tempo", Schema.number("Beats per minute: only what is within 6% of it, or of half or double it. 0 for any tempo.")),
+            ("goes_with_song", Schema.boolean("Only the records, ideas and samples that would come into the open song moved no "
+                                              + "further than a sample bears — four semitones — nearest first. False for all of them.")),
+            ("show", Schema.boolean("Also open the Library surface on this search, for the person to see and hear what it found.")),
+        ], required: ["shelf", "words", "key", "within", "tempo", "goes_with_song", "show"])
+    }
+
+    /// The search an input asks for, as the Library surface would run it, shelf by shelf.
+    struct Search {
+        var shelf: LibraryShelf?
+        var base: LibraryQuery
+
+        init(_ input: Input, tool: String) throws {
+            if let raw = input.shelf, !raw.isEmpty {
+                guard let shelf = LibraryShelf(rawValue: raw), shelf.isLibrary else {
+                    throw DirectorToolFailure(tool: tool, reason: "\"\(raw)\" is not a shelf.",
+                                              suggestion: "One of songs, records, ideas, samples, albums; or empty for every shelf.")
+                }
+                self.shelf = shelf
+            }
+            var query = LibraryQuery(shelf: .songs, text: input.words ?? "")
+            if let raw = input.key?.trimmingCharacters(in: .whitespaces), !raw.isEmpty {
+                guard let key = Key(parsing: raw) else {
+                    throw DirectorToolFailure(tool: tool, reason: "\"\(raw)\" is not a key.", suggestion: "Write it as \"D minor\" or \"Bb major\".")
+                }
+                query.key = .init(key, within: input.within ?? 0)
+            }
+            if let tempo = input.tempo, tempo > 0 { query.tempo = .around(tempo) }
+            if input.goesWithSong == true {
+                query.goesWith = true
+                query.sort = .init(.fit)
+            }
+            base = query
+        }
+
+        /// Whether it narrows anything: a shelf, or a filter.
+        var narrows: Bool { shelf != nil || base.narrows }
+
+        func query(_ shelf: LibraryShelf) -> LibraryQuery {
+            var query = base
+            query.shelf = shelf
+            return query
+        }
+
+        /// The items of a shelf the search keeps, in the order it ranks them; all of them, as the
+        /// library holds them, when it narrows nothing.
+        func pick<T>(_ items: [T], on shelf: LibraryShelf, index: LibraryIndex, id: (T) -> UUID) -> [T] {
+            if let only = self.shelf, only != shelf { return [] }
+            guard base.narrows else { return items }
+            let byID = Dictionary(items.map { (id($0), $0) }, uniquingKeysWith: { first, _ in first })
+            return query(shelf).run(index).compactMap { byID[$0.id.id] }
+        }
+    }
+
+    /// "near: The record of Drifter stays in A minor at 85." — how it would come in, in Sources' words.
+    static func fitLine(_ fit: LibraryFit?) -> String? {
+        guard let fit, fit.verdict != .unknown else { return nil }
+        let verdict: String = switch fit.verdict {
+        case .asIs: "as it is"
+        case .near: "near"
+        case .moves: "moved"
+        case .far: "far"
+        case .refused: "refused"
+        case .unknown: ""
+        }
+        return "\(verdict): " + (fit.sentences + fit.flags).joined(separator: " ")
+    }
 
     public func run(_ input: Input) async throws -> Output {
+        let search = try Search(input, tool: name)
         let library = await workspace.library
         let song = await workspace.song
+        // The facts the Library surface reads, for searching and for what fits the open song.
+        let index = LibraryIndex(library: library, openSong: song, sounds: LibrarySounds())
         let media = Set((song?.versions ?? []).compactMap { version -> MediaRef? in
             if case .audio(let audio) = version.kind { return audio.media }
             return nil
@@ -142,12 +245,13 @@ public struct ReadLibraryTool: DirectorTool {
             guard let id, let record = library.record(id) else { return nil }
             return record.artist.isEmpty ? record.title : "\(record.artist) – \(record.title)"
         }
-        let ideas = library.ideas.map { idea in
+        let ideas = search.pick(library.ideas, on: .ideas, index: index, id: \.id.rawValue).map { idea in
             Output.Idea(id: idea.id.description, title: PartLabel.title(of: idea), type: idea.type.rawValue,
-                        key: ReadSongTool.key(of: idea).map { "\($0)" }, note: idea.note)
+                        key: ReadSongTool.key(of: idea).map { "\($0)" }, note: idea.note,
+                        fit: Self.fitLine(index.facts(.idea(idea.id))?.fit))
         }
         var records: [Output.RecordEntry] = []
-        for record in library.records {
+        for record in search.pick(library.records, on: .records, index: index, id: \.id.rawValue) {
             var key: Key?, tempo: Double?, bars: Int?
             if let analysis = record.reading {
                 key = analysis.dominantKey
@@ -168,20 +272,22 @@ public struct ReadLibraryTool: DirectorTool {
                                               trackersAgree: check?.agreement.map { ($0 * 100).rounded() / 100 },
                                               secondTrackerTempo: check?.checkerBPM.map { ($0 * 10).rounded() / 10 },
                                               secondTrackerKept: !(record.readingAsRead?.checkerBeats?.isEmpty ?? true),
-                                              tuningCents: record.tuning.flatMap { abs($0) >= SourceFitting.leastCents ? $0 : nil }))
+                                              tuningCents: record.tuning.flatMap { abs($0) >= SourceFitting.leastCents ? $0 : nil },
+                                              fit: Self.fitLine(index.facts(.record(record.id))?.fit)))
         }
-        let samples = library.samples.map { entry in
+        let samples = search.pick(library.samples, on: .samples, index: index, id: \.id.rawValue).map { entry in
             Output.SampleEntry(id: entry.id.description, name: entry.name, key: entry.sample.key.map { "\($0)" },
                                tempo: entry.sample.detectedTempo, slices: entry.sample.slices.count,
                                dusty: !entry.sample.degradation.isEmpty,
                                source: recordName(entry.sample.sourceRecord ?? library.record(forMedia: entry.sample.media)?.id),
-                               sourceRecord: entry.sample.sourceRecord?.description)
+                               sourceRecord: entry.sample.sourceRecord?.description,
+                               fit: Self.fitLine(index.facts(.sample(entry.id))?.fit))
         }
-        let albums = library.albums.map { album in
+        let albums = search.pick(library.albums, on: .albums, index: index, id: \.id.rawValue).map { album in
             Output.AlbumEntry(id: album.id.description, title: album.title,
                               songs: album.songs.compactMap { library.song($0)?.title })
         }
-        let songs = library.songs.map { entry in
+        let songs = search.pick(library.songs, on: .songs, index: index, id: \.id.rawValue).map { entry in
             let record = Mashups.source(for: entry)
             let bars = Mashups.stems(of: entry).first.flatMap { Sources.material(of: entry, stem: $0)?.material.bars.count }
             return Output.SongEntry(id: entry.id.description, title: entry.title, key: entry.key.map { "\($0)" },
@@ -190,10 +296,27 @@ public struct ReadLibraryTool: DirectorTool {
                                     recordTempo: record?.tempo.map { ($0 * 10).rounded() / 10 }, recordBars: record == nil ? nil : bars)
         }
         let counts = "\(ideas.count) ideas, \(records.count) records, \(samples.count) samples, \(albums.count) albums, \(songs.count) songs"
+        var said: [String] = []
+        if search.narrows {
+            let looked = search.shelf.map { "the \($0.rawValue)" } ?? "every shelf"
+            said.append("Searched \(looked) for \(LibrarySurfaceView.describe(search.base))")
+            if search.base.goesWith == true, index.fitTarget == nil {
+                said.append(song == nil ? "No song is open, so nothing is held back by what goes with it"
+                                        : "\(song!.title) holds nothing yet, so everything goes with it as it is")
+            }
+        }
+        said.append(counts)
+        if input.show == true {
+            // The shelf asked for, else the one the search found most on.
+            let found: [(LibraryShelf, Int)] = [(.records, records.count), (.songs, songs.count), (.samples, samples.count),
+                                                (.ideas, ideas.count), (.albums, albums.count)]
+            let shelf = search.shelf ?? found.max { $0.1 < $1.1 }?.0 ?? .records
+            if await workspace.showLibrary(search.query(shelf)) { said.append("The Library is open on the \(shelf.rawValue) it found") }
+        }
         return Output(ideas: ideas, records: records, samples: samples, albums: albums, songs: songs,
-                      detail: song == nil ? "\(counts). No song is open, so nothing can be adopted yet."
-                                          : "\(counts). adopt brings an idea, a sample or a record into \(song!.title), "
-                                              + "or a record's or a song's stem — whole, or some bars — fitted to it.")
+                      detail: said.joined(separator: ". ") + (song == nil ? ". No song is open, so nothing can be adopted yet."
+                                          : ". adopt brings an idea, a sample or a record into \(song!.title), "
+                                              + "or a record's or a song's stem — whole, or some bars — fitted to it."))
     }
 }
 

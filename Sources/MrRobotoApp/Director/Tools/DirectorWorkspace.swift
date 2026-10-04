@@ -107,6 +107,9 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     func addSource(_ request: SourceRequest) async throws -> (version: PartVersion, sentences: [String], flags: [String])
     /// What the crate is doing to a record, or why it last failed.
     func crateStatus(of record: RecordID) -> String?
+    /// The Library surface, opened on a search for the person to see. False where there is none.
+    @discardableResult
+    func showLibrary(_ query: LibraryQuery) -> Bool
     /// Queues a record's separation in the crate. False when it cannot be.
     func separateRecord(_ record: RecordID) -> Bool
     /// Corrects a record's beat grid in the crate, and returns the record as corrected.
@@ -197,6 +200,9 @@ extension DirectorWorkspace {
     /// What the crate is doing to a record, or why it last failed. Nil when nothing, and where
     /// there is no crate.
     public func crateStatus(of record: RecordID) -> String? { nil }
+
+    /// Where there is no frame, there is no Library to open.
+    public func showLibrary(_ query: LibraryQuery) -> Bool { false }
 
     /// Queues a record's separation in the crate. False where there is no crate.
     public func separateRecord(_ record: RecordID) -> Bool { false }
@@ -387,6 +393,11 @@ public final class AppStateWorkspace: DirectorWorkspace {
     }
 
     public func crateStatus(of record: RecordID) -> String? { app.crate.status(of: record) ?? app.crate.failures[record] }
+
+    public func showLibrary(_ query: LibraryQuery) -> Bool {
+        app.showInLibrary(query)
+        return true
+    }
 
     public func correctGrid(_ record: RecordID, _ move: GridMove) throws -> Record {
         try app.correctGrid(record, move, by: .director)

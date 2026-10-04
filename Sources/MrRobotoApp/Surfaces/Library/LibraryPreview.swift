@@ -1,5 +1,9 @@
+import AudioEngine
 import Foundation
+import Instrument
+import MusicTheory
 import Observation
+import Performance
 import SongGraph
 
 /// What hearing something in the Library needs from the app: where a file is, a way to sound it
@@ -19,6 +23,10 @@ protocol LibraryListeningHost: AnyObject {
     /// The song's preview, made now when there is none for the song as it stands, saying how far
     /// the making has got.
     func songPreview(_ song: Song, progress: @escaping @Sendable (Double) -> Void) async throws -> URL
+    /// A phrase on an instrument, at a tempo: how an instrument on the shelf is heard.
+    func play(phrase notes: [NoteEvent], instrument: String, tempo: Double, id: String, label: String) async
+    /// A groove on a kit, at a tempo: how a kit on the shelf is heard.
+    func play(groove: Groove, machine: SynthMachine, tempo: Double, id: String, label: String) async
 }
 
 /// Listening in the Library: one thing at a time, through the app's player, so the transport bar
@@ -88,6 +96,7 @@ final class LibraryPreview {
         case .samples: return app.library.sample(SampleID(rawValue: item.id)) != nil
         case .ideas: return idea(VersionID(rawValue: item.id)).map(PartPlayer.canPlay) ?? false
         case .albums: return false
+        case .instruments, .kits: return app.libraryIndex.facts(item)?.code != nil
         }
     }
 
@@ -183,6 +192,16 @@ final class LibraryPreview {
             await playAlone(idea, item: item, label: PartLabel.title(of: idea), tempo: nil, host: host)
         case .albums:
             return
+        case .instruments:
+            guard let id = app.libraryIndex.facts(item)?.code, let spec = InstrumentVoiceSpec.preset(id: id) else { return }
+            let notes = LibraryPhrases.phrase(for: spec)
+            await host.play(phrase: notes, instrument: spec.id, tempo: LibraryPhrases.tempo, id: Self.id(item), label: spec.name)
+            state = .sounding(Sounding(id: Self.id(item), from: 0, length: LibraryPhrases.seconds(notes), loops: false, started: Date()))
+        case .kits:
+            guard let id = app.libraryIndex.facts(item)?.code, let machine = SynthMachine.preset(id: id) else { return }
+            await host.play(groove: LibraryPhrases.groove, machine: machine, tempo: LibraryPhrases.grooveTempo, id: Self.id(item), label: machine.name)
+            let length = Double(LibraryPhrases.groove.bars * 4) * 60 / LibraryPhrases.grooveTempo
+            state = .sounding(Sounding(id: Self.id(item), from: 0, length: length, loops: false, started: Date()))
         }
     }
 
@@ -351,6 +370,69 @@ extension Array {
     subscript(safe index: Int) -> Element? { indices.contains(index) ? self[index] : nil }
 }
 
+/// What an instrument or a kit on the shelf is heard by: a few bars that suit what it is.
+enum LibraryPhrases {
+    static let tempo = 96.0
+    static let grooveTempo = 92.0
+
+    /// Chords for what holds them — keys, organs, pads, strings, guitars — a low line for a bass, a
+    /// tune for the rest; moved by octaves into the keys a recorded instrument reaches.
+    static func phrase(for spec: InstrumentVoiceSpec) -> [NoteEvent] {
+        let notes: [NoteEvent]
+        switch spec.family {
+        case "keys", "organ", "pad", "strings", "plucked", "guitar":
+            notes = Voicing.notes(for: chords)
+        case "bass":
+            notes = line([36, 36, 43, 45, 41, 41, 43, 47], beats: 1)
+        default:
+            notes = line([72, 74, 76, 79, 81, 79, 76, 74, 72], beats: 0.5, last: 2)
+        }
+        guard spec.engine == .sampled, let range = ImportedInstruments.range(of: spec) else { return notes }
+        return fitted(notes, into: range)
+    }
+
+    static func seconds(_ notes: [NoteEvent]) -> Double {
+        (notes.map { $0.start + $0.duration }.max() ?? 0) * 60 / tempo + 0.5
+    }
+
+    /// Cmaj7, Am7, Fmaj7, G7, a bar each.
+    static let chords = Progression(key: .cMajor, bars: [
+        ProgressionBar(Chord(.c, .majorSeventh)), ProgressionBar(Chord(.a, .minorSeventh)),
+        ProgressionBar(Chord(.f, .majorSeventh)), ProgressionBar(Chord(.g, .dominantSeventh)),
+    ])
+
+    /// Two bars of kick, snare and hats, with a ghost and an open hat: enough of every voice.
+    static var groove: Groove {
+        func pattern(_ voice: DrumVoice, _ steps: String) -> GroovePattern {
+            GroovePattern(voice: voice, steps: steps.map { $0 == "X" ? .accent : $0 == "x" ? .normal : $0 == "g" ? .ghost : .rest })
+        }
+        return Groove(stepsPerBar: 16, bars: 2, patterns: [
+            pattern(.kick, "X-----x---x-----X-----x-----x---"),
+            pattern(.snare, "----X------g--g-----X------g-X--"),
+            pattern(.closedHat, "x-x-x-x-x-x-x-x-x-x-x-x-x-x-x---"),
+            pattern(.openHat, "------------------------------x-"),
+        ])
+    }
+
+    private static func line(_ keys: [Int], beats: Double, last: Double? = nil) -> [NoteEvent] {
+        keys.enumerated().map { index, key in
+            let length = index == keys.count - 1 ? (last ?? beats) : beats
+            return NoteEvent(pitch: Pitch(midi: key), start: Double(index) * beats, duration: length * 0.9, velocity: 92)
+        }
+    }
+
+    /// Left where it is when it fits; else moved by whole octaves into `range`, or as near as it can.
+    static func fitted(_ notes: [NoteEvent], into range: ClosedRange<Int>) -> [NoteEvent] {
+        guard let low = notes.map(\.pitch.midi).min(), let high = notes.map(\.pitch.midi).max() else { return notes }
+        if range.contains(low), range.contains(high) { return notes }
+        let middle = (range.lowerBound + range.upperBound) / 2
+        var shift = Int((Double(middle - (low + high) / 2) / 12).rounded()) * 12
+        while low + shift < range.lowerBound, high + shift + 12 <= range.upperBound { shift += 12 }
+        while high + shift > range.upperBound, low + shift - 12 >= range.lowerBound { shift -= 12 }
+        return notes.map { var note = $0; note.pitch = Pitch(midi: note.pitch.midi + shift); return note }
+    }
+}
+
 /// How far a song's preview has got, said from the thread that renders it to the preview on the
 /// main actor, without keeping the preview alive.
 private final class MakingReporter: @unchecked Sendable {
@@ -404,5 +486,23 @@ final class LiveLibraryListening: LibraryListeningHost {
 
     func songPreview(_ song: Song, progress: @escaping @Sendable (Double) -> Void) async throws -> URL {
         try await SongPreviews.make(song, store: app.store, progress: progress)
+    }
+
+    func play(phrase notes: [NoteEvent], instrument: String, tempo: Double, id: String, label: String) async {
+        if app.transport.isPlaying { await app.stopTransport() }
+        let player = player
+        let clock = TransportClock(tempo: tempo)
+        await player.play(id: id, label: label, seconds: LibraryPhrases.seconds(notes)) {
+            await player.playOnInstrument(notes, instrument: instrument, clock: clock)
+        }
+    }
+
+    func play(groove: Groove, machine: SynthMachine, tempo: Double, id: String, label: String) async {
+        if app.transport.isPlaying { await app.stopTransport() }
+        let player = player
+        let clock = TransportClock(tempo: tempo)
+        await player.play(id: id, label: label, seconds: Double(groove.bars * 4) * 60 / tempo + 0.5) {
+            await player.play(groove, machine: machine, clock: clock)
+        }
     }
 }

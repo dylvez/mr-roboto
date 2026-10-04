@@ -152,6 +152,8 @@ extension LibraryActions {
                                      kind: .confirm(question: "Remove \(count) samples from Samples?",
                                                     detail: "Songs that adopted them copied their audio and keep playing.",
                                                     verb: "Remove", run: { for entry in entries { _ = app.removeSample(entry.id) } })))
+        case .instruments, .kits:
+            break
         case .albums:
             let ids = items.map { AlbumID(rawValue: $0.id) }
             own.append(LibraryAction(id: "delete", title: "Delete Albums…", isDestructive: true, group: 2,

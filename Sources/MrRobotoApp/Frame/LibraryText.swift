@@ -28,6 +28,8 @@ extension LibraryFacts {
             return pieces.isEmpty ? tags.joined(separator: " · ") : pieces.joined(separator: " · ")
         case .albums:
             return LibraryText.count(songs, "song")
+        case .instruments, .kits:
+            return [family, range, pack].compactMap { $0 }.joined(separator: " · ")
         }
     }
 
@@ -68,6 +70,9 @@ extension LibraryColumn {
         case .slices: "Slices"
         case .source: "Cut from"
         case .fit: "Fit"
+        case .family: "Family"
+        case .range: "Range"
+        case .pack: "From"
         }
     }
 
@@ -93,6 +98,9 @@ extension LibraryColumn {
         case .slices: facts.slices.map { $0 > 0 ? "\($0)" : "" } ?? ""
         case .source: facts.source ?? ""
         case .fit: facts.fit?.short ?? ""
+        case .family: facts.family ?? ""
+        case .range: facts.range ?? ""
+        case .pack: facts.pack ?? ""
         }
     }
 
@@ -114,6 +122,8 @@ enum LibraryText {
         case .ideas: "idea"
         case .samples: "sample"
         case .albums: "album"
+        case .instruments: "instrument"
+        case .kits: "kit"
         }
     }
 

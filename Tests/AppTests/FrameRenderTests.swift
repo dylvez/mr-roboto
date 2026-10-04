@@ -285,6 +285,19 @@ struct FrameRenderTests {
         try write(view, size: CGSize(width: 1240, height: 720), name: "library-batch")
     }
 
+    @Test("the Library's instruments and kits, one of each chosen, with a song open")
+    func librarySounds() throws {
+        FontRegistration.registerBundledFonts()
+        let (app, shelf) = LibraryBrowserFixture.app(open: { $0.nightBus })
+        _ = shelf
+        let model = LibraryBrowserModel(app: app, memory: .inMemory())
+        model.select(.instrument("rhodes"))
+        let view = LibrarySurfaceView(model: model).background(Design.Palette.panel)
+        try write(view, size: CGSize(width: 1240, height: 720), name: "library-instruments")
+        model.select(.kit("tr808"))
+        try writeDark(view, size: CGSize(width: 1240, height: 720), name: "library-kits-dark")
+    }
+
     @Test("the Merge surface on a chop and a bass line in different keys")
     func merge() throws {
         FontRegistration.registerBundledFonts()
