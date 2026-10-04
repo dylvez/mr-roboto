@@ -1,3 +1,4 @@
+import AVFoundation
 import AudioEngine
 import Foundation
 import MusicTheory
@@ -337,6 +338,60 @@ struct SourcesDirectorTests {
             .init("kind", .string("song")), .init("id", .string(a.id.description)), .init("stem", .string("vocals")),
         ])))
         #expect(wrong.isError && wrong.content.contains("no vocals stem"))
+    }
+}
+
+@Suite("Sources: a clip's loop turns over without a tick", .serialized) @MainActor
+struct SourceLoopEdgeTests {
+
+    /// Two seconds of a held tone that neither starts nor ends on a zero: what bars cut through a
+    /// sustained piano are.
+    static func held(in directory: URL) throws -> URL {
+        let rate = 44_100.0
+        let tone = (0..<Int(rate * 2)).map { Float(0.5 * cos(2 * Double.pi * 110.25 * Double($0) / rate)) }
+        let url = directory.appendingPathComponent("held.wav")
+        try BoothAdapter.write([tone], sampleRate: rate, to: url)
+        return url
+    }
+
+    @AudioActor
+    static func loop(_ track: SongPlayback.ChopTrack, seconds: Double) throws -> [Float] {
+        let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 2))
+        let buffer = try LiveSongPlayer.dustyChop(track, format: format, repeatedTo: seconds)
+        let data = try #require(buffer.floatChannelData)
+        return Array(UnsafeBufferPointer(start: data[0], count: Int(buffer.frameLength)))
+    }
+
+    @Test("bars of another record come in and go out at each turn and at the section's cut; a bar cut here is laid end to end as it always was")
+    func edges() async throws {
+        let directory = WiringFixture.temporaryDirectory("source-loop")
+        defer { WiringFixture.remove(directory) }
+        let url = try Self.held(in: directory)
+        func track(source: Bool) -> SongPlayback.ChopTrack {
+            SongPlayback.ChopTrack(version: VersionID(), name: "Held", url: url, region: SongGraph.TimeRange(start: 0, end: 2), passes: [], isSource: source)
+        }
+        // Two turns and some of a third: two joins inside, and a cut part-way through the last.
+        let plain = try await Self.loop(track(source: false), seconds: 4.6)
+        let eased = try await Self.loop(track(source: true), seconds: 4.6)
+        #expect(plain.count == eased.count && plain.count == 202_860)
+        let join = 88_200
+        // As cut: full level right up to the join and from it, and at the section's end.
+        #expect(abs(plain[join - 1]) > 0.3 && abs(plain[join]) > 0.3 && abs(plain[plain.count - 1]) > 0.1)
+        // Eased: silent at the join, at the start and at the cut; untouched in the middle of a turn.
+        for at in [0, join - 1, join, 2 * join - 1, 2 * join, eased.count - 1] { #expect(abs(eased[at]) < 0.01, "\(at): \(eased[at])") }
+        #expect(eased[join / 2] == plain[join / 2] && eased[join + join / 2] == plain[join + join / 2])
+        // In within 3 ms, out over 8.
+        #expect(eased[Int(0.004 * 44_100)] == plain[Int(0.004 * 44_100)])
+        #expect(abs(eased[join - Int(0.004 * 44_100)]) < abs(plain[join - Int(0.004 * 44_100)]))
+    }
+
+    @Test("the song knows which chops are bars of another record")
+    func marked() async throws {
+        let (app, directory, _, b) = try await SourcesFixture.mashup("source-loop-plan")
+        defer { WiringFixture.remove(directory) }
+        _ = try await app.addSource(SourceRequest(song: b.id, stem: "vocals", bars: 1..<3, takesItsGrid: false))
+        let chops = app.playback.segments.flatMap(\.voices).compactMap(\.chop)
+        #expect(!chops.isEmpty && chops.allSatisfy(\.isSource))
     }
 }
 

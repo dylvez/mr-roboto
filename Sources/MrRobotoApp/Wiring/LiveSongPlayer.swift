@@ -685,15 +685,37 @@ final class LiveSongPlayer: SongPlaybackHost {
         }
         let dry = try clock.map { try fitted(span.planar, sampleRate: span.sampleRate, of: chop, to: $0) } ?? span.planar
         var wet = try Dust.render(dry, sampleRate: span.sampleRate, passes: chop.passes)
+        // Bars of another record: each turn of the loop comes in and goes out, so a held note does
+        // not tick where the loop turns over.
+        if chop.isSource { wet = eased(wet, sampleRate: span.sampleRate) }
         if let seconds, seconds > 0 {
             let frames = Int((seconds * span.sampleRate).rounded())
             let copies = max(1, (frames + wet[0].count - 1) / max(1, wet[0].count))
             wet = wet.map { channel in Array([[Float]](repeating: channel, count: copies).joined().prefix(frames)) }
+            // And where the section cuts the last turn short.
+            if chop.isSource { wet = eased(wet, sampleRate: span.sampleRate, comingIn: false) }
         }
         guard let buffer = AuditionService.buffer(planar: wet, sampleRate: span.sampleRate, in: format) else {
             throw EngineError.renderFailed("\(chop.name) could not be put in the graph's format")
         }
         return buffer
+    }
+
+    /// How long a clip of another record takes to come in at each turn of its loop: short, so the
+    /// note on its bar line keeps its attack. It goes out over `windowFade`, as a stem does.
+    nonisolated static let clipFadeIn = 0.003
+
+    /// Audio with its edges eased: in over `clipFadeIn`, out over `windowFade`.
+    nonisolated static func eased(_ planar: [[Float]], sampleRate: Double, comingIn: Bool = true) -> [[Float]] {
+        planar.map { channel in
+            var out = channel
+            let count = out.count
+            let rise = comingIn ? min(count / 2, max(1, Int(clipFadeIn * sampleRate))) : 0
+            let fall = min(count / 2, max(1, Int(windowFade * sampleRate)))
+            for i in 0..<rise { out[i] *= Float(i) / Float(rise) }
+            for i in 0..<fall { out[count - 1 - i] *= Float(i) / Float(fall) }
+            return out
+        }
     }
 
     /// A chop's bar stretched to the song's tempo (`ChopTrack.loopSeconds`), with its pitch kept.

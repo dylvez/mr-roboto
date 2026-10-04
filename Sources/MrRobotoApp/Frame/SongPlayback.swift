@@ -100,6 +100,10 @@ public struct SongPlayback: Equatable, Sendable {
         public var pads: [PadTrim]
         /// The level the chop is played at over its media's own (`Sample.gainDB`). Nil is as recorded.
         public var gainDB: Double?
+        /// Bars of another record fitted to the song (`Sample.fit`), rather than a bar cut here at
+        /// a drum's transient: its loop turns over, and a section cuts it, through held notes, so
+        /// its edges are eased (`LiveSongPlayer.eased`).
+        public var isSource = false
 
         public var id: VersionID { version }
 
@@ -126,7 +130,7 @@ public struct SongPlayback: Equatable, Sendable {
 
         public init(version: VersionID, name: String, url: URL, region: SongGraph.TimeRange,
                     passes: [Degradation], part: PartID? = nil, slices: [SliceMarker] = [],
-                    tempo: Double? = nil, pads: [PadTrim] = [], gainDB: Double? = nil) {
+                    tempo: Double? = nil, pads: [PadTrim] = [], gainDB: Double? = nil, isSource: Bool = false) {
             self.version = version
             self.name = name
             self.url = url
@@ -137,6 +141,7 @@ public struct SongPlayback: Equatable, Sendable {
             self.tempo = tempo
             self.pads = pads
             self.gainDB = gainDB
+            self.isSource = isSource
         }
     }
 
@@ -882,7 +887,8 @@ public struct SongPlayback: Equatable, Sendable {
                                             tempo: sample.detectedTempo ?? song.tempo)
         return ChopTrack(version: version.id, name: PartLabel.title(of: version), url: url,
                          region: region, passes: sample.degradation, part: version.partID,
-                         slices: sample.slices, tempo: sample.detectedTempo, pads: sample.pads, gainDB: sample.gainDB)
+                         slices: sample.slices, tempo: sample.detectedTempo, pads: sample.pads, gainDB: sample.gainDB,
+                         isSource: sample.fit != nil)
     }
 
     /// The chop a groove part plays on, resolved to what the transport can read: the chop part's
