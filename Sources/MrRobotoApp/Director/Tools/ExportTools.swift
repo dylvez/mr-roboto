@@ -12,7 +12,19 @@ public struct ExportTool: DirectorTool {
     public struct Output: Encodable, Sendable {
         public var files: [String]
         public var directory: String
+        /// What a master reads, from the report written beside it: this print, not a bounce taken
+        /// before the song last changed.
+        public var integratedLUFS: Double?
+        public var truePeakDBTP: Double?
+        public var targetLUFS: Double?
         public var detail: String
+
+        enum CodingKeys: String, CodingKey {
+            case files, directory, detail
+            case integratedLUFS = "integrated_lufs"
+            case truePeakDBTP = "true_peak_dbtp"
+            case targetLUFS = "target_lufs"
+        }
     }
 
     let workspace: any DirectorWorkspace
@@ -45,7 +57,24 @@ public struct ExportTool: DirectorTool {
         }
         guard let first = files.first else { throw DirectorToolFailure(tool: name, reason: "Nothing was written.") }
         let directory = first.deletingLastPathComponent()
+        var detail = "\(files.count) file\(files.count == 1 ? "" : "s") in \(directory.path): \(files.map(\.lastPathComponent).joined(separator: ", "))."
+        // The prompt asks for the loudness the report carries, so the report is read here: left to
+        // remember one, the model gives the last number it saw, from before the song changed.
+        let report = input.what == "master" ? Self.report(among: files) : nil
+        if let report {
+            detail += String(format: " This master reads %.1f LUFS, true peak %.1f dBTP, for a target of %.1f LUFS. Say these; a reading from before it is not this print's.",
+                             report.integratedLUFS, report.truePeakDBTP, report.targetLUFS)
+        }
+        func tenth(_ value: Double?) -> Double? { value.map { ($0 * 10).rounded() / 10 } }
         return Output(files: files.map(\.lastPathComponent), directory: directory.path,
-                      detail: "\(files.count) file\(files.count == 1 ? "" : "s") in \(directory.path): \(files.map(\.lastPathComponent).joined(separator: ", ")).")
+                      integratedLUFS: tenth(report?.integratedLUFS), truePeakDBTP: tenth(report?.truePeakDBTP),
+                      targetLUFS: tenth(report?.targetLUFS), detail: detail)
+    }
+
+    /// The master's report, read back from where it was written.
+    static func report(among files: [URL]) -> Export.MasterReport? {
+        guard let url = files.first(where: { $0.pathExtension.lowercased() == "json" }),
+              let data = try? Data(contentsOf: url) else { return nil }
+        return try? JSONDecoder().decode(Export.MasterReport.self, from: data)
     }
 }

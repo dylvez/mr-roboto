@@ -93,6 +93,17 @@ struct MasterExportTests {
         let decoded = try JSONDecoder().decode(Export.MasterReport.self, from: Data(contentsOf: result.report))
         #expect(decoded.song == "Arrival" && decoded.mixVersion != nil)
 
+        // The Director's tool answers with the print's own loudness, read back from the report: it
+        // is asked to say it, and left to remember one it gives a reading from before the print.
+        app.exportDirectory = out
+        let said = try await ExportTool(workspace: AppStateWorkspace(app)).run(.init(what: "master"))
+        let printed = try JSONDecoder().decode(Export.MasterReport.self, from: Data(contentsOf: result.report))
+        #expect(said.integratedLUFS == (printed.integratedLUFS * 10).rounded() / 10 && said.targetLUFS == -14)
+        #expect(said.truePeakDBTP == (printed.truePeakDBTP * 10).rounded() / 10)
+        #expect(said.detail.contains(String(format: "reads %.1f LUFS, true peak %.1f dBTP", printed.integratedLUFS, printed.truePeakDBTP)), "\(said.detail)")
+        let notes = try await ExportTool(workspace: AppStateWorkspace(app)).run(.init(what: "midi"))
+        #expect(notes.integratedLUFS == nil && !notes.detail.contains("LUFS"))
+
         // The stems: one per strip, dry of the master's +6.
         let stems = try await Export.stems(app, to: out)
         #expect(stems.count == 2, "\(stems.map(\.lastPathComponent))")
