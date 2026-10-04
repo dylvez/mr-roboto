@@ -160,6 +160,7 @@ public actor Director {
                 stage: any DirectorStage,
                 pad: DirectorStagePad,
                 role: DirectorRole = .judgment,
+                model: ClaudeModel? = nil,
                 persona: String? = nil,
                 maxRounds: Int = DirectorConversation.defaultMaxRounds,
                 workbench: DirectorWorkbench? = nil) {
@@ -167,7 +168,7 @@ public actor Director {
         self.stage = stage
         self.pad = pad
         self.workbench = workbench
-        self.conversation = DirectorConversation(client: client, toolbox: toolbox, role: role,
+        self.conversation = DirectorConversation(client: client, toolbox: toolbox, role: role, model: model,
                                                  persona: persona, maxRounds: maxRounds)
     }
 
@@ -193,7 +194,8 @@ public actor Director {
                             client: ClaudeClient = ClaudeClient(),
                             engines: DirectorEngines = .app(),
                             audition: (any DirectorAudition)? = nil,
-                            persona: String? = nil) -> Director {
+                            persona: String? = nil,
+                            model: ClaudeModel? = nil) -> Director {
         let stage = AppStateStage(app)
         let pad = DirectorStagePad()
         let workbench = DirectorWorkbench(engines: engines)
@@ -209,7 +211,7 @@ public actor Director {
                                             stage: stage,
                                             pad: pad,
                                             persona: persona)
-        return Director(client: client, toolbox: toolbox, stage: stage, pad: pad, persona: persona,
+        return Director(client: client, toolbox: toolbox, stage: stage, pad: pad, model: model, persona: persona,
                         workbench: workbench)
     }
 
@@ -259,6 +261,14 @@ public actor Director {
     /// Starts the thread over. The ledger is the client's and survives.
     public func clear() async {
         await conversation.clear()
+    }
+
+    /// The model the band runs on.
+    public var model: ClaudeModel { get async { await conversation.runsOn } }
+
+    /// Puts the band on another model; a change starts its thread over.
+    public func use(_ model: ClaudeModel) async {
+        await conversation.use(model)
     }
 
     // MARK: The turn

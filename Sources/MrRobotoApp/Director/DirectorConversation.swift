@@ -59,6 +59,8 @@ public actor DirectorConversation {
     private let client: ClaudeClient
     private let toolbox: DirectorToolbox
     private let role: DirectorRole
+    /// The model the thread runs on: the role's, unless one was chosen.
+    private var model: ClaudeModel
     private let system: [ClaudeText]
     private let maxTokens: Int
     private let effort: ClaudeEffort
@@ -93,6 +95,7 @@ public actor DirectorConversation {
     public init(client: ClaudeClient,
                 toolbox: DirectorToolbox,
                 role: DirectorRole = .judgment,
+                model: ClaudeModel? = nil,
                 persona: String? = nil,
                 maxRounds: Int = DirectorConversation.defaultMaxRounds,
                 maxTokens: Int = 16000,
@@ -100,6 +103,7 @@ public actor DirectorConversation {
         self.client = client
         self.toolbox = toolbox
         self.role = role
+        self.model = model ?? role.model
         self.system = DirectorPrompt.systemBlocks(persona: persona)
         self.maxRounds = maxRounds
         self.maxTokens = maxTokens
@@ -133,7 +137,7 @@ public actor DirectorConversation {
         do {
             for round in 1...maxRounds {
                 try Task.checkCancellation()
-                let request = ClaudeRequest(model: role.model,
+                let request = ClaudeRequest(model: model,
                                             maxTokens: maxTokens,
                                             system: system,
                                             tools: toolbox.definitions,
@@ -222,6 +226,18 @@ public actor DirectorConversation {
 
     /// What the session has spent so far.
     public func spend() async -> ClaudeSpend { await client.spend }
+
+    /// The model the thread runs on.
+    public var runsOn: ClaudeModel { model }
+
+    /// Puts the thread on another model, and starts it over when that is a change: a transcript
+    /// carries the thinking of the model that wrote it, signed, and another model is not to be
+    /// handed it as its own. The cache is per model too, so nothing read is lost by it.
+    public func use(_ model: ClaudeModel) {
+        guard model != self.model else { return }
+        self.model = model
+        clear()
+    }
 
     /// Starts over. The ledger is the client's and is not touched.
     public func clear() {

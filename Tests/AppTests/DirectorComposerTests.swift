@@ -23,7 +23,8 @@ struct DirectorEndingTests {
     static func rig(_ replies: [DirectorScriptedTransport.Reply],
                     keySource: any ClaudeKeySource = DirectorTestClient.key,
                     transport: (any ClaudeTransport)? = nil,
-                    maxRounds: Int = 12) -> Rig {
+                    maxRounds: Int = 12,
+                    models: DirectorModelChoice = DirectorModelChoice(defaults: UserDefaults(suiteName: "director-ending-tests")!)) -> Rig {
         let directory = GuidanceFixture.temporaryDirectory("director-ending")
         let app = AppState(library: Library(), song: nil,
                            store: LibraryStore(directoryURL: directory),
@@ -42,7 +43,7 @@ struct DirectorEndingTests {
                                   sleeper: DirectorRecordingSleeper(), retry: .none)
         let director = Director(client: client, toolbox: toolbox, stage: stage, pad: pad,
                                 maxRounds: maxRounds)
-        let session = DirectorSession(director: director, app: app)
+        let session = DirectorSession(director: director, app: app, models: models)
         app.attach(band: session)
         return Rig(app: app, session: session, directory: directory)
     }
@@ -271,6 +272,53 @@ struct DirectorEndingTests {
         defer { again.clean() }
         await Self.send(again, "less in the hook")
         #expect(again.app.log.last { $0.source == .director }?.text == turn.say)
+    }
+
+    // MARK: The model
+
+    @Test("The band runs on Sonnet 5 until one is chosen; a choice is kept, and one no longer offered is the standard again")
+    func modelChoice() throws {
+        let defaults = try #require(UserDefaults(suiteName: "director-model-\(UUID().uuidString)"))
+        let choice = DirectorModelChoice(defaults: defaults)
+        #expect(choice.model == .sonnet5 && DirectorModelChoice.offered == [.sonnet5, .opus5])
+        choice.model = .opus5
+        #expect(DirectorModelChoice(defaults: defaults).model == .opus5)
+        defaults.set(ClaudeModel.fable51.rawValue, forKey: DirectorModelChoice.key)
+        #expect(choice.model == .sonnet5)
+        defaults.set("claude-nobody", forKey: DirectorModelChoice.key)
+        #expect(choice.model == .sonnet5)
+        // What the menu says, from the prices.
+        #expect(DirectorModelChoice.line(for: .sonnet5) == "Sonnet 5, the less expensive")
+        #expect(DirectorModelChoice.line(for: .opus5) == "Opus 5, 2.5 times the price")
+    }
+
+    @Test("Choosing a model puts the next request on it, starts the conversation over, keeps the choice and says so")
+    func choosingAModel() async throws {
+        let transport = DirectorScriptedTransport([.events(DirectorSSE.reply("One.")), .events(DirectorSSE.reply("Two.")),
+                                                   .events(DirectorSSE.reply("Three."))])
+        let defaults = try #require(UserDefaults(suiteName: "director-model-\(UUID().uuidString)"))
+        let rig = Self.rig([], transport: transport, models: DirectorModelChoice(defaults: defaults))
+        defer { rig.clean() }
+        #expect(rig.session.model == .opus5, "the model this rig's director was made on")
+
+        await Self.send(rig, "first")
+        rig.session.choose(.sonnet5)
+        #expect(rig.session.model == .sonnet5 && DirectorModelChoice(defaults: defaults).model == .sonnet5)
+        #expect(rig.app.log.last?.text == "The band runs on Sonnet 5 now")
+        await Self.send(rig, "second")
+        await Self.send(rig, "third")
+
+        let bodies = [try await transport.request(0).bodyJSON(), try await transport.request(1).bodyJSON(),
+                      try await transport.request(2).bodyJSON()]
+        #expect(bodies.map { $0["model"]?.stringValue } == ["claude-opus-5", "claude-sonnet-5", "claude-sonnet-5"])
+        // The thread started over with the change, and goes on from there.
+        #expect(bodies.map { $0["messages"]?.arrayValue?.count } == [1, 1, 3])
+        #expect(await rig.session.director.model == .sonnet5)
+
+        // The model it is already on changes nothing and says nothing.
+        let lines = rig.app.log.count
+        rig.session.choose(.sonnet5)
+        #expect(rig.app.log.count == lines)
     }
 
     // MARK: The ledger

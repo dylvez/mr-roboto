@@ -102,6 +102,10 @@ public final class DirectorSession {
     /// What this session has spent, as one line, or nil before the first turn.
     public private(set) var spendLine: String?
 
+    /// The model the band runs on, as the rail shows it.
+    public private(set) var model: ClaudeModel
+    @ObservationIgnored private let models: DirectorModelChoice
+
     @ObservationIgnored public let director: Director
     @ObservationIgnored private weak var app: AppState?
     @ObservationIgnored private var turn: Task<Void, Never>?
@@ -122,14 +126,36 @@ public final class DirectorSession {
         var reason: String
     }
 
-    public init(director: Director, app: AppState) {
+    /// `runningOn` is the model the director handed in was made with, so the rail never names one
+    /// the band is not on.
+    public init(director: Director, app: AppState, runningOn model: ClaudeModel = DirectorRole.judgment.model,
+                models: DirectorModelChoice = DirectorModelChoice()) {
         self.director = director
         self.app = app
+        self.model = model
+        self.models = models
     }
 
-    /// The app's own: the live frame, the real client, the real engines.
+    /// The app's own: the live frame, the real client, the real engines, the model last chosen.
     public static func live(for app: AppState) -> DirectorSession {
-        DirectorSession(director: Director.live(for: app), app: app)
+        let models = DirectorModelChoice()
+        return DirectorSession(director: Director.live(for: app, model: models.model), app: app,
+                               runningOn: models.model, models: models)
+    }
+
+    // MARK: The model
+
+    /// Puts the band on another model, and keeps the choice for the next launch. Its conversation
+    /// starts over, because a thread is one model's: the thinking it carries is signed by the model
+    /// that did it. The song is the app's and is as it was. Not while a turn is in flight.
+    public func choose(_ model: ClaudeModel) {
+        guard model != self.model, !isWorking else { return }
+        self.model = model
+        models.model = model
+        let director = self.director
+        Task { await director.use(model) }
+        app?.note(.session, "The band runs on \(model.label) now",
+                  detail: "Its conversation starts over; the song is as it was.")
     }
 
     // MARK: The key
@@ -230,8 +256,12 @@ public final class DirectorSession {
         let watch: @Sendable (DirectorEvent) -> Void = { [weak self] event in
             Task { @MainActor in self?.observe(event, buffer: buffer) }
         }
+        let model = self.model
         turn = Task { [weak self] in
             guard let self else { return }
+            // The model chosen in the rail, before the turn rather than whenever its own task got
+            // there: a choice made and a sentence sent straight after go out in that order.
+            await self.director.use(model)
             let result = await self.director.direct(text, onEvent: watch)
             self.land(result)
         }

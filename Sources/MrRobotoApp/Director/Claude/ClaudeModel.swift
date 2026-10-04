@@ -9,6 +9,8 @@ import Foundation
 ///
 /// Three, deliberately. Every call in the app picks a `DirectorRole` and the role picks the model,
 /// so "which model does the critic use" is answered in one place rather than at every call site.
+/// The one exception is the Director's own conversation, which runs on the model the user chose
+/// in the rail (`DirectorModelChoice`): it is nearly all of the bill, and the bill is theirs.
 public enum ClaudeModel: String, Sendable, Codable, Hashable, CaseIterable, CustomStringConvertible {
     /// Judgment: choosing a surface, reading a song, deciding what to propose.
     case opus5 = "claude-opus-5"
@@ -67,6 +69,53 @@ public enum ClaudeModel: String, Sendable, Codable, Hashable, CaseIterable, Cust
         case .opus5, .sonnet5: true
         case .fable51: false
         }
+    }
+}
+
+extension ClaudeModel {
+    /// The name a person reads: "Sonnet 5".
+    public var label: String {
+        switch self {
+        case .opus5: "Opus 5"
+        case .sonnet5: "Sonnet 5"
+        case .fable51: "Fable 5.1"
+        }
+    }
+}
+
+/// Which model the band runs on: chosen in the rail, kept between launches.
+///
+/// Sonnet 5 until somebody says otherwise. Run through the same five-sentence session it reached
+/// for the same tools as Opus 5 at two fifths of the price, once the tools' answers carried the
+/// numbers it is asked to say; Opus 5 is the more careful reporter, and one click away.
+public struct DirectorModelChoice {
+    private let defaults: UserDefaults
+    static let key = "director.model"
+
+    /// What the band runs on before anybody has chosen.
+    public static let standard = ClaudeModel.sonnet5
+    /// The ones offered, the less expensive first.
+    public static let offered: [ClaudeModel] = [.sonnet5, .opus5]
+
+    public init(defaults: UserDefaults = .standard) { self.defaults = defaults }
+
+    public var model: ClaudeModel {
+        get {
+            let kept = defaults.string(forKey: Self.key).flatMap(ClaudeModel.init(rawValue:))
+            return kept.flatMap { Self.offered.contains($0) ? $0 : nil } ?? Self.standard
+        }
+        nonmutating set { defaults.set(newValue.rawValue, forKey: Self.key) }
+    }
+
+    /// A model as the menu offers it: its name, and what it costs beside the least expensive one,
+    /// worked out from the prices rather than written down a second time.
+    public static func line(for model: ClaudeModel) -> String {
+        guard let least = offered.min(by: { $0.pricing.input < $1.pricing.input }), model != least else {
+            return "\(model.label), the less expensive"
+        }
+        let times = NSDecimalNumber(decimal: model.pricing.input / least.pricing.input).doubleValue
+        let said = times == times.rounded() ? String(format: "%.0f", times) : String(format: "%.1f", times)
+        return "\(model.label), \(said) times the price"
     }
 }
 

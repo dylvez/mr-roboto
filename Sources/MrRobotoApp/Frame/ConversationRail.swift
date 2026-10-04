@@ -265,6 +265,24 @@ struct LiveComposer: View {
                     .help("What this session has spent, and how much of each prompt came out of the cache.")
                 Spacer(minLength: 0)
                 if !band.isWorking {
+                    // Which model the band runs on, where what it costs is read. It is most of the
+                    // bill, so it is the user's to choose and one click to change.
+                    Menu {
+                        ForEach(DirectorModelChoice.offered, id: \.self) { model in
+                            Toggle(DirectorModelChoice.line(for: model), isOn: Binding(
+                                get: { band.model == model },
+                                set: { if $0 { band.choose(model) } }))
+                        }
+                    } label: {
+                        Text(band.model.label)
+                            .font(Design.Typography.ui(11.5, weight: .medium))
+                            .foregroundStyle(Design.Palette.accent)
+                    }
+                    .menuStyle(.button)
+                    .buttonStyle(.plain)
+                    .menuIndicator(.hidden)
+                    .fixedSize()
+                    .help("The model the band runs on. Changing it starts the band's conversation over; the song stays as it is.")
                     Button(band.keyStatus.hasKey ? "Key…" : "Set the key…") { isSettingKey = true }
                         .buttonStyle(.plain)
                         .font(Design.Typography.ui(11.5, weight: .medium))
