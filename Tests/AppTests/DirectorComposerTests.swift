@@ -246,6 +246,33 @@ struct DirectorEndingTests {
         #expect(turn.say == "Cut bar nine into eight pieces")
     }
 
+    @Test("What the Director says before a call is still there when the turn lands, a paragraph above what it says after")
+    func saidBetweenCalls() async {
+        // The account first, the tool, then only a sign-off: the last reply alone would leave the
+        // rail saying "It is open." with the loudness gone.
+        let account = DirectorSSE.start()
+            + DirectorSSE.text("The hooks read -13.0 LUFS now.")
+            + DirectorSSE.toolUse(id: "t", name: "read_song", jsonPieces: ["{}"], index: 1)
+            + DirectorSSE.end(stopReason: "tool_use")
+        let signOff = DirectorSSE.start() + DirectorSSE.text("It is open.") + DirectorSSE.end()
+        let rig = Self.rig([.events(account), .events(signOff)])
+        defer { rig.clean() }
+
+        let seen = SendableBox<[String]>([])
+        await rig.session.refreshKeyStatus()
+        let turn = await rig.session.director.direct("less in the hook") { event in
+            if case .say(let piece) = event { seen.value = seen.value + [piece] }
+        }
+        #expect(turn.say == "The hooks read -13.0 LUFS now.\n\nIt is open.")
+        #expect(seen.value.joined() == turn.say, "what streamed is what stays: \(seen.value)")
+
+        // And through the field, the rail's line is the whole of it.
+        let again = Self.rig([.events(account), .events(signOff)])
+        defer { again.clean() }
+        await Self.send(again, "less in the hook")
+        #expect(again.app.log.last { $0.source == .director }?.text == turn.say)
+    }
+
     // MARK: The ledger
 
     @Test("What the session spent is a line under the composer, and nothing before the first turn")

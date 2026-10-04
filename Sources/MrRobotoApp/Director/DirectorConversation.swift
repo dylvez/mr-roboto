@@ -84,6 +84,12 @@ public actor DirectorConversation {
     /// The whole transcript, oldest first.
     public private(set) var messages: [ClaudeTurn] = []
 
+    /// What the model said in the turn just run, reply by reply: the words between the calls as
+    /// well as the last ones. One model gives its account once the work is done; another gives it
+    /// before it opens the surface and only signs off afterwards, and the last reply alone is then
+    /// "That's open as a Compare" with the loudness it read left behind.
+    public private(set) var spoken: [String] = []
+
     public init(client: ClaudeClient,
                 toolbox: DirectorToolbox,
                 role: DirectorRole = .judgment,
@@ -122,6 +128,7 @@ public actor DirectorConversation {
         /// The newest reply, kept so a turn that runs out of rounds can hand back what the model
         /// was in the middle of saying rather than only how many times it went round.
         var lastResponse: ClaudeResponse?
+        spoken = []
 
         do {
             for round in 1...maxRounds {
@@ -137,6 +144,8 @@ public actor DirectorConversation {
                 }
                 working.append(response.turn)
                 lastResponse = response
+                let words = response.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !words.isEmpty { spoken.append(words) }
 
                 switch response.stopReason {
                 case .refusal(let refusal):

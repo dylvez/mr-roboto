@@ -94,7 +94,8 @@ public enum DirectorEvent: Sendable {
     case finished(DirectorTurn)
 }
 
-/// The tool names of the turn in flight, in the order the loop announced them.
+/// The tool names of the turn in flight, in the order the loop announced them, and where the reply
+/// starts a new paragraph.
 ///
 /// A lock rather than an actor, and that is the point: the progress callback is synchronous and
 /// runs inside the loop's task group, so an actor would mean an unstructured `Task` per call and an
@@ -103,6 +104,24 @@ public enum DirectorEvent: Sendable {
 final class DirectorCallLog: @unchecked Sendable {
     private let lock = NSLock()
     private var names: [String] = []
+    private var hasWords = false
+    private var breakDue = false
+
+    /// A piece of the reply as the rail should get it: words that follow an earlier reply's, with
+    /// tools run in between, start a paragraph of their own, as they do in the turn's `say`.
+    func piece(_ text: String) -> String {
+        lock.lock()
+        defer { lock.unlock() }
+        defer { hasWords = true; breakDue = false }
+        return breakDue ? "\n\n" + text : text
+    }
+
+    /// A round's tools have run: whatever is said next is the next reply.
+    func roundEnded() {
+        lock.lock()
+        defer { lock.unlock() }
+        breakDue = hasWords
+    }
 
     func append(_ name: String) {
         lock.lock()
@@ -267,13 +286,15 @@ public actor Director {
             outcome = try await conversation.ask(message) { progress in
                 switch progress {
                 case .stream(.textDelta(_, let text)):
-                    onEvent?(.say(text))
+                    onEvent?(.say(log.piece(text)))
                 case .toolStarted(let name, _):
                     log.append(name)
                     onEvent?(.toolStarted(name))
                 case .toolFinished(let name, let isError, let message):
                     onEvent?(.toolFinished(name: name, isError: isError, message: message))
-                case .stream, .roundFinished:
+                case .roundFinished:
+                    log.roundEnded()
+                case .stream:
                     break
                 }
             }
@@ -287,17 +308,20 @@ public actor Director {
             return await finish(.failed("\(error)"), log: log, say: "\(error)", detail: nil)
         }
 
+        // Everything it said in the turn, not the last reply alone: the rail showed all of it while
+        // the turn worked, and words that were on the screen do not go when the turn lands.
+        let said = await conversation.spoken.joined(separator: "\n\n")
         switch outcome {
-        case .finished(let response):
-            return await finish(.answered, log: log, say: response.text, detail: nil)
-        case .truncated(let response):
-            return await finish(.truncated, log: log, say: response.text,
+        case .finished:
+            return await finish(.answered, log: log, say: said, detail: nil)
+        case .truncated:
+            return await finish(.truncated, log: log, say: said,
                                 detail: "That reply hit its ceiling mid-thought. Ask again to carry on; nothing was lost.")
         case .refused(let refusal):
             return await finish(.refused(refusal), log: log, say: refusal.sentence, detail: nil)
         case .stoppedAtRoundLimit(let rounds, _):
             // The detail is built in `finish`, where the call log and the pad are both in hand.
-            return await finish(.roundLimit(rounds: rounds), log: log, say: outcome.text, detail: nil)
+            return await finish(.roundLimit(rounds: rounds), log: log, say: said.isEmpty ? outcome.text : said, detail: nil)
         }
     }
 
