@@ -148,7 +148,7 @@ public struct DirectorToolbox: Sendable {
     /// own marker then caches tools and system together.
     public var definitions: [ClaudeToolDefinition] {
         var result = tools.map(\.definition)
-        if !result.isEmpty { result[result.count - 1].cacheControl = .ephemeral }
+        if !result.isEmpty { result[result.count - 1].cacheControl = DirectorPrompt.prefixCache }
         return result
     }
 

@@ -181,6 +181,10 @@ struct DirectorLoopTests {
             let messages = try #require(body["messages"]?.arrayValue)
             let lastBlock = messages.last?["content"]?.arrayValue?.last
             #expect(lastBlock?["cache_control"] != nil, "request \(index): the newest turn")
+            // The prefix is kept an hour and the conversation five minutes, the longer one first.
+            #expect(system.last?["cache_control"]?["ttl"]?.stringValue == "1h")
+            #expect(body["tools"]?.arrayValue?.last?["cache_control"]?["ttl"]?.stringValue == "1h")
+            #expect(lastBlock?["cache_control"]?["ttl"] == nil, "request \(index): five minutes is the default, unsaid")
         }
 
         // Second request: the marker is on the tool result, which is where the conversation grew.

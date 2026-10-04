@@ -355,12 +355,20 @@ public enum DirectorPrompt {
         the ledger and the rail if they want them.
         """
 
+    /// How long the frozen prefix is kept: an hour, where the conversation after it is kept five
+    /// minutes. Somebody making a record asks, listens, plays, and asks again ten minutes later,
+    /// and at five minutes every one of those asks wrote the whole prefix again — some thirty
+    /// thousand tokens at the write price — where reading it costs a tenth of sending it. The first
+    /// write costs twice the input price instead of one and a quarter, and one pause pays that back.
+    /// The longer entry comes first in the request, which is the order the API requires.
+    public static let prefixCache = ClaudeCacheControl.hour
+
     /// The system prompt as blocks, with the one breakpoint on the last of them.
     ///
     /// Tools render before system, so this single marker caches the tool list and the system
     /// prompt together — one entry, read by every request in the session.
     public static var systemBlocks: [ClaudeText] {
-        [ClaudeText(system, cacheControl: .ephemeral)]
+        [ClaudeText(system, cacheControl: prefixCache)]
     }
 
     /// What a persona's own prompt is appended to. Personas are B4's; the seam is here so that
@@ -369,7 +377,7 @@ public enum DirectorPrompt {
         guard let persona, !persona.isEmpty else { return systemBlocks }
         // The shared part keeps its own breakpoint, so every persona reads the same cached entry
         // and pays only for its own few hundred tokens.
-        return [ClaudeText(system, cacheControl: .ephemeral),
-                ClaudeText(persona, cacheControl: .ephemeral)]
+        return [ClaudeText(system, cacheControl: prefixCache),
+                ClaudeText(persona, cacheControl: prefixCache)]
     }
 }
