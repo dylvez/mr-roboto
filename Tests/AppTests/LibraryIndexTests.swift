@@ -51,7 +51,8 @@ enum LibraryIndexFixture {
                                 rootPitch: Pitch(midi: 50), detectedTempo: 100, sourceRecord: drifter.id)
         let chop = LibrarySample(name: "Drifter hit", sample: chopSample, tags: ["dusty"], addedAt: day.addingTimeInterval(300))
         var nightBus = Song(title: "Night Bus", key: Key(parsing: "C major"), tempo: 85, createdAt: day)
-        let fitted = Sample(media: media("1"), fit: SourceFit(label: "Drifter", media: drifterDrums, stem: "drums", start: 0, record: drifter.id))
+        let fitted = Sample(media: media("1"), fit: SourceFit(label: "Drifter", media: drifterDrums, stem: "drums", start: 0, fromBar: 4, toBar: 8,
+                                                             record: drifter.id))
         let fittedPart = PartID()
         try! nightBus.append(PartVersion(partID: fittedPart, kind: .sample(fitted), createdAt: day.addingTimeInterval(1000),
                                          author: .user, operation: Operation.adopted, note: "Drums of Drifter"))

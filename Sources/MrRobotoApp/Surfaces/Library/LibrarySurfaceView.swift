@@ -136,7 +136,7 @@ struct LibrarySurfaceView: View {
 
     private func list(width: CGFloat) -> some View {
         let rows = model.rows
-        let columns = Self.columns(for: model.shelf, width: width)
+        let columns = Self.columns(for: model.shelf, width: width, fitting: model.index.fitTarget != nil)
         return VStack(spacing: 0) {
             toolbar(shown: rows.count)
             Hairline()
@@ -265,6 +265,8 @@ struct LibrarySurfaceView: View {
             ForEach(columns, id: \.self) { column in
                 if column == .title {
                     titleCell(facts, isChosen: isChosen, openRecords: openRecords)
+                } else if column == .fit {
+                    fitCell(facts)
                 } else {
                     let text = column.text(facts)
                     Text(text.isEmpty ? "–" : text)
@@ -296,6 +298,29 @@ struct LibrarySurfaceView: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isChosen ? .isSelected : [])
+    }
+
+    /// How it goes with the open song: as it is in the ink, moved in grey, far in the warning colour.
+    private func fitCell(_ facts: LibraryFacts) -> some View {
+        let fit = facts.fit
+        let text = LibraryColumn.fit.text(facts)
+        let colour: Color = switch fit?.verdict {
+        case .asIs?, .near?: Design.Palette.ink
+        case .moves?: Design.Palette.inkSecondary
+        case .far?, .refused?: Design.Palette.warn
+        case .unknown?, nil: Design.Palette.line
+        }
+        return HStack(spacing: 4) {
+            if fit?.verdict == .asIs || fit?.verdict == .near {
+                Circle().fill(Design.Palette.accent).frame(width: 5, height: 5)
+            }
+            Text(text.isEmpty ? "–" : text)
+                .font(Design.Typography.numeric(11.5))
+                .foregroundStyle(colour)
+                .lineLimit(1)
+        }
+        .frame(width: Self.width(of: .fit), alignment: .leading)
+        .help(fit.map { ($0.sentences + $0.flags).joined(separator: " ") } ?? "")
     }
 
     /// Hear it without choosing it: play, or stop when it is what is sounding.
@@ -349,6 +374,9 @@ struct LibrarySurfaceView: View {
     private func filterChip(_ filter: LibraryBrowserModel.Filter) -> some View {
         let query = model.query
         switch filter {
+        case .goesWith:
+            BoothChip("Goes with \(model.index.fitTarget?.title ?? "this song")", isOn: query.goesWith == true) { model.toggleGoesWith() }
+                .help("Only what comes into the open song moved no further than a sample bears — four semitones — nearest first")
         case .key:
             menuChip(query.key.map(Self.keyLabel) ?? "Key", isOn: query.key != nil) { keyMenu }
         case .tempo:
@@ -544,14 +572,15 @@ struct LibrarySurfaceView: View {
         case .root: 46
         case .slices: 48
         case .source: 150
+        case .fit: 104
         }
     }
 
     /// The shelf's columns that fit, in order, the title always.
-    static func columns(for shelf: LibraryShelf, width: CGFloat) -> [LibraryColumn] {
+    static func columns(for shelf: LibraryShelf, width: CGFloat, fitting: Bool = false) -> [LibraryColumn] {
         var room = width - 24 - titleMinimum - playWidth - columnSpacing
         var shown: [LibraryColumn] = [.title]
-        for column in LibraryColumn.columns(for: shelf) where column != .title {
+        for column in LibraryColumn.columns(for: shelf, fitting: fitting) where column != .title {
             let needs = (Self.width(of: column) ?? 0) + columnSpacing
             guard needs <= room else { break }
             room -= needs
@@ -622,6 +651,9 @@ private struct LibraryDetail: View {
                 }
             }
             actions
+            if let fit = facts.fit, let target = model.index.fitTarget {
+                withSong(fit, target)
+            }
             if model.preview.canHear(facts.id) {
                 LibraryListen(facts: facts, model: model)
             }
@@ -689,6 +721,26 @@ private struct LibraryDetail: View {
                 LibraryActions.perform(action) { pending = $0 }
             }
             .help(action.help)
+        }
+    }
+
+    // MARK: With the open song
+
+    /// What bringing it into the open song would do, as Sources says it.
+    private func withSong(_ fit: LibraryFit, _ target: FitTarget) -> some View {
+        section("With \(target.title)") {
+            if fit.verdict == .unknown {
+                Text("Nothing to go on: no key and no tempo read.").font(Design.Typography.ui(11.5)).foregroundStyle(Design.Palette.inkTertiary)
+            } else {
+                ForEach(fit.sentences, id: \.self) { sentence in
+                    Text(sentence).font(Design.Typography.ui(12, weight: .regular)).foregroundStyle(Design.Palette.ink)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                ForEach(fit.flags, id: \.self) { flag in
+                    Text(flag).font(Design.Typography.ui(11.5, weight: .regular)).foregroundStyle(Design.Palette.warn)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
         }
     }
 
@@ -843,11 +895,14 @@ private struct LibraryDetail: View {
         }
     }
 
-    /// "Drums of Drifter (drums), Bar 12": what a song takes, part by part.
+    /// "Drums of Drifter (drums), Bar 12, Vocals of Drifter (bars 5–8)": what a song takes, part by part.
     static func takes(_ uses: [RecordUse]) -> String {
         let parts = uses.map { use -> String in
             guard use.part != nil else { return "the song grew from it" }
-            return use.stem.map { stem in use.title.localizedCaseInsensitiveContains(stem) ? use.title : "\(use.title) (\(stem))" } ?? use.title
+            var notes: [String] = []
+            if let stem = use.stem, !use.title.localizedCaseInsensitiveContains(stem) { notes.append(stem) }
+            if let bars = use.bars { notes.append(bars.count == 1 ? "bar \(bars.lowerBound + 1)" : "bars \(bars.lowerBound + 1)–\(bars.upperBound)") }
+            return notes.isEmpty ? use.title : "\(use.title) (\(notes.joined(separator: ", ")))"
         }
         let counted = Dictionary(parts.map { ($0, 1) }, uniquingKeysWith: +)
         return LibraryIndex.unique(parts).map { part in counted[part, default: 1] > 1 ? "\(part) ×\(counted[part]!)" : part }

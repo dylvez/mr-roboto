@@ -11,6 +11,8 @@ public enum LibraryColumn: String, CaseIterable, Codable, Sendable {
     /// The records a song is made from.
     case records
     case kind, note, root, slices, source
+    /// How it goes with the open song.
+    case fit
 
     /// The columns a shelf shows, in order.
     public static func columns(for shelf: LibraryShelf) -> [LibraryColumn] {
@@ -21,6 +23,13 @@ public enum LibraryColumn: String, CaseIterable, Codable, Sendable {
         case .samples: [.title, .root, .tempo, .slices, .note, .source]
         case .albums: [.title, .songs, .length]
         }
+    }
+
+    /// The shelf's columns, with how each item fits the open song beside its title when there is one.
+    public static func columns(for shelf: LibraryShelf, fitting: Bool) -> [LibraryColumn] {
+        var columns = columns(for: shelf)
+        if fitting, [.records, .ideas, .samples].contains(shelf) { columns.insert(.fit, at: 1) }
+        return columns
     }
 }
 
@@ -101,12 +110,15 @@ public struct LibraryQuery: Hashable, Codable, Sendable {
     /// A genre profile's id or name.
     public var genre: String?
     public var offPitch: Bool?
+    /// Only what goes with the open song: moved no further than a sample bears (`LibraryFit`).
+    /// Holds nothing back while no song is open.
+    public var goesWith: Bool?
     /// Nil keeps the library's own order.
     public var sort: Sort?
 
     public init(shelf: LibraryShelf, text: String = "", key: KeyFilter? = nil, tempo: TempoFilter? = nil,
                 hasStems: Bool? = nil, usage: Usage? = nil, genre: String? = nil, offPitch: Bool? = nil,
-                sort: Sort? = nil) {
+                goesWith: Bool? = nil, sort: Sort? = nil) {
         self.shelf = shelf
         self.text = text
         self.key = key
@@ -115,12 +127,14 @@ public struct LibraryQuery: Hashable, Codable, Sendable {
         self.usage = usage
         self.genre = genre
         self.offPitch = offPitch
+        self.goesWith = goesWith
         self.sort = sort
     }
 
     /// True when anything narrows the shelf: words, or a filter.
     public var narrows: Bool {
         !words.isEmpty || key != nil || tempo != nil || hasStems != nil || usage != nil || genre != nil || offPitch != nil
+            || goesWith != nil
     }
 
     /// The words typed, folded the way the index folds what it searches.
@@ -133,7 +147,8 @@ public struct LibraryQuery: Hashable, Codable, Sendable {
     /// The shelf's items that pass, in the order asked for. A sort is stable: items that tie keep
     /// the library's order, and an item without the fact sorts last whichever way the column runs.
     public func run(_ index: LibraryIndex) -> [LibraryFacts] {
-        let passing = index.items(on: shelf).filter(admits)
+        let fitting = index.fitTarget != nil
+        let passing = index.items(on: shelf).filter { admits($0, fitting: fitting) }
         guard let sort else { return passing }
         return passing.enumerated().sorted { a, b in
             switch Self.order(a.element, b.element, by: sort.column) {
@@ -146,8 +161,9 @@ public struct LibraryQuery: Hashable, Codable, Sendable {
         }.map(\.element)
     }
 
-    /// Whether an item passes the words and every filter.
-    public func admits(_ facts: LibraryFacts) -> Bool {
+    /// Whether an item passes the words and every filter. `fitting`: whether a song is open for
+    /// "goes with" to mean anything.
+    public func admits(_ facts: LibraryFacts, fitting: Bool = true) -> Bool {
         guard facts.id.shelf == shelf else { return false }
         for word in words where !facts.searchText.contains(word) { return false }
         if let key, !key.admits(facts.key) { return false }
@@ -160,6 +176,9 @@ public struct LibraryQuery: Hashable, Codable, Sendable {
                     || facts.genre.map({ GenreBook.fold($0) == folded }) == true else { return false }
         }
         if let offPitch, facts.isOffPitch != offPitch { return false }
+        if goesWith == true, fitting {
+            guard let fit = facts.fit, fit.verdict <= .moves else { return false }
+        }
         return true
     }
 
@@ -203,6 +222,7 @@ public struct LibraryQuery: Hashable, Codable, Sendable {
         case .records: return number(a.records, b.records)
         case .root: return number(a.root?.midi, b.root?.midi)
         case .slices: return number(a.slices, b.slices)
+        case .fit: return number(a.fit.flatMap { $0.verdict == .unknown ? nil : $0.cost }, b.fit.flatMap { $0.verdict == .unknown ? nil : $0.cost })
         }
     }
 
@@ -224,6 +244,7 @@ public struct LibraryQuery: Hashable, Codable, Sendable {
         case .tuning: facts.tuning != nil
         case .root: facts.root != nil
         case .slices: facts.slices != nil
+        case .fit: facts.fit.map { $0.verdict != .unknown } ?? false
         }
     }
 

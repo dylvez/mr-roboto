@@ -67,6 +67,7 @@ extension LibraryColumn {
         case .root: "Root"
         case .slices: "Slices"
         case .source: "Cut from"
+        case .fit: "Fit"
         }
     }
 
@@ -91,6 +92,7 @@ extension LibraryColumn {
         case .root: facts.root.map { "\($0)" } ?? ""
         case .slices: facts.slices.map { $0 > 0 ? "\($0)" : "" } ?? ""
         case .source: facts.source ?? ""
+        case .fit: facts.fit?.short ?? ""
         }
     }
 

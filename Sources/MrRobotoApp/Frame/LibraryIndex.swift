@@ -87,6 +87,8 @@ public struct LibraryFacts: Hashable, Sendable, Identifiable {
     public var records = 0
     /// Albums a song is on.
     public var albums = 0
+    /// How it goes with the open song: a record's, an idea's or a sample's, while a song is open.
+    public var fit: LibraryFit?
     /// Everything the text search reads, folded (`LibraryIndex.fold`).
     public var searchText = ""
 
@@ -104,6 +106,8 @@ public struct RecordUse: Hashable, Sendable {
     public var title: String
     /// "vocals", "drums", "bass", "other", or nil for the whole record.
     public var stem: String?
+    /// The record's bars a clip takes, 0-based, the end not included; nil for a whole stem.
+    public var bars: Range<Int>? = nil
 }
 
 /// The facts about everything in the library, and how its things are related, both ways.
@@ -127,6 +131,10 @@ public struct LibraryIndex: Sendable {
     // What reading a song needs from the rest of the library.
     private var lookups = Lookups()
     private let genres: GenreBook
+
+    /// The open song's key, tempo and meter, which every record, idea and sample is fitted to.
+    /// Nil with no song open.
+    public private(set) var fitTarget: FitTarget?
 
     /// The index of `library`, reading `openSong` in place of the library's copy of it. A song
     /// the library does not hold yet is not listed, as the sidebar does not list it.
@@ -168,6 +176,7 @@ public struct LibraryIndex: Sendable {
         items = all
         for (index, facts) in items.enumerated() { position[facts.id] = index }
         for index in items.indices { count(&items[index]) }
+        fit(to: FitTarget.of(openSong))
     }
 
     // MARK: Reading it
@@ -204,6 +213,8 @@ public struct LibraryIndex: Sendable {
     /// takes from and took from, the ideas and samples it holds and held, its albums. A song the
     /// index does not list is left out, as `init` leaves it.
     public mutating func refresh(_ song: Song) {
+        // What everything is fitted to follows the open song, saved or not.
+        if FitTarget.of(song) != fitTarget { fit(to: FitTarget.of(song)) }
         guard let old = readings[song.id] else { return }
         let new = read(song)
         readings[song.id] = new
@@ -266,7 +277,7 @@ public struct LibraryIndex: Sendable {
         for version in song.versions {
             if let found = lookups.record(of: version.kind) {
                 let use = RecordUse(song: song.id, record: found.record, part: version.partID,
-                                    title: PartLabel.title(of: version), stem: found.stem)
+                                    title: PartLabel.title(of: version), stem: found.stem, bars: Lookups.bars(of: version.kind))
                 if let place = usePlace[version.partID] { uses[place] = use } else {
                     usePlace[version.partID] = uses.count
                     uses.append(use)
@@ -361,6 +372,24 @@ public struct LibraryIndex: Sendable {
         return facts
     }
 
+    /// Every record, idea and sample fitted to `target`, or to nothing.
+    private mutating func fit(to target: FitTarget?) {
+        fitTarget = target
+        for index in items.indices {
+            let id = items[index].id
+            guard let target else {
+                items[index].fit = nil
+                continue
+            }
+            switch id.shelf {
+            case .records: items[index].fit = lookups.records[RecordID(rawValue: id.id)].flatMap { LibraryFitting.fit($0, into: target) }
+            case .ideas: items[index].fit = lookups.ideas[VersionID(rawValue: id.id)].flatMap { LibraryFitting.fit($0, into: target) }
+            case .samples: items[index].fit = lookups.samples[SampleID(rawValue: id.id)].flatMap { LibraryFitting.fit($0, into: target) }
+            case .songs, .albums: items[index].fit = nil
+            }
+        }
+    }
+
     /// The counts, which read the relations rather than the item.
     private func count(_ facts: inout LibraryFacts) {
         switch facts.id.shelf {
@@ -412,6 +441,8 @@ public struct LibraryIndex: Sendable {
 private struct Lookups: Sendable {
     var records: [RecordID: Record] = [:]
     var albums: [AlbumID: Album] = [:]
+    var ideas: [VersionID: PartVersion] = [:]
+    var samples: [SampleID: LibrarySample] = [:]
     /// A record's mix and each of its stems, by medium: the stem's name, or nil for the mix.
     var media: [MediaRef: (record: RecordID, stem: String?)] = [:]
     var samplesByMedia: [MediaRef: [SampleID]] = [:]
@@ -436,8 +467,12 @@ private struct Lookups: Sendable {
                 releases[song] = release
             }
         }
-        for entry in library.samples { samplesByMedia[entry.media, default: []].append(entry.id) }
+        for entry in library.samples {
+            samplesByMedia[entry.media, default: []].append(entry.id)
+            samples[entry.id] = entry
+        }
         for idea in library.ideas {
+            ideas[idea.id] = idea
             if let medium = idea.mediaReferences.first {
                 ideasByMedia[medium, default: []].append(idea.id)
             } else {
@@ -465,6 +500,18 @@ private struct Lookups: Sendable {
         if let id = named, records[id] != nil { return (id, stem ?? media[medium]?.stem) }
         if let found = media[medium] { return (found.record, found.stem ?? stem) }
         return nil
+    }
+
+    /// The record's bars a fitted clip takes: what its fit says.
+    static func bars(of kind: PartKind) -> Range<Int>? {
+        let fit: SourceFit?
+        switch kind {
+        case .sample(let sample): fit = sample.fit
+        case .audio(let audio): fit = audio.fit
+        default: return nil
+        }
+        guard let from = fit?.fromBar, let to = fit?.toBar, to > from else { return nil }
+        return from..<to
     }
 
     /// The ideas and samples in the library whose music this version is.

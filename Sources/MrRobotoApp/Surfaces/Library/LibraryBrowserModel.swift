@@ -132,15 +132,28 @@ final class LibraryBrowserModel {
     // MARK: Filters
 
     /// The filters a shelf offers, in the order its chips sit.
-    enum Filter: String, CaseIterable, Sendable { case key, tempo, genre, stems, usage, offPitch }
+    enum Filter: String, CaseIterable, Sendable { case goesWith, key, tempo, genre, stems, usage, offPitch }
 
     var filters: [Filter] {
+        // What goes with the open song, first, while there is one.
+        let fitting: [Filter] = index.fitTarget != nil ? [.goesWith] : []
         switch shelf {
-        case .songs: [.key, .tempo, .genre, .usage]
-        case .records: [.key, .tempo, .stems, .usage, .offPitch]
-        case .ideas: [.key, .usage]
-        case .samples: [.key, .tempo, .usage]
-        case .albums: []
+        case .songs: return [.key, .tempo, .genre, .usage]
+        case .records: return fitting + [.key, .tempo, .stems, .usage, .offPitch]
+        case .ideas: return fitting + [.key, .usage]
+        case .samples: return fitting + [.key, .tempo, .usage]
+        case .albums: return []
+        }
+    }
+
+    /// Only what goes with the open song, nearest first unless another order was chosen.
+    func toggleGoesWith() {
+        if query.goesWith == true {
+            query.goesWith = nil
+            if query.sort?.column == .fit { query.sort = nil }
+        } else {
+            query.goesWith = true
+            if query.sort == nil { query.sort = .init(.fit) }
         }
     }
 
