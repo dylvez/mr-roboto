@@ -117,6 +117,9 @@ public final class SurfaceRegistry {
         registry.register(.sources) { item, app in
             SourcesSurfaceView(model: SurfaceWiring.shared.sourcesModel(for: item, app: app))
         }
+        registry.register(.library) { item, app in
+            LibrarySurfaceView(model: SurfaceWiring.shared.libraryModel(for: item, app: app))
+        }
         registry.register(.booth) { item, app in
             BoothSurfaceView(model: SurfaceWiring.shared.boothModel(for: item, app: app))
         }

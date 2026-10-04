@@ -47,6 +47,7 @@ final class SurfaceWiring {
     private var mashups: [SurfaceID: MashupModel] = [:]
     private var sourceSheets: [SurfaceID: SourcesModel] = [:]
     private var masters: [SurfaceID: MasterModel] = [:]
+    private var libraries: [SurfaceID: LibraryBrowserModel] = [:]
     // The two answer surfaces. What they draw is filed on `AppState` by whoever asked the question
     // (see `SurfaceAnswer`); what is kept here is the built model and the host it plays through,
     // for exactly as long as the bench holds the item — the same rule as the four above.
@@ -412,6 +413,15 @@ final class SurfaceWiring {
         return model
     }
 
+    /// The Library surface: its shelf, its queries and what is chosen, remembered in the app's defaults.
+    func libraryModel(for item: BenchItem, app: AppState) -> LibraryBrowserModel {
+        prune(app)
+        if let existing = libraries[item.id] { return existing }
+        let model = LibraryBrowserModel(app: app, memory: LibraryBrowserMemory(defaults: app.defaults))
+        libraries[item.id] = model
+        return model
+    }
+
     /// The Mashup surface: two library songs on one grid, previewed through the shared rig.
     func mashupModel(for item: BenchItem, app: AppState) -> MashupModel {
         prune(app)
@@ -501,6 +511,7 @@ final class SurfaceWiring {
         takeSheets[id] = nil
         mixers[id] = nil
         masters[id] = nil
+        libraries[id] = nil
         compares[id] = nil; compareAdapters[id] = nil
     }
 
@@ -529,6 +540,7 @@ final class SurfaceWiring {
         mixers = mixers.filter { open.contains($0.key) }
         mashups = mashups.filter { open.contains($0.key) }
         sourceSheets = sourceSheets.filter { open.contains($0.key) }
+        libraries = libraries.filter { open.contains($0.key) }
         masters = masters.filter { open.contains($0.key) }
         compares = compares.filter { open.contains($0.key) }
         compareAdapters = compareAdapters.filter { open.contains($0.key) }
@@ -622,7 +634,7 @@ final class SurfaceWiring {
             return nil
         case .chords:
             if let model = chordSheets[item.id] { return model.part }
-        case .mixer, .master, .structure, .booth, .takes, .album, .cast, .mashup, .sources, .merge, .compare, .check, .lyrics:
+        case .mixer, .master, .structure, .booth, .takes, .album, .cast, .mashup, .sources, .merge, .compare, .check, .lyrics, .library:
             return nil
         default:
             break

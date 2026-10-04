@@ -143,6 +143,7 @@ extension SurfaceKind {
         case .master: return ("master", "gauge.with.needle")
         case .mashup: return ("mashup", "circle.lefthalf.filled.righthalf.striped.horizontal")
         case .sources: return ("sources", "square.stack.3d.down.right")
+        case .library: return ("library", "books.vertical")
         case .compare: return ("compare", "chart.bar")
         case .check: return ("check", "checkmark.magnifyingglass")
         }

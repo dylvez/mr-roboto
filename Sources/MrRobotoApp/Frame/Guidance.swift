@@ -425,6 +425,8 @@ public enum Guidance {
     /// one of these surfaces is legitimate unbound as well (the drop target, an empty grid, a new
     /// sound from the machine preset), so this never fails and never has to be checked.
     public static func dockAction(for kind: SurfaceKind, in song: Song?) -> SurfaceAction {
+        // The library is the same with a song open or not.
+        if kind == .library { return SurfaceAction(surface: kind, title: "Library") }
         let fallback = SurfaceAction(surface: kind, title: song?.title ?? "Untitled")
         guard let song else { return fallback }
         switch kind {
@@ -464,6 +466,8 @@ public enum Guidance {
             return SurfaceAction(surface: kind, title: "Mashup")
         case .sources:
             return SurfaceAction(surface: kind, title: "Sources")
+        case .library:
+            return SurfaceAction(surface: kind, title: "Library")
         case .mixer, .master:
             // Bound to the newest mix version when there is one; a song at unity opens on nothing
             // and the first move makes the mix.
@@ -495,7 +499,8 @@ public enum Guidance {
     /// The surfaces the dock carries: every one you work in, from the start, none waiting for the
     /// song to reach it; and Takes once there are takes to comp.
     public static func dockSurfaces(for song: Song?) -> [SurfaceKind] {
-        var kinds = SurfaceKind.gateA + [.lyrics, .booth]
+        // The library first: everything else is made from what is in it.
+        var kinds = [SurfaceKind.library] + SurfaceKind.gateA + [.lyrics, .booth]
         if let song, !takes(in: song).isEmpty { kinds.append(.takes) }
         kinds.append(.mixer)
         return kinds
@@ -510,6 +515,7 @@ public enum Guidance {
         case .mixer: return "⇧⌘M"
         case .takes: return "⇧⌘T"
         case .master: return "⌥⌘M"
+        case .library: return "⇧⌘L"
         default: return ""
         }
     }

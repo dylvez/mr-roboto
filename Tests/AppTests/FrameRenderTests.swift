@@ -33,6 +33,15 @@ struct FrameRenderTests {
         try png.write(to: directory.appendingPathComponent("\(name).png"))
     }
 
+    /// Writes a view in the dark appearance: the app's appearance is what the theme's colours
+    /// resolve against, so it is set for the draw and put back after.
+    private func writeDark<V: View>(_ view: V, size: CGSize, name: String) throws {
+        let before = NSApplication.shared.appearance
+        NSApplication.shared.appearance = NSAppearance(named: .darkAqua)
+        defer { NSApplication.shared.appearance = before }
+        try write(view.environment(\.colorScheme, .dark), size: size, name: name)
+    }
+
     private func app(_ song: Song) -> AppState {
         let defaults = UserDefaults(suiteName: "mrroboto.render.\(UUID().uuidString)")!
         let dir = GuidanceFixture.temporaryDirectory("render")
@@ -213,6 +222,32 @@ struct FrameRenderTests {
         #expect(app.addSong(song.id, to: album))
         app.openAlbum(album)
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-library")
+    }
+
+    @Test("the Library surface: songs with the open one chosen, records with one chosen, wide and at the minimum, light and dark")
+    func librarySurface() throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        let shelf = LibraryIndexFixture.shelf()
+        let app = AppState(library: shelf.library, song: shelf.nightBus, transportHost: StubTransportHost())
+        // What the surface remembers goes to the app's defaults: put back what this changed.
+        defer { for key in ["shelf"] + LibraryShelf.allCases.map(\.rawValue) { UserDefaults.standard.removeObject(forKey: LibraryBrowserMemory.prefix + key) } }
+        // The strip on the left is folded, as a first launch has it; nothing here unfolds it.
+        app.showSurface(.library)
+        let wide = CGSize(width: 1440, height: 900)
+        let minimum = CGSize(width: FrameLayout.minimumWindowWidth(collapsed: app.regions.collapsed), height: FrameLayout.minimumWindowHeight)
+        try write(FrameView(app: app), size: wide, name: "frame-library-songs")
+        // A render runs no update cycle, so the surface's model takes what was asked of it here.
+        let item = try #require(app.bench.active)
+        let model = SurfaceWiring.shared.libraryModel(for: item, app: app)
+        app.showInLibrary(.record(shelf.drifter.id))
+        model.takeAsk()
+        try write(FrameView(app: app), size: wide, name: "frame-library-records")
+        try writeDark(FrameView(app: app), size: wide, name: "frame-library-records-dark")
+        app.showInLibrary(.song(shelf.river.id))
+        model.takeAsk()
+        try write(FrameView(app: app), size: minimum, name: "frame-library-minimum")
+        try writeDark(FrameView(app: app), size: minimum, name: "frame-library-minimum-dark")
     }
 
     @Test("the Merge surface on a chop and a bass line in different keys")

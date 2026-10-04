@@ -40,12 +40,13 @@ struct StartingFormTests {
 @Suite("Workflow: one bar of surfaces")
 struct DockTests {
 
-    @Test("every surface you work in is on the dock from the start; Takes joins once there are takes")
+    @Test("every surface you work in is on the dock from the start, the Library first; Takes joins once there are takes")
     func dockSurfaces() {
         let song = Song.new(title: "Sketch")
-        #expect(Guidance.dockSurfaces(for: song) == [.importRecord, .chopLane, .grid, .chords, .pianoRoll, .sound,
+        #expect(Guidance.dockSurfaces(for: song) == [.library, .importRecord, .chopLane, .grid, .chords, .pianoRoll, .sound,
                                                      .structure, .lyrics, .booth, .mixer])
         #expect(Guidance.dockSurfaces(for: nil).contains(.mixer))
+        #expect(Guidance.dockShortcut(for: .library) == "⇧⌘L")
         #expect(Guidance.dockShortcut(for: .grid) == "⌘3")
         #expect(Guidance.dockShortcut(for: .booth) == "⌘0")
     }

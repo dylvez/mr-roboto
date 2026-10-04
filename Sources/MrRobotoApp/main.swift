@@ -301,6 +301,9 @@ struct FrameCommands: Commands {
             }
             .help("The band's question goes back to the order the work goes in, with nothing learned from what you chose")
             Divider()
+            // The whole library on the bench: every shelf, searched, sorted and described.
+            Button("Library") { app.showSurface(.library) }
+                .keyboardShortcut("l", modifiers: [.command, .shift])
             Button("Cast…") { app.openSurface(.cast, title: app.song?.title ?? "Cast") }
                 .keyboardShortcut("8", modifiers: .command)
                 .disabled(app.song == nil)

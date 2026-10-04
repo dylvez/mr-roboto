@@ -32,6 +32,7 @@ struct SurfaceBand: View {
             case .master: master(context, size, ink)
             case .mashup: mashup(context, size, ink)
             case .sources: sources(context, size, ink)
+            case .library: library(context, size, ink)
             case .compare: compare(context, size, ink)
             case .check: check(context, size, ink)
             }
@@ -61,6 +62,33 @@ struct SurfaceBand: View {
             x += step
         }
         return path
+    }
+
+    /// Spines on a shelf, side by side, of every height, one leaning on the next.
+    private func library(_ context: GraphicsContext, _ size: CGSize, _ ink: Color) {
+        let base = size.height - 2
+        var shelf = Path()
+        shelf.move(to: CGPoint(x: 0, y: base))
+        shelf.addLine(to: CGPoint(x: size.width, y: base))
+        context.stroke(shelf, with: .color(ink), lineWidth: 1)
+        let widths: [CGFloat] = [5, 7, 4, 6, 8, 5]
+        let heights: [CGFloat] = [0.62, 0.8, 0.7, 0.9, 0.55, 0.75, 0.85]
+        var x: CGFloat = 4
+        var index = 0
+        while x < size.width {
+            let width = widths[index % widths.count]
+            let height = (size.height - 4) * heights[index % heights.count]
+            var spine = Path(roundedRect: CGRect(x: x, y: base - height, width: width, height: height), cornerRadius: 1)
+            if index % 9 == 5 {
+                // Leaning on its neighbour, from its foot.
+                let foot = CGPoint(x: x + width, y: base)
+                spine = spine.applying(CGAffineTransform(translationX: foot.x, y: foot.y).rotated(by: 0.26).translatedBy(x: -foot.x, y: -foot.y))
+                x += 4
+            }
+            context.stroke(spine, with: .color(ink), lineWidth: 1)
+            x += width + 2 + (index % 5 == 4 ? 9 : 0)
+            index += 1
+        }
     }
 
     private func record(_ context: GraphicsContext, _ size: CGSize, _ ink: Color) {

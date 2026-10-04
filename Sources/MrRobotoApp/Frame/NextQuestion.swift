@@ -197,7 +197,7 @@ enum NextAdvisor {
         if others > 0 {
             candidates.append(Candidate(option: NextOption(
                 kind: "openLibrary", title: last == nil ? "Open a song" : "Open another song",
-                rationale: "\(Guidance.count(app.library.songs.count, "song")) in the library; the list unfolds on the left.",
+                rationale: "\(Guidance.count(app.library.songs.count, "song")) in the library; the Library opens on the bench, searchable and sorted.",
                 move: .showLibrary), score: 6))
         }
         if app.library.songs.filter({ Mashups.source(for: $0) != nil }).count >= 2 {
@@ -687,7 +687,7 @@ extension AppState {
         case .songSettings:
             wantsSongSettings = true
         case .showLibrary:
-            regions.setCollapsed(false, for: .library)
+            showSurface(.library)
         case .exportMaster:
             MrRobotoApp.export(self, what: "Exporting the master…") { try await Export.master(self, to: $0).wav }
         case .develop:

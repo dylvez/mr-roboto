@@ -212,8 +212,16 @@ public final class AppState {
 
     /// The library as last read from disk. Replaced wholesale by `reloadLibrary()`; never mutated in place.
     public internal(set) var library: Library {
-        didSet { StemPresenceIndex.remember(library) }
+        didSet {
+            StemPresenceIndex.remember(library)
+            indexCache = nil
+        }
     }
+
+    /// The library browser's index, built when it is first read after the library changes, and
+    /// read again for the open song alone after the song changes (`libraryIndex`).
+    @ObservationIgnored var indexCache: LibraryIndex?
+    @ObservationIgnored var indexFollowsSong = false
 
     /// Whether the library directory had anything in it. The sidebar's empty state reads this.
     public internal(set) var libraryStatus: LibraryStatus
@@ -238,7 +246,11 @@ public final class AppState {
 
     /// The song in the frame. Nil before one is opened; the header, ledger and transport all read it.
     public private(set) var song: Song? {
-        didSet { rememberSections(after: oldValue) }
+        didSet {
+            rememberSections(after: oldValue)
+            // Another song open: the one left is read again as the library holds it.
+            if oldValue?.id != song?.id { indexCache = nil } else { indexFollowsSong = true }
+        }
     }
 
     /// How each section stood before it last changed, the newest last (`SectionState`). In memory
@@ -290,6 +302,10 @@ public final class AppState {
     /// A stem dropped on the song or asked for from the crate, waiting for the Sources surface to
     /// choose it. The surface takes it, so it is chosen once.
     public var askedSource: AskedSource?
+
+    /// An item asked to be shown in the Library surface — from a row's menu in the strip on the
+    /// left — waiting for the surface to select it. The surface takes it, so it is shown once.
+    public var libraryAsk: LibraryItemID?
 
     // MARK: Bench
 
@@ -756,7 +772,9 @@ public final class AppState {
 
     /// Everything that was about the song that was open: the bench, its bindings, the answers.
     private func leaveSong() {
-        for item in bench.items { bench.close(item.id) }
+        // The library's own surface is about the library, not the song: it stays where it was,
+        // so a song opened from it does not close it behind you.
+        for item in bench.items where !item.kind.outlivesSong { bench.close(item.id) }
         // The last song's failed save is not the next song's: it used to sit beside its Save.
         lastSaveError = nil
         bindings.removeAll()

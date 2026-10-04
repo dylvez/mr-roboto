@@ -97,6 +97,13 @@ public enum Primer {
                         + "tempo and bars stand: the record is moved to meet them, its first bar on the bar you choose, or its bars "
                         + "fitted to whole bars and looped like a chop. Preview eight bars against the song, add it, and fit it "
                         + "again later from the untouched record — another semitone, another bar.")
+        case .library:
+            return ("Library",
+                    "Everything the house has made and brought in, a shelf at a time: songs, records, ideas, samples and "
+                        + "albums. Type to search every word a thing says about itself; sort by any column; narrow by key, "
+                        + "tempo — half and double time count — and whether anything uses it. Pick one to read it without "
+                        + "opening it: what a song is made from, which songs take from a record. What can be done to it is "
+                        + "under its name, the same as its row's menu in the strip on the left.")
         case .mashup:
             return ("Mashup",
                     "Two songs from the library on one grid. One keeps its tempo and key — usually the instrumental — and the "

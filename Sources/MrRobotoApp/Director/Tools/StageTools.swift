@@ -50,7 +50,7 @@ enum StageChoiceBuilder {
             throw DirectorToolFailure(
                 tool: tool,
                 reason: "\"\(raw)\" is not a surface in the catalog.",
-                suggestion: "One of: \(SurfaceKind.allCases.map(\.rawValue).joined(separator: ", ")).")
+                suggestion: "One of: \(SurfaceKind.directable.map(\.rawValue).joined(separator: ", ")).")
         }
         return kind
     }
@@ -80,7 +80,7 @@ enum StageChoiceBuilder {
                     suggestion: "Pass `finding`: the one thing you found, in the song's own numbers.")
             }
             return .check(of: subject, finding: finding)
-        case .importRecord, .chopLane, .grid, .sound, .chords, .pianoRoll, .structure, .album, .merge, .cast, .lyrics, .booth, .takes, .mixer, .master, .mashup, .sources:
+        case .importRecord, .chopLane, .grid, .sound, .chords, .pianoRoll, .structure, .album, .merge, .cast, .lyrics, .booth, .takes, .mixer, .master, .mashup, .sources, .library:
             guard reference == nil else {
                 throw DirectorToolFailure(
                     tool: tool,
@@ -98,7 +98,7 @@ enum StageChoiceBuilder {
                 "Which surface from the fixed catalog. Chords get a lead sheet, feel gets a grid, "
                 + "a bar of audio gets the chop lane; alternatives get a Compare and a single "
                 + "finding gets a Check. Never invent a layout.",
-                enum: SurfaceKind.allCases.map(\.rawValue))),
+                enum: SurfaceKind.directable.map(\.rawValue))),
             ("title", Schema.string(titleDescription)),
             ("bound", Schema.array(
                 "Version ids the surface opens on, from read_song or create_part_version. On a "

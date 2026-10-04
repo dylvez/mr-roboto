@@ -83,6 +83,11 @@ extension AppState {
     /// The number a dock chip carries: the song's sections on Structure, its parts for every other
     /// surface (the same count as the surface's title menu), nothing on the Booth or at zero.
     public func dockCount(for kind: SurfaceKind) -> Int? {
+        // The library's chip counts what is in it, song open or not.
+        if kind == .library {
+            let count = library.songs.count + library.records.count + library.ideas.count + library.samples.count + library.albums.count
+            return count > 0 ? count : nil
+        }
         guard let song, kind != .booth else { return nil }
         let count = kind == .structure ? song.sections.count : partChoices(for: kind).count
         return count > 0 ? count : nil

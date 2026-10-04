@@ -95,6 +95,11 @@ struct LibrarySidebar: View {
             HStack(spacing: 8) {
                 SmallLabel("Library")
                 Spacer()
+                ChipButton(systemImage: "books.vertical", help: "Open the Library on the bench: every shelf, searched, sorted and described (⇧⌘L)",
+                           isOn: app.bench.active?.kind == .library) {
+                    app.showSurface(.library)
+                }
+                .accessibilityLabel("Open the Library")
                 ChipButton(systemImage: "plus.square.on.square", help: "New album",
                            isEnabled: app.store != nil) {
                     if let id = app.createAlbum(title: "New album") { app.openAlbum(id) }
@@ -126,33 +131,33 @@ struct LibrarySidebar: View {
                     } else if app.library.isEmpty {
                         emptyState
                     } else {
+                        // What each row says is the index's, as the Library surface says it.
+                        let index = app.libraryIndex
                         group("Ideas", app.library.ideas.map { idea in
                             Row(payload: LibraryDragPayload(kind: .idea, id: idea.id.rawValue, title: PartLabel.title(of: idea)),
                                 title: PartLabel.title(of: idea),
-                                detail: idea.note ?? idea.operation,
-                                inSong: Self.holds(idea, app.song),
-                                adopts: true)
+                                detail: index.facts(.idea(idea.id))?.line ?? "",
+                                inSong: Self.holds(idea, app.song))
                         })
                         group("Songs", app.library.songs.map { song in
                             Row(payload: LibraryDragPayload(kind: .song, id: song.id.rawValue, title: song.title),
-                                title: song.title,
-                                detail: songDetail(song),
+                                title: index.facts(.song(song.id))?.title ?? song.title,
+                                detail: index.facts(.song(song.id))?.line ?? "",
                                 isSelected: app.song?.id == song.id,
                                 opens: song.id)
                         })
                         group("Albums", app.library.albums.map { album in
                             Row(payload: LibraryDragPayload(kind: .album, id: album.id.rawValue, title: album.title),
                                 title: album.title,
-                                detail: "\(album.songs.count) song\(album.songs.count == 1 ? "" : "s")",
+                                detail: index.facts(.album(album.id))?.line ?? "",
                                 opensAlbum: album.id)
                         })
                         recordsGroup
                         group("Samples", app.library.samples.map { entry in
                             Row(payload: LibraryDragPayload(kind: .sample, id: entry.id.rawValue, title: entry.name),
                                 title: entry.name,
-                                detail: Self.sampleDetail(entry),
-                                inSong: app.song?.versions.contains { $0.kind == .sample(entry.sample) } == true,
-                                adopts: true)
+                                detail: index.facts(.sample(entry.id))?.line ?? "",
+                                inSong: app.song?.versions.contains { $0.kind == .sample(entry.sample) } == true)
                         })
                     }
                 }
@@ -164,42 +169,15 @@ struct LibrarySidebar: View {
         .background(Design.Palette.panelAlt)
     }
 
-    private func songDetail(_ song: Song) -> String {
-        var pieces: [String] = []
-        if let key = song.key { pieces.append(key.name) }
-        pieces.append("\(Int(song.tempo.rounded())) bpm")
-        if song.lengthInBars > 0 { pieces.append("\(song.lengthInBars) bars") }
-        return pieces.joined(separator: " · ")
-    }
-
     /// "D major · 113 bpm · 78 bars · 4 stems", from the record's own analysis. Without the stems
     /// where the row marks them itself.
     static func recordDetail(_ record: Record, stems showsStems: Bool = true) -> String {
-        var pieces: [String] = []
-        if let analysis = record.reading {
-            if let key = analysis.dominantKey { pieces.append(key.name) }
-            if let tempo = analysis.dominantTempo { pieces.append("\(Int(tempo.rounded())) bpm") }
-            if !analysis.bars.isEmpty { pieces.append("\(analysis.bars.count) bars") }
-            // Only a record far enough off pitch to be moved when it is fitted.
-            if let cents = record.tuning, abs(cents) >= SourceFitting.leastCents {
-                pieces.append("\(Int(abs(cents).rounded()))¢ \(cents > 0 ? "sharp" : "flat")")
-            }
-        }
-        if showsStems, let stems = record.stems { pieces.append("\(stems.count) stem\(stems.count == 1 ? "" : "s")") }
-        if pieces.isEmpty { pieces.append(record.artist.isEmpty ? record.media.fileExtension.uppercased() : record.artist) }
-        return pieces.joined(separator: " · ")
+        let line = LibraryIndex.facts(of: record).recordLine(stems: showsStems)
+        return line.isEmpty ? record.media.fileExtension.uppercased() : line
     }
 
     /// Root, tempo, slices and the chain, from the sample itself.
-    static func sampleDetail(_ entry: LibrarySample) -> String {
-        var pieces: [String] = []
-        if let root = entry.sample.rootPitch { pieces.append("\(root)") }
-        if let tempo = entry.sample.detectedTempo { pieces.append("\(Int(tempo.rounded())) bpm") }
-        if !entry.sample.slices.isEmpty { pieces.append("\(entry.sample.slices.count) slices") }
-        if !entry.sample.degradation.isEmpty { pieces.append(Dust.describe(entry.sample.degradation)) }
-        if pieces.isEmpty { pieces.append(entry.tags.joined(separator: " · ")) }
-        return pieces.joined(separator: " · ")
-    }
+    static func sampleDetail(_ entry: LibrarySample) -> String { LibraryIndex.facts(of: entry).line }
 
     /// Whether the open song already holds this idea's music — the same kind, note for note.
     static func holds(_ idea: PartVersion, _ song: Song?) -> Bool {
@@ -298,20 +276,27 @@ struct LibrarySidebar: View {
         var opensAlbum: AlbumID?
         /// The open song already holds this item's music.
         var inSong: Bool = false
-        /// Ideas and samples: the row can be adopted into the open song from its menu.
-        var adopts: Bool = false
 
         var id: UUID { payload.id }
+
+        /// The item, as the library's index and its actions know it.
+        var item: LibraryItemID? {
+            switch payload.kind {
+            case .song: LibraryItemID(.songs, payload.id)
+            case .album: LibraryItemID(.albums, payload.id)
+            case .idea: LibraryItemID(.ideas, payload.id)
+            case .sample: LibraryItemID(.samples, payload.id)
+            case .record: LibraryItemID(.records, payload.id)
+            case .stem: nil
+            }
+        }
     }
 
     struct RowView: View {
         let row: Row
         let app: AppState
-        /// A delete asks once. Nothing in the library could be unmade before this, and the first
-        /// way to unmake something must not be a slip of the mouse.
-        @State private var isConfirmingDelete = false
-        @State private var isRenaming = false
-        @State private var newTitle = ""
+        /// An action from the menu that asks first, or asks for a name (`LibraryActionPrompt`).
+        @State private var pending: LibraryAction?
 
         var body: some View {
             Button {
@@ -346,91 +331,14 @@ struct LibrarySidebar: View {
             .disabled(row.opens == nil && row.opensAlbum == nil)
             .draggable(row.payload)
             .contextMenu {
-                if row.adopts {
-                    Button("Adopt into this song") { app.receive(row.payload, at: .bench) }
-                        .disabled(app.song == nil)
-                }
-                if let id = row.opens {
-                    Button("Open") { app.openSong(id) }
+                // The same list the Library surface offers under the item's name.
+                if let item = row.item {
+                    LibraryActionMenuItems(actions: LibraryActions.actions(for: item, in: app)) { pending = $0 }
                     Divider()
-                    Button("Rename…") { newTitle = row.title; isRenaming = true }
-                    Button("Duplicate") { app.duplicateSong(id) }
-                    Button("Show in Finder") { app.revealInFinder(song: id) }
-                    Divider()
-                    Button("Move to Trash…") { isConfirmingDelete = true }
-                }
-                if let id = row.opensAlbum {
-                    Button("Open") { app.openAlbum(id) }
-                    Divider()
-                    Button("Rename…") { newTitle = row.title; isRenaming = true }
-                    Button("Delete Album…") { isConfirmingDelete = true }
-                }
-                if row.opens == nil, row.opensAlbum == nil {
-                    Divider()
-                    Button("Remove from Library…") { isConfirmingDelete = true }
+                    Button("Show in the Library") { app.showInLibrary(item) }
                 }
             }
-            .confirmationDialog(deleteQuestion, isPresented: $isConfirmingDelete, titleVisibility: .visible) {
-                Button(deleteVerb, role: .destructive) { delete() }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text(deleteDetail)
-            }
-            .alert("Rename", isPresented: $isRenaming) {
-                TextField("Title", text: $newTitle)
-                Button("Rename") { rename() }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text(row.opensAlbum != nil ? "A new name for the album." : "A new name for the song. Its package on disk keeps its file name.")
-            }
-        }
-
-        // MARK: What a delete does, said before it does it
-
-        private var deleteQuestion: String {
-            switch row.payload.kind {
-            case .song: return "Move “\(row.title)” to the Trash?"
-            case .album: return "Delete the album “\(row.title)”?"
-            case .idea: return "Remove the idea “\(row.title)” from the library?"
-            case .sample: return "Remove “\(row.title)” from Samples?"
-            case .record: return "Remove “\(row.title)” from Records?"
-            case .stem: return ""
-            }
-        }
-
-        private var deleteDetail: String {
-            switch row.payload.kind {
-            case .song: return "The song's package goes to the Trash, where Finder can put it back. It leaves every album it is on."
-            case .album: return "Its songs stay in the library; only the order, the targets and the clearances go."
-            case .idea: return "Songs that adopted it copied its audio and keep playing."
-            case .sample: return "Songs that adopted it copied its audio and keep playing."
-            case .record: return "Its audio and its stems stay in the library folder, so songs made from it still play. Only the row goes."
-            case .stem: return ""
-            }
-        }
-
-        private var deleteVerb: String {
-            switch row.payload.kind {
-            case .song: return "Move to Trash"
-            case .album: return "Delete Album"
-            case .idea, .sample, .record, .stem: return "Remove"
-            }
-        }
-
-        private func delete() {
-            switch row.payload.kind {
-            case .song: app.deleteSong(SongID(rawValue: row.payload.id))
-            case .album: app.deleteAlbum(AlbumID(rawValue: row.payload.id))
-            case .idea: app.removeIdea(VersionID(rawValue: row.payload.id))
-            case .sample: app.removeSample(SampleID(rawValue: row.payload.id))
-            case .record: app.removeRecord(RecordID(rawValue: row.payload.id))
-            case .stem: break
-            }
-        }
-
-        private func rename() {
-            if let id = row.opens { app.renameSong(id, to: newTitle) }
-            else if let id = row.opensAlbum { app.renameAlbum(id, to: newTitle.trimmingCharacters(in: .whitespacesAndNewlines)) }
+            .modifier(LibraryActionPrompt(pending: $pending))
         }
     }
 }
@@ -442,9 +350,8 @@ struct RecordRowView: View {
     let record: Record
     let app: AppState
     @State private var isOpen: Bool
-    @State private var isConfirmingDelete = false
-    @State private var isRenaming = false
-    @State private var newTitle = ""
+    /// An action from the menu that asks first, or asks for a name (`LibraryActionPrompt`).
+    @State private var pending: LibraryAction?
 
     init(record: Record, app: AppState, startsOpen: Bool = false) {
         self.record = record
@@ -457,17 +364,15 @@ struct RecordRowView: View {
     }
     private var stems: [RecordStem] { (record.stems ?? []).sorted { RecordStems.order($0.name) < RecordStems.order($1.name) } }
     private var opens: Bool { !stems.isEmpty || !chops.isEmpty }
+    /// Whether the open song takes from it, as the library's index reads it.
     private var inSong: Bool {
-        let media = Set([record.media] + stems.map(\.media))
-        return app.song?.versions.contains { version in
-            Guidance.audio(of: version).map { media.contains($0.media) || ($0.fit.map { media.contains($0.media) } ?? false) } ?? false
-        } == true
+        app.song.map { app.libraryIndex.records(in: $0.id).contains(record.id) } ?? false
     }
     private var line: String {
         if let status = app.crate.status(of: record.id) { return status }
         if let failure = app.crate.failures[record.id] { return failure }
         if record.reading == nil { return "not read yet" }
-        return LibrarySidebar.recordDetail(record, stems: false)
+        return app.libraryIndex.facts(.record(record.id))?.recordLine(stems: false) ?? LibrarySidebar.recordDetail(record, stems: false)
     }
 
     var body: some View {
@@ -512,7 +417,12 @@ struct RecordRowView: View {
             .padding(.vertical, 5)
             .padding(.trailing, 8)
             .draggable(LibraryDragPayload(kind: .record, id: record.id.rawValue, title: record.title))
-            .contextMenu { menu }
+            .contextMenu {
+                // The same list the Library surface offers under the record's name.
+                LibraryActionMenuItems(actions: LibraryActions.actions(for: .record(record.id), in: app)) { pending = $0 }
+                Divider()
+                Button("Show in the Library") { app.showInLibrary(.record(record.id)) }
+            }
 
             if isOpen {
                 VStack(alignment: .leading, spacing: 3) {
@@ -543,77 +453,12 @@ struct RecordRowView: View {
                 .padding(.bottom, 4)
             }
         }
-        .confirmationDialog("Remove “\(record.title)” from Records?", isPresented: $isConfirmingDelete, titleVisibility: .visible) {
-            Button("Remove", role: .destructive) { app.removeRecord(record.id) }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Its audio and its stems stay in the library folder, so songs made from it still play. Only the row goes.")
-        }
-        .alert("Rename", isPresented: $isRenaming) {
-            TextField("Title", text: $newTitle)
-            Button("Rename") { app.renameRecord(record.id, to: newTitle) }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("A new name for the record. Sources already fitted from it keep the name they were fitted under.")
-        }
-    }
-
-    @ViewBuilder
-    private var menu: some View {
-        Button("Start a Song from It") { app.flipAgain(record.id) }
-            .disabled(record.reading == nil)
-        Button("Add to This Song…") { app.askForSource(AskedSource(origin: .record(record.id))) }
-            .disabled(app.song == nil || record.reading == nil)
-        Button("Adopt the Record into This Song") { app.receive(LibraryDragPayload(kind: .record, id: record.id.rawValue, title: record.title), at: .bench) }
-            .disabled(app.song == nil)
-        Divider()
-        if record.stems == nil {
-            let holders = app.songsHoldingStems(of: record.id)
-            if let holder = holders.first {
-                Button("Keep \(holder.title)'s Stems with It") { app.gatherStems(of: record.id, from: holder.id) }
-                    .disabled(app.crate.isQueued(.gather, for: record.id))
-            }
-            Button("Separate Its Stems") { app.separateRecord(record.id) }
-                .disabled(app.crate.isQueued(.separate, for: record.id))
-        } else {
-            Button("Separate Its Stems Again") { app.separateRecord(record.id) }
-                .disabled(app.crate.isQueued(.separate, for: record.id))
-        }
-        Button(record.reading == nil ? "Read It" : "Read It Again") { app.analyseRecord(record.id) }
-            .disabled(app.crate.isQueued(.analyse, for: record.id))
-        if record.readingAsRead != nil {
-            Menu("Its Grid") {
-                ForEach(GridMove.allCases, id: \.self) { move in
-                    if move == .secondTracker, app.refusal(of: move, for: record.id) == .noSecondTracker(record.title) {
-                        Button("Listen with the Second Tracker") { app.listenForSecondTracker(record.id) }
-                            .disabled(app.crate.isQueued(.listen, for: record.id))
-                    } else {
-                        Button(gridTitle(move)) { app.correctGridAsked(record.id, move) }
-                            .disabled(app.refusal(of: move, for: record.id) != nil)
-                    }
-                }
-            }
-        }
-        if app.crate.status(of: record.id) != nil {
-            Button("Stop") { app.crate.cancel(record.id) }
-        }
-        Divider()
-        Button("Rename…") { newTitle = app.suggestedName(for: record.id); isRenaming = true }
-        Button("Remove from Library…") { isConfirmingDelete = true }
-    }
-
-    /// The menu's words for a correction, with what it would make of the tempo.
-    private func gridTitle(_ move: GridMove) -> String {
-        if move == .secondTracker, record.grid?.secondTracker == true { return "The First Tracker's Grid" }
-        guard move != .asRead, let now = record.reading?.dominantTempo, let read = record.readingAsRead else { return move.title }
-        let next = move.applied(to: record.grid, beatsPerBar: Sources.beatsPerBar(in: record.reading ?? read))
-        guard let then = read.regridded(next).dominantTempo, abs(then - now) > 0.05 else { return move.title }
-        return String(format: "%@ (%.1f → %.1f bpm)", move.title, now, then)
+        .modifier(LibraryActionPrompt(pending: $pending))
     }
 }
 
 /// One stem of a record: its name, how much of the record it is, and where in it it plays.
-private struct StemRow: View {
+struct StemRow: View {
     let stem: RecordStem
     let record: Record
 
@@ -652,7 +497,7 @@ private struct StemRow: View {
 }
 
 /// A stem's level bar by bar: one tick per bar, taller where it is louder, absent where it rests.
-private struct StemPresence: View {
+struct StemPresence: View {
     let levels: [Double]
     var strength: Double = 1
 

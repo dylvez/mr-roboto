@@ -233,7 +233,7 @@ extension WorkPath {
         case .structure: return .arrange
         case .lyrics: return .words
         case .sources: return path == .assembled ? .sources : nil
-        case .album, .merge, .cast, .mashup: return nil
+        case .album, .merge, .cast, .mashup, .library: return nil
         case .booth, .takes: return .sing
         case .mixer, .master: return .mix
         case .sound:

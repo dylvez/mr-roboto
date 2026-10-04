@@ -45,7 +45,7 @@ extension SurfaceKind {
         // A tune too: the roll has drawn one since it could write one, and the Director, which
         // writes them, was the one thing that could not open it on what it had written.
         case .pianoRoll: return [.bassline, .melody, .groove]
-        case .structure, .album, .cast, .booth, .mashup, .sources: return []
+        case .structure, .album, .cast, .booth, .mashup, .sources, .library: return []
         case .lyrics: return [.lyric]
         case .takes: return [.audio]
         case .mixer, .master: return [.mix]
@@ -448,6 +448,7 @@ public struct DirectorSurfaceChoice: Sendable, Equatable, Hashable, Identifiable
         case .master: return "the mix version, or nothing for a song mixed at unity"
         case .mashup: return "nothing bound: it draws two library songs and makes a new one"
         case .sources: return "nothing bound: it draws the library's records and pulls a stem or some bars into the open song"
+        case .library: return "nothing bound: it draws the whole library"
         }
     }
 

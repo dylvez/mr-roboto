@@ -450,6 +450,8 @@ struct DirectorStageToolboxTests {
         let open = full.tool(named: "open_surface")
         let values = open?.definition.inputSchema["properties"]?["surface"]?["enum"]?
             .arrayValue?.compactMap(\.stringValue)
-        #expect(values == SurfaceKind.allCases.map(\.rawValue))
+        // Every surface but the Library: the band reads the library through read_library.
+        #expect(values == SurfaceKind.directable.map(\.rawValue))
+        #expect(values?.contains(SurfaceKind.library.rawValue) == false)
     }
 }

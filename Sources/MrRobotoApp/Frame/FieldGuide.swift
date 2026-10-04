@@ -14,13 +14,13 @@ enum FieldGuide {
         var id: String { word }
     }
 
-    static let glyphs: [String: String] = ["Library": "album", "Song": "song", "Version": "version",
+    static let glyphs: [String: String] = ["Library": "library", "Song": "song", "Version": "version",
                                            "Form": "record", "Section": "section", "Slice · Pad": "chop",
                                            "Feel": "feel", "Sample": "idea", "Critic": "check"]
 
     /// The words that are not steps or surfaces, in the order you tend to meet them.
     static let words: [Entry] = [
-        Entry(word: "Library", meaning: "Everything saved: songs, albums, imported records, your samples, and ideas that belong to no song yet."),
+        Entry(word: "Library", meaning: "Everything saved: songs, albums, imported records, your samples, and ideas that belong to no song yet. The strip on the left lists it; the Library surface (⇧⌘L, first on the dock) shows it a shelf at a time, searched by every word, sorted by any column and narrowed by key — a relative counts as the same key — by tempo, half and double time counted, and by whether anything uses it. Choose something to read it without opening it: what a song is made from and which albums it is on, which songs take from a record and which of its stems, where a chop was cut. What can be done to it is under its name, the same list as its row's menu, and the Library stays on the bench when you open a song from it."),
         Entry(word: "Set aside", meaning: "A part taken out of the song without deleting it: out of every section that played it, off the Mixer and out of Structure, and not suggested by the band. Right-click it in Parts and choose Set Aside; it waits under Set aside at the bottom of Parts, and a click brings it back into the sections it left. A chop the band cuts only to read — a stem's hits, mapped — is set aside as reference from the start."),
         Entry(word: "Crate", meaning: "The library's Records: audio brought in as raw material, and no song made of it. File ▸ Import Records… (⌘I) takes any number of files; each is read for its key, tempo and bars and, if you ask, separated into its stems, one at a time in the background while you work — the header says how far. A record's row opens to its stems, each with how much of the record it is and where in it it plays; drag one onto the song or a section to bring it in through Sources, or start a song from the record. Bar lines a tracker misread are corrected from the row's Its Grid: half or double the tempo, move the downbeat a beat, or take the second tracker's grid; Fit again on Sources then tightens what came from it to the new bars."),
         Entry(word: "Song", meaning: "The document you work in. It keeps every version ever made for it, and its sections in order."),

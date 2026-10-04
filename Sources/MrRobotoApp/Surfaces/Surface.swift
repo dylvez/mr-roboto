@@ -80,6 +80,10 @@ public enum SurfaceKind: String, CaseIterable, Sendable {
     /// key, tempo and bars; and the sources the song already holds, fitted again. Bound to nothing:
     /// it draws the library and the open song.
     case sources = "Sources"
+    /// The library, whole: shelves of songs, records, ideas, samples and albums, searched, sorted
+    /// and described without opening anything, and acted on from where they are listed. Bound to
+    /// nothing; it draws the library, and it stays on the bench when another song is opened.
+    case library = "Library"
 
     // The two answer surfaces. They are in the catalog because the Director has to be able to
     // *name* one — a question with alternatives gets a Compare, a question with one finding gets a
@@ -97,7 +101,16 @@ public enum SurfaceKind: String, CaseIterable, Sendable {
 
     /// The surfaces that draw the song or the library rather than a version of a part, and so
     /// open on nothing.
-    public var isUnbound: Bool { self == .structure || self == .album || self == .cast || self == .booth || self == .mashup || self == .sources }
+    public var isUnbound: Bool { self == .structure || self == .album || self == .cast || self == .booth || self == .mashup || self == .sources || self == .library }
+
+    /// The surfaces the Director can name. Not the Library yet: the band reads the library through
+    /// `read_library`, and opening the browser on a query of its own is for when that tool can
+    /// search the way the browser does. Its schema enumerates this list, so it is pinned.
+    public static let directable: [SurfaceKind] = allCases.filter { $0 != .library }
+
+    /// The surfaces about the library rather than the open song: they stay on the bench when
+    /// another song is opened.
+    public var outlivesSong: Bool { self == .library }
 
     /// The two the Director opens to answer with. You do not pick these off a shelf — a Compare
     /// with nothing to compare is not a surface, it is an empty promise — so they are deliberately
@@ -117,7 +130,7 @@ public enum SurfaceKind: String, CaseIterable, Sendable {
         case .lyrics: return PersonaID("lyricist")
         case .booth, .takes, .structure, .album: return PersonaID("producer")
         case .mixer, .master: return PersonaID("engineer")
-        case .cast, .compare, .check: return nil
+        case .cast, .compare, .check, .library: return nil
         }
     }
 }
