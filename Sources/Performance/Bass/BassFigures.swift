@@ -41,14 +41,16 @@ enum BassFigures {
                 switch note.tone {
                 case .interval(let interval):
                     let root = BassWriter.place(chord.bass, near: last, in: lineage)
-                    pitch = BassWriter.clampToRegister(root + chordTone(chord, interval), lineage)
+                    pitch = BassWriter.clampToRegister(root + tone(of: chord, interval), lineage)
                 case .octaveUp:
                     pitch = BassWriter.clampToRegister(BassWriter.place(chord.bass, near: nil, in: lineage) + 12, lineage)
                 case .chordTone:
                     // One of the two chord tones nearest the last note, never the same note again:
                     // a line that moves by the shortest way, the seed choosing which way.
                     let root = BassWriter.place(chord.bass, near: last, in: lineage)
-                    let tones = chord.intervals.map { BassWriter.clampToRegister(root + $0, lineage) }
+                    // Over an inversion the tones are counted from the bass note, not the root.
+                    let offset = bassOffset(chord)
+                    let tones = chord.intervals.map { BassWriter.clampToRegister(root + (offset == 0 ? $0 : (($0 - offset) % 12 + 12) % 12), lineage) }
                     let near = last ?? tones[0]
                     let moving = tones.filter { $0 != near }
                     let nearest = (moving.isEmpty ? tones : moving).sorted { abs($0 - near) < abs($1 - near) }
@@ -189,6 +191,25 @@ enum BassFigures {
         case 10, 11: return tones.first { $0 == 10 || $0 == 11 } ?? 10
         default: return interval
         }
+    }
+
+    /// A chord tone as semitones above the chord's bass note. In root position that is the tone's
+    /// own interval. Over an inversion the bass is not the root — a fifth counted up from the F
+    /// sharp of D/F♯ is C sharp, which is no note of D major — so the tone is found from the root
+    /// and set above the bass (below it, for the fifth below). The bass's own octave stays its own.
+    static func tone(of chord: Chord, _ interval: Int) -> Int {
+        let tone = chordTone(chord, interval)
+        let offset = bassOffset(chord)
+        guard offset != 0, interval % 12 != 0 else { return tone }
+        let up = ((tone - offset) % 12 + 12) % 12
+        if interval < 0 { return up == 0 ? -12 : up - 12 }
+        return up == 0 ? 12 : up
+    }
+
+    /// Semitones from a chord's root up to its bass note: 0 in root position, 4 for D/F♯.
+    static func bassOffset(_ chord: Chord) -> Int {
+        let stack = chord.intervals
+        return stack.isEmpty ? 0 : stack[min(max(0, chord.inversion), stack.count - 1)] % 12
     }
 
     /// The last beat before each change becomes a half-step into the new root.

@@ -121,6 +121,29 @@ struct BassWriterTests {
         #expect(early > 0 && late > 0)
     }
 
+    @Test("over an inversion every note is the chord's: the fifth of D/F♯ is A, not the C sharp a fifth over its bass",
+          arguments: [BassLineage.rolling, .rootFifth, .octave, .oneDrop])
+    func inversions(lineage: BassLineage) throws {
+        let chords = try ["D/F#", "Gmaj7/F#", "A7/C#", "Em7/D"].map { ChordSpan(try #require(Chord(parsing: $0)), beats: 4) }
+        var request = Self.request(lineage, chords: chords)
+        request.bars = 4
+        let line = BassWriter.write(request)
+        #expect(!line.notes.isEmpty)
+        for note in line.notes {
+            let chord = chords[min(chords.count - 1, Int(note.start / 4))].chord
+            #expect(chord.pitchClassSet.contains(note.pitch.pitchClass), "\(note.pitch) at beat \(note.start) is no note of \(chord.symbol)")
+        }
+        // The line still starts each bar on the chord's bass note (a one drop leaves beat one empty).
+        for (bar, span) in chords.enumerated() where lineage != .oneDrop {
+            let first = try #require(line.notes.first { $0.start >= Double(bar) * 4 - 1e-6 && $0.start < Double(bar) * 4 + 1 })
+            #expect(first.pitch.pitchClass == span.chord.bass, "bar \(bar + 1) starts on \(first.pitch)")
+        }
+        // In root position nothing has moved.
+        let plain = BassWriter.write(Self.request(lineage))
+        #expect(plain.notes.allSatisfy { note in Self.dm7g7[min(1, Int(note.start / 4))].chord.pitchClassSet.contains(note.pitch.pitchClass) }
+                || lineage == .oneDrop)
+    }
+
     @Test("with no chords, the writer uses the key's I–IV–V–I and says so")
     func defaultHarmony() {
         let request = Self.request(.palladino, chords: [])
