@@ -515,14 +515,21 @@ public struct SongObservation: Hashable, Sendable {
     /// song's drum machine, is a setting of a part, and never plays in a section on its own — counted,
     /// every song with a sampled piano had "Salamander Grand Piano" in no section.
     public static func of(_ song: Song) -> SongObservation {
+        // A part set aside is out of the song until it is brought back: not a part in it, and not
+        // one waiting to be stitched.
+        let song = song.withoutAsides
         // Nor is a variation: the drums with no kick under a breakdown are the drums, and a section
         // playing them is playing that part.
         let counted = song.partIDs.filter { id in
             guard !song.isVariation(id) else { return false }
             return song.latestVersion(of: id).map { ![PartType.analysis, .audio, .sound, .mix].contains($0.type) } ?? false
         }
-        // A lane names the part, so this is the part set directly now rather than a lookup.
-        let stitched = Set(song.sections.flatMap(\.stitch).map { song.strip(of: $0.part) })
+        // A lane names the part, so this is the part set directly now rather than a lookup. A chop a
+        // stitched groove plays is in those sections too: its pads are what the groove sounds.
+        var stitched = Set(song.sections.flatMap(\.stitch).map { song.strip(of: $0.part) })
+        for part in Array(stitched) {
+            if let chop = SongPlayback.chop(under: part, in: song) { stitched.insert(song.strip(of: chop.partID)) }
+        }
         let orphans = song.sections.isEmpty ? [] : counted.filter { !stitched.contains($0) }
             .compactMap { song.latestVersion(of: $0) }.map { PartLabel.title(of: $0) }
         var most: (String, Int)?

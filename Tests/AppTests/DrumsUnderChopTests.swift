@@ -70,6 +70,18 @@ struct DrumsUnderChopTests {
         #expect(model.selectedSection?.stitch.map(\.part) == [groove.partID, chop.partID])
     }
 
+    @Test("the Producer counts the chop a stitched groove plays as in the song, and a chop nothing plays as in no section")
+    func theProducerCounts() throws {
+        let (app, directory, chop, groove) = try DrumlessFixture.app("drumless-producer")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var song = try #require(app.song)
+        let name = PartLabel.title(of: chop)
+        song.sections = [Section(name: "Loop", stitch: [Lane(part: groove.partID)], lengthInBars: 4)]
+        #expect(!SongObservation.of(song).orphanedParts.contains(name), "the groove sounds its pads")
+        song.sections = [Section(name: "Loop", stitch: [], lengthInBars: 4)]
+        #expect(SongObservation.of(song).orphanedParts.contains(name), "nothing plays it")
+    }
+
     @Test("Structure says the groove is the chop in a rhythm, and Add drums puts the pattern on the machine beside it")
     func addDrums() throws {
         let (app, directory, chop, groove) = try DrumlessFixture.app("drumless-add")

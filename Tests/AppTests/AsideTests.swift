@@ -58,6 +58,25 @@ struct AsideTests {
         #expect(none == nil)
     }
 
+    @Test("the Producer counts what is in the song: a part set aside is neither a part nor one in no section")
+    func producer() throws {
+        let (_, directory, built) = Self.arranged("aside-producer")
+        defer { WiringFixture.remove(directory) }
+        var song = built.song
+        let bass = try #require(song.latestVersion(of: built.bass).map(PartLabel.title(of:)))
+        // The bass taken out of every section by hand is in no section, and the Producer says so.
+        var unstitched = song
+        for index in unstitched.sections.indices { unstitched.sections[index].stitch.removeAll { $0.part == built.bass } }
+        #expect(SongObservation.of(unstitched).orphanedParts.contains(bass))
+        // Set aside, it is out of the song: not one of its parts, and not waiting for a section.
+        let before = SongObservation.of(song)
+        let set = song.setAside(built.bass, note: "too busy")
+        #expect(set)
+        let after = SongObservation.of(song)
+        #expect(!after.orphanedParts.contains(bass), "\(after.orphanedParts)")
+        #expect(after.orphanedParts == before.orphanedParts && after.partCount == before.partCount - 1)
+    }
+
     @Test("set aside it does not play, has no row in Structure, no fader, and the band does not suggest it; brought back it does")
     func app() throws {
         let (app, directory, built) = Self.arranged("aside-app")
