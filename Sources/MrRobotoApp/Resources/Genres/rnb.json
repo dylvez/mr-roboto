@@ -1,0 +1,743 @@
+{
+  "aliases": [
+    "contemporary r&b",
+    "rnb",
+    "r and b",
+    "new jack swing",
+    "swingbeat",
+    "hip-hop soul",
+    "90s r&b",
+    "pbr&b",
+    "trap soul",
+    "trapsoul"
+  ],
+  "bassHands": [
+    "programmed",
+    "boom-bap"
+  ],
+  "family": "soul",
+  "feels": [
+    "New Jack Swing",
+    "Slow Jam",
+    "Halftime",
+    "Trap Rolling Hats"
+  ],
+  "form": {
+    "evidence": {
+      "inferred": "section names from Say My Name (verses, pre-chorus, chorus, bridge: Wikipedia, Hooktheory) and the Hooktheory section lists of No Scrubs, Weak and End of the Road; lengths on an 8-bar phrase grid with the 4-bar pre-chorus of the cited examples and a doubled last chorus; 92 bars is 3.4 minutes at 108 BPM and 4.2 at 87, inside the measured song lengths; forms vary, with vamped outros and post-choruses lengthening them."
+    },
+    "sections": [
+      {
+        "bars": 4,
+        "name": "Intro"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 4,
+        "name": "Pre-Chorus"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 4,
+        "name": "Pre-Chorus"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 8,
+        "name": "Bridge"
+      },
+      {
+        "bars": 16,
+        "name": "Chorus"
+      },
+      {
+        "bars": 8,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "rnb",
+  "idioms": [
+    "rnb"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/New_jack_swing",
+          "https://daily.redbullmusicacademy.com/2017/05/teddy-riley-new-jack-swing-oral-history",
+          "https://en.wikipedia.org/wiki/Teddy_Riley",
+          "https://en.wikipedia.org/wiki/My_Prerogative"
+        ]
+      },
+      "name": "Teddy Riley",
+      "period": "1987–1996",
+      "why": "The architect of new jack swing: swingbeats of offbeat-accented sixteenth-note triplets on drum machines and samplers, with a loud, sparse, street-flavoured sound, and the first Guy album cut live with razor-blade edits. He co-wrote My Prerogative, co-produced half of Michael Jackson's Dangerous including Remember the Time, and made No Diggity with Blackstreet."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Jimmy_Jam_and_Terry_Lewis",
+          "https://en.wikipedia.org/wiki/Contemporary_R%26B"
+        ]
+      },
+      "name": "Jimmy Jam and Terry Lewis",
+      "period": "1982–1989",
+      "why": "Minneapolis-sound producers noted for early use of the TR-808, which ran through most of their work, from the S.O.S. Band's Just Be Good to Me. Janet Jackson's Control (1986) set funk and disco rhythm under heavy synthesizers, sound effects and a rap sensibility, and Rhythm Nation 1814 (1989) followed with four Hot 100 number ones."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.encyclopedia.com/people/literature-and-arts/music-popular-and-jazz-biographies/timbaland",
+          "https://en.wikipedia.org/wiki/Timbaland",
+          "https://en.wikipedia.org/wiki/Are_You_That_Somebody%3F"
+        ]
+      },
+      "name": "Timbaland",
+      "period": "1996–1998",
+      "why": "Took a hip-hop sound and its breakbeats into R&B with a stuttering, syncopated style built from beats he made rather than samples: triple-time kick bursts and stop-start grooves on Aaliyah's One in a Million, hits such as Ginuwine's Pony, and found sounds such as a cooing baby. Are You That Somebody? was recorded and mixed with engineer Jimmy Douglass in one overnight session, the baby noises and his ad-libs added last."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Channel_Orange",
+          "https://en.wikipedia.org/wiki/Alternative_R%26B",
+          "https://en.wikipedia.org/wiki/The-Dream"
+        ]
+      },
+      "name": "Frank Ocean",
+      "period": "2011–2012",
+      "why": "With Nostalgia, Ultra and Channel Orange he helped define alternative R&B; Channel Orange moved from samples to played keyboards, guitar and bass (with Malay), dub reverb and long, shifting songs like the 9:52 Pyramids, sung in a free-form flow alternating falsetto and tenor. The Quietus credits The-Dream's stadium R&B as an influence on his work."
+    }
+  ],
+  "meters": [
+    "4/4",
+    "6/8"
+  ],
+  "name": "R&B",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/New_jack_swing",
+          "https://daily.redbullmusicacademy.com/2017/05/teddy-riley-new-jack-swing-oral-history",
+          "https://thesubgenropedia.transistor.fm/episodes/new-jack-swing",
+          "https://en.wikipedia.org/wiki/My_Prerogative"
+        ]
+      },
+      "text": "New jack swing is a drum-machine groove: programmed hats in offbeat-accented sixteenth-note triplets — the 'swingbeat' — under a dominant, deliberately loud snare that Hank Shocklee says was not even in tune with the track. Machines were the TR-808, Roland R-8, LinnDrum, SP-1200 and Akai samplers; Riley's MPC60 swing setting was studied by other engineers. Tempo runs about 95 to 105 BPM and up — My Prerogative is 120."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.encyclopedia.com/people/literature-and-arts/music-popular-and-jazz-biographies/timbaland",
+          "https://en.wikipedia.org/wiki/One_in_a_Million_(Aaliyah_song)",
+          "https://en.wikipedia.org/wiki/Are_You_That_Somebody%3F"
+        ]
+      },
+      "text": "Timbaland's late-90s R&B is built on syncopation and hesitation: kick patterns stuttering in triple-time bursts and stop-start grooves (One in a Million, called jungle at a ballad tempo, its rapid staccato beats run with drum-and-bass mixing), and Are You That Somebody? cross-cut with beatboxing, staccato guitars and baby noises — beats he made himself rather than lifted from samples."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.mixgraph.io/bpm-for/r-b",
+          "https://orphiq.com/resources/bpm-tempo-guide",
+          "https://www.whippedcreamsounds.com/what-tempo-is-rnb-music-made-at-we-analysed-50-songs",
+          "https://www.hooktheory.com/theorytab/view/swv/weak",
+          "https://www.hooktheory.com/theorytab/view/boyz-ii-men/ill-make-love-to-you",
+          "https://www.hooktheory.com/theorytab/view/destinys-child/say-my-name",
+          "https://www.hooktheory.com/theorytab/view/frank-ocean/thinkin-bout-you",
+          "https://www.hooktheory.com/theorytab/view/boyz-ii-men/end-of-the-road"
+        ]
+      },
+      "text": "Tempo depends on how it is counted. 794 measured R&B tracks have a 108 BPM median, half between 96 and 121, nine in ten between 87 and 131; editorial guides say 60–100 with slow jams at the bottom. The gap is double counting: Leave the Door Open is 74 felt and listed at 148, Weak and I'll Make Love to You are transcribed at 128 and 143, and half-time grooves with the snare on 3 — Say My Name at 136, Thinkin Bout You at 130 — feel like 65–70. Slow jams are often in 6/8: End of the Road at about 50 to the dotted quarter."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://emastered.com/blog/r-n-b-chord-progressions"
+        ]
+      },
+      "text": "Chords are extended — sevenths, ninths, elevenths, thirteenths, some altered — because extensions make smoother moves between chords; ii–V–I is the most recognisable motion, borrowed chords from the parallel key and half-step slides supply the tension. Classic voicings: Sade's i–v–iv–v in minor sevenths, Usher's My Boo with an augmented seventh on V, Michael Jackson's Rock with You walking I–iii–IV–ii–V."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/bobby-brown/my-prerogative",
+          "https://www.hooktheory.com/theorytab/view/tlc/creep",
+          "https://www.hooktheory.com/theorytab/view/janet-jackson/thats-the-way-love-goes",
+          "https://www.hooktheory.com/theorytab/view/tlc/no-scrubs",
+          "https://www.hooktheory.com/theorytab/view/bryson-tiller/dont",
+          "https://www.hooktheory.com/theorytab/view/sza/kill-bill",
+          "https://www.hooktheory.com/theorytab/view/rihanna/umbrella"
+        ]
+      },
+      "text": "The hits loop short minor progressions and colour them: My Prerogative and Creep are two-chord vamps (i–V7, i7–iv7); That's the Way Love Goes, Say My Name, Wicked Games and Umbrella cycle three or four diatonic minor chords; No Scrubs and Don't use the harmonic-minor V7; Kill Bill runs ii–V–I with V7/ii, Thinkin Bout You slips in a borrowed bIIImaj7, and Umbrella's bridge changes key."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://daily.redbullmusicacademy.com/2017/05/teddy-riley-new-jack-swing-oral-history",
+          "https://en.wikipedia.org/wiki/Say_My_Name",
+          "https://en.wikipedia.org/wiki/Umbrella_(Rihanna_song)",
+          "https://en.wikipedia.org/wiki/Kill_Bill_(SZA_song)"
+        ]
+      },
+      "text": "The bass is a keyboard or a machine more often than a player: the Yamaha DX100 FM patch known as 'Lately Bass' recurs across Keith Sweat and Heavy D records of the new jack era; Say My Name rides syncopated 808 programming; Umbrella has a distorted bassline under its synths; Kill Bill's bass is an electric guitar tuned down an octave."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Hip_hop_soul",
+          "https://en.wikipedia.org/wiki/Trapsoul"
+        ]
+      },
+      "text": "Hip-hop soul (from Mary J. Blige's What's the 411?, 1992) put R&B singing over the sample-heavy boom-bap backing tracks of hip-hop rather than new jack swing's synths, and Jodeci's 1993 album moved toward rhythm-led hip-hop production; trap soul (Bryson Tiller's Trapsoul, 2015) did the same with trap."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Say_My_Name",
+          "https://en.wikipedia.org/wiki/Brandy_Norwood",
+          "https://en.wikipedia.org/wiki/Melisma",
+          "https://www.soundonsound.com/node/4920578",
+          "https://www.soundonsound.com/node/4920578?page=2"
+        ]
+      },
+      "text": "Vocals are the arrangement: parts split across singers (in Say My Name Beyoncé leads verses and bridge, Kelly Rowland adds the second part in the chorus, LeToya Luckett the high harmony in the pre-chorus); Brandy built tightly packed walls of interlocking background voices and long cascading runs; melisma, popularised by Mariah Carey's Vision of Love (1990) and Whitney Houston, was the measure of a singer until the trend turned around 2008–09. A vocal producer such as Kuk Harrell, who vocal-produced Umbrella, cuts a lead in about an hour and a half, comps takes as they are sung and tunes with Melodyne rather than Auto-Tune."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/New_jack_swing",
+          "https://en.wikipedia.org/wiki/Jimmy_Jam_and_Terry_Lewis",
+          "https://en.wikipedia.org/wiki/Contemporary_R%26B",
+          "https://en.wikipedia.org/wiki/Say_My_Name",
+          "https://en.wikipedia.org/wiki/One_in_a_Million_(Aaliyah_song)"
+        ]
+      },
+      "text": "The 1986–93 palette is digital: TR-808 (used on most Jam & Lewis productions), LinnDrum, Roland R-8, SP-1200 and MPC samplers, DX7 and D-50 synthesizers; Janet Jackson's Control fused funk and disco rhythm with heavy synthesizers, percussion, sound effects and a rap sensibility. Late-90s records add synthesized strings and 70s wah-wah guitar licks (Say My Name), shimmering synths and found sounds (One in a Million)."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Alternative_R%26B",
+          "https://en.wikipedia.org/wiki/House_of_Balloons",
+          "https://en.wikipedia.org/wiki/Channel_Orange"
+        ]
+      },
+      "text": "Alternative R&B (Frank Ocean, The Weeknd, SZA, Miguel; mid-2000s on) is echo-laden and lofty, built on synthesizers and filtered drums with nods to 80s Prince, borrowing from indie, rock and EDM: The Weeknd's House of Balloons (2011) is dark, sampling Siouxsie and the Banshees, Beach House and Cocteau Twins; Channel Orange (2012) uses electronic keyboards, muted percussion and dub reverb."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://www.soundonsound.com/node/4911071",
+          "https://en.wikipedia.org/wiki/Ctrl_(SZA_album)",
+          "https://www.ujam.com/tutorials/how-to-produce-laid-back-rb/"
+        ]
+      },
+      "text": "The lead sits dry and close: Jimmy Douglass, Timbaland's mixer, uses reverb only moderately and calls his signature a dry sound, working the kick to be thick around 60 Hz without mud; SZA's Ctrl kept the voice upfront and natural with reverb turned down for intimacy; laid-back R&B guides warn never to over-compress the mix."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre",
+          "https://luvlang.studio/research/loudness-2026",
+          "https://lufs.to/genres/rnb",
+          "https://lufs.to/methodology"
+        ]
+      },
+      "text": "Released masters: 11,412 R&B/Soul tracks from 2016–2026 have a −9.6 LUFS median, middle half −11.2 to −8.3 (BS.1770); a reference set of 8 R&B releases from 2004–2024 measures −13.0; lufs.to's 54 RnB tracks (1990s–2000s) sit at −11.9 with a 14.2 dB median peak-to-RMS. lufs.to's smaller sample takes in catalogue such as Ray Charles and runs quieter than the 2016–2026 survey."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://mtosmt.org/issues/mto.11.17.3/mto.11.17.3.summach.html",
+          "https://en.wikipedia.org/wiki/Say_My_Name",
+          "https://www.hooktheory.com/theorytab/view/tlc/no-scrubs",
+          "https://www.hooktheory.com/theorytab/view/janet-jackson/thats-the-way-love-goes",
+          "https://www.hooktheory.com/theorytab/view/swv/weak",
+          "https://en.wikipedia.org/wiki/Umbrella_(Rihanna_song)",
+          "https://en.wikipedia.org/wiki/Channel_Orange",
+          "https://en.wikipedia.org/wiki/House_of_Balloons"
+        ]
+      },
+      "text": "Verse, pre-chorus, chorus and bridge: by the late 1980s, when new jack swing arrived, 60% of Billboard's top verse-chorus songs had a pre-chorus, and the R&B hits keep one (Say My Name, No Scrubs, That's the Way Love Goes, Weak); a post-chorus tag can carry the hook — Umbrella's 'ella, ella' follows each chorus, then a bridge and a fade. Alternative R&B lets songs run long and change shape: Pyramids is 9:52, moving from synth-funk to slow jam, and House of Balloons tracks reach 7:39."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Slow_jam",
+          "https://en.wikipedia.org/wiki/Alternative_R%26B",
+          "https://en.wikipedia.org/wiki/Ctrl_(SZA_album)"
+        ]
+      },
+      "text": "The slow jam's subject is romance and longing; alternative R&B widens it to drugs, spirituality and personal philosophy, and SZA's Ctrl is confessional, frank and often comically blunt about jealousy, social media and low self-esteem in a relationship."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "inferred": "computed by Bench/genres/melody_ranges.py over https://colinraffel.com/projects/lmd/ and https://www.tagtraum.com/msd_genre_datasets.html; whole-song ranges from Wikipedia (My Prerogative) and Hooktheory (That's the Way Love Goes, Say My Name)"
+      },
+      "text": "Melody ranges are measured, not recalled: 416 eight-bar windows from the melody tracks of 72 Lakh MIDI files labelled RnB by tagtraum, each read with the app's own Melodist arithmetic; the range is the 10th to 90th percentile, typical the median. Performed MIDI, so note lengths are as played. The share of chord tones is not measured: the files carry no chords. The label is the dataset's RnB label, which spans soul, Motown, funk and contemporary R&B. Whole-song vocal ranges run wider than a window: My Prerogative C4–A5, That's the Way Love Goes A#3–F5, Say My Name A#3–D5."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/New_jack_swing",
+          "https://en.wikipedia.org/wiki/My_Prerogative",
+          "https://www.attackmagazine.com/features/interview/roger-linn-swing-groove-magic-mpc-timing/"
+        ]
+      },
+      "text": "Programming new jack swing hats straight. The swing is the genre — sixteenths swung to triplets, accented off the beat — so set the swing near the MPC's 66% triplet setting, not a light 54%."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://emastered.com/blog/r-n-b-chord-progressions",
+          "https://www.hooktheory.com/theorytab/view/sza/kill-bill",
+          "https://www.hooktheory.com/theorytab/view/frank-ocean/thinkin-bout-you"
+        ]
+      },
+      "text": "Writing triads that never leave the key. R&B lives on sevenths and ninths, ii–V motion, a secondary dominant (Kill Bill's V7/ii) or a borrowed chord (Thinkin Bout You's bIIImaj7)."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/destinys-child/say-my-name",
+          "https://www.whippedcreamsounds.com/what-tempo-is-rnb-music-made-at-we-analysed-50-songs",
+          "https://orphiq.com/resources/bpm-tempo-guide"
+        ]
+      },
+      "text": "Reading a half-time groove's BPM as its speed. Say My Name is transcribed at 136 and a slow jam can be listed at double its felt tempo; judge by where the snare falls, and do not speed a half-time R&B groove up to make it 'R&B tempo'."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.soundonsound.com/node/4911071",
+          "https://en.wikipedia.org/wiki/Ctrl_(SZA_album)",
+          "https://www.ujam.com/tutorials/how-to-produce-laid-back-rb/"
+        ]
+      },
+      "text": "Drowning the lead in reverb or squashing the mix. The voice sits dry and upfront (Douglass's dry sound, SZA's reverb turned down) and the mix keeps its dynamics."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/bobby-brown/my-prerogative"
+        ]
+      },
+      "mode": "harmonic minor",
+      "roman": "i - V7",
+      "text": "The new jack swing vamp: My Prerogative's whole song, tonic minor against the dominant seventh."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/janet-jackson/thats-the-way-love-goes"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "VImaj7 - v - i",
+      "text": "Jam & Lewis's That's the Way Love Goes loop: a major seventh on VI falling through the minor v to i."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/destinys-child/say-my-name"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "i - VI - iv - VII",
+      "text": "Say My Name's verse-to-chorus cycle, with i, iv and v all minor; the verse colours VII as a seventh with a suspended second."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/sza/kill-bill"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "ii9 - V7 - Imaj7 - VI7",
+      "text": "Kill Bill's ii–V–I, turned back to ii by VI7, the secondary dominant V7/ii."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://emastered.com/blog/r-n-b-chord-progressions",
+          "https://www.hooktheory.com/theorytab/view/frank-ocean/thinkin-bout-you"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "IVmaj7 - ii9 - iii7 - vi7 - IVmaj7 - iii7 - bIIImaj7 - ii7",
+      "text": "Thinkin Bout You: diatonic sevenths with one borrowed bIIImaj7 sliding by half step into ii."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.mixgraph.io/bpm-for/r-b",
+          "https://orphiq.com/resources/bpm-tempo-guide",
+          "https://www.whippedcreamsounds.com/what-tempo-is-rnb-music-made-at-we-analysed-50-songs",
+          "https://www.hooktheory.com/theorytab/view/destinys-child/say-my-name",
+          "https://www.hooktheory.com/theorytab/view/frank-ocean/thinkin-bout-you"
+        ]
+      },
+      "feature": "tempo.bpm",
+      "high": 140,
+      "low": 60,
+      "typical": 108,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "inferred": "New jack swing's hats are sixteenth-note triplets — Riley's productions swing their sixteenths as triplets (Wikipedia: New jack swing, My Prerogative) — which is Roger Linn's 66% (Attack Magazine interview: 66% is perfect triplet swing); Riley set his MPC60's swing (RBMA oral history); the half-time trap hats of 2010s R&B are written straight (Trap Rolling Hats, trap profile), so 50 is the other end."
+      },
+      "feature": "swing.percent",
+      "high": 67,
+      "low": 50,
+      "unit": "MPC percent"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre",
+          "https://luvlang.studio/research/loudness-2026",
+          "https://lufs.to/genres/rnb"
+        ]
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -8.3,
+      "low": -13.0,
+      "typical": -9.6,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "crest = 5.28 - 0.743 x integrated LUFS, the relation fitted across about 2,500 tracks' peak-minus-RMS on lufs.to (https://lufs.to/methodology defines its dynamic range as peak minus RMS, the app's crest), applied over this profile's -13.0 to -8.3 LUFS, typical -9.6 -> 12.4 dB; lufs.to's own 54 measured RnB tracks have a median dynamic range of 14.2, inside the band."
+      },
+      "feature": "mix.crest.db",
+      "high": 14.9,
+      "low": 11.4,
+      "typical": 12.4,
+      "unit": "dB"
+    },
+    {
+      "evidence": {
+        "inferred": "counted from the Hooktheory transcriptions opened for this profile: My Prerogative and Creep 2, That's the Way Love Goes and Don't 3, Wicked Games and Kill Bill 4, Say My Name and Remember the Time 5, Adorn 6, No Scrubs 7, Thinkin Bout You about 8, End of the Road and Umbrella (with its bridge in another key) about 9; Weak, at 12, is the outlier above."
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 9,
+      "low": 2,
+      "typical": 5,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "inferred": "from the Hooktheory progressions read in their stated keys: Say My Name, Wicked Games, Creep and That's the Way Love Goes are fully diatonic (1.0); Thinkin Bout You's borrowed bIIImaj7 gives 7/8; Kill Bill's V7/ii and Remember the Time's major V7 in minor give 0.8; Umbrella's verse V in B-flat minor gives 0.75. New jack swing's i–V7 loops are keyed in harmonic minor by Hooktheory and read 1.0 there."
+      },
+      "feature": "harmony.diatonic.ratio",
+      "high": 1.0,
+      "low": 0.75,
+      "unit": "fraction"
+    },
+    {
+      "evidence": {
+        "inferred": "10th to 90th percentile and median of the album lengths cited in this profile: My Prerogative 4:51, End of the Road 5:48, One in a Million 4:30, Are You That Somebody? 4:26, Say My Name 4:31, Umbrella 4:36, Thinkin Bout You 3:20, Wicked Games 5:25, Don't 3:18, The Weekend 4:32, Love Galore 4:35, Kill Bill 2:35 (the streaming-era short end)."
+      },
+      "feature": "form.minutes",
+      "high": 5.4,
+      "low": 3.3,
+      "typical": 4.5,
+      "unit": "minutes"
+    },
+    {
+      "evidence": {
+        "inferred": "the form below puts the first chorus after a 4-bar intro, a 16-bar verse and a 4-bar pre-chorus: 24 bars, which is 53 s at the 108 BPM median and 66 s at Umbrella's 87; with an 8-bar first verse it is 16 bars, 36 s at 108."
+      },
+      "feature": "form.hook.seconds",
+      "high": 70,
+      "low": 35,
+      "typical": 53,
+      "unit": "seconds"
+    },
+    {
+      "evidence": {
+        "inferred": "counted from the form below (10 sections); 8 without intro and outro, 11 with a post-chorus such as Umbrella's 'ella' tag (Wikipedia: Umbrella)."
+      },
+      "feature": "form.sections",
+      "high": 11,
+      "low": 8,
+      "typical": 10,
+      "unit": "sections"
+    },
+    {
+      "evidence": {
+        "inferred": "distinct names in the form below: intro, verse, pre-chorus, chorus, bridge, outro (6) — the verse/pre-chorus/chorus/bridge set Wikipedia and Hooktheory list for Say My Name; a post-chorus adds one, a song without intro or outro drops one."
+      },
+      "feature": "form.turns",
+      "high": 7,
+      "low": 5,
+      "typical": 6,
+      "unit": "turns"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.range.semitones",
+      "high": 19,
+      "low": 7,
+      "typical": 12,
+      "unit": "semitones"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.leap.max.semitones",
+      "high": 12,
+      "low": 4,
+      "typical": 7,
+      "unit": "semitones"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.stepwise.ratio",
+      "high": 0.88,
+      "low": 0.52,
+      "typical": 0.71,
+      "unit": "fraction"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.notes.per.bar",
+      "high": 7.1,
+      "low": 2.4,
+      "typical": 4.3,
+      "unit": "notes per bar"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.rest.ratio",
+      "high": 0.6,
+      "low": 0.12,
+      "typical": 0.33,
+      "unit": "fraction"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.peak.count",
+      "high": 6,
+      "low": 1,
+      "typical": 2,
+      "unit": "notes"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://colinraffel.com/projects/lmd/",
+          "https://www.tagtraum.com/msd_genre_datasets.html"
+        ]
+      },
+      "feature": "melody.motif.ratio",
+      "high": 0.79,
+      "low": 0.0,
+      "typical": 0.36,
+      "unit": "fraction"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Bobby Brown",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/My_Prerogative",
+          "https://www.hooktheory.com/theorytab/view/bobby-brown/my-prerogative"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "swing.percent",
+        "harmony.chords.distinct"
+      ],
+      "listenFor": "From the first bar, sixteenths swung to triplets over an A-minor i–V7 vamp at 120 BPM (Hooktheory transcribes it at 110).",
+      "title": "My Prerogative",
+      "year": 1988
+    },
+    {
+      "artist": "Boyz II Men",
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/boyz-ii-men/end-of-the-road",
+          "https://en.wikipedia.org/wiki/End_of_the_Road_(Boyz_II_Men_song)"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.minutes",
+        "harmony.diatonic.ratio"
+      ],
+      "listenFor": "Babyface's 6/8 slow jam at about 50 to the dotted quarter, the pre-chorus turning to the relative minor, and the a cappella ending of the 5:48 album version.",
+      "title": "End of the Road",
+      "year": 1992
+    },
+    {
+      "artist": "Aaliyah",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/One_in_a_Million_(Aaliyah_song)",
+          "https://www.encyclopedia.com/people/literature-and-arts/music-popular-and-jazz-biographies/timbaland"
+        ]
+      },
+      "features": [
+        "grid.subdivision",
+        "form.minutes"
+      ],
+      "listenFor": "Throughout, Timbaland's kick stuttering in triple-time bursts under a slow, sung-rapped vocal, with crickets and aircraft in the gaps.",
+      "title": "One in a Million",
+      "year": 1996
+    },
+    {
+      "artist": "Destiny's Child",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Say_My_Name",
+          "https://www.hooktheory.com/theorytab/view/destinys-child/say-my-name",
+          "https://mixmag.asia/read/say-my-name-destinys-child-inspired-uk-garage-2-step-rodney-jerkins-news"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "harmony.chords.distinct",
+        "form.turns"
+      ],
+      "listenFor": "A C-minor i–VI–iv–VII transcribed at 136 BPM, syncopated 808s, synth strings and wah guitar, and the harmony parts handed between singers in the pre-chorus and second chorus.",
+      "title": "Say My Name",
+      "year": 1999
+    },
+    {
+      "artist": "Rihanna",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Umbrella_(Rihanna_song)",
+          "https://www.hooktheory.com/theorytab/view/rihanna/umbrella"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.sections",
+        "harmony.diatonic.ratio"
+      ],
+      "listenFor": "At 87 BPM in B-flat minor, the VI–III–VII7–i chorus followed every time by the 'ella, ella' post-chorus, then a bridge in G-flat before the fade.",
+      "title": "Umbrella",
+      "year": 2007
+    },
+    {
+      "artist": "SZA",
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/sza/kill-bill",
+          "https://en.wikipedia.org/wiki/Kill_Bill_(SZA_song)"
+        ]
+      },
+      "features": [
+        "harmony.diatonic.ratio",
+        "form.minutes",
+        "tempo.bpm"
+      ],
+      "listenFor": "From the intro, a ii9–V7–I loop in A-flat turned by its V7/ii at 89 BPM over boom-bap drum machines, done in 2:35.",
+      "title": "Kill Bill",
+      "year": 2022
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "808",
+      "fm",
+      "sub"
+    ],
+    "instruments": [
+      "fm-piano",
+      "strings",
+      "clean-electric",
+      "pad",
+      "oohs"
+    ],
+    "machines": [
+      "tr808",
+      "linn",
+      "sp1200",
+      "mpc60",
+      "trap"
+    ]
+  },
+  "summary": "Soul singing over producer-built, programmed rhythm tracks: new jack swing's drum machines with sixteenths swung toward triplets (from 1986), hip-hop soul and Timbaland's stuttering syncopation in the 1990s, and the dark, echo-laden synths and half-time trap drums of 2010s alternative R&B. Harmony is seventh, ninth and eleventh chords in short minor loops, ii–V moves, secondary dominants and borrowed chords, under a melismatic lead with stacked harmonies.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Contemporary_R%26B",
+      "https://en.wikipedia.org/wiki/New_jack_swing",
+      "https://en.wikipedia.org/wiki/Alternative_R%26B",
+      "https://emastered.com/blog/r-n-b-chord-progressions"
+    ]
+  }
+}

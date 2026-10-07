@@ -28,6 +28,10 @@ public enum BassLineage: String, Codable, Sendable, Hashable, CaseIterable {
     case motown
     case rolling
     case logDrum = "log-drum"
+    case dub
+    case afrobeat
+    case pedal
+    case boomBap = "boom-bap"
 
     public var name: String {
         switch self {
@@ -42,6 +46,10 @@ public enum BassLineage: String, Codable, Sendable, Hashable, CaseIterable {
         case .motown: return "Motown"
         case .rolling: return "Rolling sub"
         case .logDrum: return "Log drum"
+        case .dub: return "Dub"
+        case .afrobeat: return "Afrobeat"
+        case .pedal: return "Pedal"
+        case .boomBap: return "Boom-bap"
         }
     }
 
@@ -59,6 +67,10 @@ public enum BassLineage: String, Codable, Sendable, Hashable, CaseIterable {
         case .motown: return "Jamerson's melodic eighths: syncopated pickups and chromatic passing tones (Motown, soul)"
         case .rolling: return "long sub notes, one to three a bar, moving under the breaks (drum & bass, dubstep, garage)"
         case .logDrum: return "short pitched log-drum hits off the beat (amapiano)"
+        case .dub: return "a heavy riff with room in it: the root held from one, the fifth and the root again late in the bar (dub, roots reggae, trip-hop)"
+        case .afrobeat: return "a one-bar ostinato of short syncopated roots, sevenths and fifths, the same every bar, interlocking with the guitars (afrobeat)"
+        case .pedal: return "one long root a chord, held across the bars it lasts: a drone under the harmony (ambient, film score, a ballad's intro)"
+        case .boomBap: return "a played bass on the kick's own hits, roots cut short, a pentatonic pickup into the next bar (boom-bap, lo-fi)"
         }
     }
 
@@ -69,7 +81,9 @@ public enum BassLineage: String, Codable, Sendable, Hashable, CaseIterable {
         switch self {
         case .palladino: return 40
         case .thundercat: return 10
-        case .programmed, .octave, .oneDrop, .tumbao, .walking, .rootFifth, .motown, .rolling, .logDrum: return 0
+        case .programmed, .octave, .oneDrop, .tumbao, .walking, .rootFifth, .motown, .rolling, .logDrum, .dub, .afrobeat, .pedal: return 0
+        // Laid back with the drums of a sampled break, not ahead of them.
+        case .boomBap: return 25
         }
     }
 
@@ -82,6 +96,9 @@ public enum BassLineage: String, Codable, Sendable, Hashable, CaseIterable {
         case .programmed, .rolling: return 16...40
         case .octave, .oneDrop, .tumbao, .rootFifth, .logDrum: return 28...52
         case .walking, .motown: return 28...55
+        case .dub: return 24...48
+        case .afrobeat, .boomBap: return 28...52
+        case .pedal: return 21...45
         }
     }
 
@@ -95,6 +112,9 @@ public enum BassLineage: String, Codable, Sendable, Hashable, CaseIterable {
         case .octave: return 28...40
         case .oneDrop, .tumbao, .walking, .rootFifth, .motown: return 31...43
         case .logDrum: return 33...45
+        case .dub: return 28...40
+        case .afrobeat, .boomBap: return 31...43
+        case .pedal: return 26...38
         }
     }
 
@@ -108,6 +128,8 @@ public enum BassLineage: String, Codable, Sendable, Hashable, CaseIterable {
         case .rootFifth: return "picked"
         case .rolling: return "reese"
         case .logDrum: return "log-drum"
+        case .dub, .afrobeat, .boomBap: return "finger"
+        case .pedal: return "sub"
         }
     }
 }
@@ -225,7 +247,9 @@ public enum BassWriter {
         case .programmed:
             drafts = writeProgrammed(request, kicks: kicks, harmony: harmony, beatsPerBar: beatsPerBar,
                                      bars: bars)
-        case .octave, .oneDrop, .tumbao, .walking, .rootFifth, .motown, .rolling, .logDrum:
+        case .boomBap:
+            drafts = writeBoomBap(request, kicks: kicks, harmony: harmony, beatsPerBar: beatsPerBar, bars: bars, rng: &rng)
+        case .octave, .oneDrop, .tumbao, .walking, .rootFifth, .motown, .rolling, .logDrum, .dub, .afrobeat, .pedal:
             drafts = BassFigures.write(request, harmony: harmony, beatsPerBar: beatsPerBar, bars: bars, rng: &rng)
         }
 
@@ -403,6 +427,38 @@ public enum BassWriter {
         return drafts
     }
 
+    // MARK: Boom-bap — a played bass on the break's kick
+
+    /// A bass player on top of a sampled break: a root on each of the kick's hits, cut well short
+    /// of the next so the kick has the low end to itself between them, and — where the kick leaves
+    /// the end of a bar empty — a pentatonic pickup, the flat seventh or the fifth, into the next.
+    private static func writeBoomBap(_ request: BassRequest, kicks: [Double], harmony: HarmonyMap,
+                                     beatsPerBar: Double, bars: Int, rng: inout BassRandom) -> [Draft] {
+        let total = beatsPerBar * Double(bars)
+        let onsets = kicks.isEmpty ? stride(from: 0, to: total, by: beatsPerBar / 2).map { $0 } : kicks
+        var drafts: [Draft] = []
+        var last: Int?
+        for (i, onset) in onsets.enumerated() {
+            let chord = harmony.chord(at: onset)
+            let pitch = place(chord.bass, near: last, in: .boomBap)
+            let next = i + 1 < onsets.count ? onsets[i + 1] : total
+            let end = max(onset + 0.2, min(onset + 0.75, onset + (next - onset) * 0.6))
+            let onTheBar = abs(onset.truncatingRemainder(dividingBy: beatsPerBar)) < 1e-6
+            drafts.append(Draft(pitch: pitch, start: onset, end: end, velocity: onTheBar ? 108 : 98))
+            last = pitch
+        }
+        guard request.density > 0.4 else { return drafts }
+        for bar in 0..<bars {
+            let at = Double(bar + 1) * beatsPerBar - 0.5
+            guard at < total, !onsets.contains(where: { abs($0 - at) < 0.3 }) else { continue }
+            let chord = harmony.chord(at: at)
+            let root = place(chord.bass, near: last, in: .boomBap)
+            let pitch = clampToRegister(root + BassFigures.tone(of: chord, rng.unit() < 0.55 ? 10 : 7) - 12, .boomBap)
+            drafts.append(Draft(pitch: pitch, start: at, end: at + 0.35, velocity: 90))
+        }
+        return drafts
+    }
+
     // MARK: Shared arithmetic
 
     /// R14's budget, from density. Under 100 bpm a verse gets at most six attacks a bar in lineage
@@ -416,6 +472,10 @@ public enum BassWriter {
         case .walking, .motown, .logDrum: ceiling = 8
         case .oneDrop, .rootFifth: ceiling = 6
         case .tumbao, .rolling: ceiling = 3
+        case .dub: ceiling = 4
+        case .afrobeat: ceiling = 8
+        case .pedal: ceiling = 2
+        case .boomBap: ceiling = 6
         }
         return max(1, min(ceiling, Int((2 + density * Double(ceiling - 2)).rounded())))
     }

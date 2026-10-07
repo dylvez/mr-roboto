@@ -101,7 +101,7 @@ public struct Progression: Hashable, Codable, Sendable {
 
     /// The progression moved by `semitones`, with its key moved to match.
     public func transposed(by semitones: Int) -> Progression {
-        let newKey = Key(tonicPitchClass: key.tonic.pitchClass.transposed(by: semitones), mode: key.mode)
+        let newKey = key.transposed(by: semitones)
         let newBars = bars.map { bar in
             ProgressionBar(chords: bar.chords.map { ChordSpan($0.chord.transposed(by: semitones), beats: $0.beats) })
         }

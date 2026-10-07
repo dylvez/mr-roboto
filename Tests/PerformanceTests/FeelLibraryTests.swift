@@ -174,7 +174,7 @@ struct FeelLibraryTests {
 
     @Test("an idiom nothing carries falls back rather than returning nothing")
     func unknownIdiomFallsBack() {
-        let suggestions = Self.library.suggest(for: 120, idiom: Idiom("klezmer"), limit: 3)
+        let suggestions = Self.library.suggest(for: 120, idiom: Idiom("polka"), limit: 3)
         #expect(suggestions.count == 3, "an unknown idiom should rank on tempo, not empty out")
         #expect(suggestions.allSatisfy { $0.tempoRange.contains(120) })
     }

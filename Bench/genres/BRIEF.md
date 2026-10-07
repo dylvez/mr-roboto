@@ -80,7 +80,10 @@ indent, valid JSON exactly in this shape:
 
 Bars in `form.sections` are a typical arrangement, in bars of the genre's meter; say in a note if
 forms vary a lot. `progressions` use roman numerals relative to the key (upper case major, lower
-case minor, `b` for flats, `7`/`maj7`/`m7` suffixes allowed). Aim for: 3–4 lineages, 4–6 references,
+case minor, `b` for flats, `7`/`maj7`/`m7` suffixes allowed). `mode` is one of the church modes
+(ionian, dorian, phrygian, lydian, mixolydian, aeolian, locrian) or one of these scales the app
+also keys songs in: harmonic minor, melodic minor, phrygian dominant, double harmonic,
+hungarian minor, ukrainian dorian. Aim for: 3–4 lineages, 4–6 references,
 2–5 progressions (0 if the genre is not harmony-driven — then say so in a harmony note), 8–15 notes
 covering most areas, 6–15 ranges, 2–4 pitfalls.
 
@@ -88,7 +91,8 @@ covering most areas, 6–15 ranges, 2–4 pitfalls.
 a groove was written in). Use only these: hip-hop, boom-bap, lo-fi, trap, trip-hop, neo-soul, soul,
 motown, funk, house, electronic, disco, breakbeat, drum-and-bass, rock, pop, blues, jazz, latin,
 reggae, country, folk, ballad, musical-theatre, waltz, uk-garage, odd-meter, new-orleans,
-jersey-club, gospel, dubstep, drill, amapiano, afrobeats, afrobeat, afro-cuban.
+jersey-club, gospel, dubstep, drill, amapiano, afrobeats, afrobeat, afro-cuban, swing, ska, dub,
+dancehall, rnb, cinematic, ambient, flamenco, klezmer, middle-eastern.
 
 `feels` — names from the app's feel library that belong to this genre (exact names, only these):
 Ballad Brushes; Pop Piano Backbeat; Travis Shaker; Folk Strum; Broadway Ride; Soul Tambourine;
@@ -97,8 +101,10 @@ Pocket; Standard Rock; Four on the Floor; Boom-Bap; Shuffle; Bossa Nova; Train B
 Motown; Breakbeat (Amen); Waltz; Jazz Waltz; 3/4 Ballad; Disco; Classic House; UK Garage 2-Step;
 Drum & Bass; Halftime; Jersey Club; Afrobeats; Amapiano; Afrobeat; Second Line; UK Drill; One-Chord
 Funk; Gospel Shout; Country Two-Step; Slow Blues 12/8; Afro-Cuban 6/8; Five Four; Seven Eight; Son
-Clave 3-2; Son Clave 2-3; Rumba Clave; Salsa Tumbao; Cha-Cha-Chá; Samba; Baião; Dembow.
-An empty list is allowed if none fits.
+Clave 3-2; Son Clave 2-3; Rumba Clave; Salsa Tumbao; Cha-Cha-Chá; Samba; Baião; Dembow; Cumbia;
+Cajón Groove; Maqsum; Big Band Swing; Ska; Steppers; Rockers; Dancehall; New Jack Swing; Slow Jam;
+Cinematic Toms; Rumba Flamenca; Bulerías; Bulgar; Saidi.
+An empty list is allowed if none fits (a genre with no drums at all, such as much ambient music).
 
 `bassHands` — which of the app's bass-writing styles fit (the app will implement all of these):
 - `palladino` — behind the kick 20–65 ms, roots and slides, note-off on the beat (neo-soul, D'Angelo).
@@ -112,11 +118,17 @@ An empty list is allowed if none fits.
 - `motown` — Jamerson-style melodic eighths with chromatic passing tones and syncopated pickups.
 - `rolling` — long sustained sub or reese notes moving under breakbeats, one or two per bar (drum & bass, dubstep, UK garage).
 - `log-drum` — amapiano log-drum figures: short pitched percussive hits syncopated off the beat.
+- `dub` — heavy, sparse, melodic riff of roots, fifths and octaves, half-time in feel, leaving space (dub, roots reggae, trip-hop).
+- `afrobeat` — a one- or two-bar syncopated ostinato that repeats under the whole section, many rests, interlocking with the guitars (Fela, afrobeat).
+- `pedal` — one long held root per chord, or a drone under several chords (ambient, film score, ballads).
+- `boom-bap` — a played bass that follows the kick with short roots and a pentatonic pickup, cut short (boom-bap, lo-fi hip-hop).
 
 `sounds` — only these ids:
 - machines: tr808, tr909, linn, cr78, tr606, tr707, dmx, simmons, sp1200, mpc60, studio, jazz, rock, funk, vintage, trap, lofi
 - bass: sub, finger, picked, slap, upright, fretless, muted, 808, acid, analogue, reese, square, fm, rubber, pluck, log-drum
-- instruments: grand-piano, fm-piano, felt-piano, clavinet, harpsichord, toy-piano, rock-organ, pipe-organ, harmonium, combo-organ, vibraphone, xylophone, glockenspiel, kalimba, steel-drum, music-box, tubular-bells, nylon-guitar, steel-guitar, clean-electric, overdrive-guitar, distorted-guitar, muted-guitar, harp, koto, banjo, pizzicato, strings, slow-strings, violin, cello, oohs, glass-pad, dark-pad, air-pad, sweep-pad, flute, clarinet, oboe, tenor-sax, alto-sax, pan-flute, synth-brass, trumpet, horns, bell-pluck, stab, saw-lead, sine-lead, chip-square, chip-pulse, chip-triangle, rhodes, wurlitzer, bell, marimba, juno, pad, choir, pluck, organ, lead, brass
+- instruments (an acoustic sound is played on the library's recording of it when there is one, and `horns`/`brass`
+  on its horn section; `organ`, `rock-organ`, `jazz-organ` and `gospel-organ` are tonewheel organs through a
+  rotating speaker): grand-piano, fm-piano, felt-piano, clavinet, harpsichord, toy-piano, rock-organ, jazz-organ, gospel-organ, pipe-organ, harmonium, combo-organ, vibraphone, xylophone, glockenspiel, kalimba, steel-drum, music-box, tubular-bells, nylon-guitar, steel-guitar, clean-electric, overdrive-guitar, distorted-guitar, muted-guitar, harp, koto, banjo, pizzicato, strings, slow-strings, violin, cello, oohs, glass-pad, dark-pad, air-pad, sweep-pad, flute, clarinet, oboe, tenor-sax, alto-sax, pan-flute, synth-brass, trumpet, horns, bell-pluck, stab, saw-lead, sine-lead, chip-square, chip-pulse, chip-triangle, rhodes, wurlitzer, bell, marimba, juno, pad, choir, pluck, organ, lead, brass
 
 ## The features (the only ones `ranges` may use; units exactly as stated)
 

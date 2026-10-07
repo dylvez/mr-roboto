@@ -1,0 +1,616 @@
+{
+  "aliases": [
+    "swing",
+    "swing era",
+    "big band",
+    "big band jazz",
+    "jazz orchestra",
+    "jump blues",
+    "jump swing",
+    "modern big band"
+  ],
+  "bassHands": [
+    "walking"
+  ],
+  "family": "jazz",
+  "feels": [
+    "Big Band Swing",
+    "Shuffle",
+    "Ballad Brushes"
+  ],
+  "form": {
+    "evidence": {
+      "inferred": "an AABA head of 32 bars (Wikipedia, Thirty-two-bar form) with Rogers' 8-16 bar intro, solos as long as the melody with backgrounds, the shout chorus placed about two-thirds of the way through (it starts at bar 105 of 156), and Mossman's recap and coda as a last A and a tag; 156 bars at the profile's typical 170 BPM run 3.7 minutes"
+    },
+    "sections": [
+      {
+        "bars": 8,
+        "name": "Intro"
+      },
+      {
+        "bars": 32,
+        "name": "Head"
+      },
+      {
+        "bars": 32,
+        "name": "Solo"
+      },
+      {
+        "bars": 32,
+        "name": "Solo"
+      },
+      {
+        "bars": 32,
+        "name": "Shout"
+      },
+      {
+        "bars": 16,
+        "name": "Out Chorus"
+      },
+      {
+        "bars": 4,
+        "name": "Coda"
+      }
+    ]
+  },
+  "id": "swing",
+  "idioms": [
+    "swing",
+    "jazz"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Count_Basie",
+          "https://en.wikipedia.org/wiki/Freddie_Green",
+          "https://en.wikipedia.org/wiki/Walter_Page",
+          "https://en.wikipedia.org/wiki/Jo_Jones"
+        ]
+      },
+      "name": "Count Basie Orchestra",
+      "period": "1935–1960s",
+      "why": "Built on the All-American Rhythm Section of Basie, Freddie Green, Walter Page and Jo Jones and on head arrangements developed in rehearsal; Basie said the band 'can really swing when it swings easy'. The 'Old Testament' band featured Lester Young; the 'New Testament' band from 1952 took in bebop. Arrangers Neal Hefti, Frank Foster, Ernie Wilkins and Sammy Nestico broadened its palette."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Duke_Ellington",
+          "https://en.wikipedia.org/wiki/Take_the_%22A%22_Train"
+        ]
+      },
+      "name": "Duke Ellington and Billy Strayhorn",
+      "period": "1926–1960s",
+      "why": "Ellington composed for individual players' sounds, from Bubber Miley's growl 'jungle style' to features for Hodges, Brown and Cootie Williams. Strayhorn, his 'right arm', wrote 'Take the A Train' (recorded 1941); the 1940s Blanton-Webster band freed the bass and filled the sax section to five, and Paul Gonsalves' 27-chorus solo at Newport in 1956 revived the band."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Benny_Goodman",
+          "https://en.wikipedia.org/wiki/Fletcher_Henderson"
+        ]
+      },
+      "name": "Benny Goodman and Fletcher Henderson",
+      "period": "1935–1940s",
+      "why": "Goodman's breakthrough at the Palomar Ballroom on 21 August 1935, played on Fletcher Henderson's arrangements, launched the swing era. Henderson and Don Redman had split the band into sections answering each other and riffing behind soloists. Goodman played Carnegie Hall in January 1938 and led integrated small groups with Teddy Wilson and Lionel Hampton."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Woody_Herman"
+        ]
+      },
+      "name": "Woody Herman's Herds",
+      "period": "1939–1987",
+      "why": "Herman's 'Woodchopper's Ball' (1939) sold over five million copies. The First Herd (1944-46) set bebop themes on a swing rhythm, with arrangers Ralph Burns and Neal Hefti, and the Second Herd (1947) was named the 'Four Brothers' band after a feature for its saxophonists Stan Getz, Zoot Sims, Serge Chaloff and Herbie Steward."
+    }
+  ],
+  "meters": [
+    "4/4"
+  ],
+  "name": "Big Band Swing",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.ismir2015.uma.es/articles/143_Paper.pdf",
+          "https://theinstrumentalist.com/?p=3953",
+          "https://theinstrumentalist.com/january-2018/jazz-drumset/",
+          "https://www.moderndrummer.com/2012/07/improve-your-bottom-line-part-1-bass-drum-comping-in-44/",
+          "https://en.wikipedia.org/wiki/Comping_(jazz)"
+        ]
+      },
+      "text": "The kit: the ride plays the common time-keeping pattern, a quarter note on the downbeat and a long-short pair of swung eighths across the backbeat (the skip note), with the hi-hat pedal on 2 and 4. The bass drum plays 'a felt-but-not-heard four beats' with a walking bass, a 'dynamically controlled quarter-note pulse' (feathering), and the snare comps under the ride. In full-band passages the drummer drives the ensemble and sets up the brass hits: a prep stroke on the snare, then the accent on crash and bass drum."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://mcg.uva.nl/mcg-2023/papers/honing-haas-2008.pdf",
+          "https://www.ismir2015.uma.es/articles/143_Paper.pdf",
+          "https://acoustics.org/pressroom/httpdocs/137th/friberg.html"
+        ]
+      },
+      "text": "The swing ratio is not a fixed 2:1. Honing and de Haas found drummers settle near 2.2:1 at beats longer than 350 ms (slower than about 170 BPM) and straighten as the tempo rises; Dittmar et al. measured drummers going from about 2.5:1 near 150 BPM to 1.5:1 at 250, and Friberg and Sundstrom from almost 3.5:1 when slow to 1:1 when very fast, with the short note about 100 ms at medium to fast tempos."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://lurklurk.org/lindyhop/musical_structure.html",
+          "https://atomicballroom.com/lessons/dance-styles/lindy-hop/",
+          "https://en.wikipedia.org/wiki/Li%27l_Darlin%27",
+          "https://songbpm.com/@count-basie/lil-darlin"
+        ]
+      },
+      "text": "Tempos for dancing run from about 120 to about 260 BPM: Shiny Stockings 120, In the Mood 170, Flying Home 200, Sing Sing Sing 225, Jumpin' at the Woodside 255, with 120-180 the Lindy Hop core. Slow swing is its own skill: Neal Hefti's Li'l Darlin' (1958, 66 BPM) 'dies if it isn't played at exactly the right tempo', and Hefti meant it as medium swing, not a ballad."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Walter_Page",
+          "https://www.learnjazzstandards.com/blog/learning-jazz/bass/write-walking-bass-line/",
+          "https://en.wikipedia.org/wiki/Jump_blues"
+        ]
+      },
+      "text": "Walter Page popularised the walking bass on all four beats in place of the two-beat style. A walking line puts the root on beat 1, chord tones (roots and fifths first) on 2 and 3, and on 4 a half step below or above the next root, or its fifth. Jump blues swaps it for an eight-to-the-bar boogie-woogie bass under a shuffle."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Big_band",
+          "https://en.wikipedia.org/wiki/Duke_Ellington"
+        ]
+      },
+      "text": "The band is four sections: trumpets, trombones, saxophones and a rhythm section of guitar, piano, double bass and drums, sometimes vibraphone. Swing-era bands had two or three trumpets, one or two trombones and three or four saxophones; Ellington's section grew to five saxophones with Ben Webster (1939), and Kenton's 1940s band used up to five of each."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Fletcher_Henderson",
+          "https://en.wikipedia.org/wiki/Swing_music",
+          "https://en.wikipedia.org/wiki/One_O%27Clock_Jump",
+          "https://en.wikipedia.org/wiki/Count_Basie"
+        ]
+      },
+      "text": "Fletcher Henderson and Don Redman set the formula: reeds against brass, sometimes in call and response, sometimes one section playing riffs behind the other or behind a soloist. Basie's band worked from head arrangements, riffs made up in rehearsal: 'One O'Clock Jump' (1937) is a 12-bar blues built from band members' riffs, with each section making up its part against the others."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://www.bluedogmusic.com/jazz-arranging-power-3739",
+          "https://evanrogersmusic.com/blog-contents/big-band-arranging/the-shout-chorus",
+          "https://evanrogersmusic.com/blog-contents/big-band-arranging/solos-and-backgrounds"
+        ]
+      },
+      "text": "Section writing: saxes riff in a close-voiced harmonised line, brass answer with chords spread wide at the bottom and close at the top, or in unison doubled in octaves. A sax soli puts the section alone in harmony with short brass interjections. The shout chorus, a tutti about two-thirds of the way through, mixes soli and spread voicings (four-way close and drop-2) across the whole band, lead line clear and high. Backgrounds behind a soloist usually enter the second time round the A section."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Big_band",
+          "https://en.wikipedia.org/wiki/Thirty-two-bar_form",
+          "https://wcupa.edu/music/documents/jazzMaterials/mossman/Arranging%20for%20Big%20Band%20123.pdf",
+          "https://www.evanrogersmusic.com/blog-contents/big-band-arranging/form-and-structure"
+        ]
+      },
+      "text": "Arrangements are strophic: choruses of a 12-bar blues or a 32-bar AABA song (four 8-bar sections, the B the bridge), the first chorus the melody, then solos, written soli and shout choruses. Mossman's roadmap is intro, theme, interludes, solos, solis, tuttis, recap and coda; Rogers sizes it as an 8-16 bar intro, the melody, solos the same length as the melody, development, and an 8-16 bar outro. Forms vary a lot from chart to chart."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Twelve-bar_blues",
+          "https://en.wikipedia.org/wiki/Rhythm_changes",
+          "https://en.wikipedia.org/wiki/Swing_music"
+        ]
+      },
+      "text": "Alongside Tin Pan Alley songs, two progressions recur. The blues is I, IV and V with dominant sevenths throughout. Rhythm changes, from 'I Got Rhythm', runs I-vi-ii-V twice in each A section, two chords a bar, and dominants round the circle (III7-VI7-II7-V7, two bars each) in the bridge; Ellington's 'Cotton Tail' (1940) and Lester Young's 'Lester Leaps In' (1939) use it."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Count_Basie",
+          "https://en.wikipedia.org/wiki/Freddie_Green",
+          "https://en.wikipedia.org/wiki/Comping_(jazz)",
+          "https://en.wikipedia.org/wiki/Jo_Jones",
+          "https://www.moderndrummer.com/2012/07/improve-your-bottom-line-part-1-bass-drum-comping-in-44/"
+        ]
+      },
+      "text": "Basie's All-American Rhythm Section (Basie, Freddie Green, Walter Page, Jo Jones) is the model. Green covered four strings but sounded only some of them, damping the rest, changed chords as often as every beat, and said the guitar should sound 'like the drummer is playing chords'. Basie comped sparsely, against the swing-era habit of a chord on every beat. Jo Jones moved the drummer's time from the bass drum, the 1920s-30s 'solid four', onto an opening and closing hi-hat and often left the bass drum out, which led to keeping time on the ride."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Duke_Ellington",
+          "https://en.wikipedia.org/wiki/Benny_Goodman",
+          "https://en.wikipedia.org/wiki/Woody_Herman"
+        ]
+      },
+      "text": "Ellington wrote for players' own sounds rather than for sections in the abstract: Bubber Miley's growl trumpet made the late-1920s 'jungle style', and later pieces were built around Johnny Hodges' alto, Lawrence Brown's trombone and Cootie Williams' trumpet. Goodman and Herman put clarinet in front of the band, and Goodman's small groups added Lionel Hampton's vibraphone."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Jump_blues",
+          "https://en.wikipedia.org/wiki/Louis_Jordan",
+          "https://en.wikipedia.org/wiki/Thad_Jones/Mel_Lewis_Orchestra",
+          "https://en.wikipedia.org/wiki/Big_band"
+        ]
+      },
+      "text": "Two descendants: jump blues (late 1940s to early 1950s) cut the band to five to seven players with horns, a shuffle, boogie-woogie bass and short riffs, as Louis Jordan's Tympany Five did. Modern big band runs on from the Thad Jones/Mel Lewis Orchestra (1965-, Monday nights at the Village Vanguard from 1966), whose writing shaped Maria Schneider, Bob Brookmeyer, Jim McNeely and Bob Mintzer; twenty-first-century big bands can exceed 20 players."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://www.soundonsound.com/techniques/session-notes-selwyn-jazz-part-2"
+        ]
+      },
+      "text": "Mixing a big band starts from the room: Mike Senior builds the ensemble on the room mics, delays them about 10 ms, adds spot mics for detail, high-passes every channel against kick and bass spill, trims the close-miked saxes at 335-415 Hz and the close mics' brightness around 3 kHz, compresses the brass bus gently (1.4:1), and spends about half the work on automation, which keeps the playing's dynamics."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Swing_music",
+          "https://en.wikipedia.org/wiki/Jump_blues",
+          "https://en.wikipedia.org/wiki/Louis_Jordan"
+        ]
+      },
+      "text": "Band vocals draw on the Great American Songbook's Tin Pan Alley standards. Jump blues brought playful, humorous lyrics and asides in jive talk, novelty lyrics with double meanings, and call-and-response choruses between the singer and the band."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://lurklurk.org/lindyhop/musical_structure.html",
+          "https://en.wikipedia.org/wiki/In_the_Mood",
+          "https://www.speech.kth.se/music/performance/Texts/ensemble_swing.htm"
+        ]
+      },
+      "text": "Melodies are riffs and phrases two or four bars long. 'In the Mood' opens on a saxophone theme of repeated, rhythmically displaced arpeggios, with trumpets and trombones adding accent riffs. In small-group recordings soloists swing less than the drummer (below 2:1 where the drummer is above it) and sit late on the downbeats while lining up on the upbeats."
+    }
+  ],
+  "parent": "jazz",
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://theinstrumentalist.com/?p=3953",
+          "https://theinstrumentalist.com/january-2018/jazz-drumset/",
+          "https://www.moderndrummer.com/2012/07/improve-your-bottom-line-part-1-bass-drum-comping-in-44/"
+        ]
+      },
+      "text": "Pounding the bass drum on every beat. Barton warns it muddies the string bass, which sits in the same range; feather the four so it is felt rather than heard, and save the bass drum's volume for setting up the brass."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://mcg.uva.nl/mcg-2023/papers/honing-haas-2008.pdf",
+          "https://www.ismir2015.uma.es/articles/143_Paper.pdf",
+          "https://www.speech.kth.se/music/performance/Texts/ensemble_swing.htm"
+        ]
+      },
+      "text": "One swing ratio for every tempo. Drummers straighten as the tempo rises, from about 2.5:1 near 150 BPM to 1.5:1 at 250, so scale the swing with the tempo and lighten it on the lead line, which swings less than the drums."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://songbpm.com/@benny-goodman/sing-sing-sing",
+          "https://lurklurk.org/lindyhop/musical_structure.html",
+          "https://songbpm.com/@glenn-miller/in-the-mood",
+          "https://www.learnjazzstandards.com/blog/learning-jazz/bass/write-walking-bass-line/"
+        ]
+      },
+      "text": "Trusting a tempo detector. songbpm reads the 8:42 Sing Sing Sing at 112 BPM where dancers count 225, though it agrees on In the Mood (172 against 170); check a fast chart's reading against the walking bass, one note per beat."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Fletcher_Henderson",
+          "https://evanrogersmusic.com/blog-contents/big-band-arranging/solos-and-backgrounds",
+          "https://evanrogersmusic.com/blog-contents/big-band-arranging/the-shout-chorus"
+        ]
+      },
+      "text": "Writing the whole band all the time. The tradition sets sections against each other in call and response, keeps backgrounds out of a soloist's first A section, and saves the full tutti for the shout chorus about two-thirds of the way through."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Rhythm_changes"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "I - vi - ii - V",
+      "text": "The rhythm-changes A section, two chords a bar, twice per eight bars."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Rhythm_changes"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "III7 - VI7 - II7 - V7",
+      "text": "The rhythm-changes bridge: dominants round the circle of fifths, two bars each."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Twelve-bar_blues",
+          "https://en.wikipedia.org/wiki/One_O%27Clock_Jump",
+          "https://www.hooktheory.com/theorytab/view/glenn-miller/in-the-mood"
+        ]
+      },
+      "mode": "mixolydian",
+      "roman": "I7 - IV7 - I7 - V7 - IV7 - I7",
+      "text": "The 12-bar blues with dominant sevenths, the frame of 'One O'Clock Jump' and of the verse Hooktheory reads in 'In the Mood' (I, I7 as V7/IV, IV, IV7, I)."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/duke-ellington/take-the-a-train",
+          "https://en.wikipedia.org/wiki/Take_the_%22A%22_Train"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "I - II7 - I - V7",
+      "text": "The 'Take the A Train' chorus as Hooktheory reads it: the secondary dominant II7 with a raised eleventh, back to I, then V7."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "inferred": "bounds are lurklurk.org's 'around 120 to around 260 beats per minute' for swing dance music (Atomic Ballroom calls 120-180 the core); typical 170 is the median of lurklurk's seven example records (Shiny Stockings 120, Is You Is 140, T'ain't What You Do 160, In the Mood 170, Flying Home 200, Sing Sing Sing 225, Jumpin' at the Woodside 255) and agrees with Hooktheory's 166 for In the Mood and 169 for Take the 'A' Train. Slow-swing ballads such as Li'l Darlin' (66 on songbpm) sit below the range on purpose"
+      },
+      "feature": "tempo.bpm",
+      "high": 260,
+      "low": 120,
+      "typical": 170,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "inferred": "Honing & de Haas measured drummers' ride swing settling near 2.2:1 (68.75%) at beat durations over 350 ms (below about 170 BPM) and falling roughly linearly faster than that; Dittmar et al. found drummers going from about 2.5:1 (71%) near 150 BPM to 1.5:1 (60%) at 250; Friberg & Sundstrom's 2.38:1 (70%) at 132 BPM. Over this profile's 120-260 BPM range that is 60-72%, typical 2.2:1. None of the measured drummers is a big-band drummer"
+      },
+      "feature": "swing.percent",
+      "high": 72,
+      "low": 60,
+      "typical": 69,
+      "unit": "MPC percent"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.learnjazzstandards.com/blog/learning-jazz/bass/write-walking-bass-line/",
+          "https://en.wikipedia.org/wiki/Walter_Page",
+          "https://en.wikipedia.org/wiki/Jump_blues"
+        ]
+      },
+      "feature": "bass.attacks.per.bar",
+      "high": 8,
+      "low": 4,
+      "typical": 4,
+      "unit": "attacks per bar"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.learnjazzstandards.com/blog/learning-jazz/bass/write-walking-bass-line/"
+        ]
+      },
+      "feature": "bass.downbeat.coverage",
+      "high": 1.0,
+      "low": 0.95,
+      "unit": "fraction of bars"
+    },
+    {
+      "evidence": {
+        "inferred": "a walking line is one quarter note per beat (Learn Jazz Standards) and Walter Page's walking bass is on all four beats, so almost every onset is on the quarter grid; the allowance is for pickups and the boogie-woogie eighths of jump blues"
+      },
+      "feature": "bass.syncopation",
+      "high": 0.1,
+      "low": 0.0,
+      "unit": "fraction of onsets"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Rhythm_changes",
+          "https://en.wikipedia.org/wiki/Twelve-bar_blues",
+          "https://en.wikipedia.org/wiki/One_O%27Clock_Jump"
+        ]
+      },
+      "feature": "harmony.changes.per.bar",
+      "high": 2,
+      "low": 0.5,
+      "unit": "changes per bar"
+    },
+    {
+      "evidence": {
+        "inferred": "no loudness survey has a swing or big-band bucket. freshlybakedstudios' Jazz bucket (2,933 releases from 2012-2026, middle half -15.2 to -10.8 LUFS, median -12.8) stands in for it. lufs.to's only big-band sample, 14 tracks of Harry Connick Jr.'s 1993 When My Heart Finds Christmas (median -15.9, -17.8 to -13.2), sits at its quiet end"
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -10.8,
+      "low": -15.2,
+      "typical": -12.8,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (crest-factor 'dynamic range', peak minus RMS, as defined on https://lufs.to/methodology) give crest = 5.28 - 0.743 x integrated LUFS across 2,544 tracks (r = -0.88); applied to this profile's -15.2 to -10.8 LUFS, typical -12.8. lufs.to's one big-band album reads higher, a median 18.3 dB (middle half 17.7-19.3), but it is one quiet Christmas record measured against true peak"
+      },
+      "feature": "mix.crest.db",
+      "high": 16.6,
+      "low": 13.3,
+      "typical": 14.8,
+      "unit": "dB"
+    },
+    {
+      "evidence": {
+        "inferred": "durations on songbpm: Caldonia 2:44, Jumpin' at the Woodside 3:10, In the Mood 3:16, Shiny Stockings 3:33, April in Paris 3:48, Woodchopper's Ball 4:30, Li'l Darlin' 5:04, Take the 'A' Train 5:32 and Sing Sing Sing 8:42 (the median of the nine is 3:48). Wikipedia notes Sing Sing Sing took both sides of a 12-inch 78, so it is the exception; the form below, 156 bars at 170 BPM, runs 3.7 minutes"
+      },
+      "feature": "form.minutes",
+      "high": 5.5,
+      "low": 2.7,
+      "typical": 3.8,
+      "unit": "minutes"
+    },
+    {
+      "evidence": {
+        "inferred": "the jazz label's measurement in Bench/genres/melody_ranges.json (171 eight-bar windows from the melody tracks of 30 Lakh MIDI files labelled Jazz by tagtraum, mostly vocal standards), taken for swing because big bands played the Great American Songbook (Wikipedia, Swing music); not a measurement of big-band records"
+      },
+      "feature": "melody.range.semitones",
+      "high": 23,
+      "low": 7,
+      "typical": 12,
+      "unit": "semitones"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Count Basie",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/One_O%27Clock_Jump"
+        ]
+      },
+      "features": [
+        "harmony.changes.per.bar",
+        "bass.attacks.per.bar",
+        "form.repetition"
+      ],
+      "listenFor": "Every chorus: a 12-bar blues made of riffs, with sections riffing behind solos by Herschel Evans, Lester Young, Buck Clayton, Walter Page and Basie.",
+      "title": "One O'Clock Jump",
+      "year": 1937
+    },
+    {
+      "artist": "Benny Goodman",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Sing,_Sing,_Sing_(With_a_Swing)",
+          "https://lurklurk.org/lindyhop/musical_structure.html",
+          "https://songbpm.com/@benny-goodman/sing-sing-sing"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.minutes"
+      ],
+      "listenFor": "Gene Krupa's drumming throughout Jimmy Mundy's arrangement, 8:43 across both sides of a 12-inch 78, at about 225 BPM; detectors read it as 112.",
+      "title": "Sing, Sing, Sing",
+      "year": 1937
+    },
+    {
+      "artist": "Glenn Miller",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/In_the_Mood",
+          "https://lurklurk.org/lindyhop/musical_structure.html",
+          "https://www.hooktheory.com/theorytab/view/glenn-miller/in-the-mood"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "swing.percent",
+        "melody.motif.ratio"
+      ],
+      "listenFor": "The opening: the sax section's displaced arpeggio riff with trumpet and trombone accents, then the tenor chase, at about 170 BPM.",
+      "title": "In the Mood",
+      "year": 1939
+    },
+    {
+      "artist": "Duke Ellington",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Take_the_%22A%22_Train",
+          "https://www.hooktheory.com/theorytab/view/duke-ellington/take-the-a-train"
+        ]
+      },
+      "features": [
+        "harmony.diatonic.ratio",
+        "form.sections",
+        "tempo.bpm"
+      ],
+      "listenFor": "The AABA head in C with its II7 colour, Ray Nance's trumpet solo, and the lift to E-flat after the second chorus.",
+      "title": "Take the \"A\" Train",
+      "year": 1941
+    },
+    {
+      "artist": "Louis Jordan and His Tympany Five",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Louis_Jordan",
+          "https://songbpm.com/@louis-jordan/caldonia"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.minutes",
+        "lyric.syllables.per.line"
+      ],
+      "listenFor": "Throughout its 2:44, at about 165 BPM: the small-band jump blues Jordan's Tympany Five made, with shuffle rhythm, short horn riffs and call and response with the band.",
+      "title": "Caldonia",
+      "year": 1945
+    },
+    {
+      "artist": "Count Basie",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Li%27l_Darlin%27",
+          "https://songbpm.com/@count-basie/lil-darlin"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "swing.percent"
+      ],
+      "listenFor": "The whole record: the band holding Neal Hefti's slow, simple theme at about 66 BPM as medium swing, not as a ballad.",
+      "title": "Li'l Darlin'",
+      "year": 1958
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "upright"
+    ],
+    "instruments": [
+      "horns",
+      "brass",
+      "trumpet",
+      "tenor-sax",
+      "alto-sax",
+      "clarinet",
+      "grand-piano",
+      "clean-electric",
+      "vibraphone"
+    ],
+    "machines": [
+      "jazz"
+    ]
+  },
+  "summary": "Dance music for a band of saxophones, trumpets and trombones over a rhythm section that plays four to the bar: a walking bass on every beat, a rhythm guitar chording on every beat, a ride cymbal's long-short swing with the hi-hat on 2 and 4. Arrangements set the sections against each other in call and response and riffs behind soloists, over choruses of 32-bar AABA songs or 12-bar blues, and build to a shout chorus for the whole band. Tempos run from about 120 BPM for the dance floor to over 250 for flag-wavers, with slow-swing ballads below that.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Swing_music",
+      "https://en.wikipedia.org/wiki/Big_band",
+      "https://en.wikipedia.org/wiki/Walter_Page",
+      "https://en.wikipedia.org/wiki/Freddie_Green",
+      "https://theinstrumentalist.com/?p=3953",
+      "https://evanrogersmusic.com/blog-contents/big-band-arranging/the-shout-chorus",
+      "https://lurklurk.org/lindyhop/musical_structure.html"
+    ]
+  }
+}

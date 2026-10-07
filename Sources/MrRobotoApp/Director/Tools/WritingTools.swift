@@ -552,7 +552,7 @@ public struct SetSongTool: DirectorTool {
             ("title", Schema.string("The song's new title, or empty to keep it.")),
             ("artist", Schema.string("Who the song is by, or empty to keep it.")),
             ("tempo", Schema.number("Beats per minute, 20 to 300; 0 keeps it.", minimum: 0, maximum: 300)),
-            ("key", Schema.string("Like \"D minor\", \"Bb major\", \"F# dorian\" or \"Am\"; \"none\" clears it; empty keeps it.")),
+            ("key", Schema.string("Like \"D minor\", \"Bb major\", \"F# dorian\" or \"Am\"; or a scale the modes do not have: \"D harmonic minor\", \"E phrygian dominant\" (freygish, hijaz, flamenco), \"C double harmonic\", \"A hungarian minor\", \"D ukrainian dorian\", \"C melodic minor\"; \"none\" clears it; empty keeps it.")),
             ("time_signature", Schema.string("Like \"4/4\", \"3/4\", \"6/8\" or \"7/8\"; empty keeps it.")),
             ("brief", Schema.string("What the song is about, in one sentence, three to forty words; \"none\" clears it; empty keeps it.")),
         ], required: ["title", "artist", "tempo", "key", "time_signature", "brief"])

@@ -4,7 +4,9 @@
     "bristol sound",
     "downtempo"
   ],
-  "bassHands": [],
+  "bassHands": [
+    "dub"
+  ],
   "family": "electronic",
   "feels": [
     "Trip-Hop"

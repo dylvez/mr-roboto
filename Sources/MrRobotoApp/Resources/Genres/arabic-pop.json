@@ -1,0 +1,512 @@
+{
+  "aliases": [
+    "arabic pop",
+    "arab pop",
+    "egyptian pop",
+    "lebanese pop",
+    "levantine pop",
+    "al jeel",
+    "el geel",
+    "shaabi",
+    "sha'abi",
+    "mahraganat",
+    "electro-shaabi",
+    "mediterranean music",
+    "tarab"
+  ],
+  "bassHands": [
+    "pedal"
+  ],
+  "family": "arabic",
+  "feels": [
+    "Maqsum",
+    "Saidi"
+  ],
+  "form": {
+    "evidence": {
+      "inferred": "section order from maqamworld's taqtuqa (several verses and a repeating chorus) with an instrumental introduction and interludes; bar counts are a sketch sized so 80 bars of 4/4 at 100 BPM, inside the 80-140 range, run 3.2 minutes, inside the cited 3-4-minute taqtuqa. A free-rhythm taqsim or mawwal often comes before the rhythm enters"
+    },
+    "sections": [
+      {
+        "bars": 8,
+        "name": "Intro"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 8,
+        "name": "Interlude"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 8,
+        "name": "Interlude"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      }
+    ]
+  },
+  "id": "arabic-pop",
+  "idioms": [
+    "middle-eastern"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Umm_Kulthum",
+          "https://en.wikipedia.org/wiki/Enta_Omri"
+        ]
+      },
+      "name": "Umm Kulthum",
+      "period": "1923-1973",
+      "why": "Egypt's great singer worked with the composers Mohamed El Qasabgi, Riad Al Sunbati and Mohammed Abdel Wahab. Her concerts ran up to five hours for three songs, as she repeated a line over and over with shifting emphasis, never the same way twice, to reach tarab; 'Enta Omri' (1964), in maqam kurd, lasts 59 minutes on record."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Abdel_Halim_Hafez",
+          "https://www.maqamworld.com/en/iqaa/saidi.php",
+          "https://www.maqamworld.com/en/iqaa/maqsum.php"
+        ]
+      },
+      "name": "Abdel Halim Hafez",
+      "period": "1952-1977",
+      "why": "The romantic film and concert singer recorded over 300 songs with composers including Mohammed Abdel Wahab and Baligh Hamdi, and brought Western instruments such as oboe, piano, clarinet and guitar into his songs. Hamdi set 'Sawwah' (1966) and 'Zayy el-Hawa' (1970) on the sa'idi, and his last song, 'Qari'at al-Fingan' (1976), rides the maqsum."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Fairuz"
+        ]
+      },
+      "name": "Fairuz and the Rahbani brothers",
+      "period": "1960s-1980s",
+      "why": "The Rahbanis broke with the dominant thirty-minute Egyptian style, writing Fairuz short three-minute story songs in Lebanese dialect that blended Lebanese folk with Western sounds, hundreds of them in the 1960s and 70s. After Assi Rahbani's death in 1986 her son Ziad took her toward jazz and funk."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Amr_Diab",
+          "https://en.wikipedia.org/wiki/Hamid_El_Shaeri",
+          "https://en.wikipedia.org/wiki/Tamally_Maak"
+        ]
+      },
+      "name": "Amr Diab",
+      "period": "1983-",
+      "why": "Credited as the father of 'Mediterranean music', which the musicologist Michael Frishkopf describes as a blend of Western and Middle Eastern and Egyptian rhythms; Nour El Ain (1996) brought him international success. Hamid El Shaeri produced his tracks from 1989, 'Tamally Maak' (2000) topped Rolling Stone's list of the century's best Arabic pop songs, and he pioneered the music video in the region."
+    }
+  ],
+  "meters": [
+    "4/4",
+    "2/4"
+  ],
+  "name": "Arabic Pop",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://sites.ualberta.ca/~michaelf/Theory/Durub%20chart%20rev%202009.pdf",
+          "https://ftp.maqamworld.com/en/iqaa.php",
+          "https://en.wikipedia.org/wiki/Maqsoum"
+        ]
+      },
+      "text": "The groove is an iqa', a repeating cycle of dums (low, struck at the centre of the drum) and teks (high, at the rim) that the percussionist fleshes out with fills. Maqsum, in four, is dum-tek-rest-tek-dum-rest-tek-rest: doums on 1 and 3, teks on the and of 1, the and of 2 and on 4. The sa'idi puts two dums together in the middle (dum-tek-rest-dum-dum-rest-tek-rest, the first dum sometimes dropped); baladi, or masmudi saghir, opens with two dums. Malfuf is a quick cycle in two, dum-rest-rest-tek-rest-rest-tek-rest, and ayyub (zar) is another two-beat cycle."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.maqamworld.com/en/iqaa/maqsum.php",
+          "https://www.maqamworld.com/en/iqaa/saidi.php",
+          "https://www.maqamworld.com/en/iqaa/baladi.php",
+          "https://www.maqamworld.com/en/iqaa/malfuf.php",
+          "https://www.maqamworld.com/en/iqaa/ayyub.php"
+        ]
+      },
+      "text": "Maqsum is by far the most widely used iqa' in Arabic music: maqamworld's examples run from Umm Kulthum and Abdel Halim Hafez's 'Qari'at al-Fingan' (1976) to Fairuz and the shaabi singer Ahmad Adaweya, and it moves to baladi and wahda within a song. The sa'idi, from Upper Egypt, is quintessentially Egyptian and trades places with maqsum and baladi; Baligh Hamdi wrote Abdel Halim's 'Sawwah' (1966) and 'Zayy el-Hawa' (1970) on it. Malfuf (laff) is mostly folk and popular, and baladi swaps two bars of it for one of its own; ayyub belongs to Sufi and zar music and some belly dance."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "inferred": "the cited dum, tek and riq roles (Frishkopf; maqamworld) mapped onto the darbuka, frame drum and tambourine voices the app's kit has; tempos from the Loopmasters Arabic percussion pack (80-140 BPM) and Music Metrics Vault's description of mahraganat (140-160)"
+      },
+      "text": "In the app's kit the doum goes to the darbuka, with the frame drum under the main doums, the tek to the darbuka's rim stroke and the riq's jingles to the tambourine voice, as the Maqsum and Saidi feels already do. Producers' Arabic percussion loops sit at 80-140 BPM; mahraganat runs faster, its kicks around 140-160."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Arabic_maqam",
+          "https://en.wikipedia.org/wiki/Jins",
+          "https://www.maqamworld.com/en/jins/hijaz.php"
+        ]
+      },
+      "text": "Maqam scales are microtonal, notated since about 1900 on a grid of 24 quarter tones. Rast, bayati, saba and sikah need neutral seconds and thirds (rast's third sits near 350 cents in much of the Arab world) that twelve-tone equal temperament, the app's tuning, cannot play. Nahawand, 'ajam, kurd and hijaz contain no quarter tones and can be played on a piano, though without their microtonal detail: hijaz's step from the second to the third degree is usually played smaller than the notated augmented second, and an equal-tempered hijaz is disparaged as 'piano hijaz'."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "inferred": "the upper and lower jins of each maqam as maqamworld gives them (hijaz, hijazkar, nahawand, kurd, 'ajam pages) spelled with the jins intervals in Wikipedia's Jins article (hijaz's augmented second, kurd as the lower half of the phrygian, nahawand as the lower half of the minor, 'ajam as the lower part of the major) and compared with the app's mode list"
+      },
+      "text": "The playable maqamat as the app's modes: hijaz (jins hijaz with nahawand on the fourth) is phrygian dominant; hijazkar, hijaz's commonest variant (hijaz on the tonic, nikriz on the fourth, hijazkar on the octave), is double harmonic; nahawand (a nahawand pentachord with hijaz or kurd on the fifth) is harmonic minor with hijaz above and aeolian with kurd; kurd (kurd with nahawand on the fourth) is phrygian; 'ajam is ionian. Hijaz with rast on its fourth carries a quarter tone and has no twelve-tone equivalent. This profile gives progressions only for these playable maqamat; a song in rast or bayati cannot be keyed in the app."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://www.researchcatalogue.net/view/1053899/1059109",
+          "https://www.researchcatalogue.net/view/1786090/1786091"
+        ]
+      },
+      "text": "Classical Arabic music has no harmony as a parameter. Arrangers find the non-microtonal passages easy to harmonise and put suspended chords (sus2, sus4) or a drone under quarter-tone passages so no third clashes with the melody. Arab musicians argue harmony must not overshadow the melody, and choral and part-singing experiments in Egypt, Lebanon and North Africa never caught on with audiences."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://www.researchcatalogue.net/view/1053899/1059109",
+          "https://www.musicmetricsvault.com/genres/mahraganat/2236"
+        ]
+      },
+      "text": "Arranging maqam music for the double bass, Dielemans lists its options: confirm the tonal centre, follow the melody's main note, colour it toward harmonic motion, double it in unison, shadow it in thirds or sixths, move against it, or hold a drone or pedal that gives the melody room to move. Mahraganat replaces all of this with 808-style basslines programmed on a laptop."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://www.maqamworld.com/en/form/vocal_comp.php",
+          "https://en.wikipedia.org/wiki/Umm_Kulthum",
+          "https://en.wikipedia.org/wiki/Fairuz",
+          "https://en.wikipedia.org/wiki/Arabic_pop_music"
+        ]
+      },
+      "text": "The modern song is the taqtuqa: three to four minutes, several verses and a repeating chorus over a plain iqa' such as maqsum, with words and a tune easy to sing back. Behind it stands the ughniya, which can last an hour live, with a long introduction and full maqam modulations (Umm Kulthum's concerts ran up to five hours for three songs), and the Rahbani brothers' move, for Fairuz, from thirty-minute Egyptian songs to three-minute story songs in Lebanese dialect. Abdel Halim Hafez's and Fairuz's era brought songs down to about 5-20 minutes."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://maqamworld.com/en/form/improv.php",
+          "https://scalar.usc.edu/works/music-in-global-america/nour-el-ein---amr-diab.1"
+        ]
+      },
+      "text": "Free-time improvisation frames the metered song: a taqsim (instrumental, on oud, violin, nay or qanun) or layali (the singer on 'ya layl ya 'ayn') leads into a mawwal, a vocal improvisation on a colloquial poem, before the rhythm enters. Amr Diab's 'Nour El Ain' still alternates free-rhythm sections with metered ones, and its refrains are a call and response between Diab and a small male chorus."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Umm_Kulthum",
+          "https://scalar.usc.edu/works/music-in-global-america/nour-el-ein---amr-diab.1",
+          "https://en.wikipedia.org/wiki/Shaabi"
+        ]
+      },
+      "text": "The melody carries the music, with improvised vocal ornament on maqam-derived scales. Umm Kulthum would repeat a single line over and over, changing its emphasis and intensity and never singing it the same way twice, to bring her audience to tarab; shaabi singers such as Adaweya were famed for the mawwal."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Al_Jeel",
+          "https://en.wikipedia.org/wiki/Hamid_El_Shaeri",
+          "https://en.wikipedia.org/wiki/Abdel_Halim_Hafez"
+        ]
+      },
+      "text": "The ensemble of oud, qanun, rabab, nay and violins was joined in the 1950s-70s by Western instruments (Abdel Halim Hafez brought in oboe, drums, piano, clarinet and guitar) and in the 1980s by al-jeel's synthesizers and Roland TR-707 drum machine over Bedouin, Nubian and Egyptian rhythms. Hamid El Shaeri's production, cymbals and drum machines beside traditional Libyan clapping, dominated Arabic pop for the next decade and reached Amr Diab's records from 1989."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://scalar.usc.edu/works/music-in-global-america/nour-el-ein---amr-diab.1",
+          "https://en.wikipedia.org/wiki/Amr_Diab",
+          "https://en.wikipedia.org/wiki/Tamally_Maak"
+        ]
+      },
+      "text": "Amr Diab's 'Mediterranean' records put Spanish guitar and French accordion over Arabic rhythms and frame drums ('Nour El Ain', 1996), and 'Tamally Maak' (2000) is built on classical guitar, with a guitar solo by Pino Fares in Tarek Madkour's arrangement."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "inferred": "the cited instrumentation (al-jeel's oud, qanun, rabab, nay and violin; Nour El Ain's Spanish guitar and accordion) set against the app's instrument list: harp and koto as the nearest plucked zithers, flute as the nearest end-blown pipe"
+      },
+      "text": "The app has no qanun, nay, oud or accordion. For the qanun's plucked runs use the harp or the koto, for the nay the flute, for the violin section strings and violin, and give the accordion's lines to the strings or the nylon guitar. None of them can bend into a quarter tone, so keep these parts to the playable maqamat."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Mahraganat"
+        ]
+      },
+      "text": "Mahraganat (electro-shaabi), from Cairo's popular neighbourhoods around 2006-07, is made in software rather than played: synthesizers, sequencers, samplers and drum kits on a maqsum foundation, with heavy Auto-Tune on the voice. Hassan Shakoush and Omar Kamal's 'Bent El-Giran' (2020) drew hundreds of millions of views, and Egypt's Musicians' Syndicate banned the genre that year."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Arabic_pop_music",
+          "https://en.wikipedia.org/wiki/Fairuz",
+          "https://en.wikipedia.org/wiki/Shaabi",
+          "https://en.wikipedia.org/wiki/Mohammed_Assaf"
+        ]
+      },
+      "text": "Lyrics dwell on longing, melancholy, strife and love, with 'habibi' everywhere, mostly in minor keys and without explicit sex or alcohol. Egyptian colloquial dominated until the Rahbanis' Lebanese-dialect songs; shaabi lyrics can be intensely political and full of humour and double entendre; and Mohammed Assaf won Arab Idol in 2013 with 'Ali al-Kuffiyeh', a Palestinian song calling on Palestinians to raise their kuffiyehs."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Arabic_maqam",
+          "https://en.wikipedia.org/wiki/Jins",
+          "https://www.researchcatalogue.net/view/1053899/1059109"
+        ]
+      },
+      "text": "Keying a song in rast, bayati, saba or sikah. Their neutral intervals cannot be played in twelve-tone equal temperament: choose nahawand (harmonic minor or aeolian), kurd (phrygian), hijaz (phrygian dominant) or 'ajam (ionian), or keep the chords to sus2, sus4 and a drone and accept that the tune only points at the maqam."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.researchcatalogue.net/view/1786090/1786091",
+          "https://www.researchcatalogue.net/view/1053899/1059109"
+        ]
+      },
+      "text": "Harmonising like Western pop, a chord under every phrase. In this music harmony serves the melody and must not overshadow it: use few chords, a drone or a pedal, and let the singer's ornaments carry the interest."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://sites.ualberta.ca/~michaelf/Theory/Durub%20chart%20rev%202009.pdf",
+          "https://www.maqamworld.com/en/iqaa/maqsum.php",
+          "https://en.wikipedia.org/wiki/Maqsoum"
+        ]
+      },
+      "text": "Programming a kick-and-snare backbeat. The groove is an iqa' (maqsum, sa'idi, baladi) with its doums and teks in their own places, maqsum's doums on 1 and 3 and teks on the and of 1, the and of 2 and on 4, with the percussionist's fills between."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Phrygian_dominant_scale",
+          "https://www.maqamworld.com/en/maqam/hijaz.php"
+        ]
+      },
+      "mode": "phrygian dominant",
+      "roman": "I - bII - I",
+      "text": "Hijaz on a piano: the major tonic and the major chord a half step above it, two of the scale's main chords (I, bII, iv, vii)."
+    },
+    {
+      "evidence": {
+        "inferred": "maqamworld's nahawand (nahawand on the tonic, hijaz on the fifth) spelled out is the harmonic minor, whose V7 is the major-third chord on the upper hijaz's tonic; Dielemans finds non-microtonal maqam passages easy to harmonise"
+      },
+      "mode": "harmonic minor",
+      "roman": "i - iv - V7 - i",
+      "text": "Nahawand with hijaz on the fifth: the minor tonic, the minor fourth and the dominant seventh that the upper hijaz implies."
+    },
+    {
+      "evidence": {
+        "inferred": "jins kurd is the lower half of the phrygian (Wikipedia, Jins) and maqam kurd adds nahawand on the fourth (maqamworld), so the bII triad is in the scale; Enta Omri is in kurd (Wikipedia)"
+      },
+      "mode": "phrygian",
+      "roman": "i - bII - i",
+      "text": "Kurd, the maqam of Umm Kulthum's 'Enta Omri': the minor tonic and the major chord on the half step above it, the step that defines jins kurd."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "inferred": "Loopmasters cuts its Arabic percussion loops (darbuka, dumbek, riq; baladi, malfuf, karachi) at 80-140 BPM. songbpm's detector readings for 21 tracks by Amr Diab, Nancy Ajram and Mohammed Assaf run 69-182 (median 140, quartiles 115 and 150), and it gives Akhasmak Ah as 151 or half-time 76, so the readings above 140 are taken as counted on the eighth-note pulse rather than on the beat the maqsum's doums mark"
+      },
+      "feature": "tempo.bpm",
+      "high": 140,
+      "low": 80,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "inferred": "maqamworld calls the taqtuqa the standard 3-4 minute Arabic song; the 21 durations listed on songbpm for Amr Diab, Nancy Ajram and Mohammed Assaf, with Tamally Maak's 4:29 from Wikipedia, run 2:32-5:20, median 3:54, with 10th and 90th percentiles near 3:12 and 4:48"
+      },
+      "feature": "form.minutes",
+      "high": 4.8,
+      "low": 3.2,
+      "typical": 3.9,
+      "unit": "minutes"
+    },
+    {
+      "evidence": {
+        "inferred": "a taqtuqa of several verses and a repeating chorus (maqamworld) laid out as intro, verse, chorus, interlude, verse, chorus, interlude, chorus repeats 4 of 8 sections (0.5); a third verse or a doubled last chorus moves it toward 0.6, a mawwal opening toward 0.4"
+      },
+      "feature": "form.repetition",
+      "high": 0.65,
+      "low": 0.4,
+      "unit": "fraction"
+    },
+    {
+      "evidence": {
+        "inferred": "verse and chorus (the taqtuqa, maqamworld) plus an instrumental introduction or interlude, and in some songs a free-rhythm mawwal or taqsim section (maqamworld improvised forms; Nour El Ain's alternation of free and metered sections, USC Scalar)"
+      },
+      "feature": "form.turns",
+      "high": 5,
+      "low": 3,
+      "unit": "turns"
+    },
+    {
+      "evidence": {
+        "inferred": "the eight-section taqtuqa sketched in this profile's form, give or take a verse, a chorus or a free introduction"
+      },
+      "feature": "form.sections",
+      "high": 10,
+      "low": 6,
+      "unit": "sections"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Umm Kulthum",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Enta_Omri",
+          "https://en.wikipedia.org/wiki/Umm_Kulthum"
+        ]
+      },
+      "features": [
+        "form.minutes",
+        "form.repetition",
+        "melody.motif.ratio"
+      ],
+      "listenFor": "Across its hour: lines sung again and again with new emphasis and ornament, in maqam kurd, which the app can play as phrygian.",
+      "title": "Enta Omri",
+      "year": 1964
+    },
+    {
+      "artist": "Abdel Halim Hafez",
+      "evidence": {
+        "cited": [
+          "https://www.maqamworld.com/en/iqaa/saidi.php",
+          "https://en.wikipedia.org/wiki/Abdel_Halim_Hafez"
+        ]
+      },
+      "features": [
+        "grid.subdivision",
+        "tempo.bpm"
+      ],
+      "listenFor": "The rhythm section: Baligh Hamdi's song on the sa'idi, two doums together in the middle of each bar where the maqsum has one.",
+      "title": "Zayy el-Hawa",
+      "year": 1970
+    },
+    {
+      "artist": "Abdel Halim Hafez",
+      "evidence": {
+        "cited": [
+          "https://www.maqamworld.com/en/iqaa/maqsum.php",
+          "https://en.wikipedia.org/wiki/Abdel_Halim_Hafez"
+        ]
+      },
+      "features": [
+        "grid.subdivision",
+        "tempo.bpm"
+      ],
+      "listenFor": "The rhythm section: his last song carried on the maqsum, doums on 1 and 3 with the teks and fills between.",
+      "title": "Qari'at al-Fingan",
+      "year": 1976
+    },
+    {
+      "artist": "Amr Diab",
+      "evidence": {
+        "cited": [
+          "https://scalar.usc.edu/works/music-in-global-america/nour-el-ein---amr-diab.1",
+          "https://en.wikipedia.org/wiki/Amr_Diab"
+        ]
+      },
+      "features": [
+        "form.turns",
+        "song.parts"
+      ],
+      "listenFor": "Throughout: Spanish guitar and accordion over Arabic rhythm and frame drums, free-rhythm passages against metered ones, and refrains traded between Diab and a small male chorus.",
+      "title": "Nour El Ain",
+      "year": 1996
+    },
+    {
+      "artist": "Amr Diab",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Tamally_Maak"
+        ]
+      },
+      "features": [
+        "form.minutes"
+      ],
+      "listenFor": "Throughout its 4:29: the classical guitar that leads Tarek Madkour's arrangement, and Pino Fares's guitar solo.",
+      "title": "Tamally Maak",
+      "year": 2000
+    },
+    {
+      "artist": "Hassan Shakoush and Omar Kamal",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Mahraganat"
+        ]
+      },
+      "features": [
+        "tempo.bpm"
+      ],
+      "listenFor": "Throughout: the genre's hallmarks, heavy Auto-Tune and programmed drums on a maqsum foundation, in the hit that took mahraganat to hundreds of millions of views.",
+      "title": "Bent El-Giran",
+      "year": 2020
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "finger",
+      "upright",
+      "808"
+    ],
+    "instruments": [
+      "strings",
+      "violin",
+      "harp",
+      "koto",
+      "flute",
+      "nylon-guitar",
+      "pad"
+    ],
+    "machines": [
+      "tr707",
+      "studio"
+    ]
+  },
+  "summary": "Egyptian and Levantine song built on maqam and iqa': a singer carries an ornamented melody in a maqam, often one with quarter tones, over a cyclic dum-and-tek rhythm on darbuka and riq, above all the maqsum, with the baladi and the Upper-Egyptian sa'idi. From Umm Kulthum's hour-long tarab songs and the Rahbani brothers' three-minute songs for Fairuz to the three-to-four-minute verse-and-chorus songs of Amr Diab and Nancy Ajram, the oud, qanun, nay and violins of the classical ensemble were joined by guitars, synthesizers and drum machines, while harmony stayed under the melody. Shaabi and its electronic offshoot mahraganat are the street side of the same rhythms.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Arabic_pop_music",
+      "https://en.wikipedia.org/wiki/Arabic_maqam",
+      "https://www.maqamworld.com/en/iqaa/maqsum.php",
+      "https://www.maqamworld.com/en/form/vocal_comp.php",
+      "https://en.wikipedia.org/wiki/Umm_Kulthum",
+      "https://en.wikipedia.org/wiki/Fairuz",
+      "https://en.wikipedia.org/wiki/Al_Jeel",
+      "https://www.researchcatalogue.net/view/1053899/1059109",
+      "https://en.wikipedia.org/wiki/Mahraganat"
+    ]
+  }
+}

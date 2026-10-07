@@ -87,7 +87,7 @@ struct SongSettingsPopover: View {
                 }
             }
             VStack(alignment: .leading, spacing: 4) {
-                field("Key", text: $keyText, focus: .key, prompt: "D major, F# minor, or blank") { applyKey() }
+                field("Key", text: $keyText, focus: .key, prompt: "D major, F# minor, E phrygian dominant, or blank") { applyKey() }
                 problem(keyProblem)
             }
             GenrePicker(app: app)

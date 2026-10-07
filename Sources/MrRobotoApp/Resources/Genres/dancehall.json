@@ -1,0 +1,588 @@
+{
+  "aliases": [
+    "ragga",
+    "raggamuffin",
+    "digital dancehall",
+    "rub-a-dub",
+    "dancehall reggae",
+    "trap dancehall"
+  ],
+  "bassHands": [
+    "programmed",
+    "dub"
+  ],
+  "family": "caribbean",
+  "feels": [
+    "Dancehall",
+    "Dembow"
+  ],
+  "form": {
+    "evidence": {
+      "inferred": "Manuel & Marshall's regular eight- or sixteen-bar verses and choruses, alternating verse and refrain; 80 bars at 96 BPM run 3.3 minutes, near the 3:25 median of the nine records in form.minutes. Riddims thin out in verses and fill in for refrains."
+    },
+    "sections": [
+      {
+        "bars": 4,
+        "name": "Intro"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 4,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "dancehall",
+  "idioms": [
+    "dancehall",
+    "reggae"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Henry_%22Junjo%22_Lawes",
+          "https://en.wikipedia.org/wiki/Zungguzungguguzungguzeng",
+          "https://en.wikipedia.org/wiki/Scientist_Rids_the_World_of_the_Evil_Curse_of_the_Vampires"
+        ]
+      },
+      "name": "Henry \"Junjo\" Lawes",
+      "period": "late 1970s–1999",
+      "why": "Began producing in the late 1970s with the Roots Radics as his regular studio band, and built the Volcano label and sound system. He produced Yellowman (including 'Zungguzungguguzungguzeng' on his 'Diseases' riddim), Barrington Levy and Scientist's dubs, and later worked with Beenie Man and Ninjaman."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/King_Jammy",
+          "https://en.wikipedia.org/wiki/Under_Mi_Sleng_Teng",
+          "https://en.wikipedia.org/wiki/Steely_%26_Clevie"
+        ]
+      },
+      "name": "King Jammy",
+      "period": "1976–present",
+      "why": "A King Tubby engineer who set up his own Waterhouse studio and sound system in 1976. 'Under Mi Sleng Teng' (1985), which he slowed and overdubbed from a Casio preset, is credited as the first digital riddim, and he recorded hundreds of versions on it. With Steely & Clevie as house band from 1986, his productions and sound system dominated the late 1980s and early 1990s."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Steely_%26_Clevie",
+          "https://en.wikipedia.org/wiki/Dembow_beat",
+          "https://wayneandwax.com/pdfs/dembow-paper-proofs.pdf"
+        ]
+      },
+      "name": "Steely & Clevie",
+      "period": "mid-1980s–2009",
+      "why": "Keyboardist Wycliffe 'Steely' Johnson and Cleveland 'Clevie' Browne, who pioneered the drum machine in reggae. They were Jammy's house band in 1986, started their own label in 1987, made the 'Fish Market' / 'Poco Man Jam' riddim (1989) and played the 'Dem Bow' riddim Bobby Digital produced for Shabba Ranks."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Diwali_Riddim",
+          "https://wayneandwax.com/academic/manuel-marshall_riddim-method.pdf"
+        ]
+      },
+      "name": "Stephen \"Lenky\" Marsden",
+      "period": "2000s",
+      "why": "One of the young producers who dominated the Greensleeves and VP riddim series. His 'Diwali' riddim (2002), named for its Indian dance-music influence and syncopated clapping, carried Sean Paul's 'Get Busy', Wayne Wonder's 'No Letting Go' and Bounty Killer's 'Sufferer'; he made custom versions per song with lines that mirror the vocal and stop-time silences."
+    }
+  ],
+  "meters": [
+    "4/4"
+  ],
+  "name": "Dancehall",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/academic/manuel-marshall_riddim-method.pdf",
+          "https://wayneandwax.com/pdfs/dembow-paper-proofs.pdf",
+          "https://blog.soundtrap.com/?p=1599",
+          "https://en.wikipedia.org/wiki/Dembow_beat"
+        ]
+      },
+      "text": "The default dancehall beat of the late 1980s and early 1990s (as on 'Bam Bam') puts the kick on every beat, cross-cut by snares marking 3+3+2, which can be heard as a habanera: on sixteenths counted from 1, snare or clap on 4, 7, 12 and 15, so nothing lands on 2 and 4. 'Dem Bow' adds snare rolls to it, the line reggaeton later played as timbales. It is the same figure as the app's Dembow feel."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/academic/manuel-marshall_riddim-method.pdf",
+          "https://blog.soundtrap.com/?p=1599",
+          "https://orphiq.com/resources/what-is-dancehall",
+          "https://songbpm.com/@wayne-smith/under-mi-sleng-teng",
+          "https://songbpm.com/@yellowman/zungguzungguguzungguzeng"
+        ]
+      },
+      "text": "Tempo: from 1990 to 2003 most riddims had the 3-3-2 pulse at about 90-110 BPM, with some faster since; guides quote 80-100 or 85-110. The early digital riddims read about 83 (detectors give 165). Rhythms are less standard than in roots reggae: 'Clappas' (2003) has a triplet swing, 'Military' is a march, 'Joyride' a medium-tempo polka. Swing comes from slight nudges by ear, not a quantise setting."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/academic/manuel-marshall_riddim-method.pdf",
+          "https://en.wikipedia.org/wiki/Sly_and_Robbie"
+        ]
+      },
+      "text": "Early dancehall (late 1970s to mid-1980s) voiced classic riddims in the one drop, often as crisp, minimal re-licks by Channel One's house bands the Revolutionaries and the Roots Radics; Sly and Robbie introduced the rub-a-dub sound in the early 1980s and led the move to programming by the mid-1980s."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/academic/manuel-marshall_riddim-method.pdf",
+          "https://en.wikipedia.org/wiki/Riddim",
+          "https://en.wikipedia.org/wiki/Dancehall",
+          "https://en.wikipedia.org/wiki/Under_Mi_Sleng_Teng"
+        ]
+      },
+      "text": "The riddim comes first: a beat-maker builds it and contracts deejays to voice it, and most songs sit on one of the dozen or so riddims popular at the time. Single-riddim CDs carry up to twenty vocalists and selectors 'juggle' several songs on one riddim; 'Real Rock' carries at least 269 songs and 'Sleng Teng' over 500. The same riddim must carry a hard boast, a party anthem and a love song ('Diwali': 'Sufferer', 'Get Busy', 'No Letting Go')."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/academic/manuel-marshall_riddim-method.pdf",
+          "https://en.wikipedia.org/wiki/Murder_She_Wrote_(song)"
+        ]
+      },
+      "text": "By the late 1980s songs settled into regular eight- or sixteen-bar verses and choruses, alternating verse and refrain. Riddims often have two or three sections in which instruments drop out for verses and return for refrains, a practice from dub. 'Murder She Wrote' is a single four-bar loop."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/academic/manuel-marshall_riddim-method.pdf",
+          "https://en.wikipedia.org/wiki/Murder_She_Wrote_(song)"
+        ]
+      },
+      "text": "Deejays intone on pitches: verses on one or two notes or a reciting tone, refrains more melodic, sung with a back-up chorus and often doubled by a synth. Stock tunes are reused, and a voicing can sit a little out of key with its riddim without anyone minding. 'Murder She Wrote' set the pairing of toasted verses and a sung hook."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Toasting_(Jamaican_music)",
+          "https://en.wikipedia.org/wiki/Dancehall",
+          "https://en.wikipedia.org/wiki/Yellowman",
+          "https://wayneandwax.com/pdfs/dembow-paper-proofs.pdf",
+          "https://wayneandwax.com/academic/manuel-marshall_riddim-method.pdf"
+        ]
+      },
+      "text": "Toasting is talking, usually in a monotone melody, over a rhythm, with boasts, catchphrases and rhyme; the dancehall deejay's chant is part talking, part singing. Themes moved from roots reggae's social justice, repatriation and Rastafari to dancing, violence and sex; Yellowman set the 'slack', direct style. Deejays rework earlier phrases: 'Under mi sleng teng' reworks Yellowman's 'Under me fat ting' and Barrington Levy's 'Under mi Sensi'."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://orphiq.com/resources/what-is-dancehall",
+          "https://wayneandwax.com/academic/manuel-marshall_riddim-method.pdf",
+          "https://blog.soundtrap.com/?p=1599"
+        ]
+      },
+      "text": "Harmony is minimal: a stab, a two-note riff, sometimes nothing; or an ostinato that alternates a major tonic with ii, IV, V or bVII; two- to four-chord loops at most. It leaves the mid-range to the voice."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://orphiq.com/resources/what-is-dancehall",
+          "https://wayneandwax.com/org/lessons/musiclesson1.html",
+          "https://blog.soundtrap.com/?p=1599",
+          "https://wayneandwax.com/academic/manuel-marshall_riddim-method.pdf"
+        ]
+      },
+      "text": "Synth bass more often than bass guitar from the mid-1980s: a short figure of two or three low notes, repeated with gaps, often the track's hook. It rarely moves; it doubles the 3+3+2 kick figure to fatten it. Sleng Teng's was overtone-rich; later basses are usually sine or synth with little harmonic content, lightly saturated."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Dancehall",
+          "https://en.wikipedia.org/wiki/Under_Mi_Sleng_Teng",
+          "https://wayneandwax.com/academic/manuel-marshall_riddim-method.pdf",
+          "https://en.wikipedia.org/wiki/Sly_and_Robbie"
+        ]
+      },
+      "text": "Digital from 1985: the Casio MT-40 'rock' preset that became Sleng Teng, the Oberheim DX drum machine; by the mid-2000s the Korg Triton was the studio staple and the Akai MPC common for drums, with Reason and Fruityloops coming in. Since Sleng Teng most riddims use futuristic digital timbres, though some feature acoustic sounds ('Drum Song' with nyabinghi drums, 'Equinoxx' with nylon guitar), and Sly Dunbar put tabla into the 'Bam Bam' style."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/academic/manuel-marshall_riddim-method.pdf",
+          "https://en.wikipedia.org/wiki/Diwali_Riddim"
+        ]
+      },
+      "text": "Since the early 1990s many riddims ('Punnany', 'Pepper Seed', 'Mud Up') are spare, mostly percussion, while others are densely layered. Producers such as Lenky Marsden make custom versions per song, adding lines that mirror the singer's melody and stop-time silences; 'Diwali' is known for its syncopated clapping."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre",
+          "https://wayneandwax.com/academic/manuel-marshall_riddim-method.pdf"
+        ]
+      },
+      "text": "Released reggae/dancehall masters measure a median -10.1 LUFS integrated (middle half -11.6 to -8.7) across 1,297 tracks, about 0.6 dB under pop. Many Jamaican engineers still prefer the warm, round sound of tape recorded hot to digital."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Dancehall",
+          "https://en.wikipedia.org/wiki/Skillibeng",
+          "https://dancehallmag.com/?p=32891"
+        ]
+      },
+      "text": "Modern dancehall: re-emerged globally by 2016. In the 2020s a trap-leaning generation (Skillibeng's blend with trap and drill) voices trap riddims as well as dancehall ones; Sean Paul says some younger artists sound better on trap riddims, and Masicka moves between both."
+    }
+  ],
+  "parent": "reggae",
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/pdfs/dembow-paper-proofs.pdf",
+          "https://wayneandwax.com/academic/manuel-marshall_riddim-method.pdf",
+          "https://blog.soundtrap.com/?p=1599"
+        ]
+      },
+      "text": "Programming a one drop or a rock backbeat. Since the late 1980s the default is a kick on every beat cross-cut by snares in 3+3+2 (sixteenths 4, 7, 12 and 15 counting from 1); nothing lands on 2 and 4."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/academic/manuel-marshall_riddim-method.pdf",
+          "https://orphiq.com/resources/what-is-dancehall"
+        ]
+      },
+      "text": "Writing a finished song instead of a riddim. A riddim is built before any voicing and has to carry many: keep harmony to a stab or a two-chord ostinato, leave the mid-range for the voice, and make two or three sections that drop instruments for verses and bring them back for refrains."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://songbpm.com/@wayne-smith/under-mi-sleng-teng",
+          "https://songbpm.com/@yellowman/zungguzungguguzungguzeng"
+        ]
+      },
+      "text": "Reading early digital riddims at double. Detectors read 'Under Mi Sleng Teng' and 'Zungguzungguguzungguzeng' at 165; they run at about 83, inside the genre's 80-110."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/academic/manuel-marshall_riddim-method.pdf"
+        ]
+      },
+      "mode": "mixolydian",
+      "roman": "I - bVII",
+      "text": "The 'Real Rock' ostinato (B-flat to A-flat) that hundreds of deejay songs are voiced over."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/academic/manuel-marshall_riddim-method.pdf"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "I - I - IV - V",
+      "text": "The vintage 'Nanny Goat' riddim, re-licked under 1990s deejays such as Buju Banton."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/academic/manuel-marshall_riddim-method.pdf"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "i - iv",
+      "text": "A minor riddim oscillating between tonic and subdominant ('Just Be Good to Me')."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/academic/manuel-marshall_riddim-method.pdf"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "I - ii",
+      "text": "A major tonic alternating with ii, one of the two-chord ostinatos riddims use."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/academic/manuel-marshall_riddim-method.pdf",
+          "https://orphiq.com/resources/what-is-dancehall",
+          "https://blog.soundtrap.com/?p=1599",
+          "https://wayneandwax.com/org/lessons/musiclesson1.html"
+        ]
+      },
+      "feature": "tempo.bpm",
+      "high": 110,
+      "low": 80,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "inferred": "Wayne Marshall's lesson doubles the basic 3+3+2 figure in the bass (kicks on the 1st and 4th sixteenth of each half bar, snare on the 7th): doubling the kicks gives 4 attacks a bar, the whole figure 6. Orphiq's 'short synth figure, repeated' of two or three notes fits inside that."
+      },
+      "feature": "bass.attacks.per.bar",
+      "high": 6,
+      "low": 4,
+      "unit": "attacks per bar"
+    },
+    {
+      "evidence": {
+        "inferred": "Of the 3+3+2 positions the cited lesson gives (sixteenths 1, 4 and 7 of each half bar) only the first is on a quarter note: a bass doubling the kicks has half its onsets off the quarter grid, one doubling the whole figure two thirds."
+      },
+      "feature": "bass.syncopation",
+      "high": 0.67,
+      "low": 0.5,
+      "unit": "fraction of onsets"
+    },
+    {
+      "evidence": {
+        "inferred": "the doubled figure starts with the kick on beat 1 of every bar (Wayne Marshall's lesson), and the standard dancehall/dembow kick lands on every beat (Marshall 2008), so every downbeat carries a bass attack."
+      },
+      "feature": "bass.downbeat.coverage",
+      "high": 1,
+      "low": 1,
+      "unit": "fraction of bars"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/academic/manuel-marshall_riddim-method.pdf",
+          "https://orphiq.com/resources/what-is-dancehall",
+          "https://blog.soundtrap.com/?p=1599"
+        ]
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 4,
+      "low": 1,
+      "typical": 2,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "inferred": "Manuel & Marshall's riddim ostinatos alternate the tonic with one other chord over two- or four-bar loops ('Murder She Wrote' is 'a simple four-bar loop'), 0.25-1 changes a bar; the 'Nanny Goat' I-I-IV-V changes three times in four bars (0.75)."
+      },
+      "feature": "harmony.changes.per.bar",
+      "high": 1,
+      "low": 0.25,
+      "unit": "changes per bar"
+    },
+    {
+      "evidence": {
+        "inferred": "Manuel & Marshall: deejays from the late 1970s to the early 1990s voice 'simple two- or three-note melodies or even virtual reciting tones', verses around one or two pitches and refrains more melodic; two or three neighbouring scale notes span 2-5 semitones and a wider refrain reaches about a fifth. Sung refrains by singers (Pliers, Wayne Wonder) can exceed this."
+      },
+      "feature": "melody.range.semitones",
+      "high": 7,
+      "low": 2,
+      "unit": "semitones"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre"
+        ]
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -8.7,
+      "low": -11.6,
+      "typical": -10.1,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "set equal to the released-master loudness of 1,297 reggae/dancehall tracks (middle half -11.6 to -8.7, median -10.1) in the cited Freshly Baked survey, since the delivered target is the released master."
+      },
+      "feature": "mix.master.target.lufs",
+      "high": -8.7,
+      "low": -11.6,
+      "typical": -10.1,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "the pooled fit of lufs.to's per-track measurements used in the parent reggae profile, crest = 5.28 - 0.743 x integrated LUFS (dynamic range defined on https://lufs.to/methodology as peak minus RMS of the released track), applied to this profile's -11.6 to -8.7 LUFS range; typical -10.1 LUFS -> 12.8 dB. Pooled across genres, not a dancehall measurement; lufs.to's 29 'Ragga' tracks (UK, 1990s-2000s) read a median 14.5 dB at -12 LUFS."
+      },
+      "feature": "mix.crest.db",
+      "high": 13.9,
+      "low": 11.7,
+      "typical": 12.8,
+      "unit": "dB"
+    },
+    {
+      "evidence": {
+        "inferred": "SongBPM durations of nine dancehall records: Sleng Teng 3:17, Who Am I 3:16, Dem Bow 3:38, Murder She Wrote 4:05, Get Busy 3:30, No Letting Go 3:22, Fever 3:25, Temperature 3:36, So Mi Like It 2:34; median 3:25. Zungguzungguguzungguzeng's 6:27 album cut is left out as an extended mix."
+      },
+      "feature": "form.minutes",
+      "high": 4.1,
+      "low": 2.5,
+      "typical": 3.4,
+      "unit": "minutes"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Yellowman",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Zungguzungguguzungguzeng",
+          "https://songbpm.com/@yellowman/zungguzungguguzungguzeng",
+          "https://wayneandwax.com/academic/manuel-marshall_riddim-method.pdf"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "melody.range.semitones"
+      ],
+      "listenFor": "Junjo Lawes's 'Diseases' riddim under steady, on-the-beat chanting on a few pitches; detectors read 165, so count it at 83.",
+      "title": "Zungguzungguguzungguzeng",
+      "year": 1982
+    },
+    {
+      "artist": "Wayne Smith",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Under_Mi_Sleng_Teng",
+          "https://songbpm.com/@wayne-smith/under-mi-sleng-teng",
+          "https://wayneandwax.com/academic/manuel-marshall_riddim-method.pdf"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "bass.attacks.per.bar"
+      ],
+      "listenFor": "The first all-digital riddim, a Casio MT-40 preset slowed by King Jammy with an overtone-rich synth bass, 3:17 in D, read at 83 (165 detected).",
+      "title": "Under Mi Sleng Teng",
+      "year": 1985
+    },
+    {
+      "artist": "Shabba Ranks",
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/pdfs/dembow-paper-proofs.pdf",
+          "https://en.wikipedia.org/wiki/Dembow_beat",
+          "https://songbpm.com/@shabba-ranks/dem-bow"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "grid.subdivision",
+        "bass.syncopation"
+      ],
+      "listenFor": "Steely & Clevie's kick on every beat with snares in 3+3+2 plus extra snare rolls, at 98 BPM for 3:38: the riddim that gave the dembow its name.",
+      "title": "Dem Bow",
+      "year": 1990
+    },
+    {
+      "artist": "Chaka Demus & Pliers",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Murder_She_Wrote_(song)",
+          "https://wayneandwax.com/academic/manuel-marshall_riddim-method.pdf",
+          "https://songbpm.com/@chaka-demus-pliers/murder-she-wrote"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "harmony.changes.per.bar",
+        "form.minutes"
+      ],
+      "listenFor": "Sly & Robbie's 'Bam Bam' riddim as one four-bar loop with its guitar riff, toasted verses against a sung hook, 95 BPM in B minor.",
+      "title": "Murder She Wrote",
+      "year": 1992
+    },
+    {
+      "artist": "Beenie Man",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Who_Am_I_(Beenie_Man_song)",
+          "https://songbpm.com/@beenie-man/who-am-i"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.minutes"
+      ],
+      "listenFor": "Jeremy Harding's 'Playground' riddim, voiced in what seemed one take; 84 BPM detected over 3:16.",
+      "title": "Who Am I",
+      "year": 1997
+    },
+    {
+      "artist": "Sean Paul",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Diwali_Riddim",
+          "https://en.wikipedia.org/wiki/Dancehall",
+          "https://songbpm.com/@sean-paul/get-busy"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.minutes"
+      ],
+      "listenFor": "Lenky's 'Diwali' riddim and its syncopated claps at 100 BPM for 3:30; the first dancehall single to top the Billboard Hot 100.",
+      "title": "Get Busy",
+      "year": 2003
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "sub",
+      "808",
+      "finger"
+    ],
+    "instruments": [
+      "stab",
+      "organ",
+      "strings",
+      "clean-electric",
+      "nylon-guitar",
+      "grand-piano"
+    ],
+    "machines": [
+      "dmx",
+      "tr808",
+      "studio"
+    ]
+  },
+  "summary": "Jamaican music from the late 1970s on in which deejays chant, half talking and half singing, over riddims: instrumentals built first and then voiced by dozens of artists. After King Jammy's all-digital 'Under Mi Sleng Teng' (1985) riddims were made on keyboards and drum machines, and from the late 1980s the default beat is a kick on every beat cross-cut by snares in 3+3+2, at about 90-110 BPM, under minimal harmony and a short, repeated synth bass. The lyrics turned from roots reggae's themes to dancing, sex and violence.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Dancehall",
+      "https://wayneandwax.com/academic/manuel-marshall_riddim-method.pdf",
+      "https://wayneandwax.com/pdfs/dembow-paper-proofs.pdf",
+      "https://orphiq.com/resources/what-is-dancehall"
+    ]
+  }
+}

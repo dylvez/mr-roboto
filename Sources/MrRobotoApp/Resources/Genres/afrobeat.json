@@ -4,7 +4,9 @@
     "fela afrobeat",
     "afrofunk"
   ],
-  "bassHands": [],
+  "bassHands": [
+    "afrobeat"
+  ],
   "family": "african",
   "feels": [
     "Afrobeat",

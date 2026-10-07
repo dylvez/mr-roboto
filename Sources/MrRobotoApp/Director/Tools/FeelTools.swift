@@ -68,7 +68,7 @@ public struct ListFeelsTool: DirectorTool {
             ("tempo", Schema.optional(Schema.number("Only feels that suit this tempo, in BPM.", minimum: 20, maximum: 300))),
             ("idiom", Schema.optional(Schema.string("Only feels tagged with this idiom, e.g. \"boom-bap\", \"lo-fi\", \"soul\"."))),
             ("beats_per_bar", Schema.optional(Schema.integer("Only feels in this metre: 4 for 4/4, 3 for 3/4.", minimum: 1, maximum: 16))),
-            ("limit", Schema.optional(Schema.integer("How many to return. Defaults to 8.", minimum: 1, maximum: 60))),
+            ("limit", Schema.optional(Schema.integer("How many to return. Defaults to 8.", minimum: 1, maximum: 100))),
         ], required: ["tempo", "idiom", "beats_per_bar", "limit"])
     }
 

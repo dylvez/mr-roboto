@@ -18,7 +18,9 @@ public enum GenreNumerals {
         guard !tokens.isEmpty else { return nil }
         let fromMajor = tokens.contains { $0.first.map { "b♭#♯".contains($0) } ?? false }
         let named = mode.flatMap { name in Mode.allCases.first { $0.name.lowercased() == name.lowercased() } }
-        let scale = fromMajor ? Mode.ionian.scale : (named?.scale ?? key.scale)
+        // A scale the modes do not have — "phrygian dominant", the flamenco mode — by its name.
+        let coloured = mode.flatMap(ScaleColour.init(named:)).map { Scale(name: $0.name, intervals: $0.intervals) }
+        let scale = fromMajor ? Mode.ionian.scale : (named?.scale ?? coloured ?? key.scale)
         var out: [Chord] = []
         for token in tokens {
             guard let chord = chord(token, key: key, scale: scale) else { return nil }
@@ -38,7 +40,7 @@ public enum GenreNumerals {
     /// ones in a major key. A progression that names no mode fits either.
     public static func fits(mode: String?, _ key: Key) -> Bool {
         guard let mode = mode?.lowercased(), !mode.isEmpty else { return true }
-        let minor = ["aeolian", "dorian", "phrygian", "locrian", "harmonic minor", "melodic minor", "minor"].contains(mode)
+        let minor = ["aeolian", "dorian", "phrygian", "locrian", "minor"].contains(mode) || ScaleColour(named: mode) != nil
         let keyMinor = [.aeolian, .dorian, .phrygian, .locrian].contains(key.mode)
         return minor == keyMinor
     }

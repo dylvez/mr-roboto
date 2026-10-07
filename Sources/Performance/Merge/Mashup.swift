@@ -93,7 +93,7 @@ public enum Mashup {
         // it used to stay in the backbone's key from before the nudge, a whole tone off.
         var key = target.key ?? spine.key ?? other.key
         if target.key == nil, let nudge = backbone == .a ? semitonesA : semitonesB, let from = spine.key {
-            key = Key(tonicPitchClass: from.tonic.pitchClass.transposed(by: nudge), mode: from.mode)
+            key = from.transposed(by: nudge)
         }
         let settled = MergeTarget(key: key, tempo: target.tempo ?? spine.tempo ?? other.tempo)
         let moveA = Merge.move(MergeFragment(label: a.label, kind: .sample, key: a.key, tempo: a.tempo), to: settled, semitones: semitonesA)

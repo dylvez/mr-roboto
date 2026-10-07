@@ -26,6 +26,18 @@ EXTRA_FEELS = {
     "cumbia": ["Cumbia"],
     "folk": ["Cajón Groove"],
 }
+# Bass hands a profile should claim that the research could not name, because the writer had no
+# such player then: the afrobeat ostinato, the boom-bap bass on the break's kick, dub's riff.
+EXTRA_HANDS = {
+    "afrobeat": ["afrobeat"],
+    "boom-bap": ["boom-bap"],
+    "lo-fi-hip-hop": ["boom-bap", "palladino"],
+    "trip-hop": ["dub"],
+    "breakbeat": ["rolling"],
+    "reggae": ["dub"],
+}
+# Aliases that became genres of their own.
+DROP_ALIASES = {"reggae": ["dub", "dancehall", "rub-a-dub"], "jazz": ["swing"]}
 def judged(f): return (f.startswith(STYLE) and not f.startswith("form.album.")) or f in MIX
 for path in sorted(glob.glob(SRC + "/*.json")):
     p = json.load(open(path))
@@ -37,6 +49,9 @@ for path in sorted(glob.glob(SRC + "/*.json")):
     p["ranges"] = [r for r in p["ranges"] if r["feature"] not in DROP_RANGES.get(p["id"], [])]
     for f in EXTRA_FEELS.get(p["id"], []):
         if f not in p["feels"]: p["feels"].append(f)
+    for h in EXTRA_HANDS.get(p["id"], []):
+        if h not in p["bassHands"]: p["bassHands"].append(h)
+    p["aliases"] = [a for a in p.get("aliases", []) if a not in DROP_ALIASES.get(p["id"], [])]
     with open(os.path.join(DST, p["id"] + ".json"), "w") as out:
         json.dump(p, out, indent=2, sort_keys=True, ensure_ascii=False); out.write("\n")
     if dropped: print(p["id"], "dropped", dropped)

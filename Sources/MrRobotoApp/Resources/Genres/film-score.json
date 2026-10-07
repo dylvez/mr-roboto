@@ -1,0 +1,559 @@
+{
+  "aliases": [
+    "film music",
+    "soundtrack",
+    "orchestral score",
+    "underscore",
+    "trailer music",
+    "tv score",
+    "cinematic"
+  ],
+  "bassHands": [
+    "pedal"
+  ],
+  "family": "cinematic",
+  "feels": [
+    "Cinematic Toms"
+  ],
+  "form": {
+    "evidence": {
+      "inferred": "Time (Inception) as the model: Carayol describes an eight-bar cycle under a pyramid-shaped swell, and at the 63 BPM TheoryTab and songbpm give, its 4:36 is about 72 bars of 4/4, nine cycles. The split — one cycle alone, four building, two at full strength, two thinning — follows the pyramid she describes rather than bar counts she gives. Cue forms are set by the picture and vary from cue to cue; a trailer cue follows the three acts in the notes instead."
+    },
+    "sections": [
+      {
+        "bars": 8,
+        "name": "Intro"
+      },
+      {
+        "bars": 32,
+        "name": "Build"
+      },
+      {
+        "bars": 16,
+        "name": "Climax"
+      },
+      {
+        "bars": 16,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "film-score",
+  "idioms": [
+    "cinematic"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/John_Williams",
+          "https://franklehman.com/wp-content/uploads/2023/06/Star-Wars-Thematic-Catalogue.pdf"
+        ]
+      },
+      "name": "John Williams",
+      "period": "1952–present",
+      "why": "Scored Star Wars (1977) as a neo-Romantic symphonic score drawing on Korngold, Wagner, Holst and Golden Age Hollywood, built on leitmotifs that Lehman's catalogue follows across the films; Jaws's two-note ostinato became shorthand for approaching danger. 54 Oscar nominations and five wins, often recording with the London Symphony Orchestra."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Ennio_Morricone",
+          "https://en.wikipedia.org/wiki/The_Good,_the_Bad_and_the_Ugly_(soundtrack)"
+        ]
+      },
+      "name": "Ennio Morricone",
+      "period": "1946–2020",
+      "why": "Wrote more than 400 film and television scores. For Sergio Leone's Dollars films a small budget pushed him to gunshots, whips, whistling, voices, jew's harp and the Fender electric guitar, and some music was written before filming so Leone could hold scenes for it; The Good, the Bad and the Ugly gives its three men the same coyote-howl motif on flute, arghilofono and voices."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Hans_Zimmer",
+          "https://www.erudit.org/fr/revue/rmo/2018/v5/n2/1054148ar.pdf",
+          "https://en.wikipedia.org/wiki/Dunkirk_(soundtrack)",
+          "https://en.wikipedia.org/wiki/BRAAAM"
+        ]
+      },
+      "name": "Hans Zimmer",
+      "period": "1977–present",
+      "why": "Fused synthesizers with the orchestra, from his early work with Stanley Myers, and runs Remote Control Productions as a collaborative studio. His Nolan scores build minimal cycles round a minor triad, ostinato fifths and held notes into slow swells; Dunkirk is built on a Shepard tone and a ticking watch, and the Inception horn sound became the trailer BRAAAM."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Hildur_Gu%C3%B0nad%C3%B3ttir",
+          "https://en.wikipedia.org/wiki/Joker_(soundtrack)"
+        ]
+      },
+      "name": "Hildur Guðnadóttir",
+      "period": "2001–present",
+      "why": "A cellist who writes from her instrument: she composed Joker's score from the script before filming, Arthur's theme on solo cello against an orchestra, and Joaquin Phoenix improvised the bathroom dance to it on set. Her Chernobyl score was made from sounds recorded in a decommissioned nuclear power plant; an Oscar for Joker, an Emmy and a Grammy for Chernobyl."
+    }
+  ],
+  "meters": [
+    "4/4",
+    "6/8"
+  ],
+  "name": "Film Score",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.erudit.org/fr/revue/rmo/2018/v5/n2/1054148ar.pdf",
+          "https://www.soundonsound.com/reviews/spitfire-audio-hans-zimmer-percussion-volume-1"
+        ]
+      },
+      "text": "Much underscore has no drum kit at all. Time swells on strings, brass, orchestral percussion, piano, synthesizers and electric guitar over an eight-bar cycle, and the drums Zimmer does use are orchestral and ethnic — orchestral bass drums, Japanese taikos, Brazilian surdos, piatti and tam-tams — rather than a kit."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.ujam.com/tutorials/epic-drums-for-video-game-and-film-soundtracks/",
+          "https://www.soundonsound.com/reviews/spitfire-audio-hans-zimmer-percussion-volume-1"
+        ]
+      },
+      "text": "When drums drive an action or trailer cue, the idiom is constant eighth notes on the big drums with sixteenths added here and there, or dotted-quarter syncopations to begin with. Layers are played separately so they sit slightly out of sync, and the taikos and tam-tams are saved for the moments that need them."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://filmscoreclicktrack.com/on-the-right-track/",
+          "https://en.wikipedia.org/wiki/Film_score",
+          "https://en.wikipedia.org/wiki/Dunkirk_(soundtrack)"
+        ]
+      },
+      "text": "The picture sets the tempo. Max Steiner's click track (with Carl Stalling and Scott Bradley in 1930s animation) fixes a tempo so musical events land on hit points cut to the frame, and it is still how action cues are synced. In Dunkirk a recording of Nolan's own watch sets the tempo, and the tick runs faster from the land timeline to the sea to the air."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Film_score"
+        ]
+      },
+      "text": "A score is a set of cues, not songs. At the spotting session composer and director decide where music starts and stops and which on-screen events it must hit; the cues are then synced by timecode, click, streamers and punches. Most films carry 45 to 120 minutes of music."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://www.erudit.org/fr/revue/rmo/2018/v5/n2/1054148ar.pdf",
+          "https://www.hooktheory.com/theorytab/view/hans-zimmer/time"
+        ]
+      },
+      "text": "Zimmer's contemplative cues are cycles: Time repeats an eight-bar loop in a modal minor (the war adagio of The Thin Red Line, eleven bars) under a pyramid-shaped swell in which orchestra and synthesizers pile up, low long-note thirds giving way to a descending quarter-note countermelody and an emerging pulse."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://www.rareformaudio.com/blog/how-production-music-reveals-trailer-structure",
+          "https://en.wikipedia.org/wiki/BRAAAM"
+        ]
+      },
+      "text": "Trailer music is cut in three acts for the editor: Act I sets the tone (ambient, emotional, minimal), Act II builds as rhythms develop and tension rises, Act III peaks with percussion, melody and big hits. In the 2010s the BRAAAM — a loud, low blast of brass or synthesized brass — became its signature."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://franklehman.com/wp-content/uploads/2023/06/Star-Wars-Thematic-Catalogue.pdf"
+        ]
+      },
+      "text": "Harmony is associative rather than tied to a key. In Williams's Star Wars the pair Gm and Ebm (i–bvi, the 'Tarnhelm') means villainy and the dark side, Gm and Eb (i–VI) the epic and the mythical, G and E (I–VI) heroism, Gm and C (i–IV) destiny and the Force; absolute key carries little meaning."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://mtosmt.org/issues/mto.06.12.2/mto.06.12.2.murphy.html"
+        ]
+      },
+      "text": "Two major triads a tritone apart are Hollywood's sound for outer space and the extraordinary (Star Wars, Star Trek: The Motion Picture, The Wrath of Khan, Men in Black, Treasure Planet): tutti or brass, smooth voice leading above the roots in the bass, each chord lasting at least a second, swinging back to the first chord."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://mtosmt.org/issues/mto.13.19.4/mto.13.19.4.lehman.html",
+          "https://www.mtosmt.org/issues/mto.16.22.1/mto.16.22.1.richards.html"
+        ]
+      },
+      "text": "Cadences are rhetoric more than syntax. Lehman names the mixed plagal cadence (borrowed-chord nostalgia such as vi–bVI–I, prominent in Newman's 20th Century Fox fanfare), the subtonic half cadence bVII–V of the Western, and Williams's chromatically modulating resolutions for wonder. In Richards's 482 Oscar-nominated themes, 63% of the conventionally phrased themes have a strict V–I cadence; the rest close on tonic arrivals, modal cadences or tonic pedals."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://franklehman.com/wp-content/uploads/2023/06/Star-Wars-Thematic-Catalogue.pdf",
+          "https://www.erudit.org/fr/revue/rmo/2018/v5/n2/1054148ar.pdf",
+          "https://www.soundonsound.com/techniques/arranging-strings-part-1"
+        ]
+      },
+      "text": "Pedal points hold the bottom still while the harmony or the tune moves: the Star Wars Main Theme's B section sits mostly over a dominant pedal, the Rebel Fanfare stacks parallel major triads over a static pedal, and Zimmer keeps a held low note beneath ethereal textures (in The Da Vinci Code's 'The Paschal Spiral', an A-minor string chord over a bass E coloured by an electronic B pedal). Cellos are usually doubled an octave down by the basses."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://www.soundonsound.com/techniques/sampled-orchestra-part6",
+          "https://www.soundonsound.com/techniques/arranging-strings-part-1"
+        ]
+      },
+      "text": "Orchestration by register: three unison trumpets doubled an octave below by trombones and bass trombone carry Williams's big tunes; trumpets and horns in octaves are the classic majestic brass sound; chordal horn ostinatos sit at C4–A4 (down to G3 for a mellower tone), rhythmic trombones at C3–F#4; the cellos take a melody while the upper strings sustain, and violins split divisi for octave doublings."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/John_Williams",
+          "https://franklehman.com/wp-content/uploads/2023/06/Star-Wars-Thematic-Catalogue.pdf"
+        ]
+      },
+      "text": "Themes are leitmotifs: Williams ties them to characters and ideas and develops them. Lehman's catalogue counts as a principal leitmotif only an idea heard in more than one film and more than ten times that gathers meaning; the Main Theme opens with a leap of a fourth then a fifth and uses octave displacement, and the Force theme rises from a fourth and is closely tied to the solo French horn."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://www.mtosmt.org/issues/mto.16.22.1/mto.16.22.1.richards.html",
+          "https://franklehman.com/wp-content/uploads/2023/06/Star-Wars-Thematic-Catalogue.pdf"
+        ]
+      },
+      "text": "Most film themes are built on eight-bar models (two four-bar halves), the period the commonest. Around 1990 short 'motto' and discursive themes became the majority, as sequencers made short repeated motifs easy and editing kept changing the picture late; the Rebel Fanfare is a textbook motto."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Ennio_Morricone",
+          "https://en.wikipedia.org/wiki/The_Ecstasy_of_Gold",
+          "https://en.wikipedia.org/wiki/Thomas_Newman",
+          "https://en.wikipedia.org/wiki/Hildur_Gu%C3%B0nad%C3%B3ttir",
+          "https://en.wikipedia.org/wiki/Hans_Zimmer"
+        ]
+      },
+      "text": "Signature colour often comes from outside the orchestra: Morricone's whistling, Fender guitar, gunshots, whips and voices (a budget choice) and Edda Dell'Orso's wordless soprano; Thomas Newman's zither, hurdy-gurdy, hammered dulcimer and percussion-only scores; Guðnadóttir's solo cello and halldorophone; Zimmer's synthesizers fused with the orchestra."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://tech.ebu.ch/docs/r/r128.pdf",
+          "https://thepostflow.com/filmmaker-resources/delivery-specs-cheat-sheet/",
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre"
+        ]
+      },
+      "text": "Deliverables and albums are different targets. Broadcast programmes are normalised to -23 LUFS with a -1 dBTP ceiling (EBU R 128) or -24 LKFS (ATSC A/85); Netflix measures dialogue-gated loudness at -27 LKFS ±2 with a -2 dBTP ceiling; cinema trailers are capped at 85 Leq(m). Released score and instrumental albums measure a median -12.9 LUFS (middle half -16.5 to -10.1): scores are among the only music still mastered near -14."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://tech.ebu.ch/docs/r/r128.pdf",
+          "https://thepostflow.com/filmmaker-resources/delivery-specs-cheat-sheet/",
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre"
+        ]
+      },
+      "text": "Mastering a score like a pop single. Film and TV deliverables are measured to a spec (-23 LUFS in EBU R 128, -24 LKFS in ATSC A/85, -27 LKFS dialogue-gated for Netflix) and released score albums sit around -13 LUFS; keep the transients and deliver to the spec instead."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/BRAAAM",
+          "https://www.ujam.com/tutorials/epic-drums-for-video-game-and-film-soundtracks/"
+        ]
+      },
+      "text": "Putting the BRAAAM and the big drums in every cue. By 2013 the horn blast was nearly omnipresent in blockbuster trailers, Zimmer disliked it becoming the blueprint for action films, and trailers moved to substitutes. Save the taikos and tam-tams for the moments that need them: the contrast is what makes them land."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://franklehman.com/wp-content/uploads/2023/06/Star-Wars-Thematic-Catalogue.pdf",
+          "https://en.wikipedia.org/wiki/John_Williams"
+        ]
+      },
+      "text": "Writing a theme once. Film themes are leitmotifs: tie each to a character or idea and develop it — the Star Wars Main Theme runs from triumph to terror and comedy to nostalgia — and let a pair of chords (the Tarnhelm for villainy) carry meaning rather than the key."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.ujam.com/tutorials/epic-drums-for-video-game-and-film-soundtracks/"
+        ]
+      },
+      "text": "Copying one drum part across an ensemble. Program or record each layer separately so they sit slightly out of sync; identical copies sound mechanical."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://franklehman.com/wp-content/uploads/2023/06/Star-Wars-Thematic-Catalogue.pdf",
+          "https://www.hooktheory.com/theorytab/view/john-williams/the-imperial-march"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "i - bvi",
+      "text": "The 'Tarnhelm', LP(m): the minor tonic and the minor chord a major third below. It harmonises the Imperial March and is Williams's sign for villainy and the dark side."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://franklehman.com/wp-content/uploads/2023/06/Star-Wars-Thematic-Catalogue.pdf",
+          "https://www.hooktheory.com/theorytab/view/klaus-badelt/hes-a-pirate"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "i - VI",
+      "text": "The minor tonic swinging to the major chord a major third below — 'the epic, the mythical' in Lehman's Star Wars table (the Force, Battle of the Heroes) — and the i–VI that opens He's a Pirate's verse."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/blog/cinematic-chord-progressions/"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "I - bVI - IV",
+      "text": "Man of Steel's heroic move: the major tonic to the major chord on the flat sixth, a chromatic mediant borrowed from the minor, then IV."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://mtosmt.org/issues/mto.06.12.2/mto.06.12.2.murphy.html"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "I - bV",
+      "text": "The major tritone progression: two major triads a tritone apart, swinging back and forth, for outer space and anything beyond ordinary experience."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/hans-zimmer/time",
+          "https://www.erudit.org/fr/revue/rmo/2018/v5/n2/1054148ar.pdf"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "iv - i - III - VII",
+      "text": "Time's loop in E minor (Am–Em–G–D), entirely diatonic, repeated as the eight-bar cycle swells."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "inferred": "Span and median of eight reference cues' tempos as published: Time 63 (TheoryTab and songbpm), He's a Pirate 70 (TheoryTab, 6/8), Any Other Name 78, Bathroom Dance 86, Star Wars Main Theme 87 (TheoryTab), Interstellar main theme / Cornfield Chase 96 (TheoryTab and songbpm), The Ecstasy of Gold 99 (2004 remaster), The Imperial March 103-104 (songbpm and TheoryTab); pages https://www.hooktheory.com/theorytab/view/hans-zimmer/time, https://songbpm.com/@hans-zimmer/time, https://www.hooktheory.com/theorytab/view/klaus-badelt/hes-a-pirate, https://songbpm.com/@thomas-newman/any-other-name---from-american-beauty-soundtrack-xNaz81VXh0, https://songbpm.com/@hildur-gudnadottir/bathroom-dance, https://www.hooktheory.com/theorytab/view/john-williams/star-wars-main-theme, https://www.hooktheory.com/theorytab/view/hans-zimmer/interstellar-main-theme, https://songbpm.com/@hans-zimmer/cornfield-chase, https://songbpm.com/@ennio-morricone/the-ecstasy-of-gold-e3847ccc-1ac2-413d-8b14-ffa27d817728, https://songbpm.com/@john-williams/the-imperial-march-darth-vader-s-theme, https://www.hooktheory.com/theorytab/view/john-williams/the-imperial-march. These are themes and underscore; action cues set to a click, and the Cinematic Toms feel under them, run faster than this range. Detected BPMs of rubato orchestral recordings disagree between versions, so these are approximate."
+      },
+      "feature": "tempo.bpm",
+      "high": 105,
+      "low": 60,
+      "typical": 87,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre"
+        ]
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -10.1,
+      "low": -16.5,
+      "typical": -12.9,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "lufs.to's per-track measurements (its 'dynamic range' is peak minus RMS of the whole track, https://lufs.to/methodology, the quantity MixMeter.crestDB computes) give crest = 5.28 - 0.743 x integrated LUFS across its genres (r = -0.88, residual SD 1.36 dB; the fit recorded in this repo's loudness notes). Applied to the cited Instrumental / Score range -16.5 to -10.1 LUFS, typical -12.9 -> 14.9 dB. Pooled across genres, not a crest measurement of scores; lufs.to's peak is true peak, so it can read up to ~0.5 dB above a sample-peak crest."
+      },
+      "feature": "mix.crest.db",
+      "high": 17.5,
+      "low": 12.8,
+      "typical": 14.9,
+      "unit": "dB"
+    },
+    {
+      "evidence": {
+        "inferred": "Album lengths of seven reference cues on songbpm: He's a Pirate 1:31, Cornfield Chase 2:07, Bathroom Dance 2:08, The Imperial March 3:00, The Ecstasy of Gold 3:23, Any Other Name 4:07, Time 4:36 (median 3:00). These are soundtrack-album tracks; cues in the film are cut to scene length, and a film carries 45-120 minutes of music in all (https://en.wikipedia.org/wiki/Film_score)."
+      },
+      "feature": "form.minutes",
+      "high": 4.6,
+      "low": 1.5,
+      "typical": 3.0,
+      "unit": "minutes"
+    },
+    {
+      "evidence": {
+        "inferred": "Time's iv-i-III-VII loop (TheoryTab) turns over as the eight-bar cycle Carayol describes, about a chord a bar; Lehman's catalogue calls the Star Wars Main Theme's B section harmonically static over a dominant pedal (slower than one a bar); Murphy finds each chord of the major tritone progression lasts at least a second, which at the 60-105 BPM above allows up to about two a bar of 4/4."
+      },
+      "feature": "harmony.changes.per.bar",
+      "high": 2,
+      "low": 0.5,
+      "unit": "changes per bar"
+    },
+    {
+      "evidence": {
+        "inferred": "From the chord lists of five TheoryTab transcriptions: Time (iv i III VII in E minor), He's a Pirate (i VI v i VI) and the Interstellar theme (VI7 v6 i v65) are wholly diatonic (1.0); The Imperial March alternates i with the bvi a major third below (Lehman's LP(m)), half its chords outside the key (0.5); the Star Wars Main Theme mixes mixolydian VII and v with V and bIII."
+      },
+      "feature": "harmony.diatonic.ratio",
+      "high": 1.0,
+      "low": 0.5,
+      "unit": "fraction"
+    },
+    {
+      "evidence": {
+        "inferred": "The chord-tone percentages TheoryTab reports for five film themes: The Imperial March 76%, Star Wars Main Theme 79%, Time 80%, He's a Pirate 81%, Interstellar 88% (median 80%)."
+      },
+      "feature": "melody.chord.tone.ratio",
+      "high": 0.9,
+      "low": 0.75,
+      "typical": 0.8,
+      "unit": "fraction"
+    },
+    {
+      "evidence": {
+        "inferred": "Lehman's catalogue: the Star Wars Main Theme opens with a fourth then a fifth (7) and uses octave displacement (12); the Force theme opens on a rising fourth (5) and climbs by step. Guðnadóttir's Joker theme is described as simplistic and monotonic, which sits at the low end."
+      },
+      "feature": "melody.leap.max.semitones",
+      "high": 12,
+      "low": 5,
+      "unit": "semitones"
+    },
+    {
+      "evidence": {
+        "inferred": "The cited pedal points — the Star Wars B section over a dominant pedal and the Rebel Fanfare over a static pedal (Lehman), Zimmer's held low pedal note and long-value thirds in the bass (Carayol) — are notes held until the next one, so a pedal bass fills nearly all of each interval."
+      },
+      "feature": "bass.note.length.ratio",
+      "high": 1.0,
+      "low": 0.85,
+      "unit": "fraction of the interval to the next onset"
+    }
+  ],
+  "references": [
+    {
+      "artist": "John Williams",
+      "evidence": {
+        "cited": [
+          "https://franklehman.com/wp-content/uploads/2023/06/Star-Wars-Thematic-Catalogue.pdf",
+          "https://www.hooktheory.com/theorytab/view/john-williams/star-wars-main-theme"
+        ]
+      },
+      "features": [
+        "melody.leap.max.semitones",
+        "bass.note.length.ratio"
+      ],
+      "listenFor": "From about 0:28 in the film the Main Theme's opening fourth-then-fifth leap on trumpets; from about 0:48 the string B section, harmonically static over a dominant pedal; at about 2:06 the Rebel Fanfare's parallel major triads.",
+      "title": "Main Title (Star Wars)",
+      "year": 1977
+    },
+    {
+      "artist": "John Williams",
+      "evidence": {
+        "cited": [
+          "https://franklehman.com/wp-content/uploads/2023/06/Star-Wars-Thematic-Catalogue.pdf",
+          "https://www.hooktheory.com/theorytab/view/john-williams/the-imperial-march",
+          "https://songbpm.com/@john-williams/the-imperial-march-darth-vader-s-theme"
+        ]
+      },
+      "features": [
+        "harmony.diatonic.ratio",
+        "tempo.bpm"
+      ],
+      "listenFor": "Throughout: the minor tonic alternating with the minor chord a major third below (i–bvi) under a thrice-repeated note and a dotted figure, in brass and snares, at about 104 BPM.",
+      "title": "The Imperial March",
+      "year": 1980
+    },
+    {
+      "artist": "Hans Zimmer",
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/hans-zimmer/time",
+          "https://songbpm.com/@hans-zimmer/time",
+          "https://www.erudit.org/fr/revue/rmo/2018/v5/n2/1054148ar.pdf",
+          "https://en.wikipedia.org/wiki/Inception_(soundtrack)"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "harmony.changes.per.bar",
+        "form.minutes"
+      ],
+      "listenFor": "From bar 1: the iv–i–III–VII loop in E minor at 63 BPM, repeated as an eight-bar cycle while instruments pile up — a 4:36 pyramid of a swell rather than verses and choruses.",
+      "title": "Time",
+      "year": 2010
+    },
+    {
+      "artist": "Ennio Morricone",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/The_Ecstasy_of_Gold",
+          "https://songbpm.com/@ennio-morricone/the-ecstasy-of-gold-e3847ccc-1ac2-413d-8b14-ffa27d817728"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.minutes"
+      ],
+      "listenFor": "Throughout: the cue for Tuco's frantic search of the cemetery, Edda Dell'Orso's wordless soprano riding the orchestra; the 2004 remaster runs 3:23 at about 99 BPM.",
+      "title": "The Ecstasy of Gold",
+      "year": 1966
+    },
+    {
+      "artist": "Hildur Guðnadóttir",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Joker_(soundtrack)",
+          "https://songbpm.com/@hildur-gudnadottir/bathroom-dance"
+        ]
+      },
+      "features": [
+        "melody.leap.max.semitones",
+        "tempo.bpm"
+      ],
+      "listenFor": "Throughout its 2:08: a simple, near-monotone solo cello line over the orchestra at about 86 BPM, written before filming and danced to on set.",
+      "title": "Bathroom Dance",
+      "year": 2019
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "sub"
+    ],
+    "instruments": [
+      "strings",
+      "slow-strings",
+      "cello",
+      "violin",
+      "horns",
+      "brass",
+      "harp",
+      "pizzicato",
+      "tubular-bells",
+      "glockenspiel",
+      "choir",
+      "grand-piano",
+      "felt-piano",
+      "pipe-organ",
+      "dark-pad",
+      "air-pad"
+    ],
+    "machines": [
+      "studio"
+    ]
+  },
+  "summary": "Music written to picture: cues spotted with the director and timed to hit points, built on leitmotifs that recur and transform with characters — or, since about 1990, on short motto motifs, ostinatos and slow minimal cycles over held pedal notes, the orchestra fused with synthesizers. Chromatic pairs of triads carry the meaning: the minor tonic swinging to the major chord a major third below for the epic, i–bvi (the 'Tarnhelm') for villainy, two major triads a tritone apart for outer space.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Film_score",
+      "https://www.mtosmt.org/issues/mto.16.22.1/mto.16.22.1.richards.html",
+      "https://www.erudit.org/fr/revue/rmo/2018/v5/n2/1054148ar.pdf",
+      "https://franklehman.com/wp-content/uploads/2023/06/Star-Wars-Thematic-Catalogue.pdf",
+      "https://mtosmt.org/issues/mto.06.12.2/mto.06.12.2.murphy.html"
+    ]
+  }
+}

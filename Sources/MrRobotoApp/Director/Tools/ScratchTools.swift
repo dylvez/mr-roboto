@@ -38,7 +38,7 @@ public struct StartSongTool: DirectorTool {
         Schema.object([
             ("title", Schema.string("A working title; empty keeps the open song's, or names it for the idea.")),
             ("tempo", Schema.number("Beats per minute.", minimum: 40, maximum: 240)),
-            ("key", Schema.string("Like \"D minor\" or \"F# major\"; empty for none yet.")),
+            ("key", Schema.string("Like \"D minor\", \"F# major\" or \"E phrygian dominant\"; empty for none yet.")),
             ("machine", Schema.string("The drum machine the beat plays on.", enum: SynthMachine.available.map(\.id))),
         ], required: ["title", "tempo", "key", "machine"])
     }

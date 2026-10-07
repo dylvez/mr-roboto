@@ -172,3 +172,36 @@ struct DrawbarOrganTests {
         #expect(InstrumentVoiceSpec.preset(id: "jazz-organ")?.drawbars?.percussion?.harmonic == 3)
     }
 }
+
+/// Develop and the organ: its speaker turns fast where the song arrives.
+@Suite("Develop: the organ's speaker") @MainActor
+struct DevelopSpeakerTests {
+    @Test("Developing a song whose chords are on an organ turns its speaker fast in the hooks and nowhere else")
+    func fastInTheHooks() throws {
+        var loop = try DevelopFixture.loop()
+        try loop.song.append(PartVersion(partID: PartID(), kind: .sound(Sound(instrument: "organ", forPart: loop.chords.partID)),
+                                         author: .user, operation: Operation.written, note: "Organ"))
+        let development = try #require(Develop.plan(for: loop.song))
+        let mix = try #require(development.mix)
+        let roles = Dictionary(uniqueKeysWithValues: development.plays.map { ($0.id, $0.role) })
+        let fast = Set((mix.sectionEffects ?? []).filter { $0.fast == true }.map(\.section))
+        #expect(!fast.isEmpty)
+        for section in development.sections {
+            let peak = roles[section.id]?.isPeak == true
+            let organ = section.stitch.contains { DevelopFixtureStrip.strip(of: $0.part, in: loop.song, development) == loop.chords.partID }
+            #expect(fast.contains(section.id) == (peak && organ), "\(section.name)")
+        }
+        // On the Rhodes, nothing of the kind.
+        let plain = try DevelopFixture.loop()
+        #expect(Develop.plan(for: plain.song)?.mix?.sectionEffects == nil)
+    }
+}
+
+/// Which part's strip a section lane plays through: a variation's root.
+enum DevelopFixtureStrip {
+    static func strip(of part: PartID, in song: Song, _ development: Development) -> PartID {
+        var all = song
+        try? all.append(contentsOf: development.versions)
+        return all.variation(of: part)?.of ?? part
+    }
+}

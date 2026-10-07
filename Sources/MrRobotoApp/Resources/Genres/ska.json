@@ -1,0 +1,590 @@
+{
+  "aliases": [
+    "jamaican ska",
+    "first-wave ska",
+    "blue beat",
+    "2 tone",
+    "two-tone",
+    "third-wave ska",
+    "ska punk"
+  ],
+  "bassHands": [
+    "walking"
+  ],
+  "family": "caribbean",
+  "feels": [
+    "Ska"
+  ],
+  "form": {
+    "evidence": {
+      "inferred": "a vocal ska single sized to McCook's 2 1/2-minute radio limit: 80 bars at the profile's typical 124 BPM run 2.6 minutes, with a horn solo standing in for the solos the Skatalites traded; instrumentals replace verse and chorus with a horn head"
+    },
+    "sections": [
+      {
+        "bars": 4,
+        "name": "Intro"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 16,
+        "name": "Verse"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 16,
+        "name": "Horn Solo"
+      },
+      {
+        "bars": 8,
+        "name": "Chorus"
+      },
+      {
+        "bars": 4,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "ska",
+  "idioms": [
+    "ska"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/The_Skatalites",
+          "https://en.wikipedia.org/wiki/Lloyd_Knibb",
+          "https://hudsonmusic.com/wp-content/uploads/wickedbeats-sample.pdf",
+          "https://www.bear-family.com/skatalites-the/"
+        ]
+      },
+      "name": "The Skatalites",
+      "period": "1964–1965",
+      "why": "Kingston's session players for Coxsone Dodd and Duke Reid before they took a name in 1964, behind records such as the Wailers' 'Simmer Down'. Lloyd Knibb, who had played with Count Ossie's Rastafarian drummers and learned Glenn Miller's big-band music in Eric Dean's band, found the ska beat in the studio for Dodd; Brevett walked the upright; McCook and Drummond came from jazz, and the horns wrote and traded solos. 'Guns of Navarone' reached the UK Top 40 in 1967."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Prince_Buster",
+          "https://en.wikipedia.org/wiki/Ska",
+          "https://en.wikipedia.org/wiki/Al_Capone_(song)"
+        ]
+      },
+      "name": "Prince Buster",
+      "period": "1961–1967",
+      "why": "A sound-system man turned producer, credited by one account with creating ska at his Wild Bells label's first session by flipping the R&B shuffle so the guitar stressed the off-beats. He produced the Folkes Brothers' 'Oh Carolina' (1961) with Count Ossie's nyabinghi drummers, and his 'Al Capone' (UK no. 18, 1967), 'Madness' and 'One Step Beyond' became the 2 Tone bands' source material."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Ernest_Ranglin",
+          "https://en.wikipedia.org/wiki/Ska",
+          "https://en.wikipedia.org/wiki/My_Boy_Lollipop"
+        ]
+      },
+      "name": "Ernest Ranglin",
+      "period": "late 1950s–1960s",
+      "why": "A jazz guitarist in Cluett Johnson's studio band, whose 'Shuffling Jug' is often called the first ska record; his rhythm guitar put the chord after the beat ('ka-chink'). He arranged and played on Millie Small's 'My Boy Lollipop', the first international ska hit."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Toots_and_the_Maytals"
+        ]
+      },
+      "name": "Toots and the Maytals",
+      "period": "1962–1968",
+      "why": "A vocal trio formed in Kingston in 1962 that recorded for Dodd at Studio One with the Skatalites, known for close-harmony gospel singing from Toots Hibbert's church background. They won the 1966 Festival Song Competition with 'Bam Bam' and in 1968 named the next music with 'Do the Reggay'."
+    }
+  ],
+  "meters": [
+    "4/4"
+  ],
+  "name": "Ska",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://hudsonmusic.com/wp-content/uploads/wickedbeats-sample.pdf",
+          "https://en.wikipedia.org/wiki/Ska"
+        ]
+      },
+      "text": "Gil Sharone's breakdown of the traditional beat, from Lloyd Knibb: cross-stick and bass drum together on 2 and 4, open hi-hat on straight eighths, the hi-hat pedal on 2 and 4, a 'swish' of the hat on the 'ah' of 2 and 4, and riding the hi-hat's bell as a signature. The feel sits between straight and swung, at q = 110-136. Wikipedia describes it differently, with the bass drum and side-stick accenting the third beat of each triplet phrase."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Ska",
+          "https://hudsonmusic.com/wp-content/uploads/wickedbeats-sample.pdf"
+        ]
+      },
+      "text": "Ska turned the R&B shuffle inside out. Ernest Ranglin put the difference as R&B going 'chink-ka' and ska going 'ka-chink'; Prince Buster is credited with flipping the shuffle beat to stress the off-beats with the guitar; Sharone calls the original rhythm a double-time shuffle with the accent on 2 and 4 around a blues framework. Fats Domino's off-beat-accented rhythm was a particular influence."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Ska",
+          "https://en.wikipedia.org/wiki/Ska_stroke",
+          "https://jamplay.com/weekend-warrior/w/discovering-ska",
+          "https://www.soundbrenner.com/blogs/articles/ska-rhythm"
+        ]
+      },
+      "text": "The skank: a short, clipped chord on every off-beat (one AND two AND three AND four AND), played as a sharp upstroke on the treble strings and released at once so it does not blur into the next beat. The piano plays the skank too and emphasises the bass line, and the horns take the lead, often following the skank. The stroke began as the piano's off-beat 'chuck' in American shuffle bands such as Louis Jordan's."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Ska",
+          "https://www.largeup.com/2014/06/11/toppa-top-10-reggaes-ten-greatest-bassists/5?page=5/",
+          "https://www.soundbrenner.com/blogs/articles/ska-rhythm",
+          "https://classified.substack.com/p/rocksteady"
+        ]
+      },
+      "text": "The bass walks. Lloyd Brevett, whose father led a jazz big band, defined the ska bass on an upright with the Skatalites in 1964-65, writing his own lines in the walking style of jazz and blues, laid-back and punchy at once. Later ska basses turn riff-based or punk-simple for speed; rocksteady replaced the walk with a steadier picked line."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/The_Skatalites",
+          "https://www.bear-family.com/skatalites-the/",
+          "https://reggaereport.com/skatalites-tommy-mccook-issue-9/"
+        ]
+      },
+      "text": "The Skatalites' front line was saxophones (Tommy McCook, tenor Roland Alphonso, alto Lester Sterling), trombone (Don Drummond) and trumpet (Johnny Moore) over Brevett, Knibb, guitarist Jah Jerry Haynes and pianist Jackie Mittoo. McCook called jazz his first love; the band made ska of Cuban melodies, jazz standards and popular songs, McCook and Alphonso trading contrasting solos and Drummond writing in uncommon minor keys."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://reggaereport.com/skatalites-tommy-mccook-issue-9/",
+          "https://www.bear-family.com/skatalites-the/",
+          "https://joelfrancis.com/tag/skatalites/"
+        ]
+      },
+      "text": "Records were cut to radio length: McCook recalls a limit of 2 1/2 minutes so stations could fit their commercials, and a tune was sometimes arranged on the spot in the studio. Instrumentals state a horn melody and hand round solos; vocal records run verse and chorus over the same kind of backing."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Ska",
+          "https://www.hooktheory.com/theorytab/view/bob-marley-and-the-wailers/simmer-down",
+          "https://hudsonmusic.com/wp-content/uploads/wickedbeats-sample.pdf",
+          "https://www.hooktheory.com/theorytab/view/madness/one-step-beyond",
+          "https://en.wikipedia.org/wiki/Al_Capone_(song)",
+          "https://www.bear-family.com/skatalites-the/"
+        ]
+      },
+      "text": "The harmony comes from R&B, blues and jazz. Hooktheory reads the Wailers' 'Simmer Down' chorus as I-vi-ii-V in B-flat at 124 BPM; Sharone hears the original beat wrapped around the blues; Prince Buster's 'One Step Beyond' (the B-side of 'Al Capone'), as Madness recorded it, is a two-chord minor i-iv; and Drummond's Skatalites tunes favoured minor keys."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Rocksteady",
+          "https://classified.substack.com/p/rocksteady",
+          "https://en.wikipedia.org/wiki/Ska",
+          "https://songbpm.com/@desmond-dekker/007-shanty-town"
+        ]
+      },
+      "text": "Rocksteady (summer 1966 to spring 1968) followed soul music in slowing down, to about 80-100 BPM against ska's 110-135, which let the bass take fat, dark, loose tones and lead the arrangement, put the lead guitar on the bass line in muted picking, moved the horns back, and made room for vocal harmony groups; reggae came out of it by 1968. Desmond Dekker's '007 (Shanty Town)' sits at 97 BPM on songbpm."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Ska_stroke",
+          "https://en.wikipedia.org/wiki/One_drop_rhythm",
+          "https://hudsonmusic.com/wp-content/uploads/wickedbeats-sample.pdf"
+        ]
+      },
+      "text": "Against reggae: ska's skank falls on every off-beat, while reggae's chop falls on 2 and 4, about half as often. The one drop's kick and cross-stick on 3 is the ska pattern counted in half time, but slower; count ska so the cross-stick lands on 2 and 4 at 110-136."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Two-tone_(music_genre)",
+          "https://en.wikipedia.org/wiki/Ska",
+          "https://en.wikipedia.org/wiki/Prince_Buster",
+          "https://songbpm.com/@the-specials/gangsters",
+          "https://songbpm.com/@the-selecter/on-my-radio",
+          "https://songbpm.com/@madness/one-step-beyond",
+          "https://songbpm.com/@the-english-beat/mirror-in-the-bathroom"
+        ]
+      },
+      "text": "2 Tone (Coventry, from 1979: the Specials, Madness, the Selecter, the Beat) fused ska, rocksteady and reggae with punk and new wave, with faster tempos, fuller instrumentation and a harder edge, and covered Prince Buster. On songbpm its records run faster than the first wave: Gangsters 130, On My Radio 141, One Step Beyond 155, Mirror in the Bathroom 171."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Third_wave_ska",
+          "https://www.hooktheory.com/theorytab/view/the-mighty-mighty-bosstones/the-impression-that-i-get"
+        ]
+      },
+      "text": "The third wave (late 1980s to the 1990s, popular in the US by 1996: the Mighty Mighty Bosstones, Operation Ivy, No Doubt, Reel Big Fish, Sublime) is dominated by guitar riffs and large horn sections and downplays the R&B in favour of faster tempos and distortion; Hooktheory reads 'The Impression That I Get' at 181 BPM."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://lufs.to/genres/ska",
+          "https://lufs.to/loudness/ska-1990s",
+          "https://lufs.to/the-mighty-mighty-bosstones/lets-face-it",
+          "https://en.wikipedia.org/wiki/Gangsters_(song)"
+        ]
+      },
+      "text": "Third-wave CDs on lufs.to measure a median -10.4 LUFS (30 of 62 tracks between -11 and -10) with a median 13.3 dB between peak and RMS; Bob Ludwig's master of Let's Face It is the loudest of the four albums, at a median -8.7. The bass is heavy: the Specials had to recut 'Gangsters' because its bass blew the needle out of the groove, and added treble-heavy piano to compensate."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Ska",
+          "https://en.wikipedia.org/wiki/Simmer_Down",
+          "https://en.wikipedia.org/wiki/Al_Capone_(song)",
+          "https://en.wikipedia.org/wiki/Two-tone_(music_genre)"
+        ]
+      },
+      "text": "The ska sound coincided with the celebrations of Jamaica's independence in 1962. The Wailers' 'Simmer Down' warned Kingston's rude boys off violence; 'Al Capone' carried rude-boy style to British youth in 1967; 2 Tone wrote against the racial tensions of Thatcher-era Britain."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Guns_of_Navarone_(song)",
+          "https://en.wikipedia.org/wiki/Toots_and_the_Maytals",
+          "https://en.wikipedia.org/wiki/My_Boy_Lollipop",
+          "https://en.wikipedia.org/wiki/Al_Capone_(song)"
+        ]
+      },
+      "text": "Horns carry the tunes, harmonised: AllMusic, as Wikipedia quotes it, hears a 'jubilant harmonic horn chorus' in 'Guns of Navarone'. Singers ranged from Toots and the Maytals' close-harmony gospel singing to Millie Small's Jamaican-style vocal and Prince Buster's few lyrics delivered MC-style over an instrumental."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://jamplay.com/weekend-warrior/w/discovering-ska",
+          "https://www.soundbrenner.com/blogs/articles/ska-rhythm",
+          "https://en.wikipedia.org/wiki/Ska"
+        ]
+      },
+      "text": "A strummed or ringing skank. Play a short chord on every off-beat with a sharp upstroke on the treble strings and release it at once, and let the piano double it."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://hudsonmusic.com/wp-content/uploads/wickedbeats-sample.pdf",
+          "https://classified.substack.com/p/rocksteady",
+          "https://en.wikipedia.org/wiki/Rocksteady"
+        ]
+      },
+      "text": "Playing ska in the reggae or rocksteady pocket. Keep it at 110-136 with cross-stick and bass drum on 2 and 4 and a walking bass; a one drop on 3, a repeated bass riff or 80-100 BPM is rocksteady or reggae."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/the-mighty-mighty-bosstones/the-impression-that-i-get",
+          "https://songbpm.com/@the-mighty-mighty-bosstones/the-impression-that-i-get",
+          "https://jamplay.com/weekend-warrior/w/discovering-ska",
+          "https://www.learnjazzstandards.com/blog/learning-jazz/bass/write-walking-bass-line/"
+        ]
+      },
+      "text": "Trusting a tempo detector on fast ska. Hooktheory reads 'The Impression That I Get' at 181 BPM and songbpm at 90; count the skank as the 'and' between quarter notes and read the tempo from the walking bass, one note a beat."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/bob-marley-and-the-wailers/simmer-down"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "I - vi - ii - V",
+      "text": "The 'Simmer Down' chorus, in B-flat at 124 BPM: R&B ballad changes skanked on the off-beats."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://hudsonmusic.com/wp-content/uploads/wickedbeats-sample.pdf",
+          "https://en.wikipedia.org/wiki/Twelve-bar_blues"
+        ]
+      },
+      "mode": "mixolydian",
+      "roman": "I - IV - I - V - IV - I",
+      "text": "The twelve-bar blues frame the original ska beat was wrapped around."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/madness/one-step-beyond",
+          "https://en.wikipedia.org/wiki/Al_Capone_(song)"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "i - iv",
+      "text": "Prince Buster's 'One Step Beyond' as Madness recorded it in C minor: two minor chords under a horn riff."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/the-mighty-mighty-bosstones/the-impression-that-i-get"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "I - V - vi - IV",
+      "text": "The third wave's pop changes: the verse of 'The Impression That I Get', in E at 181 BPM."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "inferred": "bounds are Gil Sharone's q = 110-136 for the traditional ska beat (Wicked Beats, Hudson Music), which Jennifer Carman's 'around 110 to 135 BPM' agrees with; typical 124 is the median of ten first-wave records on songbpm (Guns of Navarone 115, Al Capone 117, Oh Carolina 120, Miss Jamaica 121, Simmer Down 124, Madness 124, Eastern Standard Time 126, Freedom Sounds 129, My Boy Lollipop 132, Phoenix City 143). 2 Tone and third-wave records run faster"
+      },
+      "feature": "tempo.bpm",
+      "high": 136,
+      "low": 110,
+      "typical": 124,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Ska",
+          "https://www.largeup.com/2014/06/11/toppa-top-10-reggaes-ten-greatest-bassists/5?page=5/",
+          "https://www.learnjazzstandards.com/blog/learning-jazz/bass/write-walking-bass-line/"
+        ]
+      },
+      "feature": "bass.attacks.per.bar",
+      "high": 4,
+      "low": 4,
+      "typical": 4,
+      "unit": "attacks per bar"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.largeup.com/2014/06/11/toppa-top-10-reggaes-ten-greatest-bassists/5?page=5/",
+          "https://www.learnjazzstandards.com/blog/learning-jazz/bass/write-walking-bass-line/"
+        ]
+      },
+      "feature": "bass.downbeat.coverage",
+      "high": 1.0,
+      "low": 0.95,
+      "unit": "fraction of bars"
+    },
+    {
+      "evidence": {
+        "inferred": "early ska bass is a jazz walking line (Wikipedia, LargeUp on Brevett), one note per beat (Learn Jazz Standards), so nearly every onset is on the quarter grid; the allowance is for pickups and for the bass-drum variation Sharone says locks with the bass line"
+      },
+      "feature": "bass.syncopation",
+      "high": 0.15,
+      "low": 0.0,
+      "unit": "fraction of onsets"
+    },
+    {
+      "evidence": {
+        "inferred": "the progressions cited in this profile: One Step Beyond's i-iv (2), the blues frame Sharone names (I, IV and V, 3), Simmer Down's I-vi-ii-V and the third wave's I-V-vi-IV (4 each)"
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 4,
+      "low": 2,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "inferred": "Tommy McCook's '2 1/2 minutes because of radio play' limit, and the durations songbpm lists for first-wave singles: My Boy Lollipop 2:02, Miss Jamaica 2:22, Guns of Navarone 2:31, Madness 2:40, Oh Carolina 2:41, Eastern Standard Time 2:44, Simmer Down 2:48, Al Capone 3:04 (median 2:41); the 6-minute Freedom Sounds and Phoenix City listed there are left out as longer than any radio cut. 2 Tone singles fall inside it (Gangsters 2:47, On My Radio 3:05)"
+      },
+      "feature": "form.minutes",
+      "high": 3.2,
+      "low": 2.0,
+      "typical": 2.7,
+      "unit": "minutes"
+    },
+    {
+      "evidence": {
+        "inferred": "middle half of the 62 per-track measurements lufs.to lists for its Ska genre (Sublime's 40oz. to Freedom, the Mighty Mighty Bosstones' Don't Know How to Party and Let's Face It, Reel Big Fish's Turn the Radio Off; quartiles -10.95 and -9.5), typical its stated median -10.4. All are 1990s third-wave CDs; no measurement of Jamaican ska or 2 Tone releases was found"
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -9.5,
+      "low": -11.0,
+      "typical": -10.4,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "middle half (12.2-14.1 dB) of the same 62 tracks' 'dynamic range', which lufs.to defines as the gap between peak and RMS (https://lufs.to/methodology), typical its stated median 13.3; its peak is true peak, so this can read up to about 0.5 dB above the app's sample-peak crest. The pooled fit crest = 5.28 - 0.743 x LUFS gives 12.3-13.4 over the same loudness"
+      },
+      "feature": "mix.crest.db",
+      "high": 14.1,
+      "low": 12.2,
+      "typical": 13.3,
+      "unit": "dB"
+    },
+    {
+      "evidence": {
+        "inferred": "set equal to the released-master loudness above, since the delivered target is the released master; a third-wave figure, not a first-wave one"
+      },
+      "feature": "mix.master.target.lufs",
+      "high": -9.5,
+      "low": -11.0,
+      "typical": -10.4,
+      "unit": "LUFS"
+    }
+  ],
+  "references": [
+    {
+      "artist": "The Wailers",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Simmer_Down",
+          "https://www.hooktheory.com/theorytab/view/bob-marley-and-the-wailers/simmer-down",
+          "https://songbpm.com/@the-wailers/simmer-down"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "harmony.chords.distinct",
+        "form.minutes"
+      ],
+      "listenFor": "The Skatalites behind the young Wailers: the skank on every off-beat and a I-vi-ii-V chorus at 124 BPM, a Jamaican number one in February 1964.",
+      "title": "Simmer Down",
+      "year": 1963
+    },
+    {
+      "artist": "Millie Small",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/My_Boy_Lollipop",
+          "https://songbpm.com/@millie-small/my-boy-lollipop"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.minutes"
+      ],
+      "listenFor": "Ernest Ranglin's arrangement and guitar turning an R&B song into ska, at about 132 BPM in 2:02, with a harmonica solo where the original had a saxophone.",
+      "title": "My Boy Lollipop",
+      "year": 1964
+    },
+    {
+      "artist": "Prince Buster",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Al_Capone_(song)",
+          "https://songbpm.com/@prince-buster/al-capone"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "lyric.lines"
+      ],
+      "listenFor": "The opening car crash, gunfire and tyres, then an almost instrumental record of jazzy horns and piano with Ranglin on guitar and Buster's few MC-style lines, at about 117 BPM.",
+      "title": "Al Capone",
+      "year": 1964
+    },
+    {
+      "artist": "The Skatalites",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Guns_of_Navarone_(song)",
+          "https://songbpm.com/@the-skatalites/guns-of-navarone"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "bass.attacks.per.bar"
+      ],
+      "listenFor": "Dimitri Tiomkin's film theme as a harmonised horn chorus over Knibb and Brevett, at about 115 BPM in 2:31.",
+      "title": "Guns of Navarone",
+      "year": 1965
+    },
+    {
+      "artist": "The Specials",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Gangsters_(song)",
+          "https://songbpm.com/@the-specials/gangsters"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "mix.tilt.db",
+        "mix.lowend.separation.db"
+      ],
+      "listenFor": "2 Tone's first hit reworking 'Al Capone' with its car effects, about 130 BPM, the bass so heavy the single had to be recut.",
+      "title": "Gangsters",
+      "year": 1979
+    },
+    {
+      "artist": "The Mighty Mighty Bosstones",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/The_Impression_That_I_Get",
+          "https://www.hooktheory.com/theorytab/view/the-mighty-mighty-bosstones/the-impression-that-i-get",
+          "https://songbpm.com/@the-mighty-mighty-bosstones/the-impression-that-i-get",
+          "https://lufs.to/the-mighty-mighty-bosstones/lets-face-it"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "mix.lufs.integrated",
+        "mix.crest.db"
+      ],
+      "listenFor": "The third wave at its commercial peak, ska punk crossed with alternative rock: the verse's I-V-vi-IV at 181 BPM (songbpm reads 90), mastered by Bob Ludwig at -8.9 LUFS.",
+      "title": "The Impression That I Get",
+      "year": 1997
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "upright",
+      "finger"
+    ],
+    "instruments": [
+      "clean-electric",
+      "grand-piano",
+      "horns",
+      "brass",
+      "trumpet",
+      "tenor-sax",
+      "alto-sax",
+      "combo-organ",
+      "overdrive-guitar"
+    ],
+    "machines": [
+      "vintage",
+      "rock"
+    ]
+  },
+  "summary": "Jamaican dance music of the early 1960s that turned the R&B shuffle around: a short guitar and piano chord on every off-beat, a walking bass on the beats, a backbeat on 2 and 4 with the cross-stick, and a jazz-trained horn section taking the tunes and the solos, at about 110-136 BPM. Rocksteady slowed it in 1966 and reggae followed in 1968; Britain's 2 Tone (from 1979) and America's third wave (1990s) brought it back faster, with punk guitars.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Ska",
+      "https://hudsonmusic.com/wp-content/uploads/wickedbeats-sample.pdf",
+      "https://en.wikipedia.org/wiki/Ska_stroke",
+      "https://en.wikipedia.org/wiki/Rocksteady",
+      "https://en.wikipedia.org/wiki/Two-tone_(music_genre)",
+      "https://en.wikipedia.org/wiki/Third_wave_ska"
+    ]
+  }
+}

@@ -1,0 +1,593 @@
+{
+  "aliases": [
+    "ambient music",
+    "drone ambient",
+    "ambient drone",
+    "modern ambient",
+    "ambient piano",
+    "generative ambient",
+    "eno ambient"
+  ],
+  "bassHands": [
+    "pedal"
+  ],
+  "family": "electronic",
+  "feels": [],
+  "form": {
+    "evidence": {
+      "inferred": "one evolving section framed by a fade in and a fade out, as the cited process pieces (Music for Airports' loops, Discreet Music, the Disintegration Loops) run as a single texture; 120 bars is 9.6 minutes at 50 BPM and 4.8 at 100, inside the cited 3–11 minute lengths. Forms vary from 90-second sketches to hour-long loops."
+    },
+    "sections": [
+      {
+        "bars": 8,
+        "name": "Intro"
+      },
+      {
+        "bars": 96,
+        "name": "Drift"
+      },
+      {
+        "bars": 16,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "ambient",
+  "idioms": [
+    "ambient"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Brian_Eno",
+          "https://en.wikipedia.org/wiki/Discreet_Music",
+          "https://en.wikipedia.org/wiki/Ambient_1:_Music_for_Airports",
+          "https://inmotionmagazine.com/eno1.html"
+        ]
+      },
+      "name": "Brian Eno",
+      "period": "1975–1983",
+      "why": "Coined ambient music and built it from systems: Discreet Music (1975) ran two synthesizer phrases of different lengths through tape delay, and Music for Airports (1978–79) layered tape loops of differing lengths so they never realign, music meant to be as easy to ignore as to listen to. The Ambient series continued with Harold Budd (1980), Laraaji (1980) and On Land (1982), and in the 1990s he moved to generative software."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Harold_Budd",
+          "https://en.wikipedia.org/wiki/The_Plateaux_of_Mirror",
+          "https://www.sonicimmersion.org/harold-budd-brian-eno-the-pearl-2/"
+        ]
+      },
+      "name": "Harold Budd",
+      "period": "1980–1984",
+      "why": "A minimalist who rejected the ambient label but defined its piano: a 'soft pedal' style of slow playing and prominent sustain, improvised inside sound-worlds Eno built on The Plateaux of Mirror (1980) and The Pearl (1984), where the reverb and treatments are heard as the sound itself."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Stars_of_the_Lid",
+          "https://en.wikipedia.org/wiki/The_Tired_Sounds_of_Stars_of_the_Lid",
+          "https://alechanleybemis.substack.com/p/stars-of-the-lid-brian-mcbride-interview"
+        ]
+      },
+      "name": "Stars of the Lid",
+      "period": "2001–2007",
+      "why": "Classical drone without drums or vocals: effects-treated guitars, piano, strings and horns, built across two double albums (2001, 2007) by mailing DAT tapes between two home studios. Brian McBride describes pairing guitar and trumpet until they sound as one instrument, and the difficulty of holding tone at very slow tempos."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Selected_Ambient_Works_Volume_II"
+        ]
+      },
+      "name": "Aphex Twin",
+      "period": "1993–1994",
+      "why": "Selected Ambient Works Volume II, recorded mostly in 1993 on old EMS, Moog, ARP and Oberheim synthesizers, turned from techno to quiet, minimal, largely beatless pieces with microtonal tunings, drones and heavy reverb. Richard D. James tied it to lucid dreaming, writing short segments between ten-minute sleeps."
+    }
+  ],
+  "meters": [
+    "4/4"
+  ],
+  "name": "Ambient",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Ambient_music",
+          "https://en.wikipedia.org/wiki/Stars_of_the_Lid",
+          "https://en.wikipedia.org/wiki/Selected_Ambient_Works_Volume_II",
+          "https://en.wikipedia.org/wiki/Gas_(musician)",
+          "https://en.wikipedia.org/wiki/Pop_(Gas_album)"
+        ]
+      },
+      "text": "No drums is the norm, so no feel from the library is claimed: ambient puts tone and atmosphere over rhythm and often has no beat at all; Stars of the Lid are praised for drone without drums or vocals; Selected Ambient Works Volume II is largely beatless. The exception is Gas, whose ambient techno runs a repetitive four-on-the-floor kick under barely audible fragments of horns and strings — and on Pop the bass drum is on only two of seven tracks."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://inmotionmagazine.com/eno1.html",
+          "https://www.hooktheory.com/theorytab/view/brian-eno/an-ending-%28ascent%29",
+          "https://www.hooktheory.com/theorytab/view/aphex-twin/rhubarb",
+          "https://www.mixgraph.io/bpm-for/ambient"
+        ]
+      },
+      "text": "Tempo is often a grid for placing events rather than a pulse anyone hears: Music for Airports' loops repeat every 23½, 25⅞ and 29 15/16 seconds and are unlikely ever to fall back into sync. Where a pulse is transcribed it is slow — An Ending (Ascent) at 50 BPM, Rhubarb at 84 — and the editorial range is 60–100 (a beat-tracked catalogue of 1,107 'ambient' tracks reads a 111 median, its examples beat-driven electronica such as Lone and Nosaj Thing)."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Drone_music"
+        ]
+      },
+      "text": "Harmony moves slowly or not at all: drone music — the minimalism of sustained tones that La Monte Young pioneered and Eno credits — holds sustained notes or tone clusters through long pieces with only slight harmonic variation, and ambient takes it over while allowing more listening levels."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://ampedstudio.com/how-to-make-ambient-music",
+          "https://www.hooktheory.com/theorytab/view/brian-eno/an-ending-%28ascent%29",
+          "https://www.hooktheory.com/theorytab/view/aphex-twin/rhubarb"
+        ]
+      },
+      "text": "Avoid the pull of the dominant: guides advise against chords that create anticipation, V chords above all, building on neutral fourths and octaves instead. Where a V appears it does not resolve home — An Ending (Ascent) cycles IV–I–V and Rhubarb IV–vi–V, both returning from V to IV."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://reverbmachine.com/blog/deconstructing-brian-eno-music-for-airports/"
+        ]
+      },
+      "text": "Modal colour comes from pitch sets more than progressions: Music for Airports 1/1 sits in D major until a Rhodes phrase's C natural tips it toward D mixolydian; 2/1 is seven loops of single sung notes whose chords form only when loops coincide, with a D-flat that clashes a semitone against C each time they meet."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://inmotionmagazine.com/eno1.html",
+          "https://en.wikipedia.org/wiki/Discreet_Music",
+          "https://en.wikipedia.org/wiki/Brian_Eno"
+        ]
+      },
+      "text": "Arrange a process, not a part list: Eno's loops are incommensurable so the combinations never repeat; Discreet Music (1975) fed two synthesizer phrases of different lengths through an echo unit into a two-tape-recorder feedback loop and was, in his words, almost made without listening; his later generative systems run on probabilistic rules that set an envelope of possibilities rather than notes."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/The_Disintegration_Loops",
+          "https://en.wikipedia.org/wiki/The_Tired_Sounds_of_Stars_of_the_Lid"
+        ]
+      },
+      "text": "Change by erosion and accretion: Basinski let 1982 tape loops shed their oxide as they played, adding reverb and synthesizer counter-melodies, so each piece decays in near-imperceptible increments; Stars of the Lid traded DAT tapes between Brussels and Chicago and layered drones of treated guitar with cello, strings, horns and piano in loops on an MPC2000 and ASR-10."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://reverbmachine.com/blog/deconstructing-brian-eno-music-for-airports/",
+          "https://en.wikipedia.org/wiki/Harold_Budd",
+          "https://en.wikipedia.org/wiki/The_Plateaux_of_Mirror",
+          "https://en.wikipedia.org/wiki/Felt_(Nils_Frahm_album)"
+        ]
+      },
+      "text": "Piano, treated: Music for Airports 1/1 is Robert Wyatt's piano and a Rhodes, echoed, looped and slowed to half speed an octave down; Harold Budd's soft-pedal style is slow playing with long sustain, acoustic and electric piano inside Eno's treatments; Nils Frahm's Felt (2011) put felt on the strings and microphones deep inside the instrument for a hushed, close sound."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://reverbmachine.com/blog/deconstructing-brian-eno-music-for-airports/",
+          "https://en.wikipedia.org/wiki/Ambient_1:_Music_for_Airports",
+          "https://en.wikipedia.org/wiki/Selected_Ambient_Works_Volume_II",
+          "https://alechanleybemis.substack.com/p/stars-of-the-lid-brian-mcbride-interview"
+        ]
+      },
+      "text": "Voices, synths and slow instruments: Music for Airports 2/1 is a choir singing single notes; its last piece is an ARP 2600 slowed down with three kinds of echo; Aphex Twin made Selected Ambient Works Volume II on old EMS, Moog, ARP and Oberheim synthesizers with microtonal tunings; Stars of the Lid pair a guitar with a trumpet until they speak as one instrument, and note that the slower the playing, the harder the tone is to sustain."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://www.sonicimmersion.org/harold-budd-brian-eno-the-pearl-2/",
+          "https://en.wikipedia.org/wiki/Harold_Budd",
+          "https://en.wikipedia.org/wiki/The_Plateaux_of_Mirror",
+          "https://en.wikipedia.org/wiki/Selected_Ambient_Works_Volume_II",
+          "https://en.wikipedia.org/wiki/The_Disintegration_Loops",
+          "https://blog.native-instruments.com/7-ways-to-amp-up-the-atmosphere/"
+        ]
+      },
+      "text": "Reverb is part of the instrument — use a hall or a cathedral, long and smooth: on The Pearl the notes dissolve into the space and the reverb is the point; Budd's sound is called reverberation-laden impressionism and he said the treatments were heard as the sound itself; SAW II is reverb-heavy; Basinski treated his decaying loops with reverb. Guides add huge reverbs kept toward the dry side, high-feedback echoes and silence."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre",
+          "https://lufs.to/genres/ambient",
+          "https://en.wikipedia.org/wiki/Discreet_Music"
+        ]
+      },
+      "text": "Quiet masters: ambient releases 2016–2026 have a −14.1 LUFS median, middle half −17.4 to −11.4, and getting quieter (−14.9 in 2016, down to −16.1 in 2025); lufs.to's 97 ambient tracks sit at −15.3 with a 15.4 dB peak-to-RMS. The idea began with listening low: Eno heard harp music played very quietly as part of the room."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Ambient_1:_Music_for_Airports",
+          "https://en.wikipedia.org/wiki/Discreet_Music",
+          "https://en.wikipedia.org/wiki/The_Tired_Sounds_of_Stars_of_the_Lid",
+          "https://en.wikipedia.org/wiki/Pop_(Gas_album)",
+          "https://en.wikipedia.org/wiki/The_Disintegration_Loops",
+          "https://en.wikipedia.org/wiki/The_Plateaux_of_Mirror"
+        ]
+      },
+      "text": "Long and through-composed, with no chorus to arrive at: Music for Airports' four pieces run 6:00 to 16:30, Discreet Music fills 30 minutes, Stars of the Lid's double album runs two hours in parts of 3–12 minutes, Gas's Pop tracks 5–15 minutes, and Basinski's dlp 1.1 an hour. Budd's Plateaux of Mirror is the short exception, ten pieces of 1:29 to 6:59."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Pop_(Gas_album)",
+          "https://en.wikipedia.org/wiki/Stars_of_the_Lid",
+          "https://en.wikipedia.org/wiki/Drone_music"
+        ]
+      },
+      "text": "The low end is a pedal or a drone, not a line: Gas's Pop runs a synthesizer drone alternating between two pitches under its loops; Stars of the Lid's music is drone of treated guitars, strings and horns; drone music sustains one note or cluster for a long time."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/brian-eno/an-ending-%28ascent%29",
+          "https://www.hooktheory.com/theorytab/view/aphex-twin/rhubarb",
+          "https://en.wikipedia.org/wiki/The_Plateaux_of_Mirror",
+          "https://reverbmachine.com/blog/deconstructing-brian-eno-music-for-airports/"
+        ]
+      },
+      "text": "Melody, when there is one, is short and slow: An Ending (Ascent) stays within an octave (A-flat 4 to A-flat 5) at 50 BPM, Rhubarb spans A3 to C-sharp 5; Budd improvised his lines in a sound-world Eno had set up; Music for Airports 2/1 has no melody, only single notes meeting."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://reverbmachine.com/blog/deconstructing-brian-eno-music-for-airports/",
+          "https://en.wikipedia.org/wiki/Selected_Ambient_Works_Volume_II",
+          "https://en.wikipedia.org/wiki/Stars_of_the_Lid"
+        ]
+      },
+      "text": "Wordless: the voices are sung single notes (Music for Airports 2/1) or muffled, cooing presences (Selected Ambient Works Volume II), and Stars of the Lid leave out vocals altogether — the Lyricist has nothing to read."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Ambient_music",
+          "https://en.wikipedia.org/wiki/Stars_of_the_Lid",
+          "https://blog.native-instruments.com/7-ways-to-amp-up-the-atmosphere/"
+        ]
+      },
+      "text": "Adding a beat because the track feels empty. Ambient puts atmosphere over rhythm and its canonical records have no drums; let silence and slow change carry it."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://ampedstudio.com/how-to-make-ambient-music",
+          "https://www.hooktheory.com/theorytab/view/brian-eno/an-ending-%28ascent%29"
+        ]
+      },
+      "text": "Writing V–I cadences. Dominant chords create anticipation the style avoids; hold a drone, move by fourths and octaves, or let a V fall back to IV."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://inmotionmagazine.com/eno1.html",
+          "https://en.wikipedia.org/wiki/Discreet_Music"
+        ]
+      },
+      "text": "Looping everything to the same length. Equal loops realign every bar and the piece stops changing; give each loop its own length, as Eno did, so the combinations do not come back."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre",
+          "https://lufs.to/genres/ambient"
+        ]
+      },
+      "text": "Mastering it as loud as pop. Released ambient sits around −14 LUFS and lower with 15 dB of peak-to-RMS; pushing it to −9 flattens the swells that are its only dynamics."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/brian-eno/an-ending-%28ascent%29"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "IV - I - V",
+      "text": "An Ending (Ascent): three major triads at 50 BPM, the V turning back to IV instead of home."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/aphex-twin/rhubarb"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "IV - vi - V",
+      "text": "Rhubarb: a slow loop whose transcribed sections never sound the tonic chord; vi is the chord it leans on."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/brian-eno/an-ending-%28ascent%29",
+          "https://www.hooktheory.com/theorytab/view/aphex-twin/rhubarb",
+          "https://www.mixgraph.io/bpm-for/ambient"
+        ]
+      },
+      "feature": "tempo.bpm",
+      "high": 100,
+      "low": 50,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre",
+          "https://lufs.to/genres/ambient"
+        ]
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -11.4,
+      "low": -17.4,
+      "typical": -14.1,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://lufs.to/genres/ambient",
+          "https://lufs.to/pete-namlook-and-richie-hawtin/from-within-i",
+          "https://lufs.to/methodology"
+        ]
+      },
+      "feature": "mix.crest.db",
+      "high": 18.9,
+      "low": 13.9,
+      "typical": 15.4,
+      "unit": "dB"
+    },
+    {
+      "evidence": {
+        "inferred": "set equal to the measured released-master loudness of ambient (freshlybakedstudios.com middle 50%, median -14.1), since the delivered target is the released master"
+      },
+      "feature": "mix.master.target.lufs",
+      "high": -11.4,
+      "low": -17.4,
+      "typical": -14.1,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "10th to 90th percentile and median of the 49 track lengths cited in this profile: Music for Airports (6:00–16:30), The Plateaux of Mirror (1:29–6:59), The Tired Sounds of Stars of the Lid (2:48–12:18), Gas's Pop (5:13–14:37) and Nils Frahm's Felt (2:37–8:56) give 3.0, 10.9 and 5.8 minutes; Discreet Music (30 min) and The Disintegration Loops (11–63 min) are the long tail."
+      },
+      "feature": "form.minutes",
+      "high": 11,
+      "low": 3,
+      "typical": 6,
+      "unit": "minutes"
+    },
+    {
+      "evidence": {
+        "inferred": "a piece built as one loop system (Music for Airports' incommensurable loops, Discreet Music's two phrases into tape delay) or one decaying loop (Basinski) is a single evolving section; counted with a fade in and a fade out it is 3 (the form below); 4 allows one change of material."
+      },
+      "feature": "form.sections",
+      "high": 4,
+      "low": 1,
+      "typical": 3,
+      "unit": "sections"
+    },
+    {
+      "evidence": {
+        "inferred": "distinct section names in the form below (intro, drift, outro) is 3; a single process piece with no framing is 1."
+      },
+      "feature": "form.turns",
+      "high": 3,
+      "low": 1,
+      "typical": 3,
+      "unit": "turns"
+    },
+    {
+      "evidence": {
+        "inferred": "the cited pieces hold a steady state rather than build: Pop's ambience described as steady and sustained, the Disintegration Loops changing in near-imperceptible increments, Music for Airports' loops simply coinciding and parting; at most a layer or two enters or leaves."
+      },
+      "feature": "form.density.spread",
+      "high": 2,
+      "low": 0,
+      "unit": "layers"
+    },
+    {
+      "evidence": {
+        "inferred": "a drone or Gas's two-pitch synth drone is 1–2; Hooktheory transcribes An Ending (Ascent) as IV–I–V and Rhubarb as IV–vi–V (3 each, 4 with Rhubarb's IV6 counted apart)."
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 4,
+      "low": 1,
+      "typical": 3,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "inferred": "drone music's lengthy pieces with only slight harmonic variation (Wikipedia: Drone music) change 0 times a bar; Music for Airports 2/1's sung loops of about 20 s mean the sounding pitch set shifts every 4–8 bars at this profile's 50–100 BPM (0.125–0.25); 0.5 allows a chord every two bars."
+      },
+      "feature": "harmony.changes.per.bar",
+      "high": 0.5,
+      "low": 0,
+      "unit": "changes per bar"
+    },
+    {
+      "evidence": {
+        "inferred": "a drone sustains a single note or chord for a long period (cited Drone music; Stars of the Lid's drones), so the low voice is struck at most once a bar and usually once in many bars."
+      },
+      "feature": "bass.attacks.per.bar",
+      "high": 1,
+      "low": 0,
+      "unit": "attacks per bar"
+    },
+    {
+      "evidence": {
+        "inferred": "sustained tones are the material (cited Drone music, Ambient music): a held root fills the space until the next one, as Gas's drone does alternating between two pitches (Wikipedia: Pop)."
+      },
+      "feature": "bass.note.length.ratio",
+      "high": 1.0,
+      "low": 0.9,
+      "unit": "fraction of the interval to the next onset"
+    },
+    {
+      "evidence": {
+        "inferred": "from the harmonic rhythm above: a root held across 2–8 bars is struck on one downbeat in 2–8 (0.125–0.5), and a drone under the whole piece on almost none."
+      },
+      "feature": "bass.downbeat.coverage",
+      "high": 0.5,
+      "low": 0,
+      "unit": "fraction of bars"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Brian Eno",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Ambient_1:_Music_for_Airports",
+          "https://reverbmachine.com/blog/deconstructing-brian-eno-music-for-airports/"
+        ]
+      },
+      "features": [
+        "form.minutes",
+        "harmony.changes.per.bar"
+      ],
+      "listenFor": "Across its 16:30, a piano and Rhodes phrase slowed an octave down, in D major until the C natural that turns it mixolydian.",
+      "title": "1/1",
+      "year": 1979
+    },
+    {
+      "artist": "Brian Eno",
+      "evidence": {
+        "cited": [
+          "https://reverbmachine.com/blog/deconstructing-brian-eno-music-for-airports/",
+          "https://inmotionmagazine.com/eno1.html"
+        ]
+      },
+      "features": [
+        "harmony.chords.distinct",
+        "form.density.spread"
+      ],
+      "listenFor": "From the start, the C and high F sung loops (20.1 and 19.6 s) drifting from apart to together until they sound as a chord.",
+      "title": "2/1",
+      "year": 1979
+    },
+    {
+      "artist": "Harold Budd and Brian Eno",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/The_Plateaux_of_Mirror",
+          "https://en.wikipedia.org/wiki/Harold_Budd"
+        ]
+      },
+      "features": [
+        "form.minutes",
+        "melody.notes.per.bar"
+      ],
+      "listenFor": "Over 6:59, Budd's slow, sustained piano improvised inside Eno's electronic treatments.",
+      "title": "First Light",
+      "year": 1980
+    },
+    {
+      "artist": "Brian Eno",
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/brian-eno/an-ending-%28ascent%29"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "melody.range.semitones",
+        "harmony.chords.distinct"
+      ],
+      "listenFor": "A IV–I–V loop in A-flat at 50 BPM with a melody inside one octave.",
+      "title": "An Ending (Ascent)",
+      "year": 1983
+    },
+    {
+      "artist": "Aphex Twin",
+      "evidence": {
+        "cited": [
+          "https://www.hooktheory.com/theorytab/view/aphex-twin/rhubarb",
+          "https://en.wikipedia.org/wiki/Selected_Ambient_Works_Volume_II"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "harmony.chords.distinct"
+      ],
+      "listenFor": "No drums from start to end: an 84 BPM IV–vi–V in A major on old analogue synths, swimming in reverb.",
+      "title": "Rhubarb",
+      "year": 1994
+    },
+    {
+      "artist": "Gas",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Pop_(Gas_album)"
+        ]
+      },
+      "features": [
+        "form.minutes",
+        "bass.note.length.ratio"
+      ],
+      "listenFor": "Through its 5:13, reversed cymbals, synthesizer passages and rain with no kick drum, the album's two-pitch drone underneath.",
+      "title": "Untitled (Pop 1)",
+      "year": 2000
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "sub",
+      "analogue"
+    ],
+    "instruments": [
+      "grand-piano",
+      "felt-piano",
+      "rhodes",
+      "choir",
+      "strings",
+      "slow-strings",
+      "cello",
+      "trumpet",
+      "clean-electric",
+      "pad",
+      "air-pad",
+      "glass-pad",
+      "dark-pad"
+    ],
+    "machines": []
+  },
+  "summary": "Music of tone and atmosphere rather than beat, song structure or a leading melody: sustained drones, slowly shifting textures and sparse, reverberant piano, voices or strings, meant to reward close listening and still sit in the background (Eno, Music for Airports, 1978). Pieces are long and through-composed, often made by a process — loops of unequal length, tape delay, tape left to decay — rather than written bar by bar.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Ambient_music",
+      "https://en.wikipedia.org/wiki/Ambient_1:_Music_for_Airports",
+      "https://inmotionmagazine.com/eno1.html",
+      "https://en.wikipedia.org/wiki/Drone_music"
+    ]
+  }
+}

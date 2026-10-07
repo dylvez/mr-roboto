@@ -146,7 +146,7 @@ public enum Merge {
         // Pitch.
         if fragment.kind != .groove, let from = fragment.key, target.key != nil || override != nil {
             move.semitones = override ?? target.key.map { semitones(from: from, to: $0) } ?? 0
-            move.key = move.semitones == 0 ? from : Key(tonicPitchClass: from.tonic.pitchClass.transposed(by: move.semitones), mode: from.mode)
+            move.key = move.semitones == 0 ? from : from.transposed(by: move.semitones)
             if fragment.kind == .sample {
                 move.preservesFormants = abs(move.semitones) >= formantSemitones
                 if abs(move.semitones) > flagSemitones {

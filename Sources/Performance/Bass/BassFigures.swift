@@ -30,6 +30,9 @@ enum BassFigures {
             case .motown: figure = motown(request.density, beatsPerBar, &rng)
             case .rolling: figure = rolling(request.density, beatsPerBar)
             case .logDrum: figure = logDrum(request.density, beatsPerBar, &rng)
+            case .dub: figure = dub(request.density, beatsPerBar, &rng)
+            case .afrobeat: figure = afrobeat(request.density, beatsPerBar)
+            case .pedal: figure = pedal(beatsPerBar, harmony: harmony, barStart: start)
             default: figure = []
             }
             for note in figure {
@@ -70,6 +73,18 @@ enum BassFigures {
         if lineage == .walking {
             drafts = approachChanges(drafts, harmony: harmony, lineage: lineage, beatsPerBar: beatsPerBar)
         }
+        // A pedal is held as long as its chord is: a bar's root that is the bar before's goes on.
+        if lineage == .pedal {
+            var held: [Draft] = []
+            for draft in drafts.sorted(by: { $0.start < $1.start }) {
+                if let previous = held.last, previous.pitch == draft.pitch, abs(previous.end - draft.start) < 0.05 {
+                    held[held.count - 1].end = draft.end
+                } else {
+                    held.append(draft)
+                }
+            }
+            drafts = held
+        }
         if lineage == .motown {
             drafts += BassWriter.approaches(harmony: harmony, lineage: lineage, minimumMove: 2, totalBeats: total)
                 .map { var d = $0; d.displaced = true; return d }
@@ -79,6 +94,47 @@ enum BassFigures {
     }
 
     // MARK: The figures
+
+    /// Dub: the root struck on one and held into the second beat, then nothing until the fifth on
+    /// the and of three and the root again on four; busier, a minor third or flat seventh on the
+    /// last off-beat and an octave answering on the and of two. The room is the point.
+    static func dub(_ density: Double, _ beats: Double, _ rng: inout BassRandom) -> [Note] {
+        guard beats >= 4 else { return [Note(at: 0, tone: .interval(0), length: beats * 0.8, velocity: 112)] }
+        var notes = [Note(at: 0, tone: .interval(0), length: 1.4, velocity: 114),
+                     Note(at: 2.5, tone: .interval(7), length: 0.45, velocity: 100)]
+        if density > 0.35 { notes.append(Note(at: 3, tone: .interval(0), length: 0.45, velocity: 104)) }
+        if density > 0.6 { notes.append(Note(at: 3.5, tone: .interval(rng.unit() < 0.5 ? 3 : 10), length: 0.4, velocity: 96)) }
+        if density > 0.8 { notes.append(Note(at: 1.5, tone: .octaveUp, length: 0.4, velocity: 90)) }
+        return notes.sorted { $0.at < $1.at }
+    }
+
+    /// Afrobeat: one bar that comes round unchanged — a short root on one and a ghost on its last
+    /// sixteenth, the flat seventh on the and of two, the fifth on the and of three; busier, the
+    /// root and the third on four and an octave tucked after the seventh.
+    static func afrobeat(_ density: Double, _ beats: Double) -> [Note] {
+        guard beats >= 4 else { return [Note(at: 0, tone: .interval(0), length: 0.4), Note(at: beats - 0.5, tone: .interval(7), length: 0.4)] }
+        var notes = [Note(at: 0, tone: .interval(0), length: 0.4, velocity: 110),
+                     Note(at: 0.75, tone: .interval(0), length: 0.2, velocity: 86),
+                     Note(at: 1.5, tone: .interval(10), length: 0.4, velocity: 100),
+                     Note(at: 2.5, tone: .interval(7), length: 0.4, velocity: 104)]
+        if density > 0.4 {
+            notes.append(Note(at: 3, tone: .interval(0), length: 0.2, velocity: 92))
+            notes.append(Note(at: 3.25, tone: .interval(3), length: 0.4, velocity: 98))
+        }
+        if density > 0.7 { notes.append(Note(at: 1.75, tone: .octaveUp, length: 0.2, velocity: 88)) }
+        return notes.sorted { $0.at < $1.at }
+    }
+
+    /// A pedal: the root of each chord the bar holds, from where the chord starts to where the
+    /// next does. Merged across bar lines afterwards, so a chord that lasts four bars is one note.
+    static func pedal(_ beats: Double, harmony: HarmonyMap, barStart: Double) -> [Note] {
+        let changes = harmony.changes.filter { $0 > barStart + 1e-6 && $0 < barStart + beats - 1e-6 }.map { $0 - barStart }
+        let starts = [0.0] + changes
+        return starts.enumerated().map { index, at in
+            let end = index + 1 < starts.count ? starts[index + 1] : beats
+            return Note(at: at, tone: .interval(0), length: end - at, velocity: 84)
+        }
+    }
 
     struct Note {
         enum Tone { case interval(Int), octaveUp, chordTone, approach }

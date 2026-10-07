@@ -70,15 +70,89 @@ public enum NumeralReference: String, Codable, Sendable, Hashable {
     case ownScale, parallelMajor
 }
 
+/// A seven-note scale the church modes do not have, as the music that uses it writes it: one of
+/// them with a degree or two raised. Harmonic minor is the minor with its seventh raised, so a
+/// song in it has the minor's signature and a leading tone; Phrygian dominant — the freygish of
+/// klezmer, the hijaz of Arabic music, flamenco's mode — is the Phrygian with its third raised.
+public enum ScaleColour: String, Codable, CaseIterable, Sendable, Hashable {
+    case harmonicMinor = "harmonic minor"
+    case melodicMinor = "melodic minor"
+    case phrygianDominant = "phrygian dominant"
+    case doubleHarmonic = "double harmonic"
+    case hungarianMinor = "hungarian minor"
+    case ukrainianDorian = "ukrainian dorian"
+
+    /// The church mode it alters, whose signature it is written in.
+    public var mode: Mode {
+        switch self {
+        case .harmonicMinor, .melodicMinor, .hungarianMinor: return .aeolian
+        case .phrygianDominant, .doubleHarmonic: return .phrygian
+        case .ukrainianDorian: return .dorian
+        }
+    }
+
+    /// The degrees raised a semitone, counted from 0 at the tonic.
+    public var raised: [Int] {
+        switch self {
+        case .harmonicMinor: return [6]
+        case .melodicMinor: return [5, 6]
+        case .phrygianDominant: return [2]
+        case .doubleHarmonic: return [2, 6]
+        case .hungarianMinor: return [3, 6]
+        case .ukrainianDorian: return [3]
+        }
+    }
+
+    /// Semitones above the tonic, the mode's with the raised degrees moved up.
+    public var intervals: [Int] {
+        var steps = mode.intervals
+        for degree in raised { steps[degree] += 1 }
+        return steps
+    }
+
+    /// "Harmonic minor".
+    public var name: String { rawValue.prefix(1).uppercased() + rawValue.dropFirst() }
+
+    /// What else it is called, where it is heard.
+    public var aliases: [String] {
+        switch self {
+        case .harmonicMinor: return ["harmonic"]
+        case .melodicMinor: return ["melodic", "jazz minor"]
+        case .phrygianDominant: return ["freygish", "hijaz", "ahava rabbah", "spanish phrygian", "flamenco"]
+        case .doubleHarmonic: return ["hijaz kar", "byzantine", "double harmonic major"]
+        case .hungarianMinor: return ["gypsy minor", "hungarian"]
+        case .ukrainianDorian: return ["misheberakh", "mi sheberakh", "altered dorian", "romanian minor"]
+        }
+    }
+
+    /// The colour a name or an alias says, however it is cased.
+    public init?(named text: String) {
+        let wanted = text.lowercased().trimmingCharacters(in: .whitespaces)
+        guard let found = Self.allCases.first(where: { $0.rawValue == wanted || $0.aliases.contains(wanted) }) else { return nil }
+        self = found
+    }
+}
+
 /// A key: a spelled tonic plus a mode, giving a key signature, spelled scale, related keys and Roman-numeral analysis.
 public struct Key: Hashable, Codable, Sendable, CustomStringConvertible {
     /// The spelled tonic; F♯ major and G♭ major are different keys.
     public var tonic: NoteName
     public var mode: Mode
+    /// A scale the mode has a degree raised in: harmonic minor, Phrygian dominant. Nil is the mode
+    /// as it is, which every key was before. Omitted from a document when nil.
+    public var colour: ScaleColour?
 
     public init(tonic: NoteName, mode: Mode = .ionian) {
         self.tonic = tonic
         self.mode = mode
+        self.colour = nil
+    }
+
+    /// A key in one of the coloured scales, on the mode it alters.
+    public init(tonic: NoteName, colour: ScaleColour) {
+        self.tonic = tonic
+        self.mode = colour.mode
+        self.colour = colour
     }
 
     /// A key on one of the 17 Music Understanding tonics.
@@ -94,11 +168,23 @@ public struct Key: Hashable, Codable, Sendable, CustomStringConvertible {
         self.init(tonic: major.spelledScale[mode.rawValue - 1], mode: mode)
     }
 
+    /// The same key moved by `semitones`, in the same mode and with the same colour: A harmonic
+    /// minor up a tone is B harmonic minor.
+    public func transposed(by semitones: Int) -> Key {
+        var moved = Key(tonicPitchClass: tonic.pitchClass.transposed(by: semitones), mode: mode)
+        moved.colour = colour
+        return moved
+    }
+
     /// Parses "C", "F# minor", "Eb major", "D dorian".
     public init?(parsing text: String) {
         let parts = text.split(separator: " ", maxSplits: 1).map(String.init)
         guard let first = parts.first, let tonic = NoteName(first) else { return nil }
         let modeText = parts.count > 1 ? parts[1].lowercased() : "major"
+        if let colour = ScaleColour(named: modeText) {
+            self.init(tonic: tonic, colour: colour)
+            return
+        }
         let mode: Mode?
         switch modeText {
         case "major", "maj", "": mode = .ionian
@@ -112,9 +198,12 @@ public struct Key: Hashable, Codable, Sendable, CustomStringConvertible {
     public static let cMajor = Key(tonic: NoteName(.c))
     public static let aMinor = Key(tonic: NoteName(.a), mode: .aeolian)
 
-    /// The scale of this key's mode.
-    public var scale: Scale { mode.scale }
-    public var isMajor: Bool { mode == .ionian }
+    /// The scale of this key's mode, or of its colour.
+    public var scale: Scale {
+        guard let colour else { return mode.scale }
+        return Scale(name: colour.name, intervals: colour.intervals)
+    }
+    public var isMajor: Bool { mode == .ionian && colour == nil }
     public var isMinor: Bool { mode == .aeolian }
 
     /// The seven pitch classes, tonic first.
@@ -239,8 +328,9 @@ public struct Key: Hashable, Codable, Sendable, CustomStringConvertible {
         (sevenths ? diatonicSevenths : diatonicTriads).compactMap { romanNumeral(for: $0, reference: reference) }
     }
 
-    /// "C major", "F♯ minor", "D Dorian".
+    /// "C major", "F♯ minor", "D Dorian", "E phrygian dominant".
     public var name: String {
+        if let colour { return "\(tonic.symbolicName) \(colour.rawValue)" }
         let modeName: String
         switch mode {
         case .ionian: modeName = "major"

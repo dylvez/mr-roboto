@@ -1,0 +1,616 @@
+{
+  "aliases": [
+    "klezmer",
+    "klezmorim",
+    "freylekhs",
+    "freilach",
+    "bulgar",
+    "bulgarish",
+    "yiddish dance music",
+    "jewish wedding music",
+    "klezmer revival"
+  ],
+  "bassHands": [
+    "root-fifth"
+  ],
+  "family": "jewish",
+  "feels": [
+    "Bulgar",
+    "Oom-Pah Waltz"
+  ],
+  "form": {
+    "evidence": {
+      "inferred": "Tarras's repeat scheme aabbccaabbcca (Rubin) without the closing a; each sentence is the commonest sixteen bars of 2/4 (52% in Rubin's sample), written as eight bars of 4/4. 96 bars at the cited crotchet 138 run 2.8 minutes, about one 78 side. Two- and four-sentence tunes and other repeat orders are common, and a doina may come first as a prelude"
+    },
+    "sections": [
+      {
+        "bars": 8,
+        "name": "A"
+      },
+      {
+        "bars": 8,
+        "name": "A"
+      },
+      {
+        "bars": 8,
+        "name": "B"
+      },
+      {
+        "bars": 8,
+        "name": "B"
+      },
+      {
+        "bars": 8,
+        "name": "C"
+      },
+      {
+        "bars": 8,
+        "name": "C"
+      },
+      {
+        "bars": 8,
+        "name": "A"
+      },
+      {
+        "bars": 8,
+        "name": "A"
+      },
+      {
+        "bars": 8,
+        "name": "B"
+      },
+      {
+        "bars": 8,
+        "name": "B"
+      },
+      {
+        "bars": 8,
+        "name": "C"
+      },
+      {
+        "bars": 8,
+        "name": "C"
+      }
+    ]
+  },
+  "id": "klezmer",
+  "idioms": [
+    "klezmer"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Naftule_Brandwein",
+          "https://openaccess.city.ac.uk/8393/1/The_art_of_the_klezmer_-_improvisation_and_ornamentation_in_the_commercial_recordings_of_New_York_clarinettists_Naftule_Brandwein_and_Dave_Tarras_1922-1929.pdf"
+        ]
+      },
+      "name": "Naftule Brandwein",
+      "period": "1922-1941",
+      "why": "Born in Przemyslany, Austria-Hungary, in 1884, he recorded as an uncredited soloist with Abe Schwartz's band and then about two dozen sides for Victor under his own name (1923-27), returning to Victor in 1941. He took risks, re-interpreting a passage differently on every attempt: Rubin finds two takes of one tune at crotchet 132 and 168 with different repeat schemes. He drew on Greek, Turkish, Hungarian and Romani playing, and revivalists from David Krakauer to Michael Winograd cite him."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Dave_Tarras",
+          "https://catskillsinstitute.northeastern.edu/history/interviews/interview-with-pete-sokolow/"
+        ]
+      },
+      "name": "Dave Tarras",
+      "period": "1921-1989",
+      "why": "Born in Ukraine, he made some 500 recordings and played clarinet and saxophone in New York bands for decades; Pete Sokolow, who sat in a section with him, called his saxophone unbelievable. His phrasing was smooth, dignified and deliberately rhythmical, and he made the bulgar, rather than the freylekhs, the dominant American klezmer dance. He taught Andy Statman in the 1970s and received a National Heritage Fellowship in 1984."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Andy_Statman",
+          "https://musik-for.uol.de/klezmer/schule/Kap05-Tanzmusik.pdf"
+        ]
+      },
+      "name": "Andy Statman",
+      "period": "1970s-",
+      "why": "A clarinettist and mandolinist who apprenticed with Tarras in the 1970s and inherited several of his clarinets. From Jewish Klezmer Music (1979) to Klezmer Suite (1994) he fused klezmer with bluegrass, jazz and Hasidic melody, drawing on Hasidism and on Coltrane in search of a new mysticism. He received a National Heritage Fellowship in 2012."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/The_Klezmatics",
+          "https://musik-for.uol.de/klezmer/schule/Kap05-Tanzmusik.pdf"
+        ]
+      },
+      "name": "The Klezmatics",
+      "period": "1986-",
+      "why": "Formed in New York's East Village in 1986 with trumpet, saxophone and clarinet, violin, accordion, bass and drums, they mixed traditional klezmer with other music and sang in Yiddish and other languages. Rhythm and Jews (1990) holds the 'NY Psycho Freylekhs' that the Oldenburg school materials choose for a circle-dance lesson, and Wonder Wheel (2006), setting Woody Guthrie lyrics, won a Grammy."
+    }
+  ],
+  "meters": [
+    "4/4",
+    "2/4",
+    "3/8"
+  ],
+  "name": "Klezmer",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://musik-for.uol.de/klezmer/schule/Kap01-Klezmergroove.pdf"
+        ]
+      },
+      "text": "The klezmer groove is an oom-pah: a plain alternating bass on the beat (in D minor, d-A-d-A in quarters) under an eighth-note pulse whose second eighth is brighter and louder, the fast off-beat. The bass drum keeps even quarters, jingles take the off-beat, and woodblocks play two-tone eighths with the higher tone second. Dropping the alternating bass, or switching everyone to unison eighth tremolo, is how a band makes the tempo seem to rise."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Klezmer",
+          "https://jewish-music.huji.ac.il/en/node/22261",
+          "https://jewish-music.huji.ac.il/en/node/22214",
+          "https://musik-for.uol.de/klezmer/schule/Kap08-Bulgar%20und%20Folk.pdf",
+          "https://musik-for.uol.de/klezmer/publikationen/lebedik2016.pdf"
+        ]
+      },
+      "text": "The bulgar, the most popular American klezmer dance, came from the Bessarabian bulgareasca and is a circle dance in 8/8 felt two ways at once: the alternating bass in four and accents of 3+3+2 eighths. Bands put the 3+3+2 in the bass drum or the chords while the off-beat goes on, often bringing it in partway through a tune as a lift; pickups are left unaccompanied, and triplets borrowed from the Romanian sirba are scattered through the tune. Freylekhs and bulgars are often musically indistinguishable."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://jewish-music.huji.ac.il/en/node/22226",
+          "https://jewish-music.huji.ac.il/en/node/22227",
+          "https://openaccess.city.ac.uk/8393/1/The_art_of_the_klezmer_-_improvisation_and_ornamentation_in_the_commercial_recordings_of_New_York_clarinettists_Naftule_Brandwein_and_Dave_Tarras_1922-1929.pdf"
+        ]
+      },
+      "text": "The zhok (slow hora) is notated in 3/8 but limps long-short, roughly 2+1: the rhythm section strikes only beats 1 and 3 and leaves out 2 (on piano, a low open fifth in the left hand against a second-inversion chord in the right), and it still feels andante at fast metronome settings. Brandwein's and Tarras's 1920s records also include waltzes at crotchet 120-126, and wedding bands played polkas and Russian and Viennese waltzes besides the bulgars and freylekhs."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://openaccess.city.ac.uk/8393/1/The_art_of_the_klezmer_-_improvisation_and_ornamentation_in_the_commercial_recordings_of_New_York_clarinettists_Naftule_Brandwein_and_Dave_Tarras_1922-1929.pdf"
+        ]
+      },
+      "text": "In the 1920s New York recordings of Brandwein and Tarras the duple-metre circle dances (freylekhs, bulgar, sher) run crotchet 76-168 and the terkish 120-168. The Jewish recorded versions of one bulgar tune run from 126 to 160-plus, Brandwein's 'Heiser Bulgar' at 138, while two Greek versions of it run 112 and 116. Tempo followed the dancers: Max Epstein played a little faster for Romanian guests and slower for Bessarabians."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://openaccess.city.ac.uk/8393/1/The_art_of_the_klezmer_-_improvisation_and_ornamentation_in_the_commercial_recordings_of_New_York_clarinettists_Naftule_Brandwein_and_Dave_Tarras_1922-1929.pdf",
+          "https://jewish-music.huji.ac.il/en/node/22214"
+        ]
+      },
+      "text": "Tunes are built of sentences, each usually repeated once: of thirty-one Brandwein and Tarras tunes, 49% have three sentences (aabbcc), 26% four and 19% two. Sixteen bars of 2/4 is the commonest sentence (52%), eight bars the next (36%), made of two- or four-bar phrases, and a fast rising run starting in bar 14 of a sixteen-bar sentence signals the end, which can come after any sentence. On the dance floor a bulgar lasted a few minutes, a sher with its square-dance figures eighteen to twenty. Two bars of 2/4 make one 4/4 bar of the form given here."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://jewish-music.huji.ac.il/en/node/22273",
+          "https://jewish-music.huji.ac.il/en/node/22375"
+        ]
+      },
+      "text": "The doina is a free-meter but structured listening piece of Romanian origin, played at the banquet table: a slow, improvised, lamenting part, usually in the misheberakh mode, then a lively metered one. The band backs the free part with intermittent chords that hold the tonal centre, the pianist with tremolo in both hands. It opens a suite of doina, zhok and bulgar, and a hora that follows a doina is called the nokhshpil, the postlude."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://musik-for.uol.de/klezmer/schule/Kap03-Musiktheorie%20und%20Musikpraxis.pdf",
+          "https://musik-for.uol.de/klezmer/publikationen/lebedik2016.pdf",
+          "https://en.wikipedia.org/wiki/Phrygian_dominant_scale",
+          "https://ethanhein.com/wp/2021/dual-tonicity-in-a-classic-klezmer-tune/"
+        ]
+      },
+      "text": "Freygish (D-Eb-F#-G-A-Bb-C) has no ordinary dominant: the chord on its fifth would be A-C-Eb, so the minor chord on the seventh degree, C minor, does the dominant's work, and G minor is the subdominant. D-Cm-D is klezmer's trademark cadence, borrowed even into tunes in other modes. A typical freygish phrase holds the major tonic, often as D7, and touches C minor only near its end, in bar 15 or bars 13-14 of sixteen; almost every freygish tune has a part in G harmonic minor, where D7 becomes the dominant. Beregovski found about a quarter of more than 5,000 collected melodies in freygish and 15% in misheberakh."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://www.klezmershack.com/articles/horowitz/horowitz.klezmodes.html",
+          "https://en.wikipedia.org/wiki/Klezmer",
+          "https://en.wikipedia.org/wiki/Ukrainian_Dorian_scale",
+          "https://openaccess.city.ac.uk/8393/1/The_art_of_the_klezmer_-_improvisation_and_ornamentation_in_the_commercial_recordings_of_New_York_clarinettists_Naftule_Brandwein_and_Dave_Tarras_1922-1929.pdf"
+        ]
+      },
+      "text": "Four modes, named after prayer modes. Freygish (ahava rabboh; the app's phrygian dominant), the mode of supplication. Misheberakh (the app's ukrainian dorian), a minor mode whose raised fourth may alternate with the natural one, common in doinas. Adoynoy (adoyshem molokh), like mixolydian with its flat seventh, the 'Jewish major', often the first sub-mode inside a freygish tune for a lighter mood. Mogen ovos, like the natural minor (aeolian), in greeting, farewell and dance tunes. Moving between sub-modes does the work of modulation, and the commonest move in all four modes is to the fourth degree."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://musik-for.uol.de/klezmer/schule/Kap01-Klezmergroove.pdf",
+          "https://musik-for.uol.de/klezmer/schule/Kap08-Bulgar%20und%20Folk.pdf",
+          "https://en.wikipedia.org/wiki/Ukrainian_Dorian_scale"
+        ]
+      },
+      "text": "Harmony is sparse. Long stretches sit on one chord even when the melody uses altered degrees, which are heard as passing or neighbour tones; chords can shift without function, and chains of fifths or secondary dominants are rare. The misheberakh's raised fourth is often simply ignored (a 1911 Warsaw wedding-band recording plays the whole passage over D minor), or covered with a drone or a diminished chord, though the 'Odessa Bulgar' takes it as the third of E7 and moves to A minor for a few bars. Joshua Horowitz calls the music non-harmonic by nature and derives the accompaniment from the melody."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://musik-for.uol.de/klezmer/schule/Kap01-Klezmergroove.pdf",
+          "https://musik-for.uol.de/klezmer/schule/Kap03-Musiktheorie%20und%20Musikpraxis.pdf",
+          "https://musik-for.uol.de/klezmer/publikationen/lebedik2016.pdf"
+        ]
+      },
+      "text": "The bass alternates root and fifth on the beat and either follows the bulgar's 3+3+2 or joins the rhythm section's off-beat gesture. In Marvin Rosenberg's band arrangement of 'Scherele' the piano plays a left-right 'rum-da' over a simple alternating bass, and the trombone that carries the bass line decorates the alternation with small grooving patterns, moving when the melody holds and settling into quarters under its sighing figures."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://openaccess.city.ac.uk/8393/1/The_art_of_the_klezmer_-_improvisation_and_ornamentation_in_the_commercial_recordings_of_New_York_clarinettists_Naftule_Brandwein_and_Dave_Tarras_1922-1929.pdf",
+          "https://en.wikipedia.org/wiki/Klezmer",
+          "https://musik-for.uol.de/klezmer/schule/Kap01-Klezmergroove.pdf",
+          "https://en.wikipedia.org/wiki/Phrygian_dominant_scale"
+        ]
+      },
+      "text": "The krekhts ('groan') is the defining clarinet ornament: a quick downward bend at the end of a note, cut off by throat and embouchure, imitating the break between chest voice and falsetto in synagogue chant and Hasidic song; it animates a held pitch, articulates stepwise runs and starts descending cadences. Around it sit the kneytsh, the kvetsh, dreydlekh (turns), the shleyfer (glissando), trills, mordents and grace notes, with vibrato used sparingly as one more ornament. Each repeat of a line is varied; in freygish the sixth may be left natural when approached from above."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://musik-for.uol.de/klezmer/schule/Kap01-Klezmergroove.pdf",
+          "https://en.wikipedia.org/wiki/Klezmer",
+          "https://musik-for.uol.de/klezmer/schule/Kap08-Bulgar%20und%20Folk.pdf",
+          "https://catskillsinstitute.northeastern.edu/history/interviews/interview-with-pete-sokolow/"
+        ]
+      },
+      "text": "A nineteenth-century kapelye could be two or three violins, a tsimbl (hammered dulcimer) and a bass: the first violin plays and ornaments the tune, the second shadows it heterophonically or in counterpoint, the third keeps the groove in rhythmic double stops. In America the clarinet, saxophone or trumpet took the lead and the trombone added slides; Harry Kandel's 1917 Victor orchestra was two cornets, four violins, flute, viola, trombone, tuba, piano and clarinet, while 1950s Catskills dance bands were trumpet, saxophone, piano and drums, some with a bass."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "inferred": "the accordion's off-beat role in Stroh's Haiducken example and the Klezmatics line-up (Wikipedia) set against the app's instrument list, which has no accordion; the piano and violin alternatives are the accompaniment instruments the cited ensembles used"
+      },
+      "text": "The app has no accordion, which revival bands lean on (the Klezmatics' Lorin Sklamberg plays it, and in Stroh's live example the accordion carries the off-beat). Give its job, off-beat chords and bass, to the piano, or to the violins and brass as the older bands did, rather than to a sustained pad, which would blur the oom-pah."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://openaccess.city.ac.uk/8393/1/The_art_of_the_klezmer_-_improvisation_and_ornamentation_in_the_commercial_recordings_of_New_York_clarinettists_Naftule_Brandwein_and_Dave_Tarras_1922-1929.pdf"
+        ]
+      },
+      "text": "Before the microphone arrived in April 1925, acoustic recording forced klezmer bands to play loud, fast and one-dimensionally, and the ten-inch 78's time limit pushed them to cut performances short, so the early records understate the music's dynamics and length."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Klezmer",
+          "https://en.wikipedia.org/wiki/The_Klezmatics"
+        ]
+      },
+      "text": "Klezmer is instrumental; words belong to the Yiddish song and theatre repertoire around it. The revival's Klezmatics sing in Yiddish and other languages, and their Grammy-winning Wonder Wheel (2006) set Woody Guthrie lyrics."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://musik-for.uol.de/klezmer/schule/Kap03-Musiktheorie%20und%20Musikpraxis.pdf",
+          "https://ethanhein.com/wp/2021/dual-tonicity-in-a-classic-klezmer-tune/"
+        ]
+      },
+      "text": "Resolving freygish with a dominant seventh on the fifth (A7 to D in D freygish). The mode has no leading tone: its cadence is the minor chord a whole step below the tonic (Cm to D), used near phrase ends, with the major tonic, often a seventh chord, everywhere else."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://musik-for.uol.de/klezmer/schule/Kap03-Musiktheorie%20und%20Musikpraxis.pdf"
+        ]
+      },
+      "text": "Harmonising every altered note with diminished chords, secondary dominants and minor ii and iv chords. Sokolow notes that early klezmer records let the raised fourth, major sixth and minor seventh pass over a plain tonic or dominant chord; the busier practice came from Hungarian and Gypsy bands and second-generation American dance bands."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://musik-for.uol.de/klezmer/schule/Kap01-Klezmergroove.pdf",
+          "https://jewish-music.huji.ac.il/en/node/22273"
+        ]
+      },
+      "text": "Playing everything rubato. Free time belongs to the doina, the preludes and the transitions between tempos; the dance tunes keep a steady beat, and the recordings give little evidence that tempo swings are a main trait of the music."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://catskillsinstitute.northeastern.edu/history/interviews/interview-with-pete-sokolow/",
+          "https://musik-for.uol.de/klezmer/schule/Kap01-Klezmergroove.pdf"
+        ]
+      },
+      "text": "Letting the ornaments bury the tune. Max Epstein taught Pete Sokolow that in Jewish clarinet the melody is the main thing and the ornaments enhance it; vary and ornament each repeat, but keep the melody audible."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://musik-for.uol.de/klezmer/schule/Kap03-Musiktheorie%20und%20Musikpraxis.pdf",
+          "https://ethanhein.com/wp/2021/dual-tonicity-in-a-classic-klezmer-tune/"
+        ]
+      },
+      "mode": "phrygian dominant",
+      "roman": "I7 - vii - I",
+      "text": "Freygish's cadence: the major tonic, often with its seventh, and the minor chord a whole step below it as the dominant (D7, Cm, D in D freygish)."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://musik-for.uol.de/klezmer/schule/Kap03-Musiktheorie%20und%20Musikpraxis.pdf",
+          "https://musik-for.uol.de/klezmer/publikationen/lebedik2016.pdf"
+        ]
+      },
+      "mode": "phrygian dominant",
+      "roman": "iv - I7 - bvii - II - iv",
+      "text": "A freygish tune's B part turning to the harmonic minor on the fourth degree, as in 'Scherele': Gm, D7, Cm, E, Gm, with D7 now the dominant."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://musik-for.uol.de/klezmer/schule/Kap08-Bulgar%20und%20Folk.pdf"
+        ]
+      },
+      "mode": "ukrainian dorian",
+      "roman": "i - II7 - v",
+      "text": "Misheberakh in the 'Odessa Bulgar': the A part over plain D minor, then the raised fourth as the third of E7, leading to A minor for a few bars before the tune returns."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://musik-for.uol.de/klezmer/schule/Kap03-Musiktheorie%20und%20Musikpraxis.pdf"
+        ]
+      },
+      "mode": "aeolian",
+      "roman": "i - bvii - i",
+      "text": "A minor (mogen ovos-like) tune borrowing the freygish cadence: in Brandwein's 'Freyt aykh Yidelekh' a freygish E-flat over C minor slips into plain D minor."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "cited": [
+          "https://openaccess.city.ac.uk/8393/1/The_art_of_the_klezmer_-_improvisation_and_ornamentation_in_the_commercial_recordings_of_New_York_clarinettists_Naftule_Brandwein_and_Dave_Tarras_1922-1929.pdf"
+        ]
+      },
+      "feature": "tempo.bpm",
+      "high": 168,
+      "low": 120,
+      "typical": 138,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://musik-for.uol.de/klezmer/schule/Kap03-Musiktheorie%20und%20Musikpraxis.pdf",
+          "https://musik-for.uol.de/klezmer/publikationen/lebedik2016.pdf",
+          "https://musik-for.uol.de/klezmer/schule/Kap08-Bulgar%20und%20Folk.pdf"
+        ]
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 4,
+      "low": 2,
+      "typical": 3,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "inferred": "Stroh (Kap03) says a freygish tune holds the major tonic through a sixteen-bar 2/4 phrase and moves to the minor chord on the seventh only in bar 15 or bars 13-14: two changes in eight 4/4 bars is 0.25. A B part such as Scherele's Gm-D7-Cm E-Gm (Kap03) changes about once a 4/4 bar, the upper end."
+      },
+      "feature": "harmony.changes.per.bar",
+      "high": 1.0,
+      "low": 0.25,
+      "unit": "changes per bar"
+    },
+    {
+      "evidence": {
+        "inferred": "from the cited progressions: freygish's D-Cm-D moves by whole steps (0 of 2 by fourth or fifth); Scherele's Gm-D7-Cm-E-Gm has one fifth move in four (0.25); the Odessa Bulgar's Dm-E7-Am has two in three, the most a klezmer tune shows, so the norm sits well under functional harmony's"
+      },
+      "feature": "harmony.root.motion.fifths",
+      "high": 0.5,
+      "low": 0.0,
+      "unit": "fraction"
+    },
+    {
+      "evidence": {
+        "inferred": "every chord in the cited freygish progressions (D7, Cm, Gm) belongs to D phrygian dominant, and every chord of the Odessa Bulgar (Dm, E7, Am) to D ukrainian dorian, when the key is stated in the mode; the E major of Scherele's B part and the borrowed freygish C minor in a D-minor tune (Kap03) are the out-of-key exceptions, one in four or five chords"
+      },
+      "feature": "harmony.diatonic.ratio",
+      "high": 1.0,
+      "low": 0.75,
+      "unit": "fraction"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://musik-for.uol.de/klezmer/schule/Kap01-Klezmergroove.pdf",
+          "https://musik-for.uol.de/klezmer/schule/Kap08-Bulgar%20und%20Folk.pdf",
+          "https://musik-for.uol.de/klezmer/publikationen/lebedik2016.pdf"
+        ]
+      },
+      "feature": "bass.attacks.per.bar",
+      "high": 4,
+      "low": 3,
+      "typical": 4,
+      "unit": "attacks per bar"
+    },
+    {
+      "evidence": {
+        "inferred": "the alternating bass strikes every beat (Kap01), so nearly every bar's downbeat carries a bass note; the unaccompanied pickups and unison breaks that Kap08 describes are the bars without one"
+      },
+      "feature": "bass.downbeat.coverage",
+      "high": 1.0,
+      "low": 0.85,
+      "unit": "fraction of bars"
+    },
+    {
+      "evidence": {
+        "inferred": "an alternating bass on the quarters (Kap01) has no off-grid onsets; a bass that follows the bulgar's 3+3+2 (Kap08, Stroh's Lebedik) puts one of three onsets, the one on the and of 2, off the quarter grid"
+      },
+      "feature": "bass.syncopation",
+      "high": 0.34,
+      "low": 0.0,
+      "unit": "fraction of onsets"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://openaccess.city.ac.uk/8393/1/The_art_of_the_klezmer_-_improvisation_and_ornamentation_in_the_commercial_recordings_of_New_York_clarinettists_Naftule_Brandwein_and_Dave_Tarras_1922-1929.pdf",
+          "https://jewish-music.huji.ac.il/en/node/22214",
+          "https://musik-for.uol.de/klezmer/schule/Kap08-Bulgar%20und%20Folk.pdf"
+        ]
+      },
+      "feature": "form.turns",
+      "high": 4,
+      "low": 2,
+      "typical": 3,
+      "unit": "turns"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://openaccess.city.ac.uk/8393/1/The_art_of_the_klezmer_-_improvisation_and_ornamentation_in_the_commercial_recordings_of_New_York_clarinettists_Naftule_Brandwein_and_Dave_Tarras_1922-1929.pdf"
+        ]
+      },
+      "feature": "form.sections",
+      "high": 13,
+      "low": 5,
+      "unit": "sections"
+    },
+    {
+      "evidence": {
+        "inferred": "from the repeat schemes Rubin lists: Brandwein's aabcc repeats 2 of 5 sections (0.4), the common aabbcc 3 of 6 (0.5), Tarras's aabbccaabbcca 10 of 13 (0.77)"
+      },
+      "feature": "form.repetition",
+      "high": 0.77,
+      "low": 0.4,
+      "unit": "fraction"
+    },
+    {
+      "evidence": {
+        "inferred": "an aabbcc tune of sixteen-bar 2/4 sentences played twice is 96 bars of 4/4, 2.8 minutes at the cited crotchet 138 and about the side of the ten-inch 78 whose time limit Rubin says shortened recorded performances; the revival runs longer: the Klezmatics tracks songbpm lists last 2:20 to 5:50, median 3:50"
+      },
+      "feature": "form.minutes",
+      "high": 5.0,
+      "low": 2.5,
+      "unit": "minutes"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Naftule Brandwein",
+      "evidence": {
+        "cited": [
+          "https://openaccess.city.ac.uk/8393/1/The_art_of_the_klezmer_-_improvisation_and_ornamentation_in_the_commercial_recordings_of_New_York_clarinettists_Naftule_Brandwein_and_Dave_Tarras_1922-1929.pdf"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.sections",
+        "form.turns"
+      ],
+      "listenFor": "From the top: the tune in D at crotchet 138 through four sentences, aabbccd, among the Jewish recorded versions Rubin compares, all between 126 and 160-plus.",
+      "title": "Heiser Bulgar",
+      "year": 1923
+    },
+    {
+      "artist": "Abe Schwartz Orchestra with Dave Tarras",
+      "evidence": {
+        "cited": [
+          "https://openaccess.city.ac.uk/8393/1/The_art_of_the_klezmer_-_improvisation_and_ornamentation_in_the_commercial_recordings_of_New_York_clarinettists_Naftule_Brandwein_and_Dave_Tarras_1922-1929.pdf",
+          "https://en.wikipedia.org/wiki/Dave_Tarras"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.turns"
+      ],
+      "listenFor": "Throughout: the same tune as Brandwein's 'Heiser Bulgar' at the same crotchet 138 in D, but only its first three sentences, aabbcc, with Tarras's even, deliberate phrasing.",
+      "title": "Gelebt und Gelacht Frehlichs",
+      "year": 1929
+    },
+    {
+      "artist": "Kandel's Orchestra",
+      "evidence": {
+        "cited": [
+          "https://musik-for.uol.de/klezmer/schule/Kap08-Bulgar%20und%20Folk.pdf"
+        ]
+      },
+      "features": [
+        "harmony.chords.distinct",
+        "harmony.diatonic.ratio",
+        "harmony.changes.per.bar"
+      ],
+      "listenFor": "Sentence B: the misheberakh G-sharp that the A part plays over plain D minor becomes the third of E7 and turns briefly to A minor before the sixteenth-note motif leads back.",
+      "title": "Odessar Bulgarish",
+      "year": 1917
+    },
+    {
+      "artist": "The Klezmorim",
+      "evidence": {
+        "cited": [
+          "https://musik-for.uol.de/klezmer/publikationen/lebedik2016.pdf",
+          "https://musik-for.uol.de/klezmer/schule/Kap03-Musiktheorie%20und%20Musikpraxis.pdf"
+        ]
+      },
+      "features": [
+        "harmony.chords.distinct",
+        "harmony.changes.per.bar",
+        "tempo.bpm"
+      ],
+      "listenFor": "Throughout: the first revival band's fast, loud off-beat under a freygish tune that needs only two chords, D7 and C minor, with the bulgar rhythm brought in only as a lift.",
+      "title": "Lebedik un Freylekh",
+      "year": 1977
+    },
+    {
+      "artist": "The Klezmatics",
+      "evidence": {
+        "cited": [
+          "https://musik-for.uol.de/klezmer/schule/Kap05-Tanzmusik.pdf",
+          "https://en.wikipedia.org/wiki/The_Klezmatics"
+        ]
+      },
+      "features": [
+        "form.minutes",
+        "tempo.bpm"
+      ],
+      "listenFor": "Throughout: a revival freylekhs built to carry a circle dance; with the album's other freylekhs it makes ten minutes, which the Oldenburg dance lesson plays twice for twenty or more dancers.",
+      "title": "NY Psycho Freylekhs",
+      "year": 1990
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "upright"
+    ],
+    "instruments": [
+      "clarinet",
+      "violin",
+      "trumpet",
+      "brass",
+      "grand-piano",
+      "cello",
+      "flute"
+    ],
+    "machines": [
+      "vintage"
+    ]
+  },
+  "summary": "Eastern European Jewish instrumental wedding and dance music, carried to New York in the 1910s and 1920s and revived from the 1970s. A clarinet or violin leads an ornamented melody (the krekhts sob, trills, slides) over an oom-pah: an alternating root-and-fifth bass on the beat and bright off-beat chords, with the bulgar's 3+3+2 accents in the drum or the chords. Dance tunes of two to four repeated sentences (aabbcc) run at about crotchet 126 to 160, beside the limping 3/8 zhok and the free-time doina, and are built on a few modes, above all freygish (phrygian dominant), which is harmonised with the major tonic and the minor chord a whole step below it rather than with a dominant seventh.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Klezmer",
+      "https://musik-for.uol.de/klezmer/schule/Kap01-Klezmergroove.pdf",
+      "https://musik-for.uol.de/klezmer/schule/Kap08-Bulgar%20und%20Folk.pdf",
+      "https://openaccess.city.ac.uk/8393/1/The_art_of_the_klezmer_-_improvisation_and_ornamentation_in_the_commercial_recordings_of_New_York_clarinettists_Naftule_Brandwein_and_Dave_Tarras_1922-1929.pdf",
+      "https://musik-for.uol.de/klezmer/schule/Kap03-Musiktheorie%20und%20Musikpraxis.pdf",
+      "https://jewish-music.huji.ac.il/en/node/22226",
+      "https://jewish-music.huji.ac.il/en/node/22273"
+    ]
+  }
+}

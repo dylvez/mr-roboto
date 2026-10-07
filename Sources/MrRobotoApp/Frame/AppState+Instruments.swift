@@ -23,9 +23,9 @@ extension AppState {
         recordedPercussion = RecordedPercussion.load(from: directory)
     }
 
-    /// File ▸ Import VCSL Percussion…: the Versilian library's congas, bongos, shaker, tambourine
-    /// and claves copied into the library and switched on, so every kit plays them in place of
-    /// its synthesized ones.
+    /// File ▸ Import VCSL Percussion…: the Versilian library's hand percussion (`RecordedPercussion.vcsl`)
+    /// copied into the library and switched on, so every kit plays it in place of its synthesized
+    /// voices.
     @discardableResult
     public func importVCSLPercussion(from root: URL) -> Bool {
         guard let directory = percussionDirectory else {

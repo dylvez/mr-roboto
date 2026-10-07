@@ -1,0 +1,573 @@
+{
+  "aliases": [
+    "dub reggae",
+    "roots dub",
+    "uk dub",
+    "uk steppers",
+    "digital dub"
+  ],
+  "bassHands": [
+    "dub",
+    "one-drop"
+  ],
+  "family": "caribbean",
+  "feels": [
+    "Reggae One Drop",
+    "Steppers",
+    "Rockers"
+  ],
+  "form": {
+    "evidence": {
+      "inferred": "Tubby's live drop-outs (Wikipedia), Mad Professor's 'bass and drum version' (Sound on Sound) and Manuel & Marshall's note that form is 'enhanced or even created by bringing various layers in and out', a practice from dub, laid out as density sections over one riddim; 60 bars run about 3.4 minutes at 70 BPM, near the 3.1-minute mean of the 22 tracks on Rockers Uptown and Scientist's Vampires. Real dubs follow their riddim's own sections."
+    },
+    "sections": [
+      {
+        "bars": 4,
+        "name": "Intro"
+      },
+      {
+        "bars": 8,
+        "name": "Riddim"
+      },
+      {
+        "bars": 8,
+        "name": "Drum & Bass"
+      },
+      {
+        "bars": 8,
+        "name": "Fragments"
+      },
+      {
+        "bars": 4,
+        "name": "Bass Alone"
+      },
+      {
+        "bars": 8,
+        "name": "Riddim"
+      },
+      {
+        "bars": 8,
+        "name": "Drum & Bass"
+      },
+      {
+        "bars": 8,
+        "name": "Fragments"
+      },
+      {
+        "bars": 4,
+        "name": "Outro"
+      }
+    ]
+  },
+  "id": "dub",
+  "idioms": [
+    "dub",
+    "reggae"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/King_Tubby",
+          "https://www.ableton.com/es/blog/studio-as-an-instrument-part-3",
+          "https://www.gearnews.com/audiothing-alborosie-dub-station-filter-echoes-and-spring-reverb-for-dub-reggae/"
+        ]
+      },
+      "name": "King Tubby",
+      "period": "1968–1989",
+      "why": "Osbourne Ruddock ran the Hometown Hi-Fi sound system and from 1971 a Waterhouse studio built around an MCI desk from Dynamic Sounds. He 'played' the desk, performing mixes live with tracks dropped out and brought back as the tape ran, sweeping the desk's stepped high-pass filter, an MCI two-track for echo and a modified Fairchild spring. He trained Prince Jammy and Scientist and dubbed Augustus Pablo, Lee Perry and Bunny Lee."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Lee_%22Scratch%22_Perry",
+          "https://www.ableton.com/es/blog/studio-as-an-instrument-part-3",
+          "https://www.soundonsound.com/people/lee-scratch-perry-daniel-boyle-recording-back-controls",
+          "https://en.wikipedia.org/wiki/Super_Ape"
+        ]
+      },
+      "name": "Lee \"Scratch\" Perry",
+      "period": "1973–2021",
+      "why": "Built the Black Ark in his yard in 1973 and worked it on a TEAC four-track, bouncing tracks to free space for overdubs, with a Grampian spring, Echoplex and later a Roland Space Echo and Mu-tron phaser. Super Ape (1976) is the culmination: dense layers of vocal fragments and earlier recordings. He later worked with Mad Professor and Adrian Sherwood."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Scientist_(musician)",
+          "https://en.wikipedia.org/wiki/Scientist_Rids_the_World_of_the_Evil_Curse_of_the_Vampires",
+          "https://tapeop.com/interviews/136/hopeton-overton-brown-scientist"
+        ]
+      },
+      "name": "Scientist",
+      "period": "mid-1970s–1980s",
+      "why": "Hopeton Brown started as an assistant at King Tubby's, moved to Channel One's 16-track desk at the end of the decade and became Henry 'Junjo' Lawes's favoured engineer for Roots Radics sessions. His Greensleeves dub albums of 1981-82 (Space Invaders, Vampires, Pac-Man) were recorded at Channel One and mixed at Tubby's, and he credits the high-pass filter, not phasers, for the sweeps."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Augustus_Pablo",
+          "https://en.wikipedia.org/wiki/King_Tubbys_Meets_Rockers_Uptown",
+          "https://www.odt.co.nz/entertainment/music/long-player-augustus-pablos-mysterious-exotic-vibe"
+        ]
+      },
+      "name": "Augustus Pablo",
+      "period": "1972–1999",
+      "why": "Brought the melodica to dub, starting with 'Java' for Clive Chin in 1972, and ran the Rockers label. On King Tubbys Meets Rockers Uptown (1976) he produced riddims played by the Barretts and Robbie Shakespeare and took the tapes to Tubby; the result is moody minor-key 'Far East' dub."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Mad_Professor",
+          "https://www.soundonsound.com/people/mad-professor",
+          "https://en.wikipedia.org/wiki/Jah_Shaka"
+        ]
+      },
+      "name": "Mad Professor",
+      "period": "1979–present",
+      "why": "Neil Fraser's Ariwa began in 1979 as a four-track studio in his London living room, on a mixer he built, and grew into the UK's largest black-owned studio. His Dub Me Crazy series and No Protection (1995), an electronic dub of Massive Attack's Protection, carried dub into the digital era with a Roland SDE-3000, Lexicon 480L and SSL; Jah Shaka's sound system is the other pillar of UK dub."
+    }
+  ],
+  "meters": [
+    "4/4"
+  ],
+  "name": "Dub",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://www.soundbrenner.com/blogs/articles/steppers-rhythm",
+          "https://www.moderndrummer.com/article/february-2019-reggae-101-the-steppers-beat/",
+          "https://www.dubroom.org/studio/tutorials-computerdub05.htm",
+          "https://www.soundbrenner.com/blogs/articles/rockers-rhythm",
+          "https://en.wikipedia.org/wiki/One_drop_rhythm",
+          "https://www.dubroom.org/studio/tutorials-computerdub04.htm"
+        ]
+      },
+      "text": "Dubs are cut from riddims in the one drop, rockers or steppers. Steppers puts the kick on all four beats, cross-stick or snare on 3, straight-eighth hats; it is credited to Sly Dunbar at Channel One and is the common beat of UK roots and dub. Rockers keeps the drop on 3 and adds kick on 1 (some players on all four), with a heavier rolling accent around 3. The names are not used consistently: Wikipedia calls the four-kick pattern rockers and gives steppers a kick on every eighth (four kicks a bar at double the count), and dubroom counts reggae at 110-190 BPM. Read the drop on 3: Soundbrenner practises steppers at 72 BPM and rockers at 70-90."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Dub_music",
+          "https://www.soundonsound.com/people/mad-professor",
+          "https://wayneandwax.com/org/lessons/roots-riddim-tutorial.html"
+        ]
+      },
+      "text": "The bass carries the dub. With the vocal and most instruments removed it is what is left in front, and sound systems wanted 'the bass and drum version'. Filter out most of the treble and mid-range for a fat, low tone; outline the chord on the strong beats with a note or two on the syncopations around them; for a 'dubby' line repeat notes, especially the fifth below the root."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/King_Tubby",
+          "https://www.odt.co.nz/entertainment/music/long-player-augustus-pablos-mysterious-exotic-vibe",
+          "https://en.wikipedia.org/wiki/Dub_music",
+          "https://www.reggaeville.com/artist-details/sly-robbie/news/view/interview-sly-dunbars-history-of-drumming-part-ii/"
+        ]
+      },
+      "text": "Muting is the arrangement. Tubby's mixes were performed live, tracks dropped out and brought back as the tape played, the desk played like an instrument. A vocal line leaps into the foreground and as quickly retreats; what stays is drums and bass with snatches of voice, horns and keys. Sly Dunbar recalled that once bass and drums stand alone, the engineers could put a lot of delay on the mix."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/org/lessons/roots-riddim-tutorial.html",
+          "https://www.studio.dubroom.org/tutorials-computerdub19.htm",
+          "https://www.berklee.edu/berklee-today/spring-2015/The-Woodshed-Bubblin",
+          "https://www.odt.co.nz/entertainment/music/long-player-augustus-pablos-mysterious-exotic-vibe"
+        ]
+      },
+      "text": "Skank chords sit on the 'and' of each beat, on guitar or doubled by keys. The organ bubble puts chords on 2 and 4 with copies an eighth before, an octave lower, and an eighth after; it is played on a low 8' drawbar, felt more than heard, and decides whether the tune is straight or shuffled. The app's 'organ', a tonewheel through a rotating speaker, is the voice for it. In a dub those chords are what the echo trails: 'tail ends of echoing chords snake around'."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/org/lessons/roots-riddim-tutorial.html",
+          "https://en.wikipedia.org/wiki/Dub_music",
+          "https://www.gearnews.com/audiothing-alborosie-dub-station-filter-echoes-and-spring-reverb-for-dub-reggae/",
+          "https://www.attackmagazine.com/?p=86844",
+          "https://articles.roland.com/?p=88324",
+          "https://www.guitarplayer.com/gear/dub-guitar-delay-echo"
+        ]
+      },
+      "text": "The echo is tape: the Echoplex at Studio One from the late 1960s, the Roland Space Echo through the 1970s, an MCI two-track at Tubby's. On a tempo-synced send, use dotted values: Attack calls dotted eighths great for dub and Roland gives the dotted sixteenth as the standard dub note value. Darken the repeats, cutting highs around 5 kHz and a little below 200 Hz, as tape rolls off highs. Start feedback around 30% and ride it up to the edge of self-oscillation and back, with a limiter on the return."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://www.musicguymixing.com/delay-throw/",
+          "https://www.odt.co.nz/entertainment/music/long-player-augustus-pablos-mysterious-exotic-vibe",
+          "https://articles.roland.com/?p=88324",
+          "https://en.wikipedia.org/wiki/King_Tubby"
+        ]
+      },
+      "text": "Echo throws: an aux carries the delay and the send is automated up for one hit or word and down again, so only the repeats carry on (a quarter note with feedback a little over 50% gives repeats that decay in time). In dub the throw lands on a snare or rim hit, a skank chord or a vocal word; snares 'snap, divide into a hundred pieces then collect together'. Running the drums, hats especially, through the echo gives syncopated repeats."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://www.gearnews.com/audiothing-alborosie-dub-station-filter-echoes-and-spring-reverb-for-dub-reggae/",
+          "https://sonicstate.com/news/2021/02/03/king-tubbys-dub-fx-in-a-plug-in",
+          "https://www.soundonsound.com/people/lee-scratch-perry-daniel-boyle-recording-back-controls",
+          "https://www.ableton.com/es/blog/studio-as-an-instrument-part-3"
+        ]
+      },
+      "text": "Spring reverb: Tubby's modified Fairchild spring was 'liberally used ... to drench his recordings', and a Fisher Space Expander valve spring was used for big snare splashes. At the Black Ark the Grampian spring took the drums, with the bottom end rolled off, blended back almost like parallel compression for a metallic drum sound."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/King_Tubby",
+          "https://www.gearnews.com/audiothing-alborosie-dub-station-filter-echoes-and-spring-reverb-for-dub-reggae/",
+          "https://tapeop.com/interviews/136/hopeton-overton-brown-scientist",
+          "https://www.soundonsound.com/people/lee-scratch-perry-daniel-boyle-recording-back-controls"
+        ]
+      },
+      "text": "Filters: Tubby swept the MCI desk's 'big knob', a stepped passive high-pass filter with eleven steps from 70 Hz to 7.5 kHz, until a part became a thin squeal and vanished. Scientist insists the phasing on these records is that filter ('No phasers. High-pass filter.'). Perry did use a phaser, the Mu-tron Bi-phase, on guitars and keys, with the Space Echo and spring in the chain."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://lufs.to/genres/dub",
+          "https://lufs.to/methodology",
+          "https://freshlybakedstudios.com/blog/average-lufs-by-genre"
+        ]
+      },
+      "text": "Dub is released quiet. lufs.to's 156 dub tracks (1990s-2000s releases, measured as released) have a median of -15.4 LUFS integrated and a median peak-to-RMS of 16.4 dB; the loudest it lists, Massive Attack vs. Mad Professor's No Protection, reads -12.5. A 1,297-track survey puts the reggae/dancehall catalogue at -10.1 and pop at -9.5."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "inferred": "from Boyle's Grampian method in Sound on Sound (drums sent with the bottom rolled off, blended back in parallel), the short, metallic snare splashes the cited springs were used for, and the plate being the shortest and brightest of the app's plate/room/hall; Wikipedia's Melodica article describes it as a free reed similar in sound to a pump organ, which the harmonium is."
+      },
+      "text": "The app has no spring reverb and no melodica. For the spring, send snare, rim and skank to a short, bright plate, high-passed before it, and blend it under the dry hit. For Pablo's lines, use the harmonium: the melodica is a free reed close in sound to a pump organ."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/org/lessons/roots-riddim-tutorial.html",
+          "https://wayneandwax.com/academic/manuel-marshall_riddim-method.pdf",
+          "https://www.odt.co.nz/entertainment/music/long-player-augustus-pablos-mysterious-exotic-vibe",
+          "https://songbpm.com/@augustus-pablo/java"
+        ]
+      },
+      "text": "A dub keeps its riddim's harmony, and riddims use few chords: I, IV and V in major keys, or the tonic alternating with one other chord; Channel One's re-licks reduced progressions to simple ostinatos. Augustus Pablo's records brought 'moody minor-key' riddims ('Java' is in A minor)."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Dub_music",
+          "https://en.wikipedia.org/wiki/Augustus_Pablo",
+          "https://en.wikipedia.org/wiki/Melodica",
+          "https://www.odt.co.nz/entertainment/music/long-player-augustus-pablos-mysterious-exotic-vibe"
+        ]
+      },
+      "text": "Leads are instrumental and fragmentary. Augustus Pablo brought the melodica to dub, a reedy minor-key 'Far East' sound; horn lines and vocal phrases surface briefly and fall into the echo."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Toasting_(Jamaican_music)",
+          "https://en.wikipedia.org/wiki/Dub_music",
+          "https://wayneandwax.com/academic/manuel-marshall_riddim-method.pdf",
+          "https://en.wikipedia.org/wiki/King_Tubbys_Meets_Rockers_Uptown",
+          "https://en.wikipedia.org/wiki/Scientist_Rids_the_World_of_the_Evil_Curse_of_the_Vampires"
+        ]
+      },
+      "text": "A dub is a version: Tubby cut vocal-less backing tracks with echo for sound systems, and deejays such as U-Roy toasted over them from 1969. Its form is the riddim's, shaped by bringing layers in and out rather than by new sections. Classic dubs are short: Rockers Uptown's twelve tracks run 31:26 and Scientist's Vampires ten run 37:37."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Dub_music",
+          "https://en.wikipedia.org/wiki/Super_Ape"
+        ]
+      },
+      "text": "Mostly none: dub removes the vocal and keeps fragments. Rastafari survives in titles and snatches, as on Super Ape, with its 'thematic emphasis on Rastafari, righteousness and repatriation' and vocal fragments by Perry, Prince Jazzbo, George Faith and Max Romeo."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Jah_Shaka",
+          "https://bassculture.substack.com/p/militant-dub-the-rise-of-uk-steppers",
+          "https://en.wikipedia.org/wiki/Mad_Professor",
+          "https://www.soundonsound.com/people/mad-professor"
+        ]
+      },
+      "text": "UK dub: Jah Shaka's South-East London sound system, from 1970, paired spiritual content, high-energy rhythms and 'massive sonority', stayed with roots and dub when others went dancehall, and fed jungle and dubstep. UK steppers is a more militant, driving strain with a deeper low end. Mad Professor's Ariwa, begun in 1979 on a four-track with a mixer he built, went digital: a Roland SDE-3000 delay, a Lexicon 480L reverb, an SSL."
+    }
+  ],
+  "parent": "reggae",
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/King_Tubby",
+          "https://articles.roland.com/?p=88324",
+          "https://www.attackmagazine.com/?p=86844",
+          "https://www.musicguymixing.com/delay-throw/"
+        ]
+      },
+      "text": "Leaving the echo on. A constant delay wash is not dub: the engineer plays it, throwing single hits and words, riding feedback to the edge of self-oscillation and back, muting parts and returning them. Automate the sends and mutes section by section."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Dub_music",
+          "https://www.soundonsound.com/people/mad-professor",
+          "https://wayneandwax.com/org/lessons/roots-riddim-tutorial.html"
+        ]
+      },
+      "text": "Thinning the bass and drums to make room for effects. They are the record; everything else is what drops out. Keep the bass fat and low, with the treble and mids filtered out, and put the echo on the skank, horns and voice."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://songbpm.com/@augustus-pablo/king-tubby-meets-rockers-uptown",
+          "https://songbpm.com/@scientist/the-voodoo-curse",
+          "https://songbpm.com/@the-upsetters/zion-s-blood"
+        ]
+      },
+      "text": "Reading the tempo double. Detectors report 133-143 BPM for dubs that run 67-72 in the one-drop count; judge tempo and drum placement where the drop lands on 3."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://www.attackmagazine.com/?p=86844",
+          "https://articles.roland.com/?p=88324"
+        ]
+      },
+      "text": "Bright, clean repeats. Tape darkens and saturates each pass; cut highs around 5 kHz and a little below 200 Hz on the echo return and drive it gently."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/org/lessons/roots-riddim-tutorial.html"
+        ]
+      },
+      "mode": "ionian",
+      "roman": "I - IV - V",
+      "text": "The major-key roots riddim core that most dubs are cut from."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/academic/manuel-marshall_riddim-method.pdf",
+          "https://en.wikipedia.org/wiki/Riddim"
+        ]
+      },
+      "mode": "mixolydian",
+      "roman": "I - bVII",
+      "text": "The 'Real Rock' ostinato (B-flat to A-flat), a Studio One riddim versioned under hundreds of songs."
+    },
+    {
+      "evidence": {
+        "inferred": "Manuel & Marshall's minor-key riddim 'oscillating clearly between minor tonic and subdominant chords', applied to the moody minor-key riddims the ODT review hears on Rockers Uptown (Java in A minor on SongBPM)."
+      },
+      "mode": "aeolian",
+      "roman": "i - iv",
+      "text": "A minor tonic and subdominant vamp for Pablo-style 'Far East' dubs."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "inferred": "SongBPM's readings of classic dub-era records, halved to the one-drop count the parent reggae profile and the app's One Drop feel use (drop on 3): King Tubby Meets Rockers Uptown 133 -> 67, Zion's Blood 134 -> 67, Voodoo Curse 143 -> 72, plus Java at 77; median 70. Widened to 60-85 to take in Soundbrenner's 72 BPM steppers and 70-90 BPM rockers exercises while staying inside Wayne Marshall's 50-100 range for roots riddims."
+      },
+      "feature": "tempo.bpm",
+      "high": 85,
+      "low": 60,
+      "typical": 70,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://lufs.to/genres/dub",
+          "https://lufs.to/methodology"
+        ]
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -12.5,
+      "low": -17,
+      "typical": -15.4,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "typical is lufs.to's measured median dynamic range for its 156 dub tracks, 16.4 dB, defined on https://lufs.to/methodology as peak minus RMS of the whole released track (the quantity mix.crest.db reads; lufs.to's peak may be a true peak, up to ~0.5 dB above a sample peak). Low/high apply the pooled lufs.to fit used in the parent reggae profile, crest = 5.28 - 0.743 x integrated LUFS, to this profile's -17 to -12.5 LUFS range; at the -15.4 median the fit gives 16.7, close to the measured 16.4."
+      },
+      "feature": "mix.crest.db",
+      "high": 17.9,
+      "low": 14.6,
+      "typical": 16.4,
+      "unit": "dB"
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://wayneandwax.com/org/lessons/roots-riddim-tutorial.html",
+          "https://wayneandwax.com/academic/manuel-marshall_riddim-method.pdf"
+        ]
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 4,
+      "low": 2,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "inferred": "Manuel & Marshall's riddim ostinatos alternate the tonic with one other chord, and Channel One's re-licks reduced progressions to such ostinatos; two chords across a two- or four-bar loop change 0.25-1 times a bar. A dub keeps its riddim's harmonic rhythm."
+      },
+      "feature": "harmony.changes.per.bar",
+      "high": 1,
+      "low": 0.25,
+      "unit": "changes per bar"
+    },
+    {
+      "evidence": {
+        "inferred": "Wikipedia's album lengths: King Tubbys Meets Rockers Uptown runs 31:26 over 12 tracks (mean 2.6 min, title track 2:28 on SongBPM) and Scientist Rids the World of the Evil Curse of the Vampires 37:37 over 10 (2:49-4:38, median 3.6); typical is the mean of all 22 tracks, 3.1 minutes."
+      },
+      "feature": "form.minutes",
+      "high": 4.5,
+      "low": 2.5,
+      "typical": 3.1,
+      "unit": "minutes"
+    },
+    {
+      "evidence": {
+        "inferred": "A dub drops from the full riddim (on Rockers Uptown: drums, bass, guitar, keys, melodica, horns, voice) to drums and bass or bass alone (Wikipedia's dub and King Tubby articles, the album's credits, the ODT review): full minus sparsest is 3 to 6 layers depending on how full the riddim was."
+      },
+      "feature": "form.density.spread",
+      "high": 6,
+      "low": 3,
+      "unit": "layers"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Augustus Pablo & King Tubby",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/King_Tubbys_Meets_Rockers_Uptown",
+          "https://songbpm.com/@augustus-pablo/king-tubby-meets-rockers-uptown",
+          "https://www.odt.co.nz/entertainment/music/long-player-augustus-pablos-mysterious-exotic-vibe"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.density.spread",
+        "form.minutes"
+      ],
+      "listenFor": "Across the 2:28, Jacob Miller's 'Baby I Love You So' surfaces in fragments and retreats while drums and bass stay; SongBPM reads 133, which is 67 in the one-drop count.",
+      "title": "King Tubby Meets Rockers Uptown",
+      "year": 1976
+    },
+    {
+      "artist": "The Upsetters",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Super_Ape",
+          "https://songbpm.com/@the-upsetters/zion-s-blood"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.minutes"
+      ],
+      "listenFor": "The Super Ape opener: Black Ark four-track layering of riddim and vocal fragments in D minor for 3:56, read at 67 BPM in the one-drop count (134 detected).",
+      "title": "Zion's Blood",
+      "year": 1976
+    },
+    {
+      "artist": "Scientist",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Scientist_Rids_the_World_of_the_Evil_Curse_of_the_Vampires",
+          "https://songbpm.com/@scientist/the-voodoo-curse",
+          "https://tapeop.com/interviews/136/hopeton-overton-brown-scientist"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.minutes"
+      ],
+      "listenFor": "A Roots Radics riddim recorded at Channel One and mixed by Scientist at King Tubby's, 3:48 in E minor, 72 BPM in the one-drop count (143 detected).",
+      "title": "Voodoo Curse",
+      "year": 1981
+    },
+    {
+      "artist": "Augustus Pablo",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Augustus_Pablo",
+          "https://songbpm.com/@augustus-pablo/java"
+        ]
+      },
+      "features": [
+        "tempo.bpm"
+      ],
+      "listenFor": "The melodica's reedy A-minor line over a 77 BPM riddim in 2:45, the 'Far East' sound later dub took up.",
+      "title": "Java",
+      "year": 1972
+    },
+    {
+      "artist": "Massive Attack vs. Mad Professor",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Mad_Professor",
+          "https://lufs.to/genres/dub"
+        ]
+      },
+      "features": [
+        "mix.lufs.integrated"
+      ],
+      "listenFor": "Electronic dub of Massive Attack's Protection, released at -12.5 LUFS integrated, about 3 LU above the dub median.",
+      "title": "No Protection",
+      "year": 1995
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "finger",
+      "sub"
+    ],
+    "instruments": [
+      "organ",
+      "clean-electric",
+      "grand-piano",
+      "clavinet",
+      "horns",
+      "trumpet",
+      "tenor-sax",
+      "harmonium"
+    ],
+    "machines": [
+      "studio",
+      "vintage"
+    ]
+  },
+  "summary": "Reggae remixed on the desk. The engineer takes a riddim's multitrack, strips the vocal, drops the other instruments in and out, and leaves drums and a heavy bass to carry it, while tape echo, spring reverb and a swept high-pass filter turn snatches of skank, horn and voice into space. It is mixed live, so the echo is played: thrown on single hits and words, its feedback ridden toward self-oscillation and pulled back. The grooves are the one drop, rockers and steppers.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Dub_music",
+      "https://en.wikipedia.org/wiki/King_Tubby",
+      "https://articles.roland.com/?p=88324",
+      "https://www.attackmagazine.com/?p=86844"
+    ]
+  }
+}

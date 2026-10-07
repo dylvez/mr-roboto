@@ -37,6 +37,15 @@ public struct Idiom: RawRepresentable, Hashable, Codable, Sendable, CustomString
     public static let musicalTheatre = Idiom("musical-theatre")
     public static let waltz = Idiom("waltz")
     public static let middleEastern = Idiom("middle-eastern")
+    public static let swing = Idiom("swing")
+    public static let ska = Idiom("ska")
+    public static let dub = Idiom("dub")
+    public static let dancehall = Idiom("dancehall")
+    public static let rnb = Idiom("rnb")
+    public static let cinematic = Idiom("cinematic")
+    public static let ambient = Idiom("ambient")
+    public static let flamenco = Idiom("flamenco")
+    public static let klezmer = Idiom("klezmer")
 
     public var description: String { rawValue }
 }

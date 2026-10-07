@@ -48,8 +48,8 @@ struct GenreTests {
     }
 
     /// Feels no profile covers, each for a reason: a meter is not a genre, and a guess would judge
-    /// the song by the wrong numbers. The maqsum belongs to Arabic music, which has no profile yet.
-    static let genreless: Set<String> = ["Five Four", "Seven Eight", "Baião", "Oom-Pah Waltz", "Second Line", "Maqsum"]
+    /// the song by the wrong numbers.
+    static let genreless: Set<String> = ["Five Four", "Seven Eight", "Baião", "Second Line"]
 
     @Test("every shipped feel belongs to a genre, but the ones no profile covers, which get no guess")
     func everyFeelHasAGenre() throws {
@@ -72,6 +72,17 @@ struct GenreTests {
         #expect(guess("Slow Blues 12/8") == "blues")
         #expect(guess("Gospel Shout") == "gospel")
         #expect(guess("Baião") == nil)
+        // The genres written for the feels that had none.
+        #expect(guess("Big Band Swing") == "swing")
+        #expect(guess("Ska") == "ska")
+        #expect(guess("Steppers") == "dub")
+        #expect(guess("Dancehall") == "dancehall")
+        #expect(guess("New Jack Swing") == "rnb")
+        #expect(guess("Cinematic Toms") == "film-score")
+        #expect(guess("Rumba Flamenca") == "flamenco")
+        #expect(guess("Bulgar") == "klezmer")
+        #expect(guess("Saidi") == "arabic-pop")
+        #expect(guess("Reggae One Drop") == "reggae", "the one drop is reggae's before it is dub's")
     }
 
     @Test("a tempo fits its genre counted any way players count it: half time, double time, a compound meter's dotted quarter")

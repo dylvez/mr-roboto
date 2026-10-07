@@ -140,7 +140,7 @@ struct FrameCommands: Commands {
             .disabled(app.store == nil)
             Button("Import VCSL Percussion…") {
                 if let url = FilePanels.chooseFolder(
-                    message: "The Versilian Community Sample Library folder (its sfz branch). Its congas, bongos, shaker, tambourine and claves are copied into the library and every kit plays them.",
+                    message: "The Versilian Community Sample Library folder (its sfz branch). Its hand percussion — congas, bongos, shakers, tambourine, claves, woodblock, agogô, cabasa, güiro, triangle, vibraslap, cajón, darbuka, frame drum and slit drum — is copied into the library and every kit plays it. Run again, it adds only what is new and keeps your settings.",
                     prompt: "Bring In") {
                     app.importVCSLPercussion(from: url)
                 }

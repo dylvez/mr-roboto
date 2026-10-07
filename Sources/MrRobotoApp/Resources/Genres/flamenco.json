@@ -1,0 +1,545 @@
+{
+  "aliases": [
+    "cante jondo",
+    "nuevo flamenco",
+    "rumba flamenca",
+    "flamenco pop",
+    "rumba catalana"
+  ],
+  "bassHands": [
+    "root-fifth"
+  ],
+  "family": "spanish",
+  "feels": [
+    "Rumba Flamenca",
+    "Bulerías",
+    "Cajón Groove"
+  ],
+  "form": {
+    "evidence": {
+      "inferred": "A soleares for dance in twelve-beat compases (one 12/8 bar each), in the order studioflamenco.com gives (entrada/salida, llamada, letra, falseta, subida and escobilla, a second letra, a bulerías close), with its letras of about 7-8 compases. A llamada marks the start or end of a section and is set at one compás; the salida, falseta, escobilla and bulerías have no stated length (Wikipedia's falseta article gives none), so 4 and 8 compases are one realisation, not a norm — forms vary widely."
+    },
+    "sections": [
+      {
+        "bars": 4,
+        "name": "Salida"
+      },
+      {
+        "bars": 1,
+        "name": "Llamada"
+      },
+      {
+        "bars": 8,
+        "name": "Letra"
+      },
+      {
+        "bars": 4,
+        "name": "Falseta"
+      },
+      {
+        "bars": 1,
+        "name": "Llamada"
+      },
+      {
+        "bars": 8,
+        "name": "Letra"
+      },
+      {
+        "bars": 8,
+        "name": "Escobilla"
+      },
+      {
+        "bars": 8,
+        "name": "Bulerías"
+      }
+    ]
+  },
+  "id": "flamenco",
+  "idioms": [
+    "flamenco"
+  ],
+  "lineages": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/La_Ni%C3%B1a_de_los_Peines",
+          "https://en.wikipedia.org/wiki/Rumba_flamenca"
+        ]
+      },
+      "name": "La Niña de los Peines (Pastora Pavón)",
+      "period": "1898–1950s",
+      "why": "Recorded from 1910 to 1950 — siguiriyas, soleá, tangos, tientos, peteneras, bulerías, malagueñas — and made the first rumba recordings in the 1910s. Lorca in 1933 singled out her in-tune third and quarter tones; she is the link between 19th-century tradition and the 20th-century revival."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Paco_de_Luc%C3%ADa",
+          "https://en.wikipedia.org/wiki/Camar%C3%B3n_de_la_Isla",
+          "https://en.wikipedia.org/wiki/Caj%C3%B3n"
+        ]
+      },
+      "name": "Paco de Lucía",
+      "period": "1958–2014",
+      "why": "Recorded nine or ten albums with Camarón (the two articles differ) between 1968 and 1977; the rumba 'Entre dos aguas' (1973), with bongos and electric bass, became his best-known piece. His 1981 sextet with Carles Benavent, Jorge Pardo and Rubem Dantas brought the cajón into flamenco; his playing joined extremely fast picados to rasgueado."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Camar%C3%B3n_de_la_Isla",
+          "https://en.wikipedia.org/wiki/La_leyenda_del_tiempo"
+        ]
+      },
+      "name": "Camarón de la Isla",
+      "period": "1969–1992",
+      "why": "Considered the most popular and influential cantaor of the modern period; nine albums with Paco de Lucía from 1969 to 1977, then with Tomatito. La leyenda del tiempo (1979, produced by Ricardo Pachón) brought electric bass, flute and extra percussion in, scandalised purists, sold poorly at first and became nuevo flamenco's landmark."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Gipsy_Kings"
+        ]
+      },
+      "name": "Gipsy Kings",
+      "period": "1979–present",
+      "why": "The Reyes and Baliardo brothers (sons of José Reyes and of Manitas de Plata) from Arles, playing a pop-oriented rumba flamenca blended with Catalan rumba and salsa. Their 1987 album with 'Bamboléo' and 'Djobi Djoba' spent forty weeks on the US charts; Savor Flamenco won a Grammy in 2014."
+    }
+  ],
+  "meters": [
+    "12/8",
+    "4/4"
+  ],
+  "name": "Flamenco",
+  "notes": [
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Palo_(flamenco)"
+        ]
+      },
+      "text": "Palos fall into compás families: the twelve-beat soleá family (soleá, alegrías and the other cantiñas, bulerías), the seguiriya (twelve beats with the strong beats elsewhere — a soleá counted from its eighth beat), the 4/4 tangos family (tangos, tientos, farruca, garrotín, tanguillos, rumba) and free-rhythm cantes (fandangos libres, malagueñas, granaínas)."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Buler%C3%ADas",
+          "https://en.wikipedia.org/wiki/Palo_(flamenco)"
+        ]
+      },
+      "text": "Bulerías counts from twelve: [12] 1 2 [3] 4 5 [6] 7 [8] 9 [10] 11, heard as a bar of 6/8 then a bar of 3/4. Dancers count it in six, and it can drop into six- and three-beat sections. It is normally played at 195–240 beats a minute; it began in 19th-century Jerez as the fast ending to soleares or alegrías and is still the festive closer."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Sole%C3%A1",
+          "https://en.wikipedia.org/wiki/Alegr%C3%ADas",
+          "https://learnavel.com/lessons/flamenco/guitar/alegrias-1"
+        ]
+      },
+      "text": "Soleá and alegrías share bulerías's accents on 3, 6, 8, 10 and 12. Soleá is the slow, serious one, free to slow down and push (rubato) when sung alone but strict under a dancer; alegrías, from Cádiz, runs at 120–170 bpm, faster for dance than for song."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Rumba_flamenca",
+          "https://www.berklee.edu/node/2352286"
+        ]
+      },
+      "text": "Rumba flamenca is 4/4 on a modified tresillo (3+3+2) with accents on 2 and 4 and a slightly pronounced accent on the and of 2 over a weaker downbeat; the guitar slaps the strings to mute them on 1 (or 1 and 3). About 100–120 bpm, played on guitars, palmas, body slaps, castanets and cajón — not congas and claves."
+    },
+    {
+      "area": "groove",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Palmas_(music)"
+        ]
+      },
+      "text": "Palmas keep the compás: sordas (cupped, muffled) under guitar introductions and under the singing, fuertes (fingers into the palm, crisp) for loud footwork and bulerías; contratiempo claps fill between the beats, and the clappers mark where a dancer's phrase begins or ends."
+    },
+    {
+      "area": "arrangement",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Caj%C3%B3n",
+          "https://en.wikipedia.org/wiki/Paco_de_Luc%C3%ADa",
+          "https://en.wikipedia.org/wiki/Rumba_flamenca"
+        ]
+      },
+      "text": "The cajón is Peruvian: Paco de Lucía brought one back after a 1977 event in Lima with the percussionist Caitro Soto, and with Rubem Dantas in his sextet (Sólo quiero caminar, 1981) it entered flamenco, and from there other styles."
+    },
+    {
+      "area": "sound",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Rasgueado",
+          "https://en.wikipedia.org/wiki/Paco_de_Luc%C3%ADa",
+          "https://en.wikipedia.org/wiki/Falseta"
+        ]
+      },
+      "text": "The guitar's rhythm is rasgueado: strokes with the nail side of the fingers, downstrokes from the index to the little finger and the thumb coming back up, over a golpeador plate that takes the taps; Paco de Lucía joined it to extremely fast picado runs. Between sung verses the guitar plays falsetas, short melodies of no fixed length."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Andalusian_cadence",
+          "https://studioflamenco.com/soleares"
+        ]
+      },
+      "text": "The Andalusian cadence — Am–G–F–E, iv–III–II–I with E as a Phrygian tonic or i–bVII–bVI–V in A minor — is used as an ostinato more than as a phrase ending. The guitar's two home positions are por arriba (E Phrygian, Am–G–F–E) and por medio (A Phrygian, Dm–C–Bb–A); a capo moves them."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Flamenco_mode",
+          "https://en.wikipedia.org/wiki/Phrygian_dominant_scale"
+        ]
+      },
+      "text": "The flamenco mode is Phrygian with a major tonic chord: the raised third and seventh are written in as accidentals, and the melody's major third clashing with the harmony's minor third is the flamenco sound itself. Chords on I, bII and III are characteristic, voiced as four-note dissonant sonorities with open strings; as a phrygian dominant scale its own chords are I, bII, iv and vii."
+    },
+    {
+      "area": "harmony",
+      "evidence": {
+        "cited": [
+          "https://arxiv.org/pdf/1510.04029",
+          "https://en.wikipedia.org/wiki/Tango_(flamenco)",
+          "https://en.wikipedia.org/wiki/Rumba_flamenca"
+        ]
+      },
+      "text": "Not every palo is Phrygian: cantiñas such as alegrías are sung in major (a pitch-histogram study separates them from soleares on exactly that), tangos come in modal, minor and major variants, and rumbas may be in any key."
+    },
+    {
+      "area": "melody",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Sole%C3%A1",
+          "https://arxiv.org/pdf/1510.04029",
+          "https://en.wikipedia.org/wiki/La_Ni%C3%B1a_de_los_Peines"
+        ]
+      },
+      "text": "The cante is narrow and ornamented: a soleá stanza usually stays within a fifth, its difficulty in melisma and microtones, and a cappella cantes move mostly by step with heavy melismatic ornament and drifting tuning. Lorca praised La Niña de los Peines for singing third tones and quarter tones in tune."
+    },
+    {
+      "area": "lyrics",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Sole%C3%A1",
+          "https://en.wikipedia.org/wiki/Copla_(meter)"
+        ]
+      },
+      "text": "Coplas are short: a soleá stanza has three or four lines, the even lines in assonant rhyme (the first and third in a three-line stanza), the content serious and sententious, often of intimate pain; the Spanish copla is four lines of no more than eight syllables."
+    },
+    {
+      "area": "form",
+      "evidence": {
+        "cited": [
+          "https://studioflamenco.com/soleares",
+          "https://en.wikipedia.org/wiki/Falseta",
+          "https://en.wikipedia.org/wiki/Buler%C3%ADas"
+        ]
+      },
+      "text": "A performance is assembled from parts rather than through-composed: a soleares for dance runs entrada or salida, llamada, a letra of about seven or eight compases, falsetas, the subida and escobilla footwork, again with a second letra and a remate, and often closes in bulerías. Falsetas have no standard length, so forms vary widely."
+    },
+    {
+      "area": "bass",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Camar%C3%B3n_de_la_Isla",
+          "https://en.wikipedia.org/wiki/Carles_Benavent",
+          "https://www.notreble.com/?p=9628"
+        ]
+      },
+      "text": "The bass is a newcomer: Camarón's La leyenda del tiempo (1979) was among the first flamenco records with electric bass, and Carles Benavent in Paco de Lucía's sextet played fretless with a pick in a flamenco alzapúa, his harmonics and groove on the rumba 'Chanela' likened to Jaco Pastorius. Mariano Martos's flamenco bass method teaches rumba and tangos as a basic pattern extended with the fifth and the octave, and bulerías with its closing (cierre) on the tenth beat."
+    },
+    {
+      "area": "mix",
+      "evidence": {
+        "cited": [
+          "https://lufs.to/gipsy-kings/the-best-of-the-gipsy-kings",
+          "https://lufs.to/gipsy-kings/savor-flamenco",
+          "https://lufs.to/genres/flamenco"
+        ]
+      },
+      "text": "Measured rumba masters: The Best of the Gipsy Kings (1995, mastered by Brian Lee at Gateway) has a median of -13.1 LUFS and 16.3 dB crest; Savor Flamenco (2013, Bob Ludwig) -10.5 LUFS and 13.8 dB — the 2010s master is about 2.6 dB louder and denser."
+    }
+  ],
+  "parent": null,
+  "pitfalls": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Buler%C3%ADas",
+          "https://en.wikipedia.org/wiki/Alegr%C3%ADas"
+        ]
+      },
+      "text": "Counting bulerías or soleá from one in 4/4. The compás is twelve beats counted from twelve, the weight on 3, 6, 8, 10 and 12 (a 6/8 then a 3/4); clap it before writing over it."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Rumba_flamenca",
+          "https://www.berklee.edu/node/2352286"
+        ]
+      },
+      "text": "Playing rumba flamenca as Cuban rumba, with congas and clave. It is guitars, palmas, body slaps, castanets and cajón on a 3+3+2 strum, accents on 2 and 4 and a lift on the and of 2."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Andalusian_cadence",
+          "https://en.wikipedia.org/wiki/Flamenco_mode"
+        ]
+      },
+      "text": "Resolving the Andalusian descent to a minor chord, or 'correcting' the clash. The tonic chord is major (E in Am–G–F–E), and the melody's major third rubbing against the harmony's minor third is the idiom."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Palmas_(music)"
+        ]
+      },
+      "text": "Clapping loud palmas under the singer. Sordas (muffled) go under guitar introductions and the cante; fuertes are for loud footwork and bulerías."
+    }
+  ],
+  "progressions": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Andalusian_cadence",
+          "https://en.wikipedia.org/wiki/Flamenco_mode"
+        ]
+      },
+      "mode": "phrygian dominant",
+      "roman": "iv - bIII - bII - I",
+      "text": "The Andalusian cadence heard from its last chord: Am–G–F–E in E, descending to the flamenco mode's major tonic. The G natural is the mode's minor third, kept in the harmony against the melody's G sharp."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Andalusian_cadence",
+          "https://www.berklee.edu/node/2352286"
+        ]
+      },
+      "mode": "harmonic minor",
+      "roman": "i - bVII - bVI - V",
+      "text": "The same descent read from the minor, as rumbas and pop songs use it, repeated as an ostinato — Berklee's rumba example is Dm–C–Bb–A(addb9)."
+    },
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Flamenco_mode",
+          "https://en.wikipedia.org/wiki/Buler%C3%ADas",
+          "https://studioflamenco.com/soleares"
+        ]
+      },
+      "mode": "phrygian dominant",
+      "roman": "bII - I",
+      "text": "The cadence's final half-step on its own: bII falling to the major root chord (F–E por arriba, Bb–A por medio), two of the three chords the flamenco mode treats as characteristic."
+    }
+  ],
+  "ranges": [
+    {
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Rumba_flamenca",
+          "https://en.wikipedia.org/wiki/Alegr%C3%ADas",
+          "https://en.wikipedia.org/wiki/Buler%C3%ADas",
+          "https://arxiv.org/pdf/1510.04029"
+        ]
+      },
+      "feature": "tempo.bpm",
+      "high": 240,
+      "low": 90,
+      "unit": "BPM"
+    },
+    {
+      "evidence": {
+        "inferred": "10th-90th percentile and median of the 29 per-track integrated loudness values lufs.to lists for The Best of the Gipsy Kings (1995, album median -13.1) and Savor Flamenco (2013, album median -10.5): https://lufs.to/genres/flamenco, https://lufs.to/gipsy-kings/the-best-of-the-gipsy-kings, https://lufs.to/gipsy-kings/savor-flamenco. That is rumba flamenca as released on CD and download; no measurement of traditional cante or solo-guitar releases was found, and they are likely quieter."
+      },
+      "feature": "mix.lufs.integrated",
+      "high": -10.1,
+      "low": -13.6,
+      "typical": -12.6,
+      "unit": "LUFS"
+    },
+    {
+      "evidence": {
+        "inferred": "The same 29 tracks' 'dynamic range', which lufs.to defines as the gap between peak and RMS in dB (https://lufs.to/methodology) — the app's crest — at the 10th-90th percentile and median. lufs.to's peak is true peak, so it can read up to ~0.5 dB above a sample-peak crest; rumba flamenca only."
+      },
+      "feature": "mix.crest.db",
+      "high": 17.2,
+      "low": 13.1,
+      "typical": 15.9,
+      "unit": "dB"
+    },
+    {
+      "evidence": {
+        "inferred": "Wikipedia's soleá article: a stanza's melody usually stays within a fifth (7 semitones). The low end is the fourth the Andalusian cadence descends (A-G-F-E), around whose interval structure the cited COFLA study found some bulerías melodies centred. Describes the cante; pop rumba melodies were not measured."
+      },
+      "feature": "melody.range.semitones",
+      "high": 7,
+      "low": 5,
+      "unit": "semitones"
+    },
+    {
+      "evidence": {
+        "inferred": "Low: the bII and major I that end the cited Andalusian cadence, which the cited flamenco-mode article names (with III) as characteristic. High: the cadence's four chords (Am, G, F, E in E) plus the vii (Dm) among the phrygian dominant scale's own chords I, bII, iv and vii (cited Wikipedia article)."
+      },
+      "feature": "harmony.chords.distinct",
+      "high": 5,
+      "low": 2,
+      "unit": "chords"
+    },
+    {
+      "evidence": {
+        "inferred": "Keyed in E phrygian dominant, as the app keys the flamenco mode, the cited Andalusian cadence Am-G-F-E has one chord in four outside the scale — G, the minor third the cited flamenco-mode article says the harmony keeps against the melody's G sharp — so 0.75; the bII-I and iv-I moves are wholly inside it (1.0)."
+      },
+      "feature": "harmony.diatonic.ratio",
+      "high": 1.0,
+      "low": 0.75,
+      "unit": "fraction"
+    },
+    {
+      "evidence": {
+        "inferred": "The Spanish copla is four lines of arte menor, no more than eight syllables a line; its patterns include the romance (8-8-8-8) and the seguidilla (7-5-7-5, a mean of 6) (Wikipedia, Copla); the soleá stanza is three or four such lines (Wikipedia, Soleá)."
+      },
+      "feature": "lyric.syllables.per.line",
+      "high": 8,
+      "low": 6,
+      "unit": "syllables"
+    },
+    {
+      "evidence": {
+        "inferred": "A four-line soleá stanza rhymes lines 2 and 4 by assonance and leaves 1 and 3 free; a three-line one rhymes the first and third (Wikipedia, Soleá). Assonance is not perfect rhyme, so at most about half the lines rhyme perfectly, and often none."
+      },
+      "feature": "lyric.perfect.rhyme.rate",
+      "high": 0.5,
+      "low": 0,
+      "unit": "fraction"
+    },
+    {
+      "evidence": {
+        "inferred": "Lengths songbpm gives for the four rumba references: Bamboléo 3:23, Volando voy 3:24, Djobi Djoba 3:25, Entre dos aguas 6:02 (https://songbpm.com/@gipsy-kings/bamboleo, https://songbpm.com/@camaron-de-la-isla/volando-voy, https://songbpm.com/@gipsy-kings/djobi-djoba, https://songbpm.com/@paco-de-lucia/entre-dos-aguas). Cante and dance performances were not timed."
+      },
+      "feature": "form.minutes",
+      "high": 6.1,
+      "low": 3.3,
+      "unit": "minutes"
+    }
+  ],
+  "references": [
+    {
+      "artist": "Paco de Lucía",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Paco_de_Luc%C3%ADa",
+          "https://songbpm.com/@paco-de-lucia/entre-dos-aguas"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "form.minutes"
+      ],
+      "listenFor": "Throughout its six minutes: the guitar's picado lines over a rumba with bongos and electric bass, at about 102 BPM.",
+      "title": "Entre dos aguas",
+      "year": 1973
+    },
+    {
+      "artist": "Camarón de la Isla",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/La_leyenda_del_tiempo",
+          "https://en.wikipedia.org/wiki/Camar%C3%B3n_de_la_Isla",
+          "https://songbpm.com/@camaron-de-la-isla/volando-voy"
+        ]
+      },
+      "features": [
+        "tempo.bpm"
+      ],
+      "listenFor": "Throughout: Kiko Veneno's rumba on La leyenda del tiempo, the cante over a nuevo-flamenco band with electric bass, at about 128 BPM.",
+      "title": "Volando voy",
+      "year": 1979
+    },
+    {
+      "artist": "Paco de Lucía Sextet",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Carles_Benavent",
+          "https://en.wikipedia.org/wiki/Paco_de_Luc%C3%ADa"
+        ]
+      },
+      "features": [
+        "bass.syncopation"
+      ],
+      "listenFor": "Throughout: Carles Benavent's fretless bass — harmonics and groove — under the sextet's rumba, on the album that brought the cajón into flamenco.",
+      "title": "Chanela",
+      "year": 1981
+    },
+    {
+      "artist": "Gipsy Kings",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Gipsy_Kings",
+          "https://songbpm.com/@gipsy-kings/bamboleo",
+          "https://lufs.to/gipsy-kings/the-best-of-the-gipsy-kings"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "mix.lufs.integrated",
+        "mix.crest.db"
+      ],
+      "listenFor": "Throughout its 3:23: rumba flamenca as pop at about 120 BPM; the 1995 Best Of master measures -12.7 LUFS with a 16.4 dB crest.",
+      "title": "Bamboléo",
+      "year": 1987
+    },
+    {
+      "artist": "Gipsy Kings",
+      "evidence": {
+        "cited": [
+          "https://en.wikipedia.org/wiki/Gipsy_Kings",
+          "https://songbpm.com/@gipsy-kings/djobi-djoba",
+          "https://lufs.to/gipsy-kings/the-best-of-the-gipsy-kings"
+        ]
+      },
+      "features": [
+        "tempo.bpm",
+        "mix.lufs.integrated"
+      ],
+      "listenFor": "Throughout: the album's other hit at about 108 BPM, the loudest track of the 1995 Best Of at -11.9 LUFS with a 15.3 dB crest.",
+      "title": "Djobi Djoba",
+      "year": 1987
+    }
+  ],
+  "sounds": {
+    "bass": [
+      "finger",
+      "fretless",
+      "upright"
+    ],
+    "instruments": [
+      "nylon-guitar",
+      "flute",
+      "violin",
+      "tenor-sax"
+    ],
+    "machines": [
+      "studio"
+    ]
+  },
+  "summary": "Song (cante), guitar (toque) and dance (baile) from the gitano communities of Andalusia, organised by compás: a twelve-beat cycle accented on 3, 6, 8, 10 and 12 for soleá, alegrías and bulerías, a binary family for tangos and its Cuban-derived offshoot the rumba. The serious palos sit in the Phrygian 'flamenco mode' with a major tonic — the Andalusian cadence Am–G–F–E — under a melismatic, microtonal voice, with palmas, rasgueado and, since Paco de Lucía, the cajón.",
+  "summaryEvidence": {
+    "cited": [
+      "https://en.wikipedia.org/wiki/Flamenco",
+      "https://en.wikipedia.org/wiki/Palo_(flamenco)",
+      "https://en.wikipedia.org/wiki/Buler%C3%ADas",
+      "https://en.wikipedia.org/wiki/Andalusian_cadence",
+      "https://en.wikipedia.org/wiki/Flamenco_mode",
+      "https://en.wikipedia.org/wiki/Caj%C3%B3n"
+    ]
+  }
+}

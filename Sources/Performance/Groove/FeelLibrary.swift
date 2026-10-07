@@ -192,7 +192,7 @@ extension FeelLibrary {
     /// sample-based) needs that neither source had, the Latin set, and the styles and meters none
     /// of those covered.
     public static let standard = FeelLibrary(
-        Feels.grooveTheory + Feels.accompaniment + Feels.idiom + Feels.latin + Feels.styles
+        Feels.grooveTheory + Feels.accompaniment + Feels.idiom + Feels.latin + Feels.styles + Feels.more
     )
 }
 

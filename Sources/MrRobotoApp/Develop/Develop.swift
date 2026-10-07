@@ -542,6 +542,21 @@ public enum Develop {
                 mix.sectionGains.append(SectionGain(section: section.id, part: strip, gainDB: max(-60, min(12, base + offset))))
             }
         }
+        // An organ's speaker turns fast where the song arrives, as an organist switches it for the
+        // chorus, and slow everywhere else; what somebody set a section to stands.
+        if var effects = mix.sectionEffects {
+            effects.removeAll { !kept.contains($0.section) }
+            mix.sectionEffects = effects.isEmpty ? nil : effects
+        }
+        for (section, role) in zip(sections, roles.map(\.role)) where role.isPeak {
+            for lane in section.stitch {
+                let strip = strip(of: lane.part, in: song, written: versions)
+                let own = InstrumentVoiceSpec.preset(id: SongPlayback.instrumentID(for: strip, in: song))?.insert
+                guard mix.insert(for: strip, in: nil, instrument: own)?.kind == .rotary,
+                      !(mix.sectionEffects ?? []).contains(where: { $0.section == section.id && $0.part == strip }) else { continue }
+                mix.setSectionEffect(SectionEffect(section: section.id, part: strip, fast: true))
+            }
+        }
         // The answering line sits under the tune it answers.
         if let answering, !mix.sectionGains.contains(where: { $0.section == answering.section && $0.part == answering.part }) {
             let base = mix.strip(for: answering.part)?.gainDB ?? 0
