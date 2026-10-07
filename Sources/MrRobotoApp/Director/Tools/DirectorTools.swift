@@ -108,6 +108,8 @@ public enum DirectorTools {
             FixGridTool(workspace: workspace).erased(),
             // A part set aside, appended after the fifty-four: how a part is taken away.
             SetAsideTool(workspace: workspace).erased(),
+            // Effects, appended after the fifty-five: an amp, a rotating speaker, the echo, the room.
+            SetEffectsTool(workspace: workspace).erased(),
         ]
         if let stage {
             let pad = pad ?? DirectorStagePad()
@@ -195,6 +197,8 @@ public enum DirectorTools {
         "fix_grid",
         // A part set aside or brought back, appended.
         "set_aside",
+        // Effects on a strip and the returns, appended.
+        "set_effects",
     ]
 
     /// The two the frame adds. Appended after `names`, never among them: a session with no frame

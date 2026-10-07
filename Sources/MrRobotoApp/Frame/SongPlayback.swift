@@ -566,6 +566,17 @@ public struct SongPlayback: Equatable, Sendable {
     /// The Mixer draws these and `MixGraph.reserve` claims a slot for each before the transport
     /// connects anything, so which parts get a fader is the plan's own order rather than whichever
     /// source happened to be scheduled first.
+    /// What each pitched part's instrument brings to its mixer strip when the mix sets nothing:
+    /// an organ's rotating speaker. The first sound a part plays on decides, as its strip is one.
+    public var instrumentInserts: [PartID: StripInsert] {
+        var out: [PartID: StripInsert] = [:]
+        for voice in voices + segments.flatMap(\.voices) where voice.isPitched {
+            guard let part = voice.part, out[part] == nil, let insert = InstrumentVoiceSpec.preset(id: voice.sound)?.insert else { continue }
+            out[part] = insert
+        }
+        return out
+    }
+
     public var parts: [PartID] {
         var seen = Set<PartID>()
         var out: [PartID] = []

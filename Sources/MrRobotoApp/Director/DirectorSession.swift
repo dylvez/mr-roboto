@@ -389,6 +389,7 @@ public final class DirectorSession {
         case "split_section": return "Splitting a section…"
         case "fix_grid": return "Correcting the record's grid…"
         case "set_aside": return "Setting it aside…"
+        case "set_effects": return "Setting the effects…"
         case "create_part_version": return "Recording it into the song…"
         case "degrade_part": return "Putting it through the machine…"
         case "set_progression": return "Writing the chords down…"

@@ -418,6 +418,7 @@ public actor Director {
         case "level_chop": return "levelled the chop at its source"
         case "split_section": return "split a section"
         case "set_aside": return many ? "set \(times) parts aside or back" : "set a part aside or brought it back"
+        case "set_effects": return many ? "changed the effects \(times) times" : "changed the effects"
         case "fix_grid": return many ? "corrected \(times) grids" : "corrected a record's grid"
         case "create_part_version":
             return many ? "recorded \(times) versions into the song" : "recorded one version into the song"

@@ -5,10 +5,11 @@ import SongGraph
 
 // M6 X2: the strips in the engine.
 //
-// Every source the transport adds is routed through its part's strip — an EQ unit, a dynamics
-// unit and a mixer node for level and pan — into the main mixer; each strip also feeds a send
-// mixer into one reverb bus. The master chain is the main mixer, a peak limiter, and a trim that
-// sets the ceiling. The same graph live and offline, so a bounce through the mix is the mix.
+// Every source the transport adds is routed through its part's strip — an insert (an amp, a
+// rotating speaker, or nothing), an EQ unit, a dynamics unit and a mixer node for level and pan —
+// into the main mixer; each strip also feeds a send mixer into one reverb bus and another into
+// one echo. The master chain is the main mixer, a peak limiter, and a trim that sets the ceiling.
+// The same graph live and offline, so a bounce through the mix is the mix.
 //
 // The units are Apple's (AVAudioUnitEQ, the DynamicsProcessor, the PeakLimiter, AVAudioUnitReverb):
 // deterministic enough for a rough mix, licence-free, and they render in manual mode. Two honest
@@ -25,10 +26,14 @@ public final class MixStripNodes: @unchecked Sendable {
     /// sampler for its clean sections and a player for its dusty ones — has both. The EQ has one
     /// input bus, and connecting a second node to it silently replaced the first.
     public let input: AVAudioMixerNode
+    /// The amp or the rotating speaker, before the EQ; set to nothing on most strips.
+    public let insert: AVAudioUnitEffect
     public let eq: AVAudioUnitEQ
     public let dynamics: AVAudioUnitEffect
     public let out: AVAudioMixerNode
     public let send: AVAudioMixerNode
+    /// The send to the echo.
+    public let echo: AVAudioMixerNode
     private var peakValue: Float = 0
     private var rmsValue: Float = 0
     /// Whether the meter tap is installed. A tap is per-node and installing a second one on the
@@ -39,13 +44,18 @@ public final class MixStripNodes: @unchecked Sendable {
 
     init() {
         input = AVAudioMixerNode()
+        insert = StripInsertUnit.makeNode()
         eq = AVAudioUnitEQ(numberOfBands: 3)
         dynamics = AVAudioUnitEffect(audioComponentDescription: AudioComponentDescription(
             componentType: kAudioUnitType_Effect, componentSubType: kAudioUnitSubType_DynamicsProcessor,
             componentManufacturer: kAudioUnitManufacturer_Apple, componentFlags: 0, componentFlagsMask: 0))
         out = AVAudioMixerNode()
         send = AVAudioMixerNode()
+        echo = AVAudioMixerNode()
     }
+
+    /// The insert's unit, to set.
+    var insertUnit: StripInsertUnit? { insert.auAudioUnit as? StripInsertUnit }
 
     /// The last buffer's peak and RMS at the strip's output, 0…1.
     public var meter: (peak: Float, rms: Float) { lock.withLock { (peakValue, rmsValue) } }
@@ -106,6 +116,16 @@ public final class MixGraph {
     public let trim: AVAudioMixerNode
     public let bus: AVAudioMixerNode
     public let reverb: AVAudioUnitReverb
+    /// The echo's return: every strip's echo send into one tempo-synced delay.
+    public let echoBus: AVAudioMixerNode
+    public let delay: AVAudioUnitDelay
+    /// The song's tempo, which the echo's time is counted in. Set before a mix is applied.
+    public var tempo: Double = 120 {
+        didSet { if tempo != oldValue { applyEcho(mix.echoSettings) } }
+    }
+    /// What each part's instrument brings to its strip when the mix sets nothing: an organ's
+    /// rotating speaker. Set by whoever routes the parts, before the mix is applied.
+    public var instrumentInserts: [PartID: StripInsert] = [:]
     /// Where every routed node went, so it can be put back.
     private var routed: [ObjectIdentifier: (node: AVAudioNode, part: PartID)] = [:]
     /// The mix as last applied.
@@ -121,7 +141,10 @@ public final class MixGraph {
         reverb = AVAudioUnitReverb()
         reverb.loadFactoryPreset(.mediumRoom)
         reverb.wetDryMix = 100
-        for node in [trim, bus, reverb] as [AVAudioNode] { av.attach(node) }
+        echoBus = AVAudioMixerNode()
+        delay = AVAudioUnitDelay()
+        delay.wetDryMix = 100
+        for node in [trim, bus, reverb, echoBus, delay] as [AVAudioNode] { av.attach(node) }
         // Master: main mixer → trim → output. No limiter here — a lookahead limiter has latency,
         // and the transport is sample-exact; the ceiling is `Limiter` over a bounce or an export.
         av.disconnectNodeOutput(engine.mainMixer)
@@ -130,17 +153,25 @@ public final class MixGraph {
         // The bus: sends → bus mixer → reverb → main mixer.
         try av.connectNode(bus, to: reverb, format: engine.format)
         try av.connectNode(reverb, to: engine.mainMixer, format: engine.format)
+        // The echo: echo sends → echo bus → delay → main mixer.
+        try av.connectNode(echoBus, to: delay, format: engine.format)
+        try av.connectNode(delay, to: engine.mainMixer, format: engine.format)
         // The pool.
         for _ in 0..<Self.slotCount {
             let strip = MixStripNodes()
-            for node in [strip.input, strip.eq, strip.dynamics, strip.out, strip.send] as [AVAudioNode] { av.attach(node) }
-            try av.connectNode(strip.input, to: strip.eq, format: engine.format)
+            for node in [strip.input, strip.insert, strip.eq, strip.dynamics, strip.out, strip.send, strip.echo] as [AVAudioNode] {
+                av.attach(node)
+            }
+            try av.connectNode(strip.input, to: strip.insert, format: engine.format)
+            try av.connectNode(strip.insert, to: strip.eq, format: engine.format)
             try av.connectNode(strip.eq, to: strip.dynamics, format: engine.format)
             try av.connectNode(strip.dynamics, to: strip.out, format: engine.format)
             av.connect(strip.out, to: [AVAudioConnectionPoint(node: engine.mainMixer, bus: engine.mainMixer.nextAvailableInputBus),
-                                       AVAudioConnectionPoint(node: strip.send, bus: 0)],
+                                       AVAudioConnectionPoint(node: strip.send, bus: 0),
+                                       AVAudioConnectionPoint(node: strip.echo, bus: 0)],
                        fromBus: 0, format: engine.format)
             try av.connectNode(strip.send, to: bus, format: engine.format)
+            try av.connectNode(strip.echo, to: echoBus, format: engine.format)
             // The meter tap is *not* installed here. `MixStripNodes.meter` is a per-sample loop over
             // every frame of every channel, and it runs on the render thread — so a pool of strips
             // metered at build time runs that loop for every slot, for every block, forever,
@@ -152,6 +183,7 @@ public final class MixGraph {
             slots.append(strip)
         }
         applyMaster(mix.master)
+        applyReturns(mix)
     }
 
     // MARK: Strips
@@ -248,14 +280,50 @@ public final class MixGraph {
             apply(mix.strip(for: part, label: ""), to: strip)
         }
         applyMaster(mix.master)
+        applyReturns(mix)
     }
 
-    /// Moves to a section: only the gains that a section overrides change.
+    /// Moves to a section: only what a section overrides changes — the gains, the echo sends and
+    /// the rotating speakers' speed.
     public func move(to section: SectionID?) {
         guard section != self.section else { return }
         self.section = section
         for (part, strip) in strips {
             strip.out.outputVolume = Self.linear(mix.levelDB(for: part, in: section))
+            strip.echo.outputVolume = Self.linear(mix.echoDB(for: part, in: section))
+            strip.insertUnit?.set(mix.insert(for: part, in: section, instrument: instrumentInserts[part]))
+        }
+    }
+
+    /// The reverb's space and the echo's time, feedback and tone.
+    private func applyReturns(_ mix: Mix) {
+        if mix.roomSetting != appliedRoom {
+            reverb.loadFactoryPreset(Self.preset(mix.roomSetting))
+            reverb.wetDryMix = 100
+            appliedRoom = mix.roomSetting
+        }
+        applyEcho(mix.echoSettings)
+    }
+
+    private var appliedRoom: Room = .room
+
+    private func applyEcho(_ echo: Echo) {
+        // AVAudioUnitDelay reaches two seconds: a half note under 60 BPM is folded to the beat.
+        var seconds = echo.beats * 60 / max(20, tempo)
+        while seconds > 2 { seconds /= 2 }
+        delay.delayTime = seconds
+        delay.feedback = Float(echo.feedback * 100)
+        delay.lowPassCutoff = Float(echo.toneHz)
+        delay.wetDryMix = 100
+    }
+
+    static func preset(_ room: Room) -> AVAudioUnitReverbPreset {
+        switch room {
+        case .room: return .mediumRoom
+        case .plate: return .plate
+        case .chamber: return .mediumChamber
+        case .hall: return .largeHall
+        case .cathedral: return .cathedral
         }
     }
 
@@ -263,6 +331,8 @@ public final class MixGraph {
         strip.out.outputVolume = strip.part == nil ? 0 : Self.linear(mix.levelDB(for: settings.part, in: section))
         strip.out.pan = Float(max(-1, min(1, settings.pan)))
         strip.send.outputVolume = Self.linear(settings.sendDB)
+        strip.echo.outputVolume = strip.part == nil ? 0 : Self.linear(mix.echoDB(for: settings.part, in: section))
+        strip.insertUnit?.set(strip.part.map { mix.insert(for: $0, in: section, instrument: instrumentInserts[$0]) } ?? nil)
         for (index, band) in settings.eq.prefix(strip.eq.bands.count).enumerated() {
             let unit = strip.eq.bands[index]
             switch band.shape {

@@ -1,4 +1,5 @@
 import Foundation
+import SongGraph
 
 // MARK: - A pitched, sustaining instrument
 
@@ -32,6 +33,56 @@ public struct InstrumentVoiceSpec: Codable, Sendable, Hashable, Identifiable {
         /// Not synthesized at all: recordings brought in from an SFZ pack, played from the kit in
         /// `sampledKit`. See `ImportedInstruments`.
         case sampled
+        /// A tonewheel organ: sine drawbars, the key click, the percussion stop (`Drawbars`).
+        case drawbar
+    }
+
+    /// A tonewheel organ's registration (`Engine.drawbar`).
+    ///
+    /// Nine drawbars, each a sine at one footage of the key, pulled out 0 to 8, each step about
+    /// 3 dB: 16', 5⅓', 8', 4', 2⅔', 2', 1⅗', 1⅓', 1' — the octave below, the fifth above that,
+    /// the note, its octave, and the harmonics above. The wheels are tuned to the tempered scale,
+    /// as a Hammond's are, so the 2⅔' fifth is a hair flat and the 1⅗' third a little sharp
+    /// against the note: the slow beating in a held chord that is half of the sound. The top
+    /// wheels fold back an octave above 5.9 kHz, as the instrument's run out.
+    public struct Drawbars: Codable, Sendable, Hashable {
+        /// Nine settings, 0…8, 16' first. "888000000" is the first three out.
+        public var registration: [Int]
+        /// The percussion stop: the 4' (second harmonic) or 2⅔' (third) struck and dying away on
+        /// each note. Nil is off.
+        public var percussion: Percussion?
+        /// The key click: the contacts closing, a short burst at the front of every note, 0…1.
+        public var click: Double
+
+        public struct Percussion: Codable, Sendable, Hashable {
+            /// 2 or 3: which harmonic.
+            public var harmonic: Int
+            /// Fast decay (about 0.2 s) rather than slow (about 1 s).
+            public var fast: Bool
+            /// Its level, 0…1.
+            public var level: Double
+
+            public init(harmonic: Int, fast: Bool = true, level: Double = 0.7) {
+                self.harmonic = harmonic == 2 ? 2 : 3
+                self.fast = fast
+                self.level = min(1, max(0, level))
+            }
+        }
+
+        public init(_ registration: String, percussion: Percussion? = nil, click: Double = 0.5) {
+            let digits = registration.compactMap { $0.wholeNumberValue }.map { min(8, max(0, $0)) }
+            self.registration = Array((digits + Array(repeating: 0, count: 9)).prefix(9))
+            self.percussion = percussion
+            self.click = min(1, max(0, click))
+        }
+
+        /// The footages as multiples of the note: tempered, as the wheels are.
+        public static let ratios: [Double] = [0.5, pow(2, 19.0 / 12) / 2, 1, 2, pow(2, 19.0 / 12), 4, pow(2, 28.0 / 12),
+                                              pow(2, 31.0 / 12), 8]
+        public static let footages = ["16'", "5⅓'", "8'", "4'", "2⅔'", "2'", "1⅗'", "1⅓'", "1'"]
+
+        /// "888000000".
+        public var text: String { registration.map(String.init).joined() }
     }
 
     /// A plucked string's settings (`Engine.pluckedString`).
@@ -178,6 +229,11 @@ public struct InstrumentVoiceSpec: Codable, Sendable, Hashable, Identifiable {
     public var shortKit: String?
     /// A section's players, top to bottom, by instrument id (`Ensembles`). Nil for one instrument.
     public var members: [String]?
+    /// `Engine.drawbar` only: the registration.
+    public var drawbars: Drawbars?
+    /// What the instrument brings to its mixer strip when the mix sets nothing there: an organ
+    /// its rotating speaker. The Mixer can change it or take it off.
+    public var insert: StripInsert?
 
     /// Whether this is a section of recorded instruments rather than one instrument.
     public var isEnsemble: Bool { members != nil }
@@ -263,7 +319,7 @@ public extension InstrumentVoiceSpec {
         // Keys
         grandPiano, rhodes, wurlitzer, fmPiano, feltPiano, clavinet, harpsichord, toyPiano, juno,
         // Organs
-        organ, rockOrgan, pipeOrgan, harmonium, comboOrgan,
+        organ, rockOrgan, jazzOrgan, gospelOrgan, pipeOrgan, harmonium, comboOrgan,
         // Mallets and bells
         bell, marimba, vibraphone, xylophone, glockenspiel, kalimba, steelDrum, musicBox, tubularBells,
         // Plucked strings
@@ -417,19 +473,21 @@ public extension InstrumentVoiceSpec {
         drive: 0.15, level: 0.85, durationSeconds: 3, velocityLayers: [50, 112])
 
     /// Drawbars: octaves stacked as sines, no filter movement at all.
-    static let organ = InstrumentVoiceSpec(
-        id: "organ", name: "Organ", family: "organ", engine: .subtractive,
-        summary: "A sustained drawbar organ: the chord holds as long as the key does.",
-        oscillators: [
-            Oscillator(waveform: .sine, octave: 0, level: 1),
-            Oscillator(waveform: .sine, octave: 1, level: 0.55),
-            Oscillator(waveform: .sine, octave: 2, cents: 2, level: 0.3),
-            Oscillator(waveform: .square, octave: 0, level: 0.18),
-        ],
-        subLevel: 0.4,
-        filterHz: 6_000, filterKeyTrack: 0.3, filterQ: 0.7, filterEnvelopeOctaves: 0,
-        amplitude: Envelope(attack: 0.006, decay: 0.05, sustain: 1, release: 0.08),
-        drive: 0.2, level: 0.72, durationSeconds: 4)
+    static let organ = tonewheel(
+        id: "organ", name: "Organ", drawbars: Drawbars("888000000", click: 0.45),
+        summary: "A tonewheel organ, the first three drawbars out, through its rotating speaker: the warm, full organ of soul, gospel and reggae.")
+
+    /// A tonewheel organ: the drawbar engine, its speaker on its strip.
+    static func tonewheel(id: String, name: String, drawbars: Drawbars, summary: String, drive: Double = 0,
+                          insert: StripInsert = .rotarySlow) -> InstrumentVoiceSpec {
+        var spec = InstrumentVoiceSpec(
+            id: id, name: name, family: "organ", engine: .drawbar, summary: summary,
+            amplitude: Envelope(attack: 0.003, decay: 0, sustain: 1, release: 0.04),
+            drive: drive, level: 0.8, durationSeconds: 5.5)
+        spec.drawbars = drawbars
+        spec.insert = insert
+        return spec
+    }
 
     /// One square, wide open: the lead that sits on top of everything.
     static let squareLead = InstrumentVoiceSpec(

@@ -325,6 +325,29 @@ struct MixerMasterTabTests {
         }
     }
 
+    @Test("the strips with their echo and insert draw at a 1440 window's bench and at the minimum; an insert is kept at once")
+    func effectsColumns() throws {
+        let (song, plan) = try arranged()
+        let host = StubMixHost(song: song, playback: plan)
+        let mixer = MixerModel(host: host)
+        let part = try #require(mixer.rows.first?.part)
+        mixer.setInsert(.ampCrunch, for: part)
+        #expect(host.committed.last?.2.contains("through an amp, crunch") == true, "\(host.committed.last?.2 ?? "")")
+        mixer.setEcho(-9, for: part)
+        mixer.setRoom(.plate)
+        #expect(mixer.mix.room == .plate && mixer.strip(part).echoDB == -9)
+        let folder = ProcessInfo.processInfo.environment["MRROBOTO_RENDER"].map { URL(fileURLWithPath: $0, isDirectory: true) }
+        for (width, name) in [(CGFloat(900), "mixer-effects-900"), (Design.Metric.surfaceMinimumWidth, "mixer-effects-minimum")] {
+            let renderer = ImageRenderer(content: MixerSurfaceView(model: mixer)
+                .frame(width: width, height: Design.Metric.surfaceMinimumHeight + 120))
+            renderer.scale = 2
+            let image = try #require(renderer.nsImage)
+            if let folder, let tiff = image.tiffRepresentation, let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) {
+                try png.write(to: folder.appendingPathComponent("\(name).png"))
+            }
+        }
+    }
+
     @Test("a master lever moved on the Mixer's tab is a mix version on the Mixer's line, and stales the reading")
     func leverOnTheTab() async throws {
         let (song, plan) = try arranged()

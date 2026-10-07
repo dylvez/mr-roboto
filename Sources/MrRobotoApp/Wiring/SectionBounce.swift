@@ -248,10 +248,11 @@ enum SectionBounce {
         return planar
     }
 
-    /// Where each section after the first begins, in frames — only when the mix sets gains by
-    /// section; otherwise nothing changes along the way and the render is one piece.
+    /// Where each section after the first begins, in frames — only when the mix changes by
+    /// section, a level or an effect; otherwise nothing changes along the way and the render is
+    /// one piece.
     static func sectionBoundaries(of plan: SongPlayback, clock: TransportClock, sampleRate: Double) -> [(frame: AVAudioFramePosition, section: SectionID)] {
-        guard let mix = plan.mix, !mix.sectionGains.isEmpty else { return [] }
+        guard let mix = plan.mix, mix.changesBySection else { return [] }
         return plan.segments.dropFirst().map { segment in
             (AVAudioFramePosition((clock.seconds(forBar: segment.startBar) * sampleRate).rounded()), segment.section)
         }

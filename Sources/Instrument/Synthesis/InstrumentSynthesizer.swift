@@ -30,6 +30,9 @@ public enum InstrumentSynthesizer {
         case .sampled:
             // Its sound is its recordings, which are played from its kit, not rendered here.
             return [Float](repeating: 0, count: frames)
+        case .drawbar:
+            // Its own length: the front of the note, then the loop it holds on (`drawbarLoop`).
+            return drawbar(spec, midi: midi, sampleRate: sampleRate)
         }
         applyAmplitude(&samples, spec.amplitude, sampleRate: sampleRate)
         if let tremolo = spec.tremolo, tremolo.depth > 0 {
@@ -52,6 +55,93 @@ public enum InstrumentSynthesizer {
     }
 
     public static func frequency(ofMIDI midi: Int) -> Double { 440 * pow(2, (Double(midi) - 69) / 12) }
+
+    // MARK: Drawbar organ
+
+    /// Where a held organ note loops, in frames: after the front of the note — the contacts'
+    /// click and the percussion, both gone by then — a stretch of three and a half to four and a
+    /// half seconds over which every wheel the note sounds turns a whole number of times, so the
+    /// loop has no seam. Of those lengths, the one that moves the note's own wheels least from
+    /// their pitch: under two cents at the bottom of the keyboard, nothing at the top.
+    public static func drawbarLoop(midi: Int, sampleRate: Double) -> (start: Int, length: Int) {
+        let start = Int((1.5 * sampleRate).rounded())
+        let f = frequency(ofMIDI: midi)
+        var best = (length: Int((4 * sampleRate).rounded()), error: Double.infinity)
+        var length = Int((3.5 * sampleRate).rounded())
+        while length <= Int((4.5 * sampleRate).rounded()) {
+            // The 8' and the 16' are what is heard as the note.
+            var error = 0.0
+            for ratio in [1.0, 0.5, 2.0] {
+                let wanted = f * ratio * Double(length) / sampleRate
+                let cents = 1_200 * log2(max(1, wanted.rounded()) / wanted)
+                error = max(error, abs(cents) * (ratio == 2 ? 0.5 : 1))
+            }
+            if error < best.error { best = (length, error) }
+            length += 7
+        }
+        return (start, best.length)
+    }
+
+    /// A tonewheel note: the drawbars' sines, each moved to the nearest pitch that turns a whole
+    /// number of times in the loop; the percussion and the key click at the front; the contacts'
+    /// few milliseconds of attack. No fade at the end: the kit loops it.
+    static func drawbar(_ spec: InstrumentVoiceSpec, midi: Int, sampleRate: Double) -> [Float] {
+        let bars = spec.drawbars ?? InstrumentVoiceSpec.Drawbars("888000000")
+        let (start, length) = drawbarLoop(midi: midi, sampleRate: sampleRate)
+        let frames = start + length
+        let f = frequency(ofMIDI: midi)
+        var seeded = SeededRandom(seed: UInt64(midi &* 40_503 &+ 7))
+        // The wheels that sound: their pitch, made periodic over the loop, and their level.
+        var wheels: [(step: Double, level: Double, phase: Double)] = []
+        let topWheel = 5_920.0
+        for (index, setting) in bars.registration.enumerated() where setting > 0 {
+            var hz = f * InstrumentVoiceSpec.Drawbars.ratios[index]
+            while hz > topWheel { hz /= 2 }
+            let turns = max(1, (hz * Double(length) / sampleRate).rounded())
+            let level = pow(10, -3 * Double(8 - setting) / 20)
+            wheels.append((2 * .pi * turns / Double(length), level, seeded.unit() * 2 * .pi))
+        }
+        let total = max(1e-6, wheels.reduce(0) { $0 + $1.level })
+        var samples = [Float](repeating: 0, count: frames)
+        for wheel in wheels {
+            let gain = wheel.level / total
+            var phase = wheel.phase
+            for i in 0..<frames {
+                samples[i] += Float(gain * sin(phase))
+                phase += wheel.step
+                if phase > 2 * .pi { phase -= 2 * .pi }
+            }
+        }
+        // The percussion: its harmonic struck and dying away, gone before the loop.
+        if let percussion = bars.percussion {
+            let hz = f * (percussion.harmonic == 2 ? 2 : InstrumentVoiceSpec.Drawbars.ratios[4])
+            let t60 = percussion.fast ? 0.22 : 0.95
+            let gain = 0.6 * percussion.level
+            for i in 0..<min(frames, start) {
+                let t = Double(i) / sampleRate
+                samples[i] += Float(gain * SynthEnvelope.exponential(t: t, t60: t60) * sin(2 * .pi * hz * t))
+            }
+        }
+        // The key click: the busbars' contacts closing, a few milliseconds of bright noise.
+        if bars.click > 0 {
+            var band = Biquad.bandPassUnity(frequency: 3_200, q: 0.8, sampleRate: sampleRate)
+            let clickFrames = Int(0.012 * sampleRate)
+            for i in 0..<min(frames, clickFrames) {
+                let t = Double(i) / sampleRate
+                let burst = band.process(seeded.bipolar()) * SynthEnvelope.exponential(t: t, t60: 0.008)
+                samples[i] += Float(0.35 * bars.click * burst)
+            }
+        }
+        // The contacts close over a few milliseconds.
+        let attack = max(1, Int(0.003 * sampleRate))
+        for i in 0..<min(frames, attack) { samples[i] *= Float(i) / Float(attack) }
+        if spec.drive > 0 {
+            for index in samples.indices { samples[index] = Float(SynthShaper.saturate(Double(samples[index]), drive: spec.drive)) }
+        }
+        let gain = Float(spec.level)
+        for index in samples.indices { samples[index] *= gain }
+        return samples
+    }
 
     /// How far a wobble has faded in, 0…1, rising over its delay.
     static func fadeIn(_ modulation: InstrumentVoiceSpec.Modulation, at seconds: Double) -> Double {
@@ -393,13 +483,17 @@ public enum SynthesizedInstrument {
             let scale = gains[entry.root] ?? 1
             for index in samples.indices { samples[index] *= scale }
             try SynthesizedKit.writeWAV(samples, to: KitPath.resolve(relativePath, in: folder), sampleRate: sampleRate)
+            // An organ holds as long as the key does: its note loops on the stretch it was made
+            // to (`drawbarLoop`), the release taken where the key comes up.
+            let loop = spec.engine == .drawbar ? InstrumentSynthesizer.drawbarLoop(midi: entry.root, sampleRate: sampleRate) : nil
             zones.append(Zone(
                 id: ZoneID("\(spec.id)_\(entry.root)_\(entry.layer)"),
                 sample: relativePath,
                 key: .range(low...high, rootNote: entry.root),
                 velocity: bandLow...bandHigh,
                 offMode: .normal,
-                envelope: Envelope(sustain: 1, release: Float(spec.amplitude.release))))
+                envelope: Envelope(sustain: 1, release: Float(spec.amplitude.release)),
+                loop: loop.map { Loop(mode: .loopContinuous, start: $0.start, end: $0.start + $0.length - 1) }))
         }
 
         let manifest = KitManifest(

@@ -43,8 +43,11 @@ let package = Package(
             "Analysis",
             .product(name: "onnxruntime", package: "onnxruntime-swift-package-manager"),
         ], linkerSettings: [.linkedFramework("AVFoundation")]),
-        .target(name: "AudioEngine", dependencies: ["MusicTheory", "SongGraph"],
+        .target(name: "AudioEngine", dependencies: ["MusicTheory", "SongGraph", "CStripFX"],
                 linkerSettings: [.linkedFramework("AVFoundation")]),
+        // A mixer strip's insert: an amp and cabinet, a rotating speaker. In C for the same reason
+        // as the render core: it runs inside an audio unit's render block.
+        .target(name: "CStripFX"),
         // The realtime render core. macOS 27 marks the realtime-safe AVAudioSourceNode render
         // block unavailable to Swift, so voice rendering lives in C and Swift owns lifetime.
         .target(name: "CVoiceRender"),

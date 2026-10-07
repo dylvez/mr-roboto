@@ -194,6 +194,56 @@ public final class MixerModel {
         }
     }
     public func setCompressor(_ compressor: Compressor?, for part: PartID) { update(part) { $0.compressor = compressor }; endGesture() }
+
+    // MARK: Effects
+
+    /// What the part's instrument brings to its strip when the mix sets nothing: an organ's speaker.
+    public func instrumentInsert(for part: PartID) -> StripInsert? { host.playback.instrumentInserts[part] }
+
+    /// The insert as it plays on the strip, in the section picked when there is one.
+    public func insert(for part: PartID) -> StripInsert? {
+        mix.insert(for: part, in: levelSection, instrument: instrumentInsert(for: part))
+    }
+
+    /// Puts an insert on a strip, or takes it off with `.off`; nil goes back to the instrument's
+    /// own. A choice, kept at once.
+    public func setInsert(_ insert: StripInsert?, for part: PartID) {
+        update(part) { $0.insert = insert }
+        endGesture()
+    }
+
+    /// The rotating speaker's speed in the section picked: fast, slow, or nil for the strip's own.
+    public func setFast(_ fast: Bool?, for part: PartID) {
+        guard let section = levelSection else {
+            if let fast, var insert = insert(for: part), insert.kind == .rotary {
+                insert.fast = fast
+                setInsert(insert, for: part)
+            }
+            return
+        }
+        var effect = mix.sectionEffects?.first { $0.section == section && $0.part == part } ?? SectionEffect(section: section, part: part)
+        effect.fast = fast
+        mix.setSectionEffect(effect)
+        host.preview(mix)
+        endGesture()
+    }
+
+    public func setEcho(_ dB: Double?, for part: PartID) { update(part) { $0.echoDB = dB.map { max(-60, min(0, $0)) } } }
+
+    public func setRoom(_ room: Room) {
+        guard mix.roomSetting != room else { return }
+        mix.room = room == .room ? nil : room
+        host.preview(mix)
+        endGesture()
+    }
+
+    public func setEcho(beats: Double? = nil, feedback: Double? = nil) {
+        var echo = mix.echoSettings
+        if let beats { echo.beats = beats }
+        if let feedback { echo.feedback = min(0.9, max(0, feedback)) }
+        mix.echo = echo == .standard ? nil : echo
+        host.preview(mix)
+    }
     public func setMaster(gainDB: Double? = nil, ceilingDBTP: Double? = nil, targetLUFS: Double? = nil) {
         if let gainDB { mix.master.gainDB = max(-24, min(24, gainDB)) }
         if let ceilingDBTP { mix.master.ceilingDBTP = max(-12, min(0, ceilingDBTP)) }
@@ -247,6 +297,19 @@ public final class MixerModel {
             if strip.compressor != before.compressor {
                 moves.append(strip.compressor.map { String(format: "%@ compressor %.0f dB %.1f:1", name, $0.thresholdDB, $0.ratio) } ?? "\(name) compressor off")
             }
+            if strip.insert != before.insert {
+                moves.append(strip.insert.map { "\(name) through \($0.phrase)" } ?? "\(name) on its instrument's own insert")
+            }
+            if strip.echoDB != before.echoDB { moves.append(strip.echoDB.map { String(format: "%@ echo %+.1f dB", name, $0) } ?? "\(name) echo off") }
+        }
+        if b.roomSetting != a.roomSetting { moves.append("reverb \(b.roomSetting.name.lowercased())") }
+        if b.echoSettings != a.echoSettings {
+            moves.append(String(format: "echo every %@, feedback %.0f%%", b.echoSettings.timeName, b.echoSettings.feedback * 100))
+        }
+        for effect in b.sectionEffects ?? [] where !(a.sectionEffects ?? []).contains(effect) {
+            let name = labels[effect.part] ?? "a part", place = sections[effect.section] ?? "a section"
+            if let fast = effect.fast { moves.append("\(name) speaker \(fast ? "fast" : "slow") in \(place)") }
+            if let db = effect.echoDB { moves.append(String(format: "%@ echo %+.1f dB in %@", name, db, place)) }
         }
         if b.master.gainDB != a.master.gainDB { moves.append(String(format: "master %+.1f dB", b.master.gainDB)) }
         if b.master.ceilingDBTP != a.master.ceilingDBTP { moves.append(String(format: "master ceiling %.1f dBTP", b.master.ceilingDBTP)) }

@@ -1,4 +1,5 @@
 import Foundation
+import SongGraph
 
 // MARK: - The rest of the bank
 
@@ -92,21 +93,21 @@ public extension InstrumentVoiceSpec {
     // MARK: Organs
 
     /// Drawbars through an overdriven amp and a spinning speaker.
-    static let rockOrgan = InstrumentVoiceSpec(
-        id: "rock-organ", name: "Rock Organ", family: "organ", engine: .subtractive,
-        summary: "A driven drawbar organ, with a spinning speaker's wobble.",
-        vibrato: Modulation(rateHz: 6.6, depth: 10, delaySeconds: 0),
-        tremolo: Modulation(rateHz: 6.6, depth: 0.18, delaySeconds: 0),
-        oscillators: [
-            Oscillator(waveform: .sine, level: 1),
-            Oscillator(waveform: .sine, octave: 1, level: 0.7),
-            Oscillator(waveform: .sine, octave: 2, level: 0.45),
-            Oscillator(waveform: .square, level: 0.3),
-        ],
-        subLevel: 0.5,
-        filterHz: 4_500, filterKeyTrack: 0.3, filterQ: 0.8,
-        amplitude: Envelope(attack: 0.004, decay: 0.05, sustain: 1, release: 0.06),
-        drive: 0.55, level: 0.7, durationSeconds: 4)
+    static let rockOrgan = tonewheel(
+        id: "rock-organ", name: "Rock Organ", drawbars: Drawbars("888600000", click: 0.7),
+        summary: "A tonewheel organ driven hard into its rotating speaker: the growl of rock and blues organ.",
+        drive: 0.3, insert: StripInsert(kind: .rotary, drive: 0.6))
+
+    /// The first three out and the third-harmonic percussion, fast: the organ trio's tick.
+    static let jazzOrgan = tonewheel(
+        id: "jazz-organ", name: "Jazz Organ",
+        drawbars: Drawbars("888000000", percussion: Drawbars.Percussion(harmonic: 3, fast: true, level: 0.8), click: 0.55),
+        summary: "A tonewheel organ with the percussion's bright tick at the front of every note: the organ trio of soul jazz.")
+
+    /// Four out and the top one: the church's full organ, bright and shouting.
+    static let gospelOrgan = tonewheel(
+        id: "gospel-organ", name: "Gospel Organ", drawbars: Drawbars("888800008", click: 0.6),
+        summary: "A tonewheel organ with the high drawbar out, bright and full: the church organ that answers the choir. A section can set its speaker turning fast.")
 
     /// Pipes at four footages: broad, still, slow to speak.
     static let pipeOrgan = InstrumentVoiceSpec(
@@ -276,26 +277,34 @@ public extension InstrumentVoiceSpec {
         amplitude: Envelope(attack: 0.001, decay: 3, sustain: 1, release: 0.25),
         drive: 0.25, level: 0.85, durationSeconds: 4, velocityLayers: [50, 112])
 
-    /// An electric through a pushed amp: the string driven into saturation, which squashes its
-    /// decay into sustain, then darkened the way a guitar speaker cuts everything over 4 kHz. Each
-    /// note is driven on its own and chords are summed after, so a chord is cleaner than a real
-    /// amp makes it — fine for single lines and power chords, polite on a full barre chord.
-    static let overdrivenGuitar = InstrumentVoiceSpec(
-        id: "overdrive-guitar", name: "Overdriven Guitar", family: "guitar", engine: .pluckedString,
-        summary: "An electric through a cranked amp: warm, singing overdrive for riffs and leads.",
-        pluck: Pluck(decaySeconds: 4, decayKeyTrack: 0.3, brightnessHz: 5_000, pickPosition: 0.11),
-        filterHz: 3_200, filterKeyTrack: 0.2, filterQ: 1.5,
-        amplitude: Envelope(attack: 0.001, decay: 4, sustain: 1, release: 0.18),
-        drive: 0.8, level: 0.72, durationSeconds: 4.5, velocityLayers: [50, 112])
+    /// An electric through a pushed amp. The string is only warmed here; the amp is the strip's
+    /// insert (`StripInsert.ampCrunch`), so a chord is driven as one, the way a real amp breaks
+    /// up, rather than each note on its own and summed after, which left a barre chord polite.
+    /// The amp's cabinet is the speaker that darkens it.
+    static let overdrivenGuitar: InstrumentVoiceSpec = {
+        var spec = InstrumentVoiceSpec(
+            id: "overdrive-guitar", name: "Overdriven Guitar", family: "guitar", engine: .pluckedString,
+            summary: "An electric through a cranked amp: warm, singing overdrive for riffs and leads.",
+            pluck: Pluck(decaySeconds: 4, decayKeyTrack: 0.3, brightnessHz: 5_000, pickPosition: 0.11),
+            filterHz: 6_000, filterKeyTrack: 0.2, filterQ: 1.2,
+            amplitude: Envelope(attack: 0.001, decay: 4, sustain: 1, release: 0.18),
+            drive: 0.2, level: 0.8, durationSeconds: 4.5, velocityLayers: [50, 112])
+        spec.insert = .ampCrunch
+        return spec
+    }()
 
-    /// Harder again: more drive, a darker speaker, less dynamics left.
-    static let distortedGuitar = InstrumentVoiceSpec(
-        id: "distorted-guitar", name: "Distorted Guitar", family: "guitar", engine: .pluckedString,
-        summary: "High-gain distortion: thick, compressed and aggressive, for power chords and rock riffs.",
-        pluck: Pluck(decaySeconds: 5, decayKeyTrack: 0.2, brightnessHz: 5_500, pickPosition: 0.1),
-        filterHz: 2_600, filterKeyTrack: 0.15, filterQ: 1.8,
-        amplitude: Envelope(attack: 0.001, decay: 5, sustain: 1, release: 0.15),
-        drive: 1, level: 0.66, durationSeconds: 5, velocityLayers: [50, 112])
+    /// Harder again: the amp at a lead's gain.
+    static let distortedGuitar: InstrumentVoiceSpec = {
+        var spec = InstrumentVoiceSpec(
+            id: "distorted-guitar", name: "Distorted Guitar", family: "guitar", engine: .pluckedString,
+            summary: "High-gain distortion: thick, compressed and aggressive, for power chords and rock riffs.",
+            pluck: Pluck(decaySeconds: 5, decayKeyTrack: 0.2, brightnessHz: 5_500, pickPosition: 0.1),
+            filterHz: 6_000, filterKeyTrack: 0.15, filterQ: 1.2,
+            amplitude: Envelope(attack: 0.001, decay: 5, sustain: 1, release: 0.15),
+            drive: 0.25, level: 0.8, durationSeconds: 5, velocityLayers: [50, 112])
+        spec.insert = .ampLead
+        return spec
+    }()
 
     static let mutedGuitar = InstrumentVoiceSpec(
         id: "muted-guitar", name: "Muted Guitar", family: "guitar", engine: .pluckedString,

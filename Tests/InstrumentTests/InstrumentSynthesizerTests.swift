@@ -30,9 +30,11 @@ struct InstrumentSynthesizerTests {
                                                        band: (expected * 0.45)...(expected * 2.2),
                                                        sampleRate: Self.rate, resolution: max(0.5, expected / 200))
             // An octave either way is still "the note": some voices put more energy in the
-            // second harmonic than the first, which reads as the same pitch.
+            // second harmonic than the first, which reads as the same pitch. An organ's 5⅓' is the
+            // third harmonic of its 16', and pulled out as far as the 8' it can be the loudest.
             let ratio = found / expected
-            let onPitch = [1.0, 2.0, 0.5].contains { abs(ratio - $0) / $0 < 0.03 }
+            let octaves = spec.engine == .drawbar ? [1.0, 2.0, 0.5, 1.5] : [1.0, 2.0, 0.5]
+            let onPitch = octaves.contains { abs(ratio - $0) / $0 < 0.03 }
             #expect(onPitch, "\(spec.id) at MIDI \(midi): wanted \(Int(expected)) Hz, found \(Int(found)) Hz")
         }
     }
@@ -112,8 +114,9 @@ struct InstrumentSynthesizerTests {
         #expect(finite, "\(spec.id) produced a non-finite sample")
         #expect(peak <= 1, "\(spec.id) peaks at \(peak)")
         #expect(peak > 0.05, "\(spec.id) is nearly silent")
-        // It ends at zero, so a note held to the edge of the render does not click.
-        #expect(abs(once[once.count - 1]) < 0.001)
+        // It ends at zero, so a note held to the edge of the render does not click. An organ's
+        // note does not end: it ends where its loop starts again (`DrawbarOrganTests`).
+        if spec.engine != .drawbar { #expect(abs(once[once.count - 1]) < 0.001) }
     }
 
     @Test("baked into a kit: zones cover the keyboard, never transposing far, with the velocity layers asked for")
@@ -251,6 +254,8 @@ struct InstrumentPresetTests {
             #expect((pluck?.decaySeconds ?? 0) > 0 && (0...0.5).contains(pluck?.pickPosition ?? -1))
         case .sampled:
             Issue.record("\(spec.id): a preset is synthesized; only an import is sampled")
+        case .drawbar:
+            #expect(spec.drawbars?.registration.contains { $0 > 0 } == true, "\(spec.id) has no drawbar out")
         }
         #expect(!spec.summary.isEmpty, "\(spec.id) says nothing about how it sounds")
         #expect(spec.durationSeconds >= 1 && spec.durationSeconds <= 10)

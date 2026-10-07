@@ -1705,8 +1705,9 @@ public final class AppState {
     private func followSection(atSeconds seconds: Double) {
         guard let id = section(atSeconds: seconds), activeSection != id else { return }
         activeSection = id
-        if let host = playbackHost, playback.mix?.sectionGains.isEmpty == false {
-            // M6: the section's gain overrides follow the playhead.
+        if let host = playbackHost, playback.mix?.changesBySection == true {
+            // M6: the section's gain overrides follow the playhead, and its effects: a speaker
+            // turning fast in the chorus, an echo thrown in the bridge.
             let mix = playback.mix
             Task { await host.mixChanged(mix, section: id) }
         }

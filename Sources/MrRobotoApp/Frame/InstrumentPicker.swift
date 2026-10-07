@@ -146,6 +146,11 @@ struct InstrumentPicker: View {
                           pluck?.decaySeconds ?? 0, (pluck?.pickPosition ?? 0) * 100)
         case .sampled:
             return spec.summary.isEmpty ? "Sampled: recordings from an SFZ pack." : spec.summary
+        case .drawbar:
+            let bars = spec.drawbars
+            let percussion = bars?.percussion.map { ", percussion on the \($0.harmonic == 2 ? "second" : "third") harmonic, \($0.fast ? "fast" : "slow")" } ?? ""
+            let speaker = spec.insert.map { ", through \($0.phrase)" } ?? ""
+            return "Tonewheel organ, drawbars \(bars?.text ?? "888000000")\(percussion)\(speaker)."
         }
     }
 }

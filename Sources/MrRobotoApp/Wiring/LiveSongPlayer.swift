@@ -100,6 +100,9 @@ final class LiveSongPlayer: SongPlaybackHost {
         // pitched kit is nineteen roots of rendered audio. The surfaces' own samplers — the ones
         // with no part — are never retired; they belong to the app, not to a plan.
         await service.retire(partsOtherThan: Set(plan.parts))
+        // The echo counts in the song's beats, and an organ brings its speaker to its strip.
+        graph.tempo = plan.tempo
+        graph.instrumentInserts = plan.instrumentInserts
         graph.apply(plan.mix ?? .unity, section: plan.segments.first?.section)
         lastMix = plan.mix
 
