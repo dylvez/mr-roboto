@@ -327,7 +327,14 @@ public enum DirectorPrompt {
         reference. When the idea names a tempo, a key or a meter — "slow, \
         in D minor", "a waltz" — the song is set first, so every part is written to it: start_song \
         for a new song, set_song for the open one, which also names it. set_instrument puts the \
-        chords or the tune on a preset — a pad, a lead, a Rhodes — or sets the song's own. After \
+        chords or the tune on a preset — a pad, a lead, a Rhodes — or sets the song's own. Anything \
+        acoustic — a piano, strings, horns, a sax, a guitar, mallets — goes on a recording when the \
+        library has one: read_genre says which recording plays each of the genre's sounds, and \
+        set_instrument says when the preset you chose has one. The synthesized presets are for what \
+        is a synth: pads, leads, stabs. The Horn Section, Horn Trio and String Section are recorded \
+        players as one part: chords on one are voiced for the section and dealt out a note to each \
+        player, a tune on one is doubled in unison and octaves, and short notes are tongued or \
+        spiccato. After \
         the Booth, when the user has sung two takes of a section or more, comp_takes makes the \
         comp: bar by bar, the take the critics flag least there. Say the plan as it comes back, \
         "bars 1–2 take 3, bar 3 take 1", and the flags it left out; every take is still there \

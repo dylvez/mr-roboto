@@ -351,7 +351,9 @@ public enum SynthesizedInstrument {
 
     public static func build(_ spec: InstrumentVoiceSpec, in folder: URL, sampleRate: Double = 48_000) throws -> LoadedKit {
         if spec.engine == .sampled {
-            // An imported instrument already is a kit; there is nothing to render.
+            // An imported instrument already is a kit; there is nothing to render. A section, or
+            // one with short recordings beside its held ones, is its recordings put together.
+            if let played = try PlayedKits.kit(for: spec) { return played }
             guard let kit = spec.sampledKit else { throw KitError.notADirectory(path: spec.id) }
             return try KitStore.load(from: URL(fileURLWithPath: kit, isDirectory: true))
         }

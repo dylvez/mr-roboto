@@ -172,6 +172,19 @@ public struct InstrumentVoiceSpec: Codable, Sendable, Hashable, Identifiable {
     /// `Engine.sampled` only: the folder holding its kit, set when the instrument is registered.
     /// Not part of what it sounds like, so it is never written to its `instrument.json`.
     public var sampledKit: String?
+    /// `Engine.sampled` only: the folder of the same instrument's short recordings — its staccato,
+    /// its spiccato — which play the notes let go quickly (`Articulations`). Found when the library
+    /// is loaded; never written to its `instrument.json`.
+    public var shortKit: String?
+    /// A section's players, top to bottom, by instrument id (`Ensembles`). Nil for one instrument.
+    public var members: [String]?
+
+    /// Whether this is a section of recorded instruments rather than one instrument.
+    public var isEnsemble: Bool { members != nil }
+
+    /// Whether its short notes are recordings of short notes — a section's, or an instrument's
+    /// staccato beside its held notes — rather than the front of a held note cut off.
+    public var playsShortNotes: Bool { shortKit != nil || isEnsemble }
 
     // Subtractive
     public var oscillators: [Oscillator]

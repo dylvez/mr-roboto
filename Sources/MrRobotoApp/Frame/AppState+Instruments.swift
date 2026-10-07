@@ -178,7 +178,7 @@ extension AppState {
     /// song's own instrument, as it would for any id it does not know.
     @discardableResult
     public func removeImportedInstrument(id: String) -> Bool {
-        guard let spec = ImportedInstruments.spec(id: id) else { return false }
+        guard let spec = ImportedInstruments.spec(id: id), !spec.isEnsemble else { return false }
         do {
             try ImportedInstruments.remove(id: id)
         } catch {
@@ -186,6 +186,9 @@ extension AppState {
             return false
         }
         importedInstruments.removeAll { $0.id == id }
+        // A section that sat it, and a held recording it was the short notes of, are made again
+        // from what is left.
+        loadImportedInstruments()
         note(.you, "Removed \(spec.name) from the library", detail: "The pack it came from is untouched.")
         return true
     }

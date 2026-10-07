@@ -233,7 +233,11 @@ public struct RecordedPercussion: Codable, Hashable, Sendable {
 
     /// The Versilian Community Sample Library's hand percussion (CC0), by file and key: the open
     /// tones of the quinto and tumba for the congas, the open hits of the bongos, the small
-    /// shaker's down-stroke, a tambourine hit and the claves. VCSL has no woodblock.
+    /// shaker's down-stroke, a tambourine hit, the claves and the woodblock; the agogô's two bells, the cabasa's hit, the güiro's short hit and medium scrape, the middle
+    /// triangle open and held, the vibraslap; the cajón's bass tone (its third stroke, the one
+    /// with most below 300 Hz) and its slap (the first, the brightest); the darbuka's doum (its
+    /// first, long and low) and tek (its third, short and bright); the large frame drum's open
+    /// hit; the slit drum's high tongue.
     /// <https://github.com/sgossner/VCSL>
     public static let vcsl: [(kind: SynthVoiceKind, file: String, note: Int, label: String)] = [
         (.highConga, "Membranophones/Struck Membranophones/Conga.sfz", 63, "VCSL quinto, open tone"),
@@ -243,11 +247,30 @@ public struct RecordedPercussion: Codable, Hashable, Sendable {
         (.shaker, "Idiophones/Struck Idiophones/Shaker, Small.sfz", 64, "VCSL small shaker, down-stroke"),
         (.tambourine, "Idiophones/Struck Idiophones/Tambourine 1.sfz", 60, "VCSL tambourine, hit"),
         (.claves, "Idiophones/Struck Idiophones/Claves.sfz", 60, "VCSL claves"),
+        (.woodblock, "Idiophones/Struck Idiophones/Woodblock.sfz", 60, "VCSL woodblock"),
+        (.highAgogo, "Idiophones/Struck Idiophones/Agogo Bells.sfz", 60, "VCSL agogô, high bell"),
+        (.lowAgogo, "Idiophones/Struck Idiophones/Agogo Bells.sfz", 61, "VCSL agogô, low bell"),
+        (.cabasa, "Idiophones/Struck Idiophones/Cabasa.sfz", 60, "VCSL cabasa, hit"),
+        (.guiro, "Idiophones/Struck Idiophones/Guiro.sfz", 61, "VCSL güiro, short stroke"),
+        (.guiroLong, "Idiophones/Struck Idiophones/Guiro.sfz", 62, "VCSL güiro, long scrape"),
+        (.openTriangle, "Idiophones/Struck Idiophones/Triangles.sfz", 65, "VCSL triangle, open"),
+        (.muteTriangle, "Idiophones/Struck Idiophones/Triangles.sfz", 67, "VCSL triangle, held"),
+        (.vibraslap, "Idiophones/Struck Idiophones/Vibraslap.sfz", 60, "VCSL vibraslap"),
+        (.cajon, "Idiophones/Struck Idiophones/Cajon.sfz", 62, "VCSL cajón, bass tone"),
+        (.cajonSlap, "Idiophones/Struck Idiophones/Cajon.sfz", 60, "VCSL cajón, slap"),
+        (.darbuka, "Membranophones/Struck Membranophones/Darbuka.sfz", 60, "VCSL darbuka, doum"),
+        (.darbukaTek, "Membranophones/Struck Membranophones/Darbuka.sfz", 62, "VCSL darbuka, tek"),
+        (.frameDrum, "Membranophones/Struck Membranophones/Frame Drum.sfz", 61, "VCSL frame drum, open"),
+        (.slitDrum, "Idiophones/Struck Idiophones/Slit Drum.sfz", 60, "VCSL slit drum, high tongue"),
     ]
 
     /// Imports VCSL's hand percussion from the library's checkout at `root` into `directory`,
     /// saves the set and puts it in use. A file VCSL's checkout lacks leaves its voices
     /// synthesized; none at all is an error.
+    ///
+    /// Run again over a set already imported — when this build plays more voices than the one
+    /// that imported it — a recording already in `directory` is used as it is, not copied again,
+    /// and whether the set is on, and which machines keep their own percussion, stay as they were.
     @discardableResult
     public static func importVCSL(from root: URL, into directory: URL) throws -> RecordedPercussion {
         var sources: [String: String] = [:]
@@ -256,8 +279,13 @@ public struct RecordedPercussion: Codable, Hashable, Sendable {
             let file = root.appendingPathComponent(entry.file)
             guard FileManager.default.fileExists(atPath: file.path) else { continue }
             if sources[entry.file] == nil {
-                let imported = try ImportedInstruments.importSFZ(at: file, into: directory, register: false)
-                sources[entry.file] = URL(fileURLWithPath: imported.spec.sampledKit ?? "").lastPathComponent
+                let slug = ImportedInstruments.slug(of: file.deletingPathExtension().lastPathComponent)
+                if (try? KitStore.load(from: directory.appendingPathComponent(slug, isDirectory: true))) != nil {
+                    sources[entry.file] = slug
+                } else {
+                    let imported = try ImportedInstruments.importSFZ(at: file, into: directory, register: false)
+                    sources[entry.file] = URL(fileURLWithPath: imported.spec.sampledKit ?? "").lastPathComponent
+                }
             }
             if let source = sources[entry.file], !source.isEmpty {
                 assignments.append(Assignment(kind: entry.kind, source: source, note: entry.note, label: entry.label))
@@ -266,7 +294,12 @@ public struct RecordedPercussion: Codable, Hashable, Sendable {
         guard !assignments.isEmpty else {
             throw ImportedInstruments.ImportError.noRegions(file: root.lastPathComponent)
         }
-        let set = RecordedPercussion(name: "VCSL", assignments: assignments)
+        var set = RecordedPercussion(name: "VCSL", assignments: assignments)
+        if let data = try? Data(contentsOf: directory.appendingPathComponent(fileName)),
+           let before = try? JSONDecoder().decode(RecordedPercussion.self, from: data) {
+            set.isOn = before.isOn
+            set.keepSynthesized = before.keepSynthesized
+        }
         try save(set, to: directory)
         return set
     }

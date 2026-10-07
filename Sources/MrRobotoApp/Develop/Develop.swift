@@ -417,11 +417,11 @@ public enum Develop {
                         said.append("chords, its own: \(plays.symbols())")
                         continue
                     }
-                    let family = InstrumentVoiceSpec.preset(id: SongPlayback.instrumentID(for: part.partID, in: song))?.family ?? "keys"
+                    let instrument = InstrumentVoiceSpec.preset(id: SongPlayback.instrumentID(for: part.partID, in: song))
                     if let lastWay, onTheSongsChords {
                         var played = lastWay.progression
                         played.playing = sheet.playing
-                        if let treatment = chordsTreatment(for: role, playing: sheet.playing, lifted: lifted, family: family) {
+                        if let treatment = chordsTreatment(for: role, playing: sheet.playing, lifted: lifted, instrument: instrument) {
                             played.playing = treatment.isPlain ? nil : treatment
                         }
                         let id = variation(of: part, named: "last-\(lastWay.move.rawValue)", kind: .progression(played),
@@ -430,7 +430,7 @@ public enum Develop {
                         said.append("chords, \(lastWay.move.name.lowercased()): \(played.symbols())")
                         continue
                     }
-                    if let treatment = chordsTreatment(for: role, playing: sheet.playing, lifted: lifted, family: family) {
+                    if let treatment = chordsTreatment(for: role, playing: sheet.playing, lifted: lifted, instrument: instrument) {
                         var played = sheet
                         played.playing = treatment.isPlain ? nil : treatment
                         let name = treatment.keysPattern == .held ? "held" : "played-\(treatment.pattern)"
@@ -755,14 +755,15 @@ public enum Develop {
     /// How the chords are played in a section, when it is not how they are written. Chords with a
     /// rhythm are held where the song stands still; chords that are held are given the genre's
     /// rhythm where the song arrives, on an instrument that can play one. Nil plays them as written.
-    static func chordsTreatment(for role: SectionRole, playing: ChordPlaying?, lifted: KeysPattern?, family: String) -> ChordPlaying? {
+    static func chordsTreatment(for role: SectionRole, playing: ChordPlaying?, lifted: KeysPattern?,
+                                instrument: InstrumentVoiceSpec?) -> ChordPlaying? {
         let written = playing ?? ChordPlaying()
         switch role {
         case .intro, .breakdown, .outro:
             guard written.keysPattern != .held else { return nil }
             return ChordPlaying(.held, written.keysVoicing)
         case .hook, .drop:
-            guard written.keysPattern == .held, let lifted, lifted.suits(family: family) else { return nil }
+            guard written.keysPattern == .held, let lifted, lifted.suits(instrument ?? .rhodes) else { return nil }
             return ChordPlaying(lifted, written.keysVoicing, seed: 0x4B45_5953)
         default:
             return nil

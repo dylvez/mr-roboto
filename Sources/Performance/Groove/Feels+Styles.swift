@@ -18,7 +18,7 @@ extension Feels {
     static let styles: [Feel] = [
         disco, classicHouse, ukGarage, drumAndBass, halftime, jerseyClub,
         afrobeats, amapiano, afrobeat, secondLine, ukDrill, funkOneChord, gospelShout, countryTwoStep,
-        slowBlues128, afroCuban68, fiveFour, sevenEight,
+        slowBlues128, afroCuban68, fiveFour, sevenEight, cajonGroove, maqsum,
     ]
 
     private static func written(_ summary: String, lineage: [String]) -> Provenance {
@@ -295,4 +295,35 @@ extension Feels {
         ]),
         provenance: written("Seven eighths grouped 2+2+3: hats on the eighths accenting each group, the snare on the second group, the kick on the first and the long last one.",
                             lineage: ["Peter Gabriel, \"Solsbury Hill\"", "Balkan 7/8"]))
+
+    // MARK: Hand drums
+
+    /// The kit unplugged: a cajón for the kick and the snare.
+    static let cajonGroove = Feel(
+        name: "Cajón Groove",
+        idioms: [.folk, .ballad],
+        tempoRange: 80...120, suggestedTempo: 96,
+        groove: twoBars([
+            line(.shaker, steps: 32, beat: 4, on: eighths(upTo: 32), ghosts: both([2, 6, 10, 14])),
+            line(.cajonSlap, steps: 32, beat: 4, on: both([4, 12]), ghosts: [7, 14, 23, 30, 31]),
+            line(.cajon, steps: 32, beat: 4, on: [0, 6, 8, 16, 22, 24, 27]),
+        ]),
+        humanize: Humanize(velocity: 0.12, timing: 0.05, seed: 0xCA70_0001),
+        provenance: written("What an acoustic set plays when there is no kit: the cajón's bass tone where the kick would be — one, the and of two, three — its slap on two and four with the fingers ghosting between, and a shaker in eighths.",
+                            lineage: ["Afro-Peruvian cajón", "the acoustic set"]))
+
+    /// Maqsum: doum, tek, rest, tek, doum, rest, tek, rest.
+    static let maqsum = Feel(
+        name: "Maqsum",
+        idioms: [.middleEastern],
+        tempoRange: 80...130, suggestedTempo: 104,
+        groove: twoBars([
+            line(.darbuka, steps: 32, beat: 4, on: both([0, 8]), accents: both([0, 8])),
+            line(.darbukaTek, steps: 32, beat: 4, on: both([2, 6, 12]), ghosts: both([4, 10, 14, 15])),
+            line(.frameDrum, steps: 32, beat: 4, on: [0, 16]),
+            line(.tambourine, steps: 32, beat: 4, on: both([2, 6, 12])),
+        ]),
+        humanize: Humanize(velocity: 0.1, timing: 0.04, seed: 0xDA4B_0001),
+        provenance: written("The maqsum, the rhythm most Arabic popular music and belly dance is played on: doum in the middle of the darbuka on one and three, tek at the rim on the and of one, the and of two and four, with the fingers filling between; a frame drum under the first doum and the riq's jingles with the teks.",
+                            lineage: ["Egyptian baladi", "Arabic popular music"]))
 }

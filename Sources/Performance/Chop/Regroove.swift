@@ -126,10 +126,11 @@ public struct Regroove: Sendable {
         /// The usual kit, folded onto three classes: anything low is the kick's job, anything that
         /// answers on the backbeat is the snare's, anything metallic keeps time.
         public static let defaultVoices: [SliceClass: [DrumVoice]] = [
-            .kick: [.kick, .lowTom],
+            .kick: [.kick, .lowTom, .cajon, .darbuka, .frameDrum],
             .snare: [.snare, .clap, .rim, .midTom, .highTom, .highConga, .lowConga, .highBongo, .lowBongo,
-                     .claves, .woodblock, .cowbell],
-            .hat: [.closedHat, .openHat, .ride, .crash, .shaker, .tambourine, .perc],
+                     .claves, .woodblock, .cowbell, .cajonSlap, .darbukaTek, .slitDrum, .highAgogo, .lowAgogo],
+            .hat: [.closedHat, .openHat, .ride, .crash, .shaker, .tambourine, .perc, .cabasa, .guiro, .guiroLong,
+                   .openTriangle, .muteTriangle, .vibraslap],
         ]
 
         /// The class serving `voice`, or `fallback`.

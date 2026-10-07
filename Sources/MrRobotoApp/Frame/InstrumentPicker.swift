@@ -72,6 +72,14 @@ struct InstrumentPicker: View {
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
                     .help(Self.describe(spec))
+                // A synthesized piano, trumpet or string section, when the library has the real one.
+                if spec.engine != .sampled, let recording = RecordedSounds.recording(for: spec.id, among: imported) {
+                    FamilyChip(title: "Play it on the \(recording.name)", isOn: false, holdsSelection: false) {
+                        browsing = recording.family
+                        choose(recording.id)
+                    }
+                    .help("The \(spec.name) is synthesized. \(recording.name) is a recording in the library: \(Self.character(recording))")
+                }
             }
         }
         .onChange(of: selected) { _, _ in browsing = nil }
@@ -102,7 +110,7 @@ struct InstrumentPicker: View {
                     BoothChip(spec.name, isOn: spec.id == selected) { choose(spec.id) }
                         .help(Self.character(spec))
                         .contextMenu {
-                            if spec.engine == .sampled, removeInstrument != nil {
+                            if spec.engine == .sampled, !spec.isEnsemble, removeInstrument != nil {
                                 Button("Remove \(spec.name) from the Library…") { removing = spec }
                             }
                         }

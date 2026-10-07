@@ -1,4 +1,5 @@
 import Foundation
+import Instrument
 import MusicTheory
 import SongGraph
 
@@ -107,6 +108,10 @@ public enum KeysPattern: String, CaseIterable, Codable, Sendable, Identifiable {
     public static let struckFamilies: Set<String> = ["keys", "organ", "bell", "guitar", "bass", "plucked", "pluck", "chip", "lead", "imported"]
 
     public func suits(family: String) -> Bool { !isShort || Self.struckFamilies.contains(family) }
+
+    /// The same for an instrument: and a short pattern suits anything with recordings of its short
+    /// notes, a section of horns or strings, a trumpet with its staccato.
+    public func suits(_ spec: InstrumentVoiceSpec) -> Bool { suits(family: spec.family) || spec.playsShortNotes }
 
     /// The pattern a genre's keys usually play, by the genre profile's id. Nil where the profiles
     /// the app ships give no reason to pick one. Inferred from the idiom of each genre, not cited:

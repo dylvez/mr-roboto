@@ -48,8 +48,8 @@ struct GenreTests {
     }
 
     /// Feels no profile covers, each for a reason: a meter is not a genre, and a guess would judge
-    /// the song by the wrong numbers.
-    static let genreless: Set<String> = ["Five Four", "Seven Eight", "Baião", "Oom-Pah Waltz", "Second Line"]
+    /// the song by the wrong numbers. The maqsum belongs to Arabic music, which has no profile yet.
+    static let genreless: Set<String> = ["Five Four", "Seven Eight", "Baião", "Oom-Pah Waltz", "Second Line", "Maqsum"]
 
     @Test("every shipped feel belongs to a genre, but the ones no profile covers, which get no guess")
     func everyFeelHasAGenre() throws {

@@ -36,6 +36,7 @@ public struct Idiom: RawRepresentable, Hashable, Codable, Sendable, CustomString
     public static let ballad = Idiom("ballad")
     public static let musicalTheatre = Idiom("musical-theatre")
     public static let waltz = Idiom("waltz")
+    public static let middleEastern = Idiom("middle-eastern")
 
     public var description: String { rawValue }
 }

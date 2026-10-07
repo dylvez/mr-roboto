@@ -396,6 +396,29 @@ public struct DrumVoice: RawRepresentable, Hashable, Codable, Sendable, CustomSt
     public static let lowBongo = DrumVoice("lowBongo")
     public static let claves = DrumVoice("claves")
     public static let woodblock = DrumVoice("woodblock")
+    // More hand percussion: the Latin American, Brazilian and Middle Eastern instruments the
+    // feels of those musics are written for.
+    public static let highAgogo = DrumVoice("highAgogo")
+    public static let lowAgogo = DrumVoice("lowAgogo")
+    public static let cabasa = DrumVoice("cabasa")
+    /// A short stroke of the güiro: the scrape cut off.
+    public static let guiro = DrumVoice("guiro")
+    /// The long stroke, drawn across every ridge.
+    public static let guiroLong = DrumVoice("guiroLong")
+    public static let openTriangle = DrumVoice("openTriangle")
+    /// The triangle held in the hand that strikes it: a tick.
+    public static let muteTriangle = DrumVoice("muteTriangle")
+    public static let vibraslap = DrumVoice("vibraslap")
+    /// The cajón's bass tone, struck in the middle of its face.
+    public static let cajon = DrumVoice("cajon")
+    /// Its slap, at the top edge, where the snares are.
+    public static let cajonSlap = DrumVoice("cajonSlap")
+    /// The darbuka's doum, in the middle of the head.
+    public static let darbuka = DrumVoice("darbuka")
+    /// Its tek, at the rim.
+    public static let darbukaTek = DrumVoice("darbukaTek")
+    public static let frameDrum = DrumVoice("frameDrum")
+    public static let slitDrum = DrumVoice("slitDrum")
     /// Unnamed percussion: what MIDI import makes of a note it has no voice for, and what feels
     /// wrote before the hand-percussion voices existed. Kits play it on their shaker.
     public static let perc = DrumVoice("perc")

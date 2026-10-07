@@ -26,11 +26,29 @@ extension KitManifest {
     ///    repeats a sample rather than dropping a hit; `validate` reports it.
     ///
     /// - Returns: nil only when nothing covers (note, velocity).
-    public func zone(note: Int, velocity: Int, roundRobin: Int = 0) -> Zone? {
-        let candidates = candidates(note: note, velocity: velocity)
+    ///
+    /// Two more choices come first in a kit that has them, and are no choice in one that does not:
+    ///
+    /// - `layer`, the player of a section the note was dealt to (`Zone.layer`). A note for no
+    ///   player is the top one's; a player with nothing on the note gives way to any that has.
+    /// - `length`, how long the note is held, in seconds. A note no longer than a short
+    ///   recording's `longest` is played on it; any other, or one of unknown length — a key held
+    ///   on a controller — on the held recording. Where only one of the two covers the note, it
+    ///   plays.
+    public func zone(note: Int, velocity: Int, roundRobin: Int = 0, layer: Int? = nil, length: Double? = nil) -> Zone? {
+        var candidates = candidates(note: note, velocity: velocity)
         guard !candidates.isEmpty else { return nil }
-        let length = max(1, candidates.map(\.seqLength).max() ?? 1)
-        let wanted = (((roundRobin % length) + length) % length) + 1
+        if candidates.contains(where: { $0.layer != nil }) {
+            let player = candidates.filter { ($0.layer ?? 0) == (layer ?? 0) }
+            if !player.isEmpty { candidates = player }
+        }
+        if candidates.contains(where: { $0.longest != nil }) {
+            let short = candidates.filter { zone in zone.longest.map { limit in length.map { $0 <= limit } ?? false } ?? false }
+            let held = candidates.filter { $0.longest == nil }
+            candidates = !short.isEmpty ? short : (held.isEmpty ? candidates : held)
+        }
+        let set = max(1, candidates.map(\.seqLength).max() ?? 1)
+        let wanted = (((roundRobin % set) + set) % set) + 1
         if let exact = candidates.first(where: { $0.seqPosition == wanted }) { return exact }
         if let below = candidates.last(where: { $0.seqPosition < wanted }) { return below }
         return candidates.last

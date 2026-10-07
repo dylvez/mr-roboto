@@ -128,7 +128,7 @@ public struct WriteGrooveTool: DirectorTool {
             ("bars", Schema.integer("How many bars. A clave is a two-bar cycle, so Latin feels want an even number.", minimum: 1, maximum: 16)),
             ("swing_percent", Schema.number("Where the off-beat sixteenth lands: 50 straight, 66.7 triplet, 75 the far end; 0 keeps the feel's own.", minimum: 0, maximum: 75)),
             ("rows", Schema.array("Rows that replace or add voices; empty keeps the feel as written.",
-                                  of: Schema.string("voice: pattern. Voices: kick, snare, clap, rim, closedHat, openHat, ride, crash, lowTom, midTom, highTom, cowbell, shaker, tambourine, highConga, lowConga, highBongo, lowBongo, claves, woodblock."))),
+                                  of: Schema.string("voice: pattern. Voices: kick, snare, clap, rim, closedHat, openHat, ride, crash, lowTom, midTom, highTom, cowbell, shaker, tambourine, highConga, lowConga, highBongo, lowBongo, claves, woodblock, highAgogo, lowAgogo, cabasa, guiro (a short stroke), guiroLong (the long scrape), openTriangle, muteTriangle, vibraslap, cajon (its bass tone), cajonSlap, darbuka (the doum), darbukaTek, frameDrum, slitDrum."))),
             ("note", Schema.string("One line for the ledger saying what this beat is, in the user's language.")),
             ("steps_per_bar", Schema.integer("The grid the rows are written on, in steps a bar of the song: 16 is sixteenths in four, "
                                              + "12 triplets in four or sixteenths in three, 8 eighths. 0 takes the feel's own, or 16 with no feel.",
@@ -138,7 +138,9 @@ public struct WriteGrooveTool: DirectorTool {
     }
 
     static let voices = ["kick", "snare", "clap", "rim", "closedHat", "openHat", "ride", "crash", "lowTom", "midTom", "highTom",
-                         "cowbell", "shaker", "tambourine", "highConga", "lowConga", "highBongo", "lowBongo", "claves", "woodblock", "perc"]
+                         "cowbell", "shaker", "tambourine", "highConga", "lowConga", "highBongo", "lowBongo", "claves", "woodblock",
+                         "highAgogo", "lowAgogo", "cabasa", "guiro", "guiroLong", "openTriangle", "muteTriangle", "vibraslap",
+                         "cajon", "cajonSlap", "darbuka", "darbukaTek", "frameDrum", "slitDrum", "perc"]
 
     /// One row, read. Throws with the row and what is wrong with it.
     static func parse(_ row: String, steps: Int, tool: String) throws -> GroovePattern {

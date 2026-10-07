@@ -9,11 +9,11 @@ import Testing
 struct HandPercussionTests {
     static let sr: Double = 48_000
 
-    @Test("every machine has all eight hand-percussion voices, after its drums")
+    @Test("every machine has all the hand-percussion voices, after its drums")
     func everyMachineHasThem() {
         for machine in SynthMachine.all {
             let kinds = machine.voices.map(\.kind)
-            #expect(Array(kinds.suffix(8)) == SynthVoiceKind.handPercussion, "\(machine.name): \(kinds)")
+            #expect(Array(kinds.suffix(SynthVoiceKind.handPercussion.count)) == SynthVoiceKind.handPercussion, "\(machine.name): \(kinds)")
             #expect(Set(kinds).count == kinds.count, "\(machine.name) lists a voice twice")
         }
     }
@@ -46,6 +46,33 @@ struct HandPercussionTests {
         #expect(try centroid(.shaker) > 4_000)
         #expect(try centroid(.tambourine) > 4_000)
         #expect(try centroid(.claves) > 1_500)
+    }
+
+    @Test("the low stroke of a cajón or a darbuka sits under its high one, and the metal and the beads sit high")
+    func worldPlaces() throws {
+        let studio = SynthMachine.studio
+        func centroid(_ kind: SynthVoiceKind) throws -> Double {
+            let spec = try #require(studio.spec(for: kind))
+            return SynthMeasure.spectralCentroid(DrumSynthesizer.render(spec, velocity: 100, sampleRate: Self.sr),
+                                                 in: 0..<Int(0.04 * Self.sr), sampleRate: Self.sr)
+        }
+        #expect(try centroid(.cajon) < centroid(.cajonSlap))
+        #expect(try centroid(.darbuka) < centroid(.darbukaTek))
+        #expect(try centroid(.frameDrum) < centroid(.darbukaTek))
+        #expect(try centroid(.lowAgogo) < centroid(.highAgogo))
+        for kind in [SynthVoiceKind.cabasa, .guiro, .guiroLong, .openTriangle, .muteTriangle] {
+            #expect(try centroid(kind) > 2_000, "\(kind)")
+        }
+        // A held triangle is a tick; an open one rings.
+        let open = try #require(studio.spec(for: .openTriangle)), held = try #require(studio.spec(for: .muteTriangle))
+        #expect(open.tone.decaySeconds(decay: 0.5) > 4 * held.tone.decaySeconds(decay: 0.5))
+    }
+
+    @Test("VCSL plays every hand-percussion voice, each from one place")
+    func vcslCoversThem() {
+        let kinds = RecordedPercussion.vcsl.map(\.kind)
+        #expect(Set(kinds).count == kinds.count)
+        #expect(Set(kinds) == Set(SynthVoiceKind.handPercussion))
     }
 
     @Test("the played skins bend down as they settle; the electronic ones carry no skin noise")

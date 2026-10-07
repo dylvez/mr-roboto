@@ -10,10 +10,14 @@ public enum SynthVoiceKind: String, Codable, Sendable, Hashable, CaseIterable {
     case kick, snare, closedHat, openHat, clap, rim
     case lowTom, midTom, highTom, cowbell, crash, ride
     case shaker, tambourine, highConga, lowConga, highBongo, lowBongo, claves, woodblock
+    case highAgogo, lowAgogo, cabasa, guiro, guiroLong, openTriangle, muteTriangle, vibraslap
+    case cajon, cajonSlap, darbuka, darbukaTek, frameDrum, slitDrum
 
     /// The hand percussion, in the order a kit lists it.
     public static let handPercussion: [SynthVoiceKind] = [
         .shaker, .tambourine, .highConga, .lowConga, .highBongo, .lowBongo, .claves, .woodblock,
+        .highAgogo, .lowAgogo, .cabasa, .guiro, .guiroLong, .openTriangle, .muteTriangle, .vibraslap,
+        .cajon, .cajonSlap, .darbuka, .darbukaTek, .frameDrum, .slitDrum,
     ]
 
     /// The groove-level voice name this kind answers to.
@@ -39,6 +43,20 @@ public enum SynthVoiceKind: String, Codable, Sendable, Hashable, CaseIterable {
         case .lowBongo: return .lowBongo
         case .claves: return .claves
         case .woodblock: return .woodblock
+        case .highAgogo: return .highAgogo
+        case .lowAgogo: return .lowAgogo
+        case .cabasa: return .cabasa
+        case .guiro: return .guiro
+        case .guiroLong: return .guiroLong
+        case .openTriangle: return .openTriangle
+        case .muteTriangle: return .muteTriangle
+        case .vibraslap: return .vibraslap
+        case .cajon: return .cajon
+        case .cajonSlap: return .cajonSlap
+        case .darbuka: return .darbuka
+        case .darbukaTek: return .darbukaTek
+        case .frameDrum: return .frameDrum
+        case .slitDrum: return .slitDrum
         }
     }
 
@@ -67,6 +85,21 @@ public enum SynthVoiceKind: String, Codable, Sendable, Hashable, CaseIterable {
         case .shaker: return 70      // Maracas
         case .claves: return 75      // Claves
         case .woodblock: return 76   // Hi Wood Block
+        case .vibraslap: return 58   // Vibraslap
+        case .highAgogo: return 67   // High Agogo
+        case .lowAgogo: return 68    // Low Agogo
+        case .cabasa: return 69      // Cabasa
+        case .guiro: return 73       // Short Guiro
+        case .guiroLong: return 74   // Long Guiro
+        case .muteTriangle: return 80 // Mute Triangle
+        case .openTriangle: return 81 // Open Triangle
+        // General MIDI has no cajón, darbuka, frame drum or slit drum: the keys above its map.
+        case .cajon: return 88
+        case .cajonSlap: return 89
+        case .darbuka: return 90
+        case .darbukaTek: return 91
+        case .frameDrum: return 92
+        case .slitDrum: return 93
         }
     }
 
@@ -82,6 +115,15 @@ public enum SynthVoiceKind: String, Codable, Sendable, Hashable, CaseIterable {
         case .lowConga: return "low_conga"
         case .highBongo: return "high_bongo"
         case .lowBongo: return "low_bongo"
+        case .highAgogo: return "high_agogo"
+        case .lowAgogo: return "low_agogo"
+        case .guiroLong: return "guiro_long"
+        case .openTriangle: return "open_triangle"
+        case .muteTriangle: return "mute_triangle"
+        case .cajonSlap: return "cajon_slap"
+        case .darbukaTek: return "darbuka_tek"
+        case .frameDrum: return "frame_drum"
+        case .slitDrum: return "slit_drum"
         default: return rawValue
         }
     }

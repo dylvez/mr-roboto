@@ -48,6 +48,8 @@ public enum GrooveVariation {
     /// Hand percussion: a second player, who does not stop when the drummer does.
     public static let hands: Set<DrumVoice> = [
         .shaker, .tambourine, .highConga, .lowConga, .highBongo, .lowBongo, .claves, .woodblock, .cowbell, .perc,
+        .highAgogo, .lowAgogo, .cabasa, .guiro, .guiroLong, .openTriangle, .muteTriangle, .vibraslap,
+        .cajon, .cajonSlap, .darbuka, .darbukaTek, .frameDrum, .slitDrum,
     ]
 
     /// The longest a written-through variation runs. The Grid draws sixteen bars and no more, and

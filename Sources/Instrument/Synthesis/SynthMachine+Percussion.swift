@@ -100,6 +100,125 @@ extension SynthMachine {
                 output: SynthOutput(toneDarkHz: 7_000, toneBrightHz: 14_000, highPassHz: 200),
                 velocity: SynthVelocity(rangeDB: 12, brightnessFactor: 1.1),
                 durationSeconds: 0.25, seed: seed + 8),
+        ] + worldPercussion(machine, seed: seed)
+    }
+
+    /// The rest of the hand percussion: agogô, cabasa, güiro, triangle, vibraslap, cajón,
+    /// darbuka, frame drum and slit drum. Stand-ins for the recordings that play them when a set
+    /// is on (`RecordedPercussion`), shaped from what those recordings measure: the agogô's bells
+    /// near 1.5 and 1 kHz, the triangle's near 1.44 kHz, the cajón's bass round 80 Hz and the
+    /// darbuka's doum round 145.
+    private static func worldPercussion(_ machine: String, seed: UInt64) -> [SynthVoiceSpec] {
+        // A bell of struck metal: a ring with inharmonic partials over it.
+        func bell(_ kind: SynthVoiceKind, hz: Double, partials: [Double], decay: (Double, Double, Double),
+                  level: Double, seed: UInt64) -> SynthVoiceSpec {
+            SynthVoiceSpec(
+                kind: kind, engine: .ring, machine: machine,
+                controls: SynthControls(level: level),
+                tone: SynthTone(frequencyHz: hz, altLevel: 0.35, tuneSemitones: 7,
+                                decayShortestSeconds: decay.0, decayMidSeconds: decay.1, decayLongestSeconds: decay.2,
+                                attackSeconds: 0.0002, level: 0.6, partialsHz: partials),
+                click: SynthClick(level: 0.14, decaySeconds: 0.0015, highPassHz: 3_000, noiseFraction: 0.5),
+                output: SynthOutput(toneDarkHz: 9_000, toneBrightHz: 16_000, highPassHz: 400),
+                velocity: SynthVelocity(rangeDB: 14, brightnessFactor: 1.1),
+                durationSeconds: decay.2 + 0.15, seed: seed)
+        }
+        // A scraped gourd: the stick crossing ridge after ridge, each a short burst of noise.
+        func scrape(_ kind: SynthVoiceKind, ridges: Int, every: Double, seed: UInt64) -> SynthVoiceSpec {
+            SynthVoiceSpec(
+                kind: kind, engine: .burstNoise, machine: machine,
+                controls: SynthControls(level: 0.4),
+                // DECAY is how long the gourd rings after the last ridge: the tail's floor sits
+                // under the knob's whole sweep, so the knob always moves it.
+                noise: SynthNoise(level: 0.8, bandHz: 4_200, bandQ: 0.9, highPassHz: 1_500,
+                                  decayShortestSeconds: 0.03, decayMidSeconds: 0.06, decayLongestSeconds: 0.12),
+                burst: SynthBurst(count: ridges, intervalSeconds: every, burstDecaySeconds: 0.012,
+                                  tailLevel: 0.2, tailDecaySeconds: 0.01),
+                output: SynthOutput(toneDarkHz: 8_000, toneBrightHz: 14_000, highPassHz: 800),
+                velocity: SynthVelocity(rangeDB: 12, brightnessFactor: 1.05),
+                durationSeconds: Double(ridges) * every + 0.2, seed: seed)
+        }
+        // A struck head or box: a low ring that bends as it settles, skin and the hand on it.
+        func head(_ kind: SynthVoiceKind, hz: Double, peak: Double, decay: (Double, Double, Double), slap: Double,
+                  skin: Double, skinHz: Double, level: Double, seed: UInt64) -> SynthVoiceSpec {
+            SynthVoiceSpec(
+                kind: kind, engine: .bridgedT, machine: machine,
+                controls: SynthControls(level: level),
+                tone: SynthTone(frequencyHz: hz, tuneSemitones: 7, pitchPeakHz: peak, pitchEnvelopeSeconds: 0.04,
+                                decayShortestSeconds: decay.0, decayMidSeconds: decay.1, decayLongestSeconds: decay.2,
+                                attackSeconds: 0.0008, level: 0.85),
+                noise: SynthNoise(level: skin, bandHz: skinHz, bandQ: 0.7, highPassHz: 300,
+                                  decayShortestSeconds: 0.03, decayMidSeconds: 0.06, decayLongestSeconds: 0.12,
+                                  attackSeconds: 0.0005),
+                click: SynthClick(level: slap, decaySeconds: 0.003, highPassHz: 1_200, noiseFraction: 0.6),
+                output: SynthOutput(toneDarkHz: 3_000, toneBrightHz: 9_000, highPassHz: 40, drive: 0.05),
+                velocity: SynthVelocity(rangeDB: 14, pitchCents: 30, decayFactor: 1.1, brightnessFactor: 1.2),
+                durationSeconds: max(0.35, decay.2 + 0.15), seed: seed)
+        }
+        return [
+            bell(.highAgogo, hz: 1_490, partials: [3_980, 6_210], decay: (0.12, 0.25, 0.45), level: 0.32, seed: seed + 9),
+            bell(.lowAgogo, hz: 1_050, partials: [2_810, 4_430], decay: (0.18, 0.4, 0.8), level: 0.32, seed: seed + 10),
+            // Beads round a gourd: a short, very high rattle, sharper than the shaker's swell.
+            SynthVoiceSpec(
+                kind: .cabasa, engine: .filteredNoise, machine: machine,
+                controls: SynthControls(level: 0.36),
+                noise: SynthNoise(level: 0.9, bandHz: 9_000, bandQ: 0.8, highPassHz: 5_000,
+                                  decayShortestSeconds: 0.05, decayMidSeconds: 0.09, decayLongestSeconds: 0.16,
+                                  attackSeconds: 0.003),
+                output: SynthOutput(toneDarkHz: 11_000, toneBrightHz: 18_000, highPassHz: 3_000),
+                velocity: SynthVelocity(rangeDB: 12, decayFactor: 1.1, brightnessFactor: 1.1),
+                durationSeconds: 0.3, seed: seed + 11),
+            scrape(.guiro, ridges: 9, every: 0.016, seed: seed + 12),
+            scrape(.guiroLong, ridges: 26, every: 0.022, seed: seed + 13),
+            bell(.openTriangle, hz: 1_440, partials: [3_930, 5_610, 7_320, 9_080], decay: (0.8, 1.4, 2.2), level: 0.26,
+                 seed: seed + 14),
+            bell(.muteTriangle, hz: 1_440, partials: [3_930, 5_610, 7_320, 9_080], decay: (0.06, 0.12, 0.2), level: 0.26,
+                 seed: seed + 15),
+            // A wooden ball rattling against the teeth of a jawbone's worth of metal, dying away.
+            SynthVoiceSpec(
+                kind: .vibraslap, engine: .burstNoise, machine: machine,
+                controls: SynthControls(level: 0.34),
+                noise: SynthNoise(level: 0.7, bandHz: 3_600, bandQ: 1.4, highPassHz: 1_200,
+                                  decayShortestSeconds: 0.6, decayMidSeconds: 1.0, decayLongestSeconds: 1.6),
+                burst: SynthBurst(count: 6, intervalSeconds: 0.028, burstDecaySeconds: 0.02,
+                                  tailLevel: 0.5, tailDecaySeconds: 0.3),
+                output: SynthOutput(toneDarkHz: 7_000, toneBrightHz: 12_000, highPassHz: 600),
+                velocity: SynthVelocity(rangeDB: 12),
+                durationSeconds: 1.9, seed: seed + 16),
+            head(.cajon, hz: 82, peak: 120, decay: (0.12, 0.2, 0.32), slap: 0.2, skin: 0.12, skinHz: 1_400,
+                 level: 0.55, seed: seed + 17),
+            // The slap is the snares behind the top of the face: a higher knock and a wash of wire.
+            SynthVoiceSpec(
+                kind: .cajonSlap, engine: .dualToneNoise, machine: machine,
+                controls: SynthControls(snappy: 0.7, level: 0.42),
+                tone: SynthTone(frequencyHz: 190, altFrequencyHz: 340, altLevel: 0.5, tuneSemitones: 7,
+                                decayShortestSeconds: 0.04, decayMidSeconds: 0.07, decayLongestSeconds: 0.12,
+                                attackSeconds: 0.0005, level: 0.6),
+                noise: SynthNoise(level: 0.55, bandHz: 4_800, bandQ: 0.7, highPassHz: 1_500,
+                                  decayShortestSeconds: 0.06, decayMidSeconds: 0.11, decayLongestSeconds: 0.2,
+                                  attackSeconds: 0.0005),
+                click: SynthClick(level: 0.25, decaySeconds: 0.002, highPassHz: 2_000, noiseFraction: 0.7),
+                output: SynthOutput(toneDarkHz: 6_000, toneBrightHz: 13_000, highPassHz: 90),
+                velocity: SynthVelocity(rangeDB: 14, brightnessFactor: 1.2),
+                durationSeconds: 0.35, seed: seed + 18),
+            head(.darbuka, hz: 145, peak: 175, decay: (0.3, 0.5, 0.8), slap: 0.08, skin: 0.06, skinHz: 900,
+                 level: 0.5, seed: seed + 19),
+            // The tek: a finger at the rim, a bright crack and little body.
+            SynthVoiceSpec(
+                kind: .darbukaTek, engine: .ring, machine: machine,
+                controls: SynthControls(level: 0.38),
+                tone: SynthTone(frequencyHz: 760, altFrequencyHz: 1_930, altLevel: 0.4, tuneSemitones: 7,
+                                decayShortestSeconds: 0.04, decayMidSeconds: 0.08, decayLongestSeconds: 0.14,
+                                attackSeconds: 0.0003, level: 0.6),
+                noise: SynthNoise(level: 0.25, bandHz: 3_200, bandQ: 0.8, highPassHz: 1_200,
+                                  decayShortestSeconds: 0.02, decayMidSeconds: 0.04, decayLongestSeconds: 0.07),
+                click: SynthClick(level: 0.3, decaySeconds: 0.002, highPassHz: 2_500, noiseFraction: 0.6),
+                output: SynthOutput(toneDarkHz: 8_000, toneBrightHz: 15_000, highPassHz: 250),
+                velocity: SynthVelocity(rangeDB: 14, brightnessFactor: 1.2),
+                durationSeconds: 0.3, seed: seed + 20),
+            head(.frameDrum, hz: 84, peak: 104, decay: (0.35, 0.6, 0.95), slap: 0.06, skin: 0.1, skinHz: 800,
+                 level: 0.5, seed: seed + 21),
+            bell(.slitDrum, hz: 156, partials: [410], decay: (0.2, 0.38, 0.6), level: 0.5, seed: seed + 22),
         ]
     }
 

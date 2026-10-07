@@ -120,9 +120,13 @@ public struct PlayChordsTool: DirectorTool {
             ? "\(spelled), \(playing.sentence.lowercased()), on the \(spec?.name ?? instrumentID): \(notes) notes a pass, the top line \(top.joined(separator: " ")), "
                 + String(format: "the voices moving %.1f semitones a change. It plays wherever the chords play.", movement)
             : "No song would take it, so it was not recorded."
-        if recorded, let spec, !pattern.suits(family: spec.family) {
+        if recorded, let spec, !pattern.suits(spec) {
             detail += " \(pattern.name) is short notes and the \(spec.name) swells into a note, so little of it will be heard: "
-                + "set_instrument to a piano, an organ or a guitar, or hold the chords."
+                + "set_instrument to a piano, an organ, a guitar or a section, or hold the chords."
+        }
+        if recorded, let spec, spec.isEnsemble, pattern == .arpeggio || pattern == .boomChick {
+            detail += " The \(spec.name) plays every chord struck as a chord for the section; the single notes of \(pattern.name.lowercased()) "
+                + "are played by every player in unison and octaves."
         }
         return Output(version: kept.id.description, part: kept.partID.description, chords: spelled, pattern: pattern.rawValue,
                       voicing: voicing.rawValue, seed: Int(clamping: playing.seed), instrument: spec?.name ?? instrumentID,

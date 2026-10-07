@@ -1,4 +1,5 @@
 import Foundation
+import Instrument
 import Performance
 
 // The genres, as the Director reads them: which there are, what one is, and which the song is in.
@@ -71,6 +72,9 @@ public struct ReadGenreTool: DirectorTool {
         public var feels: [String]
         public var bassHands: [String]
         public var sounds: GenreSounds
+        /// Each of the sounds' instruments as this library plays it: "grand-piano: Steinway Grand
+        /// (sfz-steinway-grand), recorded", or "organ: synthesized, no recording".
+        public var playedOn: [String]
         /// "Intro 16 | Groove 32 | …", when the profile gives a typical form.
         public var form: String?
         public var progressions: [String]
@@ -85,6 +89,7 @@ public struct ReadGenreTool: DirectorTool {
         enum CodingKeys: String, CodingKey {
             case id, name, family, summary, tempo, meters, ranges, feels, sounds, form, progressions, notes, players, records, pitfalls, evidence
             case bassHands = "bass_hands"
+            case playedOn = "played_on"
         }
     }
 
@@ -131,6 +136,7 @@ public struct ReadGenreTool: DirectorTool {
             tempo: profile.tempo?.span ?? "not stated", meters: profile.meters,
             ranges: profile.ranges.map { "\($0.feature): \($0.span)" + ($0.typical.map { ", typically \(Self.number($0))" } ?? "") },
             feels: profile.feels, bassHands: profile.bassHands, sounds: profile.sounds,
+            playedOn: Self.playedOn(profile.sounds.instruments),
             form: profile.form.map { $0.sections.map { "\($0.name) \($0.bars)" }.joined(separator: " | ") },
             progressions: profile.progressions.map { "\($0.roman)\($0.mode.map { " (\($0))" } ?? ""): \($0.text)" },
             notes: Dictionary(grouping: profile.notes, by: \.area).mapValues { $0.map(\.text) },
@@ -141,6 +147,18 @@ public struct ReadGenreTool: DirectorTool {
     }
 
     static func number(_ x: Double) -> String { x == x.rounded() ? String(Int(x)) : String(format: "%.3g", x) }
+
+    /// What each of a genre's instruments is played on in this library: the recording that plays
+    /// it when there is one, else the preset, said to be synthesized.
+    static func playedOn(_ ids: [String], among specs: [InstrumentVoiceSpec] = ImportedInstruments.all) -> [String] {
+        ids.map { id in
+            if let recording = RecordedSounds.recording(for: id, among: specs) {
+                return "\(id): \(recording.name) (\(recording.id)), recorded"
+            }
+            let synthesized = RecordedSounds.hasRecordedCounterpart(id) ? "synthesized, no recording in the library" : "synthesized"
+            return "\(id): \(InstrumentVoiceSpec.preset(id: id)?.name ?? id), \(synthesized)"
+        }
+    }
 }
 
 // MARK: - set_genre

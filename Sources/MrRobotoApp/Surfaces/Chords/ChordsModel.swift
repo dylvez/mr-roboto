@@ -1,4 +1,5 @@
 import Foundation
+import Instrument
 import MusicTheory
 import Performance
 import SongGraph
@@ -103,6 +104,8 @@ public final class ChordsModel {
     public var patternCaution: String? {
         let family = host.instrumentFamily(for: part)
         guard !pattern.suits(family: family) else { return nil }
+        // A section, or an instrument with its short notes recorded, plays them whatever its family.
+        if InstrumentVoiceSpec.preset(id: host.instrument(for: part))?.playsShortNotes == true { return nil }
         return "\(pattern.name) is short notes, and this instrument swells into a note: try it on a piano, an organ or a guitar, or hold the chords."
     }
     public private(set) var key: Key

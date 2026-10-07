@@ -496,8 +496,9 @@ public final class GridModel {
         return machine.name
     }
 
-    /// A voice as a person says it: "closed hat", not "closedHat".
+    /// A voice as a person says it: "closed hat", not "closedHat"; "güiro", with its accent.
     public static func name(of voice: DrumVoice) -> String {
+        if let spoken = spoken[voice.rawValue] { return spoken }
         var words = ""
         for character in voice.rawValue {
             if character.isUppercase, !words.isEmpty { words.append(" ") }
@@ -505,6 +506,13 @@ public final class GridModel {
         }
         return words
     }
+
+    /// The voices whose names are not their words run together.
+    static let spoken: [String: String] = [
+        "highAgogo": "high agogô", "lowAgogo": "low agogô", "guiro": "güiro", "guiroLong": "güiro, long",
+        "openTriangle": "triangle", "muteTriangle": "triangle, held", "cajon": "cajón", "cajonSlap": "cajón slap",
+        "darbukaTek": "darbuka tek",
+    ]
 
     /// Appends an empty row for a voice the grid does not have yet.
     public func addVoice(_ voice: DrumVoice) {

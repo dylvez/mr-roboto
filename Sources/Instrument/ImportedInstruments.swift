@@ -118,7 +118,30 @@ public enum ImportedInstruments {
             if let range = noteRange(of: kit.manifest) { ranges.withLock { $0[spec.id] = range } }
             found.append(spec)
         }
-        return found
+        return played(found)
+    }
+
+    /// `specs` as they are played: each held recording linked to its short one (`Articulations`),
+    /// and after them the sections they seat (`Ensembles`), all registered. A section whose
+    /// players are no longer all here is taken away.
+    static func played(_ specs: [InstrumentVoiceSpec]) -> [InstrumentVoiceSpec] {
+        let partners = Articulations.partners(among: specs)
+        let linked = specs.map { spec -> InstrumentVoiceSpec in
+            var spec = spec
+            spec.shortKit = partners[spec.id]?.sampledKit
+            register(spec)
+            return spec
+        }
+        let sections = Ensemble.available(among: linked)
+        for ensemble in Ensemble.all where !sections.contains(where: { $0.id == ensemble.id }) { unregister(id: ensemble.id) }
+        for section in sections {
+            register(section)
+            let reaches = (section.members ?? []).compactMap { id in linked.first { $0.id == id }.flatMap(range(of:)) }
+            if let low = reaches.map(\.lowerBound).min(), let high = reaches.map(\.upperBound).max() {
+                ranges.withLock { $0[section.id] = low...high }
+            }
+        }
+        return linked + sections
     }
 
     /// Beside a kit: the levelling it was given (`levelVersion`).
@@ -300,7 +323,8 @@ public enum ImportedInstruments {
     /// Takes an imported instrument out of the app: its folder, copies and all. The pack it came
     /// from is not touched.
     public static func remove(id: String) throws {
-        guard let spec = spec(id: id), let folder = spec.sampledKit else { return }
+        // A section is its players' recordings, and has no folder of its own to take away.
+        guard let spec = spec(id: id), !spec.isEnsemble, let folder = spec.sampledKit else { return }
         try FileManager.default.removeItem(at: URL(fileURLWithPath: folder, isDirectory: true))
         unregister(id: id)
     }

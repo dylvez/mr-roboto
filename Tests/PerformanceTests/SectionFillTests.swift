@@ -86,6 +86,8 @@ struct FeelVoicesTests {
         let kitVoices: Set<DrumVoice> = [
             .kick, .snare, .clap, .rim, .closedHat, .openHat, .ride, .crash, .lowTom, .midTom, .highTom, .cowbell,
             .shaker, .tambourine, .highConga, .lowConga, .highBongo, .lowBongo, .claves, .woodblock,
+            .highAgogo, .lowAgogo, .cabasa, .guiro, .guiroLong, .openTriangle, .muteTriangle, .vibraslap,
+            .cajon, .cajonSlap, .darbuka, .darbukaTek, .frameDrum, .slitDrum,
         ]
         for feel in FeelLibrary.standard.feels {
             for pattern in feel.groove.patterns {

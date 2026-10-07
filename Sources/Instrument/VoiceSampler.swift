@@ -65,6 +65,9 @@ public final class VoiceSampler: @unchecked Sendable {
         public var time: Double
         /// Seconds until the note-off, or nil for a one-shot.
         public var duration: Double?
+        /// The player of a section that plays it (`Zone.layer`), counted from the top. Set when a
+        /// section's kit deals a chord out (`KitEnsemble.dealt`); nil everywhere else.
+        public var layer: Int?
 
         /// A drum hit addressed by voice name, the form the groove engine produces.
         public init(_ voice: DrumVoice, velocity: Int, at time: Double, duration: Double? = nil) {
@@ -73,9 +76,10 @@ public final class VoiceSampler: @unchecked Sendable {
         }
 
         /// A hit addressed by MIDI note, the form a keyboard or a chopped pad map produces.
-        public init(note: Int, velocity: Int, at time: Double, duration: Double? = nil) {
+        public init(note: Int, velocity: Int, at time: Double, duration: Double? = nil, layer: Int? = nil) {
             self.voice = nil; self.note = note
             self.velocity = velocity; self.time = time; self.duration = duration
+            self.layer = layer
         }
     }
 
@@ -517,8 +521,15 @@ public final class VoiceSampler: @unchecked Sendable {
     public func enqueue(_ hits: [Hit]) {
         lock.lock()
         defer { lock.unlock() }
-        pending.append(contentsOf: hits)
+        pending.append(contentsOf: dealtLocked(hits))
         pending.sort { $0.time < $1.time }
+    }
+
+    /// `hits` as the kit plays them: a section's deals what is struck together out to its players
+    /// (`KitEnsemble.dealt`); any other kit plays them as they are. Called with the lock held.
+    private func dealtLocked(_ hits: [Hit]) -> [Hit] {
+        guard let ensemble = kit?.manifest.ensemble else { return hits }
+        return ensemble.dealt(hits)
     }
 
     // MARK: Playing
@@ -528,13 +539,14 @@ public final class VoiceSampler: @unchecked Sendable {
     /// Hits must be pushed in non-decreasing time order across calls: the core consumes its queue
     /// strictly FIFO, so an event queued for a later frame holds back everything behind it.
     ///
-    /// - Returns: a handle per hit, in the order given, for `stop(_:at:)`.
+    /// - Returns: a handle per hit, in the order given, for `stop(_:at:)`. A section plays a note on
+    ///   each of its players, and hands back a handle for each.
     @discardableResult
     public func play(_ hits: [Hit]) throws -> [VoiceHandle] {
         lock.lock()
         defer { lock.unlock() }
         guard engine != nil, kit != nil else { throw SamplerError.notPrepared }
-        let handles = try buildLocked(hits, throwingOnUnmapped: true)
+        let handles = try buildLocked(dealtLocked(hits), throwingOnUnmapped: true)
         drainLocked(upTo: nil)
         if queueFullEvents > 0 {
             let pending = queueFullEvents
@@ -691,10 +703,13 @@ public final class VoiceSampler: @unchecked Sendable {
         } else {
             return nil
         }
-        let counter = roundRobinCounters[note, default: 0]
-        guard let zone = kit.manifest.zone(note: note, velocity: hit.velocity, roundRobin: counter),
+        // Each player of a section keeps its own count, as each keeps its own recordings.
+        let counted = note + 128 * (hit.layer ?? 0)
+        let counter = roundRobinCounters[counted, default: 0]
+        guard let zone = kit.manifest.zone(note: note, velocity: hit.velocity, roundRobin: counter,
+                                           layer: hit.layer, length: hit.duration),
               let index = indexByZone[zone.id] else { return nil }
-        roundRobinCounters[note] = counter + 1
+        roundRobinCounters[counted] = counter + 1
         // Tuning is already baked into the zone's `pitchRatio`; this is the key transposition only,
         // which is 0 for a `.note` (drum) placement and `note - rootNote` for a `.range` one.
         let semitones = zone.key.transposition(forNote: note)

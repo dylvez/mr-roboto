@@ -480,8 +480,9 @@ public struct LibraryIndex: Sendable {
             let range = ImportedInstruments.range(of: spec)
             facts.range = range.map { "\(Pitch(midi: $0.lowerBound))–\(Pitch(midi: $0.upperBound))" }
             facts.rangeLow = range?.lowerBound
-            facts.pack = Self.sfz(in: spec.summary) ?? "Recorded"
-            facts.isImported = ImportedInstruments.spec(id: spec.id) != nil
+            // A section is made of the recordings in the library, not brought in: nothing to remove.
+            facts.pack = spec.isEnsemble ? "Recorded section" : Self.sfz(in: spec.summary) ?? "Recorded"
+            facts.isImported = !spec.isEnsemble && ImportedInstruments.spec(id: spec.id) != nil
         } else {
             facts.pack = "Built in"
         }

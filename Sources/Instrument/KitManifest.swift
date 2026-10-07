@@ -44,6 +44,9 @@ public struct KitManifest: Hashable, Codable, Sendable {
     /// or `.hybrid` and this stays `nil` until A3 fills it in. Present so the format version does not
     /// have to change when it lands.
     public var synthesis: SynthesizedVoiceSet?
+    /// The players of a section, when the kit is one (`Ensembles`): what a chord struck on it is
+    /// dealt out to. Nil for a kit that is one instrument.
+    public var ensemble: KitEnsemble?
 
     public init(
         formatVersion: Int = KitManifest.currentFormatVersion,
@@ -53,7 +56,8 @@ public struct KitManifest: Hashable, Codable, Sendable {
         zones: [Zone] = [],
         velocityCurve: VelocityCurve = .squared,
         voices: [String: Int] = [:],
-        synthesis: SynthesizedVoiceSet? = nil
+        synthesis: SynthesizedVoiceSet? = nil,
+        ensemble: KitEnsemble? = nil
     ) {
         self.formatVersion = formatVersion
         self.name = name
@@ -63,6 +67,7 @@ public struct KitManifest: Hashable, Codable, Sendable {
         self.velocityCurve = velocityCurve
         self.voices = voices
         self.synthesis = synthesis
+        self.ensemble = ensemble
     }
 
     // MARK: Voice map
@@ -81,7 +86,7 @@ public struct KitManifest: Hashable, Codable, Sendable {
     // MARK: Codable
 
     private enum CodingKeys: String, CodingKey {
-        case formatVersion, name, description, kind, zones, velocityCurve, voices, synthesis
+        case formatVersion, name, description, kind, zones, velocityCurve, voices, synthesis, ensemble
     }
 
     public init(from decoder: Decoder) throws {
@@ -94,6 +99,7 @@ public struct KitManifest: Hashable, Codable, Sendable {
         velocityCurve = try container.decodeIfPresent(VelocityCurve.self, forKey: .velocityCurve) ?? .squared
         voices = try container.decodeIfPresent([String: Int].self, forKey: .voices) ?? [:]
         synthesis = try container.decodeIfPresent(SynthesizedVoiceSet.self, forKey: .synthesis)
+        ensemble = try container.decodeIfPresent(KitEnsemble.self, forKey: .ensemble)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -106,6 +112,7 @@ public struct KitManifest: Hashable, Codable, Sendable {
         try container.encode(velocityCurve, forKey: .velocityCurve)
         if !voices.isEmpty { try container.encode(voices, forKey: .voices) }
         try container.encodeIfPresent(synthesis, forKey: .synthesis)
+        try container.encodeIfPresent(ensemble, forKey: .ensemble)
     }
 }
 
@@ -255,6 +262,13 @@ public struct Zone: Hashable, Codable, Sendable, Identifiable {
     public var tuneCents: Float
     public var envelope: Envelope
     public var loop: Loop?
+    /// Which player of a section this zone is (`KitManifest.ensemble`), counted from the top.
+    /// Nil in a kit that is one instrument.
+    public var layer: Int?
+    /// The longest note, in seconds, this zone is played for: a short recording — a staccato, a
+    /// spiccato — kept for the notes that are let go quickly, beside the held recording that plays
+    /// the rest. Nil plays a note of any length.
+    public var longest: Double?
 
     public init(
         id: ZoneID,
@@ -272,7 +286,9 @@ public struct Zone: Hashable, Codable, Sendable, Identifiable {
         pan: Float = 0,
         tuneCents: Float = 0,
         envelope: Envelope = .default,
-        loop: Loop? = nil
+        loop: Loop? = nil,
+        layer: Int? = nil,
+        longest: Double? = nil
     ) {
         self.id = id
         self.sample = sample
@@ -290,6 +306,8 @@ public struct Zone: Hashable, Codable, Sendable, Identifiable {
         self.tuneCents = tuneCents
         self.envelope = envelope
         self.loop = loop
+        self.layer = layer
+        self.longest = longest
     }
 
     /// A drum zone: one key, unity pitch.
@@ -324,7 +342,7 @@ public struct Zone: Hashable, Codable, Sendable, Identifiable {
     private enum CodingKeys: String, CodingKey {
         case id, sample, note, lowNote, highNote, rootNote, lovel, hivel
         case seqPosition, seqLength, group, offBy, offMode
-        case sampleStart, sampleEnd, gainDB, pan, tuneCents, envelope, loop
+        case sampleStart, sampleEnd, gainDB, pan, tuneCents, envelope, loop, layer, longest
     }
 
     public init(from decoder: Decoder) throws {
@@ -354,6 +372,8 @@ public struct Zone: Hashable, Codable, Sendable, Identifiable {
         tuneCents = try c.decodeIfPresent(Float.self, forKey: .tuneCents) ?? 0
         envelope = try c.decodeIfPresent(Envelope.self, forKey: .envelope) ?? .default
         loop = try c.decodeIfPresent(Loop.self, forKey: .loop)
+        layer = try c.decodeIfPresent(Int.self, forKey: .layer)
+        longest = try c.decodeIfPresent(Double.self, forKey: .longest)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -382,6 +402,8 @@ public struct Zone: Hashable, Codable, Sendable, Identifiable {
         try c.encode(tuneCents, forKey: .tuneCents)
         try c.encode(envelope, forKey: .envelope)
         try c.encodeIfPresent(loop, forKey: .loop)
+        try c.encodeIfPresent(layer, forKey: .layer)
+        try c.encodeIfPresent(longest, forKey: .longest)
     }
 }
 

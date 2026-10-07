@@ -334,7 +334,7 @@ struct GridSurfaceTests {
     @Test("every shipped feel loads into the grid and comes back out identical")
     func everyFeelRoundTrips() {
         let library = FeelLibrary.standard
-        #expect(library.count == 51, "the library ships 51 feels with provenance")
+        #expect(library.count == 54, "the library ships 54 feels with provenance")
         #expect(library.validate().isEmpty)
 
         let model = GridModel(host: StubGridHost())

@@ -22,6 +22,9 @@ DROP_FEELS = {"jazz": ["Bossa Nova"]}
 DROP_RANGES = {"blues": ["harmony.changes.per.bar"]}
 EXTRA_FEELS = {
     "salsa": ["Cha-Cha-Chá", "Rumba Clave", "Afro-Cuban 6/8"],
+    # Written once the kits had a güiro and a cajón to play them on.
+    "cumbia": ["Cumbia"],
+    "folk": ["Cajón Groove"],
 }
 def judged(f): return (f.startswith(STYLE) and not f.startswith("form.album.")) or f in MIX
 for path in sorted(glob.glob(SRC + "/*.json")):

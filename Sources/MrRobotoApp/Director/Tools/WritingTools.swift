@@ -249,6 +249,7 @@ public struct WriteMelodyTool: DirectorTool {
                     + "that is this tune's next version. With no parent it would be a second tune in the song."
             }
             detail += " Open the Piano roll on \(version.id.description) to see it and play it."
+            if let preset { detail += SetInstrumentTool.recordingNote(for: preset) }
         } else {
             detail += "."
         }
@@ -754,8 +755,17 @@ public struct SetInstrumentTool: DirectorTool {
         var detail = changed ? "\(target == "the song" ? "The song" : target) plays on the \(spec.name) now"
                              : "\(target == "the song" ? "The song" : target) was already on the \(spec.name)"
         detail += plays.isEmpty ? "; no chords or melody are written yet, so the next one will." : ": " + plays.joined(separator: ", ") + "."
+        detail += Self.recordingNote(for: spec)
         return Output(instrument: spec.id, name: spec.name, family: spec.family, target: target, plays: plays,
                       changed: changed, detail: detail)
+    }
+
+    /// What a synthesized preset with a recording of its instrument in the library says about it:
+    /// that the recording is there, and is what an acoustic part should be on. Empty otherwise.
+    static func recordingNote(for spec: InstrumentVoiceSpec) -> String {
+        guard spec.engine != .sampled, let recording = RecordedSounds.recording(for: spec.id) else { return "" }
+        return " The \(spec.name) is synthesized, and the library has a recording that plays it: \(recording.name) "
+            + "(\(recording.id)). Put the part on that, unless a synthesized sound is the point."
     }
 
     /// The newest version of every chord and melody part, in the order the parts began.
