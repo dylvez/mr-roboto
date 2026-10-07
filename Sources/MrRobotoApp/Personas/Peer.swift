@@ -530,8 +530,9 @@ public struct FormObservation: Hashable, Sendable {
         self.seconds = seconds
     }
 
-    /// Names a listener calls the hook.
-    static let hookNames = ["hook", "chorus", "refrain", "drop"]
+    /// Names a listener calls the hook. A jazz tune's head is the part sung back, its solos what
+    /// comes between.
+    static let hookNames = ["hook", "chorus", "refrain", "drop", "head"]
 
     public static func of(_ song: Song) -> FormObservation {
         let secondsPerBar = Double(song.timeSignature.beatsPerBar) * 60 / max(1, song.tempo)

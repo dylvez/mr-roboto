@@ -259,10 +259,11 @@ struct EnsembleTests {
 
     @Test("A built-in sound is played on the first of its recordings the library has")
     func recordedSounds() {
-        let library = ["Kawai Grand", "Steinway Grand", "Violin Section", "Rhodes"].map { Self.recorded($0) }
+        let library = ["Kawai Grand", "Steinway Grand", "Violin Section", "Rhodes", "Nylon Guitar"].map { Self.recorded($0) }
         #expect(RecordedSounds.recording(for: "grand-piano", among: library)?.name == "Steinway Grand")
         #expect(RecordedSounds.recording(for: "strings", among: library)?.name == "Violin Section")
         #expect(RecordedSounds.recording(for: "rhodes", among: library)?.name == "Rhodes")
+        #expect(RecordedSounds.recording(for: "nylon-guitar", among: library)?.name == "Nylon Guitar")
         #expect(RecordedSounds.recording(for: "organ", among: library) == nil)
         #expect(RecordedSounds.recording(for: "pad", among: library) == nil)
         #expect(RecordedSounds.hasRecordedCounterpart("trumpet"))

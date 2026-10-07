@@ -111,9 +111,10 @@ public enum Primer {
                         + "a song's full record — preview eight bars, then make the song: it lands in the library with its stems in place.")
         case .mixer:
             return ("Mixer",
-                    "A strip per part: fader, pan, send, mute and solo, three bands of EQ and a compressor, with meters while "
-                        + "the song plays. \"Level in…\" sets a strip's level for one section alone. Every move you let go of is a "
-                        + "mix version — step back from Parts. Pick two strips "
+                    "A strip per part: fader, pan, reverb and echo sends, mute and solo, three bands of EQ, a compressor and an "
+                        + "insert, an amp or a rotating speaker, with meters while the song plays. \"Level in…\" sets a strip's level, "
+                        + "its speaker or its echo for one section alone; the room and the echo's time are on the Returns row. Every "
+                        + "move you let go of is a mix version — step back from Parts. Pick two strips "
                         + "and the overlay says where they share energy, band by band, in dB. The master is on its own tab.")
         case .master:
             return ("Master",

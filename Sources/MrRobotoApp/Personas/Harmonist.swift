@@ -565,7 +565,7 @@ public struct Harmonist: Persona {
             holds: diatonic >= Harmonist.diatonicFloor,
             says: borrowed.isEmpty
                 ? "Every chord belongs to \(observation.key.name)."
-                : "\(borrowed.map(\.description).joined(separator: ", ")) \(borrowed.count == 1 ? "is" : "are") outside \(observation.key.name)"
+                : "\(borrowed.map { $0.symbol(preferring: observation.key.spellingPreference) }.joined(separator: ", ")) \(borrowed.count == 1 ? "is" : "are") outside \(observation.key.name)"
                     + (diatonic >= Harmonist.diatonicFloor ? " — borrowed, and it holds." : ". That is a modulation nobody declared.")))
 
         let cadence = observation.cadenceRatio

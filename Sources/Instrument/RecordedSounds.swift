@@ -34,6 +34,7 @@ public enum RecordedSounds {
         "tubular-bells": ["Tubular Bells"],
         "clean-electric": ["Electric Guitar", "Gretsch Guitar", "Hofner Guitar", "Archtop Guitar, Pickup"],
         "muted-guitar": ["Gretsch Guitar Staccato", "Hofner Guitar Staccato"],
+        "nylon-guitar": ["Nylon Guitar"],
         "harp": ["Harp", "Concert Harp", "Folk Harp"],
         "koto": ["Dan Tranh"],
         "banjo": ["Ganjo"],

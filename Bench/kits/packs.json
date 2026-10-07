@@ -424,5 +424,19 @@
   "from": "Packs/jlearman.SteelDrum/jSteelDrum-noxfade.sfz",
   "credit": "Jeff Learman, jSteelDrum",
   "licence": "public domain"
+ },
+ {
+  "name": "Nylon Guitar",
+  "family": "guitar",
+  "from": "Packs/FreePats.SpanishClassicalGuitar/SpanishClassicalGuitar-20190618.sfz",
+  "credit": "FreePats, Spanish Classical Guitar",
+  "licence": "CC0"
+ },
+ {
+  "name": "Accordion",
+  "family": "organ",
+  "from": "Packs/FreePats.ButtonAccordionHN/PRESET Button Accordion HN tuned.sfz",
+  "credit": "FreePats, Button Accordion HN (Jeff Stauffer, michael02022)",
+  "licence": "CC0"
  }
 ]

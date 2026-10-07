@@ -62,6 +62,11 @@ struct PersonaHarmonistTests {
         #expect(one.diatonicRatio >= Harmonist.diatonicFloor)
         let many = HarmonyObservation.of(progression([chord(.d), chord(.f), chord(.a, .major, .flat), chord(.e, .major, .flat)]), label: "gone")
         #expect(many.diatonicRatio < Harmonist.diatonicFloor, "\(many.diatonicRatio)")
+        // Named as the key spells them: B flat seven in F, not A sharp seven.
+        let f = Key(tonic: NoteName(.f))
+        let blues = progression([chord(.f, .dominantSeventh), chord(.b, .dominantSeventh, .flat)], key: f)
+        let says = Harmonist().read(HarmonyObservation.of(blues, label: "blues")).first { $0.rule == "harmonist.stays-in-key" }?.says ?? ""
+        #expect(says.contains("Bb7") && !says.contains("A#"), "\(says)")
     }
 
     @Test("the bass is judged at the change: a chord tone agrees, a second does not, and an inversion is fine")

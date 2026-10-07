@@ -98,6 +98,10 @@ struct PersonaPeerTests {
         #expect(flat.first { $0.rule == "peer.hook-inside-thirty" }?.says.contains("Nothing is named as a hook") == true)
         #expect(flat.first { $0.rule == "peer.repetition" }?.holds == true, "2 of 4 repeat, under the ceiling")
         #expect(flat.first { $0.rule == "peer.something-lifts" }?.holds == false)
+
+        // A jazz tune's head is its hook.
+        song.sections[1].name = "Head"
+        #expect(FormObservation.of(song).hookArrivalSeconds != nil)
     }
 
     @Test("it refuses a late hook in seconds and a form that never turns, and defers the sound")
