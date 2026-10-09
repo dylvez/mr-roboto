@@ -43,14 +43,26 @@ public final class InboxWatcher {
         self.take = take
     }
 
-    /// The inbox in iCloud Drive when the Mac has one, else in ~/Music; and ~/Downloads for
-    /// captures AirDropped from the phone.
-    public static var defaultFolders: [Folder] {
+    /// The Mr. Roboto folder: in iCloud Drive when the Mac has one, else in ~/Music. The inbox is
+    /// in it, and so are the guides (`PhoneGuides`): it is the one folder the phone is pointed at.
+    public nonisolated static var robotoFolder: URL {
         let home = FileManager.default.homeDirectoryForCurrentUser
         let cloud = home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs", isDirectory: true)
         let base = FileManager.default.fileExists(atPath: cloud.path) ? cloud : home.appendingPathComponent("Music", isDirectory: true)
-        let inbox = base.appendingPathComponent("Mr. Roboto/Inbox", isDirectory: true)
+        return base.appendingPathComponent("Mr. Roboto", isDirectory: true)
+    }
+
+    /// `Mr. Roboto/Inbox`: what lands here is taken.
+    public nonisolated static var inboxFolder: URL { robotoFolder.appendingPathComponent("Inbox", isDirectory: true) }
+    /// `Mr. Roboto/Guides`: what the Mac rendered for the phone to sing to.
+    public nonisolated static var guidesFolder: URL { robotoFolder.appendingPathComponent("Guides", isDirectory: true) }
+
+    /// The inbox in iCloud Drive when the Mac has one, else in ~/Music; and ~/Downloads for
+    /// captures AirDropped from the phone.
+    public static var defaultFolders: [Folder] {
+        let inbox = inboxFolder
         try? FileManager.default.createDirectory(at: inbox, withIntermediateDirectories: true)
+        let home = FileManager.default.homeDirectoryForCurrentUser
         return [Folder(url: inbox), Folder(url: home.appendingPathComponent("Downloads", isDirectory: true), prefix: capturePrefix)]
     }
 
@@ -108,19 +120,24 @@ public final class InboxWatcher {
     }
 }
 
-/// What a capture's file name says: `roboto-capture--<song>--<section>--<pass>--<stamp>.m4a`.
+/// What a capture's file name says: `roboto-capture--<song>--<section>--<pass>--<stamp>.m4a`,
+/// and `--<lead>` after the stamp when the phone played a guide while it recorded.
 /// Every field but the stamp is optional; a plain file name says nothing and becomes an idea.
 public struct CaptureName: Hashable, Sendable {
     public var song: String?
     public var section: String?
     public var pass: Int?
     public var stamp: String?
+    /// Seconds at the head of the file before the section's first beat: the guide's count-in,
+    /// plus the latency the phone measured. The inbox trims them off (`AppState.trimmed`).
+    public var lead: Double?
 
-    public init(song: String? = nil, section: String? = nil, pass: Int? = nil, stamp: String? = nil) {
+    public init(song: String? = nil, section: String? = nil, pass: Int? = nil, stamp: String? = nil, lead: Double? = nil) {
         self.song = song
         self.section = section
         self.pass = pass
         self.stamp = stamp
+        self.lead = lead
     }
 
     public init(fileName: String) {
@@ -131,6 +148,7 @@ public struct CaptureName: Hashable, Sendable {
         if fields.count > 1, !fields[1].isEmpty { section = fields[1] }
         if fields.count > 2, let n = Int(fields[2]) { pass = n }
         if fields.count > 3 { stamp = fields[3] }
+        if fields.count > 4, let seconds = Double(fields[4]), seconds > 0 { lead = seconds }
     }
 
     /// The file name for a capture, as the phone writes it.
@@ -138,6 +156,8 @@ public struct CaptureName: Hashable, Sendable {
         func clean(_ s: String?) -> String {
             (s ?? "").replacingOccurrences(of: "--", with: "-").replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: " ", with: "_")
         }
-        return "\(InboxWatcher.capturePrefix)--\(clean(song))--\(clean(section))--\(pass.map(String.init) ?? "")--\(stamp ?? "").\(ext)"
+        let head = "\(InboxWatcher.capturePrefix)--\(clean(song))--\(clean(section))--\(pass.map(String.init) ?? "")--\(stamp ?? "")"
+        let tail = lead.map { String(format: "--%.3f", $0) } ?? ""
+        return "\(head)\(tail).\(ext)"
     }
 }

@@ -1,3 +1,4 @@
+import AVFAudio
 import AudioEngine
 import Foundation
 import SongGraph
@@ -27,20 +28,71 @@ extension AppState {
 
         // A take, when the name says which song and the song is here.
         if let title = name.song, let match = library.songs.first(where: { $0.title.caseInsensitiveCompare(title) == .orderedSame }) {
-            if let song, song.id == match.id {
-                return takeIntoOpenSong(url, info: info, name: name, store: store)
+            // Sung to a guide, the head of the file is the count-in the phone played: off it
+            // comes, so the first frame kept is the section's first beat.
+            var source = url
+            var info = info
+            if let lead = name.lead, lead > 0 {
+                do {
+                    source = try Self.trimmed(url, lead: lead)
+                    info = try AudioFileInfo.read(source)
+                } catch {
+                    return .failed("\(url.lastPathComponent) could not be trimmed of its \(String(format: "%.2f", lead)) s lead: \(error)")
+                }
             }
-            return takeIntoLibrarySong(url, info: info, name: name, songID: match.id, store: store)
+            defer { if source != url { try? FileManager.default.removeItem(at: source) } }
+            if let song, song.id == match.id {
+                return takeIntoOpenSong(url, source: source, info: info, name: name, store: store)
+            }
+            return takeIntoLibrarySong(url, source: source, info: info, name: name, songID: match.id, store: store)
         }
         return ideaFromInbox(url, info: info, name: name, store: store)
     }
 
-    private func takeIntoOpenSong(_ url: URL, info: AudioFileInfo, name: CaptureName, store: LibraryStore) -> InboxOutcome {
+    /// The capture less its lead: a WAV among the temporary files, from `lead` seconds into the
+    /// file to its end, which the caller copies into the package and then lets go. A lead as
+    /// long as the file is a take with nothing in it, and is refused.
+    nonisolated static func trimmed(_ url: URL, lead: Double) throws -> URL {
+        let file = try AVAudioFile(forReading: url)
+        let format = file.processingFormat
+        let skip = min(file.length, AVAudioFramePosition((lead * format.sampleRate).rounded()))
+        let left = AVAudioFrameCount(file.length - skip)
+        guard left > 0, let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: left) else {
+            throw InboxFailure.leadLongerThanTake(seconds: lead)
+        }
+        file.framePosition = skip
+        try file.read(into: buffer, frameCount: left)
+        let frames = Int(buffer.frameLength)
+        let planar = (0..<Int(format.channelCount)).map { channel in
+            Array(UnsafeBufferPointer(start: buffer.floatChannelData![channel], count: frames))
+        }
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("MrRoboto/inbox", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let out = directory.appendingPathComponent(url.deletingPathExtension().lastPathComponent).appendingPathExtension("wav")
+        try? FileManager.default.removeItem(at: out)
+        try BoothAdapter.write(planar, sampleRate: format.sampleRate, to: out)
+        return out
+    }
+
+    public enum InboxFailure: Error, CustomStringConvertible {
+        case leadLongerThanTake(seconds: Double)
+        public var description: String {
+            switch self {
+            case .leadLongerThanTake(let seconds):
+                return "the lead of \(String(format: "%.2f", seconds)) s is as long as the take, so nothing was sung after the count-in"
+            }
+        }
+    }
+
+    /// - Parameters:
+    ///   - url: the file in the inbox, whose name the rail reads out.
+    ///   - source: the audio that goes into the package: the file itself, or it trimmed of its lead.
+    private func takeIntoOpenSong(_ url: URL, source: URL, info: AudioFileInfo, name: CaptureName, store: LibraryStore) -> InboxOutcome {
         guard let song else { return .failed("No song is open.") }
         let media: MediaRef
         do {
             if (try? store.songStore(for: song.id)) == nil { save() }
-            media = try store.songStore(for: song.id).addMedia(copying: url)
+            media = try store.songStore(for: song.id).addMedia(copying: source)
         } catch { return .failed("Could not copy the capture into \(song.title): \(error)") }
         let version = Self.takeVersion(media: media, info: info, name: name, song: song, clock: clock)
         guard record(version) else { return .failed("The song would not take the capture.") }
@@ -49,11 +101,11 @@ extension AppState {
         return .take(version.id)
     }
 
-    private func takeIntoLibrarySong(_ url: URL, info: AudioFileInfo, name: CaptureName, songID: SongID, store: LibraryStore) -> InboxOutcome {
+    private func takeIntoLibrarySong(_ url: URL, source: URL, info: AudioFileInfo, name: CaptureName, songID: SongID, store: LibraryStore) -> InboxOutcome {
         do {
             let package = try store.songStore(for: songID)
             var song = try package.load()
-            let media = try package.addMedia(copying: url)
+            let media = try package.addMedia(copying: source)
             let version = Self.takeVersion(media: media, info: info, name: name, song: song,
                                            clock: TransportClock(tempo: song.tempo, timeSignature: song.timeSignature, sampleRate: info.sampleRate))
             try song.append(version)
@@ -81,7 +133,8 @@ extension AppState {
     }
 
     /// A take placed at its section's first bar: the phone had no transport, so the bar is the
-    /// section's and the alignment is the section's start.
+    /// section's and the alignment is the section's start. Sung to a guide, the file was trimmed
+    /// of the count-in first, so its first frame is that bar's first beat.
     static func takeVersion(media: MediaRef, info: AudioFileInfo, name: CaptureName, song: Song, clock: TransportClock) -> PartVersion {
         var section: Section?
         var startBar = 0
@@ -100,7 +153,8 @@ extension AppState {
         let audio = Audio(media: media, role: .take, sampleRate: info.sampleRate, channelCount: info.channelCount,
                           duration: info.duration, alignmentOffset: clock.seconds(forBar: startBar), take: take)
         let partID = existing.last?.partID ?? PartID()
+        let how = name.lead != nil ? "captured on the phone, sung to the guide" : "captured on the phone"
         return PartVersion(partID: partID, kind: .audio(audio), author: .user, operation: Operation.recorded,
-                           note: "Take \(pass)\(section.map { ", \($0.name)" } ?? ""), captured on the phone")
+                           note: "Take \(pass)\(section.map { ", \($0.name)" } ?? ""), \(how)")
     }
 }

@@ -77,11 +77,55 @@ struct InboxTests {
         #expect(file == "roboto-capture--Soft_Machine--Verse_2--3--20260919-090000.m4a")
         let back = CaptureName(fileName: file)
         #expect(back.song == "Soft Machine" && back.section == "Verse 2" && back.pass == 3 && back.stamp == "20260919-090000")
+        #expect(back.lead == nil, "a name from before the guides has no lead")
         #expect(CaptureName(fileName: "voice memo 12.m4a") == CaptureName())
+        // Sung to the guide, the name carries the lead after the stamp, to the millisecond.
+        let guided = CaptureName(song: "Soft Machine", section: "Hook", pass: 1, stamp: "20261009-080000", lead: 2.6087)
+        #expect(guided.fileName() == "roboto-capture--Soft_Machine--Hook--1--20261009-080000--2.609.m4a")
+        #expect(CaptureName(fileName: guided.fileName()).lead == 2.609)
+        #expect(CaptureName(fileName: "roboto-capture--A--B--1--s--0.000.m4a").lead == nil, "no lead is no lead")
         #expect(InboxWatcher.isCandidate(URL(fileURLWithPath: "/x/roboto-capture--a--b--1--s.m4a"), prefix: "roboto-capture"))
         #expect(!InboxWatcher.isCandidate(URL(fileURLWithPath: "/x/holiday.m4a"), prefix: "roboto-capture"))
         #expect(!InboxWatcher.isCandidate(URL(fileURLWithPath: "/x/.hidden.wav"), prefix: nil))
         #expect(!InboxWatcher.isCandidate(URL(fileURLWithPath: "/x/notes.txt"), prefix: nil))
+    }
+
+    @Test("a take sung to the guide comes in without its lead: the count-in is trimmed, and the take starts on the section's first beat")
+    func guidedTake() throws {
+        let directory = LibraryFixture.directory("inbox-guided")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = LibraryStore(directoryURL: directory)
+        let app = AppState(library: Library(), song: nil, store: store, status: .empty(directory), transportHost: StubTransportHost())
+        var song = Song(title: "Arrival", artist: "Vessel", key: Key(tonic: NoteName(.d)), tempo: 120)
+        song.sections = [Section(name: "Verse", stitch: [], lengthInBars: 4), Section(name: "Hook", stitch: [], lengthInBars: 2)]
+        app.open(song)
+        app.save()
+        // Three seconds as the phone writes them — AAC — of which the first one is the count-in:
+        // silence, then a tone from the first beat on.
+        let rate = 48_000.0
+        let lane = (0..<Int(3 * rate)).map { i -> Float in
+            i < Int(rate) ? 0 : Float(0.3 * sin(2 * .pi * 220 * Double(i) / rate))
+        }
+        let file = directory.appendingPathComponent(CaptureName(song: "Arrival", section: "Hook", stamp: "20261009-080000", lead: 1.0).fileName())
+        try SongPreviews.writeAAC([lane], sampleRate: rate, to: file)
+        guard case .take = app.importFromInbox(file) else { Issue.record("not a take"); return }
+        let takes = Guidance.takes(in: app.song!)
+        let audio = try #require(Guidance.audio(of: takes.last!))
+        #expect(abs(audio.duration - 2) < 0.05, "two seconds are left of three: \(audio.duration)")
+        #expect(audio.alignmentOffset == 8, "and they sit at the hook's first bar, bar 4 of 120 bpm")
+        #expect(takes.last?.note?.contains("sung to the guide") == true)
+        // What was kept is the sung part: loud from its first frame, no silence in front.
+        let url = try store.mediaURL(for: audio.media, song: song.id)
+        let kept = try BoothAdapter.planar(url)
+        let head = kept.planar[0].prefix(Int(0.05 * kept.sampleRate))
+        #expect(head.contains { abs($0) > 0.2 }, "the first 50 ms are the tone, not the count-in's silence")
+        #expect(app.log.contains { $0.text.contains("came in as Take 1") })
+        // A lead as long as the take is refused, and says so.
+        let empty = directory.appendingPathComponent(CaptureName(song: "Arrival", section: "Hook", stamp: "20261009-080100", lead: 9).fileName())
+        try SongPreviews.writeAAC([lane], sampleRate: rate, to: empty)
+        guard case .failed(let why) = app.importFromInbox(empty) else { Issue.record("an empty take was taken"); return }
+        #expect(why.contains("nothing was sung after the count-in"), "\(why)")
+        #expect(Guidance.takes(in: app.song!).count == 1)
     }
 
     @Test("a song in the library that is not open takes the capture into its package")

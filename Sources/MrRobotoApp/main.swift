@@ -125,6 +125,8 @@ struct FrameCommands: Commands {
                 Button("Stems…") { MrRobotoApp.export(app, what: "Exporting the stems…") { try await Export.stems(app, to: $0).first } }
                 Button("MIDI…") { MrRobotoApp.export(app, what: "Exporting MIDI…") { try Export.midi(app, to: $0) } }
                 Button("Lyrics…") { MrRobotoApp.export(app, what: "Exporting the lyrics…") { try Export.lyrics(app, to: $0) } }
+                Divider()
+                Button("Guides for the Phone") { MrRobotoApp.exportGuides(app) }
             }
             .disabled(app.song == nil)
             Button("Import Instrument…") {
@@ -389,6 +391,27 @@ extension MrRobotoApp {
                 if let found = url.flatMap({ $0 }) { NSWorkspace.shared.activateFileViewerSelecting([found]) }
             } catch {
                 app.note(.session, "The export failed", detail: "\(error)")
+            }
+        }
+    }
+}
+
+extension MrRobotoApp {
+    /// File ▸ Export ▸ Guides for the Phone: every section of the open song with a count-in in
+    /// front, into the Mr. Roboto folder in iCloud Drive, where Roboto Capture reads them. No
+    /// dialog: the folder is the one the phone is pointed at, and Finder shows it after.
+    @MainActor
+    static func exportGuides(_ app: AppState) {
+        guard app.busy == nil else {
+            app.note(.session, "Still \(app.busy!.lowercased())", detail: "Wait for it to finish before rendering the guides.")
+            return
+        }
+        Task { @MainActor in
+            do {
+                let result = try await app.whileBusy("Rendering the guides for the phone…") { try await PhoneGuides.export(app) }
+                if let result { NSWorkspace.shared.activateFileViewerSelecting([result.folder]) }
+            } catch {
+                app.note(.session, "The guides could not be rendered", detail: "\(error)")
             }
         }
     }
