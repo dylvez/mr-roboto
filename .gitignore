@@ -16,3 +16,5 @@ Art/contact/
 Art/picked/
 __pycache__/
 Art/out/
+# Scratch harnesses: a ZZ test file is a session's rig for one song or one check, kept on disk, out of the history.
+Tests/AppTests/ZZ*.swift
