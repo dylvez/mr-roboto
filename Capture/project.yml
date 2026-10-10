@@ -1,5 +1,5 @@
 # Roboto Capture — the phone half of M5. `make capture` generates the project with xcodegen and
-# builds it for the simulator; the device build and its signing are yours.
+# builds it for the simulator; in Xcode, Run installs it on the phone with the team below.
 name: RobotoCapture
 options:
   bundleIdPrefix: com.mrroboto
@@ -27,4 +27,7 @@ targets:
         SWIFT_VERSION: "6.0"
         TARGETED_DEVICE_FAMILY: "1"
         CODE_SIGN_STYLE: Automatic
-        DEVELOPMENT_TEAM: ""
+        DEVELOPMENT_TEAM: 79CDQ9CPN8
+        # Xcode's recommended settings for a new project, kept here so it stops asking on each regeneration.
+        ENABLE_USER_SCRIPT_SANDBOXING: YES
+        STRING_CATALOG_GENERATE_SYMBOLS: YES

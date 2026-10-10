@@ -13,8 +13,13 @@ pieces). Taken files move to `Done/` beside the inbox.
 
 - a song the library holds + a section → a take on that song, at the section's first bar, pass as
   given or the next; on the open song it lands live, on another song it is written into the package.
-- a song the library does not hold, or no name at all → an idea in the library, with the file name
-  in its note.
+- a song the library does not hold, or no name at all → an idea in the library, titled for what the
+  phone was told it was for ("Beat from the phone"), with the file name in its note. Its audio is
+  also brought into the crate as a record and read there — tempo, key, bars — so `read_library`
+  lists the idea with its seconds, its reading and `read_as`, and the band can start a song at its
+  tempo, adopt it, and write a groove to it, or chop the record for a beat out of its own sounds.
+  An iCloud placeholder (`.name.icloud`) in the inbox is asked for, so a Mac that optimises its
+  storage still takes what the phone sends.
 - a lead → seconds at the head of the file before the section's first beat: the guide's count-in,
   plus the latency the phone measured. The inbox trims them off (`AppState.trimmed`) before the take
   goes in, so its first frame is the section's first beat. A lead as long as the file is refused.

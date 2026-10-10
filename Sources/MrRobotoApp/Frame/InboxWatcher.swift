@@ -87,6 +87,12 @@ public final class InboxWatcher {
     public func scan() {
         for folder in folders {
             let files = (try? FileManager.default.contentsOfDirectory(at: folder.url, includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey])) ?? []
+            // iCloud leaves `.name.icloud` where a file it has not brought down yet will be — a Mac
+            // set to optimise its storage keeps what the phone sends in the cloud. Ask for it, and
+            // a later scan finds the file itself.
+            for url in files where Self.isPlaceholder(url) {
+                try? FileManager.default.startDownloadingUbiquitousItem(at: Self.fileBehind(placeholder: url))
+            }
             for url in files where Self.isCandidate(url, prefix: folder.prefix) {
                 let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
                 guard size > 0 else { continue }
@@ -98,6 +104,17 @@ public final class InboxWatcher {
                 }
             }
         }
+    }
+
+    nonisolated static func isPlaceholder(_ url: URL) -> Bool {
+        let name = url.lastPathComponent
+        return name.hasPrefix(".") && name.hasSuffix(".icloud") && name.count > 8
+    }
+
+    /// `.song.m4a.icloud` stands for `song.m4a` beside it.
+    nonisolated static func fileBehind(placeholder url: URL) -> URL {
+        let name = String(url.lastPathComponent.dropFirst().dropLast(".icloud".count))
+        return url.deletingLastPathComponent().appendingPathComponent(name)
     }
 
     nonisolated static func isCandidate(_ url: URL, prefix: String?) -> Bool {

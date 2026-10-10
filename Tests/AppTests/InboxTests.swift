@@ -18,7 +18,7 @@ struct InboxTests {
     }
 
     @Test("a plain file is an idea; a file named for the open song's verse is a take on it, pass by pass")
-    func ideasAndTakes() throws {
+    func ideasAndTakes() async throws {
         let directory = LibraryFixture.directory("inbox")
         defer { try? FileManager.default.removeItem(at: directory) }
         let inbox = directory.appendingPathComponent("Inbox", isDirectory: true)
@@ -68,6 +68,22 @@ struct InboxTests {
         watcher.scan(); watcher.scan()
         #expect(app.library.ideas.count == 2 && app.library.ideas[1].note?.contains("does not hold") == true)
         #expect(app.log.contains { $0.text.contains("came in as Take 1") })
+
+        // An idea is named for what the phone was told it was for, not "Record"; and it is read in
+        // the crate under the same audio, where the band finds its tempo and can chop it.
+        // Longer than the memo: the same audio would be one record in the crate, not two.
+        try wav(seconds: 1.5, at: inbox.appendingPathComponent(CaptureName(section: "Beat", stamp: "20261010-133529").fileName(extension: "wav")))
+        watcher.scan(); watcher.scan()
+        #expect(app.library.ideas.count == 3)
+        #expect(PartLabel.title(of: app.library.ideas[0]) == "Idea from the phone", "a memo with no name")
+        #expect(PartLabel.title(of: app.library.ideas[2]) == "Beat from the phone")
+        await app.crate.waitUntilIdle()
+        let beat = try #require(Guidance.audio(of: app.library.ideas[2]))
+        let read = try #require(app.library.record(forMedia: beat.media), "the crate holds the same audio as a record")
+        #expect(read.title == "Beat from the phone")
+        let listed = try await ReadLibraryTool(workspace: AppStateWorkspace(app)).run(.init(shelf: "ideas"))
+        let row = try #require(listed.ideas.first { $0.title == "Beat from the phone" })
+        #expect(row.seconds == 1.5 && row.readAs == read.id.description, "\(row)")
     }
 
     @Test("the capture name round-trips, and a plain name says nothing")
@@ -88,6 +104,11 @@ struct InboxTests {
         #expect(!InboxWatcher.isCandidate(URL(fileURLWithPath: "/x/holiday.m4a"), prefix: "roboto-capture"))
         #expect(!InboxWatcher.isCandidate(URL(fileURLWithPath: "/x/.hidden.wav"), prefix: nil))
         #expect(!InboxWatcher.isCandidate(URL(fileURLWithPath: "/x/notes.txt"), prefix: nil))
+        // iCloud's placeholder for a file not yet brought down is not a candidate, but names the file it stands for.
+        let placeholder = URL(fileURLWithPath: "/x/.roboto-capture--a--b--1--s.m4a.icloud")
+        #expect(InboxWatcher.isPlaceholder(placeholder) && !InboxWatcher.isCandidate(placeholder, prefix: nil))
+        #expect(InboxWatcher.fileBehind(placeholder: placeholder).path == "/x/roboto-capture--a--b--1--s.m4a")
+        #expect(!InboxWatcher.isPlaceholder(URL(fileURLWithPath: "/x/.icloud")))
     }
 
     @Test("a take sung to the guide comes in without its lead: the count-in is trimmed, and the take starts on the section's first beat")

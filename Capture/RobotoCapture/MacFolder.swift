@@ -9,6 +9,9 @@ import Observation
 @Observable
 final class MacFolder {
     private(set) var url: URL?
+    /// True when the folder is in iCloud Drive, so what goes in it reaches the Mac. A folder under
+    /// On My iPhone is the phone's alone, and the Mac never sees it.
+    private(set) var isInCloud = false
     private(set) var manifest: Manifest?
     private(set) var problem: String?
     /// True while the manifest is on its way down from iCloud.
@@ -61,16 +64,32 @@ final class MacFolder {
         return url.appendingPathComponent("Guides", isDirectory: true)
     }
 
+    /// True for the Mr. Roboto folder itself, or its Inbox: named so, or holding an Inbox or a
+    /// Guides folder. A folder inside it — a song's guides, say — is not, and a capture put there
+    /// is one the Mac never looks for.
+    nonisolated static func looksLikeTheMacFolder(_ url: URL) -> Bool {
+        let name = url.lastPathComponent
+        if name == "Mr. Roboto" || name == "Inbox" { return true }
+        let children = (try? FileManager.default.contentsOfDirectory(atPath: url.path)) ?? []
+        return children.contains("Inbox") || children.contains("Guides")
+    }
+
     func choose(_ picked: URL) {
         forget()
         guard picked.startAccessingSecurityScopedResource() else {
             problem = "That folder could not be opened."
             return
         }
+        guard Self.looksLikeTheMacFolder(picked) else {
+            picked.stopAccessingSecurityScopedResource()
+            problem = "\(picked.lastPathComponent) is not the Mr. Roboto folder. Choose the folder named Mr. Roboto at the top of iCloud Drive, not one inside it."
+            return
+        }
         do {
             let bookmark = try picked.bookmarkData(options: [], includingResourceValuesForKeys: nil, relativeTo: nil)
             UserDefaults.standard.set(bookmark, forKey: Self.bookmarkKey)
             url = picked
+            isInCloud = FileManager.default.isUbiquitousItem(at: picked)
             reload()
         } catch {
             picked.stopAccessingSecurityScopedResource()
@@ -81,6 +100,7 @@ final class MacFolder {
     func forget() {
         url?.stopAccessingSecurityScopedResource()
         url = nil
+        isInCloud = false
         manifest = nil
         problem = nil
         UserDefaults.standard.removeObject(forKey: Self.bookmarkKey)
@@ -95,6 +115,7 @@ final class MacFolder {
             return
         }
         url = resolved
+        isInCloud = FileManager.default.isUbiquitousItem(at: resolved)
         if stale, let fresh = try? resolved.bookmarkData(options: [], includingResourceValuesForKeys: nil, relativeTo: nil) {
             UserDefaults.standard.set(fresh, forKey: Self.bookmarkKey)
         }
@@ -128,6 +149,29 @@ final class MacFolder {
     func guideData(for section: SectionEntry) async throws -> Data {
         guard let guides else { throw CocoaError(.fileNoSuchFile) }
         return try await Self.read(guides.appendingPathComponent(section.file))
+    }
+
+    /// Where a capture of this name has got to, read off the folder: still going up to iCloud,
+    /// in iCloud waiting for the Mac, or taken by the Mac — which moves what it takes into
+    /// `Inbox/Done`, and iCloud brings that move back to the phone.
+    enum Delivery: Equatable {
+        case waiting, uploading, inCloud, taken, missing
+    }
+
+    func delivery(of name: String) -> Delivery {
+        guard let inbox else { return .missing }
+        if FileManager.default.fileExists(atPath: inbox.appendingPathComponent("Done").appendingPathComponent(name).path) {
+            return .taken
+        }
+        let file = inbox.appendingPathComponent(name)
+        guard FileManager.default.fileExists(atPath: file.path) else { return .missing }
+        guard isInCloud,
+              let values = try? file.resourceValues(forKeys: [.ubiquitousItemIsUploadedKey, .ubiquitousItemIsUploadingKey]) else {
+            return .inCloud
+        }
+        if values.ubiquitousItemIsUploaded == true { return .inCloud }
+        if values.ubiquitousItemIsUploading == true { return .uploading }
+        return .waiting
     }
 
     /// The capture copied into the Inbox, where the Mac takes it by its name.

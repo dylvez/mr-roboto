@@ -122,13 +122,23 @@ extension AppState {
         let media: MediaRef
         do { media = try store.addMedia(copying: url, kind: .idea) } catch { return .failed("Could not copy the capture into the library: \(error)") }
         let audio = Audio(media: media, role: .take, sampleRate: info.sampleRate, channelCount: info.channelCount, duration: info.duration)
-        var provenance = "Capture from the inbox: \(url.lastPathComponent)"
+        // Its name is what the phone was told it was for — "Beat" — and the rest is provenance:
+        // the note's first clause is the title the shelf and the band read (`PartLabel`).
+        let called = "\(name.section ?? "Idea") from the phone"
+        var provenance = "\(called): capture \(url.lastPathComponent), from the inbox"
         if let title = name.song { provenance += " — for \(title), which the library does not hold" }
         let idea = PartVersion(partID: PartID(), kind: .audio(audio), author: .user, operation: Operation.recorded, note: provenance)
         var updated = library
         updated.ideas.append(idea)
         guard writeLibrary(updated) else { return .failed("The library would not take the idea.") }
-        note(.session, "\(url.lastPathComponent) came in as an idea", detail: provenance)
+        // And read as a record is read — tempo, key, bars — in the crate, where the band's tools can
+        // chop it and lay it along a song. The idea keeps its shelf; the reading has the same audio,
+        // so each finds the other by it. The band asked for a file path to a hum it could already see.
+        if let kept = try? store.mediaURL(for: media) {
+            crate.enqueue(CrateJob(kind: .bring, file: kept, title: called, separating: false))
+        }
+        note(.session, "\(url.lastPathComponent) came in as an idea",
+             detail: "\(called). It is read next in the crate, for its tempo and key, so the band can build on it.")
         return .idea(idea.id)
     }
 

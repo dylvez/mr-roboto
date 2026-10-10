@@ -33,8 +33,20 @@ public struct ReadLibraryTool: DirectorTool {
             public var type: String
             public var key: String?
             public var note: String?
+            /// An audio idea — a capture from the phone — runs this long.
+            public var seconds: Double?
+            /// Its reading, once the crate has read it as a record.
+            public var tempo: Double?
+            public var bars: Int?
+            /// The record it was read as, for chop_bar and the record tools.
+            public var readAs: String?
             /// How it would come into the open song, when one is open.
             public var fit: String?
+
+            enum CodingKeys: String, CodingKey {
+                case id, title, type, key, note, seconds, tempo, bars, fit
+                case readAs = "read_as"
+            }
         }
         public struct RecordEntry: Encodable, Sendable {
             public var id: String
@@ -143,7 +155,9 @@ public struct ReadLibraryTool: DirectorTool {
 
     public let name = "read_library"
     public var purpose: String {
-        "Read the library: ideas (parts kept with no song), records (the crate: each record read for its key, "
+        "Read the library: ideas (parts kept with no song; an audio idea is a capture from the phone, with its seconds "
+        + "and — once the crate has read it — its tempo, key, bars and read_as, the record it was read as), "
+        + "records (the crate: each record read for its key, "
         + "tempo and bars, and its stems kept with it, each with how much of the record it is and the bar it "
         + "comes in at), samples (chops saved with their slices and chain), albums and songs — each with its "
         + "key and tempo where it has one, and for each song the stems its record gives and its record's bars. "
@@ -247,10 +261,24 @@ public struct ReadLibraryTool: DirectorTool {
             guard let id, let record = library.record(id) else { return nil }
             return record.artist.isEmpty ? record.title : "\(record.artist) – \(record.title)"
         }
-        let ideas = search.pick(library.ideas, on: .ideas, index: index, id: \.id.rawValue).map { idea in
-            Output.Idea(id: idea.id.description, title: PartLabel.title(of: idea), type: idea.type.rawValue,
-                        key: ReadSongTool.key(of: idea).map { "\($0)" }, note: idea.note,
-                        fit: Self.fitLine(index.facts(.idea(idea.id))?.fit, into: index.fitTarget))
+        let ideas = search.pick(library.ideas, on: .ideas, index: index, id: \.id.rawValue).map { idea -> Output.Idea in
+            var key = ReadSongTool.key(of: idea).map { "\($0)" }
+            var seconds: Double?, tempo: Double?, bars: Int?, readAs: String?
+            // An audio idea is read in the crate under the same audio: its tempo and key are there.
+            if case .audio(let audio) = idea.kind {
+                seconds = (audio.duration * 10).rounded() / 10
+                if let record = library.record(forMedia: audio.media) {
+                    readAs = record.id.description
+                    if let reading = record.reading {
+                        tempo = reading.dominantTempo.map { ($0 * 10).rounded() / 10 }
+                        bars = reading.bars.isEmpty ? nil : reading.bars.count
+                        if key == nil { key = reading.dominantKey.map { "\($0)" } }
+                    }
+                }
+            }
+            return Output.Idea(id: idea.id.description, title: PartLabel.title(of: idea), type: idea.type.rawValue,
+                               key: key, note: idea.note, seconds: seconds, tempo: tempo, bars: bars, readAs: readAs,
+                               fit: Self.fitLine(index.facts(.idea(idea.id))?.fit, into: index.fitTarget))
         }
         var records: [Output.RecordEntry] = []
         for record in search.pick(library.records, on: .records, index: index, id: \.id.rawValue) {

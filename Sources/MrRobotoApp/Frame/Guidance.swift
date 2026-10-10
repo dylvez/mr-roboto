@@ -126,6 +126,9 @@ enum PartLabel {
             case .take:
                 if audio.comp != nil { return "Comp" }
                 if let take = audio.take { return "Take \(take.pass)" }
+                // A capture from the phone with no song named: its note begins with what the phone
+                // was told it was for. Every one of them used to be "Record".
+                if version.operation == Operation.recorded, let name = note(of: version) { return name }
                 return "Record"
             case .stem:
                 // A stem of another record says which: two records' vocals in one song were both

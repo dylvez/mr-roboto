@@ -73,6 +73,8 @@ final class Recorder: NSObject, AVAudioRecorderDelegate, AVAudioPlayerDelegate {
     /// Captures copied into the Mac folder's Inbox, by file name.
     private(set) var sent: Set<String>
     private(set) var sending: Set<String> = []
+    /// Where each sent capture has got to, by file name; `refreshDeliveries` reads it off the folder.
+    private(set) var deliveries: [String: MacFolder.Delivery] = [:]
     var song: String { didSet { UserDefaults.standard.set(song, forKey: "song") } }
     var section: String { didSet { UserDefaults.standard.set(section, forKey: "section") } }
     /// Whether the section's guide plays while recording, when it has one. Remembered.
@@ -118,6 +120,22 @@ final class Recorder: NSObject, AVAudioRecorderDelegate, AVAudioPlayerDelegate {
     func reload() {
         let files = (try? FileManager.default.contentsOfDirectory(at: Self.documents, includingPropertiesForKeys: [.creationDateKey])) ?? []
         captures = files.compactMap(CaptureName.parse).sorted { $0.stamp > $1.stamp }
+        refreshDeliveries()
+    }
+
+    /// Reads where every sent capture has got to. Cheap: a few file checks.
+    func refreshDeliveries() {
+        var next: [String: MacFolder.Delivery] = [:]
+        for capture in captures {
+            let name = capture.url.lastPathComponent
+            if sent.contains(name) { next[name] = mac.delivery(of: name) }
+        }
+        deliveries = next
+    }
+
+    /// True while something sent is not yet in the Mac's hands, so the screen keeps looking.
+    var awaitingTheMac: Bool {
+        deliveries.values.contains { $0 != .taken }
     }
 
     func toggle() async {
@@ -245,6 +263,7 @@ final class Recorder: NSObject, AVAudioRecorderDelegate, AVAudioPlayerDelegate {
                 try await mac.send(capture.url)
                 sent.insert(name)
                 UserDefaults.standard.set(Array(sent), forKey: "sent")
+                refreshDeliveries()
             } catch {
                 lastError = "\(capture.title) could not be put in the Mac's inbox: \(error.localizedDescription) Share it instead."
             }
@@ -252,6 +271,7 @@ final class Recorder: NSObject, AVAudioRecorderDelegate, AVAudioPlayerDelegate {
     }
 
     func isSent(_ capture: Capture) -> Bool { sent.contains(capture.url.lastPathComponent) }
+    func delivery(of capture: Capture) -> MacFolder.Delivery? { deliveries[capture.url.lastPathComponent] }
     func isSending(_ capture: Capture) -> Bool { sending.contains(capture.url.lastPathComponent) }
 
     func delete(_ capture: Capture) {

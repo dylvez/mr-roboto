@@ -304,7 +304,16 @@ public enum DirectorPrompt {
         half-time shuffle is, so write it. Never import, adopt, separate or chop a record the \
         user did not name; their library is not raw material unless they say so. Only \
         regroove_chop when they ask for a beat out of a sample. Then a bass line and chords are \
-        write_bassline and set_progression, which need no record either.
+        write_bassline and set_progression, which need no record either. \
+        A capture from the phone with no song named — the rail says it "came in as an idea" — is an \
+        audio idea on the ideas shelf, titled for what the user called it ("Beat from the phone"), \
+        and its audio is read in the crate as a record is: read_library lists it with its seconds \
+        and, once read, its tempo, key, bars and read_as, the record it was read as. "This idea", \
+        "my hum", "what I just sent" is the newest of them: read_library, never a file path. A beat \
+        from it: start_song at its tempo when no song is open or the open one is at another, adopt \
+        it (kind idea) so the user's own voice plays along the song, then write_groove to it — the \
+        rhythm they hummed, under them. A beat out of its own sounds: chop_bar the record it was \
+        read as, classify_slices, regroove_chop. It is raw material the user named by sending it.
 
         The tune and the words are yours to write, on the Melodist's and the Lyricist's behalf, \
         and theirs to read back. write_melody takes the tune as a line of notes — "D4 0 1, F4 1 \

@@ -9,6 +9,9 @@ import UniformTypeIdentifiers
 struct CaptureView: View {
     @State private var recorder = Recorder()
     @State private var choosingFolder = false
+    @Environment(\.scenePhase) private var scenePhase
+    /// A look at the folder every few seconds while something sent is still on its way.
+    private let look = Timer.publish(every: 5, on: .main, in: .common).autoconnect()
     /// The song and section typed rather than picked: a song the Mac wrote no guides for.
     @State private var typing = false
 
@@ -37,6 +40,16 @@ struct CaptureView: View {
                     typing = false
                 }
             }
+            .onReceive(look) { _ in
+                if recorder.awaitingTheMac { recorder.refreshDeliveries() }
+            }
+            .onChange(of: scenePhase) { _, phase in
+                // Back from the Mac: the guides it wrote meanwhile, and what it took.
+                if phase == .active {
+                    recorder.mac.reload()
+                    recorder.refreshDeliveries()
+                }
+            }
         }
     }
 
@@ -50,11 +63,15 @@ struct CaptureView: View {
             VStack(alignment: .leading, spacing: 2) {
                 if let name = recorder.mac.name {
                     Text(name).font(.subheadline)
-                    Text(macDetail).font(.caption).foregroundStyle(.secondary)
+                    Text(macDetail).font(.caption)
+                        .foregroundStyle(recorder.mac.url != nil && !recorder.mac.isInCloud ? AnyShapeStyle(.orange) : AnyShapeStyle(.secondary))
+                        .fixedSize(horizontal: false, vertical: true)
                 } else {
                     Text("Choose the Mr. Roboto folder").font(.subheadline)
-                    Text("In iCloud Drive. Captures go to its Inbox on their own, and its guides play while you sing.")
-                        .font(.caption).foregroundStyle(.secondary)
+                    Text(recorder.mac.problem ?? "At the top of iCloud Drive. Captures go to its Inbox on their own, and its guides play while you sing.")
+                        .font(.caption)
+                        .foregroundStyle(recorder.mac.problem == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(.orange))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             Spacer()
@@ -66,6 +83,9 @@ struct CaptureView: View {
     }
 
     private var macDetail: String {
+        if recorder.mac.url != nil, !recorder.mac.isInCloud {
+            return "This folder is not in iCloud Drive, so the Mac never sees it. Choose Mr. Roboto under iCloud Drive."
+        }
         if recorder.mac.loading { return "Reading the guides…" }
         if let problem = recorder.mac.problem { return problem }
         guard let songs = recorder.mac.manifest?.songs, !songs.isEmpty else {
@@ -213,8 +233,9 @@ struct CaptureView: View {
                         }
                         Spacer()
                         if recorder.isSent(capture) {
-                            Image(systemName: "checkmark.icloud").foregroundStyle(.secondary)
-                                .accessibilityLabel("In the Mac's inbox")
+                            Image(systemName: recorder.delivery(of: capture) == .taken ? "checkmark.icloud" : "icloud")
+                                .foregroundStyle(.secondary)
+                                .accessibilityLabel(deliveryWord(capture))
                         } else if recorder.isSending(capture) {
                             ProgressView().controlSize(.small)
                         } else if recorder.mac.inbox != nil {
@@ -235,7 +256,18 @@ struct CaptureView: View {
     private func subtitle(_ capture: Capture) -> String {
         var line = String(format: "%.1f s · %@", capture.seconds, capture.stamp)
         if capture.lead != nil { line += " · guide" }
-        if recorder.isSent(capture) { line += " · on the Mac" }
+        if recorder.isSent(capture) { line += " · " + deliveryWord(capture) }
         return line
+    }
+
+    /// What the folder says about a sent capture. "On the Mac" only once the Mac has moved it.
+    private func deliveryWord(_ capture: Capture) -> String {
+        switch recorder.delivery(of: capture) {
+        case .taken: return "on the Mac"
+        case .inCloud: return "in iCloud, waiting for the Mac"
+        case .uploading: return "uploading"
+        case .waiting: return "waiting to upload"
+        case .missing, .none: return "sent"
+        }
     }
 }
