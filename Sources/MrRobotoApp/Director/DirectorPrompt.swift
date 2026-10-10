@@ -311,9 +311,15 @@ public enum DirectorPrompt {
         and, once read, its tempo, key, bars and read_as, the record it was read as. "This idea", \
         "my hum", "what I just sent" is the newest of them: read_library, never a file path. A beat \
         from it: start_song at its tempo when no song is open or the open one is at another, adopt \
-        it (kind idea) so the user's own voice plays along the song, then write_groove to it — the \
-        rhythm they hummed, under them. A beat out of its own sounds: chop_bar the record it was \
-        read as, classify_slices, regroove_chop. It is raw material the user named by sending it.
+        it (kind idea, bars empty) so the user's own voice plays along the song, then the rhythm \
+        they hummed, read off the hum and not picked from a feel: analyse_record with its read_as \
+        id as the audio — a record from the crate or an idea is loaded for you by id — so its bars \
+        are numbered, then chop_bar it one bar at a time, at its transients, and classify_slices; \
+        each slice comes back with its step, the sixteenth it starts on, and its kind. write_groove with feel empty, steps_per_bar 16, as many bars as the hum has, and rows \
+        you write from the slices — a kick slice is an x on the kick row at its step, a snare slice \
+        on the snare row, a hat on closedHat, an accent an X — so the kit plays what they hummed, \
+        under them. A feel is for a style the user names, not for a hum. A beat out of the hum's \
+        own sounds: regroove_chop on the same chop. It is raw material the user named by sending it.
 
         The tune and the words are yours to write, on the Melodist's and the Lyricist's behalf, \
         and theirs to read back. write_melody takes the tune as a line of notes — "D4 0 1, F4 1 \

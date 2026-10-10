@@ -146,7 +146,7 @@ public struct AnalyseRecordTool: DirectorTool {
     }
     public var schema: DirectorJSON {
         Schema.object([
-            ("audio", Schema.string("An audio handle from import_record.")),
+            ("audio", Schema.string("An audio handle from import_record, or the id of a record in the crate (read_library's read_as) or of an audio idea: the library's copy is loaded for you.")),
         ], required: ["audio"])
     }
 
@@ -300,7 +300,7 @@ public struct SeparateStemsTool: DirectorTool {
     }
     public var schema: DirectorJSON {
         Schema.object([
-            ("audio", Schema.string("An audio handle from import_record.")),
+            ("audio", Schema.string("An audio handle from import_record, or the id of a record in the crate (read_library's read_as) or of an audio idea: the library's copy is loaded for you.")),
             ("stems", Schema.optional(Schema.array("Which stems to keep. All of them when null.",
                                                    of: Schema.string("A stem name.",
                                                                      enum: StemName.allCases.map(\.rawValue))))),

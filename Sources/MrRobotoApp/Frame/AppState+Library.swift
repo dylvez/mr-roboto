@@ -288,6 +288,24 @@ extension AppState {
         updateAlbum(id) { $0.title = title.isEmpty ? $0.title : title }
     }
 
+    /// The file behind an id the band got from read_library: a record in the crate, or an audio
+    /// idea — a capture from the phone. Nil when the id names neither. The band's record tools take
+    /// such an id as an audio handle, so a hum is chopped without anyone naming a file path.
+    public func libraryAudio(id: String) throws -> (url: URL, media: MediaRef)? {
+        guard let store else { return nil }
+        let media: MediaRef?
+        if let record = library.records.first(where: { $0.id.description.caseInsensitiveCompare(id) == .orderedSame }) {
+            media = record.media
+        } else if let idea = library.ideas.first(where: { $0.id.description.caseInsensitiveCompare(id) == .orderedSame }),
+                  case .audio(let audio) = idea.kind {
+            media = audio.media
+        } else {
+            media = nil
+        }
+        guard let media else { return nil }
+        return (try store.mediaURL(for: media), media)
+    }
+
     /// The name on the sleeve. An album used to carry the artist it was created with for good.
     @discardableResult
     public func setArtist(_ artist: String, for id: AlbumID) -> Bool {

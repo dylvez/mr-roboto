@@ -67,14 +67,32 @@ public actor DirectorWorkbench {
 
     public let engines: DirectorEngines
 
+    /// What `audio` loads when a handle is not one of its own: a record in the crate by its id —
+    /// read_library's read_as — or an audio idea by its, so the record tools reach what the
+    /// library holds without a file path. Nil says the id is nobody's.
+    public typealias LibraryLoader = @Sendable (String) async throws -> LoadedAudio?
+    private let libraryLoader: LibraryLoader?
+
     private var audio: [String: LoadedAudio] = [:]
     private var analyses: [String: AnalysisReport] = [:]
     private var chops: [String: StoredChop] = [:]
     private var grooves: [String: StoredGroove] = [:]
     private var counters: [String: Int] = [:]
 
-    public init(engines: DirectorEngines = DirectorEngines()) {
+    public init(engines: DirectorEngines = DirectorEngines(), libraryLoader: LibraryLoader? = nil) {
         self.engines = engines
+        self.libraryLoader = libraryLoader
+    }
+
+    /// A loader over whatever resolves an id to a file in the library: the app's own lookup, run
+    /// where the library lives. The file is read here, off that actor.
+    public static func libraryLoader(resolving resolve: @escaping @Sendable (String) async throws -> (url: URL, media: MediaRef)?) -> LibraryLoader {
+        { handle in
+            guard UUID(uuidString: handle) != nil, let found = try await resolve(handle) else { return nil }
+            let (planar, sampleRate) = try ChopAudio.readPlanar(found.url)
+            guard !planar.isEmpty, !planar[0].isEmpty else { return nil }
+            return LoadedAudio(url: found.url, planar: planar, mono: ChopAudio.mono(planar), sampleRate: sampleRate, media: found.media)
+        }
     }
 
     // MARK: Handles
@@ -115,9 +133,15 @@ public actor DirectorWorkbench {
         audio[handle]?.media = ref
     }
 
-    public func audio(_ handle: String) throws -> LoadedAudio {
-        guard let found = audio[handle] else { throw Self.unknown("audio", handle, Array(audio.keys)) }
-        return found
+    public func audio(_ handle: String) async throws -> LoadedAudio {
+        if let found = audio[handle] { return found }
+        // Not a handle of this bench: the library's, when the id names something it holds. Kept
+        // under the id itself, so chops cut from it say where they came from.
+        if let libraryLoader, let loaded = try await libraryLoader(handle) {
+            audio[handle] = loaded
+            return loaded
+        }
+        throw Self.unknown("audio", handle, Array(audio.keys))
     }
 
     public var audioHandles: [String] { audio.keys.sorted() }

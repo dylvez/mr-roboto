@@ -50,8 +50,11 @@ public struct ChopBarTool: DirectorTool {
             public var durationSeconds: Double
             public var origin: String
             public var peakDB: Double
+            /// The sixteenth of the span the slice starts on, 0 to 15: a bar's rhythm as steps, so
+            /// a hum can be written back as rows without arithmetic.
+            public var step: Int
             enum CodingKeys: String, CodingKey {
-                case index, origin
+                case index, origin, step
                 case startSeconds = "start_seconds"
                 case durationSeconds = "duration_seconds"
                 case peakDB = "peak_db"
@@ -73,12 +76,13 @@ public struct ChopBarTool: DirectorTool {
     public let name = "chop_bar"
     public var purpose: String {
         "Cut one bar — or any span in seconds — of a record into slices, at its transients or on "
-        + "its grid. Returns a chop handle and the slices, which classify_slices and regroove_chop "
-        + "then work on."
+        + "its grid. Returns a chop handle and the slices, each with the sixteenth of the span it "
+        + "starts on (step), which classify_slices and regroove_chop then work on — or which you "
+        + "write back as write_groove rows, a hit on each slice's step, to play a hummed rhythm on the kit."
     }
     public var schema: DirectorJSON {
         Schema.object([
-            ("audio", Schema.string("An audio handle. Chopping the drums stem gives cleaner slices than the full mix.")),
+            ("audio", Schema.string("An audio handle, or the id of a record in the crate (read_library's read_as) or of an audio idea, loaded for you. Chopping the drums stem gives cleaner slices than the full mix.")),
             ("bar", Schema.optional(Schema.integer("Bar to cut, zero-based, as list_bars numbers them. Needs analyse_record first.", minimum: 0))),
             ("start_seconds", Schema.optional(Schema.number("Start of the span, when naming one directly instead of a bar.", minimum: 0))),
             ("end_seconds", Schema.optional(Schema.number("End of the span.", minimum: 0))),
@@ -144,7 +148,8 @@ public struct ChopBarTool: DirectorTool {
                                        startSeconds: (slice.startSeconds * 1000).rounded() / 1000,
                                        durationSeconds: (slice.duration * 1000).rounded() / 1000,
                                        origin: slice.origin.rawValue,
-                                       peakDB: (slice.peakDB * 10).rounded() / 10)
+                                       peakDB: (slice.peakDB * 10).rounded() / 10,
+                                       step: Int((slice.startSeconds / max(chop.duration, 1e-9) * 16).rounded()) % 16)
                       })
     }
 

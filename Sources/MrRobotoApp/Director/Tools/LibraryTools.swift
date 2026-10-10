@@ -370,6 +370,26 @@ public struct AdoptTool: DirectorTool {
             case atBar = "at_bar"
         }
 
+        /// `bars` is a pair, but every key is required and the band writes a number there when it
+        /// means one bar, or the idea's bar count: a number is read as that one bar, and an idea
+        /// ignores it anyway. It used to refuse the whole call.
+        public init(from decoder: any Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            kind = try c.decode(String.self, forKey: .kind)
+            id = try c.decode(String.self, forKey: .id)
+            stem = try c.decodeIfPresent(String.self, forKey: .stem)
+            if let pair = try? c.decodeIfPresent([Int].self, forKey: .bars) {
+                bars = pair
+            } else if let one = try? c.decodeIfPresent(Int.self, forKey: .bars) {
+                bars = [one, one]
+            } else {
+                bars = nil
+            }
+            atBar = try c.decodeIfPresent(Int.self, forKey: .atBar)
+            semitones = try c.decodeIfPresent(Int.self, forKey: .semitones)
+            tighten = try c.decodeIfPresent(String.self, forKey: .tighten)
+        }
+
         /// "on", "off", or nil for as the record's beat trackers say (or, fitting again, as it was).
         var tightens: Bool? {
             switch tighten?.lowercased() {

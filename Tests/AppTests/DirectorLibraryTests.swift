@@ -29,8 +29,12 @@ private enum LibraryToolFixture {
         let built = try MergeFixture.build("tools")
         let app = built.app
         let saved = try #require(app.saveToSamples(built.sample.id, name: "Horns bar"))
-        let toolbox = DirectorTools.toolbox(workbench: DirectorWorkbench(engines: DirectorTestEngines.make(bars: 4)),
-                                            workspace: AppStateWorkspace(app))
+        // The bench reaches the library by id, as the live one does.
+        let workbench = DirectorWorkbench(engines: DirectorTestEngines.make(bars: 4),
+                                          libraryLoader: DirectorWorkbench.libraryLoader { id in
+                                              try await MainActor.run { try app.libraryAudio(id: id) }
+                                          })
+        let toolbox = DirectorTools.toolbox(workbench: workbench, workspace: AppStateWorkspace(app))
         return Rig(app: app, toolbox: toolbox, record: built.record, sample: saved, bass: built.bass.id, directory: built.directory)
     }
 
@@ -67,6 +71,27 @@ struct DirectorLibraryToolTests {
         #expect(chop["key"] as? String == "G major" && chop["tempo"] as? Double == 100)
     }
 
+    @Test("chop_bar takes a record from the crate by its id, no file path asked, and each slice says its step")
+    func chopsByID() async throws {
+        let rig = try LibraryToolFixture.rig()
+        defer { rig.clean() }
+        let result = await rig.toolbox.run(ClaudeToolUse(id: "c", name: "chop_bar", input: .object([
+            .init("audio", .string(rig.record.id.description)),
+            .init("start_seconds", .double(0)), .init("end_seconds", .double(2)),
+            .init("method", .string("divisions")), .init("division", .int(4)),
+        ])))
+        #expect(!result.isError, "\(result.content)")
+        let out = LibraryToolFixture.json(result)
+        #expect((out["audio"] as? String)?.hasPrefix("audio-") == true, "the excerpt is a handle of its own, as a cut from any record is")
+        let slices = out["slices"] as? [[String: Any]] ?? []
+        #expect(slices.map { $0["step"] as? Int } == [0, 4, 8, 12], "four even slices of the span land on its quarters: \(slices)")
+        // An id the library does not hold is still unknown.
+        let nobody = await rig.toolbox.run(ClaudeToolUse(id: "n", name: "chop_bar", input: .object([
+            .init("audio", .string(UUID().uuidString)), .init("start_seconds", .double(0)), .init("end_seconds", .double(1)),
+        ])))
+        #expect(nobody.isError)
+    }
+
     @Test("adopt brings a sample in as a chop, and refuses what the library does not hold")
     func adopts() async throws {
         let rig = try LibraryToolFixture.rig()
@@ -89,6 +114,16 @@ struct DirectorLibraryToolTests {
             .init("kind", .string("song")), .init("id", .string(UUID().uuidString)),
         ])))
         #expect(wrong.isError)
+        // A number where the pair of bars goes is read as one bar, not refused: the band wrote the
+        // idea's bar count there and the whole call used to fail on its arguments.
+        let numbered = await rig.toolbox.run(ClaudeToolUse(id: "n", name: "adopt", input: .object([
+            .init("kind", .string("idea")), .init("id", .string(UUID().uuidString)), .init("bars", .int(3)),
+        ])))
+        #expect(numbered.isError && numbered.content.contains("holds no idea"), "\(numbered.content)")
+        let paired = try JSONDecoder().decode(AdoptTool.Input.self, from: Data(#"{"kind":"record","id":"x","stem":"drums","bars":[9,10]}"#.utf8))
+        #expect(paired.bars == [9, 10])
+        let single = try JSONDecoder().decode(AdoptTool.Input.self, from: Data(#"{"kind":"record","id":"x","bars":4}"#.utf8))
+        #expect(single.bars == [4, 4])
     }
 
     @Test("merge plans only without a section, renders and stitches with one, and carries the Sampler's flags")

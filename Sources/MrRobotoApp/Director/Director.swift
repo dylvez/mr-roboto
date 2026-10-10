@@ -198,7 +198,11 @@ public actor Director {
                             model: ClaudeModel? = nil) -> Director {
         let stage = AppStateStage(app)
         let pad = DirectorStagePad()
-        let workbench = DirectorWorkbench(engines: engines)
+        // The bench reaches what the library holds by id: a record from the crate, a hum from the
+        // phone, without a file path.
+        let workbench = DirectorWorkbench(engines: engines, libraryLoader: DirectorWorkbench.libraryLoader { id in
+            try await MainActor.run { try app.libraryAudio(id: id) }
+        })
         let rig = audition ?? DirectorAuditionRig(workbench: workbench,
                                                   service: SurfaceWiring.shared.service(for: app),
                                                   app: app)

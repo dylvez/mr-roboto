@@ -297,10 +297,18 @@ struct DirectorDustToolboxTests {
     static let before: [(String, String)] = [
         ("read_song", "10626fba3f9ec72db432d4fd63add5b690d8d875cbea72ef036c902d529c62d5"),
         ("import_record", "04e0dee66856bf1f281c855e7541d79dd7f8047268cdea2c6888f690a2652046"),
-        ("analyse_record", "a42fc108df503519941fc9514b8f59bbd8a36d701dcdd7afe925a82ee7beb9d1"),
+        // And on 2026-10-10, on purpose: its audio may be the id of a record in the crate or of an
+        // audio idea, loaded for you, so a hum from the phone needs no file path.
+        ("analyse_record", "9ebb2b4f8e0883f744e2335e19b8a650a87509c0b2866cbfc3c1d5284ef246f8"),
         ("list_bars", "acb70e206f27579643cac3e264facb0401d1846f7e89a2f734e9180bd950f5bb"),
-        ("separate_stems", "2a241e427e5f3af03e8b065ce721b20d44d3c09f1ece42be293016bf0276951b"),
-        ("chop_bar", "28552c37cc1da03731c85b73f7624068b88ecaef43badf8190084be45816ce1f"),
+        // And on 2026-10-10, on purpose: its audio may be the id of a record in the crate or of an
+        // audio idea, loaded for you, so a hum from the phone needs no file path.
+        ("separate_stems", "e919f5477608876f6fad3c0f78999edb71e5a5019ddc8019ae250a7ea1c2a499"),
+// Changed once, on purpose, on 2026-10-10: each slice says its step, the sixteenth it starts
+        // on, so a hum from the phone can be written back as write_groove rows; the purpose says so.
+        // And on 2026-10-10, on purpose: its audio may be the id of a record in the crate or of an
+        // audio idea, loaded for you, so a hum from the phone needs no file path.
+        ("chop_bar", "4c6669b35a16a79aa160104b8465f58cee02a26a969bfb24bc4453fe08226b32"),
         ("classify_slices", "ff7f1a8732c54579b55225da582dc6a7e8b1e5eac0fef4ca4ecbc0aad45c7f85"),
         ("list_feels", "d26597dcdfef9bea91bcb289e5a4e266c6bda67364786787701f335e2df382fc"),  // limit up to 100: the library has 66
         ("describe_feel", "c51e563c303367f5e62a7b88c13a9f8f0aae2bb4c7f6f5f37fca2485fae7e889"),
