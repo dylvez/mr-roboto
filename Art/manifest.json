@@ -403,6 +403,102 @@
       "cutout": true,
       "where": "the Melodist",
       "brief": "An emblem: a music-box cylinder seen side-on, a short metal drum on two end bearings with small pins standing out of it, the pins arranged in a line that rises and then falls. Compact, fits inside a circle."
+    },
+    {
+      "group": "covers",
+      "source": "generate",
+      "priority": 2,
+      "size": [
+        3000,
+        3000
+      ],
+      "cutout": false,
+      "style": "style-shellac.txt",
+      "where": "A direction for the cover of Shellac, Swag Hooks' album; the pick goes to Art/out/",
+      "name": "cover-shellac-roseland",
+      "brief": "The floor of a grand ballroom in 1924, seen from the balcony at night. A twelve-piece dance orchestra in white dinner jackets plays on the bandstand at the far end under a scalloped canopy; couples in evening dress fill the floor in the foreground, softly blurred with movement; a mirrored ball scatters small points of light across them; warm amber tungsten light, the far wall lost in haze. One beam of cold electric-blue light cuts down through the amber from somewhere above, as if the night had never ended.",
+      "title": "Shellac",
+      "artist": "Swag Hooks"
+    },
+    {
+      "group": "covers",
+      "source": "generate",
+      "priority": 2,
+      "size": [
+        3000,
+        3000
+      ],
+      "cutout": false,
+      "style": "style-shellac.txt",
+      "where": "A direction for the cover of Shellac, Swag Hooks' album; the pick goes to Art/out/",
+      "name": "cover-shellac-collage",
+      "brief": "An archive table seen from directly above: a dozen small photographs from the 1910s and 1920s laid out overlapping on dark green baize, held by paper photo corners, each of a different musician or group \u2014 a dance orchestra on a bandstand, a choir in robes, a seated man with a steel guitar flat across his lap, a fiddler, a cellist, a clarinettist, a woman in a long dress singing beside a piano, a man with a classical guitar, a small klezmer band with clarinet and violin, a cornet player, a pianist at an upright. Silver prints with worn edges, creases and thumb marks, one or two in sepia, lit from one side like a reading room.",
+      "title": "Shellac",
+      "artist": "Swag Hooks"
+    },
+    {
+      "group": "covers",
+      "source": "generate",
+      "priority": 2,
+      "size": [
+        3000,
+        3000
+      ],
+      "cutout": false,
+      "style": "style-shellac.txt",
+      "where": "A direction for the cover of Shellac, Swag Hooks' album; the pick goes to Art/out/",
+      "name": "cover-shellac-needle",
+      "brief": "A close view of a steel needle resting in the grooves of a black shellac 78 rpm record turning on a felt turntable mat, the record's paper label plain cream with a worn gold ring and nothing printed on it, warm lamplight from one side, a little dust hanging in the light, the grooves catching the light in fine arcs, shallow depth of field, the gramophone's brass horn out of focus behind. A product still life from the 1920s.",
+      "title": "Shellac",
+      "artist": "Swag Hooks"
+    },
+    {
+      "group": "covers",
+      "source": "generate",
+      "priority": 2,
+      "size": [
+        3000,
+        3000
+      ],
+      "cutout": false,
+      "style": "style-shellac-future.txt",
+      "where": "A direction for the cover of Shellac, Swag Hooks' album; the pick goes to Art/out/",
+      "title": "Shellac",
+      "artist": "Swag Hooks",
+      "name": "cover-shellac-roseland-androids",
+      "brief": "The floor of a grand ballroom in 1924, seen from the balcony at night. A twelve-piece dance orchestra in white dinner jackets plays on the bandstand at the far end under a scalloped canopy; couples in evening dress fill the floor, softly blurred with movement; a mirrored ball scatters points of light; warm amber tungsten light, the far wall lost in haze. Among the couples, a handful of the dancers are sleek chrome androids in the same evening dress \u2014 tailcoats, beaded gowns \u2014 dancing with the humans as if they had always been there, their polished faces catching the mirror ball, a faint cold blue glow at their eyes and collars."
+    },
+    {
+      "group": "covers",
+      "source": "generate",
+      "priority": 2,
+      "size": [
+        3000,
+        3000
+      ],
+      "cutout": false,
+      "style": "style-shellac-future.txt",
+      "where": "A direction for the cover of Shellac, Swag Hooks' album; the pick goes to Art/out/",
+      "title": "Shellac",
+      "artist": "Swag Hooks",
+      "name": "cover-shellac-roseland-century",
+      "brief": "A grand ballroom seen from the balcony at night, and across the frame it changes century. At the left, nearest the balcony, it is 1924: couples in evening dress, a mirrored ball, warm amber tungsten light, a hand-tinted sepia print. By the right, at the bandstand, it is the same room a hundred years on: the dancers in dark sleek clothes under cold electric-blue and magenta light, the bandstand a wall of glowing panels where the orchestra stood, a sphere of pure light where the mirror ball hung. The two halves dissolve into one another across the middle of the floor with no hard edge, some couples half in each."
+    },
+    {
+      "group": "covers",
+      "source": "generate",
+      "priority": 2,
+      "size": [
+        3000,
+        3000
+      ],
+      "cutout": false,
+      "style": "style-shellac-future.txt",
+      "where": "A direction for the cover of Shellac, Swag Hooks' album; the pick goes to Art/out/",
+      "title": "Shellac",
+      "artist": "Swag Hooks",
+      "name": "cover-shellac-roseland-stages",
+      "brief": "A grand ballroom seen from the balcony at night, two stages facing each other across one floor, and the room changing century from one to the other. On the left, on a bandstand under a scalloped canopy, a 1924 dance orchestra in white dinner jackets with a woman singer in a beaded gown at a stand microphone, in warm amber tungsten light, hand-tinted sepia, couples in evening dress dancing before them. On the right, on a second stage under a truss of lights, a lone electronic musician at a console of glowing panels, and beside them a sleek chrome robot assistant holding out a record, under cold electric-blue and magenta lasers, dancers in dark sleek clothes before them. A mirrored ball hangs over the middle of the floor, where the two centuries dissolve into one another with no hard edge, some couples half in each, haze catching the lasers."
     }
   ]
 }

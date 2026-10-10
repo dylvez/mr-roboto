@@ -288,6 +288,12 @@ extension AppState {
         updateAlbum(id) { $0.title = title.isEmpty ? $0.title : title }
     }
 
+    /// The name on the sleeve. An album used to carry the artist it was created with for good.
+    @discardableResult
+    public func setArtist(_ artist: String, for id: AlbumID) -> Bool {
+        updateAlbum(id) { $0.artist = artist }
+    }
+
     // M7: the record.
 
     @discardableResult

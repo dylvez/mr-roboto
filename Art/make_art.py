@@ -16,7 +16,7 @@ import statistics
 import sys
 from pathlib import Path
 
-from PIL import Image, ImageChops, ImageDraw, ImageFilter
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 
 ART = Path(__file__).resolve().parent
 OUT = ART.parent / "Sources" / "MrRobotoApp" / "Resources" / "Art"
@@ -24,6 +24,47 @@ OUT = ART.parent / "Sources" / "MrRobotoApp" / "Resources" / "Art"
 # fitted like the rest, but written beside this script for scripts/make-app.sh to turn into .icns.
 ICONS = {"doc-icon": "doc-icon-1024.png"}
 NOT_BUNDLED = {"app-icon-concepts", "doc-icon", "band-record", "band-chop", "band-grid", "band-sound"}
+# A record's cover (`cover-<album>`) is not the app's to bundle: it is written whole, square, at the
+# spec's size, to Art/out/, for dropping on the Album surface. Nothing is trimmed or cut out of it.
+# With `title` and `artist` on the entry, they are set in type over the quiet top of the image —
+# Futura, which is of the period the covers so far are from — rather than asked of the model.
+COVERS = ART / "out"
+TYPEFACE = "/System/Library/Fonts/Supplemental/Futura.ttc"
+
+
+def typeface(size, index=0):
+    """Futura at `size`: index 0 is Medium, 2 is Bold in the system's collection; Helvetica if not there."""
+    try:
+        return ImageFont.truetype(TYPEFACE, size, index=index)
+    except OSError:
+        return ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", size)
+
+
+def set_type(image, title, artist):
+    """The title in letter-spaced capitals and the artist beneath, centred in the top of the frame, in
+    ivory with a soft dark halo so they read over a photograph without a panel behind them."""
+    w, h = image.size
+    layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(layer)
+    ivory = (242, 232, 210, 255)
+    title_font, artist_font = typeface(int(h * 0.075)), typeface(int(h * 0.028))
+    tracking = int(h * 0.018)
+
+    def width(text, font, spacing):
+        return sum(draw.textlength(c, font=font) for c in text) + spacing * (len(text) - 1)
+
+    def spaced(text, font, spacing, y):
+        x = (w - width(text, font, spacing)) / 2
+        for c in text:
+            draw.text((x, y), c, font=font, fill=ivory)
+            x += draw.textlength(c, font=font) + spacing
+
+    spaced(title.upper(), title_font, tracking, int(h * 0.075))
+    spaced(artist, artist_font, int(tracking * 0.35), int(h * 0.075) + title_font.size + int(h * 0.022))
+    halo = layer.getchannel("A").filter(ImageFilter.GaussianBlur(h * 0.012))
+    shadow = Image.new("RGBA", image.size, (20, 14, 8, 0))
+    shadow.putalpha(halo.point(lambda v: int(v * 0.75)))
+    return Image.alpha_composite(Image.alpha_composite(image.convert("RGBA"), shadow), layer).convert("RGB")
 TOLERANCE = 26          # how far from the ground colour still counts as ground (sum of RGB differences / 3)
 MARGIN = 0.06           # breathing room left around the trimmed subject, as a fraction of the canvas
 
@@ -94,6 +135,20 @@ def main():
         if name in NOT_BUNDLED or (only and name not in only):
             continue
         asset = manifest[name]
+        if name.startswith("cover-"):
+            COVERS.mkdir(parents=True, exist_ok=True)
+            source = Image.open(ART / "picked" / f"{name}.png").convert("RGB")
+            side = min(source.size)
+            square = source.crop(((source.width - side) // 2, (source.height - side) // 2,
+                                  (source.width - side) // 2 + side, (source.height - side) // 2 + side))
+            final = square.resize(tuple(asset["size"]), Image.LANCZOS)
+            if asset.get("title"):
+                final = set_type(final, asset["title"], asset.get("artist", ""))
+            final.save(COVERS / f"{name}.png", optimize=True)
+            scale = asset["size"][0] / side
+            print(f"{name:22} {asset['size'][0]}x{asset['size'][1]}  scale {scale:.2f}"
+                  + ("  (upscaled from %d: soft at full size)" % side if scale > 1.2 else "") + f"  -> Art/out/{name}.png")
+            continue
         source = Image.open(ART / "picked" / f"{name}.png")
         transparent = asset.get("cutout", False)
         image = cutout(source) if transparent else source.convert("RGBA")

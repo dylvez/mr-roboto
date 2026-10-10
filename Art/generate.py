@@ -31,7 +31,11 @@ def load_manifest():
 
 
 def prompt_for(asset, manifest, style, has_reference):
-    parts = [style, "Subject: " + asset["brief"]]
+    # An asset with its own `style` — a file beside the manifest, or null for none — does not get
+    # the house style: a record's cover is the record's look, not the app's.
+    if "style" in asset:
+        style = (ART / asset["style"]).read_text().strip() if asset["style"] else ""
+    parts = [p for p in [style, "Subject: " + asset["brief"]] if p]
     if asset.get("cutout", False):
         parts.append(manifest["background"])
     if has_reference:
