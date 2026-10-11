@@ -144,7 +144,7 @@ struct LibrarySampleTests {
         #expect(entry.sample.sourceRecord == record.id)
         #expect(FileManager.default.fileExists(atPath: store.samplesDirectoryURL.appendingPathComponent(entry.sample.media.fileName).path),
                 "the sample's audio was copied into samples/")
-        #expect(LibrarySidebar.sampleDetail(entry).contains("92 bpm"))
+        #expect(LibraryText.sampleDetail(entry).contains("92 bpm"))
 
         let later = LibraryFixture.app(directory)
         later.reloadLibrary()
@@ -157,7 +157,7 @@ struct LibrarySampleTests {
         #expect(later.bench.items.last?.kind == .chopLane)
         #expect(later.bound(for: later.bench.items.last!.id) == [version.id])
         #expect(later.playback.chop != nil, "a dusty chop plays from the transport")
-        #expect(LibrarySidebar.recordDetail(record).contains("D major"))
+        #expect(LibraryText.recordDetail(record).contains("D major"))
     }
 
     @Test("only a chop can be saved as a sample")

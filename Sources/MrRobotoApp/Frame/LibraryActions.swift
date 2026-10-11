@@ -3,10 +3,10 @@ import Instrument
 import SongGraph
 import SwiftUI
 
-/// Something that can be done to an item in the library. The strip on the left offers these as a
-/// row's menu and the Library surface as buttons under the item's name, from one list
-/// (`LibraryActions`), so the two cannot drift apart. Every one is a call the app already makes,
-/// asking first in the words it already used wherever it cannot be undone.
+/// Something that can be done to an item in the library. The Library surface offers these as
+/// buttons under the item's name and as a row's menu, from one list (`LibraryActions`), so the two
+/// cannot drift apart. Every one is a call the app already makes, asking first in the words it
+/// already used wherever it cannot be undone.
 struct LibraryAction: Identifiable {
     enum Kind {
         /// Done at once.

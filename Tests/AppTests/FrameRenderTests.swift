@@ -91,7 +91,7 @@ struct FrameRenderTests {
         SurfaceRegistry.registerSurfaces()
         let built = GuidanceFixture.separated()
         let app = app(built.song)
-        app.regions.setCollapsed(false, for: .rail)
+        for region in FrameRegion.allCases { app.regions.setCollapsed(false, for: region) }
         let width = FrameLayout.minimumWindowWidth(collapsed: [])
         try write(FrameView(app: app), size: CGSize(width: width, height: FrameLayout.minimumWindowHeight), name: "frame-minimum-all-open")
     }
@@ -250,7 +250,7 @@ struct FrameRenderTests {
         let app = AppState(library: shelf.library, song: shelf.nightBus, transportHost: StubTransportHost())
         // What the surface remembers goes to the app's defaults: put back what this changed.
         defer { for key in ["shelf"] + LibraryShelf.allCases.map(\.rawValue) { UserDefaults.standard.removeObject(forKey: LibraryBrowserMemory.prefix + key) } }
-        // The strip on the left is folded, as a first launch has it; nothing here unfolds it.
+        // The parts are folded to their strip, as a first launch has them; nothing here unfolds them.
         app.showSurface(.library)
         let wide = CGSize(width: 1440, height: 900)
         let minimum = CGSize(width: FrameLayout.minimumWindowWidth(collapsed: app.regions.collapsed), height: FrameLayout.minimumWindowHeight)
@@ -583,7 +583,7 @@ extension FrameRenderTests {
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-sources-empty")
     }
 
-    @Test("the crate in the sidebar: one record separating, one read and opened on its stems; the header says how far")
+    @Test("the crate on the Library's Records shelf: one record separating, one read; the header says how far")
     func crate() async throws {
         FontRegistration.registerBundledFonts()
         SurfaceRegistry.registerSurfaces()
@@ -597,17 +597,12 @@ extension FrameRenderTests {
         app.crate.host = host
         app.importRecords([files[1]], separating: true)
         while app.crate.running?.kind != .separate { await Task.yield() }
-        let rows = VStack(alignment: .leading, spacing: 6) {
-            ForEach(Array(app.library.records.enumerated()), id: \.offset) { index, record in
-                RecordRowView(record: record, app: app, startsOpen: index == 0)
-            }
-        }
-        .padding(Design.Metric.inset)
-        .background(Design.Palette.panelAlt)
         #expect(app.crate.status(of: app.library.records[1].id) == "separating…")
         #expect(app.crate.line == "Separating Record 2")
-        try write(rows, size: CGSize(width: FrameLayout.librarySidebarWidth, height: 260), name: "sidebar-crate")
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-crate")
+        // Where File ▸ Import Records… shows the crate now: the Library, on its Records shelf.
+        app.showInLibrary(LibraryQuery(shelf: .records))
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-crate-library")
         app.crate.cancel(app.library.records[1].id)
         await app.crate.waitUntilIdle()
     }

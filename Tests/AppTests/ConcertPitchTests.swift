@@ -49,7 +49,7 @@ struct ConcertPitchAppTests {
         let tuning = try #require(record.tuning)
         #expect(abs(tuning + 28) < 2, "\(tuning)")
         #expect(app.log.contains { $0.text == "Record 1 is read" && ($0.detail ?? "").contains("cents flat of concert pitch") })
-        #expect(LibrarySidebar.recordDetail(record).contains("¢ flat"), "its row says so")
+        #expect(LibraryText.recordDetail(record).contains("¢ flat"), "its row says so")
 
         app.open(Song.new(title: "At pitch", key: Key(tonic: NoteName(.e)), tempo: 100))
         app.save()
@@ -79,7 +79,7 @@ struct ConcertPitchAppTests {
         let (app, directory, record) = try await Self.crate("pitch-true", cents: 0)
         defer { WiringFixture.remove(directory) }
         #expect(abs(try #require(record.tuning)) < 2)
-        #expect(!LibrarySidebar.recordDetail(record).contains("¢"), "a record at pitch says nothing of it")
+        #expect(!LibraryText.recordDetail(record).contains("¢"), "a record at pitch says nothing of it")
         app.open(Song.new(title: "At pitch", key: Key(tonic: NoteName(.e)), tempo: 100))
         app.save()
         let request = SourceRequest(record: record.id, stem: Mashups.full, atBar: 0, takesItsGrid: false)

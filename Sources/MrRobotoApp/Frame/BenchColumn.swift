@@ -83,7 +83,7 @@ struct BenchColumn: View {
     private var emptyNote: some View {
         EmptyNote(title: app.song == nil ? "Nothing open." : "The bench is empty.",
                   detail: app.song == nil
-                      ? "The Director is asking where to start, in the Band column: pick up a song, start a new one, or flip a record. Every song you have made is in the library, in the strip on the left."
+                      ? "The Director is asking where to start, in the Band column: pick up a song, start a new one, or flip a record. Every song you have made is in the Library, first on the dock (⇧⌘L)."
                       : "Answer the band's question on the right, or press a surface above and it fills the bench. Pin one to keep it on screen while you work in another.")
             .padding(Design.Metric.inset)
             .frame(maxWidth: .infinity, alignment: .leading)

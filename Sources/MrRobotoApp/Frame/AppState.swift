@@ -310,8 +310,8 @@ public final class AppState {
     /// choose it. The surface takes it, so it is chosen once.
     public var askedSource: AskedSource?
 
-    /// An item asked to be shown in the Library surface — from a row's menu in the strip on the
-    /// left — waiting for the surface to select it. The surface takes it, so it is shown once.
+    /// An item asked to be shown in the Library surface, waiting for the surface to select it. The
+    /// surface takes it, so it is shown once.
     public var libraryAsk: LibraryItemID?
     /// A search asked to be shown in the Library surface — by the band — taken by the surface once.
     public var libraryQueryAsk: LibraryQuery?

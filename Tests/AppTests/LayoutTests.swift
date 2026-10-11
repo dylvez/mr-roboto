@@ -38,20 +38,21 @@ private enum Before {
 @Suite("Layout: width")
 struct LayoutWidthTests {
 
-    @Test("At the default window the open surface gets 1009 of 1440 points — 70%, not 42% — with the band open")
+    @Test("At the default window the open surface gets 1054 of 1440 points — 73%, not 42% — with the band open")
     func defaultWindow() {
         let collapsed = FrameLayout.defaultCollapsedRegions
         let width = FrameLayout.defaultWindowWidth
 
-        // The band open (340), the library and the parts as strips (44 each), three hairlines.
-        #expect(FrameLayout.fixedWidth(collapsed: collapsed) == 431)
-        #expect(FrameLayout.benchWidth(inWindowOfWidth: width, collapsed: collapsed) == 1009)
+        // The band open (340), the parts as a strip (44), two hairlines. The library had a strip of
+        // its own as well, until the Library surface took over all it did.
+        #expect(FrameLayout.fixedWidth(collapsed: collapsed) == 386)
+        #expect(FrameLayout.benchWidth(inWindowOfWidth: width, collapsed: collapsed) == 1054)
         // Studio draws the surface edge to edge, so the bench's padding is the surface's too.
-        #expect(FrameLayout.surfaceWidth(inWindowOfWidth: width, collapsed: collapsed) == 1009)
+        #expect(FrameLayout.surfaceWidth(inWindowOfWidth: width, collapsed: collapsed) == 1054)
 
         let share = FrameLayout.surfaceShare(inWindowOfWidth: width, collapsed: collapsed)
         #expect(share > FrameLayout.minimumSurfaceShare)
-        #expect(abs(share - 0.7007) < 0.001)
+        #expect(abs(share - 0.7319) < 0.001)
 
         // The point of the whole exercise, said as a comparison rather than as a constant.
         #expect(FrameLayout.surfaceWidth(inWindowOfWidth: width, collapsed: collapsed)
@@ -78,25 +79,27 @@ struct LayoutWidthTests {
         let none: Set<FrameRegion> = []
         let all = Set(FrameRegion.allCases)
 
-        // Three hairlines between four columns are part of the arithmetic, not rounding.
-        #expect(FrameLayout.fixedWidth(collapsed: none) == Before.fixedWidth - Before.railSlimmedBy + 3)
-        #expect(FrameLayout.fixedWidth(collapsed: all) == CGFloat(3 * 44 + 3))
+        // Two hairlines between three columns are part of the arithmetic, not rounding. The
+        // furniture was 830 with the library's column; the band slimmed by 40, and the library
+        // went to the bench.
+        #expect(FrameLayout.fixedWidth(collapsed: none) == CGFloat(340 + 230 + 2))
+        #expect(FrameLayout.fixedWidth(collapsed: none) < Before.fixedWidth - Before.railSlimmedBy - 200)
+        #expect(FrameLayout.fixedWidth(collapsed: all) == CGFloat(2 * 44 + 2))
 
-        #expect(FrameLayout.benchWidth(inWindowOfWidth: 1440, collapsed: all) == 1305)
-        #expect(FrameLayout.surfaceWidth(inWindowOfWidth: 1440, collapsed: all) == 1305)
+        #expect(FrameLayout.benchWidth(inWindowOfWidth: 1440, collapsed: all) == 1350)
+        #expect(FrameLayout.surfaceWidth(inWindowOfWidth: 1440, collapsed: all) == 1350)
 
-        #expect(FrameLayout.benchWidth(inWindowOfWidth: 1728, collapsed: none) == 935)
-        #expect(FrameLayout.surfaceWidth(inWindowOfWidth: 1728, collapsed: none) == 935)
-        #expect(FrameLayout.benchWidth(inWindowOfWidth: 1728, collapsed: FrameLayout.defaultCollapsedRegions) == 1297)
-        #expect(FrameLayout.surfaceWidth(inWindowOfWidth: 1728, collapsed: FrameLayout.defaultCollapsedRegions) == 1297)
-        #expect(FrameLayout.benchWidth(inWindowOfWidth: 1728, collapsed: all) == 1593)
-        #expect(FrameLayout.surfaceWidth(inWindowOfWidth: 1728, collapsed: all) == 1593)
+        #expect(FrameLayout.benchWidth(inWindowOfWidth: 1728, collapsed: none) == 1156)
+        #expect(FrameLayout.surfaceWidth(inWindowOfWidth: 1728, collapsed: none) == 1156)
+        #expect(FrameLayout.benchWidth(inWindowOfWidth: 1728, collapsed: FrameLayout.defaultCollapsedRegions) == 1342)
+        #expect(FrameLayout.surfaceWidth(inWindowOfWidth: 1728, collapsed: FrameLayout.defaultCollapsedRegions) == 1342)
+        #expect(FrameLayout.benchWidth(inWindowOfWidth: 1728, collapsed: all) == 1638)
+        #expect(FrameLayout.surfaceWidth(inWindowOfWidth: 1728, collapsed: all) == 1638)
 
-        // All three open in a 1440 window just fits now: 793 of furniture leaves 647, seven more than a
-        // surface needs once the bench has no padding of its own, and the window minimum with every
-        // region open is 1433. Cool Neutral's padding made it 1469, past a 1440 window.
-        #expect(FrameLayout.benchWidth(inWindowOfWidth: 1440, collapsed: none) == 647)
-        #expect(FrameLayout.minimumWindowWidth(collapsed: none) == 1433)
+        // Both open in a 1440 window: 572 of furniture leaves the bench 868, and the window minimum
+        // with both open is 1212. With the library's column it was 647, and 1433.
+        #expect(FrameLayout.benchWidth(inWindowOfWidth: 1440, collapsed: none) == 868)
+        #expect(FrameLayout.minimumWindowWidth(collapsed: none) == 1212)
     }
 
     @Test("Folding a region hands every one of its points to the bench, and nothing else moves")
@@ -153,8 +156,8 @@ struct LayoutMinimumTests {
 
     @Test("The minimum is what a surface needs, not what the furniture costs")
     func minimumIsTheSurface() {
-        // 640, three 44-point strips and three hairlines: in Studio the bench has no padding of its own.
-        #expect(FrameLayout.minimumWindowWidth == 775)
+        // 640, two 44-point strips and two hairlines: in Studio the bench has no padding of its own.
+        #expect(FrameLayout.minimumWindowWidth == 730)
         #expect(FrameLayout.minimumWindowHeight == 562)
 
         // At the floor, a surface is drawn at exactly the size the tokens say it needs.
@@ -171,9 +174,9 @@ struct LayoutMinimumTests {
 
     @Test("Asking for a region back asks the window for its width, rather than crushing the bench")
     func minimumFollowsTheRegions() {
-        #expect(FrameLayout.minimumWindowWidth(collapsed: Set(FrameRegion.allCases)) == 775)
-        #expect(FrameLayout.minimumWindowWidth(collapsed: FrameLayout.defaultCollapsedRegions) == 1071)
-        #expect(FrameLayout.minimumWindowWidth(collapsed: []) == 1433)
+        #expect(FrameLayout.minimumWindowWidth(collapsed: Set(FrameRegion.allCases)) == 730)
+        #expect(FrameLayout.minimumWindowWidth(collapsed: FrameLayout.defaultCollapsedRegions) == 1026)
+        #expect(FrameLayout.minimumWindowWidth(collapsed: []) == 1212)
 
         // Whatever is open, the minimum window still draws a full-size surface.
         for collapsed in [Set(FrameRegion.allCases), FrameLayout.defaultCollapsedRegions, []] {
@@ -203,33 +206,35 @@ struct LayoutRegionTests {
         return (defaults, { UserDefaults.standard.removePersistentDomain(forName: name) })
     }
 
-    @Test("First launch: the band is open, asking; the library and the parts are strips")
+    @Test("First launch: the band is open, asking; the parts are a strip")
     func firstLaunchDefaults() {
         let (defaults, cleanUp) = scratch()
         defer { cleanUp() }
         let regions = RegionVisibility(defaults: defaults)
 
-        #expect(regions.isCollapsed(.library) == true)
         #expect(regions.isCollapsed(.rail) == false)
         #expect(regions.isCollapsed(.ledger) == true)
-        #expect(regions.fixedWidth == CGFloat(44 + 340 + 44))
-        #expect(FrameLayout.defaultCollapsedRegions == [.library, .ledger])
+        #expect(regions.fixedWidth == CGFloat(340 + 44))
+        #expect(FrameLayout.defaultCollapsedRegions == [.ledger])
+        // The library is a surface, not a region: there is no column for it to fold.
+        #expect(FrameRegion.allCases == [.rail, .ledger])
     }
 
     @Test("A layout remembered from before the band opened by default is put back to the new defaults once, then kept")
     func newDefaultsAppliedOnce() {
         let (defaults, cleanUp) = scratch()
         defer { cleanUp() }
-        // The old defaults, remembered, and no layout version: an install from before.
-        defaults.set(false, forKey: FrameRegion.library.defaultsKey)
+        // The old defaults, remembered, and no layout version: an install from before. The
+        // library's own key is left over from when it had a column, and is ignored.
+        defaults.set(false, forKey: "frame.region.library.collapsed")
         defaults.set(true, forKey: FrameRegion.rail.defaultsKey)
         defaults.set(false, forKey: FrameRegion.ledger.defaultsKey)
         let upgraded = RegionVisibility(defaults: defaults)
-        #expect(upgraded.collapsed == [.library, .ledger])
+        #expect(upgraded.collapsed == [.ledger])
 
         // What you fold after that is yours.
         upgraded.setCollapsed(false, for: .ledger)
-        #expect(RegionVisibility(defaults: defaults).collapsed == [.library])
+        #expect(RegionVisibility(defaults: defaults).collapsed == [])
     }
 
     @Test("Collapse and expand round-trip, and every region can be put away")
@@ -256,17 +261,15 @@ struct LayoutRegionTests {
         defer { cleanUp() }
 
         let first = RegionVisibility(defaults: defaults)
-        first.setCollapsed(true, for: .library)
         first.setCollapsed(true, for: .ledger)
         first.setCollapsed(false, for: .rail)
 
         // A second object over the same preferences is what the next launch sees.
         let next = RegionVisibility(defaults: defaults)
-        #expect(next.isCollapsed(.library) == true)
         #expect(next.isCollapsed(.ledger) == true)
         #expect(next.isCollapsed(.rail) == false)
-        #expect(next.collapsed == [.library, .ledger])
-        #expect(next.fixedWidth == CGFloat(44 + 340 + 44))
+        #expect(next.collapsed == [.ledger])
+        #expect(next.fixedWidth == CGFloat(340 + 44))
     }
 
     @Test("Each region has its own shortcut and its own preferences key")
@@ -501,7 +504,6 @@ struct LayoutColumnFitTests {
         // column's header, the conversation and the composer the rail drew 678 points in 553, and
         // the window cut the header and the transport off. The card now gives way first.
         #expect(try drawn(ConversationRail(app: app), width: FrameLayout.conversationRailWidth, height: column) == column)
-        #expect(try drawn(LibrarySidebar(app: app), width: FrameLayout.librarySidebarWidth, height: column) == column)
         #expect(try drawn(PartsLedger(app: app), width: FrameLayout.partsLedgerWidth, height: column) == column)
         #expect(try drawn(BenchColumn(app: app, registry: .shared), width: FrameLayout.benchMinimumWidth, height: column) == column)
         app.perform(SurfaceAction(surface: .library, title: "Library"))

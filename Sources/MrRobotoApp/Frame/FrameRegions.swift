@@ -1,7 +1,7 @@
 import Observation
 import SwiftUI
 
-/// The three regions that flank the bench, and whether each one is currently open.
+/// The two regions that flank the bench, and whether each one is currently open.
 ///
 /// They were fixed because the mockups that drew them were drawn for Gate B, where an AI Director
 /// fills the rail and opens panels beside your work. In Gate A the rail is inert, the library is how
@@ -10,8 +10,11 @@ import SwiftUI
 ///
 /// So each one collapses to a strip. Collapsing never hides information outright: a collapsed region
 /// keeps its name and its count on the strip, and the strip is the control that brings it back.
+///
+/// There were three. The library had a column of its own on the left until the Library surface
+/// did all it did and more — searched, sorted, heard, acted on and dragged from — on the bench,
+/// first in the dock; ⌥⌘1 opens that surface now.
 public enum FrameRegion: String, CaseIterable, Sendable, Identifiable {
-    case library
     case rail
     case ledger
 
@@ -20,7 +23,6 @@ public enum FrameRegion: String, CaseIterable, Sendable, Identifiable {
     /// What the strip and the View menu call it.
     public var title: String {
         switch self {
-        case .library: return "Library"
         case .rail: return "Band"
         case .ledger: return "Parts"
         }
@@ -29,31 +31,37 @@ public enum FrameRegion: String, CaseIterable, Sendable, Identifiable {
     /// The width it is drawn at when it is open.
     public var expandedWidth: CGFloat {
         switch self {
-        case .library: return Design.Metric.librarySidebarWidth
         case .rail: return Design.Metric.conversationRailWidth
         case .ledger: return Design.Metric.partsLedgerWidth
         }
     }
 
-    /// ⌥⌘1/2/3, left to right as the regions sit on screen. ⌘1–4 are the surfaces and ⌃⌘1–3 the
-    /// themes; these are pressed about as often as the themes are.
+    /// ⌥⌘2 the band, ⌥⌘3 the parts — the keys they had when the band sat left of the bench and the
+    /// parts right of it, kept when the two changed sides so the hand does not have to learn them
+    /// again. ⌥⌘1 was the library's, and opens the Library surface now. ⌘1–4 are the surfaces and
+    /// ⌃⌘1–2 the themes; these are pressed about as often as the themes are.
     public var shortcut: Character {
         switch self {
-        case .library: return "1"
         case .rail: return "2"
         case .ledger: return "3"
+        }
+    }
+
+    /// Which side of the bench it sits on: the parts to the left of the work, the band to the
+    /// right of it, where a conversation sits beside the thing it is about in most apps now.
+    public var side: HorizontalEdge {
+        switch self {
+        case .rail: return .trailing
+        case .ledger: return .leading
         }
     }
 
     /// Where the choice is remembered between launches.
     public var defaultsKey: String { "frame.region.\(rawValue).collapsed" }
 
-    /// What a first launch opens with, and the reasoning is the same in all three cases: does this
+    /// What a first launch opens with, and the reasoning is the same in both cases: does this
     /// region earn its width while you are working?
     ///
-    /// - The **library** does not, any more. It is how you get in and how you switch songs, and the
-    ///   Director's first question now does the getting in — pick up the last song, start one,
-    ///   flip a record, or open another, which unfolds it. Its strip is one click from the list.
     /// - The **rail** does: the band asks what next at its top, and the band is the app's idea. It
     ///   used to start folded, from when it was a session log and an inert composer.
     /// - The **ledger** folds to its strip, with its count, to pay for the band: with the band open
@@ -62,7 +70,6 @@ public enum FrameRegion: String, CaseIterable, Sendable, Identifiable {
     ///   their versions are one click away.
     public var isCollapsedByDefault: Bool {
         switch self {
-        case .library: return true
         case .rail: return false
         case .ledger: return true
         }
@@ -151,10 +158,10 @@ struct CollapsedStrip: View {
     var body: some View {
         Button(action: expand) {
             VStack(spacing: 10) {
-                Image(systemName: "chevron.compact.left")
+                // Opening comes away from the edge the strip sits against.
+                Image(systemName: region.side == .leading ? "chevron.compact.right" : "chevron.compact.left")
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(Design.Palette.inkTertiary)
-                    .rotationEffect(.degrees(180))
                 if !badge.isEmpty {
                     Text(badge)
                         .font(Design.Typography.numeric(10.5))
@@ -189,7 +196,8 @@ struct CollapseButton: View {
     let app: AppState
 
     var body: some View {
-        ChipButton(systemImage: region == .ledger ? "chevron.right" : "chevron.left",
+        // Folding goes toward the window's edge the region sits against.
+        ChipButton(systemImage: region.side == .leading ? "chevron.left" : "chevron.right",
                    help: "Hide \(region.title) (⌥⌘\(region.shortcut))") {
             app.regions.setCollapsed(true, for: region)
         }

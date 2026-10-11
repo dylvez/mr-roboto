@@ -20,7 +20,6 @@ import SwiftUI
 /// `LayoutTests` at the minimum window, at 1440 and at 1728, so a later change cannot quietly take
 /// the bench's space back.
 public enum FrameLayout {
-    public static let librarySidebarWidth = Design.Metric.librarySidebarWidth
     public static let conversationRailWidth = Design.Metric.conversationRailWidth
     public static let partsLedgerWidth = Design.Metric.partsLedgerWidth
     public static let collapsedRegionWidth = Design.Metric.collapsedRegionWidth
@@ -46,8 +45,8 @@ public enum FrameLayout {
     /// The bench at its narrowest: a surface at its minimum, plus the bench's own padding.
     public static var benchMinimumWidth: CGFloat { surfaceMinimumWidth + 2 * benchPadding }
 
-    /// The vertical hairlines between the four columns: library│rail│bench│ledger.
-    public static let verticalDividers: CGFloat = 3 * Design.Metric.hairline
+    /// The vertical hairlines between the three columns: ledger│bench│rail.
+    public static let verticalDividers: CGFloat = 2 * Design.Metric.hairline
     /// The horizontal hairlines under the header and above the transport — only the one above the
     /// transport when the window's toolbar is the header.
     public static var horizontalDividers: CGFloat { (Design.style.nativeChrome ? 1 : 2) * Design.Metric.hairline }
@@ -212,22 +211,19 @@ struct FrameView: View {
                 HeaderBar(app: app)
                 Hairline()
             }
+            // The parts to the left of the work, the band to the right of it.
             HStack(spacing: 0) {
-                RegionColumn(region: .library, app: app, badge: libraryBadge) {
-                    LibrarySidebar(app: app)
-                }
-                Hairline(axis: .vertical)
-                RegionColumn(region: .rail, app: app, badge: railBadge,
-                             isAccented: !app.proposals.isEmpty || app.unseenSessionNotes > 0,
-                             isWarning: app.unseenSessionNotes > 0) {
-                    ConversationRail(app: app)
+                RegionColumn(region: .ledger, app: app, badge: ledgerBadge) {
+                    PartsLedger(app: app)
                 }
                 Hairline(axis: .vertical)
                 BenchColumn(app: app, registry: registry)
                     .frame(minWidth: FrameLayout.benchMinimumWidth, maxWidth: .infinity)
                 Hairline(axis: .vertical)
-                RegionColumn(region: .ledger, app: app, badge: ledgerBadge) {
-                    PartsLedger(app: app)
+                RegionColumn(region: .rail, app: app, badge: railBadge,
+                             isAccented: !app.proposals.isEmpty || app.unseenSessionNotes > 0,
+                             isWarning: app.unseenSessionNotes > 0) {
+                    ConversationRail(app: app)
                 }
             }
             .frame(maxHeight: .infinity)
@@ -274,11 +270,7 @@ struct FrameView: View {
 
     /// A collapsed region still says how much it is holding, so putting one away is not the same as
     /// forgetting what is in it.
-    private var libraryBadge: String {
-        let count = app.library.songs.count
-        return count == 0 ? "" : "\(count)"
-    }
-
+    ///
     /// Lines the app wrote while the rail was folded come first: a failed save is worth more than a
     /// count of suggestions. Then the suggestions, then the length of the log.
     private var railBadge: String {

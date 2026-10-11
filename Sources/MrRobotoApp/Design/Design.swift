@@ -970,8 +970,8 @@ public enum Design {
         /// The side regions, at the width they are drawn when they are open. They no longer set the
         /// window's minimum — every one of them collapses to `collapsedRegionWidth` — so these are
         /// what a region costs when you have asked for it, not what the frame costs you always.
-        public static let librarySidebarWidth: CGFloat = 220
-        /// Open from the first launch, so it is what the bench pays most for: 340 holds the band's
+        ///
+        /// The band's column. Open from the first launch, so it is what the bench pays most for: 340 holds the band's
         /// question, the log and the field, and leaves the bench 824 at the 1440 default.
         public static let conversationRailWidth: CGFloat = 340
         public static let partsLedgerWidth: CGFloat = 230

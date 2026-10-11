@@ -65,15 +65,15 @@ struct CommandPaletteTests {
         #expect(!songs.contains { $0.title == open.title })
     }
 
-    @Test("A command does what it says: Loop loops, Show Library shows it")
+    @Test("A command does what it says: Loop loops, Show Parts shows them")
     func commandsRun() {
         let (app, _) = app()
         let wasLooping = app.isLooping
         CommandPalette.commands(for: app).first { $0.id == "song.loop" }?.run()
         #expect(app.isLooping != wasLooping)
 
-        let folded = app.regions.isCollapsed(.library)
-        CommandPalette.commands(for: app).first { $0.id == "view.region.library" }?.run()
-        #expect(app.regions.isCollapsed(.library) != folded)
+        let folded = app.regions.isCollapsed(.ledger)
+        CommandPalette.commands(for: app).first { $0.id == "view.region.ledger" }?.run()
+        #expect(app.regions.isCollapsed(.ledger) != folded)
     }
 }

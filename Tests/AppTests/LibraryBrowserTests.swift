@@ -5,8 +5,8 @@ import Testing
 
 @testable import MrRobotoApp
 
-// The Library surface: its model, the actions it shares with the strip on the left, and its place
-// on the bench and in the dock.
+// The Library surface: its model, the actions it offers as buttons and as a row's menu, and its
+// place on the bench and in the dock.
 
 @MainActor
 enum LibraryBrowserFixture {
@@ -225,8 +225,8 @@ struct LibraryActionTests {
         #expect(index.facts(.sample(shelf.chop.id))?.line == "D3 · 100 bpm · 2 slices")
         #expect(index.facts(.album(shelf.album.id))?.line == "2 songs")
         #expect(index.facts(.idea(shelf.idea.id))?.line == "the changes")
-        #expect(LibrarySidebar.recordDetail(shelf.drifter) == "D minor · 100 bpm · 8 bars · 12¢ sharp · 2 stems")
-        #expect(LibrarySidebar.recordDetail(shelf.ferry) == "WAV", "nothing read: what it is")
+        #expect(LibraryText.recordDetail(shelf.drifter) == "D minor · 100 bpm · 8 bars · 12¢ sharp · 2 stems")
+        #expect(LibraryText.recordDetail(shelf.ferry) == "WAV", "nothing read: what it is")
     }
 }
 

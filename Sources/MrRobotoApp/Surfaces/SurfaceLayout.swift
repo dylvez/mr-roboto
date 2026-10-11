@@ -39,7 +39,7 @@ public enum SurfaceGeometry {
                                                  visibleSurfaces: 1))
     }
 
-    /// The same window with all three side regions folded away: the widest a surface gets at 1440.
+    /// The same window with both side regions folded away: the widest a surface gets at 1440.
     public static var wide: CGSize {
         CGSize(width: FrameLayout.surfaceWidth(inWindowOfWidth: FrameLayout.defaultWindowWidth,
                                                collapsed: Set(FrameRegion.allCases)),

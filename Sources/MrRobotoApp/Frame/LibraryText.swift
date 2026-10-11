@@ -2,11 +2,11 @@ import Foundation
 import MusicTheory
 import SongGraph
 
-// How the library's facts read: a row's line in the strip on the left, a cell in the Library
-// surface's list, a fact in its detail pane. One place, so the two views say the same thing.
+// How the library's facts read: a cell in the Library surface's list, a fact in its detail pane,
+// a song's line in the command palette. One place, so they all say the same thing.
 
 extension LibraryFacts {
-    /// The second line of a row in the strip on the left: "D major · 113 bpm · 78 bars".
+    /// An item's facts in one line: "D major · 113 bpm · 78 bars".
     var line: String {
         switch id.shelf {
         case .songs:
@@ -114,6 +114,20 @@ extension LibraryColumn {
 }
 
 enum LibraryText {
+    /// "D major · 113 bpm · 78 bars · 4 stems", from the record's own analysis; without the stems
+    /// where the row marks them itself, and the file's type for a record not read yet.
+    static func recordDetail(_ record: Record, stems showsStems: Bool = true) -> String {
+        let line = LibraryIndex.facts(of: record).recordLine(stems: showsStems)
+        return line.isEmpty ? record.media.fileExtension.uppercased() : line
+    }
+
+    /// Root, tempo, slices and the chain, from the sample itself.
+    static func sampleDetail(_ entry: LibrarySample) -> String { LibraryIndex.facts(of: entry).line }
+
+    /// Each shelf's glyph, so the library speaks the same visual vocabulary as the path.
+    static let shelfGlyphs: [String: String] = ["Ideas": "idea", "Songs": "song", "Albums": "album",
+                                                "Records": "record", "Samples": "chop"]
+
     /// "song", "record": one of a shelf.
     static func noun(_ shelf: LibraryShelf) -> String {
         switch shelf {

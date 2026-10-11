@@ -290,7 +290,7 @@ struct CheckLayoutTests {
         #expect(standard.reasonSize > tight.reasonSize)
         #expect(tight.headlineSize == 17)
         #expect(standard.headlineSize == 22)
-        // And it stops growing, rather than becoming a poster at 1305 points.
+        // And it stops growing, rather than becoming a poster at 1350 points.
         #expect(CheckLayout(size: SurfaceGeometry.wide).headlineSize == standard.headlineSize)
     }
 

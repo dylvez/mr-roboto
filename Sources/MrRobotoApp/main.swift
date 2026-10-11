@@ -261,7 +261,10 @@ struct FrameCommands: Commands {
         // thing the instrument does.
         CommandGroup(after: .toolbar) {
             Divider()
-            // The three flanking regions, foldable. ⌥⌘1/2/3, left to right as they sit on screen:
+            // ⌥⌘1 was the library's column; the Library is a surface now, and the key opens it.
+            Button("Show Library") { app.showSurface(.library) }
+                .keyboardShortcut("1", modifiers: [.command, .option])
+            // The two flanking regions, foldable: ⌥⌘2 the band (right), ⌥⌘3 the parts (left);
             // the instrument dominates the window and these are on call.
             ForEach(FrameRegion.allCases) { region in
                 Toggle("Show \(region.title)", isOn: Binding(
@@ -344,7 +347,8 @@ extension MrRobotoApp {
     static func importRecords(_ app: AppState) {
         guard let (files, separating) = FilePanels.chooseRecords() else { return }
         app.importRecords(files, separating: separating)
-        app.regions.setCollapsed(false, for: .library)
+        // Where they are being read and separated: the crate, on the Library's Records shelf.
+        app.showInLibrary(LibraryQuery(shelf: .records))
     }
 
     /// File ▸ Flip a Record and the empty bench's button: the open dialog, then the Record surface

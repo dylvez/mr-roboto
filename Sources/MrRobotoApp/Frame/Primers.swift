@@ -103,7 +103,7 @@ public enum Primer {
                         + "albums. Type to search every word a thing says about itself; sort by any column; narrow by key, "
                         + "tempo — half and double time count — and whether anything uses it. Pick one to read it without "
                         + "opening it: what a song is made from, which songs take from a record. What can be done to it is "
-                        + "under its name, the same as its row's menu in the strip on the left.")
+                        + "under its name; drag a row, a stem or a chop onto the song or a section to bring it in.")
         case .mashup:
             return ("Mashup",
                     "Two songs from the library on one grid. One keeps its tempo and key — usually the instrumental — and the "

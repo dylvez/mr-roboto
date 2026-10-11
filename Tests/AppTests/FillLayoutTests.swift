@@ -6,7 +6,7 @@ import Testing
 
 // Do the surfaces use the room they have?
 //
-// The frame was rebuilt so that one surface fills the bench — 1009 × 798 at the default window, 1305
+// The frame was rebuilt so that one surface fills the bench — 1054 × 798 at the default window, 1350
 // wide with the side regions folded, 640 × 460 at the window minimum — and every surface in the
 // catalog had been authored when a surface got about 610 × 253. They sized themselves to their
 // content and top-aligned, leaving a third of a very expensive panel blank.
@@ -18,7 +18,7 @@ import Testing
 //
 // The shape of each test is the same on purpose: **the number has to change between the geometries**.
 // A layout that quietly went back to a constant would still be "sensible" at one size; it is the
-// difference between 640 and 1305 that says the surface is reading its own width.
+// difference between 640 and 1350 that says the surface is reading its own width.
 
 /// The three sizes, named once.
 private enum Geometry {
@@ -33,10 +33,10 @@ struct FillGeometryTests {
     @Test("They are the frame's own numbers, not a copy of them")
     func geometriesComeFromTheFrame() {
         #expect(Geometry.minimum == CGSize(width: 640, height: 460))
-        // Studio's: the surface runs edge to edge and the bars above and below it are shorter.
-        // Cool Neutral's were 973 × 665 and 1269 × 665.
-        #expect(Geometry.standard == CGSize(width: 1009, height: 798))
-        #expect(Geometry.wide == CGSize(width: 1305, height: 798))
+        // Studio's: the surface runs edge to edge, the bars above and below it are shorter, and
+        // the library has no column of its own. Cool Neutral's were 973 × 665 and 1269 × 665.
+        #expect(Geometry.standard == CGSize(width: 1054, height: 798))
+        #expect(Geometry.wide == CGSize(width: 1350, height: 798))
 
         // And they are derived, so a change to `Design.Metric` or to the regions moves them.
         #expect(Geometry.minimum.width == Design.Metric.surfaceMinimumWidth)
@@ -186,7 +186,7 @@ struct FillImportTests {
         #expect(stems < standard.contentSize.height)
     }
 
-    @Test("The lane label column follows the width, so a stem name is not truncated at 1305")
+    @Test("The lane label column follows the width, so a stem name is not truncated at 1350")
     func laneLabelsFollowWidth() {
         let widths = SurfaceGeometry.all.map { layout($0).laneLabelWidth }
         #expect(widths[0] < widths[2])
@@ -408,7 +408,7 @@ struct FillSoundTests {
             let layout = self.layout(size)
             #expect(layout.controlWidth <= SoundLayout.maximumControlWidth)
             #expect(layout.controlWidth >= SoundLayout.minimumControlWidth)
-            // A control never spans the panel: at 1305 points that would be the ugliness.
+            // A control never spans the panel: at 1350 points that would be the ugliness.
             #expect(layout.controlWidth < layout.contentSize.width)
         }
         #expect(layout(Geometry.wide).controlWidth == SoundLayout.maximumControlWidth)

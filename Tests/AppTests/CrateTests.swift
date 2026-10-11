@@ -91,7 +91,7 @@ struct CrateTests {
         // The disk holds what the frame does.
         let reread = try store.load()
         #expect(reread.records == app.library.records && reread.songs.isEmpty)
-        #expect(!LibrarySidebar.recordDetail(app.library.records[0]).isEmpty && LibrarySidebar.recordDetail(app.library.records[0]).hasSuffix("4 stems"))
+        #expect(!LibraryText.recordDetail(app.library.records[0]).isEmpty && LibraryText.recordDetail(app.library.records[0]).hasSuffix("4 stems"))
     }
 
     @Test("the same audio twice is one record; asked twice, a job is queued once")

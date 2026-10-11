@@ -25,7 +25,7 @@ struct ArtTests {
     @Test("every idiom glyph the frame names is drawn")
     func glyphs() {
         let names = PathStep.Kind.allCases.map(\.glyph) + SurfaceKind.allCases.map(\.glyph.name)
-            + Array(LibrarySidebar.glyphs.values) + Array(FieldGuide.glyphs.values) + ["idea"]
+            + Array(LibraryText.shelfGlyphs.values) + Array(FieldGuide.glyphs.values) + ["idea"]
         for name in Set(names) {
             let image = Art.glyph(name)
             #expect(image != nil, "glyph-\(name).svg is missing from Resources/Glyphs")

@@ -1,3 +1,4 @@
+import AppKit
 import MusicTheory
 import SongGraph
 import SwiftUI
@@ -188,7 +189,7 @@ struct LibrarySurfaceView: View {
         switch shelf {
         case .instruments: "sound"
         case .kits: "groove"
-        default: LibrarySidebar.glyphs[shelf.title] ?? "song"
+        default: LibraryText.shelfGlyphs[shelf.title] ?? "song"
         }
     }
 
@@ -222,7 +223,10 @@ struct LibrarySurfaceView: View {
         return VStack(spacing: 0) {
             toolbar(shown: rows.count)
             Hairline()
-            if model.count(on: model.shelf) == 0 {
+            if case .failed(let url, let reason) = model.app.libraryStatus {
+                failedRead(url, reason)
+                Spacer(minLength: 0)
+            } else if model.count(on: model.shelf) == 0 {
                 emptyShelf
                 Spacer(minLength: 0)
             } else if rows.isEmpty {
@@ -606,8 +610,37 @@ struct LibrarySurfaceView: View {
                 FrameButton(title: action.buttonTitle, isEnabled: action.isEnabled) { LibraryActions.perform(action) { pending = $0 } }
                     .help(action.help)
             }
+            // A library with nothing in it at all: where it is, so a library kept somewhere else
+            // can be found, and the folder can be seen.
+            if model.app.library.isEmpty, let directory = model.app.libraryStatus.directory {
+                libraryFolder(directory)
+            }
         }
         .padding(Design.Metric.inset)
+    }
+
+    /// The library could not be read: where, why, and the two ways on.
+    private func failedRead(_ url: URL, _ reason: String) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            EmptyNote(title: "The library could not be read.", detail: reason)
+            libraryFolder(url)
+            FrameButton(title: "Reload Library", emphasis: .quiet) { model.app.reloadLibrary() }
+                .help("Read the library folder again")
+        }
+        .padding(Design.Metric.inset)
+    }
+
+    private func libraryFolder(_ directory: URL) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(directory.path)
+                .font(Design.Typography.numeric(10.5))
+                .foregroundStyle(Design.Palette.inkTertiary)
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+            FrameButton(title: "Show in Finder", emphasis: .quiet) {
+                NSWorkspace.shared.activateFileViewerSelecting([directory])
+            }
+        }
     }
 
     private var nothingMatches: some View {
@@ -1010,7 +1043,16 @@ private struct LibraryDetail: View {
         if let record = model.app.library.record(id), let stems = record.stems, !stems.isEmpty {
             section("Stems") {
                 ForEach(stems.sorted { RecordStems.order($0.name) < RecordStems.order($1.name) }, id: \.name) { stem in
+                    // One stem at a time, onto the song or a Structure section, through Sources.
                     StemRow(stem: stem, record: record)
+                        .draggable(LibraryDragPayload(kind: .stem, id: record.id.rawValue,
+                                                      title: Sources.label(stem: stem.name, of: record.title), stem: stem.name))
+                        .contextMenu {
+                            Button("Add to This Song…") {
+                                model.app.askForSource(AskedSource(origin: .record(record.id), stem: stem.name))
+                            }
+                            .disabled(model.app.song == nil)
+                        }
                 }
             }
         }
@@ -1033,7 +1075,14 @@ private struct LibraryDetail: View {
         if !chops.isEmpty {
             section("Samples cut from it") {
                 ForEach(chops, id: \.self) { chop in
-                    link(model.index.facts(.sample(chop))?.title ?? "A sample", glyph: "chop", to: .sample(chop))
+                    let title = model.index.facts(.sample(chop))?.title ?? "A sample"
+                    let payload = LibraryDragPayload(kind: .sample, id: chop.rawValue, title: title)
+                    link(title, glyph: "chop", to: .sample(chop))
+                        .draggable(payload)
+                        .contextMenu {
+                            Button("Adopt into This Song") { _ = model.app.receive(payload, at: .bench) }
+                                .disabled(model.app.song == nil)
+                        }
                 }
             }
         }
