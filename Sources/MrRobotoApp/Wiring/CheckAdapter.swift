@@ -463,10 +463,7 @@ struct StatedCheck: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Design.Metric.gutter) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text(SurfaceKind.check.rawValue.uppercased())
-                    .font(Design.Typography.label)
-                    .tracking(1.1)
-                    .foregroundStyle(Design.Palette.inkTertiary)
+                SmallLabel(SurfaceKind.check.rawValue, color: Design.Palette.inkTertiary)
                 Text("the Director, in words")
                     .font(Design.Typography.ui(12))
                     .foregroundStyle(Design.Palette.inkSecondary)

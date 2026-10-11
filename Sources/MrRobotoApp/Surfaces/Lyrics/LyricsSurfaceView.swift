@@ -90,9 +90,12 @@ struct LyricsSurfaceView: View {
     private var labelChips: some View {
         let choices = model.labelChoices
         if choices.isEmpty {
-            Text("Type [Verse] above a stanza to name it after a section.")
-                .font(Design.Typography.ui(11, weight: .regular))
-                .foregroundStyle(Design.Palette.inkTertiary)
+            // The primer says this; said here only where primers are.
+            if Design.style.inlinePrimers {
+                Text("Type [Verse] above a stanza to name it after a section.")
+                    .font(Design.Typography.ui(11, weight: .regular))
+                    .foregroundStyle(Design.Palette.inkTertiary)
+            }
         } else {
             FlowRow(spacing: 6) {
                 Text("Label a stanza")
@@ -160,7 +163,7 @@ struct LyricsSurfaceView: View {
                     Text(name.uppercased())
                         .font(Design.Typography.label)
                         .tracking(1.1)
-                        .foregroundStyle(Design.Palette.accent)
+                        .foregroundStyle(Design.Palette.emphasis)
                         .padding(.leading, 22)
                         .padding(.top, index == 0 ? 0 : 4)
                         .accessibilityLabel("Stanza: \(name)")
@@ -171,7 +174,7 @@ struct LyricsSurfaceView: View {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text(index < letters.count ? letters[index] : "")
                             .font(Design.Typography.numeric(11, weight: .medium))
-                            .foregroundStyle(Design.Palette.accent)
+                            .foregroundStyle(Design.Palette.emphasis)
                             .frame(width: 14)
                         HStack(spacing: 1) {
                             ForEach(Array(line.syllables.enumerated()), id: \.offset) { position, syllable in
@@ -213,7 +216,7 @@ struct LyricsSurfaceView: View {
             } else if model.setTo != nil {
                 Text("Set to a melody this song no longer holds.")
                     .font(Design.Typography.ui(11, weight: .regular))
-                    .foregroundStyle(Design.Palette.warn)
+                    .foregroundStyle(Design.Palette.danger)
             }
         }
     }
@@ -239,21 +242,34 @@ private struct SetToMelodyMenu: View {
             if !choices.isEmpty { Divider() }
             Toggle("Not set", isOn: Binding(get: { model.setTo == nil }, set: { _ in model.setMelody(nil) }))
         } label: {
-            HStack(spacing: 4) {
-                Text(set.map { "Set to \($0.title)" } ?? "Set to melody")
-                    .font(Design.Typography.ui(11.5, weight: set == nil ? .regular : .semibold))
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                Image(systemName: "chevron.down")
-                    .font(Design.Typography.ui(8, weight: .bold))
+            if Design.style.filledControls {
+                StudioChip(isOn: set != nil) {
+                    HStack(spacing: 4) {
+                        Text(set.map { "Set to \($0.title)" } ?? "Set to melody")
+                            .font(Design.Typography.ui(11.5, weight: set == nil ? .regular : .semibold))
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                        Image(systemName: "chevron.down")
+                            .font(Design.Typography.ui(8, weight: .bold))
+                    }
+                }
+            } else {
+                HStack(spacing: 4) {
+                    Text(set.map { "Set to \($0.title)" } ?? "Set to melody")
+                        .font(Design.Typography.ui(11.5, weight: set == nil ? .regular : .semibold))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Image(systemName: "chevron.down")
+                        .font(Design.Typography.ui(8, weight: .bold))
+                }
+                .foregroundStyle(set == nil ? Design.Palette.inkSecondary : Design.Palette.accent)
+                .padding(.horizontal, 8)
+                .frame(height: Design.Metric.chipHeight)
+                .background(set == nil ? Design.Palette.panelAlt : Design.Palette.accentSoft,
+                            in: RoundedRectangle(cornerRadius: Design.Metric.corner))
+                .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
+                    .stroke(set == nil ? Design.Palette.line : Design.Palette.accent.opacity(0.35), lineWidth: Design.Metric.hairline))
             }
-            .foregroundStyle(set == nil ? Design.Palette.inkSecondary : Design.Palette.accent)
-            .padding(.horizontal, 8)
-            .frame(height: Design.Metric.chipHeight)
-            .background(set == nil ? Design.Palette.panelAlt : Design.Palette.accentSoft,
-                        in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-            .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
-                .stroke(set == nil ? Design.Palette.line : Design.Palette.accent.opacity(0.35), lineWidth: Design.Metric.hairline))
         }
         .menuStyle(.button)
         .buttonStyle(.plain)
@@ -291,7 +307,7 @@ private struct SyllableMark: View {
 
     private var rule: Color {
         if offBeat { return Design.Palette.warn }
-        return stressed ? Design.Palette.accent.opacity(0.6) : Color.clear
+        return stressed ? Design.Palette.emphasis.opacity(0.6) : Color.clear
     }
 
     var body: some View {
@@ -310,6 +326,6 @@ private struct LyricLabel: View {
     let text: String
     init(_ text: String) { self.text = text }
     var body: some View {
-        Text(text.uppercased()).font(Design.Typography.label).tracking(1.1).foregroundStyle(Design.Palette.inkTertiary)
+        SmallLabel(text, color: Design.Palette.inkTertiary)
     }
 }

@@ -83,7 +83,7 @@ struct FieldGuideView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 10) {
-                    SmallLabel("Surfaces", color: Design.Palette.accent)
+                    SmallLabel("Surfaces", color: Design.Palette.emphasis)
                     ForEach(SurfaceKind.allCases, id: \.self) { kind in
                         let primer = Primer.text(for: kind)
                         entry(glyph: kind.glyph, word: primer.title, meaning: primer.body)
@@ -91,7 +91,7 @@ struct FieldGuideView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 10) {
-                    SmallLabel("Words", color: Design.Palette.accent)
+                    SmallLabel("Words", color: Design.Palette.emphasis)
                     ForEach(FieldGuide.words) { word in
                         entry(glyph: FieldGuide.glyphs[word.word].map { ($0, "circle") }, word: word.word, meaning: word.meaning)
                     }

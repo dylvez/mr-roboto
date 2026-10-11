@@ -59,9 +59,9 @@ public struct CheckLayout: Equatable, Sendable {
 
     /// Header, the attribution line, the locus line, the hear control, and the gutters between them
     /// and the fixes. What the card costs before the measurement panel and the fixes.
-    public static let baseChromeHeight: CGFloat = 22 + 18 + 18 + hearHeight + 4 * Design.Metric.gutter
+    public static var baseChromeHeight: CGFloat { 22 + 18 + 18 + hearHeight + 4 * Design.Metric.gutter }
     /// The measurement panel, when it is shown, plus its own gutter.
-    public static let arithmeticHeight: CGFloat = 52 + Design.Metric.gutter
+    public static var arithmeticHeight: CGFloat { 52 + Design.Metric.gutter }
     /// Reserved for the outcome line and the keep-it control under the fixes. A constant rather
     /// than a share: it is one line of text at every size.
     public static let footerReserve: CGFloat = 28
@@ -78,9 +78,11 @@ public struct CheckLayout: Equatable, Sendable {
 
         cardWidth = min(content.width, Self.maximumCardWidth)
         // The two anchors are the geometries the surface is actually drawn in: 17 points at the
-        // window minimum's 604 of content, 22 at the default window's 871, and no further. A
-        // headline is read once; it can afford the size, and it cannot afford to be a poster.
-        let span = (content.width - 604) / 267
+        // window minimum's content (604 in Cool, 608 in Studio's narrower margins), 22 from 267
+        // points wider, and no further. A headline is read once; it can afford the size, and it
+        // cannot afford to be a poster.
+        let floor = SurfaceGeometry.content(of: SurfaceGeometry.minimum).width
+        let span = (content.width - floor) / 267
         headlineSize = clamped(17 + span * 5, 17, 22)
         reasonSize = clamped(13 + span * 2.5, 13, 15.5)
 

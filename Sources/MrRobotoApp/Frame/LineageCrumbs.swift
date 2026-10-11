@@ -122,7 +122,7 @@ struct LineageCrumbs: View {
         } else {
             Text(crumb.title)
                 .font(Design.Typography.ui(12, weight: isLast ? .medium : .regular))
-                .foregroundStyle(isLast ? Design.Palette.accent : Design.Palette.inkSecondary)
+                .foregroundStyle(isLast ? Design.Palette.emphasis : Design.Palette.inkSecondary)
                 .lineLimit(1)
         }
     }

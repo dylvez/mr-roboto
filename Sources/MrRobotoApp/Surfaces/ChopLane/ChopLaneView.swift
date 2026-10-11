@@ -35,7 +35,7 @@ public struct ChopLaneView: View {
                 if let error = surface.lastError {
                     Text(error)
                         .font(Design.Typography.ui(11))
-                        .foregroundStyle(Design.Palette.warn)
+                        .foregroundStyle(Design.Palette.danger)
                 }
                 Spacer(minLength: 0)
             }
@@ -72,13 +72,10 @@ public struct ChopLaneView: View {
     @ViewBuilder
     private var levelControl: some View {
         if let gain = surface.level.gainDB {
-            Text("LEVEL")
-                .font(Design.Typography.label)
-                .tracking(0.8)
-                .foregroundStyle(Design.Palette.inkTertiary)
+            SmallLabel("Level", color: Design.Palette.inkTertiary)
             Text(String(format: "%+.1f dB", gain))
                 .font(Design.Typography.numeric(12))
-                .foregroundStyle(Design.Palette.accent)
+                .foregroundStyle(Design.Palette.emphasis)
                 .help("The bar plays this much louder than it was recorded: its pads here, its loop and a groove on its slices in the song.")
             Button("As recorded") { surface.playAsRecorded() }
                 .buttonStyle(.plain)
@@ -86,10 +83,7 @@ public struct ChopLaneView: View {
                 .foregroundStyle(Design.Palette.inkSecondary)
                 .help("Play the bar at its recording's own level again. A new version of the chop; the mix does not move.")
         } else if let asks = surface.level.asks {
-            Text("LEVEL")
-                .font(Design.Typography.label)
-                .tracking(0.8)
-                .foregroundStyle(Design.Palette.inkTertiary)
+            SmallLabel("Level", color: Design.Palette.inkTertiary)
             Text("quiet as recorded")
                 .font(Design.Typography.ui(12))
                 .foregroundStyle(Design.Palette.inkSecondary)
@@ -126,14 +120,11 @@ public struct ChopLaneView: View {
     private var sensitivityLever: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline) {
-                Text("SENSITIVITY")
-                    .font(Design.Typography.label)
-                    .tracking(0.8)
-                    .foregroundStyle(Design.Palette.inkTertiary)
+                SmallLabel("Sensitivity", color: Design.Palette.inkTertiary)
                 Spacer()
                 Text("\(surface.sliceCount) slices")
                     .font(Design.Typography.numeric(12))
-                    .foregroundStyle(Design.Palette.accent)
+                    .foregroundStyle(Design.Palette.emphasis)
                 // The detector's threshold is a number to repeat, not to read: it is in the tooltip.
                     .help("Onset threshold δ \(String(format: "%.1f", surface.onsetThreshold)): lower finds more slices")
             }
@@ -157,10 +148,7 @@ public struct ChopLaneView: View {
     private var feelLever: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline) {
-                Text("RE-GROOVE")
-                    .font(Design.Typography.label)
-                    .tracking(0.8)
-                    .foregroundStyle(Design.Palette.inkTertiary)
+                SmallLabel("Re-groove", color: Design.Palette.inkTertiary)
                 Spacer()
                 Text("\(Int(surface.tempo.rounded())) bpm")
                     .font(Design.Typography.numeric(12))
@@ -458,6 +446,15 @@ struct ChopLanePads: View {
         .padding(8)
         .frame(maxWidth: .infinity, minHeight: layout.padHeight, alignment: .topLeading)
         .background(selected ? Design.Palette.accentSoft : Design.Palette.panelAlt)
+        .overlay(alignment: .leading) {
+            // Studio: the class's hue down the pad's edge, the hue of the voice a groove on this
+            // chop plays the slice as.
+            if Design.style.laneColours, let kind = classification?.kind {
+                Rectangle()
+                    .fill(LaneClass(ChopLaneSurface.voice(for: kind)).color)
+                    .frame(width: 3)
+            }
+        }
         .overlay(
             RoundedRectangle(cornerRadius: Design.Metric.corner)
                 .stroke(selected ? Design.Palette.accent : Design.Palette.line,
@@ -526,7 +523,7 @@ struct ChopLanePads: View {
                 ZStack(alignment: .leading) {
                     Rectangle().fill(Design.Palette.line)
                     Rectangle()
-                        .fill(overridden ? Design.Palette.ink : Design.Palette.accent)
+                        .fill(overridden ? Design.Palette.ink : Design.Palette.emphasis)
                         .frame(width: geometry.size.width * value)
                 }
             }
@@ -568,10 +565,7 @@ struct ChopLaneInspector: View {
     private func controls(for index: Int) -> some View {
         let edit = surface.edit(forSlice: index)
         return HStack(spacing: 12) {
-            Text("SLICE \(index)")
-                .font(Design.Typography.label)
-                .tracking(0.8)
-                .foregroundStyle(Design.Palette.inkTertiary)
+            SmallLabel("Slice \(index)", color: Design.Palette.inkTertiary)
             slider("pitch", binding: tuneBinding(index), range: Self.tuneRange,
                    readout: ChopLaneReadout.pitch(edit.tuneCents),
                    isNeutral: edit.tuneCents == 0,

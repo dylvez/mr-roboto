@@ -14,7 +14,7 @@ struct PartsLedger: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
-                SmallLabel("Parts")
+                SmallLabel("Parts", kind: .eyebrow)
                 Spacer()
                 Text("\(app.versions.count)")
                     .font(Design.Typography.numeric(10.5))
@@ -22,7 +22,7 @@ struct PartsLedger: View {
                 CollapseButton(region: .ledger, app: app)
             }
             .padding(.horizontal, Design.Metric.inset)
-            .frame(height: FrameLayout.headerHeight)
+            .frame(height: FrameLayout.dockHeight)
 
             Hairline()
 
@@ -198,10 +198,7 @@ private struct VersionChips: View {
                     }
                     .padding(.horizontal, 6)
                     .frame(height: Design.Metric.tagHeight)
-                    .background(isSelected ? Design.Palette.panel : Design.Palette.panelAlt)
-                    .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
-                        .stroke(isSelected ? Design.Palette.accent : Design.Palette.line, lineWidth: Design.Metric.hairline))
-                    .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+                    .modifier(VersionChipFace(isSelected: isSelected))
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -327,8 +324,29 @@ private struct ActionTag: View {
         .foregroundStyle(Design.Palette.accent)
         .padding(.horizontal, 6)
         .frame(height: Design.Metric.tagHeight)
-        .background(isSelected ? Design.Palette.panel : Design.Palette.accentSoft)
+        // Studio: the verb is a link, so it keeps the accent's ink but not a tinted ground.
+        .background(isSelected ? Design.Palette.panel : (Design.style.filledControls ? Design.Palette.fill : Design.Palette.accentSoft))
         .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
         .padding(.top, 2)
+    }
+}
+
+/// A version's chip on a ledger row: outlined, and outlined in the accent when it is the one
+/// selected, in Cool; a fill that deepens when selected, with no line, in Studio.
+private struct VersionChipFace: ViewModifier {
+    let isSelected: Bool
+
+    func body(content: Content) -> some View {
+        if Design.style.filledControls {
+            content
+                .background(isSelected ? Design.Palette.accentSoft : Design.Palette.fill,
+                            in: RoundedRectangle(cornerRadius: Design.Metric.corner, style: .continuous))
+        } else {
+            content
+                .background(isSelected ? Design.Palette.panel : Design.Palette.panelAlt)
+                .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
+                    .stroke(isSelected ? Design.Palette.accent : Design.Palette.line, lineWidth: Design.Metric.hairline))
+                .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+        }
     }
 }

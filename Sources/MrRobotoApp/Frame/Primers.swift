@@ -131,6 +131,36 @@ public enum Primer {
     }
 }
 
+extension Primer {
+    /// The primer in one line: what the surface is for, said under its title in Studio while the
+    /// primer is showing. The whole primer is behind the `?`.
+    public static func summary(for kind: SurfaceKind, variant: String? = nil) -> String {
+        switch kind {
+        case .importRecord: return "The record as measured — key, tempo, bars, form — and its stems, ready to chop."
+        case .chopLane: return "One bar cut from a stem, its slices on the pads; Re-groove puts them on a feel."
+        case .grid: return "Steps, swing and ghost notes for each drum voice. It keeps itself as you paint."
+        case .sound: return "Dust on a chop or a groove; the shape of a kit sound's synthesized voice."
+        case .chords: return "A progression, typed the way a lead sheet says it: Dm9 G13 | Cmaj9."
+        case .pianoRoll where variant == "melody": return "A tune: click to place a note, drag to move it, or play one in."
+        case .pianoRoll: return "A bass line over the groove's kicks; the levers re-run it in a player's hands."
+        case .structure: return "The song's form: sections in order, each with its bars and the parts that play in it."
+        case .album: return "Songs in order, the loudness they are delivered at, and a clearance for every record."
+        case .lyrics: return "The words, a line each; label a stanza [Verse] or [Hook] and the Booth shows it."
+        case .cast: return "Who is in the room for this song, and what each of them listens for."
+        case .merge: return "Two fragments moved to one key and one tempo, then stitched as a section."
+        case .compare: return "The band's candidates, each judged against the thing it has to beat."
+        case .check: return "One finding from a critic about one part. Flagged, never fixed for you."
+        case .booth: return "Pick a section and a count-in, press Record; every take stays."
+        case .sources: return "A stem, or some bars, of a record, moved to the song's key, tempo and bars."
+        case .library: return "Everything made and brought in, a shelf at a time: search it, hear it, act on it."
+        case .mashup: return "Two songs on one grid: one keeps its key and tempo, the other meets it."
+        case .mixer: return "A strip per part — level, pan, sends, EQ, compressor, insert — with meters."
+        case .master: return "The last bounce against the target: loudness, true peak, crest and spectrum."
+        case .takes: return "Every take of one part, lane by lane, with the band's flags. Make the comp."
+        }
+    }
+}
+
 /// Which primers you have dismissed, remembered across launches.
 @MainActor
 @Observable
@@ -198,5 +228,70 @@ struct PrimerBanner: View {
         .overlay(alignment: .leading) {
             Rectangle().fill(Design.Palette.accent).frame(width: 2)
         }
+    }
+}
+
+/// Studio's primer: the one line under a surface's title, quiet, with the whole primer a click away
+/// and a way to put it away for good. Where Cool spent a banner the width of the surface on the
+/// primer, this costs one line of the surface's own height.
+struct PrimerLine: View {
+    let kind: SurfaceKind
+    let store: PrimerStore
+    var variant: String?
+    @State private var isShowingAll = false
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Text(Primer.summary(for: kind, variant: variant))
+                .font(Design.Typography.role(.callout))
+                .foregroundStyle(Design.Palette.inkSecondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+            Button("More") { isShowingAll = true }
+                .buttonStyle(.plain)
+                .font(Design.Typography.role(.callout))
+                .foregroundStyle(Design.Palette.accent)
+                .fixedSize()
+                .help("The whole primer")
+                .popover(isPresented: $isShowingAll, arrowEdge: .bottom) {
+                    PrimerPopover(kind: kind, variant: variant)
+                }
+            Spacer(minLength: 8)
+            Button {
+                store.dismiss(kind)
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(Design.Palette.inkTertiary)
+                    .frame(width: 18, height: 18)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help("Hide this line. The ? in the header has the whole primer.")
+        }
+        .padding(.horizontal, Design.Metric.inset)
+        .padding(.bottom, 8)
+    }
+}
+
+/// The whole primer, behind a surface's `?` in Studio.
+struct PrimerPopover: View {
+    let kind: SurfaceKind
+    var variant: String?
+
+    var body: some View {
+        let primer = Primer.text(for: kind, variant: variant)
+        VStack(alignment: .leading, spacing: 6) {
+            Text(primer.title)
+                .font(Design.Typography.role(.title3))
+                .foregroundStyle(Design.Palette.ink)
+            Text(primer.body)
+                .font(Design.Typography.role(.body))
+                .foregroundStyle(Design.Palette.inkSecondary)
+                .lineSpacing(2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .frame(width: 360, alignment: .leading)
     }
 }

@@ -6,8 +6,8 @@ import Testing
 
 @testable import MrRobotoApp
 
-/// The palette is now three palettes, and the thing that used to be guaranteed by one person reading
-/// one list of constants has to be guaranteed by arithmetic instead.
+/// The palette is two palettes, and the thing that used to be guaranteed by one person reading one
+/// list of constants has to be guaranteed by arithmetic instead.
 ///
 /// Everything here works on the declared `UInt32` pairs rather than on a rendered view: a token's two
 /// values are the design, and every claim worth making about a colour — is it warm, does it read
@@ -88,7 +88,8 @@ struct DesignThemeTests {
         }
 
         let tokens = theme.palette.tokens
-        #expect(tokens.count == 14, "\(theme.displayName) has \(tokens.count) tokens, expected 14")
+        #expect(tokens.count == 40, "\(theme.displayName) has \(tokens.count) tokens, expected 40")
+        #expect(theme.palette.lanes.count == 8, "\(theme.displayName) has \(theme.palette.lanes.count) lane hues, expected 8")
 
         for (name, pair) in tokens {
             #expect(resolved(pair.color, .aqua) == pair.light,
@@ -109,8 +110,8 @@ struct DesignThemeTests {
         }
     }
 
-    /// The three are meant to be three directions, not three tunings of one. If two ever converge,
-    /// one of them has stopped earning its place in the menu.
+    /// The two are meant to be two directions, not two tunings of one. If they ever converge, one of
+    /// them has stopped earning its place in the menu.
     @Test("No two themes are the same palette")
     func themesAreDistinct() {
         let palettes = Design.Theme.allCases.map(\.palette)
@@ -147,38 +148,71 @@ struct DesignThemeTests {
         }
     }
 
-    /// Petrol is a cold theme too — the ground is a hue, but it is a blue-green one. Its neutrals
-    /// must not slide up the wheel toward the accent.
-    @Test("Petrol's ground stays blue-green rather than sliding toward its own accent")
-    func petrolNeutralsAreCold() {
-        let palette = Design.Theme.petrol.palette
+    /// Studio's greys are near-neutral, the way Apple's are: faintly cool where they lean at all, and
+    /// never warm, in either appearance — including the translucent fills.
+    @Test("Not one of Studio's greys drifts warm, and none of them is a colour")
+    func studioNeutralsAreNearNeutral() {
+        let palette = Design.Theme.studio.palette
         for (name, pair) in palette.tokens
         where Design.Palette.Values.neutralTokenNames.contains(name) {
             for (appearance, value) in appearances(pair) {
                 let (r, _, b) = channels(value)
                 #expect(r <= b,
-                        "petrol.\(name) (\(appearance)) is warm: red \(Int(r)) leads blue \(Int(b))")
-
-                let (hue, saturation) = hueAndSaturation(value)
-                if saturation > 0.05 {
-                    #expect((170...200).contains(hue),
-                            "petrol.\(name) (\(appearance)) sits at \(Int(hue))°, outside the petrol band")
-                }
+                        "studio.\(name) (\(appearance)) is warm: red \(Int(r)) leads blue \(Int(b))")
+                // The spread between the channels, not HSL saturation, which runs high for any
+                // near-white: #F5F6F8 is 18% "saturated" and three units of blue.
+                let (cr, cg, cb) = channels(value)
+                let spread = max(cr, cg, cb) - min(cr, cg, cb)
+                #expect(spread <= 16,
+                        "studio.\(name) (\(appearance)) leans \(Int(spread)) units — a colour, not a grey")
             }
         }
     }
 
-    /// The control. Notebook is the warm one, kept for comparison — and if this ever stops being
-    /// true, the warmth test above has stopped being able to detect anything.
-    @Test("Notebook is still the warm one, which is what the other two are measured against")
-    func notebookIsWarm() {
-        let palette = Design.Theme.notebook.palette
-        let warmNeutrals = palette.tokens
-            .filter { Design.Palette.Values.neutralTokenNames.contains($0.name) }
-            .flatMap { appearances($0.pair) }
-            .filter { channels($0.1).r > channels($0.1).b }
-        #expect(warmNeutrals.count >= 12,
-                "notebook has gone cool — only \(warmNeutrals.count) warm neutral values left")
+    /// Each fixed meaning is its own colour: a critic's finding must not look like record, and
+    /// nothing may look like the sounding orange.
+    @Test("Studio gives sounding, record, caution and the accent a colour each")
+    func studioMeaningsAreDistinct() {
+        let palette = Design.Theme.studio.palette
+        for (appearance, index) in [("light", \Design.ColorPair.light), ("dark", \Design.ColorPair.dark)] {
+            let meanings = [("accent", palette.accent), ("sounding", palette.sounding), ("danger", palette.danger),
+                            ("warn", palette.warn), ("solo", palette.solo), ("mute", palette.mute), ("ok", palette.ok)]
+            let values = meanings.map { $0.1[keyPath: index] }
+            #expect(Set(values).count == meanings.count, "two of Studio's meanings share a colour (\(appearance))")
+            // No lane hue sits in the orange the sounding colour owns.
+            for (offset, lane) in palette.lanes.enumerated() {
+                let (hue, saturation) = hueAndSaturation(lane[keyPath: index])
+                #expect(saturation < 0.2 || !(20...45).contains(hue),
+                        "lane \(offset) (\(appearance)) sits at \(Int(hue))°, in the sounding orange")
+            }
+        }
+    }
+
+    /// The display and the plate are a piece of equipment: dark in both appearances, with figures
+    /// that read on them at a glance.
+    @Test("The transport display reads in both appearances", arguments: Design.Theme.allCases)
+    func displayReads(theme: Design.Theme) {
+        let palette = theme.palette
+        for (appearance, index) in [("light", \Design.ColorPair.light), ("dark", \Design.ColorPair.dark)] {
+            let plate = palette.plate[keyPath: index]
+            #expect(contrast(palette.lcdInk[keyPath: index], plate) >= 12,
+                    "\(theme.displayName) display figures (\(appearance)) are faint")
+            #expect(contrast(palette.lcdLabel[keyPath: index], plate) >= 4.5,
+                    "\(theme.displayName) display labels (\(appearance)) are under AA")
+            #expect(contrast(palette.lcdRecordingInk[keyPath: index], palette.lcdRecording[keyPath: index]) >= 12,
+                    "\(theme.displayName) recording figures (\(appearance)) are faint")
+            #expect(luminance(plate) < 0.02, "\(theme.displayName) plate (\(appearance)) is not dark")
+        }
+    }
+
+    /// The text on an orange fill — Stop while a part plays, the lit Play — reads on it.
+    @Test("Text on the sounding orange reads")
+    func onSoundingReads() {
+        let palette = Design.Theme.studio.palette
+        for index in [\Design.ColorPair.light, \Design.ColorPair.dark] {
+            #expect(contrast(palette.onSounding[keyPath: index], palette.sounding[keyPath: index]) >= 4.5)
+            #expect(contrast(palette.soundingInk[keyPath: index], palette.paper[keyPath: index]) >= 4.5)
+        }
     }
 
     // MARK: Contrast
@@ -315,7 +349,7 @@ struct DesignThemeTests {
     /// through, and tests run in parallel.
     @Test("Changing the theme notifies observers, which is what repaints the app")
     func switchingIsObservable() {
-        let store = Design.ThemeStore(.notebook)
+        let store = Design.ThemeStore(.cool)
         // A box rather than a captured `var`: `onChange` is a `@Sendable` closure and runs wherever
         // the mutation happened.
         let notified = Mutex(false)
@@ -327,9 +361,9 @@ struct DesignThemeTests {
         }
 
         #expect(!notified.withLock { $0 })
-        store.theme = .petrol
+        store.theme = .studio
         #expect(notified.withLock { $0 }, "a theme change did not reach observation tracking")
-        #expect(store.theme == .petrol)
+        #expect(store.theme == .studio)
     }
 
     /// A store reads its starting theme from defaults, so the app opens in whatever was last chosen.
@@ -342,8 +376,42 @@ struct DesignThemeTests {
         #expect(Design.storedTheme(defaults) == Design.defaultTheme,
                 "an empty defaults should give the default theme")
 
+        // A choice made among these themes is written with their version, as `select` writes it.
         defaults.set(theme.rawValue, forKey: Design.themeDefaultsKey)
+        defaults.set(Design.themeVersion, forKey: Design.themeVersionKey)
         #expect(Design.storedTheme(defaults) == theme)
+    }
+
+    /// Cool Neutral was the default before Studio, so nearly every install remembers it without
+    /// anyone having chosen it. Those move to Studio once; a choice of Cool made since stays.
+    @Test("A choice remembered from before Studio moves to Studio once, and a later choice sticks")
+    func choiceFromBeforeStudioMovesOnce() throws {
+        let suite = "design.theme.test.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
+
+        defaults.set("cool", forKey: Design.themeDefaultsKey)
+        #expect(Design.storedTheme(defaults) == .studio)
+        #expect(defaults.string(forKey: Design.themeDefaultsKey) == "studio")
+        #expect(defaults.integer(forKey: Design.themeVersionKey) == Design.themeVersion)
+
+        // Choosing Cool again, the way the View menu does, is remembered as chosen.
+        defaults.set("cool", forKey: Design.themeDefaultsKey)
+        #expect(Design.storedTheme(defaults) == .cool)
+    }
+
+    /// The retired themes fall back rather than trapping on an optional.
+    @Test("Notebook and Petrol, remembered, open in the default")
+    func retiredThemesFallBack() throws {
+        for retired in ["notebook", "petrol"] {
+            let suite = "design.theme.test.\(UUID().uuidString)"
+            let defaults = try #require(UserDefaults(suiteName: suite))
+            defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
+            defaults.set(retired, forKey: Design.themeDefaultsKey)
+            #expect(Design.storedTheme(defaults) == Design.defaultTheme)
+            defaults.set(retired, forKey: Design.themeDefaultsKey)
+            #expect(Design.storedTheme(defaults) == Design.defaultTheme, "\(retired) after the move")
+        }
     }
 
     /// Anything else in defaults — a theme that was removed, a hand-edited plist — falls back rather
@@ -358,20 +426,30 @@ struct DesignThemeTests {
         #expect(Design.storedTheme(defaults) == Design.defaultTheme)
     }
 
-    /// Only Petrol pins the appearance, and it pins it to dark. If another theme ever started
-    /// pinning, the app would stop following the system for no stated reason.
-    @Test("Petrol is the only theme that takes the appearance out of the system's hands")
-    func onlyPetrolPinsTheAppearance() {
-        #expect(Design.Theme.notebook.pinnedAppearance == nil)
-        #expect(Design.Theme.cool.pinnedAppearance == nil)
-        #expect(Design.Theme.petrol.pinnedAppearance == .darkAqua)
+    /// No theme decides light or dark any more: the person does, or the system does.
+    @Test("The appearance follows the system until chosen, and the choice is remembered")
+    func appearanceIsAChoice() throws {
+        let suite = "design.appearance.test.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
+
+        #expect(Design.storedAppearance(defaults) == .system)
+        #expect(Design.Appearance.system.name == nil)
+        #expect(Design.Appearance.light.name == .aqua)
+        #expect(Design.Appearance.dark.name == .darkAqua)
+        for appearance in Design.Appearance.allCases {
+            defaults.set(appearance.rawValue, forKey: Design.appearanceDefaultsKey)
+            #expect(Design.storedAppearance(defaults) == appearance)
+        }
+        defaults.set("sepia", forKey: Design.appearanceDefaultsKey)
+        #expect(Design.storedAppearance(defaults) == .system)
     }
 
     /// The View menu's shortcuts are positional, so the order of `allCases` is load-bearing: it is
-    /// what ⌃⌘1, ⌃⌘2 and ⌃⌘3 mean.
+    /// what ⌃⌘1 and ⌃⌘2 mean.
     @Test("The menu order is the shortcut order")
     func menuOrder() {
-        #expect(Design.Theme.allCases == [.notebook, .cool, .petrol])
-        #expect(Design.Theme.allCases.map(\.displayName) == ["Notebook", "Cool Neutral", "Petrol"])
+        #expect(Design.Theme.allCases == [.studio, .cool])
+        #expect(Design.Theme.allCases.map(\.displayName) == ["Studio", "Cool Neutral"])
     }
 }

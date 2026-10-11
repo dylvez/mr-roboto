@@ -284,9 +284,9 @@ struct LibrarySurfaceView: View {
                 Button { model.sort(by: column) } label: {
                     HStack(spacing: 3) {
                         if column.isNumeric { Spacer(minLength: 0) }
-                        Text(column.title(on: model.shelf).uppercased())
+                        Text(Design.Typography.labelText(column.title(on: model.shelf)))
                             .font(Design.Typography.label)
-                            .tracking(0.8)
+                            .tracking(Design.style.uppercaseLabels ? 0.8 : 0)
                             .lineLimit(1)
                         if let sort = model.query.sort, sort.column == column {
                             Image(systemName: sort.ascending ? "chevron.up" : "chevron.down")
@@ -407,7 +407,7 @@ struct LibrarySurfaceView: View {
         }
         return HStack(spacing: 4) {
             if fit?.verdict == .asIs || fit?.verdict == .near {
-                Circle().fill(Design.Palette.accent).frame(width: 5, height: 5)
+                Circle().fill(Design.Palette.emphasis).frame(width: 5, height: 5)
             }
             Text(text.isEmpty ? "–" : text)
                 .font(Design.Typography.numeric(11.5))
@@ -426,7 +426,7 @@ struct LibrarySurfaceView: View {
             Button { Task { await model.preview.toggle(facts.id) } } label: {
                 Image(systemName: sounding ? "stop.fill" : "play.fill")
                     .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(sounding ? Design.Palette.accent : Design.Palette.inkTertiary)
+                    .foregroundStyle(sounding ? Design.Palette.soundingInk : Design.Palette.inkTertiary)
                     .frame(width: Self.playWidth, height: 22)
                     .contentShape(Rectangle())
             }
@@ -441,7 +441,7 @@ struct LibrarySurfaceView: View {
     private func titleCell(_ facts: LibraryFacts, isChosen: Bool, openRecords: Set<RecordID>) -> some View {
         HStack(spacing: 6) {
             if facts.favourite {
-                Image(systemName: "star.fill").font(.system(size: 9)).foregroundStyle(Design.Palette.accent)
+                Image(systemName: "star.fill").font(.system(size: 9)).foregroundStyle(Design.Palette.emphasis)
                     .help("A favourite")
             }
             Text(facts.title)
@@ -451,10 +451,10 @@ struct LibrarySurfaceView: View {
             if facts.id.shelf == .songs, model.app.song?.id.rawValue == facts.id.id {
                 Text("open")
                     .font(Design.Typography.ui(10, weight: .semibold))
-                    .foregroundStyle(Design.Palette.accent)
+                    .foregroundStyle(Design.Palette.emphasis)
                     .help("The song open in the frame")
             } else if facts.id.shelf == .records, openRecords.contains(RecordID(rawValue: facts.id.id)) {
-                Circle().fill(Design.Palette.accent).frame(width: 5, height: 5)
+                Circle().fill(Design.Palette.emphasis).frame(width: 5, height: 5)
                     .help("The open song takes from it")
             }
             if facts.id.shelf == .records, let status = model.app.crate.status(of: RecordID(rawValue: facts.id.id)) {
@@ -510,6 +510,15 @@ struct LibrarySurfaceView: View {
     private func menuChip<Content: View>(_ title: String, isOn: Bool, @ViewBuilder content: () -> Content) -> some View {
         if Design.isOffscreenRender {
             BoothChip(title, isOn: isOn) {}
+        } else if Design.style.filledControls {
+            StudioChip(isOn: isOn) {
+                Menu { content() } label: {
+                    ChipText(title, isOn: isOn, size: 11.5)
+                        .foregroundStyle(isOn ? Design.Palette.ink : Design.Palette.inkSecondary)
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+            }
         } else {
             Menu { content() } label: {
                 Text(title)
@@ -770,7 +779,7 @@ private struct LibraryDetail: View {
                     Button { model.app.setFavourite(!facts.favourite, for: [facts.id]) } label: {
                         Image(systemName: facts.favourite ? "star.fill" : "star")
                             .font(.system(size: 13))
-                            .foregroundStyle(facts.favourite ? Design.Palette.accent : Design.Palette.inkTertiary)
+                            .foregroundStyle(facts.favourite ? Design.Palette.emphasis : Design.Palette.inkTertiary)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -897,9 +906,9 @@ private struct LibraryDetail: View {
         return Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 5) {
             ForEach(rows, id: \.label) { row in
                 GridRow {
-                    Text(row.label.uppercased())
+                    Text(Design.Typography.labelText(row.label))
                         .font(Design.Typography.label)
-                        .tracking(0.8)
+                        .tracking(Design.style.uppercaseLabels ? 0.8 : 0)
                         .foregroundStyle(Design.Palette.inkTertiary)
                         .gridColumnAlignment(.leading)
                     Text(row.value)
@@ -1120,6 +1129,20 @@ private struct LibraryActionButtons: View {
         case .menu(let choices):
             if Design.isOffscreenRender {
                 ActionChip(title: action.title + " ▾", isEnabled: action.isEnabled) {}
+            } else if Design.style.filledControls {
+                StudioChip {
+                    Menu {
+                        ForEach(choices) { choice in
+                            Button(choice.title) { LibraryActions.perform(choice) { pending = $0 } }.disabled(!choice.isEnabled)
+                        }
+                    } label: {
+                        ChipText(action.title, size: 12)
+                    }
+                    .menuStyle(.borderlessButton)
+                    .fixedSize()
+                }
+                .disabled(!action.isEnabled)
+                .help(action.help)
             } else {
                 Menu {
                     ForEach(choices) { choice in
@@ -1185,7 +1208,7 @@ private struct LibraryBatchDetail: View {
                         .help("Choose only this one")
                         if let (line, isFailure) = status(of: facts) {
                             Text(line).font(Design.Typography.ui(11, weight: .regular))
-                                .foregroundStyle(isFailure ? Design.Palette.warn : Design.Palette.inkTertiary)
+                                .foregroundStyle(isFailure ? Design.Palette.danger : Design.Palette.inkTertiary)
                                 .lineLimit(2)
                         }
                     }
@@ -1222,17 +1245,23 @@ private struct ActionChip: View {
 
     var body: some View {
         Button(action: action) {
-            Text(title)
-                .font(Design.Typography.ui(12, weight: leads ? .semibold : .medium))
-                .foregroundStyle(leads ? Design.Palette.panel : isDestructive ? Design.Palette.warn : Design.Palette.ink)
-                .lineLimit(1)
-                .fixedSize()
-                .padding(.horizontal, 10)
-                .frame(height: Design.Metric.chipHeight)
-                .background(leads ? Design.Palette.accent : .clear, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-                .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
-                    .stroke(leads ? Design.Palette.accent : Design.Palette.lineStrong, lineWidth: Design.Metric.hairline))
-                .contentShape(Rectangle())
+            if Design.style.filledControls {
+                StudioChip(tone: leads ? .primary : isDestructive ? .danger : .plain) {
+                    ChipText(title, isOn: leads, size: 12)
+                }
+            } else {
+                Text(title)
+                    .font(Design.Typography.ui(12, weight: leads ? .semibold : .medium))
+                    .foregroundStyle(leads ? Design.Palette.panel : isDestructive ? Design.Palette.warn : Design.Palette.ink)
+                    .lineLimit(1)
+                    .fixedSize()
+                    .padding(.horizontal, 10)
+                    .frame(height: Design.Metric.chipHeight)
+                    .background(leads ? Design.Palette.accent : .clear, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
+                    .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
+                        .stroke(leads ? Design.Palette.accent : Design.Palette.lineStrong, lineWidth: Design.Metric.hairline))
+                    .contentShape(Rectangle())
+            }
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)

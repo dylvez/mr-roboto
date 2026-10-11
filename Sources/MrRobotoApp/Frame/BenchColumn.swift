@@ -67,9 +67,7 @@ struct BenchColumn: View {
                 // the Director asks where to start, and after Close all whoever's step it is asks.
                 NextQuestionCard(app: app, question: app.nextQuestion, showsAsker: true)
                     .padding(Design.Metric.inset)
-                    .background(Design.Palette.panelAlt)
-                    .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.line, lineWidth: Design.Metric.hairline))
-                    .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+                    .modifier(Well())
                     .frame(maxWidth: 620, alignment: .leading)
             } else {
                 emptyNote
@@ -84,12 +82,24 @@ struct BenchColumn: View {
                       : "Answer the band's question on the right, or press a surface above and it fills the bench. Pin one to keep it on screen while you work in another.")
             .padding(Design.Metric.inset)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Design.Palette.panelAlt)
-            .overlay(
-                RoundedRectangle(cornerRadius: Design.Metric.corner)
-                    .stroke(Design.Palette.line, lineWidth: Design.Metric.hairline)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+            .modifier(Well())
+    }
+}
+
+/// A recessed panel for a note or a question on an empty bench: outlined in Cool, a soft fill with a
+/// card's corner in Studio. With no surface to inset it from, Studio's empty bench keeps a margin.
+private struct Well: ViewModifier {
+    func body(content: Content) -> some View {
+        if Design.style.surfaceCards {
+            content
+                .background(Design.Palette.panelAlt)
+                .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.line, lineWidth: Design.Metric.hairline))
+                .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+        } else {
+            content
+                .background(Design.Palette.panelAlt, in: RoundedRectangle(cornerRadius: Design.Metric.containerCorner, style: .continuous))
+                .padding(Design.Metric.gutter)
+        }
     }
 }
 
@@ -141,7 +151,7 @@ struct SurfaceDock: View {
                          next asked: (question: NextQuestion, option: NextOption)?,
                          room: DockQuestion.Room) -> some View {
         HStack(spacing: style == .tight ? 5 : 8) {
-            if labelled { SmallLabel("Surfaces") }
+            if labelled { SmallLabel("Surfaces", kind: .eyebrow) }
             chips(style)
             Spacer(minLength: 8)
             if let asked {
@@ -211,43 +221,39 @@ private struct DockChip: View {
     let isActive: Bool
     let action: () -> Void
 
+    @State private var isHovering = false
+
     var body: some View {
+        let studio = Design.style.filledControls
         Button(action: action) {
             HStack(spacing: style == .tight ? 4 : 6) {
                 Glyph(name: kind.glyph.name, symbol: kind.glyph.symbol, size: 13)
+                    .foregroundStyle(studio && isActive ? Design.Palette.accent : (studio ? Design.Palette.inkSecondary : (isActive ? Design.Palette.accent : Design.Palette.ink)))
                 if style == .full || style == .compact || style == .tight || (style == .current && isActive) {
                     Text(kind.rawValue)
-                        .font(Design.Typography.ui(12.5, weight: isActive ? .semibold : .medium))
+                        .font(studio ? .system(size: 12.5, weight: isActive ? .semibold : .regular)
+                                     : Design.Typography.ui(12.5, weight: isActive ? .semibold : .medium))
                         .lineLimit(1)
                         .fixedSize()
                 }
                 if let count, style != .glyphs {
                     Text("\(count)")
                         .font(Design.Typography.numeric(11))
-                        .foregroundStyle(isActive ? Design.Palette.accent : Design.Palette.inkSecondary)
+                        .foregroundStyle(studio ? Design.Palette.inkTertiary : (isActive ? Design.Palette.accent : Design.Palette.inkSecondary))
                         .lineLimit(1)
                         .fixedSize()
                 }
                 if style == .full {
                     Text(shortcut)
                         .font(Design.Typography.numeric(10))
-                        .foregroundStyle(isActive ? Design.Palette.accent : Design.Palette.inkTertiary)
+                        .foregroundStyle(isActive && !studio ? Design.Palette.accent : Design.Palette.inkTertiary)
                         .lineLimit(1)
                         .fixedSize()
                 }
             }
-            .foregroundStyle(isActive ? Design.Palette.accent : Design.Palette.ink)
-            .padding(.horizontal, style == .tight ? 7 : 10)
-            .frame(height: Design.Metric.controlHeight)
-            .background(isActive ? Design.Palette.accentSoft : Design.Palette.panel)
-            .overlay(
-                RoundedRectangle(cornerRadius: Design.Metric.corner)
-                    .stroke(isActive ? Design.Palette.accent : (isOpen ? Design.Palette.ink : Design.Palette.lineStrong),
-                            lineWidth: Design.Metric.hairline)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
-            .contentShape(Rectangle())
+            .modifier(DockChipFace(isOpen: isOpen, isActive: isActive, isHovering: isHovering, tight: style == .tight))
         }
+        .onHover { isHovering = $0 }
         .buttonStyle(.plain)
         .help(helpText)
         .accessibilityLabel("\(kind.rawValue), \(shortcut)\(isActive ? ", filling the bench" : isOpen ? ", open" : "")")
@@ -258,5 +264,46 @@ private struct DockChip: View {
         if isActive { return "\(kind.rawValue) is filling the bench (\(shortcut))\(held)" }
         if isOpen { return "Bring \(kind.rawValue) forward (\(shortcut))\(held)" }
         return "Open \(kind.rawValue) (\(shortcut))\(held)"
+    }
+}
+
+/// A dock chip's face. Cool outlines every chip and fills the one in front with the accent's tint.
+/// Studio draws no chip at all until the pointer is over it: the one filling the bench sits on the
+/// selected fill with its glyph in the accent, the open ones are in ink, the closed ones are quiet.
+private struct DockChipFace: ViewModifier {
+    let isOpen: Bool
+    let isActive: Bool
+    let isHovering: Bool
+    let tight: Bool
+
+    func body(content: Content) -> some View {
+        if Design.style.filledControls {
+            content
+                .foregroundStyle(isActive || isOpen ? Design.Palette.ink : Design.Palette.inkSecondary)
+                .padding(.horizontal, tight ? 6 : 9)
+                .frame(height: Design.Metric.controlHeight)
+                .background(isActive ? Design.Palette.selected : (isHovering ? Design.Palette.hover : .clear),
+                            in: RoundedRectangle(cornerRadius: Design.Metric.corner + 1, style: .continuous))
+                .overlay(alignment: .bottom) {
+                    // An open surface not in front: a dot under it, so the dock still says what is open.
+                    if isOpen && !isActive {
+                        Circle().fill(Design.Palette.inkTertiary).frame(width: 3, height: 3).offset(y: -2)
+                    }
+                }
+                .contentShape(Rectangle())
+        } else {
+            content
+                .foregroundStyle(isActive ? Design.Palette.accent : Design.Palette.ink)
+                .padding(.horizontal, tight ? 7 : 10)
+                .frame(height: Design.Metric.controlHeight)
+                .background(isActive ? Design.Palette.accentSoft : Design.Palette.panel)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Design.Metric.corner)
+                        .stroke(isActive ? Design.Palette.accent : (isOpen ? Design.Palette.ink : Design.Palette.lineStrong),
+                                lineWidth: Design.Metric.hairline)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+                .contentShape(Rectangle())
+        }
     }
 }

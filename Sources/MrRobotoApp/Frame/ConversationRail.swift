@@ -28,15 +28,15 @@ struct ConversationRail: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
-                SmallLabel("Band")
+                SmallLabel("Band", kind: .eyebrow)
                 Spacer()
                 Text("\(app.log.count)")
                     .font(Design.Typography.numeric(10.5))
                     .foregroundStyle(Design.Palette.inkTertiary)
                 CollapseButton(region: .rail, app: app)
             }
-            .padding(.horizontal, 28)
-            .frame(height: FrameLayout.headerHeight)
+            .padding(.horizontal, Design.Metric.regionInset)
+            .frame(height: FrameLayout.dockHeight)
 
             Hairline()
             // First call on the column's height, up to the height it was dragged to; the
@@ -90,7 +90,7 @@ struct ConversationRail: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 28)
+        .padding(.horizontal, Design.Metric.regionInset)
         .padding(.vertical, nextIsCollapsed ? 10 : 14)
         .background(Design.Palette.panelAlt)
     }
@@ -149,7 +149,7 @@ struct ConversationRail: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 28)
+                .padding(.horizontal, Design.Metric.regionInset)
                 .padding(.vertical, 24)
             }
             .onChange(of: app.log.count) {
@@ -199,11 +199,12 @@ struct LogLine: View {
             HStack(spacing: 7) {
                 if let emblem = Art.emblem(for: source) { ArtImage(emblem, width: 22) }
                 SmallLabel(source.label,
-                           color: source.isBand ? Design.Palette.accent : Design.Palette.inkSecondary)
+                           color: source.isBand ? Design.Palette.emphasis : Design.Palette.inkSecondary)
             }
             Text(text)
                 .font(Design.Typography.prose(16))
                 .foregroundStyle(Design.Palette.ink)
+                .lineSpacing(Design.style.filledControls ? 3 : 0)
                 .fixedSize(horizontal: false, vertical: true)
                 .textSelection(.enabled)
             if let detail, !detail.isEmpty {
@@ -255,15 +256,10 @@ struct LiveComposer: View {
                     .disabled(!band.canSend)
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .frame(minHeight: 48)
-            .background(Design.Palette.panel)
-            .overlay(
-                RoundedRectangle(cornerRadius: Design.Metric.corner)
-                    .stroke(band.isWorking ? Design.Palette.accent : Design.Palette.lineStrong,
-                            lineWidth: Design.Metric.hairline)
-            )
+            .padding(.horizontal, Design.style.filledControls ? 12 : 14)
+            .padding(.vertical, Design.style.filledControls ? 6 : 8)
+            .frame(minHeight: Design.style.filledControls ? 36 : 48)
+            .modifier(ComposerField(isWorking: band.isWorking))
 
             // Honest and quiet: what the session has spent, in the place you spend it, at the size
             // of a footnote. Before the first turn it says whether there is a key at all, which is
@@ -304,7 +300,7 @@ struct LiveComposer: View {
                 }
             }
         }
-        .padding(.horizontal, 28)
+        .padding(.horizontal, Design.Metric.regionInset)
         .padding(.top, 16)
         .padding(.bottom, 24)
         .onExitCommand { band.cancel() }
@@ -426,23 +422,57 @@ struct InertComposer: View {
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Design.Palette.inkTertiary)
             }
-            .padding(.horizontal, 14)
-            .frame(height: 48)
-            .background(Design.Palette.panel)
-            .overlay(
-                RoundedRectangle(cornerRadius: Design.Metric.corner)
-                    .stroke(Design.Palette.lineStrong, lineWidth: Design.Metric.hairline)
-            )
+            .padding(.horizontal, Design.style.filledControls ? 12 : 14)
+            .frame(height: Design.style.filledControls ? 36 : 48)
+            .modifier(ComposerField(isWorking: false))
+            .allowsHitTesting(false)
 
-            Text("This session has no band attached, so the field cannot send. "
-                 + "The question above is still worked out from the song, and its answers still work.")
-                .font(Design.Typography.ui(11.5, weight: .regular))
-                .foregroundStyle(Design.Palette.inkSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+            if Design.style.filledControls {
+                // One line, the reason in its tooltip: three lines of disclaimer under an empty
+                // field read as the most important thing in the column.
+                HStack(spacing: 6) {
+                    Circle().fill(Design.Palette.inkQuiet).frame(width: 6, height: 6)
+                    Text("Band offline · the question above still works")
+                        .font(Design.Typography.role(.caption))
+                        .foregroundStyle(Design.Palette.inkTertiary)
+                        .lineLimit(1)
+                }
+                .help("This session has no band attached, so the field cannot send. The question above is still worked out from the song, and its answers still work.")
+            } else {
+                Text("This session has no band attached, so the field cannot send. "
+                     + "The question above is still worked out from the song, and its answers still work.")
+                    .font(Design.Typography.ui(11.5, weight: .regular))
+                    .foregroundStyle(Design.Palette.inkSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
-        .padding(.horizontal, 28)
-        .padding(.top, 16)
-        .padding(.bottom, 24)
-        .allowsHitTesting(false)
+        .padding(.horizontal, Design.Metric.regionInset)
+        .padding(.top, Design.style.filledControls ? 12 : 16)
+        .padding(.bottom, Design.style.filledControls ? 14 : 24)
+    }
+}
+
+/// The band's field: a white box with an outline in Cool, its outline in the accent while the band
+/// works; in Studio a soft filled field with a card's corner, outlined only while the band works.
+private struct ComposerField: ViewModifier {
+    let isWorking: Bool
+
+    func body(content: Content) -> some View {
+        if Design.style.filledControls {
+            content
+                .background(Design.Palette.raised, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .strokeBorder(isWorking ? Design.Palette.accent : Design.Palette.line, lineWidth: Design.Metric.hairline)
+                )
+        } else {
+            content
+                .background(Design.Palette.panel)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Design.Metric.corner)
+                        .stroke(isWorking ? Design.Palette.accent : Design.Palette.lineStrong,
+                                lineWidth: Design.Metric.hairline)
+                )
+        }
     }
 }

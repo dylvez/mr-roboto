@@ -75,7 +75,7 @@ struct SoundSurfaceView: View {
         if let failure = surface.dryFailure {
             Text("The dry part could not be rendered, so nothing plays. \(failure)")
                 .font(Design.Typography.prose(12))
-                .foregroundStyle(Design.Palette.warn)
+                .foregroundStyle(Design.Palette.danger)
                 .fixedSize(horizontal: false, vertical: true)
         } else if surface.dryPart == nil {
             Text("Rendering the dry part…")
@@ -114,7 +114,7 @@ struct SoundSurfaceView: View {
         HStack(spacing: 6) {
             Text("A/B")
                 .font(Design.Typography.label)
-                .tracking(0.6)
+                .tracking(Design.style.uppercaseLabels ? 0.6 : 0)
                 .foregroundStyle(Design.Palette.inkTertiary)
             ForEach(SoundMonitor.allCases, id: \.self) { side in
                 chip(side == .chain ? "Chain" : "Dry", isOn: surface.monitor == side) {
@@ -184,9 +184,9 @@ struct SoundSurfaceView: View {
     private func prominentRow(_ control: SoundControl, _ layout: SoundLayout) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline) {
-                Text(control.name)
+                Text(control.labelName)
                     .font(Design.Typography.ui(13, weight: .semibold))
-                    .tracking(0.8)
+                    .tracking(Design.style.uppercaseLabels ? 0.8 : 0)
                     .foregroundStyle(Design.Palette.ink)
                 Spacer()
                 Text(control.readout)
@@ -215,14 +215,22 @@ struct SoundSurfaceView: View {
     private func resetChip(_ control: SoundControl) -> some View {
         if !surface.isAtPreset(control.parameter) {
             Button { surface.reset(control.parameter) } label: {
-                Image(systemName: "arrow.uturn.backward")
-                    .font(Design.Typography.ui(10))
-                    .foregroundStyle(Design.Palette.inkSecondary)
-                    .frame(width: Design.Metric.tagHeight, height: Design.Metric.tagHeight)
-                    .background(Design.Palette.panelAlt, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-                    .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
-                        .stroke(Design.Palette.line, lineWidth: Design.Metric.hairline))
-                    .contentShape(Rectangle())
+                if Design.style.filledControls {
+                    StudioChip(height: Design.Metric.tagHeight, horizontalPadding: 0) {
+                        Image(systemName: "arrow.uturn.backward")
+                            .font(Design.Typography.ui(10))
+                            .frame(width: Design.Metric.tagHeight)
+                    }
+                } else {
+                    Image(systemName: "arrow.uturn.backward")
+                        .font(Design.Typography.ui(10))
+                        .foregroundStyle(Design.Palette.inkSecondary)
+                        .frame(width: Design.Metric.tagHeight, height: Design.Metric.tagHeight)
+                        .background(Design.Palette.panelAlt, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
+                        .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
+                            .stroke(Design.Palette.line, lineWidth: Design.Metric.hairline))
+                        .contentShape(Rectangle())
+                }
             }
             .buttonStyle(.plain)
             .help("Back to the preset: puts \(control.name) where the machine had it, and plays it.")
@@ -235,9 +243,9 @@ struct SoundSurfaceView: View {
             ForEach(controls) { control in
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(alignment: .firstTextBaseline) {
-                        Text(control.name)
+                        Text(control.labelName)
                             .font(Design.Typography.label)
-                            .tracking(0.6)
+                            .tracking(Design.style.uppercaseLabels ? 0.6 : 0)
                             .foregroundStyle(Design.Palette.inkSecondary)
                         Spacer()
                         Text(control.readout)
@@ -287,7 +295,7 @@ struct SoundSurfaceView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Presets")
                 .font(Design.Typography.label)
-                .tracking(0.6)
+                .tracking(Design.style.uppercaseLabels ? 0.6 : 0)
                 .foregroundStyle(Design.Palette.inkTertiary)
             HStack(spacing: 6) {
                 ForEach(DegradeSettings.Preset.allCases, id: \.self) { preset in
@@ -306,10 +314,10 @@ struct SoundSurfaceView: View {
             if let failure = surface.chainFailure {
                 Text("Chain unavailable — auditioning dry. \(failure)")
                     .font(Design.Typography.prose(12))
-                    .foregroundStyle(Design.Palette.warn)
+                    .foregroundStyle(Design.Palette.danger)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(Design.Palette.warnSoft, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
+                    .background(Design.Palette.dangerSoft, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
             }
             Spacer()
             // A knob let go of is a version: that is how this surface was designed ("auditioned on
@@ -320,7 +328,7 @@ struct SoundSurfaceView: View {
             if surface.lastCommitWasRefused, surface.isDirty {
                 Text("This move could not be kept; the reason is in the rail.")
                     .font(Design.Typography.ui(12))
-                    .foregroundStyle(Design.Palette.warn)
+                    .foregroundStyle(Design.Palette.danger)
                 Button("Try again") { surface.commit() }
                     .buttonStyle(.plain)
                     .font(Design.Typography.ui(12, weight: .semibold))
@@ -363,22 +371,36 @@ struct SoundSurfaceView: View {
             chip(name, isOn: isOn, action: action)
         } else {
             Button(action: action) {
-                VStack(spacing: 3) {
-                    ArtImage(Art.machine(preset.rawValue), width: 64, height: 40)
-                    Text(name)
-                        .font(Design.Typography.ui(11, weight: isOn ? .semibold : .regular))
-                        .foregroundStyle(isOn ? Design.Palette.accent : Design.Palette.inkSecondary)
+                if Design.style.filledControls {
+                    // Studio's chip at a card's size: no outline, the machine in use on the selected fill.
+                    VStack(spacing: 3) {
+                        ArtImage(Art.machine(preset.rawValue), width: 64, height: 40)
+                        ChipText(name, isOn: isOn, size: 11)
+                            .foregroundStyle(isOn ? Design.Palette.ink : Design.Palette.inkSecondary)
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 5)
+                    .background(isOn ? Design.Palette.selected : Design.Palette.fill,
+                                in: RoundedRectangle(cornerRadius: Design.Metric.corner, style: .continuous))
+                    .contentShape(Rectangle())
+                } else {
+                    VStack(spacing: 3) {
+                        ArtImage(Art.machine(preset.rawValue), width: 64, height: 40)
+                        Text(name)
+                            .font(Design.Typography.ui(11, weight: isOn ? .semibold : .regular))
+                            .foregroundStyle(isOn ? Design.Palette.accent : Design.Palette.inkSecondary)
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 5)
+                    .background(isOn ? Design.Palette.accentSoft : Design.Palette.panelAlt,
+                                in: RoundedRectangle(cornerRadius: Design.Metric.corner))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Design.Metric.corner)
+                            .stroke(isOn ? Design.Palette.accent.opacity(0.35) : Design.Palette.line,
+                                    lineWidth: Design.Metric.hairline)
+                    )
+                    .contentShape(Rectangle())
                 }
-                .padding(.horizontal, 6)
-                .padding(.vertical, 5)
-                .background(isOn ? Design.Palette.accentSoft : Design.Palette.panelAlt,
-                            in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Design.Metric.corner)
-                        .stroke(isOn ? Design.Palette.accent.opacity(0.35) : Design.Palette.line,
-                                lineWidth: Design.Metric.hairline)
-                )
-                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .help(name)
@@ -389,18 +411,22 @@ struct SoundSurfaceView: View {
 
     private func chip(_ label: String, isOn: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(label)
-                .font(Design.Typography.ui(12, weight: isOn ? .semibold : .regular))
-                .foregroundStyle(isOn ? Design.Palette.accent : Design.Palette.inkSecondary)
-                .padding(.horizontal, 9)
-                .frame(height: Design.Metric.chipHeight)
-                .background(isOn ? Design.Palette.accentSoft : Design.Palette.panelAlt,
-                            in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Design.Metric.corner)
-                        .stroke(isOn ? Design.Palette.accent.opacity(0.35) : Design.Palette.line,
-                                lineWidth: Design.Metric.hairline)
-                )
+            if Design.style.filledControls {
+                StudioChip(isOn: isOn) { ChipText(label, isOn: isOn, size: 12) }
+            } else {
+                Text(label)
+                    .font(Design.Typography.ui(12, weight: isOn ? .semibold : .regular))
+                    .foregroundStyle(isOn ? Design.Palette.accent : Design.Palette.inkSecondary)
+                    .padding(.horizontal, 9)
+                    .frame(height: Design.Metric.chipHeight)
+                    .background(isOn ? Design.Palette.accentSoft : Design.Palette.panelAlt,
+                                in: RoundedRectangle(cornerRadius: Design.Metric.corner))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Design.Metric.corner)
+                            .stroke(isOn ? Design.Palette.accent.opacity(0.35) : Design.Palette.line,
+                                    lineWidth: Design.Metric.hairline)
+                    )
+            }
         }
         .buttonStyle(.plain)
     }
@@ -428,10 +454,7 @@ private struct VoiceReadout: View {
     var body: some View {
         HStack(alignment: .top, spacing: Design.Metric.gutter) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(surface.panel == .chain ? "CHAIN ON" : "EDITING")
-                    .font(Design.Typography.label)
-                    .tracking(1.1)
-                    .foregroundStyle(Design.Palette.inkTertiary)
+                SmallLabel(surface.panel == .chain ? "Chain on" : "Editing", color: Design.Palette.inkTertiary)
                 Text(surface.subject.isPart ? surface.subjectName : surface.draft.voice.rawValue)
                     .font(Design.Typography.prose(layout.readoutNameSize, weight: .medium))
                     .foregroundStyle(Design.Palette.ink)
@@ -446,10 +469,7 @@ private struct VoiceReadout: View {
             HStack(alignment: .top, spacing: 22) {
                 ForEach(surface.prominentControls) { control in
                     VStack(alignment: .trailing, spacing: 3) {
-                        Text(control.name)
-                            .font(Design.Typography.label)
-                            .tracking(1.1)
-                            .foregroundStyle(Design.Palette.inkTertiary)
+                        SmallLabel(control.labelName, color: Design.Palette.inkTertiary)
                         Text(control.readout)
                             .font(Design.Typography.numeric(layout.readoutValueSize))
                             .foregroundStyle(Design.Palette.ink)
@@ -462,12 +482,7 @@ private struct VoiceReadout: View {
         .padding(.horizontal, Design.Metric.inset)
         .frame(height: layout.readoutHeight)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Design.Palette.panelAlt)
-        .overlay(
-            RoundedRectangle(cornerRadius: Design.Metric.corner)
-                .stroke(Design.Palette.line, lineWidth: Design.Metric.hairline)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+        .groupedArea(Design.Palette.panelAlt, stroke: Design.Palette.line)
     }
 
     /// Where this sound came from: the machine, and the chain preset when one is doing something.
@@ -483,26 +498,29 @@ private struct VoiceReadout: View {
 
     private var monitor: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("A/B")
-                .font(Design.Typography.label)
-                .tracking(1.1)
-                .foregroundStyle(Design.Palette.inkTertiary)
+            SmallLabel("A/B", color: Design.Palette.inkTertiary)
             HStack(spacing: 6) {
                 ForEach(SoundMonitor.allCases, id: \.self) { side in
                     Button { surface.monitor = side } label: {
-                        Text(side == .chain ? "Chain" : "Dry")
-                            .font(Design.Typography.ui(13, weight: surface.monitor == side ? .semibold : .regular))
-                            .foregroundStyle(surface.monitor == side ? Design.Palette.accent : Design.Palette.inkSecondary)
-                            .padding(.horizontal, 14)
-                            .frame(height: Design.Metric.controlHeight)
-                            .background(surface.monitor == side ? Design.Palette.accentSoft : Design.Palette.panel,
-                                        in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: Design.Metric.corner)
-                                    .stroke(surface.monitor == side ? Design.Palette.accent : Design.Palette.line,
-                                            lineWidth: Design.Metric.hairline)
-                            )
-                            .contentShape(Rectangle())
+                        if Design.style.filledControls {
+                            StudioChip(isOn: surface.monitor == side, height: Design.Metric.controlHeight, horizontalPadding: 14) {
+                                ChipText(side == .chain ? "Chain" : "Dry", isOn: surface.monitor == side, size: 13)
+                            }
+                        } else {
+                            Text(side == .chain ? "Chain" : "Dry")
+                                .font(Design.Typography.ui(13, weight: surface.monitor == side ? .semibold : .regular))
+                                .foregroundStyle(surface.monitor == side ? Design.Palette.accent : Design.Palette.inkSecondary)
+                                .padding(.horizontal, 14)
+                                .frame(height: Design.Metric.controlHeight)
+                                .background(surface.monitor == side ? Design.Palette.accentSoft : Design.Palette.panel,
+                                            in: RoundedRectangle(cornerRadius: Design.Metric.corner))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: Design.Metric.corner)
+                                        .stroke(surface.monitor == side ? Design.Palette.accent : Design.Palette.line,
+                                                lineWidth: Design.Metric.hairline)
+                                )
+                                .contentShape(Rectangle())
+                        }
                     }
                     .buttonStyle(.plain)
                 }
@@ -511,5 +529,14 @@ private struct VoiceReadout: View {
                 .font(Design.Typography.ui(10.5))
                 .foregroundStyle(Design.Palette.inkTertiary)
         }
+    }
+}
+
+private extension SoundControl {
+    /// The control's name as its label is set: the machine's own capitals in Cool ("BIT DEPTH"),
+    /// sentence case in Studio ("Bit depth"). The name itself stays the panel's, for help and
+    /// accessibility.
+    var labelName: String {
+        Design.style.uppercaseLabels ? name : name.prefix(1).uppercased() + name.dropFirst().lowercased()
     }
 }

@@ -18,10 +18,10 @@ final class ActivationDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         NSApplication.shared.setActivationPolicy(.regular)
-        // Before the first window is ordered front: a theme that pins the appearance (Petrol) has to
-        // have done so already, or the window opens with light AppKit furniture over a dark ground
-        // and then corrects itself in view of the user.
-        Design.applyPinnedAppearance()
+        // Before the first window is ordered front: a chosen Light or Dark has to be in place
+        // already, or the window opens in the system's appearance and then corrects itself in view
+        // of the user.
+        Design.applyAppearance()
         // A bare executable has no bundle icon; draw ours. See `AppIconArt`.
         if let icon = AppIconArt.image() { NSApplication.shared.applicationIconImage = icon }
     }

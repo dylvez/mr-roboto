@@ -44,7 +44,7 @@ public struct CompareLayout: Equatable, Sendable {
 
     /// Header, the reference band, the lever strip, the column headings and the footer, plus the
     /// gutters between them. Measured off the view rather than guessed.
-    static let chromeHeight: CGFloat = 22 + 76 + 58 + 20 + 26 + 4 * Design.Metric.gutter
+    static var chromeHeight: CGFloat { 22 + 76 + 58 + 20 + 26 + 4 * Design.Metric.gutter }
 
     public let size: CGSize
     public let contentSize: CGSize

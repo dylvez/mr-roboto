@@ -140,6 +140,65 @@ private struct SectionBlock: View {
 
     var body: some View {
         Button { model.select(section.id) } label: {
+            if Design.style.laneColours { studio } else { cool }
+        }
+        .buttonStyle(.plain)
+        .modifier(SectionReorder(model: model, section: section.id))
+        .modifier(SectionDropTarget(model: model, section: section.id))
+        .help(model.silence(of: section)
+              ?? "\(section.name) · \(section.lengthInBars) bars · plays \(kinds.joined(separator: ", "))"
+                  + (section.intensity.map { " · intensity \(Int(($0 * 100).rounded()))%" } ?? ""))
+    }
+
+    /// Studio's block: the section's kind in its hue — a bar of it along the top and a wash of it
+    /// behind — so a verse is the same colour here, in the transport's strip and in every song. The
+    /// one selected wears the accent as a ring.
+    private var studio: some View {
+        let hue = SectionHue.color(for: section.name)
+        let shape = RoundedRectangle(cornerRadius: Design.Metric.corner + 1, style: .continuous)
+        return VStack(alignment: .leading, spacing: 3) {
+            Text(section.name)
+                .font(.system(size: 12, weight: .semibold))
+                .lineLimit(1)
+                .foregroundStyle(Design.Palette.ink)
+            Text("\(section.lengthInBars) bars")
+                .font(Design.Typography.numeric(10))
+                .foregroundStyle(Design.Palette.inkSecondary)
+            Text(kinds.isEmpty ? "silent" : kinds.joined(separator: " · "))
+                .font(Design.Typography.ui(9.5, weight: .regular))
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .foregroundStyle(kinds.isEmpty ? Design.Palette.inkTertiary : Design.Palette.inkSecondary)
+                .frame(height: 12, alignment: .leading)
+        }
+        .padding(.horizontal, 8)
+        .padding(.top, 9)
+        .padding(.bottom, 6)
+        .frame(width: width, alignment: .leading)
+        .overlay(alignment: .bottomLeading) {
+            if let intensity = section.intensity {
+                Rectangle()
+                    .fill(hue)
+                    .frame(width: max(2, (width - 16) * min(1, max(0, intensity))), height: 2)
+                    .padding(.leading, 8)
+                    .padding(.bottom, 2)
+                    .accessibilityLabel("Intensity \(Int((intensity * 100).rounded())) percent")
+            }
+        }
+        .background {
+            ZStack(alignment: .top) {
+                shape.fill(hue.opacity(isSelected ? 0.22 : 0.12))
+                Rectangle().fill(hue).frame(height: 4)
+            }
+            .clipShape(shape)
+        }
+        .overlay {
+            if isSelected { shape.strokeBorder(Design.Palette.accent, lineWidth: 1.5) }
+        }
+        .contentShape(Rectangle())
+    }
+
+    private var cool: some View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(section.name.uppercased())
                     .font(Design.Typography.label)
@@ -178,18 +237,27 @@ private struct SectionBlock: View {
                 .stroke(isSelected ? Design.Palette.accent.opacity(0.5) : Design.Palette.line,
                         lineWidth: Design.Metric.hairline))
             .contentShape(Rectangle())
+    }
+}
+
+/// A block dragged onto another goes before it. Off in offscreen renders, like every drop target:
+/// dragging and dropping are AppKit-backed, and a render draws the block they sit on as a block.
+private struct SectionReorder: ViewModifier {
+    let model: StructureModel
+    let section: SectionID
+
+    func body(content: Content) -> some View {
+        if Design.isOffscreenRender {
+            content
+        } else {
+            content
+                .draggable(section.rawValue.uuidString)
+                .dropDestination(for: String.self) { ids, _ in
+                    guard let raw = ids.first, let uuid = UUID(uuidString: raw) else { return false }
+                    model.move(SectionID(rawValue: uuid), before: section)
+                    return true
+                }
         }
-        .buttonStyle(.plain)
-        .draggable(section.id.rawValue.uuidString)
-        .dropDestination(for: String.self) { ids, _ in
-            guard let raw = ids.first, let uuid = UUID(uuidString: raw) else { return false }
-            model.move(SectionID(rawValue: uuid), before: section.id)
-            return true
-        }
-        .modifier(SectionDropTarget(model: model, section: section.id))
-        .help(model.silence(of: section)
-              ?? "\(section.name) · \(section.lengthInBars) bars · plays \(kinds.joined(separator: ", "))"
-                  + (section.intensity.map { " · intensity \(Int(($0 * 100).rounded()))%" } ?? ""))
     }
 }
 
@@ -361,9 +429,7 @@ private struct SectionDetail: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Design.Palette.panelAlt)
-        .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.line, lineWidth: Design.Metric.hairline))
-        .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+        .groupedArea()
         .onChange(of: section.id) { disarm() }
     }
 
@@ -375,10 +441,7 @@ private struct SectionDetail: View {
             switch words {
             case .sings(let label, let lines):
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(label.uppercased())
-                        .font(Design.Typography.label)
-                        .tracking(1.1)
-                        .foregroundStyle(Design.Palette.accent)
+                    SmallLabel(label, color: Design.Palette.emphasis)
                     Text(lines.prefix(2).joined(separator: " / ") + (lines.count > 2 ? " …" : ""))
                         .font(Design.Typography.prose(12.5))
                         .foregroundStyle(Design.Palette.inkSecondary)
@@ -488,16 +551,23 @@ struct FormChip: View {
 
     var body: some View {
         Button(action: action) {
-            Text(title)
-                .font(Design.Typography.ui(11.5, weight: isOn || warns ? .semibold : .regular))
-                .foregroundStyle(ink)
-                .lineLimit(1)
-                .fixedSize()
-                .padding(.horizontal, 8)
-                .frame(height: Design.Metric.chipHeight)
-                .background(ground, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-                .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
-                    .stroke(edge, lineWidth: Design.Metric.hairline))
+            if Design.style.filledControls {
+                // The armed Remove is a destructive second press: Studio's red.
+                StudioChip(isOn: isOn, tone: warns ? .danger : .plain) {
+                    ChipText(title, isOn: isOn || warns, size: 11.5)
+                }
+            } else {
+                Text(title)
+                    .font(Design.Typography.ui(11.5, weight: isOn || warns ? .semibold : .regular))
+                    .foregroundStyle(ink)
+                    .lineLimit(1)
+                    .fixedSize()
+                    .padding(.horizontal, 8)
+                    .frame(height: Design.Metric.chipHeight)
+                    .background(ground, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
+                    .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
+                        .stroke(edge, lineWidth: Design.Metric.hairline))
+            }
         }
         .buttonStyle(.plain)
     }
@@ -507,9 +577,6 @@ private struct FormLabel: View {
     let text: String
     init(_ text: String) { self.text = text }
     var body: some View {
-        Text(text.uppercased())
-            .font(Design.Typography.label)
-            .tracking(1.1)
-            .foregroundStyle(Design.Palette.inkTertiary)
+        SmallLabel(text, color: Design.Palette.inkTertiary)
     }
 }

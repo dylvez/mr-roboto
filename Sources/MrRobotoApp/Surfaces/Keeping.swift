@@ -167,6 +167,7 @@ struct KeepStatusBar: View {
             HStack(spacing: 4) {
                 Image(systemName: "checkmark")
                     .font(Design.Typography.ui(9.5, weight: .bold))
+                    .foregroundStyle(Design.Palette.ok)
                 Text("In the song as \(title)")
                     .font(Design.Typography.ui(11.5, weight: .regular))
                     .lineLimit(1)
@@ -179,7 +180,7 @@ struct KeepStatusBar: View {
             HStack(spacing: 6) {
                 Text(why)
                     .font(Design.Typography.ui(11.5, weight: .regular))
-                    .foregroundStyle(Design.Palette.warn)
+                    .foregroundStyle(Design.Palette.danger)
                     .lineLimit(2)
                 if let retry {
                     Button("Try again", action: retry)

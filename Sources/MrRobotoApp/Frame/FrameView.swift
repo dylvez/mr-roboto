@@ -24,17 +24,19 @@ public enum FrameLayout {
     public static let conversationRailWidth = Design.Metric.conversationRailWidth
     public static let partsLedgerWidth = Design.Metric.partsLedgerWidth
     public static let collapsedRegionWidth = Design.Metric.collapsedRegionWidth
-    public static let headerHeight = Design.Metric.headerHeight
-    public static let transportHeight = Design.Metric.transportHeight
+    // The rest are the theme's, and so computed: a stored `let` would freeze whichever theme was
+    // current the first time it was read.
+    public static var headerHeight: CGFloat { Design.Metric.headerHeight }
+    public static var transportHeight: CGFloat { Design.Metric.transportHeight }
 
     /// The bench's own header: the surface dock, which is how you move between surfaces now that
     /// only one is drawn at a time.
-    public static let dockHeight = Design.Metric.headerHeight
+    public static var dockHeight: CGFloat { Design.Metric.dockHeight }
 
     /// The padding between the bench's edge and a surface, on both axes.
-    public static let benchPadding = Design.Metric.gutter
+    public static var benchPadding: CGFloat { Design.Metric.benchPadding }
     /// The gap between two surfaces when a pin has split the bench.
-    public static let benchSpacing = Design.Metric.gutter
+    public static var benchSpacing: CGFloat { Design.Metric.benchSpacing }
 
     /// What a surface actually needs, from the design tokens. The window's minimum is built from
     /// this rather than from the sum of the furniture — that inversion is the point.

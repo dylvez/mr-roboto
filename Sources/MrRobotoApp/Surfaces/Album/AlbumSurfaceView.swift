@@ -138,7 +138,7 @@ private struct AlbumBody: View {
         } else if let failure = release.failure {
             Text(failure)
                 .font(Design.Typography.ui(11.5, weight: .regular))
-                .foregroundStyle(Design.Palette.warn)
+                .foregroundStyle(Design.Palette.danger)
                 .fixedSize(horizontal: false, vertical: true)
         } else if let folder = release.folder {
             HStack(spacing: 8) {
@@ -219,7 +219,7 @@ private struct AlbumBody: View {
                         .layoutPriority(1)
                     } else {
                         Text("A song the library no longer holds")
-                            .font(Design.Typography.ui(12)).foregroundStyle(Design.Palette.warn)
+                            .font(Design.Typography.ui(12)).foregroundStyle(Design.Palette.danger)
                     }
                     Spacer()
                     // A vertical list moves up and down. It used to say ◀ ▶.
@@ -300,7 +300,7 @@ private struct AlbumBody: View {
             }
             ForEach(lines) { reading in
                 HStack(alignment: .top, spacing: 6) {
-                    Circle().fill(reading.holds ? Design.Palette.accent : Design.Palette.warn).frame(width: 6, height: 6).padding(.top, 5)
+                    Circle().fill(reading.holds ? Design.Palette.emphasis : Design.Palette.warn).frame(width: 6, height: 6).padding(.top, 5)
                     Text(reading.says).font(Design.Typography.ui(12)).fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -337,14 +337,23 @@ private struct AlbumBody: View {
                 CoverView(design: design, title: album.title, artist: album.artist, side: 220)
                     .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
                     .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.line, lineWidth: Design.Metric.hairline))
-                HStack(spacing: 6) {
-                    ForEach(CoverDesign.Layout.allCases, id: \.self) { layout in
-                        AlbumChip(layout.rawValue, isOn: design.layout == layout) {
-                            var next = design
-                            next.layout = layout
-                            app.setCover(next, for: album.id)
+                if Design.style.filledControls {
+                    SegmentedChoice(options: CoverDesign.Layout.allCases, selection: design.layout, title: \.rawValue,
+                                    help: { "The \($0.rawValue) layout for the drawn cover" }) { layout in
+                        var next = design
+                        next.layout = layout
+                        app.setCover(next, for: album.id)
+                    }
+                } else {
+                    HStack(spacing: 6) {
+                        ForEach(CoverDesign.Layout.allCases, id: \.self) { layout in
+                            AlbumChip(layout.rawValue, isOn: design.layout == layout) {
+                                var next = design
+                                next.layout = layout
+                                app.setCover(next, for: album.id)
+                            }
+                            .help("The \(layout.rawValue) layout for the drawn cover")
                         }
-                        .help("The \(layout.rawValue) layout for the drawn cover")
                     }
                 }
             case .image(let media):
@@ -352,7 +361,7 @@ private struct AlbumBody: View {
                     Image(nsImage: image).resizable().aspectRatio(contentMode: .fill).frame(width: 220, height: 220)
                         .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
                 } else {
-                    Text("The cover image is missing from the library.").font(Design.Typography.ui(12)).foregroundStyle(Design.Palette.warn)
+                    Text("The cover image is missing from the library.").font(Design.Typography.ui(12)).foregroundStyle(Design.Palette.danger)
                 }
             }
             Button("Choose an Image…") {
@@ -394,11 +403,18 @@ private struct AlbumBody: View {
                         .foregroundStyle(Design.Palette.ink)
                         .lineLimit(1)
                     Spacer()
-                    ForEach(ClearanceStatus.allCases, id: \.self) { status in
-                        AlbumChip(AlbumSurfaceView.label(status), isOn: clearance.status == status) {
+                    if Design.style.filledControls {
+                        SegmentedChoice(options: ClearanceStatus.allCases, selection: clearance.status,
+                                        title: { AlbumSurfaceView.label($0) }, help: { AlbumSurfaceView.help($0) }) { status in
                             app.setClearance(status, forSource: clearance.source, record: clearance.record, media: clearance.media, in: album.id)
                         }
-                        .help(AlbumSurfaceView.help(status))
+                    } else {
+                        ForEach(ClearanceStatus.allCases, id: \.self) { status in
+                            AlbumChip(AlbumSurfaceView.label(status), isOn: clearance.status == status) {
+                                app.setClearance(status, forSource: clearance.source, record: clearance.record, media: clearance.media, in: album.id)
+                            }
+                            .help(AlbumSurfaceView.help(status))
+                        }
                     }
                 }
                 .padding(.vertical, 3)
@@ -500,17 +516,21 @@ private struct AlbumChipLabel: View {
     init(_ title: String, isOn: Bool = false) { self.title = title; self.isOn = isOn }
 
     var body: some View {
-        Text(title)
-            .font(Design.Typography.ui(11.5, weight: isOn ? .semibold : .regular))
-            .foregroundStyle(isOn ? Design.Palette.accent : Design.Palette.inkSecondary)
-            .lineLimit(1)
-            .fixedSize()
-            .padding(.horizontal, 8)
-            .frame(height: Design.Metric.chipHeight)
-            .background(isOn ? Design.Palette.accentSoft : Design.Palette.panelAlt,
-                        in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-            .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
-                .stroke(isOn ? Design.Palette.accent.opacity(0.35) : Design.Palette.line, lineWidth: Design.Metric.hairline))
+        if Design.style.filledControls {
+            StudioChip(isOn: isOn) { ChipText(title, isOn: isOn, size: 11.5) }
+        } else {
+            Text(title)
+                .font(Design.Typography.ui(11.5, weight: isOn ? .semibold : .regular))
+                .foregroundStyle(isOn ? Design.Palette.accent : Design.Palette.inkSecondary)
+                .lineLimit(1)
+                .fixedSize()
+                .padding(.horizontal, 8)
+                .frame(height: Design.Metric.chipHeight)
+                .background(isOn ? Design.Palette.accentSoft : Design.Palette.panelAlt,
+                            in: RoundedRectangle(cornerRadius: Design.Metric.corner))
+                .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
+                    .stroke(isOn ? Design.Palette.accent.opacity(0.35) : Design.Palette.line, lineWidth: Design.Metric.hairline))
+        }
     }
 }
 
@@ -530,7 +550,7 @@ private struct AlbumLabel: View {
     let text: String
     init(_ text: String) { self.text = text }
     var body: some View {
-        Text(text.uppercased()).font(Design.Typography.label).tracking(1.1).foregroundStyle(Design.Palette.inkTertiary)
+        SmallLabel(text, color: Design.Palette.inkTertiary)
     }
 }
 

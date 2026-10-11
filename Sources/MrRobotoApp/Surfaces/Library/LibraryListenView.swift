@@ -38,17 +38,30 @@ struct LibraryListen: View {
                 if sounding { await preview.stop() } else { await preview.play(facts.id) }
             }
         } label: {
-            HStack(spacing: 5) {
-                Image(systemName: sounding ? "stop.fill" : "play.fill").font(.system(size: 10, weight: .bold))
-                Text(sounding ? "Stop" : facts.id.shelf == .songs ? "Play the song" : facts.id.shelf == .records && preview.stem != nil && isRecord
-                     ? "Play the \(preview.stem!)" : "Play")
-                    .font(Design.Typography.ui(12, weight: .semibold))
+            if Design.style.filledControls {
+                // Grey at rest like any control, orange while it sounds.
+                StudioChip(tone: sounding ? .sounding : .plain) {
+                    HStack(spacing: 5) {
+                        Image(systemName: sounding ? "stop.fill" : "play.fill").font(.system(size: 10, weight: .bold))
+                        Text(sounding ? "Stop" : facts.id.shelf == .songs ? "Play the song" : facts.id.shelf == .records && preview.stem != nil && isRecord
+                             ? "Play the \(preview.stem!)" : "Play")
+                            .font(Design.Typography.ui(12, weight: .semibold))
+                    }
+                    .foregroundStyle(sounding ? Design.Palette.onSounding : Design.Palette.ink)
+                }
+            } else {
+                HStack(spacing: 5) {
+                    Image(systemName: sounding ? "stop.fill" : "play.fill").font(.system(size: 10, weight: .bold))
+                    Text(sounding ? "Stop" : facts.id.shelf == .songs ? "Play the song" : facts.id.shelf == .records && preview.stem != nil && isRecord
+                         ? "Play the \(preview.stem!)" : "Play")
+                        .font(Design.Typography.ui(12, weight: .semibold))
+                }
+                .foregroundStyle(Design.Palette.accent)
+                .padding(.horizontal, 10)
+                .frame(height: Design.Metric.chipHeight)
+                .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.accent, lineWidth: Design.Metric.hairline))
+                .contentShape(Rectangle())
             }
-            .foregroundStyle(Design.Palette.accent)
-            .padding(.horizontal, 10)
-            .frame(height: Design.Metric.chipHeight)
-            .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.accent, lineWidth: Design.Metric.hairline))
-            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .help(facts.id.shelf == .songs ? "The whole song, from a preview made the first time it is asked for and kept until the song changes"
@@ -61,7 +74,7 @@ struct LibraryListen: View {
         case .preparing(let what):
             Text(what + makingShare).font(Design.Typography.ui(11.5)).foregroundStyle(Design.Palette.inkSecondary).lineLimit(1)
         case .failed(let why) where preview.soundingNow == nil:
-            Text(why).font(Design.Typography.ui(11.5)).foregroundStyle(Design.Palette.warn).lineLimit(2)
+            Text(why).font(Design.Typography.ui(11.5)).foregroundStyle(Design.Palette.danger).lineLimit(2)
         default:
             if facts.id.shelf == .songs, preview.making?.song.rawValue == facts.id.id {
                 // Being made before anyone asked: chosen songs are made ready to hear.
@@ -212,7 +225,7 @@ private struct RecordStrip: View {
                 }
             }
             if let playhead {
-                context.fill(Path(CGRect(x: x(playhead) - 0.75, y: 0, width: 1.5, height: size.height)), with: .color(Design.Palette.accent))
+                context.fill(Path(CGRect(x: x(playhead) - 0.75, y: 0, width: 1.5, height: size.height)), with: .color(Design.Palette.sounding))
             }
         }
         .accessibilityElement(children: .ignore)

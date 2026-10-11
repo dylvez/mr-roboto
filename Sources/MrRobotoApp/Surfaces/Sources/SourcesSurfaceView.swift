@@ -124,8 +124,7 @@ struct SourcesSurfaceView: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, minHeight: 170, alignment: .topLeading)
-        .background(Design.Palette.panelAlt, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-        .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.line, lineWidth: Design.Metric.hairline))
+        .groupedArea(Design.Palette.panelAlt, stroke: Design.Palette.line)
     }
 
     /// "Vocals −2 dB": the stem, and how much of the record it is.
@@ -194,8 +193,7 @@ struct SourcesSurfaceView: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, minHeight: 170, alignment: .topLeading)
-        .background(Design.Palette.panelAlt, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-        .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.line, lineWidth: Design.Metric.hairline))
+        .groupedArea(Design.Palette.panelAlt, stroke: Design.Palette.line)
     }
 
     @ViewBuilder
@@ -315,7 +313,7 @@ struct SourcesSurfaceView: View {
             }
             Text(model.lastError ?? model.lastAdded ?? model.blocker ?? "Any number of records, one at a time. Each stays a source to clear.")
                 .font(Design.Typography.ui(11))
-                .foregroundStyle(model.lastError != nil ? Design.Palette.warn : Design.Palette.inkTertiary)
+                .foregroundStyle(model.lastError != nil ? Design.Palette.danger : Design.Palette.inkTertiary)
         }
     }
 }

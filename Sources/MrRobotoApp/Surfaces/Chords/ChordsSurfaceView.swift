@@ -41,7 +41,7 @@ extension ChordsSurfaceView {
                 KeyField(model: model)
             }
             VStack(alignment: .leading, spacing: 4) {
-                Text("CHORDS").font(Design.Typography.label).tracking(1.1).foregroundStyle(Design.Palette.inkTertiary)
+                SmallLabel("Chords", color: Design.Palette.inkTertiary)
                 Group {
                     if Design.isOffscreenRender {
                         RenderedField(text: model.text, placeholder: "Dm7 G7 | Cmaj7 | Am7 | Fmaj7", font: Design.Typography.ui(14))
@@ -52,26 +52,28 @@ extension ChordsSurfaceView {
                     }
                 }
                 .frame(maxWidth: 520)
-                // The typo, if there is one, with its mark; the way the line reads otherwise.
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    if model.problem != nil {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(Design.Palette.warn)
+                // The typo, if there is one, with its mark; the way the line reads otherwise. Once
+                // something is typed that is the primer's line, said here only where primers are.
+                if model.problem != nil || model.isDefault || Design.style.inlinePrimers {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        if model.problem != nil {
+                            Image(systemName: "exclamationmark.triangle")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(Design.Palette.warn)
+                        }
+                        Text(model.problem ?? (model.isDefault
+                                ? "Nothing typed: the key's I–IV–V–I, a bar each. Bars are separated by |, chords in a bar share it."
+                                : "Bars are separated by |; chords in a bar share its beats. Click a bar to hear it."))
+                            .font(Design.Typography.ui(11.5, weight: .regular))
+                            .foregroundStyle(model.problem == nil ? Design.Palette.inkSecondary : Design.Palette.warn)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    Text(model.problem ?? (model.isDefault
-                            ? "Nothing typed: the key's I–IV–V–I, a bar each. Bars are separated by |, chords in a bar share it."
-                            : "Bars are separated by |; chords in a bar share its beats. Click a bar to hear it."))
-                        .font(Design.Typography.ui(11.5, weight: .regular))
-                        .foregroundStyle(model.problem == nil ? Design.Palette.inkSecondary : Design.Palette.warn)
-                        .fixedSize(horizontal: false, vertical: true)
                 }
                 // The genre's own progressions, in the sheet's key, a press away.
                 let offered = model.genreProgressions
                 if !offered.isEmpty {
                     HStack(spacing: 6) {
-                        Text(offered[0].genre.uppercased()).font(Design.Typography.label).tracking(1.1)
-                            .foregroundStyle(Design.Palette.inkTertiary)
+                        SmallLabel(offered[0].genre, color: Design.Palette.inkTertiary)
                         ForEach(offered, id: \.roman) { entry in
                             FormChip(entry.roman, isOn: model.text == entry.text) { model.use(progression: entry.text) }
                                 .help("\(entry.text) — \(entry.about)")
@@ -84,8 +86,7 @@ extension ChordsSurfaceView {
                 let ways = model.anotherWays
                 if !ways.isEmpty {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text("ANOTHER WAY").font(Design.Typography.label).tracking(1.1)
-                            .foregroundStyle(Design.Palette.inkTertiary)
+                        SmallLabel("Another way", color: Design.Palette.inkTertiary)
                         FlowRow(spacing: 4) {
                             ForEach(ways, id: \.move) { way in
                                 FormChip(way.move.name, isOn: false) { model.use(way: way) }
@@ -175,9 +176,9 @@ private struct PlayingPicker: View {
 
     private func row<Chips: View>(_ label: String, @ViewBuilder chips: () -> Chips) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text(label.uppercased())
+            Text(Design.Typography.labelText(label))
                 .font(Design.Typography.label)
-                .tracking(1.1)
+                .tracking(Design.Typography.labelTracking)
                 .foregroundStyle(Design.Palette.inkTertiary)
                 .frame(width: 58, alignment: .leading)
             FlowRow(spacing: 4) { chips() }
@@ -196,10 +197,7 @@ private struct HarmonistReadings: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
                 if let emblem = Art.emblem(forPersona: "Harmonist") { ArtImage(emblem, width: 18) }
-                Text("THE HARMONIST")
-                    .font(Design.Typography.label)
-                    .tracking(1.1)
-                    .foregroundStyle(Design.Palette.inkTertiary)
+                SmallLabel("The Harmonist", color: Design.Palette.inkTertiary)
             }
             ForEach(model.orderedReadings) { reading in
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
@@ -210,7 +208,7 @@ private struct HarmonistReadings: View {
                         .accessibilityHidden(true)
                     Text(reading.says)
                         .font(Design.Typography.prose(12.5))
-                        .foregroundStyle(reading.holds ? Design.Palette.inkSecondary : Design.Palette.warn)
+                        .foregroundStyle(reading.holds ? Design.Palette.inkSecondary : Design.Palette.findingText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .accessibilityElement(children: .combine)
@@ -231,7 +229,7 @@ private struct KeyField: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text("KEY").font(Design.Typography.label).tracking(1.1).foregroundStyle(Design.Palette.inkTertiary)
+            SmallLabel("Key", color: Design.Palette.inkTertiary)
             Group {
                 if Design.isOffscreenRender {
                     RenderedField(text: text.isEmpty ? model.key.name : text, placeholder: "D major")
@@ -286,7 +284,7 @@ private struct BarCard: View {
                                 .foregroundStyle(Design.Palette.ink)
                             Text(model.numeral(of: span.chord))
                                 .font(Design.Typography.numeric(11))
-                                .foregroundStyle(Design.Palette.accent)
+                                .foregroundStyle(Design.Palette.emphasis)
                             Text(String(format: "%g beats", span.beats))
                                 .font(Design.Typography.numeric(9.5))
                                 .foregroundStyle(Design.Palette.inkTertiary)
@@ -299,8 +297,21 @@ private struct BarCard: View {
         }
         .padding(12)
         .frame(minWidth: 96, alignment: .leading)
-        .background(Design.Palette.panelAlt)
-        .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.line, lineWidth: Design.Metric.hairline))
-        .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+        .modifier(BarCell())
+    }
+}
+
+/// A bar's cell: an outlined box in Cool; in Studio a soft fill with no edge, a cell among cells.
+private struct BarCell: ViewModifier {
+    func body(content: Content) -> some View {
+        if Design.style.filledControls {
+            content
+                .background(Design.Palette.fill, in: RoundedRectangle(cornerRadius: Design.Metric.corner, style: .continuous))
+        } else {
+            content
+                .background(Design.Palette.panelAlt)
+                .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.line, lineWidth: Design.Metric.hairline))
+                .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+        }
     }
 }

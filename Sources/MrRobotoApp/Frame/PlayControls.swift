@@ -16,18 +16,33 @@ struct SurfacePlayControl: View {
             Button {
                 if isPlaying { player.stop() } else { Task { await audition.play(player) } }
             } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: isPlaying ? "stop.fill" : "play.fill").font(.system(size: 9, weight: .medium))
-                    Text(isPlaying ? "Stop" : "Play \(audition.label)")
-                        .font(Design.Typography.ui(11.5, weight: .medium))
-                        .lineLimit(1)
-                        .fixedSize()
+                if Design.style.filledControls {
+                    // Grey at rest like any control, orange while it sounds: the one place on the
+                    // surface that says it is making noise.
+                    StudioChip(tone: isPlaying ? .sounding : .plain, height: Design.Metric.chipHeight + 2, horizontalPadding: 10) {
+                        HStack(spacing: 6) {
+                            Image(systemName: isPlaying ? "stop.fill" : "play.fill").font(.system(size: 9, weight: .semibold))
+                            Text(isPlaying ? "Stop" : "Play \(audition.label)")
+                                .font(.system(size: 12, weight: .medium))
+                                .lineLimit(1)
+                                .fixedSize()
+                        }
+                        .foregroundStyle(isPlaying ? Design.Palette.onSounding : Design.Palette.ink)
+                    }
+                } else {
+                    HStack(spacing: 5) {
+                        Image(systemName: isPlaying ? "stop.fill" : "play.fill").font(.system(size: 9, weight: .medium))
+                        Text(isPlaying ? "Stop" : "Play \(audition.label)")
+                            .font(Design.Typography.ui(11.5, weight: .medium))
+                            .lineLimit(1)
+                            .fixedSize()
+                    }
+                    .padding(.horizontal, 9)
+                    .frame(height: Design.Metric.chipHeight)
+                    .foregroundStyle(isPlaying ? Design.Palette.panel : Design.Palette.accent)
+                    .background(isPlaying ? Design.Palette.accent : Design.Palette.accentSoft, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
+                    .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.accent.opacity(0.45), lineWidth: Design.Metric.hairline))
                 }
-                .padding(.horizontal, 9)
-                .frame(height: Design.Metric.chipHeight)
-                .foregroundStyle(isPlaying ? Design.Palette.panel : Design.Palette.accent)
-                .background(isPlaying ? Design.Palette.accent : Design.Palette.accentSoft, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-                .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.accent.opacity(0.45), lineWidth: Design.Metric.hairline))
             }
             .buttonStyle(.plain)
             .help("Play \(audition.label) (⌥Space for the surface in front). Space plays the whole song.")
@@ -39,8 +54,12 @@ struct SurfacePlayControl: View {
             }
             .padding(.horizontal, 9)
             .frame(height: Design.Metric.chipHeight)
-            .foregroundStyle(Design.Palette.inkTertiary)
-            .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.line, lineWidth: Design.Metric.hairline))
+            .foregroundStyle(Design.style.filledControls ? Design.Palette.inkQuiet : Design.Palette.inkTertiary)
+            .overlay {
+                if Design.style.surfaceCards {
+                    RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.line, lineWidth: Design.Metric.hairline)
+                }
+            }
             .help("This surface plays from here once it holds something: a painted step, a note, a chord, a selection.")
         }
     }
@@ -60,12 +79,23 @@ struct PartPlayButton: View {
                 Image(systemName: isPlaying ? "stop.fill" : "play.fill")
                     .font(.system(size: size, weight: .medium))
                     .frame(width: size + 11, height: size + 11)
-                    .foregroundStyle(isPlaying ? Design.Palette.panel : Design.Palette.accent)
-                    .background(isPlaying ? Design.Palette.accent : Design.Palette.accentSoft, in: Circle())
+                    .foregroundStyle(foreground(isPlaying))
+                    .background(background(isPlaying), in: Circle())
             }
             .buttonStyle(.plain)
             .help(isPlaying ? "Stop" : "Play \(PartLabel.title(of: version)) — \(player.mode == .alone ? "alone" : "in the song")")
         }
+    }
+
+    /// Cool plays in its accent; Studio is a grey button that goes orange while it sounds.
+    private func foreground(_ isPlaying: Bool) -> Color {
+        if Design.style.filledControls { return isPlaying ? Design.Palette.onSounding : Design.Palette.ink }
+        return isPlaying ? Design.Palette.panel : Design.Palette.accent
+    }
+
+    private func background(_ isPlaying: Bool) -> Color {
+        if Design.style.filledControls { return isPlaying ? Design.Palette.sounding : Design.Palette.fill }
+        return isPlaying ? Design.Palette.accent : Design.Palette.accentSoft
     }
 }
 
@@ -77,22 +107,20 @@ struct NowPlayingReadout: View {
         let player = SurfaceWiring.shared.player(for: app)
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 4) {
-                Text("PARTS PLAY").font(Design.Typography.label).tracking(1.1).foregroundStyle(Design.Palette.inkTertiary)
-                ForEach(PartPlayer.Mode.allCases, id: \.self) { mode in
-                    BoothChip(mode.title, isOn: player.mode == mode) { player.mode = mode }
-                }
+                SmallLabel("Parts play", color: Design.Palette.inkTertiary)
+                SegmentedChoice(options: PartPlayer.Mode.allCases, selection: player.mode, title: \.title) { player.mode = $0 }
             }
             HStack(spacing: 6) {
                 if let playing = player.nowPlaying {
                     Button { player.stop() } label: {
-                        Image(systemName: "stop.fill").font(.system(size: 9)).foregroundStyle(Design.Palette.accent)
+                        Image(systemName: "stop.fill").font(.system(size: 9)).foregroundStyle(Design.Palette.soundingInk)
                     }
                     .buttonStyle(.plain)
                     .help("Stop \(playing.label)")
-                    Text(playing.label).font(Design.Typography.ui(11, weight: .medium)).foregroundStyle(Design.Palette.accent).lineLimit(1)
+                    Text(playing.label).font(Design.Typography.ui(11, weight: .medium)).foregroundStyle(Design.Palette.soundingInk).lineLimit(1)
                 } else {
                     Text(player.lastError ?? "Nothing auditioning").font(Design.Typography.ui(11, weight: .regular))
-                        .foregroundStyle(player.lastError == nil ? Design.Palette.inkTertiary : Design.Palette.warn).lineLimit(1)
+                        .foregroundStyle(player.lastError == nil ? Design.Palette.inkTertiary : Design.Palette.danger).lineLimit(1)
                 }
             }
         }

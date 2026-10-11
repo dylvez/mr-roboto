@@ -45,7 +45,7 @@ struct MashupSurfaceView: View {
             HStack(spacing: 8) {
                 BoothLabel(side == .a ? "Song A" : "Song B")
                 if model.backbone == side {
-                    Text("SETS THE TEMPO").font(Design.Typography.label).tracking(1.1).foregroundStyle(Design.Palette.accent)
+                    Text(Design.Typography.labelText("Sets the tempo")).font(Design.Typography.label).tracking(Design.Typography.labelTracking).foregroundStyle(Design.Palette.accent)
                         .help("Both songs meet on this one's tempo and bars")
                 }
             }
@@ -110,9 +110,7 @@ struct MashupSurfaceView: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, minHeight: 170, alignment: .topLeading)
-        .background(Design.Palette.panelAlt, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-        .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
-            .stroke(model.backbone == side ? Design.Palette.accent.opacity(0.45) : Design.Palette.line, lineWidth: Design.Metric.hairline))
+        .groupedArea(Design.Palette.panelAlt, stroke: model.backbone == side ? Design.Palette.accent.opacity(0.45) : Design.Palette.line)
     }
 
     private func semitoneLine(_ side: MashupModel.Side) -> String {
@@ -227,7 +225,7 @@ struct MashupSurfaceView: View {
             }
             Text(model.lastError ?? model.blocker ?? "The new song's stems sit on the grid; mix it, add your own drums or bass, arrange it like any other. Both records stay sources to clear.")
                 .font(Design.Typography.ui(11))
-                .foregroundStyle(model.lastError != nil ? Design.Palette.warn : Design.Palette.inkTertiary)
+                .foregroundStyle(model.lastError != nil ? Design.Palette.danger : Design.Palette.inkTertiary)
         }
     }
 }

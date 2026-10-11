@@ -95,11 +95,7 @@ struct MixerSurfaceView: View {
     private var tabPicker: some View {
         if Design.isOffscreenRender {
             // A segmented control is AppKit's and renders as a blocked-out rectangle offscreen.
-            HStack(spacing: 4) {
-                ForEach(tabs) { tab in
-                    BoothChip(tab.rawValue, isOn: shownTab == tab) { model.tab = tab }
-                }
-            }
+            SegmentedChoice(options: tabs, selection: shownTab, title: \.rawValue) { model.tab = $0 }
         } else {
             Picker("Show", selection: Binding(get: { shownTab }, set: { model.tab = $0 })) {
                 ForEach(tabs) { tab in Text(tab.rawValue).tag(tab) }
@@ -210,10 +206,10 @@ struct MixerSurfaceView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(row.label).font(Design.Typography.ui(13, weight: .medium)).lineLimit(1)
                 HStack(spacing: 4) {
-                    MixToggle("M", isOn: strip.isMuted, tint: Design.Palette.warn,
+                    MixToggle("M", isOn: strip.isMuted, tint: Design.Palette.warn, kind: .mute,
                               help: strip.isMuted ? "Unmute \(row.label)" : "Mute \(row.label)",
                               label: "\(strip.isMuted ? "Unmute" : "Mute") \(row.label)") { model.toggleMute(row.part) }
-                    MixToggle("S", isOn: strip.isSoloed, tint: Design.Palette.accent,
+                    MixToggle("S", isOn: strip.isSoloed, tint: Design.Palette.accent, kind: .solo,
                               help: strip.isSoloed ? "Unsolo \(row.label)" : "Solo \(row.label): hear it on its own",
                               label: "\(strip.isSoloed ? "Unsolo" : "Solo") \(row.label)") { model.toggleSolo(row.part) }
                     learnChip(.strip(index))
@@ -450,10 +446,11 @@ struct MixerSurfaceView: View {
         if shownTab == .master, let master {
             MasterFooter(model: master, app: app)
         } else if let error = model.lastError {
-            Text(error).font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.warn)
+            Text(error).font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.danger)
         } else if let note = model.lastNote {
             Text("Kept: \(note)").font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.inkTertiary)
-        } else {
+        } else if Design.style.inlinePrimers {
+            // The primer says this too; where the primer sits behind the `?`, it is not said twice.
             Text("Every move you let go of is a mix version; step back from Parts. Pick two strips and Compare to see where they share energy.")
                 .font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.inkTertiary)
         }
@@ -493,37 +490,75 @@ struct MixLabel: View {
     let text: String
     init(_ text: String) { self.text = text }
     var body: some View {
-        Text(text.uppercased()).font(Design.Typography.label).tracking(1.1).foregroundStyle(Design.Palette.inkTertiary)
+        SmallLabel(text, color: Design.Palette.inkTertiary)
     }
 }
 
 /// A one-letter switch on a strip: M, S, the compressor's on/off. Terse on the strip, so it
 /// carries the whole verb in its help and its accessibility label.
 struct MixToggle: View {
+    /// What the switch is. Studio lights a mute and a solo in colours of their own, as a console's
+    /// strip does; anything else is a plain chip. Cool draws every one in its `tint`.
+    enum Kind { case plain, mute, solo }
+
     let title: String
     let isOn: Bool
     let tint: Color
+    let kind: Kind
     let help: String
     let label: String
     let action: () -> Void
-    init(_ title: String, isOn: Bool, tint: Color, help: String, label: String, action: @escaping () -> Void) {
-        self.title = title; self.isOn = isOn; self.tint = tint; self.help = help; self.label = label; self.action = action
+    init(_ title: String, isOn: Bool, tint: Color, kind: Kind = .plain, help: String, label: String, action: @escaping () -> Void) {
+        self.title = title; self.isOn = isOn; self.tint = tint; self.kind = kind; self.help = help; self.label = label; self.action = action
     }
     var body: some View {
         Button(action: action) {
-            Text(title)
-                .font(Design.Typography.numeric(10, weight: .semibold))
-                .foregroundStyle(isOn ? tint : Design.Palette.inkTertiary)
-                .padding(.horizontal, 4)
-                .frame(minWidth: Design.Metric.tagHeight, minHeight: Design.Metric.tagHeight)
-                .background(isOn ? tint.opacity(0.15) : Design.Palette.panelAlt, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-                .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(isOn ? tint.opacity(0.4) : Design.Palette.line, lineWidth: Design.Metric.hairline))
-                .contentShape(Rectangle())
+            if Design.style.filledControls {
+                studioFace
+            } else {
+                Text(title)
+                    .font(Design.Typography.numeric(10, weight: .semibold))
+                    .foregroundStyle(isOn ? tint : Design.Palette.inkTertiary)
+                    .padding(.horizontal, 4)
+                    .frame(minWidth: Design.Metric.tagHeight, minHeight: Design.Metric.tagHeight)
+                    .background(isOn ? tint.opacity(0.15) : Design.Palette.panelAlt, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
+                    .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(isOn ? tint.opacity(0.4) : Design.Palette.line, lineWidth: Design.Metric.hairline))
+                    .contentShape(Rectangle())
+            }
         }
         .buttonStyle(.plain)
         .help(help)
         .accessibilityLabel(label)
         .accessibilityAddTraits(isOn ? .isSelected : [])
+    }
+
+    /// Studio: a plain chip when off. On, a mute is filled with the mute colour and a solo with the
+    /// solo colour, so a strip that is out, or alone, says so down the whole column.
+    @ViewBuilder
+    private var studioFace: some View {
+        if isOn, let lit = litColours {
+            ChipText(title, isOn: true, size: 10)
+                .frame(minWidth: Design.Metric.tagHeight - 8)
+                .foregroundStyle(lit.ink)
+                .padding(.horizontal, 4)
+                .frame(height: Design.Metric.tagHeight)
+                .background(lit.fill, in: RoundedRectangle(cornerRadius: Design.Metric.corner, style: .continuous))
+                .contentShape(Rectangle())
+        } else {
+            StudioChip(isOn: isOn, height: Design.Metric.tagHeight, horizontalPadding: 4) {
+                ChipText(title, isOn: isOn, size: 10)
+                    .frame(minWidth: Design.Metric.tagHeight - 8)
+            }
+        }
+    }
+
+    /// The fill a lit mute or solo takes in Studio, and the ink on it; nil for a plain switch.
+    private var litColours: (fill: Color, ink: Color)? {
+        switch kind {
+        case .plain: return nil
+        case .mute: return (fill: Design.Palette.mute, ink: Color.white)
+        case .solo: return (fill: Design.Palette.solo, ink: Color.black.opacity(0.85))
+        }
     }
 }
 
@@ -534,8 +569,11 @@ struct MeterBar: View {
         GeometryReader { geometry in
             ZStack(alignment: .leading) {
                 RoundedRectangle(cornerRadius: 2).fill(Design.Palette.panelAlt)
-                RoundedRectangle(cornerRadius: 2).fill(Design.Palette.accent.opacity(0.5)).frame(width: geometry.size.width * CGFloat(min(1, rms)))
-                Rectangle().fill(peak > 0.9 ? Design.Palette.warn : Design.Palette.accent).frame(width: 2).offset(x: geometry.size.width * CGFloat(min(1, peak)))
+                RoundedRectangle(cornerRadius: 2).fill(Design.Palette.sounding.opacity(0.5)).frame(width: geometry.size.width * CGFloat(min(1, rms)))
+                // Studio: no peak tick while nothing sounds — orange is for sound, and a silent
+                // strip's meter is empty.
+                Rectangle().fill(peak > 0.9 ? Design.Palette.danger : Design.Palette.sounding).frame(width: 2).offset(x: geometry.size.width * CGFloat(min(1, peak)))
+                    .opacity(peak > 0.001 || !Design.style.filledControls ? 1 : 0)
             }
             .overlay(RoundedRectangle(cornerRadius: 2).stroke(Design.Palette.line, lineWidth: Design.Metric.hairline))
         }

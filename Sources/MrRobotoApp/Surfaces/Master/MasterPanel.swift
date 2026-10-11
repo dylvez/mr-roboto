@@ -144,7 +144,7 @@ struct MasterPanel: View {
                 for (i, dB) in bars.enumerated() {
                     let h = size.height * CGFloat(max(0, min(1, (dB + 60) / 60)))
                     let rect = CGRect(x: CGFloat(i) * width + 1, y: size.height - h, width: max(1, width - 2), height: h)
-                    context.fill(Path(rect), with: .color(Design.Palette.accent.opacity(0.7)))
+                    context.fill(Path(rect), with: .color(Design.Palette.emphasis.opacity(0.7)))
                 }
             }
             .frame(maxWidth: 560)
@@ -182,16 +182,17 @@ struct MasterPanel: View {
     private var ending: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Text("Ending").font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.inkSecondary)
-            HStack(spacing: 4) {
-                BoothChip("Stop", isOn: model.mix.master.fadeOutBars == nil) { model.setFadeOut(bars: nil) }
-                    .help("The song stops on its last bar")
-                ForEach(FadeOut.choices, id: \.self) { bars in
-                    BoothChip("Fade \(bars) bars", isOn: model.mix.master.fadeOutBars == bars) { model.setFadeOut(bars: bars) }
-                        .help("The last \(bars) bars of the form fade to silence, as it plays to its end and in the master. A loop never ends, so it never fades.")
-                }
-            }
+            SegmentedChoice(options: endings, selection: model.mix.master.fadeOutBars,
+                            title: { (bars: Int?) in bars.map { "Fade \($0) bars" } ?? "Stop" },
+                            help: { (bars: Int?) in
+                                bars.map { "The last \($0) bars of the form fade to silence, as it plays to its end and in the master. A loop never ends, so it never fades." }
+                                    ?? "The song stops on its last bar"
+                            }) { model.setFadeOut(bars: $0) }
         }
     }
+
+    /// Stop, then each fade on offer, in bars: nil is no fade.
+    private var endings: [Int?] { [nil] + FadeOut.choices.map { Optional($0) } }
 
     private func lever(_ label: String, value: Double, range: ClosedRange<Double>, format: String, set: @escaping (Double) -> Void) -> some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -214,11 +215,12 @@ struct MasterPanel: View {
                     .font(Design.Typography.ui(12.5, weight: .medium)).foregroundStyle(Design.Palette.warn)
                     .fixedSize(horizontal: false, vertical: true)
             } else if model.reading != nil {
-                Text("Nothing to change: every reading holds.").font(Design.Typography.ui(12.5, weight: .medium)).foregroundStyle(Design.Palette.accent)
+                Text("Nothing to change: every reading holds.").font(Design.Typography.ui(12.5, weight: .medium)).foregroundStyle(Design.Palette.emphasis)
             }
             ForEach(model.reading?.readings ?? []) { reading in
                 HStack(alignment: .top, spacing: 6) {
-                    Circle().fill(reading.holds ? Design.Palette.accent : Design.Palette.warn).frame(width: 6, height: 6).padding(.top, 5)
+                    // A reading that holds is Studio's green "kept, fine"; Cool kept its accent.
+                    Circle().fill(reading.holds ? (Design.style.filledControls ? Design.Palette.ok : Design.Palette.emphasis) : Design.Palette.warn).frame(width: 6, height: 6).padding(.top, 5)
                         .accessibilityHidden(true)
                     Text(reading.says).font(Design.Typography.ui(12)).foregroundStyle(Design.Palette.ink).fixedSize(horizontal: false, vertical: true)
                 }
@@ -249,7 +251,7 @@ struct MasterFooter: View {
         HStack(alignment: .center, spacing: 12) {
             Group {
                 if let error = model.lastError {
-                    Text(error).foregroundStyle(Design.Palette.warn)
+                    Text(error).foregroundStyle(Design.Palette.danger)
                 } else if let note = model.lastNote {
                     Text("Kept: \(note)").foregroundStyle(Design.Palette.inkTertiary)
                 } else {

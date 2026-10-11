@@ -45,7 +45,7 @@ public struct GridLayout: Equatable, Sendable {
     /// Two rows of labelled controls and the spacing between them, no caption.
     static let pickersTwoRowHeight: CGFloat = 92
     /// The header is a chip tall: the undo and redo chips and the length menu sit in it.
-    static let headerHeight: CGFloat = Design.Metric.chipHeight
+    static var headerHeight: CGFloat { Design.Metric.chipHeight }
     /// Swing and ghost: a label, a slider, and the detent row under swing.
     static let leversHeight: CGFloat = 62
 

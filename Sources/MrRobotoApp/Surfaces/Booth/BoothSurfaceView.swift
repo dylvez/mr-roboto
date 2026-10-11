@@ -51,7 +51,7 @@ struct BoothSurfaceView: View {
                 .lineLimit(1)
             Text(stateLine)
                 .font(Design.Typography.numeric(12))
-                .foregroundStyle(model.state == .recording ? Design.Palette.warn : Design.Palette.inkSecondary)
+                .foregroundStyle(model.state == .recording ? Design.Palette.danger : Design.Palette.inkSecondary)
                 .lineLimit(1)
             Spacer(minLength: 8)
             if let bars = model.sectionBars {
@@ -80,22 +80,40 @@ struct BoothSurfaceView: View {
             if model.state == .recording {
                 // No bare Space here: the app's transport already owns Space, and two controls
                 // on one key stop different things depending on which one wins.
-                Button("Stop") { Task { await model.stopRecording(stopSong: true) } }
+                if Design.style.filledControls {
+                    // Record's place stays red while the take records: it is Stop now.
+                    Button { Task { await model.stopRecording(stopSong: true) } } label: {
+                        RecordFace(title: "Stop", systemImage: "stop.fill")
+                    }
+                    .buttonStyle(.plain)
                     .help("Ends the take and stops the song.")
+                } else {
+                    Button("Stop") { Task { await model.stopRecording(stopSong: true) } }
+                        .help("Ends the take and stops the song.")
+                }
                 Button("Stop and keep playing") { Task { await model.stopRecording() } }
                     .help("Ends the take; the song plays on.")
             } else {
-                Button("Record") { Task { await model.record() } }
+                if Design.style.filledControls {
+                    Button { Task { await model.record() } } label: {
+                        RecordFace(title: "Record", systemImage: "circle.fill")
+                    }
+                    .buttonStyle(.plain)
                     .keyboardShortcut("r", modifiers: [])
-                    .buttonStyle(.borderedProminent)
-                    .tint(Design.Palette.warn)
                     .help(recordHelp)
+                } else {
+                    Button("Record") { Task { await model.record() } }
+                        .keyboardShortcut("r", modifiers: [])
+                        .buttonStyle(.borderedProminent)
+                        .tint(Design.Palette.danger)
+                        .help(recordHelp)
+                }
                 KeyHint("R")
             }
             if let count = model.countInLine {
                 Text(count)
                     .font(Design.Typography.prose(15, weight: .medium))
-                    .foregroundStyle(Design.Palette.accent)
+                    .foregroundStyle(Design.Palette.emphasis)
                     .lineLimit(1)
                     .accessibilityLabel(count)
             }
@@ -270,9 +288,7 @@ struct BoothSurfaceView: View {
                     .padding(.vertical, 8)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .background(Design.Palette.panelAlt, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-                .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
-                    .stroke(Design.Palette.line, lineWidth: Design.Metric.hairline))
+                .groupedArea(Design.Palette.panelAlt, stroke: Design.Palette.line)
             } else {
                 EmptyNote(title: "No words yet.",
                           detail: "Words are written on the Lyrics surface (⌘9). The song's newest lyric shows here while you sing.")
@@ -328,8 +344,9 @@ struct BoothSurfaceView: View {
     @ViewBuilder
     private var footer: some View {
         if let error = model.lastError ?? model.lanes?.lastError {
-            Text(error).font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.warn).lineLimit(2)
-        } else {
+            Text(error).font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.danger).lineLimit(2)
+        } else if Design.style.inlinePrimers {
+            // The primer says this; Studio keeps it behind the `?`.
             Text("Every take stays, untouched. The band flags what it hears on the bar it hears it; a fix is a new version.")
                 .font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.inkTertiary).lineLimit(2)
         }
@@ -373,10 +390,10 @@ struct SungWords: View {
         VStack(alignment: .leading, spacing: 5) {
             ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
                 if let label = row.label {
-                    Text(label.uppercased())
+                    Text(Design.Typography.labelText(label))
                         .font(Design.Typography.label)
-                        .tracking(1.1)
-                        .foregroundStyle(faint ? Design.Palette.inkTertiary : Design.Palette.accent)
+                        .tracking(Design.Typography.labelTracking)
+                        .foregroundStyle(faint ? Design.Palette.inkTertiary : Design.Palette.emphasis)
                         .accessibilityLabel("Stanza: \(label)")
                 }
                 if row.line.syllables.isEmpty {
@@ -397,7 +414,10 @@ struct SungWords: View {
         for (index, syllable) in line.syllables.enumerated() {
             let stressed = syllable.stress != .unstressed
             var piece = AttributedString((index > 0 && syllable.startsWord ? " " : "") + syllable.text)
-            piece.font = Design.Typography.prose(faint ? 13 : 15, weight: stressed ? .semibold : .regular)
+            // Studio's scale would set both at 13; the line being sung keeps its reading size.
+            piece.font = Design.style.filledControls
+                ? (stressed ? Design.Typography.role(faint ? .body : .title3).weight(.semibold) : Design.Typography.role(faint ? .body : .title3))
+                : Design.Typography.prose(faint ? 13 : 15, weight: stressed ? .semibold : .regular)
             piece.foregroundColor = faint
                 ? (stressed ? Design.Palette.inkSecondary : Design.Palette.inkTertiary)
                 : (stressed ? Design.Palette.ink : Design.Palette.inkSecondary)
@@ -414,11 +434,37 @@ private struct LevelBar: View {
             ZStack(alignment: .leading) {
                 RoundedRectangle(cornerRadius: 2).fill(Design.Palette.panelAlt)
                 RoundedRectangle(cornerRadius: 2)
-                    .fill(level > 0.9 ? Design.Palette.warn : Design.Palette.accent)
+                    .fill(level > 0.9 ? Design.Palette.danger : Design.Palette.sounding)
                     .frame(width: geometry.size.width * CGFloat(min(1, level)))
             }
             .overlay(RoundedRectangle(cornerRadius: 2).stroke(Design.Palette.line, lineWidth: Design.Metric.hairline))
         }
+    }
+}
+
+/// Record in Studio: the one control on the surface drawn in the danger red, a fill with its words
+/// and its glyph in the panel's colour — white on the light red, near-black on the dark appearance's
+/// brighter one, where white would not read — and still red as Stop while the take records. Cool
+/// keeps the system's prominent button in the same red.
+private struct RecordFace: View {
+    let title: String
+    let systemImage: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: systemImage)
+                .font(.system(size: 8, weight: .bold))
+                .accessibilityHidden(true)
+            Text(title)
+                .font(Design.Typography.ui(12.5, weight: .semibold))
+                .lineLimit(1)
+                .fixedSize()
+        }
+        .foregroundStyle(Design.Palette.panel)
+        .padding(.horizontal, 12)
+        .frame(height: Design.Metric.controlHeight)
+        .background(Design.Palette.danger, in: RoundedRectangle(cornerRadius: Design.Metric.corner + 1, style: .continuous))
+        .contentShape(Rectangle())
     }
 }
 
@@ -430,17 +476,21 @@ struct BoothChip: View {
 
     var body: some View {
         Button(action: action) {
-            Text(title)
-                .font(Design.Typography.ui(11.5, weight: isOn ? .semibold : .regular))
-                .foregroundStyle(isOn ? Design.Palette.accent : Design.Palette.inkSecondary)
-                .lineLimit(1)
-                .fixedSize()
-                .padding(.horizontal, 8)
-                .frame(height: Design.Metric.chipHeight)
-                .background(isOn ? Design.Palette.accentSoft : Design.Palette.panelAlt,
-                            in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-                .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
-                    .stroke(isOn ? Design.Palette.accent.opacity(0.35) : Design.Palette.line, lineWidth: Design.Metric.hairline))
+            if Design.style.filledControls {
+                StudioChip(isOn: isOn) { ChipText(title, isOn: isOn, size: 11.5) }
+            } else {
+                Text(title)
+                    .font(Design.Typography.ui(11.5, weight: isOn ? .semibold : .regular))
+                    .foregroundStyle(isOn ? Design.Palette.accent : Design.Palette.inkSecondary)
+                    .lineLimit(1)
+                    .fixedSize()
+                    .padding(.horizontal, 8)
+                    .frame(height: Design.Metric.chipHeight)
+                    .background(isOn ? Design.Palette.accentSoft : Design.Palette.panelAlt,
+                                in: RoundedRectangle(cornerRadius: Design.Metric.corner))
+                    .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
+                        .stroke(isOn ? Design.Palette.accent.opacity(0.35) : Design.Palette.line, lineWidth: Design.Metric.hairline))
+            }
         }
         .buttonStyle(.plain)
     }
@@ -450,7 +500,7 @@ struct BoothLabel: View {
     let text: String
     init(_ text: String) { self.text = text }
     var body: some View {
-        Text(text.uppercased()).font(Design.Typography.label).tracking(1.1).foregroundStyle(Design.Palette.inkTertiary)
+        SmallLabel(text, color: Design.Palette.inkTertiary)
     }
 }
 

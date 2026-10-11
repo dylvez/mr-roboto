@@ -174,16 +174,25 @@ private struct FamilyChip: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 4) {
-                if holdsSelection { Circle().fill(Design.Palette.accent).frame(width: 5, height: 5) }
-                Text(title).font(Design.Typography.ui(11, weight: isOn ? .semibold : .regular))
+            if Design.style.filledControls {
+                StudioChip(isOn: isOn, height: 22) {
+                    HStack(spacing: 4) {
+                        if holdsSelection { Circle().fill(Design.Palette.accent).frame(width: 5, height: 5) }
+                        Text(title).font(Design.Typography.ui(11, weight: isOn ? .semibold : .regular))
+                    }
+                }
+            } else {
+                HStack(spacing: 4) {
+                    if holdsSelection { Circle().fill(Design.Palette.accent).frame(width: 5, height: 5) }
+                    Text(title).font(Design.Typography.ui(11, weight: isOn ? .semibold : .regular))
+                }
+                .padding(.horizontal, 7)
+                .frame(height: 22)
+                .foregroundStyle(isOn ? Design.Palette.ink : Design.Palette.inkSecondary)
+                .background(isOn ? Design.Palette.panelAlt : Color.clear, in: RoundedRectangle(cornerRadius: 5))
+                .overlay(RoundedRectangle(cornerRadius: 5).stroke(isOn ? Design.Palette.lineStrong : Color.clear, lineWidth: Design.Metric.hairline))
+                .contentShape(Rectangle())
             }
-            .padding(.horizontal, 7)
-            .frame(height: 22)
-            .foregroundStyle(isOn ? Design.Palette.ink : Design.Palette.inkSecondary)
-            .background(isOn ? Design.Palette.panelAlt : Color.clear, in: RoundedRectangle(cornerRadius: 5))
-            .overlay(RoundedRectangle(cornerRadius: 5).stroke(isOn ? Design.Palette.lineStrong : Color.clear, lineWidth: Design.Metric.hairline))
-            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(holdsSelection ? "\(title), holds the chosen instrument" : title)

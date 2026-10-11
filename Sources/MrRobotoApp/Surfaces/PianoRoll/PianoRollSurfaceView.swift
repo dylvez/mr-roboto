@@ -47,15 +47,14 @@ struct PianoRollSurfaceView: View {
         // The card above carries the roll's title, and follows it; this row is what it writes.
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             // What this roll is writing. The same grid either way.
-            HStack(spacing: 4) {
-                ForEach(PianoRollModel.Mode.allCases, id: \.self) { mode in
-                    RollChip(mode.title, isOn: model.mode == mode) { model.setMode(mode) }
-                }
-            }
+            SegmentedChoice(options: PianoRollModel.Mode.allCases, selection: model.mode, title: \.title) { model.setMode($0) }
             if model.mode == .melody {
-                Text("Drawn here, played in on Keys, or written by the band for the Melodist.")
-                    .font(Design.Typography.ui(11.5, weight: .regular))
-                    .foregroundStyle(Design.Palette.inkTertiary)
+                // The primer says this; Studio keeps it behind the `?`.
+                if Design.style.inlinePrimers {
+                    Text("Drawn here, played in on Keys, or written by the band for the Melodist.")
+                        .font(Design.Typography.ui(11.5, weight: .regular))
+                        .foregroundStyle(Design.Palette.inkTertiary)
+                }
             } else if model.groove == nil {
                 Text("No groove yet — the line plays to the bar on its own. Open the Grid to paint one and this roll will sit under it.")
                     .font(Design.Typography.ui(11.5, weight: .regular))
@@ -78,11 +77,14 @@ struct PianoRollSurfaceView: View {
         if model.mode == .melody {
             HStack(alignment: .top, spacing: 18) {
                 InstrumentPicker(selected: model.instrument) { model.setInstrument($0) }
-                Text("Click an empty cell to add a note; drag to move; double-click to delete.")
-                    .font(Design.Typography.ui(11.5, weight: .regular))
-                    .foregroundStyle(Design.Palette.inkSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 2)
+                // The primer and the lane's own caption both say this; Studio says it once.
+                if Design.style.inlinePrimers {
+                    Text("Click an empty cell to add a note; drag to move; double-click to delete.")
+                        .font(Design.Typography.ui(11.5, weight: .regular))
+                        .foregroundStyle(Design.Palette.inkSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 2)
+                }
                 Spacer(minLength: 0)
             }
         } else {
@@ -349,14 +351,21 @@ struct KeepButton: View {
     let action: () -> Void
 
     var body: some View {
-        Button("Keep as a new version", action: action)
-            .buttonStyle(.plain)
-            .font(Design.Typography.ui(12, weight: .semibold))
-            .foregroundStyle(Design.Palette.accent)
-            .disabled(!isEnabled)
-            .opacity(isEnabled ? 1 : 0.4)
-            .help(isEnabled ? "File what is on the surface as a new version of this part"
-                            : "Nothing has changed since the last version was kept")
+        Button(action: action) {
+            // Studio fills the one primary action with the accent; Cool sets it as accented words.
+            if Design.style.filledControls {
+                StudioChip(tone: .primary) { ChipText("Keep as a new version", isOn: true, size: 12) }
+            } else {
+                Text("Keep as a new version")
+            }
+        }
+        .buttonStyle(.plain)
+        .font(Design.Typography.ui(12, weight: .semibold))
+        .foregroundStyle(Design.Palette.accent)
+        .disabled(!isEnabled)
+        .opacity(isEnabled ? 1 : 0.4)
+        .help(isEnabled ? "File what is on the surface as a new version of this part"
+                        : "Nothing has changed since the last version was kept")
     }
 }
 
@@ -372,7 +381,7 @@ struct KeptNote: View {
             Text("Kept")
                 .font(Design.Typography.ui(11.5, weight: .medium))
         }
-        .foregroundStyle(Design.Palette.accent)
+        .foregroundStyle(Design.Palette.emphasis)
         .help("Kept as \(PartLabel.title(of: version))")
         .accessibilityLabel("Kept as \(PartLabel.title(of: version))")
     }
@@ -622,17 +631,21 @@ private struct RollChip: View {
 
     var body: some View {
         Button(action: action) {
-            Text(title)
-                .font(Design.Typography.ui(11.5, weight: isOn ? .semibold : .regular))
-                .foregroundStyle(isOn ? Design.Palette.accent : Design.Palette.inkSecondary)
-                .lineLimit(1)
-                .fixedSize()
-                .padding(.horizontal, 8)
-                .frame(height: Design.Metric.chipHeight)
-                .background(isOn ? Design.Palette.accentSoft : Design.Palette.panelAlt,
-                            in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-                .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
-                    .stroke(isOn ? Design.Palette.accent.opacity(0.35) : Design.Palette.line, lineWidth: Design.Metric.hairline))
+            if Design.style.filledControls {
+                StudioChip(isOn: isOn) { ChipText(title, isOn: isOn, size: 11.5) }
+            } else {
+                Text(title)
+                    .font(Design.Typography.ui(11.5, weight: isOn ? .semibold : .regular))
+                    .foregroundStyle(isOn ? Design.Palette.accent : Design.Palette.inkSecondary)
+                    .lineLimit(1)
+                    .fixedSize()
+                    .padding(.horizontal, 8)
+                    .frame(height: Design.Metric.chipHeight)
+                    .background(isOn ? Design.Palette.accentSoft : Design.Palette.panelAlt,
+                                in: RoundedRectangle(cornerRadius: Design.Metric.corner))
+                    .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
+                        .stroke(isOn ? Design.Palette.accent.opacity(0.35) : Design.Palette.line, lineWidth: Design.Metric.hairline))
+            }
         }
         .buttonStyle(.plain)
     }
@@ -642,9 +655,6 @@ private struct RollLabel: View {
     let text: String
     init(_ text: String) { self.text = text }
     var body: some View {
-        Text(text.uppercased())
-            .font(Design.Typography.label)
-            .tracking(1.1)
-            .foregroundStyle(Design.Palette.inkTertiary)
+        SmallLabel(text, color: Design.Palette.inkTertiary)
     }
 }

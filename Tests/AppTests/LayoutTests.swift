@@ -6,7 +6,8 @@ import Testing
 
 @testable import MrRobotoApp
 
-// The frame's geometry, in numbers.
+// The frame's geometry, in numbers — Studio's, the default theme's. Cool Neutral's padded bench and
+// taller bars gave 973 × 665 at the default window and a minimum of 811 × 695.
 //
 // The complaint these tests exist to keep answered: at the default 1440-point window the bench — the
 // only place work happens — was 610 points, 42% of the width, and the three-stacked rule then cut it
@@ -36,7 +37,7 @@ private enum Before {
 @Suite("Layout: width")
 struct LayoutWidthTests {
 
-    @Test("At the default window the open surface gets 973 of 1440 points — 68%, not 42% — with the band open")
+    @Test("At the default window the open surface gets 1009 of 1440 points — 70%, not 42% — with the band open")
     func defaultWindow() {
         let collapsed = FrameLayout.defaultCollapsedRegions
         let width = FrameLayout.defaultWindowWidth
@@ -44,11 +45,12 @@ struct LayoutWidthTests {
         // The band open (340), the library and the parts as strips (44 each), three hairlines.
         #expect(FrameLayout.fixedWidth(collapsed: collapsed) == 431)
         #expect(FrameLayout.benchWidth(inWindowOfWidth: width, collapsed: collapsed) == 1009)
-        #expect(FrameLayout.surfaceWidth(inWindowOfWidth: width, collapsed: collapsed) == 973)
+        // Studio draws the surface edge to edge, so the bench's padding is the surface's too.
+        #expect(FrameLayout.surfaceWidth(inWindowOfWidth: width, collapsed: collapsed) == 1009)
 
         let share = FrameLayout.surfaceShare(inWindowOfWidth: width, collapsed: collapsed)
         #expect(share > FrameLayout.minimumSurfaceShare)
-        #expect(abs(share - 0.6757) < 0.001)
+        #expect(abs(share - 0.7007) < 0.001)
 
         // The point of the whole exercise, said as a comparison rather than as a constant.
         #expect(FrameLayout.surfaceWidth(inWindowOfWidth: width, collapsed: collapsed)
@@ -80,20 +82,20 @@ struct LayoutWidthTests {
         #expect(FrameLayout.fixedWidth(collapsed: all) == CGFloat(3 * 44 + 3))
 
         #expect(FrameLayout.benchWidth(inWindowOfWidth: 1440, collapsed: all) == 1305)
-        #expect(FrameLayout.surfaceWidth(inWindowOfWidth: 1440, collapsed: all) == 1269)
+        #expect(FrameLayout.surfaceWidth(inWindowOfWidth: 1440, collapsed: all) == 1305)
 
         #expect(FrameLayout.benchWidth(inWindowOfWidth: 1728, collapsed: none) == 935)
-        #expect(FrameLayout.surfaceWidth(inWindowOfWidth: 1728, collapsed: none) == 899)
+        #expect(FrameLayout.surfaceWidth(inWindowOfWidth: 1728, collapsed: none) == 935)
         #expect(FrameLayout.benchWidth(inWindowOfWidth: 1728, collapsed: FrameLayout.defaultCollapsedRegions) == 1297)
-        #expect(FrameLayout.surfaceWidth(inWindowOfWidth: 1728, collapsed: FrameLayout.defaultCollapsedRegions) == 1261)
+        #expect(FrameLayout.surfaceWidth(inWindowOfWidth: 1728, collapsed: FrameLayout.defaultCollapsedRegions) == 1297)
         #expect(FrameLayout.benchWidth(inWindowOfWidth: 1728, collapsed: all) == 1593)
-        #expect(FrameLayout.surfaceWidth(inWindowOfWidth: 1728, collapsed: all) == 1557)
+        #expect(FrameLayout.surfaceWidth(inWindowOfWidth: 1728, collapsed: all) == 1593)
 
-        // All three open in a 1440 window is a layout that does not fit: 793 of furniture leaves 647,
-        // which is less than a surface and its padding need. The bench holds its floor and the window
-        // minimum — the thing that actually stops you getting here — is 1469.
-        #expect(FrameLayout.benchWidth(inWindowOfWidth: 1440, collapsed: none) == FrameLayout.benchMinimumWidth)
-        #expect(FrameLayout.minimumWindowWidth(collapsed: none) == 1469)
+        // All three open in a 1440 window just fits now: 793 of furniture leaves 647, seven more than a
+        // surface needs once the bench has no padding of its own, and the window minimum with every
+        // region open is 1433. Cool Neutral's padding made it 1469, past a 1440 window.
+        #expect(FrameLayout.benchWidth(inWindowOfWidth: 1440, collapsed: none) == 647)
+        #expect(FrameLayout.minimumWindowWidth(collapsed: none) == 1433)
     }
 
     @Test("Folding a region hands every one of its points to the bench, and nothing else moves")
@@ -109,7 +111,7 @@ struct LayoutWidthTests {
 
     @Test("The bench never goes below what a surface needs, whatever the window does")
     func benchFloor() {
-        #expect(FrameLayout.benchMinimumWidth == Design.Metric.surfaceMinimumWidth + 2 * Design.Metric.gutter)
+        #expect(FrameLayout.benchMinimumWidth == Design.Metric.surfaceMinimumWidth + 2 * Design.Metric.benchPadding)
         #expect(FrameLayout.benchWidth(inWindowOfWidth: 200, collapsed: []) == FrameLayout.benchMinimumWidth)
     }
 }
@@ -119,12 +121,13 @@ struct LayoutWidthTests {
 @Suite("Layout: height")
 struct LayoutHeightTests {
 
-    @Test("One surface fills the bench: 665 points of height at the default window, not 253")
+    @Test("One surface fills the bench: 749 points of height at the default window, not 253")
     func oneSurfaceFills() {
         let height = FrameLayout.defaultWindowHeight
-        #expect(FrameLayout.benchHeight(inWindowOfHeight: height) == 758)
-        #expect(FrameLayout.benchContentHeight(inWindowOfHeight: height) == 665)
-        #expect(FrameLayout.surfaceHeight(inWindowOfHeight: height, visibleSurfaces: 1) == 665)
+        // Studio's header (48), dock (44) and transport (56) are smaller than Cool's 56, 56 and 84.
+        #expect(FrameLayout.benchHeight(inWindowOfHeight: height) == 794)
+        #expect(FrameLayout.benchContentHeight(inWindowOfHeight: height) == 749)
+        #expect(FrameLayout.surfaceHeight(inWindowOfHeight: height, visibleSurfaces: 1) == 749)
         #expect(FrameLayout.surfaceHeight(inWindowOfHeight: height, visibleSurfaces: 1)
                     > Before.surfaceHeightAt900 * 2.5)
     }
@@ -132,8 +135,9 @@ struct LayoutHeightTests {
     @Test("A pinned second surface halves the height; Gate B's three still divide it evenly")
     func splitting() {
         let height = FrameLayout.defaultWindowHeight
-        #expect(FrameLayout.surfaceHeight(inWindowOfHeight: height, visibleSurfaces: 2) == 323.5)
-        #expect(FrameLayout.surfaceHeight(inWindowOfHeight: height, visibleSurfaces: 3) == 209.666_666_666_666_66)
+        // Two surfaces share a single hairline in Studio rather than an 18-point gutter.
+        #expect(FrameLayout.surfaceHeight(inWindowOfHeight: height, visibleSurfaces: 2) == 374)
+        #expect(FrameLayout.surfaceHeight(inWindowOfHeight: height, visibleSurfaces: 3) == 249)
         // Nothing is asked for below one: a bench with nothing in it still measures its one slot.
         #expect(FrameLayout.surfaceHeight(inWindowOfHeight: height, visibleSurfaces: 0)
                     == FrameLayout.surfaceHeight(inWindowOfHeight: height, visibleSurfaces: 1))
@@ -147,9 +151,9 @@ struct LayoutMinimumTests {
 
     @Test("The minimum is what a surface needs, not what the furniture costs")
     func minimumIsTheSurface() {
-        // 640 + 36 of bench padding + three 44-point strips + three hairlines.
-        #expect(FrameLayout.minimumWindowWidth == 811)
-        #expect(FrameLayout.minimumWindowHeight == 695)
+        // 640, three 44-point strips and three hairlines: in Studio the bench has no padding of its own.
+        #expect(FrameLayout.minimumWindowWidth == 775)
+        #expect(FrameLayout.minimumWindowHeight == 611)
 
         // At the floor, a surface is drawn at exactly the size the tokens say it needs.
         #expect(FrameLayout.surfaceWidth(inWindowOfWidth: FrameLayout.minimumWindowWidth,
@@ -165,9 +169,9 @@ struct LayoutMinimumTests {
 
     @Test("Asking for a region back asks the window for its width, rather than crushing the bench")
     func minimumFollowsTheRegions() {
-        #expect(FrameLayout.minimumWindowWidth(collapsed: Set(FrameRegion.allCases)) == 811)
-        #expect(FrameLayout.minimumWindowWidth(collapsed: FrameLayout.defaultCollapsedRegions) == 1107)
-        #expect(FrameLayout.minimumWindowWidth(collapsed: []) == 1469)
+        #expect(FrameLayout.minimumWindowWidth(collapsed: Set(FrameRegion.allCases)) == 775)
+        #expect(FrameLayout.minimumWindowWidth(collapsed: FrameLayout.defaultCollapsedRegions) == 1071)
+        #expect(FrameLayout.minimumWindowWidth(collapsed: []) == 1433)
 
         // Whatever is open, the minimum window still draws a full-size surface.
         for collapsed in [Set(FrameRegion.allCases), FrameLayout.defaultCollapsedRegions, []] {

@@ -19,7 +19,7 @@ public struct ImportLayout: Equatable, Sendable {
     /// The old fixed height, now the floor.
     public static let minimumWaveformHeight: CGFloat = 132
     public static let maximumWaveformHeight: CGFloat = 320
-    public static let minimumStemLaneHeight: CGFloat = Design.Metric.chipHeight
+    public static var minimumStemLaneHeight: CGFloat { Design.Metric.chipHeight }
     public static let maximumStemLaneHeight: CGFloat = 64
     public static let minimumSectionLaneHeight: CGFloat = 20
     public static let maximumSectionLaneHeight: CGFloat = 34

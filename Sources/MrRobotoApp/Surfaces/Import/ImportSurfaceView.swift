@@ -102,7 +102,7 @@ private struct DropWell: View {
             if case .failed(let reason) = model.state {
                 Text(reason)
                     .font(Design.Typography.ui(12))
-                    .foregroundStyle(Design.Palette.warn)
+                    .foregroundStyle(Design.Palette.danger)
                     .multilineTextAlignment(.center)
             }
         }
@@ -156,7 +156,7 @@ private struct ImportProgressStrip: View {
                 Button("Cancel", action: cancel)
                     .font(Design.Typography.ui(12))
                     .buttonStyle(.plain)
-                    .foregroundStyle(Design.Palette.warn)
+                    .foregroundStyle(Design.Palette.danger)
             }
         }
     }
@@ -336,10 +336,7 @@ private struct Reading: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(label.uppercased())
-                .font(Design.Typography.label)
-                .tracking(1.1)
-                .foregroundStyle(Design.Palette.inkTertiary)
+            SmallLabel(label, color: Design.Palette.inkTertiary)
             Text(value)
                 .font(Design.Typography.numeric(13))
                 .foregroundStyle(warns ? Design.Palette.warn : Design.Palette.ink)
@@ -360,7 +357,7 @@ private struct SectionsStrip: View {
             GeometryReader { geometry in
                 VStack(alignment: .leading, spacing: 4) {
                     laneRow(ranges: model.sections.map { SongGraph.TimeRange(start: $0.start, end: $0.end) },
-                            label: "form", colour: Design.Palette.accent, width: geometry.size.width)
+                            label: "form", colour: Design.Palette.emphasis, width: geometry.size.width)
                     ForEach(model.instruments, id: \.instrument) { activity in
                         laneRow(ranges: activity.ranges, label: activity.instrument.rawValue,
                                 colour: Design.Palette.inkSecondary, width: geometry.size.width)
@@ -405,13 +402,20 @@ private struct PromoteBar: View {
             Button {
                 model.pressPromote()
             } label: {
-                Text("Promote region to a part")
-                    .font(Design.Typography.ui(13, weight: .semibold))
-                    .padding(.horizontal, 14)
-                    .frame(height: Design.Metric.controlHeight)
-                    .background(Design.Palette.accent)
-                    .foregroundStyle(Design.Palette.panel)
-                    .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+                if Design.style.filledControls {
+                    StudioChip(tone: .primary, height: Design.Metric.controlHeight, horizontalPadding: 14) {
+                        Text("Promote region to a part")
+                            .font(Design.Typography.ui(13, weight: .semibold))
+                    }
+                } else {
+                    Text("Promote region to a part")
+                        .font(Design.Typography.ui(13, weight: .semibold))
+                        .padding(.horizontal, 14)
+                        .frame(height: Design.Metric.controlHeight)
+                        .background(Design.Palette.accent)
+                        .foregroundStyle(Design.Palette.panel)
+                        .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+                }
             }
             .buttonStyle(.plain)
             .disabled(model.selection == nil)
@@ -436,15 +440,23 @@ private struct PromoteBar: View {
                 Button {
                     model.separateStems()
                 } label: {
-                    Text("Separate stems")
-                        .font(Design.Typography.ui(13, weight: .semibold))
-                        .padding(.horizontal, 14)
-                        .frame(height: Design.Metric.controlHeight)
-                        .foregroundStyle(Design.Palette.ink)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: Design.Metric.corner)
-                                .stroke(Design.Palette.ink, lineWidth: Design.Metric.hairline)
-                        )
+                    if Design.style.filledControls {
+                        StudioChip(height: Design.Metric.controlHeight, horizontalPadding: 14) {
+                            Text("Separate stems")
+                                .font(Design.Typography.ui(13, weight: .semibold))
+                                .foregroundStyle(Design.Palette.ink)
+                        }
+                    } else {
+                        Text("Separate stems")
+                            .font(Design.Typography.ui(13, weight: .semibold))
+                            .padding(.horizontal, 14)
+                            .frame(height: Design.Metric.controlHeight)
+                            .foregroundStyle(Design.Palette.ink)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: Design.Metric.corner)
+                                    .stroke(Design.Palette.ink, lineWidth: Design.Metric.hairline)
+                            )
+                    }
                 }
                 .buttonStyle(.plain)
                 .help("Split this record into drums, bass, vocals and other, into this song's package")
@@ -484,17 +496,21 @@ private struct ImportToggleChip: View {
         Button {
             isOn.toggle()
         } label: {
-            Text(title)
-                .font(Design.Typography.ui(11.5, weight: isOn ? .semibold : .regular))
-                .foregroundStyle(isOn ? Design.Palette.accent : Design.Palette.inkSecondary)
-                .lineLimit(1)
-                .fixedSize()
-                .padding(.horizontal, 8)
-                .frame(height: Design.Metric.chipHeight)
-                .background(isOn ? Design.Palette.accentSoft : Design.Palette.panelAlt,
-                            in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-                .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
-                    .stroke(isOn ? Design.Palette.accent.opacity(0.35) : Design.Palette.line, lineWidth: Design.Metric.hairline))
+            if Design.style.filledControls {
+                StudioChip(isOn: isOn, tone: .plain) { ChipText(title, isOn: isOn, size: 11.5) }
+            } else {
+                Text(title)
+                    .font(Design.Typography.ui(11.5, weight: isOn ? .semibold : .regular))
+                    .foregroundStyle(isOn ? Design.Palette.accent : Design.Palette.inkSecondary)
+                    .lineLimit(1)
+                    .fixedSize()
+                    .padding(.horizontal, 8)
+                    .frame(height: Design.Metric.chipHeight)
+                    .background(isOn ? Design.Palette.accentSoft : Design.Palette.panelAlt,
+                                in: RoundedRectangle(cornerRadius: Design.Metric.corner))
+                    .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
+                        .stroke(isOn ? Design.Palette.accent.opacity(0.35) : Design.Palette.line, lineWidth: Design.Metric.hairline))
+            }
         }
         .buttonStyle(.plain)
         .help(help)
@@ -662,8 +678,7 @@ private struct ProvenancePanel: View {
                 .foregroundStyle(Design.Palette.inkTertiary)
         }
         .padding(Design.Metric.inset)
-        .background(Design.Palette.panelAlt)
-        .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+        .groupedArea(Design.Palette.panelAlt, stroke: .clear)
     }
 
     private var keepHelp: String {
@@ -684,10 +699,7 @@ private struct Field: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(label.uppercased())
-                .font(Design.Typography.label)
-                .tracking(1.1)
-                .foregroundStyle(Design.Palette.inkTertiary)
+            SmallLabel(label, color: Design.Palette.inkTertiary)
             TextField("", text: $text)
                 .textFieldStyle(.plain)
                 .font(Design.Typography.ui(12.5, weight: .regular))
@@ -710,10 +722,7 @@ private struct PanelLabel: View {
     init(_ text: String) { self.text = text }
 
     var body: some View {
-        Text(text.uppercased())
-            .font(Design.Typography.label)
-            .tracking(1.1)
-            .foregroundStyle(Design.Palette.inkTertiary)
+        SmallLabel(text, color: Design.Palette.inkTertiary)
     }
 }
 
@@ -723,10 +732,10 @@ private struct FailureNote: View {
     var body: some View {
         Text(text)
             .font(Design.Typography.ui(12, weight: .regular))
-            .foregroundStyle(Design.Palette.warn)
+            .foregroundStyle(Design.Palette.danger)
             .padding(10)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Design.Palette.warnSoft)
+            .background(Design.Palette.dangerSoft)
             .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
     }
 }

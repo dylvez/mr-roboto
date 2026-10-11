@@ -47,15 +47,15 @@ public struct CheckSurfaceView: View {
                 .foregroundStyle(Design.Palette.inkSecondary)
             Spacer()
             if model.isResolved {
-                Tag(text: "fixed", tint: Design.Palette.accent, ground: Design.Palette.accentSoft)
+                Tag(text: "Fixed", tint: Design.Palette.emphasis, ground: Design.Palette.accentSoft)
             } else if model.isDismissed {
                 // "Left as is", not "kept": Keep is the verb for saving a version everywhere else
                 // in the frame, and a dismissed finding saved nothing.
-                Tag(text: "left as is", tint: Design.Palette.inkSecondary, ground: Design.Palette.panelAlt)
+                Tag(text: "Left as is", tint: Design.Palette.inkSecondary, ground: Design.Palette.panelAlt)
             } else if model.finding.severity == .warn {
-                Tag(text: "warn", tint: Design.Palette.warn, ground: Design.Palette.warnSoft)
+                Tag(text: "Warn", tint: Design.Palette.warn, ground: Design.Palette.warnSoft)
             } else {
-                Tag(text: "note", tint: Design.Palette.inkSecondary, ground: Design.Palette.panelAlt)
+                Tag(text: "Note", tint: Design.Palette.inkSecondary, ground: Design.Palette.panelAlt)
             }
         }
     }
@@ -83,13 +83,15 @@ public struct CheckSurfaceView: View {
     private var footer: some View {
         HStack(spacing: 12) {
             if let outcome = model.lastOutcome {
+                // Fixed; applied and the critic still fires, a caution; refused, a failure.
                 Text(outcome.spoken)
                     .font(Design.Typography.ui(11.5))
-                    .foregroundStyle(outcome.didResolve ? Design.Palette.accent : Design.Palette.warn)
+                    .foregroundStyle(outcome.didResolve ? Design.Palette.emphasis
+                                     : (outcome.wasApplied ? Design.Palette.warn : Design.Palette.danger))
             } else if let error = model.lastError {
                 Text(error)
                     .font(Design.Typography.ui(11.5))
-                    .foregroundStyle(Design.Palette.warn)
+                    .foregroundStyle(Design.Palette.danger)
             }
             Spacer()
             if model.isOpen {
@@ -119,26 +121,46 @@ private struct HearIt: View {
 
     var body: some View {
         Button { model.isPlayingProblem ? model.stop() : model.hearProblem() } label: {
-            HStack(spacing: 10) {
-                Circle()
-                    .fill(model.isPlayingProblem ? Design.Palette.accent : Design.Palette.inkSecondary)
-                    .frame(width: 10, height: 10)
-                Text(model.isPlayingProblem ? "Playing — \(model.where_)" : "Hear the problem")
-                    .font(Design.Typography.ui(13))
-                Spacer()
-                Text(String(format: "%.3g s", max(0.05, model.finding.locus.duration)))
-                    .font(Design.Typography.numeric(11))
-                    .foregroundStyle(Design.Palette.inkTertiary)
+            if Design.style.filledControls {
+                // Grey at rest like any control, orange while the problem sounds.
+                StudioChip(tone: model.isPlayingProblem ? .sounding : .plain,
+                           height: CheckLayout.hearHeight, horizontalPadding: 14) {
+                    HStack(spacing: 10) {
+                        Circle()
+                            .fill(model.isPlayingProblem ? Design.Palette.onSounding : Design.Palette.inkSecondary)
+                            .frame(width: 10, height: 10)
+                        Text(model.isPlayingProblem ? "Playing — \(model.where_)" : "Hear the problem")
+                            .font(Design.Typography.ui(13))
+                            .foregroundStyle(model.isPlayingProblem ? Design.Palette.onSounding : Design.Palette.ink)
+                        Spacer()
+                        Text(String(format: "%.3g s", max(0.05, model.finding.locus.duration)))
+                            .font(Design.Typography.numeric(11))
+                            .foregroundStyle(model.isPlayingProblem ? Design.Palette.onSounding : Design.Palette.inkTertiary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            } else {
+                HStack(spacing: 10) {
+                    Circle()
+                        .fill(model.isPlayingProblem ? Design.Palette.accent : Design.Palette.inkSecondary)
+                        .frame(width: 10, height: 10)
+                    Text(model.isPlayingProblem ? "Playing — \(model.where_)" : "Hear the problem")
+                        .font(Design.Typography.ui(13))
+                    Spacer()
+                    Text(String(format: "%.3g s", max(0.05, model.finding.locus.duration)))
+                        .font(Design.Typography.numeric(11))
+                        .foregroundStyle(Design.Palette.inkTertiary)
+                }
+                .padding(.horizontal, 14)
+                .frame(height: CheckLayout.hearHeight)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(model.isPlayingProblem ? Design.Palette.accentSoft : Design.Palette.panelAlt)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Design.Metric.corner)
+                        .stroke(model.isPlayingProblem ? Design.Palette.accent : Design.Palette.line,
+                                lineWidth: Design.Metric.hairline))
+                .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
             }
-            .padding(.horizontal, 14)
-            .frame(height: CheckLayout.hearHeight)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(model.isPlayingProblem ? Design.Palette.accentSoft : Design.Palette.panelAlt)
-            .overlay(
-                RoundedRectangle(cornerRadius: Design.Metric.corner)
-                    .stroke(model.isPlayingProblem ? Design.Palette.accent : Design.Palette.line,
-                            lineWidth: Design.Metric.hairline))
-            .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
         }
         .buttonStyle(.plain)
     }
@@ -154,10 +176,10 @@ private struct Arithmetic: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 16) {
-                Reading(label: "measured",
+                Reading(label: "Measured",
                         value: String(format: "%.4g %@", model.finding.measurement.measured,
                                       model.finding.measurement.unit))
-                Reading(label: "wanted",
+                Reading(label: "Wanted",
                         value: model.finding.measurement.threshold.description)
                 Spacer()
             }
@@ -167,8 +189,8 @@ private struct Arithmetic: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Design.Palette.panelAlt)
-        .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+        // Never had an edge: a clear one keeps Cool's panel as it was.
+        .groupedArea(Design.Palette.panelAlt, stroke: .clear)
     }
 
     private struct Reading: View {
@@ -177,10 +199,7 @@ private struct Arithmetic: View {
 
         var body: some View {
             VStack(alignment: .leading, spacing: 1) {
-                Text(label.uppercased())
-                    .font(Design.Typography.label)
-                    .tracking(1.0)
-                    .foregroundStyle(Design.Palette.inkTertiary)
+                SmallLabel(label, color: Design.Palette.inkTertiary)
                 Text(value)
                     .font(Design.Typography.numeric(12.5))
             }
@@ -235,7 +254,9 @@ private struct FixCard: View {
                 }
                 .font(Design.Typography.ui(11.5))
                 .buttonStyle(.plain)
-                .foregroundStyle(model.canPreview(fix) ? Design.Palette.accent : Design.Palette.inkTertiary)
+                .foregroundStyle(model.canPreview(fix)
+                                 ? (model.isPlaying(fix.id) ? Design.Palette.soundingInk : Design.Palette.accent)
+                                 : Design.Palette.inkTertiary)
                 .disabled(!model.canPreview(fix))
 
                 Button(isChosen ? "Applied" : "Apply") {
@@ -258,12 +279,15 @@ private struct FixCard: View {
         .frame(width: layout.fixWidth == layout.cardWidth ? nil : layout.fixWidth,
                height: layout.fixHeight, alignment: .topLeading)
         .frame(maxWidth: layout.fixWidth == layout.cardWidth ? .infinity : nil, alignment: .leading)
-        .background(isChosen ? Design.Palette.accentSoft : Design.Palette.panelAlt)
-        .overlay(
-            RoundedRectangle(cornerRadius: Design.Metric.corner)
-                .stroke(isChosen ? Design.Palette.accent : Design.Palette.line,
-                        lineWidth: Design.Metric.hairline))
-        .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+        .groupedArea(isChosen ? Design.Palette.accentSoft : Design.Palette.panelAlt,
+                     stroke: isChosen ? Design.Palette.accent : Design.Palette.line)
+        .overlay {
+            // A soft card has no edge of its own, so the fix that resolved it is given one.
+            if !Design.style.surfaceCards && isChosen {
+                RoundedRectangle(cornerRadius: Design.Metric.containerCorner, style: .continuous)
+                    .strokeBorder(Design.Palette.accent, lineWidth: 1.5)
+            }
+        }
     }
 }
 
@@ -275,9 +299,9 @@ private struct Tag: View {
     let ground: Color
 
     var body: some View {
-        Text(text.uppercased())
+        Text(Design.Typography.labelText(text))
             .font(Design.Typography.label)
-            .tracking(1.0)
+            .tracking(Design.Typography.labelTracking)
             .padding(.horizontal, 7)
             .frame(height: Design.Metric.tagHeight)
             .background(ground)

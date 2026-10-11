@@ -122,9 +122,7 @@ struct MergeSurfaceView: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Design.Palette.panelAlt)
-        .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.line, lineWidth: Design.Metric.hairline))
-        .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+        .groupedArea(Design.Palette.panelAlt, stroke: Design.Palette.line)
     }
 
     @ViewBuilder
@@ -141,7 +139,7 @@ struct MergeSurfaceView: View {
     private var footer: some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
             if let error = model.lastError {
-                Text(error).font(Design.Typography.ui(11.5)).foregroundStyle(Design.Palette.warn)
+                Text(error).font(Design.Typography.ui(11.5)).foregroundStyle(Design.Palette.danger)
             } else if let section = model.stitched {
                 Text("Stitched as \(section.name), \(section.lengthInBars) bars. The transport plays it; Structure shows it.")
                     .font(Design.Typography.ui(11.5, weight: .regular)).foregroundStyle(Design.Palette.inkSecondary)
@@ -162,12 +160,20 @@ struct MergeSurfaceView: View {
                     MergeChip("\(bars)", isOn: model.bars == bars) { model.bars = bars }
                 }
             }
-            Button("Stitch as a section") { Task { await model.stitch() } }
-                .buttonStyle(.plain)
-                .font(Design.Typography.ui(12, weight: .semibold))
-                .foregroundStyle(Design.Palette.accent)
-                .disabled(!model.isReady || model.isWorking)
-                .help("Render both moves for keeps, as new versions derived from the originals, and add a section to the end of the form that plays them together")
+            Button { Task { await model.stitch() } } label: {
+                // Studio fills the one primary action with the accent; Cool sets it as accented words.
+                if Design.style.filledControls {
+                    StudioChip(tone: .primary) { ChipText("Stitch as a section", isOn: true, size: 12) }
+                        .opacity(!model.isReady || model.isWorking ? 0.4 : 1)
+                } else {
+                    Text("Stitch as a section")
+                }
+            }
+            .buttonStyle(.plain)
+            .font(Design.Typography.ui(12, weight: .semibold))
+            .foregroundStyle(Design.Palette.accent)
+            .disabled(!model.isReady || model.isWorking)
+            .help("Render both moves for keeps, as new versions derived from the originals, and add a section to the end of the form that plays them together")
         }
     }
 }
@@ -180,17 +186,21 @@ private struct MergeChip: View {
 
     var body: some View {
         Button(action: action) {
-            Text(title)
-                .font(Design.Typography.ui(11.5, weight: isOn ? .semibold : .regular))
-                .foregroundStyle(isOn ? Design.Palette.accent : Design.Palette.inkSecondary)
-                .lineLimit(1)
-                .fixedSize()
-                .padding(.horizontal, 8)
-                .frame(height: Design.Metric.chipHeight)
-                .background(isOn ? Design.Palette.accentSoft : Design.Palette.panel,
-                            in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-                .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
-                    .stroke(isOn ? Design.Palette.accent.opacity(0.35) : Design.Palette.line, lineWidth: Design.Metric.hairline))
+            if Design.style.filledControls {
+                StudioChip(isOn: isOn) { ChipText(title, isOn: isOn, size: 11.5) }
+            } else {
+                Text(title)
+                    .font(Design.Typography.ui(11.5, weight: isOn ? .semibold : .regular))
+                    .foregroundStyle(isOn ? Design.Palette.accent : Design.Palette.inkSecondary)
+                    .lineLimit(1)
+                    .fixedSize()
+                    .padding(.horizontal, 8)
+                    .frame(height: Design.Metric.chipHeight)
+                    .background(isOn ? Design.Palette.accentSoft : Design.Palette.panel,
+                                in: RoundedRectangle(cornerRadius: Design.Metric.corner))
+                    .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
+                        .stroke(isOn ? Design.Palette.accent.opacity(0.35) : Design.Palette.line, lineWidth: Design.Metric.hairline))
+            }
         }
         .buttonStyle(.plain)
     }
@@ -200,6 +210,6 @@ private struct MergeLabel: View {
     let text: String
     init(_ text: String) { self.text = text }
     var body: some View {
-        Text(text.uppercased()).font(Design.Typography.label).tracking(1.1).foregroundStyle(Design.Palette.inkTertiary)
+        SmallLabel(text, color: Design.Palette.inkTertiary)
     }
 }

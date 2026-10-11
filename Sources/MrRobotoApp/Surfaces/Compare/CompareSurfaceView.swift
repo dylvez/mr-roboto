@@ -48,8 +48,18 @@ public struct CompareSurfaceView: View {
                     .font(Design.Typography.ui(11))
                     .foregroundStyle(Design.Palette.warn)
             }
-            Button("Take this one") {
+            Button {
                 if let id = model.selectedID { Task { await model.choose(id) } }
+            } label: {
+                if Design.style.filledControls {
+                    // The one way off this surface: the primary action once a row is chosen.
+                    StudioChip(tone: model.selectedID == nil ? .plain : .primary) {
+                        ChipText("Take this one", isOn: model.selectedID != nil, size: 12)
+                            .foregroundStyle(model.selectedID == nil ? Design.Palette.inkQuiet : Design.Palette.panel)
+                    }
+                } else {
+                    Text("Take this one")
+                }
             }
             .font(Design.Typography.ui(12))
             .buttonStyle(.plain)
@@ -66,7 +76,7 @@ public struct CompareSurfaceView: View {
         if let error = model.lastError {
             Text(error)
                 .font(Design.Typography.ui(11))
-                .foregroundStyle(Design.Palette.warn)
+                .foregroundStyle(Design.Palette.danger)
         } else if !model.indistinguishable.isEmpty {
             // A row that reads the same as the reference on every compared feature is not a choice,
             // and saying so is more useful than drawing it as if it were.
@@ -87,10 +97,7 @@ private struct ReferenceBand: View {
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             VStack(alignment: .leading, spacing: 5) {
-                Text("JUDGED AGAINST")
-                    .font(Design.Typography.label)
-                    .tracking(1.1)
-                    .foregroundStyle(Design.Palette.inkTertiary)
+                SmallLabel("Judged against", color: Design.Palette.inkTertiary)
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
                     Text(model.reference.title)
                         .font(Design.Typography.prose(15, weight: .medium))
@@ -110,11 +117,7 @@ private struct ReferenceBand: View {
         .padding(12)
         .frame(height: layout.referenceHeight, alignment: .topLeading)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Design.Palette.panelAlt)
-        .overlay(
-            RoundedRectangle(cornerRadius: Design.Metric.corner)
-                .stroke(Design.Palette.lineStrong, lineWidth: Design.Metric.hairline))
-        .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+        .groupedArea(Design.Palette.panelAlt, stroke: Design.Palette.lineStrong)
     }
 
     private var readings: some View {
@@ -137,10 +140,7 @@ private struct LeverStrip: View {
         HStack(alignment: .top, spacing: Design.Metric.gutter) {
             ForEach(model.levers) { lever in
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(lever.label.uppercased())
-                        .font(Design.Typography.label)
-                        .tracking(1.1)
-                        .foregroundStyle(Design.Palette.inkTertiary)
+                    SmallLabel(lever.label, color: Design.Palette.inkTertiary)
                     HStack(spacing: 8) {
                         Slider(value: Binding(get: { model.value(of: lever) },
                                               set: { model.setLever(lever, to: $0) }),
@@ -178,10 +178,11 @@ private struct ColumnHeadings: View {
                 .frame(width: layout.titleWidth, alignment: .leading)
             ForEach(Array(model.features.prefix(layout.visibleFeatureCount)), id: \.self) { feature in
                 // Two lines and a gutter, rather than one line each running into the next:
-                // "MIX LUFS INTEGRAT…SONG PARTS".
-                Text(CompareSurfaceView.shortName(of: feature, in: model.vocabulary).uppercased())
+                // "MIX LUFS INTEGRAT…SONG PARTS". Sentence case where labels are not capitals.
+                let name = CompareSurfaceView.shortName(of: feature, in: model.vocabulary)
+                Text(Design.Typography.labelText(name.prefix(1).uppercased() + name.dropFirst()))
                     .font(Design.Typography.label)
-                    .tracking(1.0)
+                    .tracking(Design.Typography.labelTracking)
                     .foregroundStyle(Design.Palette.inkTertiary)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
@@ -270,12 +271,15 @@ private struct CandidateRow: View {
         .padding(.horizontal, 10)
         .frame(height: layout.rowHeight, alignment: .leading)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(isSelected ? Design.Palette.accentSoft : Design.Palette.panelAlt)
-        .overlay(
-            RoundedRectangle(cornerRadius: Design.Metric.corner)
-                .stroke(isSelected ? Design.Palette.accent : Design.Palette.line,
-                        lineWidth: Design.Metric.hairline))
-        .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+        .groupedArea(isSelected ? Design.Palette.accentSoft : Design.Palette.panelAlt,
+                     stroke: isSelected ? Design.Palette.accent : Design.Palette.line)
+        .overlay {
+            // A soft card has no edge of its own, so the selected row is given one.
+            if !Design.style.surfaceCards && isSelected {
+                RoundedRectangle(cornerRadius: Design.Metric.containerCorner, style: .continuous)
+                    .strokeBorder(Design.Palette.accent, lineWidth: 1.5)
+            }
+        }
         .contentShape(Rectangle())
         .onTapGesture { model.select(candidate.id) }
     }
@@ -294,7 +298,7 @@ private struct DifferenceCell: View {
             if let difference, difference.matters {
                 Text(difference.text)
                     .font(Design.Typography.numeric(10.5))
-                    .foregroundStyle(Design.Palette.accent)
+                    .foregroundStyle(Design.Palette.emphasis)
             } else if difference == nil {
                 // Nothing on the other side to differ from: uncompared, not the same.
                 Text(" ")
@@ -321,12 +325,26 @@ private struct PlayChip: View {
     let stop: () -> Void
 
     var body: some View {
-        ChipButton(systemImage: isPlaying ? "stop.fill" : "play.fill",
-                   help: isPlaying ? "Stop \(title)" : "Play \(title) under the levers as they sit",
-                   isOn: isPlaying) {
-            isPlaying ? stop() : play()
+        if Design.style.filledControls {
+            // Grey at rest like any control, orange while its row sounds.
+            Button { isPlaying ? stop() : play() } label: {
+                StudioChip(tone: isPlaying ? .sounding : .plain, height: Design.Metric.chipHeight + 4, horizontalPadding: 0) {
+                    Image(systemName: isPlaying ? "stop.fill" : "play.fill")
+                        .font(.system(size: 12, weight: .regular))
+                        .frame(width: Design.Metric.chipHeight + 4)
+                }
+            }
+            .buttonStyle(.plain)
+            .help(isPlaying ? "Stop \(title)" : "Play \(title) under the levers as they sit")
+            .accessibilityLabel(isPlaying ? "Stop \(title)" : "Play \(title)")
+        } else {
+            ChipButton(systemImage: isPlaying ? "stop.fill" : "play.fill",
+                       help: isPlaying ? "Stop \(title)" : "Play \(title) under the levers as they sit",
+                       isOn: isPlaying) {
+                isPlaying ? stop() : play()
+            }
+            .accessibilityLabel(isPlaying ? "Stop \(title)" : "Play \(title)")
         }
-        .accessibilityLabel(isPlaying ? "Stop \(title)" : "Play \(title)")
     }
 }
 
@@ -356,10 +374,7 @@ private struct FindingsBadge: View {
         .accessibilityLabel("\(candidate.warnings.count) finding\(candidate.warnings.count == 1 ? "" : "s") on \(candidate.title); press to read them")
         .popover(isPresented: $isOpen, arrowEdge: .bottom) {
             VStack(alignment: .leading, spacing: 10) {
-                Text("What the band found on \(candidate.title)".uppercased())
-                    .font(Design.Typography.label)
-                    .tracking(1.1)
-                    .foregroundStyle(Design.Palette.inkTertiary)
+                SmallLabel("What the band found on \(candidate.title)", color: Design.Palette.inkTertiary)
                 ForEach(findings) { finding in
                     VStack(alignment: .leading, spacing: 3) {
                         HStack(alignment: .firstTextBaseline, spacing: 8) {

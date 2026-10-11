@@ -324,23 +324,36 @@ private struct GridChipLabel: View {
     }
 
     var body: some View {
-        HStack(spacing: 4) {
-            Text(title)
-                .font(Design.Typography.ui(11.5, weight: isOn || emphasis == .warn ? .semibold : .regular))
-                .lineLimit(1)
-                .fixedSize()
-            if let trailingSymbol {
-                Image(systemName: trailingSymbol)
-                    .font(Design.Typography.ui(8, weight: .bold))
+        if Design.style.filledControls {
+            // The armed Clear is the destructive half of a two-step: Studio's red, not a caution.
+            StudioChip(isOn: isOn, tone: emphasis == .warn ? .danger : .plain) {
+                HStack(spacing: 4) {
+                    ChipText(title, isOn: isOn || emphasis == .warn, size: 11.5)
+                    if let trailingSymbol {
+                        Image(systemName: trailingSymbol)
+                            .font(.system(size: 8, weight: .bold))
+                    }
+                }
             }
+        } else {
+            HStack(spacing: 4) {
+                Text(title)
+                    .font(Design.Typography.ui(11.5, weight: isOn || emphasis == .warn ? .semibold : .regular))
+                    .lineLimit(1)
+                    .fixedSize()
+                if let trailingSymbol {
+                    Image(systemName: trailingSymbol)
+                        .font(Design.Typography.ui(8, weight: .bold))
+                }
+            }
+            .foregroundStyle(foreground)
+            .padding(.horizontal, 8)
+            .frame(height: Design.Metric.chipHeight)
+            .background(background, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
+            .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
+                .stroke(border, lineWidth: Design.Metric.hairline))
+            .contentShape(Rectangle())
         }
-        .foregroundStyle(foreground)
-        .padding(.horizontal, 8)
-        .frame(height: Design.Metric.chipHeight)
-        .background(background, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-        .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
-            .stroke(border, lineWidth: Design.Metric.hairline))
-        .contentShape(Rectangle())
     }
 
     private var foreground: Color {
@@ -449,13 +462,19 @@ private struct DetentButton: View {
 
     var body: some View {
         Button(action: action) {
-            Text(title)
-                .font(Design.Typography.ui(10.5, weight: .regular))
-                .padding(.horizontal, 8)
-                .frame(height: 20)
-                .background(Design.Palette.panelAlt)
-                .foregroundStyle(Design.Palette.inkSecondary)
-                .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+            if Design.style.filledControls {
+                StudioChip(height: 20, horizontalPadding: 7) {
+                    Text(title).font(Design.Typography.ui(10.5, weight: .regular))
+                }
+            } else {
+                Text(title)
+                    .font(Design.Typography.ui(10.5, weight: .regular))
+                    .padding(.horizontal, 8)
+                    .frame(height: 20)
+                    .background(Design.Palette.panelAlt)
+                    .foregroundStyle(Design.Palette.inkSecondary)
+                    .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+            }
         }
         .buttonStyle(.plain)
     }
@@ -475,22 +494,30 @@ private struct TierBrush: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             GridLabel("Brush")
-            HStack(spacing: 4) {
-                ForEach(TierBrush.tiers, id: \.self) { tier in
-                    Button { model.brush = tier } label: {
-                        Text(tier.rawValue)
-                            .font(Design.Typography.ui(11, weight: .semibold))
-                            .padding(.horizontal, 9)
-                            .frame(height: 22)
-                            .background(model.brush == tier ? Design.Palette.accent : Design.Palette.panelAlt)
-                            .foregroundStyle(model.brush == tier ? Design.Palette.panel : Design.Palette.inkSecondary)
-                            .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+            if Design.style.filledControls {
+                SegmentedChoice(options: TierBrush.tiers, selection: model.brush, title: \.rawValue,
+                                help: { tier in
+                                    showsCaption ? "Clicks and drags paint \(tier.rawValue) hits"
+                                                 : "Clicks and drags paint \(tier.rawValue) hits. \(Self.gestures)"
+                                }) { model.brush = $0 }
+            } else {
+                HStack(spacing: 4) {
+                    ForEach(TierBrush.tiers, id: \.self) { tier in
+                        Button { model.brush = tier } label: {
+                            Text(tier.rawValue)
+                                .font(Design.Typography.ui(11, weight: .semibold))
+                                .padding(.horizontal, 9)
+                                .frame(height: 22)
+                                .background(model.brush == tier ? Design.Palette.accent : Design.Palette.panelAlt)
+                                .foregroundStyle(model.brush == tier ? Design.Palette.panel : Design.Palette.inkSecondary)
+                                .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+                        }
+                        .buttonStyle(.plain)
+                        .help(showsCaption ? "Clicks and drags paint \(tier.rawValue) hits"
+                                           : "Clicks and drags paint \(tier.rawValue) hits. \(Self.gestures)")
+                        .accessibilityLabel("\(tier.rawValue) brush")
+                        .accessibilityAddTraits(model.brush == tier ? .isSelected : [])
                     }
-                    .buttonStyle(.plain)
-                    .help(showsCaption ? "Clicks and drags paint \(tier.rawValue) hits"
-                                       : "Clicks and drags paint \(tier.rawValue) hits. \(Self.gestures)")
-                    .accessibilityLabel("\(tier.rawValue) brush")
-                    .accessibilityAddTraits(model.brush == tier ? .isSelected : [])
                 }
             }
             // The gestures, since none of them is labelled on the grid itself. Capped in width so
@@ -618,6 +645,12 @@ private struct VoiceLabel: View {
         let sounds = model.machineSounds(voice)
         Button { model.audition(voice) } label: {
             HStack(spacing: 4) {
+                if Design.style.laneColours {
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                        .fill(LaneClass(voice).color.opacity(sounds ? 1 : 0.4))
+                        .frame(width: 8, height: 8)
+                        .padding(.trailing, 2)
+                }
                 Text(name)
                     .font(Design.Typography.ui(11.5, weight: .regular))
                     .foregroundStyle(sounds ? Design.Palette.ink : Design.Palette.inkTertiary)
@@ -662,7 +695,9 @@ private struct StepRow: View {
                              isBeat: step % model.stepsPerBeat == 0,
                              isSwung: model.isSwung(step: step),
                              width: layout.stepWidth,
-                             height: layout.rowHeight)
+                             height: layout.rowHeight,
+                             lane: Design.style.laneColours ? LaneClass(voice).color : nil,
+                             isOddBeat: (step / max(1, model.stepsPerBeat)) % 2 == 1)
                     .onTapGesture {
                         // A plain click paints what the brush says; ⌥ walks the tiers, which is
                         // what a bare click used to do.
@@ -714,8 +749,50 @@ private struct StepCellView: View {
     let isSwung: Bool
     let width: CGFloat
     let height: CGFloat
+    /// Studio: the voice's hue. Nil draws Cool's cell.
+    var lane: Color? = nil
+    /// Studio: the second and fourth beat of a bar sit on a slightly deeper ground, in place of a
+    /// heavier outline on each downbeat.
+    var isOddBeat = false
 
     var body: some View {
+        if let lane { studio(lane) } else { cool }
+    }
+
+    /// A step in its voice's hue, its velocity drawn twice so it never rests on colour alone: a
+    /// ghost is a half-height cell at under half strength, a normal hit fills the cell, an accent is
+    /// the hue at full strength with a bright edge along its top. No outlines; the beat groups are
+    /// told apart by their ground.
+    private func studio(_ lane: Color) -> some View {
+        let shape = RoundedRectangle(cornerRadius: Design.Metric.cellCorner, style: .continuous)
+        return ZStack(alignment: .bottom) {
+            shape.fill(isOddBeat ? Design.Palette.hover : Design.Palette.fill)
+            switch cell.tier {
+            case .rest:
+                EmptyView()
+            case .ghost:
+                shape.fill(lane.opacity(0.55)).frame(height: height * 0.5)
+            case .normal:
+                shape.fill(lane.opacity(0.82))
+            case .accent:
+                shape.fill(lane)
+                    .overlay(alignment: .top) {
+                        Rectangle().fill(Color.white.opacity(0.5)).frame(height: 2)
+                    }
+            }
+        }
+        .frame(width: width, height: height)
+        .overlay(alignment: .bottom) {
+            // Swung steps carry a mark, so the lever's effect shows on the grid.
+            if isSwung && cell.tier != .rest {
+                Rectangle().fill(Color.black.opacity(0.3)).frame(height: 2)
+            }
+        }
+        .clipShape(shape)
+        .contentShape(Rectangle())
+    }
+
+    private var cool: some View {
         RoundedRectangle(cornerRadius: Design.Metric.corner)
             .fill(fill)
             .frame(width: width, height: height)
@@ -775,7 +852,7 @@ private struct GridNotes: View {
         if let error = model.lastError {
             Text(error)
                 .font(Design.Typography.ui(12, weight: .regular))
-                .foregroundStyle(Design.Palette.warn)
+                .foregroundStyle(Design.Palette.danger)
                 .lineLimit(1)
                 .help(error)
         } else if model.isPainted {
@@ -880,7 +957,7 @@ private struct BeatmakerLine: View {
                     .foregroundStyle(Design.Palette.warn)
                 Text(first.says)
                     .font(Design.Typography.prose(12.5))
-                    .foregroundStyle(Design.Palette.warn)
+                    .foregroundStyle(Design.Palette.findingText)
                     .lineLimit(1)
                     .truncationMode(.tail)
                 if flags.count > 1 {
@@ -912,7 +989,7 @@ private struct ReadingLine: View {
                 .frame(width: 12)
             Text(reading.says)
                 .font(Design.Typography.prose(12.5))
-                .foregroundStyle(reading.holds ? Design.Palette.inkSecondary : Design.Palette.warn)
+                .foregroundStyle(reading.holds ? Design.Palette.inkSecondary : Design.Palette.findingText)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .accessibilityElement(children: .combine)
@@ -928,10 +1005,7 @@ private struct GridLabel: View {
     init(_ text: String) { self.text = text }
 
     var body: some View {
-        Text(text.uppercased())
-            .font(Design.Typography.label)
-            .tracking(1.1)
-            .foregroundStyle(Design.Palette.inkTertiary)
+        SmallLabel(text, color: Design.Palette.inkTertiary)
     }
 }
 
@@ -953,10 +1027,10 @@ private struct GridFailureNote: View {
     var body: some View {
         Text(text)
             .font(Design.Typography.ui(12, weight: .regular))
-            .foregroundStyle(Design.Palette.warn)
+            .foregroundStyle(Design.Palette.danger)
             .padding(10)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Design.Palette.warnSoft)
-            .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
+            .background(Design.Palette.dangerSoft)
+            .clipShape(RoundedRectangle(cornerRadius: Design.style.surfaceCards ? Design.Metric.corner : Design.Metric.containerCorner))
     }
 }

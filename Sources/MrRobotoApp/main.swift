@@ -251,7 +251,7 @@ struct FrameCommands: Commands {
             .disabled(midi.mode == .off || app.song == nil)
         }
 
-        // The three visual directions, live. Switching repaints every body that reads a token and
+        // The two visual directions, live. Switching repaints every body that reads a token and
         // touches nothing else — the bench, the loaded song and the transport are not disturbed —
         // and the choice is remembered in UserDefaults for the next launch.
         //
@@ -274,6 +274,14 @@ struct FrameCommands: Commands {
                     set: { if $0 { Design.select(theme) } }))
                 .keyboardShortcut(KeyEquivalent(Character("\(themeShortcutNumber(theme))")),
                                   modifiers: [.command, .control])
+            }
+            // Light, dark or the system's, for either theme: what Petrol used to decide for itself.
+            Menu("Appearance") {
+                ForEach(Design.Appearance.allCases) { appearance in
+                    Toggle(appearance.displayName, isOn: Binding(
+                        get: { Design.appearance == appearance },
+                        set: { if $0 { Design.select(appearance) } }))
+                }
             }
             Divider()
         }
@@ -317,7 +325,7 @@ struct FrameCommands: Commands {
     }
 }
 
-/// ⌃⌘1/2/3. Plain ⌘1–3 already belong to the Surfaces menu, and these are pressed far less often.
+/// ⌃⌘1/2. Plain ⌘1–2 already belong to the Surfaces menu, and these are pressed far less often.
 private func themeShortcutNumber(_ theme: Design.Theme) -> Int {
     (Design.Theme.allCases.firstIndex(of: theme) ?? 0) + 1
 }

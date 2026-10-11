@@ -93,7 +93,7 @@ struct LibrarySidebar: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
-                SmallLabel("Library")
+                SmallLabel("Library", kind: .eyebrow)
                 Spacer()
                 ChipButton(systemImage: "books.vertical", help: "Open the Library on the bench: every shelf, searched, sorted and described (⇧⌘L)",
                            isOn: app.bench.active?.kind == .library) {
@@ -111,7 +111,7 @@ struct LibrarySidebar: View {
                 CollapseButton(region: .library, app: app)
             }
             .padding(.horizontal, Design.Metric.inset)
-            .frame(height: FrameLayout.headerHeight)
+            .frame(height: FrameLayout.dockHeight)
 
             Hairline()
 
@@ -309,7 +309,7 @@ struct LibrarySidebar: View {
                             .foregroundStyle(row.isSelected ? Design.Palette.accent : Design.Palette.ink)
                             .lineLimit(1)
                         if row.inSong {
-                            Circle().fill(Design.Palette.accent).frame(width: 5, height: 5)
+                            Circle().fill(Design.Palette.emphasis).frame(width: 5, height: 5)
                                 .help("Already in the open song")
                         }
                     }
@@ -400,13 +400,13 @@ struct RecordRowView: View {
                                 .help("Separated: \(count) stem\(count == 1 ? "" : "s"), kept with the record")
                         }
                         if inSong {
-                            Circle().fill(Design.Palette.accent).frame(width: 5, height: 5)
+                            Circle().fill(Design.Palette.emphasis).frame(width: 5, height: 5)
                                 .help("The open song takes from it")
                         }
                     }
                     Text(line)
                         .font(Design.Typography.ui(11, weight: .regular))
-                        .foregroundStyle(app.crate.failures[record.id] != nil ? Design.Palette.warn : Design.Palette.inkSecondary)
+                        .foregroundStyle(app.crate.failures[record.id] != nil ? Design.Palette.danger : Design.Palette.inkSecondary)
                         .lineLimit(1)
                         .help(app.crate.failures[record.id] ?? record.grid.map { "Its grid: \($0.description)." } ?? "")
                 }

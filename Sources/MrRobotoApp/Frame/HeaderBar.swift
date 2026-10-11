@@ -13,14 +13,15 @@ struct HeaderBar: View {
             // The app's own mark, then a rule, then the song you are in.
             HStack(spacing: 8) {
                 AppIconArt()
-                    .frame(width: 34, height: 34)
-                Wordmark(size: 16)
+                    .frame(width: Design.style.filledControls ? 26 : 34, height: Design.style.filledControls ? 26 : 34)
+                Wordmark(size: Design.style.filledControls ? 14 : 16)
             }
             .accessibilityElement(children: .combine)
             Rectangle()
                 .fill(Design.Palette.lineStrong)
-                .frame(width: Design.Metric.hairline, height: 22)
-            SmallLabel("Song")
+                .frame(width: Design.Metric.hairline, height: Design.style.filledControls ? 18 : 22)
+            // Studio lets the title say it is the song.
+            if Design.style.uppercaseLabels { SmallLabel("Song") }
             // The title is the way into the song's settings: press it to rename the song or set
             // its tempo, key and meter. Before this the title was a label, and a song made with
             // File ▸ New Song kept "Untitled, Sept 17" at 120 with no key for as long as it lived.
@@ -54,9 +55,11 @@ struct HeaderBar: View {
                 if app.song != nil { isShowingSettings = true }
             }
             if app.hasUnsavedChanges {
-                Text("unsaved")
-                    .font(Design.Typography.label)
-                    .foregroundStyle(Design.Palette.warn)
+                // Not an error: autosave is a few seconds away. Studio says so in a quiet word, as a
+                // Mac document's title does.
+                Text(Design.style.uppercaseLabels ? "unsaved" : "Edited")
+                    .font(Design.style.uppercaseLabels ? Design.Typography.label : Design.Typography.role(.callout))
+                    .foregroundStyle(Design.style.uppercaseLabels ? Design.Palette.warn : Design.Palette.inkTertiary)
                     .help("Saved on its own a few seconds after the last change, and on ⌘S.")
             }
             Spacer(minLength: 16)
@@ -100,7 +103,7 @@ struct HeaderBar: View {
                 // beside the button that failed.
                 Text("Save failed")
                     .font(Design.Typography.label)
-                    .foregroundStyle(Design.Palette.warn)
+                    .foregroundStyle(Design.Palette.danger)
                     .help(failure)
             }
             FrameButton(title: "History", emphasis: .quiet, isEnabled: app.song != nil) {
@@ -114,7 +117,7 @@ struct HeaderBar: View {
                 app.save()
             }
         }
-        .padding(.horizontal, 28)
+        .padding(.horizontal, Design.Metric.regionInset)
         .frame(height: FrameLayout.headerHeight)
         .background(Design.Palette.paper)
     }

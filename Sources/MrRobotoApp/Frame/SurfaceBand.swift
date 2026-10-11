@@ -11,6 +11,10 @@ import SwiftUI
 struct SurfaceBand: View {
     let kind: SurfaceKind
 
+    /// The one stroke in each drawing that stands out: the accent in Cool. Studio keeps the accent
+    /// for what is chosen, so a texture's highlight is a darker grey there.
+    private var highlight: Color { Design.style.filledControls ? Design.Palette.inkTertiary : Design.Palette.accent }
+
     var body: some View {
         Canvas { context, size in
             let ink = Design.Palette.lineStrong
@@ -119,7 +123,7 @@ struct SurfaceBand: View {
             var cut = Path()
             cut.move(to: CGPoint(x: x, y: 4))
             cut.addLine(to: CGPoint(x: x, y: size.height - 14))
-            context.stroke(cut, with: .color(Design.Palette.accent.opacity(0.45)), lineWidth: 1)
+            context.stroke(cut, with: .color(highlight.opacity(0.45)), lineWidth: 1)
             let pad = CGRect(x: x + spacing / 2 - 4, y: size.height - 11, width: 8, height: 6)
             let lit = index % 5 == 2
             context.fill(Path(roundedRect: pad, cornerRadius: 1),
@@ -205,7 +209,7 @@ struct SurfaceBand: View {
         while x < size.width {
             let h = size.height * pattern[index % pattern.count]
             let rect = CGRect(x: x, y: size.height - h - 2, width: 2, height: h)
-            context.fill(Path(rect), with: .color(index % 8 == 1 ? Design.Palette.accent.opacity(0.7) : ink))
+            context.fill(Path(rect), with: .color(index % 8 == 1 ? highlight.opacity(0.7) : ink))
             x += index % 8 == 7 ? 14 : 7
             index += 1
         }
@@ -219,7 +223,7 @@ struct SurfaceBand: View {
             let phase = Double(index % 12) / 12
             let h = size.height * CGFloat(0.25 + 0.7 * abs(sin(phase * .pi)))
             let rect = CGRect(x: x, y: size.height - h - 2, width: 3, height: h)
-            context.fill(Path(rect), with: .color(index % 12 == 6 ? Design.Palette.accent.opacity(0.7) : ink))
+            context.fill(Path(rect), with: .color(index % 12 == 6 ? highlight.opacity(0.7) : ink))
             x += 5
             index += 1
         }
@@ -233,7 +237,7 @@ struct SurfaceBand: View {
             let y = row == 0 ? 2 : size.height / 2 + 1
             while x < size.width {
                 let shared = Int(x - 2) % 24 == 0
-                context.fill(Path(CGRect(x: x, y: y, width: 2, height: size.height / 2 - 3)), with: .color(shared ? Design.Palette.accent.opacity(0.7) : ink))
+                context.fill(Path(CGRect(x: x, y: y, width: 2, height: size.height / 2 - 3)), with: .color(shared ? highlight.opacity(0.7) : ink))
                 x += spacing
                 index += 1
             }
@@ -252,7 +256,7 @@ struct SurfaceBand: View {
                 x += spacing
             }
         }
-        context.fill(Path(CGRect(x: size.width * 0.62, y: 1, width: 2, height: size.height - 2)), with: .color(Design.Palette.accent.opacity(0.7)))
+        context.fill(Path(CGRect(x: size.width * 0.62, y: 1, width: 2, height: size.height - 2)), with: .color(highlight.opacity(0.7)))
     }
 
     /// Faders at their heights, one in the accent.
@@ -265,7 +269,7 @@ struct SurfaceBand: View {
             context.stroke(Path { $0.move(to: CGPoint(x: x + 1.5, y: 2)); $0.addLine(to: CGPoint(x: x + 1.5, y: size.height - 2)) },
                            with: .color(ink.opacity(0.5)), lineWidth: 1)
             let cap = CGRect(x: x - 1, y: size.height - h - 2, width: 5, height: 3)
-            context.fill(Path(roundedRect: cap, cornerRadius: 1), with: .color(index % 8 == 3 ? Design.Palette.accent.opacity(0.8) : ink))
+            context.fill(Path(roundedRect: cap, cornerRadius: 1), with: .color(index % 8 == 3 ? highlight.opacity(0.8) : ink))
             x += 10
             index += 1
         }
@@ -279,13 +283,13 @@ struct SurfaceBand: View {
             let phase = Double(index % 24) / 24
             let h = size.height * CGFloat(0.3 + 0.6 * (0.5 + 0.5 * sin(phase * 2 * .pi)))
             let rect = CGRect(x: x, y: size.height - h - 2, width: 2, height: h)
-            context.fill(Path(rect), with: .color(h > size.height * 0.8 ? Design.Palette.accent.opacity(0.7) : ink.opacity(0.6)))
+            context.fill(Path(rect), with: .color(h > size.height * 0.8 ? highlight.opacity(0.7) : ink.opacity(0.6)))
             x += 4
             index += 1
         }
         let target = size.height * 0.2
         context.stroke(Path { $0.move(to: CGPoint(x: 0, y: target)); $0.addLine(to: CGPoint(x: size.width, y: target)) },
-                       with: .color(Design.Palette.accent.opacity(0.6)), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                       with: .color(highlight.opacity(0.6)), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
     }
 
     /// Three lanes of takes, a span of each chosen in the accent.
@@ -300,7 +304,7 @@ struct SurfaceBand: View {
                 let chosen = x >= chosenStart && x < chosenEnd
                 let h = laneHeight * CGFloat(0.3 + 0.6 * abs(sin(Double(x) / 5 + Double(lane))))
                 let rect = CGRect(x: x, y: y + (laneHeight - h) / 2, width: 2, height: h)
-                context.fill(Path(rect), with: .color(chosen ? Design.Palette.accent.opacity(0.7) : ink.opacity(0.6)))
+                context.fill(Path(rect), with: .color(chosen ? highlight.opacity(0.7) : ink.opacity(0.6)))
                 x += 4
             }
         }
@@ -314,7 +318,7 @@ struct SurfaceBand: View {
         while x + r * 2 < size.width {
             let head = CGRect(x: x, y: size.height / 2 - r, width: r * 2, height: r * 2)
             if index % 4 == 1 {
-                context.fill(Path(ellipseIn: head), with: .color(Design.Palette.accent.opacity(0.6)))
+                context.fill(Path(ellipseIn: head), with: .color(highlight.opacity(0.6)))
             } else {
                 context.stroke(Path(ellipseIn: head), with: .color(ink), lineWidth: 1)
             }
@@ -336,7 +340,7 @@ struct SurfaceBand: View {
         }
         context.stroke(upper, with: .color(ink), lineWidth: 1)
         context.stroke(lower, with: .color(ink), lineWidth: 1)
-        context.stroke(joined, with: .color(Design.Palette.accent.opacity(0.7)), lineWidth: 2)
+        context.stroke(joined, with: .color(highlight.opacity(0.7)), lineWidth: 2)
     }
 
     /// Tracks: numbered ticks of unequal length, like the back of a sleeve.
@@ -349,7 +353,7 @@ struct SurfaceBand: View {
             let y = size.height / 2
             context.stroke(Path { $0.move(to: CGPoint(x: x, y: y)); $0.addLine(to: CGPoint(x: x + width, y: y)) },
                            with: .color(ink), lineWidth: 2)
-            context.fill(Path(ellipseIn: CGRect(x: x - 2, y: y - 2, width: 4, height: 4)), with: .color(Design.Palette.accent))
+            context.fill(Path(ellipseIn: CGRect(x: x - 2, y: y - 2, width: 4, height: 4)), with: .color(highlight))
             x += width + 10
             index += 1
         }
@@ -365,7 +369,7 @@ struct SurfaceBand: View {
             let rect = CGRect(x: x, y: 5, width: width, height: size.height - 10)
             let path = Path(roundedRect: rect, cornerRadius: 2)
             if index % widths.count == 2 || index % widths.count == 4 {
-                context.fill(path, with: .color(Design.Palette.accent.opacity(0.35)))
+                context.fill(path, with: .color(highlight.opacity(0.35)))
             }
             context.stroke(path, with: .color(ink), lineWidth: 1)
             x += width + 4
@@ -383,7 +387,7 @@ struct SurfaceBand: View {
             let h = heights[index % heights.count]
             let width = index % 3 == 2 ? beat * 0.45 : beat * 0.85
             let rect = CGRect(x: x + 3, y: size.height * (1 - h) - 8, width: width, height: 4)
-            context.fill(Path(roundedRect: rect, cornerRadius: 1.5), with: .color(Design.Palette.accent.opacity(0.45)))
+            context.fill(Path(roundedRect: rect, cornerRadius: 1.5), with: .color(highlight.opacity(0.45)))
             if index % 2 == 0 {
                 context.fill(Path(CGRect(x: x + 1, y: size.height - 6, width: 2, height: 5)), with: .color(ink))
             }

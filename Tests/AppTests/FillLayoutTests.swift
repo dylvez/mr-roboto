@@ -6,7 +6,7 @@ import Testing
 
 // Do the surfaces use the room they have?
 //
-// The frame was rebuilt so that one surface fills the bench — 907 × 665 at the default window, 1269
+// The frame was rebuilt so that one surface fills the bench — 1009 × 749 at the default window, 1305
 // wide with the side regions folded, 640 × 460 at the window minimum — and every surface in the
 // catalog had been authored when a surface got about 610 × 253. They sized themselves to their
 // content and top-aligned, leaving a third of a very expensive panel blank.
@@ -18,7 +18,7 @@ import Testing
 //
 // The shape of each test is the same on purpose: **the number has to change between the geometries**.
 // A layout that quietly went back to a constant would still be "sensible" at one size; it is the
-// difference between 640 and 1269 that says the surface is reading its own width.
+// difference between 640 and 1305 that says the surface is reading its own width.
 
 /// The three sizes, named once.
 private enum Geometry {
@@ -33,8 +33,10 @@ struct FillGeometryTests {
     @Test("They are the frame's own numbers, not a copy of them")
     func geometriesComeFromTheFrame() {
         #expect(Geometry.minimum == CGSize(width: 640, height: 460))
-        #expect(Geometry.standard == CGSize(width: 973, height: 665))
-        #expect(Geometry.wide == CGSize(width: 1269, height: 665))
+        // Studio's: the surface runs edge to edge and the bars above and below it are shorter.
+        // Cool Neutral's were 973 × 665 and 1269 × 665.
+        #expect(Geometry.standard == CGSize(width: 1009, height: 749))
+        #expect(Geometry.wide == CGSize(width: 1305, height: 749))
 
         // And they are derived, so a change to `Design.Metric` or to the regions moves them.
         #expect(Geometry.minimum.width == Design.Metric.surfaceMinimumWidth)
@@ -64,7 +66,7 @@ struct FillChopLaneTests {
         ChopLaneLayout(size: size, sliceCount: slices)
     }
 
-    @Test("The plate is not a constant: 140 at the window minimum, 303 at the default window")
+    @Test("The plate is not a constant: 140 at the window minimum, 399 at the default window")
     func plateGrows() {
         let tight = layout(Geometry.minimum)
         let standard = layout(Geometry.standard)
@@ -75,7 +77,7 @@ struct FillChopLaneTests {
         // The old fixed `minHeight: 168` is the thing this replaces: at the default window the plate
         // is now most of a marker drag's worth of waveform rather than a strip.
         #expect(standard.plateHeight > 168 * 1.7)
-        #expect(standard.plateHeight == 303)
+        #expect(standard.plateHeight == 399)
 
         // Folding the side regions is width, not height, so the plate is unchanged — and that is
         // right. A wider plate is a longer bar, not a taller one.
@@ -85,11 +87,11 @@ struct FillChopLaneTests {
         }
     }
 
-    @Test("The pad grid's columns come from the real width: 5, 9, 11")
+    @Test("The pad grid's columns come from the real width: 5, 9, 12")
     func padColumnsFollowWidth() {
         #expect(layout(Geometry.minimum).padColumns == 5)
         #expect(layout(Geometry.standard).padColumns == 9)
-        #expect(layout(Geometry.wide).padColumns == 11)
+        #expect(layout(Geometry.wide).padColumns == 12)
 
         // Strictly increasing, which is the property a fixed column count cannot have.
         let columns = SurfaceGeometry.all.map { layout($0).padColumns }
@@ -181,7 +183,7 @@ struct FillImportTests {
         #expect(stems < standard.contentSize.height)
     }
 
-    @Test("The lane label column follows the width, so a stem name is not truncated at 1269")
+    @Test("The lane label column follows the width, so a stem name is not truncated at 1305")
     func laneLabelsFollowWidth() {
         let widths = SurfaceGeometry.all.map { layout($0).laneLabelWidth }
         #expect(widths[0] < widths[2])
@@ -280,20 +282,29 @@ struct FillGridTests {
     // width at eight bars is about four points a step — a cell nobody can hit — so past the floor
     // the steps keep it and scroll sideways under a pinned label column instead of shrinking.
 
-    @Test("One bar never scrolls sideways; four and eight bars keep the floor and scroll")
+    @Test("One bar never scrolls sideways; long grids keep the floor and scroll rather than shrink")
     func longGridsScrollRatherThanShrink() {
         for size in SurfaceGeometry.all {
             #expect(layout(size, steps: 16).stepsScroll == false, "one bar fits at \(size)")
             for steps in [64, 128] {
                 let long = layout(size, steps: steps)
-                #expect(long.stepsScroll, "\(steps) steps scroll at \(size)")
+                // A grid either fits at or above the floor, or keeps the floor and scrolls: a step
+                // never goes below it.
+                #expect(long.stepWidth >= GridLayout.minimumStepWidth)
+                guard long.stepsScroll else { continue }
                 #expect(long.stepWidth == GridLayout.minimumStepWidth)
                 #expect(long.stepsContentWidth
                             == CGFloat(steps) * GridLayout.minimumStepWidth
                             + CGFloat(steps - 1) * GridLayout.stepSpacing)
                 #expect(long.stepsContentWidth > long.contentSize.width - long.labelWidth)
             }
+            #expect(layout(size, steps: 128).stepsScroll, "eight bars scroll at \(size)")
         }
+        // Four bars scroll up to the default window; the widest surface — every region folded, edge
+        // to edge in Studio — holds them at just over the floor.
+        #expect(layout(Geometry.minimum, steps: 64).stepsScroll)
+        #expect(layout(Geometry.standard, steps: 64).stepsScroll)
+        #expect(layout(Geometry.wide, steps: 64).stepsScroll == false)
         // Two bars fit from the default window up, and scroll only at the window minimum.
         #expect(layout(Geometry.minimum, steps: 32).stepsScroll)
         #expect(layout(Geometry.standard, steps: 32).stepsScroll == false)
@@ -303,8 +314,8 @@ struct FillGridTests {
     @Test("Scrolled steps leave the scroller its room without making five voices scroll up and down")
     func scrolledStepsStillFitTheHeight() {
         for size in SurfaceGeometry.all {
-            let long = layout(size, steps: 64)
-            #expect(long.gridScrolls == false, "five voices of four bars should fit at \(size)")
+            let long = layout(size, steps: 128)
+            #expect(long.gridScrolls == false, "five voices of eight bars should fit at \(size)")
             #expect(long.gridHeight
                         == GridLayout.rulerHeight + CGFloat(long.voiceCount) * long.rowHeight
                         + CGFloat(long.voiceCount - 1) * GridLayout.rowSpacing + GridLayout.scrollerAllowance)
@@ -394,7 +405,7 @@ struct FillSoundTests {
             let layout = self.layout(size)
             #expect(layout.controlWidth <= SoundLayout.maximumControlWidth)
             #expect(layout.controlWidth >= SoundLayout.minimumControlWidth)
-            // A control never spans the panel: at 1269 points that would be the ugliness.
+            // A control never spans the panel: at 1305 points that would be the ugliness.
             #expect(layout.controlWidth < layout.contentSize.width)
         }
         #expect(layout(Geometry.wide).controlWidth == SoundLayout.maximumControlWidth)

@@ -142,7 +142,10 @@ struct CollapsedStrip: View {
 
     private var tint: Color {
         if isWarning { return Design.Palette.warn }
-        return isAccented ? Design.Palette.accent : Design.Palette.inkSecondary
+        // Studio: a folded column holding something new reads in ink, not in the accent, which is
+        // for what is chosen.
+        if isAccented { return Design.style.filledControls ? Design.Palette.ink : Design.Palette.accent }
+        return Design.Palette.inkSecondary
     }
 
     var body: some View {
@@ -158,8 +161,8 @@ struct CollapsedStrip: View {
                         .foregroundStyle(tint)
                 }
                 Text(region.title.uppercased())
-                    .font(Design.Typography.label)
-                    .tracking(1.4)
+                    .font(Design.style.uppercaseLabels ? Design.Typography.label : Design.Typography.role(.eyebrow))
+                    .tracking(Design.style.uppercaseLabels ? 1.4 : 0.8)
                     .foregroundStyle(tint)
                     .fixedSize()
                     .rotationEffect(.degrees(-90))

@@ -24,8 +24,15 @@ struct FrameRenderTests {
         URL(fileURLWithPath: ProcessInfo.processInfo.environment["MRROBOTO_RENDER"] ?? NSTemporaryDirectory())
     }
 
+    /// `MRROBOTO_DARK` draws every render in the dark appearance.
+    private var rendersDark: Bool { ProcessInfo.processInfo.environment["MRROBOTO_DARK"] != nil }
+
     private func write<V: View>(_ view: V, size: CGSize, name: String) throws {
-        let renderer = ImageRenderer(content: view.frame(width: size.width, height: size.height))
+        let before = NSApplication.shared.appearance
+        if rendersDark { NSApplication.shared.appearance = NSAppearance(named: .darkAqua) }
+        defer { if rendersDark { NSApplication.shared.appearance = before } }
+        let renderer = ImageRenderer(content: view.frame(width: size.width, height: size.height)
+            .environment(\.colorScheme, rendersDark ? .dark : .light))
         renderer.scale = 2
         let image = try #require(renderer.nsImage)
         let tiff = try #require(image.tiffRepresentation)
