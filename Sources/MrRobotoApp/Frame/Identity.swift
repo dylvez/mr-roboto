@@ -95,3 +95,77 @@ struct AppIconArt: View {
         return renderer.nsImage
     }
 }
+
+/// Roboto Capture's icon, the Mac icon's sibling: the same graphite and the same two lit orange keys
+/// for eyes, a record button for a nose, and for a mouth a display with a take on it — a waveform
+/// coloured the way a song's form is, an intro's green, a verse's blue, a hook's gold, a bridge's
+/// magenta, an outro's teal — glowing in the hook's gold, as Vibrant's display glows in the colour
+/// of the section playing. Full bleed on the 1024 grid: iOS rounds the corners itself.
+///
+/// Drawn here, beside its sibling, so the two share a hand; `FrameRenderTests` exports it into the
+/// phone's asset catalog (`Capture/RobotoCapture/Assets.xcassets`).
+struct CaptureIconArt: View {
+    /// The take, bar by bar: its height out of one and the section it is in, by lane.
+    static let take: [(height: Double, lane: Int)] = [
+        (0.28, 5), (0.5, 5), (0.36, 5),
+        (0.62, 1), (0.84, 1), (0.55, 1),
+        (1.0, 2), (0.78, 2), (0.94, 2),
+        (0.6, 6), (0.74, 6),
+        (0.46, 3), (0.3, 3),
+    ]
+
+    var body: some View {
+        Canvas { context, size in
+            let s = size.width / 1024
+            func r(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat) -> CGRect {
+                CGRect(x: x * s, y: y * s, width: w * s, height: h * s)
+            }
+            func hex(_ value: UInt32) -> Color {
+                Color(red: Double((value >> 16) & 0xff) / 255, green: Double((value >> 8) & 0xff) / 255,
+                      blue: Double(value & 0xff) / 255)
+            }
+
+            // The body, the Mac icon's graphite, to the edge.
+            context.fill(Path(CGRect(origin: .zero, size: size)),
+                         with: .linearGradient(Gradient(colors: [Color(red: 0.19, green: 0.21, blue: 0.24), AppIconArt.graphite]),
+                                               startPoint: .zero, endPoint: CGPoint(x: 0, y: size.height)))
+
+            // Two lit keys for eyes, each with the darker lip that makes it a key.
+            for x in [232.0, 636.0] {
+                let eye = r(x, 214, 156, 156)
+                context.fill(Path(roundedRect: eye.offsetBy(dx: 0, dy: 10 * s), cornerRadius: 24 * s), with: .color(.black.opacity(0.4)))
+                context.fill(Path(roundedRect: eye, cornerRadius: 24 * s), with: .color(AppIconArt.orange))
+            }
+
+            // A record button for a nose: the red, in a ring.
+            let nose = r(458, 422, 108, 108)
+            context.stroke(Path(ellipseIn: nose), with: .color(Color(red: 0.56, green: 0.59, blue: 0.62)), lineWidth: 10 * s)
+            context.fill(Path(ellipseIn: nose.insetBy(dx: 20 * s, dy: 20 * s)), with: .color(hex(SharedPalette.Vibrant.danger)))
+
+            // The mouth: a display with the take on it, glowing in the hook's gold.
+            let display = r(150, 590, 724, 250)
+            let gold = hex(SharedPalette.Vibrant.lanes[SharedPalette.PartLane.groove])
+            context.drawLayer { glow in
+                glow.addFilter(.shadow(color: gold.opacity(0.55), radius: 34 * s))
+                glow.fill(Path(roundedRect: display, cornerRadius: 34 * s), with: .color(hex(SharedPalette.Vibrant.plate)))
+            }
+            context.stroke(Path(roundedRect: display.insetBy(dx: 2 * s, dy: 2 * s), cornerRadius: 32 * s),
+                           with: .color(gold.opacity(0.6)), lineWidth: 4 * s)
+            let bar: CGFloat = 34, gap: CGFloat = 16
+            let count = CGFloat(Self.take.count)
+            let left = display.minX / s + (display.width / s - (count * bar + (count - 1) * gap)) / 2
+            let tallest = display.height / s - 76
+            for (index, step) in Self.take.enumerated() {
+                let height = max(bar, tallest * step.height)
+                let x = left + CGFloat(index) * (bar + gap)
+                let y = display.midY / s - height / 2
+                let hue = hex(SharedPalette.Vibrant.lanes[step.lane])
+                context.drawLayer { lit in
+                    lit.addFilter(.shadow(color: hue.opacity(0.7), radius: 10 * s))
+                    lit.fill(Path(roundedRect: r(x, y, bar, height), cornerRadius: bar / 2 * s), with: .color(hue))
+                }
+            }
+        }
+        .aspectRatio(1, contentMode: .fit)
+    }
+}

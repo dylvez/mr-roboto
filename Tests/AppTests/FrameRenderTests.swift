@@ -119,6 +119,15 @@ struct FrameRenderTests {
         try write(HStack(spacing: 24) {
             ForEach([16.0, 32, 64, 128], id: \.self) { AppIconArt().frame(width: $0, height: $0) }
         }.padding(20).background(Color(white: 0.93)), size: CGSize(width: 340, height: 170), name: "app-icon-sizes")
+        // Roboto Capture's, full bleed for the asset catalog, and masked the way the home screen
+        // masks it at the sizes it is seen at.
+        try write(CaptureIconArt(), size: CGSize(width: 512, height: 512), name: "capture-icon-1024")
+        try write(HStack(spacing: 24) {
+            ForEach([29.0, 40, 60, 120], id: \.self) { side in
+                CaptureIconArt().frame(width: side, height: side)
+                    .clipShape(RoundedRectangle(cornerRadius: side * 0.2237, style: .continuous))
+            }
+        }.padding(20).background(Color(white: 0.12)), size: CGSize(width: 380, height: 170), name: "capture-icon-sizes")
     }
 
     @Test("a real Grid and Sound on the bench, with glyphs and bands")
