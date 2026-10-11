@@ -5,8 +5,8 @@ import SwiftUI
 /// The Compare surface: two to four candidates as rows, the thing they are judged against at the
 /// top, differences marked, at most two levers.
 ///
-/// Every colour, face and metric comes from `Design`, so all three themes work without this file
-/// knowing there are three. The one place an accent is spent is the selected row; the one place a
+/// Every colour, face and metric comes from `Design`, so every palette works without this file
+/// knowing there is more than one. The one place an accent is spent is the selected row; the one place a
 /// warn is spent is a candidate carrying a critic finding. Nothing else is coloured, which is what
 /// makes those two mean something.
 public struct CompareSurfaceView: View {
@@ -51,14 +51,10 @@ public struct CompareSurfaceView: View {
             Button {
                 if let id = model.selectedID { Task { await model.choose(id) } }
             } label: {
-                if Design.style.filledControls {
-                    // The one way off this surface: the primary action once a row is chosen.
-                    StudioChip(tone: model.selectedID == nil ? .plain : .primary) {
-                        ChipText("Take this one", isOn: model.selectedID != nil, size: 12)
-                            .foregroundStyle(model.selectedID == nil ? Design.Palette.inkQuiet : Design.Palette.panel)
-                    }
-                } else {
-                    Text("Take this one")
+                // The one way off this surface: the primary action once a row is chosen.
+                StudioChip(tone: model.selectedID == nil ? .plain : .primary) {
+                    ChipText("Take this one", isOn: model.selectedID != nil, size: 12)
+                        .foregroundStyle(model.selectedID == nil ? Design.Palette.inkQuiet : Design.Palette.panel)
                 }
             }
             .font(Design.Typography.ui(12))
@@ -117,7 +113,7 @@ private struct ReferenceBand: View {
         .padding(12)
         .frame(height: layout.referenceHeight, alignment: .topLeading)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .groupedArea(Design.Palette.panelAlt, stroke: Design.Palette.lineStrong)
+        .groupedArea()
     }
 
     private var readings: some View {
@@ -180,9 +176,8 @@ private struct ColumnHeadings: View {
                 // Two lines and a gutter, rather than one line each running into the next:
                 // "MIX LUFS INTEGRAT…SONG PARTS". Sentence case where labels are not capitals.
                 let name = CompareSurfaceView.shortName(of: feature, in: model.vocabulary)
-                Text(Design.Typography.labelText(name.prefix(1).uppercased() + name.dropFirst()))
+                Text(name.prefix(1).uppercased() + name.dropFirst())
                     .font(Design.Typography.label)
-                    .tracking(Design.Typography.labelTracking)
                     .foregroundStyle(Design.Palette.inkTertiary)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
@@ -271,11 +266,10 @@ private struct CandidateRow: View {
         .padding(.horizontal, 10)
         .frame(height: layout.rowHeight, alignment: .leading)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .groupedArea(isSelected ? Design.Palette.accentSoft : Design.Palette.panelAlt,
-                     stroke: isSelected ? Design.Palette.accent : Design.Palette.line)
+        .groupedArea(isSelected ? Design.Palette.accentSoft : Design.Palette.panelAlt)
         .overlay {
             // A soft card has no edge of its own, so the selected row is given one.
-            if !Design.style.surfaceCards && isSelected {
+            if isSelected {
                 RoundedRectangle(cornerRadius: Design.Metric.containerCorner, style: .continuous)
                     .strokeBorder(Design.Palette.accent, lineWidth: 1.5)
             }
@@ -325,26 +319,17 @@ private struct PlayChip: View {
     let stop: () -> Void
 
     var body: some View {
-        if Design.style.filledControls {
-            // Grey at rest like any control, orange while its row sounds.
-            Button { isPlaying ? stop() : play() } label: {
-                StudioChip(tone: isPlaying ? .sounding : .plain, height: Design.Metric.chipHeight + 4, horizontalPadding: 0) {
-                    Image(systemName: isPlaying ? "stop.fill" : "play.fill")
-                        .font(.system(size: 12, weight: .regular))
-                        .frame(width: Design.Metric.chipHeight + 4)
-                }
+        // Grey at rest like any control, orange while its row sounds.
+        Button { isPlaying ? stop() : play() } label: {
+            StudioChip(tone: isPlaying ? .sounding : .plain, height: Design.Metric.chipHeight + 4, horizontalPadding: 0) {
+                Image(systemName: isPlaying ? "stop.fill" : "play.fill")
+                    .font(.system(size: 12, weight: .regular))
+                    .frame(width: Design.Metric.chipHeight + 4)
             }
-            .buttonStyle(.plain)
-            .help(isPlaying ? "Stop \(title)" : "Play \(title) under the levers as they sit")
-            .accessibilityLabel(isPlaying ? "Stop \(title)" : "Play \(title)")
-        } else {
-            ChipButton(systemImage: isPlaying ? "stop.fill" : "play.fill",
-                       help: isPlaying ? "Stop \(title)" : "Play \(title) under the levers as they sit",
-                       isOn: isPlaying) {
-                isPlaying ? stop() : play()
-            }
-            .accessibilityLabel(isPlaying ? "Stop \(title)" : "Play \(title)")
         }
+        .buttonStyle(.plain)
+        .help(isPlaying ? "Stop \(title)" : "Play \(title) under the levers as they sit")
+        .accessibilityLabel(isPlaying ? "Stop \(title)" : "Play \(title)")
     }
 }
 

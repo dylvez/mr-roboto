@@ -84,29 +84,10 @@ struct HearCompButton: View {
     var model: TakesModel
 
     var body: some View {
-        if Design.style.filledControls {
-            studio
-        } else {
-            Button {
-                Task { model.isHearingComp ? model.stopAudition() : await model.hearComp() }
-            } label: {
-                // "Hear" when the Booth's takes pane is narrow, rather than "Hear the co…".
-                ViewThatFits(in: .horizontal) {
-                    Label(model.isHearingComp ? "Stop" : "Hear the comp", systemImage: model.isHearingComp ? "stop.fill" : "play.fill")
-                        .labelStyle(.titleAndIcon)
-                        .fixedSize()
-                    Label(model.isHearingComp ? "Stop" : "Hear", systemImage: model.isHearingComp ? "stop.fill" : "play.fill")
-                        .labelStyle(.titleAndIcon)
-                        .fixedSize()
-                }
-            }
-            .font(Design.Typography.ui(12.5))
-            .disabled(model.takes.isEmpty)
-            .help(model.isHearingComp ? "Stop the comp" : "Play the comp lane as chosen, bar by bar, without keeping it")
-        }
+        studio
     }
 
-    /// Studio: a grey chip at rest, orange while the comp sounds.
+    /// A grey chip at rest, orange while the comp sounds.
     private var studio: some View {
         Button {
             Task { model.isHearingComp ? model.stopAudition() : await model.hearComp() }
@@ -146,21 +127,14 @@ struct MakeCompButton: View {
     var model: TakesModel
 
     var body: some View {
-        if Design.style.filledControls {
-            // The one primary action here: filled with the accent.
-            Button { model.keepComp() } label: {
-                StudioChip(tone: .primary) { ChipText("Make the comp", isOn: true, size: 12.5) }
-            }
-            .buttonStyle(.plain)
-            .disabled(model.takes.isEmpty || model.compIsCurrent)
-            .opacity(model.takes.isEmpty || model.compIsCurrent ? 0.4 : 1)
-            .help(help)
-        } else {
-            Button("Make the comp") { model.keepComp() }
-                .font(Design.Typography.ui(12.5))
-                .disabled(model.takes.isEmpty || model.compIsCurrent)
-                .help(help)
+        // The one primary action here: filled with the accent.
+        Button { model.keepComp() } label: {
+            StudioChip(tone: .primary) { ChipText("Make the comp", isOn: true, size: 12.5) }
         }
+        .buttonStyle(.plain)
+        .disabled(model.takes.isEmpty || model.compIsCurrent)
+        .opacity(model.takes.isEmpty || model.compIsCurrent ? 0.4 : 1)
+        .help(help)
     }
 
     private var help: String {
@@ -177,10 +151,6 @@ struct TakesNote: View {
     var body: some View {
         if let error = model.lastError {
             Text(error).font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.danger)
-        } else if Design.style.inlinePrimers {
-            // The primer says this; Studio keeps it behind the `?`.
-            Text("Press a bar on a take's lane to take that bar from it. The comp is one version; the takes stay under it.")
-                .font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.inkTertiary)
         }
     }
 }
@@ -246,7 +216,7 @@ struct TakesLanes: View {
                                 Image(systemName: isPlaying ? "stop.fill" : "play.fill")
                                     .font(Design.Typography.ui(9))
                                     .foregroundStyle(isPlaying ? Design.Palette.soundingInk
-                                                     : (Design.style.filledControls ? Design.Palette.inkSecondary : Design.Palette.accent))
+                                                     : (Design.Palette.inkSecondary))
                                     .frame(width: Design.Metric.tagHeight, height: Design.Metric.tagHeight)
                                     .contentShape(Rectangle())
                             }

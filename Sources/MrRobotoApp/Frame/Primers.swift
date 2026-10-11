@@ -132,8 +132,8 @@ public enum Primer {
 }
 
 extension Primer {
-    /// The primer in one line: what the surface is for, said under its title in Studio while the
-    /// primer is showing. The whole primer is behind the `?`.
+    /// The primer in one line: what the surface is for, said under its title while the primer is
+    /// showing. The whole primer is behind the `?`.
     public static func summary(for kind: SurfaceKind, variant: String? = nil) -> String {
         switch kind {
         case .importRecord: return "The record as measured — key, tempo, bars, form — and its stems, ready to chop."
@@ -231,9 +231,9 @@ struct PrimerBanner: View {
     }
 }
 
-/// Studio's primer: the one line under a surface's title, quiet, with the whole primer a click away
-/// and a way to put it away for good. Where Cool spent a banner the width of the surface on the
-/// primer, this costs one line of the surface's own height.
+/// The primer as a surface shows it: the one line under its title, quiet, with the whole primer a
+/// click away and a way to put it away for good. A banner the width of the surface used to carry
+/// the whole primer; this costs one line of the surface's own height.
 struct PrimerLine: View {
     let kind: SurfaceKind
     let store: PrimerStore
@@ -274,7 +274,7 @@ struct PrimerLine: View {
     }
 }
 
-/// The whole primer, behind a surface's `?` in Studio.
+/// The whole primer, behind a surface's `?`.
 struct PrimerPopover: View {
     let kind: SurfaceKind
     var variant: String?

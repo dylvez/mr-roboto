@@ -204,7 +204,7 @@ struct LogLine: View {
             Text(text)
                 .font(Design.Typography.prose(16))
                 .foregroundStyle(Design.Palette.ink)
-                .lineSpacing(Design.style.filledControls ? 3 : 0)
+                .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
                 .textSelection(.enabled)
             if let detail, !detail.isEmpty {
@@ -256,9 +256,9 @@ struct LiveComposer: View {
                     .disabled(!band.canSend)
                 }
             }
-            .padding(.horizontal, Design.style.filledControls ? 12 : 14)
-            .padding(.vertical, Design.style.filledControls ? 6 : 8)
-            .frame(minHeight: Design.style.filledControls ? 36 : 48)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .frame(minHeight: 36)
             .modifier(ComposerField(isWorking: band.isWorking))
 
             // Honest and quiet: what the session has spent, in the place you spend it, at the size
@@ -422,57 +422,39 @@ struct InertComposer: View {
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Design.Palette.inkTertiary)
             }
-            .padding(.horizontal, Design.style.filledControls ? 12 : 14)
-            .frame(height: Design.style.filledControls ? 36 : 48)
+            .padding(.horizontal, 12)
+            .frame(height: 36)
             .modifier(ComposerField(isWorking: false))
             .allowsHitTesting(false)
 
-            if Design.style.filledControls {
-                // One line, the reason in its tooltip: three lines of disclaimer under an empty
-                // field read as the most important thing in the column.
-                HStack(spacing: 6) {
-                    Circle().fill(Design.Palette.inkQuiet).frame(width: 6, height: 6)
-                    Text("Band offline · the question above still works")
-                        .font(Design.Typography.role(.caption))
-                        .foregroundStyle(Design.Palette.inkTertiary)
-                        .lineLimit(1)
-                }
-                .help("This session has no band attached, so the field cannot send. The question above is still worked out from the song, and its answers still work.")
-            } else {
-                Text("This session has no band attached, so the field cannot send. "
-                     + "The question above is still worked out from the song, and its answers still work.")
-                    .font(Design.Typography.ui(11.5, weight: .regular))
-                    .foregroundStyle(Design.Palette.inkSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+            // One line, the reason in its tooltip: three lines of disclaimer under an empty
+            // field read as the most important thing in the column.
+            HStack(spacing: 6) {
+                Circle().fill(Design.Palette.inkQuiet).frame(width: 6, height: 6)
+                Text("Band offline · the question above still works")
+                    .font(Design.Typography.role(.caption))
+                    .foregroundStyle(Design.Palette.inkTertiary)
+                    .lineLimit(1)
             }
+            .help("This session has no band attached, so the field cannot send. The question above is still worked out from the song, and its answers still work.")
         }
         .padding(.horizontal, Design.Metric.regionInset)
-        .padding(.top, Design.style.filledControls ? 12 : 16)
-        .padding(.bottom, Design.style.filledControls ? 14 : 24)
+        .padding(.top, 12)
+        .padding(.bottom, 14)
     }
 }
 
-/// The band's field: a white box with an outline in Cool, its outline in the accent while the band
-/// works; in Studio a soft filled field with a card's corner, outlined only while the band works.
+/// The band's field: a soft filled field with a card's corner, its outline in the accent while the
+/// band works.
 private struct ComposerField: ViewModifier {
     let isWorking: Bool
 
     func body(content: Content) -> some View {
-        if Design.style.filledControls {
-            content
-                .background(Design.Palette.raised, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .strokeBorder(isWorking ? Design.Palette.accent : Design.Palette.line, lineWidth: Design.Metric.hairline)
-                )
-        } else {
-            content
-                .background(Design.Palette.panel)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Design.Metric.corner)
-                        .stroke(isWorking ? Design.Palette.accent : Design.Palette.lineStrong,
-                                lineWidth: Design.Metric.hairline)
-                )
-        }
+        content
+            .background(Design.Palette.raised, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(isWorking ? Design.Palette.accent : Design.Palette.line, lineWidth: Design.Metric.hairline)
+            )
     }
 }

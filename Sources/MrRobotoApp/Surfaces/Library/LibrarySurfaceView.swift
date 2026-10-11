@@ -288,9 +288,8 @@ struct LibrarySurfaceView: View {
                 Button { model.sort(by: column) } label: {
                     HStack(spacing: 3) {
                         if column.isNumeric { Spacer(minLength: 0) }
-                        Text(Design.Typography.labelText(column.title(on: model.shelf)))
+                        Text(column.title(on: model.shelf))
                             .font(Design.Typography.label)
-                            .tracking(Design.style.uppercaseLabels ? 0.8 : 0)
                             .lineLimit(1)
                         if let sort = model.query.sort, sort.column == column {
                             Image(systemName: sort.ascending ? "chevron.up" : "chevron.down")
@@ -514,7 +513,7 @@ struct LibrarySurfaceView: View {
     private func menuChip<Content: View>(_ title: String, isOn: Bool, @ViewBuilder content: () -> Content) -> some View {
         if Design.isOffscreenRender {
             BoothChip(title, isOn: isOn) {}
-        } else if Design.style.filledControls {
+        } else {
             StudioChip(isOn: isOn) {
                 Menu { content() } label: {
                     ChipText(title, isOn: isOn, size: 11.5)
@@ -523,19 +522,6 @@ struct LibrarySurfaceView: View {
                 .menuStyle(.borderlessButton)
                 .fixedSize()
             }
-        } else {
-            Menu { content() } label: {
-                Text(title)
-                    .font(Design.Typography.ui(11.5, weight: isOn ? .semibold : .regular))
-                    .foregroundStyle(isOn ? Design.Palette.accent : Design.Palette.inkSecondary)
-            }
-            .menuStyle(.borderlessButton)
-            .fixedSize()
-            .padding(.horizontal, 8)
-            .frame(height: Design.Metric.chipHeight)
-            .background(isOn ? Design.Palette.accentSoft : Design.Palette.panelAlt, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-            .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
-                .stroke(isOn ? Design.Palette.accent.opacity(0.35) : Design.Palette.line, lineWidth: Design.Metric.hairline))
         }
     }
 
@@ -939,9 +925,8 @@ private struct LibraryDetail: View {
         return Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 5) {
             ForEach(rows, id: \.label) { row in
                 GridRow {
-                    Text(Design.Typography.labelText(row.label))
+                    Text(row.label)
                         .font(Design.Typography.label)
-                        .tracking(Design.style.uppercaseLabels ? 0.8 : 0)
                         .foregroundStyle(Design.Palette.inkTertiary)
                         .gridColumnAlignment(.leading)
                     Text(row.value)
@@ -1178,7 +1163,7 @@ private struct LibraryActionButtons: View {
         case .menu(let choices):
             if Design.isOffscreenRender {
                 ActionChip(title: action.title + " ▾", isEnabled: action.isEnabled) {}
-            } else if Design.style.filledControls {
+            } else {
                 StudioChip {
                     Menu {
                         ForEach(choices) { choice in
@@ -1190,21 +1175,6 @@ private struct LibraryActionButtons: View {
                     .menuStyle(.borderlessButton)
                     .fixedSize()
                 }
-                .disabled(!action.isEnabled)
-                .help(action.help)
-            } else {
-                Menu {
-                    ForEach(choices) { choice in
-                        Button(choice.title) { LibraryActions.perform(choice) { pending = $0 } }.disabled(!choice.isEnabled)
-                    }
-                } label: {
-                    Text(action.title).font(Design.Typography.ui(12))
-                }
-                .menuStyle(.borderlessButton)
-                .fixedSize()
-                .padding(.horizontal, 9)
-                .frame(height: Design.Metric.chipHeight)
-                .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.lineStrong, lineWidth: Design.Metric.hairline))
                 .disabled(!action.isEnabled)
                 .help(action.help)
             }
@@ -1294,22 +1264,8 @@ private struct ActionChip: View {
 
     var body: some View {
         Button(action: action) {
-            if Design.style.filledControls {
-                StudioChip(tone: leads ? .primary : isDestructive ? .danger : .plain) {
-                    ChipText(title, isOn: leads, size: 12)
-                }
-            } else {
-                Text(title)
-                    .font(Design.Typography.ui(12, weight: leads ? .semibold : .medium))
-                    .foregroundStyle(leads ? Design.Palette.panel : isDestructive ? Design.Palette.warn : Design.Palette.ink)
-                    .lineLimit(1)
-                    .fixedSize()
-                    .padding(.horizontal, 10)
-                    .frame(height: Design.Metric.chipHeight)
-                    .background(leads ? Design.Palette.accent : .clear, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-                    .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
-                        .stroke(leads ? Design.Palette.accent : Design.Palette.lineStrong, lineWidth: Design.Metric.hairline))
-                    .contentShape(Rectangle())
+            StudioChip(tone: leads ? .primary : isDestructive ? .danger : .plain) {
+                ChipText(title, isOn: leads, size: 12)
             }
         }
         .buttonStyle(.plain)

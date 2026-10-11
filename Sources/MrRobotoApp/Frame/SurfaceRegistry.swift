@@ -168,18 +168,14 @@ struct SurfaceHost: View {
     var registry: SurfaceRegistry = .shared
     /// The ✕ pressed on a surface holding unkept work: it asks once before it closes.
     @State private var isConfirmingClose = false
-    /// Studio's `?`: the whole primer, in a popover rather than across the surface.
+    /// The `?`: the whole primer, in a popover rather than across the surface.
     @State private var isShowingPrimer = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
             if app.primers.isShowing(item.kind) {
-                if Design.style.inlinePrimers {
-                    PrimerBanner(kind: item.kind, store: app.primers, variant: SurfaceWiring.shared.primerVariant(for: item, app: app))
-                } else {
-                    PrimerLine(kind: item.kind, store: app.primers, variant: SurfaceWiring.shared.primerVariant(for: item, app: app))
-                }
+                PrimerLine(kind: item.kind, store: app.primers, variant: SurfaceWiring.shared.primerVariant(for: item, app: app))
             }
             Divider().overlay(Design.Palette.line)
             content
@@ -202,21 +198,12 @@ struct SurfaceHost: View {
     }
 
     private var header: some View {
-        HStack(alignment: .firstTextBaseline, spacing: Design.style.filledControls ? 10 : 12) {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
             Glyph(name: item.kind.glyph.name, symbol: item.kind.glyph.symbol, size: 14)
                 .foregroundStyle(Design.Palette.inkSecondary)
                 .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 2 }
                 .help(item.kind.rawValue)
             // Studio leaves the kind to the glyph and the dock, and lets the title speak.
-            if Design.style.uppercaseLabels {
-                Text(item.kind.rawValue.uppercased())
-                    .font(Design.Typography.label)
-                    .tracking(1.1)
-                    .foregroundStyle(Design.Palette.inkSecondary)
-                    // One line, always: at the bench's narrowest it broke mid-word, "GR / ID".
-                    .lineLimit(1)
-                    .fixedSize()
-            }
             // The title is also the way to the song's other parts of this kind.
             PartSwitcher(item: item, app: app, title: SurfaceWiring.shared.liveTitle(for: item) ?? item.title,
                          working: boundPart)
@@ -251,22 +238,12 @@ struct SurfaceHost: View {
                 }
                 .accessibilityLabel("Ask the \(name)")
             }
-            if Design.style.inlinePrimers {
-                ChipButton(systemImage: "questionmark",
-                           help: app.primers.isShowing(item.kind)
-                               ? "Hide what \(item.kind.rawValue) is for"
-                               : "What is \(item.kind.rawValue) for?",
-                           isOn: app.primers.isShowing(item.kind)) {
-                    app.primers.toggle(item.kind)
-                }
-            } else {
-                ChipButton(systemImage: "questionmark", help: "What is \(item.kind.rawValue) for?",
-                           isOn: isShowingPrimer) {
-                    isShowingPrimer.toggle()
-                }
-                .popover(isPresented: $isShowingPrimer, arrowEdge: .bottom) {
-                    PrimerPopover(kind: item.kind, variant: SurfaceWiring.shared.primerVariant(for: item, app: app))
-                }
+            ChipButton(systemImage: "questionmark", help: "What is \(item.kind.rawValue) for?",
+                       isOn: isShowingPrimer) {
+                isShowingPrimer.toggle()
+            }
+            .popover(isPresented: $isShowingPrimer, arrowEdge: .bottom) {
+                PrimerPopover(kind: item.kind, variant: SurfaceWiring.shared.primerVariant(for: item, app: app))
             }
             ChipButton(systemImage: item.isPinned ? "pin.fill" : "pin",
                        help: item.isPinned
@@ -292,7 +269,7 @@ struct SurfaceHost: View {
             }
         }
         .padding(.horizontal, Design.Metric.inset)
-        .padding(.vertical, Design.style.filledControls ? 9 : 12)
+        .padding(.vertical, 9)
     }
 
     /// The part the surface is working on — not always its binding: a Piano roll under a groove is
@@ -322,22 +299,13 @@ struct SurfaceHost: View {
     }
 }
 
-/// A surface's edge: in Cool a bordered card inset in the bench, its border in the accent while it
-/// is pinned; in Studio nothing — the surface runs edge to edge, and its pin says it is pinned.
+/// A surface's edge: nothing — the surface runs edge to edge in the bench, and its pin says it is
+/// pinned. It only clips what the surface draws to its own cell.
 struct SurfaceCard: ViewModifier {
     let isPinned: Bool
 
     func body(content: Content) -> some View {
-        if Design.style.surfaceCards {
-            content
-                .overlay(
-                    RoundedRectangle(cornerRadius: Design.Metric.corner)
-                        .stroke(isPinned ? Design.Palette.accent : Design.Palette.line, lineWidth: Design.Metric.hairline)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
-        } else {
-            content.clipped()
-        }
+        content.clipped()
     }
 }
 

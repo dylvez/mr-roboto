@@ -6,14 +6,14 @@ import SwiftUI
 /// flagged tick for Check.
 ///
 /// Drawn rather than generated. The image model drew these as small centred objects rather than as
-/// textures, and a texture wants to be exact anyway: crisp at any width, in the theme's own line
+/// textures, and a texture wants to be exact anyway: crisp at any width, in the palette's own line
 /// colour, and confined to the header's free space so the header's words and buttons always win.
 struct SurfaceBand: View {
     let kind: SurfaceKind
 
-    /// The one stroke in each drawing that stands out: the accent in Cool. Studio keeps the accent
-    /// for what is chosen, so a texture's highlight is a darker grey there.
-    private var highlight: Color { Design.style.filledControls ? Design.Palette.inkTertiary : Design.Palette.accent }
+    /// The one stroke in each drawing that stands out: a darker grey, since the accent is kept for
+    /// what is chosen.
+    private var highlight: Color { Design.Palette.inkTertiary }
 
     var body: some View {
         Canvas { context, size in

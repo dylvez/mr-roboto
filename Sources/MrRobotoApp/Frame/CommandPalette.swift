@@ -117,18 +117,13 @@ enum CommandPalette {
                                            run: { app.openSong(song.id) }))
         }
 
-        for (index, theme) in Design.Theme.allCases.enumerated() {
-            commands.append(PaletteCommand(id: "view.theme.\(theme.rawValue)", title: theme.displayName, shelf: .view,
-                                           symbol: Design.theme == theme ? "checkmark" : "paintpalette",
-                                           shortcut: "⌃⌘\(index + 1)", detail: "Theme", keywords: "theme look",
-                                           run: { Design.select(theme) }))
-        }
-        for appearance in Design.Appearance.allCases {
-            commands.append(PaletteCommand(id: "view.appearance.\(appearance.rawValue)", title: appearance.displayName,
+        for scheme in Design.Scheme.allCases {
+            commands.append(PaletteCommand(id: "view.palette.\(scheme.rawValue)", title: "\(scheme.displayName) Palette",
                                            shelf: .view,
-                                           symbol: Design.appearance == appearance ? "checkmark" : "circle.lefthalf.filled",
-                                           detail: "Appearance", keywords: "appearance dark light mode",
-                                           run: { Design.select(appearance) }))
+                                           symbol: Design.scheme == scheme ? "checkmark" : "paintpalette",
+                                           shortcut: "⌃⌘\(scheme.shortcut)", detail: scheme.summary,
+                                           keywords: "palette theme colour color appearance dark light mode mid vibrant",
+                                           run: { Design.select(scheme) }))
         }
         for region in FrameRegion.allCases {
             let folded = app.regions.isCollapsed(region)

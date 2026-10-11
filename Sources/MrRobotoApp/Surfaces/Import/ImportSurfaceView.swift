@@ -402,19 +402,9 @@ private struct PromoteBar: View {
             Button {
                 model.pressPromote()
             } label: {
-                if Design.style.filledControls {
-                    StudioChip(tone: .primary, height: Design.Metric.controlHeight, horizontalPadding: 14) {
-                        Text("Promote region to a part")
-                            .font(Design.Typography.ui(13, weight: .semibold))
-                    }
-                } else {
+                StudioChip(tone: .primary, height: Design.Metric.controlHeight, horizontalPadding: 14) {
                     Text("Promote region to a part")
                         .font(Design.Typography.ui(13, weight: .semibold))
-                        .padding(.horizontal, 14)
-                        .frame(height: Design.Metric.controlHeight)
-                        .background(Design.Palette.accent)
-                        .foregroundStyle(Design.Palette.panel)
-                        .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
                 }
             }
             .buttonStyle(.plain)
@@ -440,22 +430,10 @@ private struct PromoteBar: View {
                 Button {
                     model.separateStems()
                 } label: {
-                    if Design.style.filledControls {
-                        StudioChip(height: Design.Metric.controlHeight, horizontalPadding: 14) {
-                            Text("Separate stems")
-                                .font(Design.Typography.ui(13, weight: .semibold))
-                                .foregroundStyle(Design.Palette.ink)
-                        }
-                    } else {
+                    StudioChip(height: Design.Metric.controlHeight, horizontalPadding: 14) {
                         Text("Separate stems")
                             .font(Design.Typography.ui(13, weight: .semibold))
-                            .padding(.horizontal, 14)
-                            .frame(height: Design.Metric.controlHeight)
                             .foregroundStyle(Design.Palette.ink)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: Design.Metric.corner)
-                                    .stroke(Design.Palette.ink, lineWidth: Design.Metric.hairline)
-                            )
                     }
                 }
                 .buttonStyle(.plain)
@@ -496,21 +474,7 @@ private struct ImportToggleChip: View {
         Button {
             isOn.toggle()
         } label: {
-            if Design.style.filledControls {
-                StudioChip(isOn: isOn, tone: .plain) { ChipText(title, isOn: isOn, size: 11.5) }
-            } else {
-                Text(title)
-                    .font(Design.Typography.ui(11.5, weight: isOn ? .semibold : .regular))
-                    .foregroundStyle(isOn ? Design.Palette.accent : Design.Palette.inkSecondary)
-                    .lineLimit(1)
-                    .fixedSize()
-                    .padding(.horizontal, 8)
-                    .frame(height: Design.Metric.chipHeight)
-                    .background(isOn ? Design.Palette.accentSoft : Design.Palette.panelAlt,
-                                in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-                    .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
-                        .stroke(isOn ? Design.Palette.accent.opacity(0.35) : Design.Palette.line, lineWidth: Design.Metric.hairline))
-            }
+            StudioChip(isOn: isOn, tone: .plain) { ChipText(title, isOn: isOn, size: 11.5) }
         }
         .buttonStyle(.plain)
         .help(help)
@@ -678,7 +642,7 @@ private struct ProvenancePanel: View {
                 .foregroundStyle(Design.Palette.inkTertiary)
         }
         .padding(Design.Metric.inset)
-        .groupedArea(Design.Palette.panelAlt, stroke: .clear)
+        .groupedArea()
     }
 
     private var keepHelp: String {

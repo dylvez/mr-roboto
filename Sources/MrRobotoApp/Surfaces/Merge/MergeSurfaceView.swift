@@ -122,7 +122,7 @@ struct MergeSurfaceView: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .groupedArea(Design.Palette.panelAlt, stroke: Design.Palette.line)
+        .groupedArea()
     }
 
     @ViewBuilder
@@ -161,13 +161,9 @@ struct MergeSurfaceView: View {
                 }
             }
             Button { Task { await model.stitch() } } label: {
-                // Studio fills the one primary action with the accent; Cool sets it as accented words.
-                if Design.style.filledControls {
-                    StudioChip(tone: .primary) { ChipText("Stitch as a section", isOn: true, size: 12) }
-                        .opacity(!model.isReady || model.isWorking ? 0.4 : 1)
-                } else {
-                    Text("Stitch as a section")
-                }
+                // The one primary action, filled with the accent.
+                StudioChip(tone: .primary) { ChipText("Stitch as a section", isOn: true, size: 12) }
+                    .opacity(!model.isReady || model.isWorking ? 0.4 : 1)
             }
             .buttonStyle(.plain)
             .font(Design.Typography.ui(12, weight: .semibold))
@@ -186,21 +182,7 @@ private struct MergeChip: View {
 
     var body: some View {
         Button(action: action) {
-            if Design.style.filledControls {
-                StudioChip(isOn: isOn) { ChipText(title, isOn: isOn, size: 11.5) }
-            } else {
-                Text(title)
-                    .font(Design.Typography.ui(11.5, weight: isOn ? .semibold : .regular))
-                    .foregroundStyle(isOn ? Design.Palette.accent : Design.Palette.inkSecondary)
-                    .lineLimit(1)
-                    .fixedSize()
-                    .padding(.horizontal, 8)
-                    .frame(height: Design.Metric.chipHeight)
-                    .background(isOn ? Design.Palette.accentSoft : Design.Palette.panel,
-                                in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-                    .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
-                        .stroke(isOn ? Design.Palette.accent.opacity(0.35) : Design.Palette.line, lineWidth: Design.Metric.hairline))
-            }
+            StudioChip(isOn: isOn) { ChipText(title, isOn: isOn, size: 11.5) }
         }
         .buttonStyle(.plain)
     }

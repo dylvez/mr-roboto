@@ -5,17 +5,16 @@ import Observation
 import Synchronization
 import SwiftUI
 
-/// The instrument's visual identity, as a set of interchangeable themes.
+/// The instrument's visual identity: one look, drawn in one of five palettes.
 ///
-/// One `Theme` value carries every colour token, every typeface stack, the metrics the controls are
-/// built to and the handful of choices that make a theme more than a palette: how a label is cased,
-/// whether a control is outlined or filled, where a surface explains itself. Exactly one theme is
-/// current at a time; `Design.Palette`, `Design.Typography`, `Design.Metric` and `Design.style` read
-/// through it, so a surface still writes `Design.Palette.accent` and never knows a theme exists.
+/// The look is fixed — the type, the controls, the metrics and the layout are Studio's, and there is
+/// one way of drawing each thing. What can be chosen is colour: `Scheme` picks a complete set of
+/// tokens, and `Design.Palette` reads through it, so a surface still writes `Design.Palette.accent`
+/// and never knows which palette is current.
 ///
-/// Switching is live. `ThemeStore` is `Observable`, and every token read goes through it, so a read
-/// inside a SwiftUI `body` registers a dependency on the current theme the same way a read of any
-/// other observable property does. Choosing a theme therefore invalidates every body that paints —
+/// Switching is live. `SchemeStore` is `Observable`, and every token read goes through it, so a read
+/// inside a SwiftUI `body` registers a dependency on the current palette the same way a read of any
+/// other observable property does. Choosing a palette therefore invalidates every body that paints —
 /// which is all of them — and nothing else. No view identity changes, so the bench, the loaded song
 /// and the transport are untouched by a switch.
 ///
@@ -76,244 +75,167 @@ public enum Design {
         return made
     }
 
-    // MARK: - Themes
+    // MARK: - Palettes
 
-    /// The two directions. A theme is a complete set of tokens, not a tweak on top of another one,
-    /// so there is no way to add a colour to one and forget it in the other.
+    /// The palettes, as the View menu's Palette list offers them.
     ///
-    /// Notebook (warm paper) and Petrol (a saturated teal ground) were retired when Studio arrived:
-    /// three hand-tuned palettes tripled the work of every new token, and neither was the direction
-    /// the app was going. A defaults entry naming either falls back to the default.
-    public enum Theme: String, CaseIterable, Identifiable, Sendable {
-        /// The instrument. A quiet ramp of near-neutral greys with no boxes drawn around panels, one
-        /// accent for what is chosen, fixed meanings for what is sounding, recording, soloed and
-        /// muted, and the rest of the colour spent on the music: drum lanes and sections. SF Pro for
-        /// controls at the system's sizes, Plex for titles and the transport's readout.
-        case studio
-
-        /// True greys carrying a slight blue bias, white panels, near-black ink and one blue, every
-        /// control outlined, IBM Plex throughout. Kept so Studio can be judged against it.
-        case cool
+    /// Auto, Light and Dark are one palette in its two appearances. Mid Dark and Vibrant are each
+    /// drawn for a dark window only, so choosing one sets the window dark as well: menus, popovers
+    /// and fields go dark with the rest.
+    ///
+    /// There were themes before these — Notebook, Petrol and last Cool Neutral, each with its own
+    /// way of drawing a control. A second look meant every control was drawn twice, and what was
+    /// wanted from a choice was colour, so the look is Studio's alone and the choice is the palette.
+    /// A choice remembered from then opens in Auto.
+    public enum Scheme: String, CaseIterable, Identifiable, Sendable {
+        /// Light or dark, as macOS is set.
+        case system
+        case light
+        case dark
+        /// Charcoal: between Light and Dark, nearer Dark. The panels are a grey you can see, the
+        /// text is light, the plates stay black — Logic's and Ableton's mid greys.
+        case mid
+        /// Near-black, with the music's colours at full strength. The accent is the colour of the
+        /// part being worked on — a groove's gold in the Grid, a tune's blue in the Piano roll — and
+        /// the transport's display glows in the colour of the section that is playing.
+        case vibrant
 
         public var id: String { rawValue }
 
         /// What the View menu calls it.
         public var displayName: String {
             switch self {
-            case .studio: return "Studio"
-            case .cool: return "Cool Neutral"
+            case .system: return "Auto"
+            case .light: return "Light"
+            case .dark: return "Dark"
+            case .mid: return "Mid Dark"
+            case .vibrant: return "Vibrant"
+            }
+        }
+
+        /// One line on what it is, for the command palette.
+        public var summary: String {
+            switch self {
+            case .system: return "Light or dark, as macOS is"
+            case .light: return "Light panels, dark text"
+            case .dark: return "Near-black panels, light text"
+            case .mid: return "Charcoal panels, light text"
+            case .vibrant: return "Near-black, coloured by what you work on"
             }
         }
 
         public var palette: Palette.Values {
             switch self {
-            case .studio: return Palette.studio
-            case .cool: return Palette.cool
+            case .system, .light, .dark: return Palette.studio
+            case .mid: return Palette.mid
+            case .vibrant: return Palette.vibrant
             }
         }
 
-        /// The families a theme draws with. Both use Plex — Studio for its titles and readout, Cool
-        /// for everything — so the registered stacks are the same; what differs is `voice`.
-        public var typeface: Typography.Faces { .plex }
-
-        /// How the theme sets type: Plex at whatever size a call asks for, or Studio's scale.
-        public var voice: Typography.Voice {
+        /// What `NSApp.appearance` is set to; nil hands it back to the system.
+        public var appearanceName: NSAppearance.Name? {
             switch self {
-            case .studio: return .studio
-            case .cool: return .plex
+            case .system: return nil
+            case .light: return .aqua
+            case .dark, .mid, .vibrant: return .darkAqua
             }
         }
 
-        public var metrics: Metric.Values {
-            switch self {
-            case .studio: return Metric.studio
-            case .cool: return Metric.cool
-            }
-        }
+        /// Whether the accent, a selected row's tint and a waveform's trace take the hue of the part
+        /// being worked on.
+        public var followsWork: Bool { self == .vibrant }
 
-        public var style: Style {
-            switch self {
-            case .studio: return Style.studio
-            case .cool: return Style.cool
-            }
-        }
+        /// Whether the music's colours are carried further than a mark: a part's colour washed
+        /// across its row, a section's filling its block, the display lit by the section playing.
+        public var isVivid: Bool { self == .vibrant }
 
-        /// Whether the accent is the one the person chose in System Settings. macOS hands an app its
-        /// own accent only when the person picked Multicolor; otherwise their choice wins, as it does
-        /// in every native app. Studio follows it; Cool keeps Carbon's blue.
-        public var followsSystemAccent: Bool { self == .studio }
+        /// ⌃⌘1–5, in the order the menu lists them. Plain ⌘1–7 are the surfaces.
+        public var shortcut: Character {
+            Character("\((Scheme.allCases.firstIndex(of: self) ?? 0) + 1)")
+        }
     }
 
-    /// The choices that make a theme more than its colours. Each is read by the one or two
-    /// components that draw it, never by a surface directly.
-    public struct Style: Sendable, Equatable, Hashable {
-        /// A label above a control set in letterspaced capitals (Cool) or in sentence case at the
-        /// system's own spacing (Studio).
-        public let uppercaseLabels: Bool
-        /// Controls drawn as outlined boxes (Cool) or as fills that step up on hover and selection,
-        /// with no stroke (Studio).
-        public let filledControls: Bool
-        /// A surface explains itself in a banner across its top (Cool), or in one line under its
-        /// title with the whole primer behind its `?` (Studio).
-        public let inlinePrimers: Bool
-        /// The transport's position, tempo and key on a dark display plate.
-        public let lcdTransport: Bool
-        /// Drum lanes and song sections each in a hue of their own.
-        public let laneColours: Bool
-        /// A surface drawn as a bordered card inset in the bench (Cool), or edge to edge (Studio).
-        public let surfaceCards: Bool
-        /// The window's own toolbar carries the song's title and History and Save (Studio), where
-        /// Cool draws a header of its own under an empty title bar.
-        public let nativeChrome: Bool
+    // MARK: - The current palette
 
-        static let cool = Style(uppercaseLabels: true, filledControls: false, inlinePrimers: true,
-                                lcdTransport: false, laneColours: false, surfaceCards: true,
-                                nativeChrome: false)
-        static let studio = Style(uppercaseLabels: false, filledControls: true, inlinePrimers: false,
-                                  lcdTransport: true, laneColours: true, surfaceCards: false,
-                                  nativeChrome: true)
-    }
-
-    /// The current theme's style.
-    public static var style: Style { theme.style }
-
-    // MARK: - The current theme
-
-    /// Holds the current theme and tells SwiftUI when it changes.
+    /// Holds the palette, and the hue of the part being worked on, and tells SwiftUI when either
+    /// changes.
     ///
     /// `Observable` by hand rather than by macro, for one reason: the macro's storage is not
     /// `Sendable`, and this object is a process-wide `let` read from whichever thread happens to be
-    /// evaluating a view. `ObservationRegistrar` is `Sendable` and `Mutex` makes the value so, which
+    /// evaluating a view. `ObservationRegistrar` is `Sendable` and `Mutex` makes the values so, which
     /// leaves the whole thing safely shared without a `nonisolated(unsafe)` escape hatch. The
     /// registrar calls are what SwiftUI's tracking actually keys on, so observation behaves exactly
     /// as it would with the macro.
-    public final class ThemeStore: Observable, Sendable {
+    public final class SchemeStore: Observable, Sendable {
         private let registrar = ObservationRegistrar()
-        private let storage: Mutex<Theme>
+        private let storage: Mutex<Scheme>
+        private let work = Mutex<Int?>(nil)
 
-        init(_ initial: Theme) { storage = Mutex(initial) }
+        init(_ initial: Scheme) { storage = Mutex(initial) }
 
-        public var theme: Theme {
+        public var scheme: Scheme {
             get {
-                registrar.access(self, keyPath: \.theme)
+                registrar.access(self, keyPath: \.scheme)
                 return storage.withLock { $0 }
             }
             set {
-                registrar.withMutation(of: self, keyPath: \.theme) {
+                registrar.withMutation(of: self, keyPath: \.scheme) {
                     storage.withLock { $0 = newValue }
+                }
+            }
+        }
+
+        /// One of the eight lane hues — the part being worked on — or nil when what fills the bench
+        /// is not a part. Only Vibrant reads it, so in the other palettes a change repaints nothing,
+        /// and setting the value it already has does not count as a change.
+        public var workHue: Int? {
+            get {
+                registrar.access(self, keyPath: \.workHue)
+                return work.withLock { $0 }
+            }
+            set {
+                guard work.withLock({ $0 }) != newValue else { return }
+                registrar.withMutation(of: self, keyPath: \.workHue) {
+                    work.withLock { $0 = newValue }
                 }
             }
         }
     }
 
     /// Where the choice is remembered between launches.
-    public static let themeDefaultsKey = "design.theme"
+    public static let schemeDefaultsKey = "design.palette"
 
-    /// Which generation of themes the remembered choice was made among. Version 2 is the one with
-    /// Studio in it: a choice remembered from before it — which was Cool Neutral, the default then,
-    /// for nearly everyone — is moved to Studio once. Choosing Cool Neutral again afterwards sticks,
-    /// because a choice made now is written with the version.
-    public static let themeVersionKey = "design.themeVersion"
-    public static let themeVersion = 2
-
-    /// The theme the app opens in when nothing has been chosen yet.
-    public static let defaultTheme = Theme.studio
-
-    public static let store = ThemeStore(renderTheme ?? storedTheme())
-
-    /// Under `MRROBOTO_RENDER`, `MRROBOTO_THEME` names the theme the renders are drawn in, so the
-    /// same frames can be drawn in each and laid side by side.
-    static let renderTheme: Theme? = isOffscreenRender
-        ? ProcessInfo.processInfo.environment["MRROBOTO_THEME"].flatMap(Theme.init(rawValue:))
-        : nil
-
-    /// The current theme. Reading this inside a `body` is what makes a switch repaint.
-    public static var theme: Theme { store.theme }
-
-    /// What `UserDefaults` remembers, or the default if it remembers nothing usable. Writes only to
-    /// move a choice made before Studio existed, and only when there is one to move.
-    static func storedTheme(_ defaults: UserDefaults = .standard) -> Theme {
-        guard let raw = defaults.string(forKey: themeDefaultsKey) else { return defaultTheme }
-        if defaults.integer(forKey: themeVersionKey) < themeVersion {
-            defaults.set(themeVersion, forKey: themeVersionKey)
-            defaults.set(defaultTheme.rawValue, forKey: themeDefaultsKey)
-            return defaultTheme
-        }
-        return Theme(rawValue: raw) ?? defaultTheme
-    }
-
-    /// Choose a theme: repaint and remember it.
-    @MainActor
-    public static func select(_ theme: Theme, defaults: UserDefaults = .standard) {
-        store.theme = theme
-        defaults.set(theme.rawValue, forKey: themeDefaultsKey)
-        defaults.set(themeVersion, forKey: themeVersionKey)
-    }
-
-    // MARK: - Appearance
-
-    /// Light, dark, or whatever the system is. A theme no longer decides this: every theme is drawn
-    /// for both appearances, and the person picks, as in any Mac app with an Appearance setting.
-    public enum Appearance: String, CaseIterable, Identifiable, Sendable {
-        case system
-        case light
-        case dark
-
-        public var id: String { rawValue }
-
-        public var displayName: String {
-            switch self {
-            case .system: return "Follow System Appearance"
-            case .light: return "Light"
-            case .dark: return "Dark"
-            }
-        }
-
-        /// What `NSApp.appearance` is set to; nil hands it back to the system.
-        public var name: NSAppearance.Name? {
-            switch self {
-            case .system: return nil
-            case .light: return .aqua
-            case .dark: return .darkAqua
-            }
-        }
-    }
-
-    /// The same shape as `ThemeStore`, for the appearance: the View menu's checkmarks read it.
-    public final class AppearanceStore: Observable, Sendable {
-        private let registrar = ObservationRegistrar()
-        private let storage: Mutex<Appearance>
-
-        init(_ initial: Appearance) { storage = Mutex(initial) }
-
-        public var appearance: Appearance {
-            get {
-                registrar.access(self, keyPath: \.appearance)
-                return storage.withLock { $0 }
-            }
-            set {
-                registrar.withMutation(of: self, keyPath: \.appearance) {
-                    storage.withLock { $0 = newValue }
-                }
-            }
-        }
-    }
-
+    /// Where Light or Dark was remembered before there were palettes: the same choice now, carried
+    /// over the first time the app opens without a palette remembered.
     public static let appearanceDefaultsKey = "design.appearance"
 
-    public static let appearanceStore = AppearanceStore(storedAppearance())
+    /// The palette the app opens in when nothing has been chosen yet.
+    public static let defaultScheme = Scheme.system
 
-    public static var appearance: Appearance { appearanceStore.appearance }
+    public static let store = SchemeStore(renderScheme ?? storedScheme())
 
-    static func storedAppearance(_ defaults: UserDefaults = .standard) -> Appearance {
-        defaults.string(forKey: appearanceDefaultsKey).flatMap(Appearance.init(rawValue:)) ?? .system
+    /// Under `MRROBOTO_RENDER`, `MRROBOTO_PALETTE` names the palette the renders are drawn in, so the
+    /// same frames can be drawn in each and laid side by side.
+    static let renderScheme: Scheme? = isOffscreenRender
+        ? ProcessInfo.processInfo.environment["MRROBOTO_PALETTE"].flatMap(Scheme.init(rawValue:))
+        : nil
+
+    /// The current palette. Reading this inside a `body` is what makes a switch repaint.
+    public static var scheme: Scheme { store.scheme }
+
+    /// What `UserDefaults` remembers, or the default if it remembers nothing usable.
+    static func storedScheme(_ defaults: UserDefaults = .standard) -> Scheme {
+        if let raw = defaults.string(forKey: schemeDefaultsKey) {
+            return Scheme(rawValue: raw) ?? defaultScheme
+        }
+        return defaults.string(forKey: appearanceDefaultsKey).flatMap(Scheme.init(rawValue:)) ?? defaultScheme
     }
 
-    /// Choose light, dark or the system's: remember it and put the AppKit furniture on it.
+    /// Choose a palette: repaint, remember it, and set the window light or dark to suit it.
     @MainActor
-    public static func select(_ appearance: Appearance, defaults: UserDefaults = .standard) {
-        appearanceStore.appearance = appearance
-        defaults.set(appearance.rawValue, forKey: appearanceDefaultsKey)
+    public static func select(_ scheme: Scheme, defaults: UserDefaults = .standard) {
+        store.scheme = scheme
+        defaults.set(scheme.rawValue, forKey: schemeDefaultsKey)
         applyAppearance()
     }
 
@@ -323,18 +245,25 @@ public enum Design {
     @MainActor
     public static func applyAppearance() {
         guard let app = NSApp else { return }
-        app.appearance = appearance.name.flatMap { NSAppearance(named: $0) }
+        app.appearance = scheme.appearanceName.flatMap { NSAppearance(named: $0) }
+    }
+
+    /// The hue of the part being worked on — a lane index, from `PartHue` — or nil for a surface
+    /// that is not about one part. The frame calls this as the bench changes; Vibrant draws with it.
+    @MainActor
+    public static func follow(hue: Int?) {
+        store.workHue = hue
     }
 
     // MARK: - Colour
 
-    /// Paper, panel and ink, per theme, and the colours with one meaning each. The token names are
-    /// the contract: a surface asks for `Design.Palette.sounding` and gets whichever orange the
-    /// current theme defines for "this is making sound".
+    /// Paper, panel and ink, per palette, and the colours with one meaning each. The token names
+    /// are the contract: a surface asks for `Design.Palette.sounding` and gets whichever orange the
+    /// current palette defines for "this is making sound".
     public enum Palette {
 
-        /// Every token, once, for one theme. Adding a token here forces both themes to define it —
-        /// which is the point of the struct.
+        /// Every token, once, for one palette. Adding a token here forces every palette to define it
+        /// — which is the point of the struct.
         public struct Values: Sendable, Equatable, Hashable {
             // The ground and the inks.
             public let paper: ColorPair
@@ -358,8 +287,8 @@ public enum Design {
             // What is chosen.
             public let accent: ColorPair
             public let accentSoft: ColorPair
-            /// Text or a mark that stands out from its neighbours without being a choice: the accent
-            /// in Cool, ink in Studio, where blue means chosen and nothing else.
+            /// Text or a mark that stands out from its neighbours without being a choice: ink, since
+            /// the accent means chosen and nothing else.
             public let emphasis: ColorPair
 
             // Fixed meanings.
@@ -396,7 +325,7 @@ public enum Design {
             public let lanes: [ColorPair]
 
             /// The tokens with their names, for anything that has to walk the whole set — the tests
-            /// that check both appearances and the hue of every neutral, mainly.
+            /// that check every palette's contrast and the hue of every neutral, mainly.
             public var tokens: [(name: String, pair: ColorPair)] {
                 [("paper", paper), ("panel", panel), ("panelAlt", panelAlt), ("raised", raised),
                  ("ink", ink), ("inkSecondary", inkSecondary), ("inkTertiary", inkTertiary), ("inkQuiet", inkQuiet),
@@ -413,7 +342,7 @@ public enum Design {
             }
 
             /// The subset that is a grey rather than a colour: everything the frame is built out of
-            /// before an accent or a warning is spent. These are the ones a theme can quietly get
+            /// before an accent or a warning is spent. These are the ones a palette can quietly get
             /// wrong by letting them drift warm.
             public static let neutralTokenNames = ["paper", "panel", "panelAlt", "raised", "ink",
                                                    "inkSecondary", "inkTertiary", "inkQuiet",
@@ -436,64 +365,6 @@ public enum Design {
                 ColorPair(0x6e8dcf, 0xa8beec),
             ]
         }
-
-        // MARK: Cool neutral
-
-        /// True greys with a slight blue bias, white panels, near-black ink, one blue.
-        ///
-        /// Every neutral below is built on one hue — 210–216°, the blue-grey end — at a saturation
-        /// low enough that it reads as grey rather than as blue. The discipline that matters is the
-        /// one the tests enforce: in every neutral, red never exceeds blue. A grey whose red channel
-        /// leads is a warm grey, and warm grey across a full screen is the complaint.
-        ///
-        /// The accent is IBM Carbon Blue 70 (#0043ce) over light and Blue 40 (#78a9ff) over dark —
-        /// real tokens from the design system IBM Plex was drawn for, rather than a blue picked by
-        /// eye. Carbon's own Blue 60 (#0f62fe) is the more familiar interactive blue but lands at
-        /// 4.38:1 on this paper, under AA, so the palette takes the next step down.
-        ///
-        /// The hairlines are not a straight translation of the notebook's. On warm paper a sand
-        /// hairline separates partly by hue; on a cold ground that help is gone and the same
-        /// luminance step reads thinner. `line` and `lineStrong` are therefore set a touch darker
-        /// than a like-for-like conversion, which restores the separation without touching
-        /// `Metric.hairline`.
-        ///
-        /// The tokens Studio brought — fills, the fixed meanings, the display — are set here to
-        /// whatever Cool already drew in their place, so Cool looks as it did: `sounding` is its
-        /// accent, `danger` its warn, a fill its alternate panel.
-        static let cool = Values(
-            paper: ColorPair(0xeef0f3, 0x101315),
-            panel: ColorPair(0xffffff, 0x191d21),
-            panelAlt: ColorPair(0xf7f8fa, 0x15181b),
-            raised: ColorPair(0xffffff, 0x191d21),
-            ink: ColorPair(0x14171a, 0xe6eaee),
-            inkSecondary: ColorPair(0x5a6068, 0x9aa3ac),
-            inkTertiary: ColorPair(0x8f969e, 0x6a727a),
-            inkQuiet: ColorPair(0x8f969e, 0x6a727a),
-            line: ColorPair(0xd7dce2, 0x2c3238),
-            lineStrong: ColorPair(0xc6ccd4, 0x3f4750),
-            fill: ColorPair(0xf7f8fa, 0x15181b),
-            hover: ColorPair(0xeef0f3, 0x101315),
-            selected: ColorPair(0xdce9fb, 0x17233f),
-            accent: ColorPair(0x0043ce, 0x78a9ff),
-            accentSoft: ColorPair(0xdce9fb, 0x17233f),
-            emphasis: ColorPair(0x0043ce, 0x78a9ff),
-            warn: ColorPair(0xc21f30, 0xff8389),
-            warnSoft: ColorPair(0xfadfe2, 0x2f1518),
-            danger: ColorPair(0xc21f30, 0xff8389),
-            dangerSoft: ColorPair(0xfadfe2, 0x2f1518),
-            sounding: ColorPair(0x0043ce, 0x78a9ff),
-            soundingInk: ColorPair(0x0043ce, 0x78a9ff),
-            onSounding: ColorPair(0xffffff, 0x191d21),
-            solo: ColorPair(0x0043ce, 0x78a9ff),
-            mute: ColorPair(0x0043ce, 0x78a9ff),
-            ok: ColorPair(0x5a6068, 0x9aa3ac),
-            plate: ColorPair(0x14181c, 0x0a0c0e),
-            trace: ColorPair(0x6fa8e6, 0x8cbcf0),
-            lcdInk: .fixed(0xcde7ff),
-            lcdLabel: .fixed(0x7e93a8),
-            lcdRecording: .fixed(0x220d0c),
-            lcdRecordingInk: .fixed(0xffc4bf),
-            lanes: Values.laneHues)
 
         // MARK: Studio
 
@@ -558,100 +429,237 @@ public enum Design {
             lcdRecordingInk: .fixed(0xffc4bf),
             lanes: Values.laneHues)
 
+        // MARK: Mid Dark
+
+        /// Charcoal, with light text: between Studio's two appearances, nearer the dark one.
+        ///
+        /// **The ground sits where a mid grey can still carry text.** A true middle grey leaves no
+        /// room under body text for a quieter ink, so the ramp is set lower: paper at L* 29, the
+        /// panel at 33 and a raised step at 38, four points apart as Studio's dark steps are, where
+        /// Studio's dark paper is at 4. Ink is 9.0:1 on the paper, the secondary ink 6.7:1 and the
+        /// tertiary 4.5:1.
+        ///
+        /// **Every colour is lifted to stand off charcoal.** The accent, the meanings and the eight
+        /// lanes are Studio's dark values raised in lightness (OKLCH +0.06, +0.08 for the three
+        /// darkest lanes), so a red kick step or a magenta section still reads on a grey that is
+        /// thirty points lighter than the one they were drawn for.
+        ///
+        /// **The plates stay black.** The waveform's plate and the transport's display are the
+        /// darkest things on screen, set into the grey the way a display is set into a desk.
+        ///
+        /// One appearance only: every pair is the same in both, and choosing it sets the window dark.
+        static let mid = Values(
+            paper: .fixed(0x444449),
+            panel: .fixed(0x4e4e54),
+            panelAlt: .fixed(0x49494e),
+            raised: .fixed(0x58585e),
+            ink: .fixed(0xf6f6f8),
+            inkSecondary: .fixed(0xd6d6dc),
+            inkTertiary: .fixed(0xb0b0b8),
+            inkQuiet: .fixed(0x88888f),
+            line: .fixed(0x5f5f66),
+            lineStrong: .fixed(0x74747b),
+            fill: ColorPair(0xa8a8b0, 0xa8a8b0, lightAlpha: 0.14, darkAlpha: 0.14),
+            hover: ColorPair(0xa8a8b0, 0xa8a8b0, lightAlpha: 0.22, darkAlpha: 0.22),
+            selected: ColorPair(0xa8a8b0, 0xa8a8b0, lightAlpha: 0.32, darkAlpha: 0.32),
+            accent: .fixed(0xaed0ff),
+            accentSoft: .fixed(0x44526b),
+            emphasis: .fixed(0xf6f6f8),
+            warn: .fixed(0xf8c962),
+            warnSoft: .fixed(0x5a4c2c),
+            danger: .fixed(0xff958c),
+            dangerSoft: .fixed(0x5e3b3b),
+            sounding: .fixed(0xf97f23),
+            soundingInk: .fixed(0xffb073),
+            onSounding: .fixed(0x24160a),
+            solo: .fixed(0xffd60a),
+            mute: .fixed(0x74c3e6),
+            ok: .fixed(0x72dc90),
+            plate: .fixed(0x131416),
+            trace: .fixed(0x8cbcf0),
+            lcdInk: .fixed(0xcde7ff),
+            lcdLabel: .fixed(0x7e93a8),
+            lcdRecording: .fixed(0x220d0c),
+            lcdRecordingInk: .fixed(0xffc4bf),
+            lanes: [0xe76d67, 0x70cafb, 0xecda6b, 0x41c2b4, 0xb88ee7, 0x8bdb8d, 0xcb6ea5, 0xbcd1fe].map(ColorPair.fixed))
+
+        // MARK: Vibrant
+
+        /// Near-black, with the music's colours at full strength.
+        ///
+        /// **The ground is darker than Studio's dark and has no colour in it.** Paper at L* 2.5 and
+        /// the panel at 5.6, with the same faint cool cast as the other greys: a saturated dark
+        /// ground was tried once, as Petrol, and it was the colour of everything. Here the colour is
+        /// spent on the work.
+        ///
+        /// **The eight hues are turned up.** The lanes keep their order and their alternating
+        /// lightness (OKLCH L 0.68 to 0.88), with chroma taken as far as sRGB allows, and every one
+        /// is bright enough to be the accent: each reads at 4.5:1 or better as text on the paper and
+        /// the panel, and under the panel as a button's label.
+        ///
+        /// **The accent is the work's.** In the Grid it is the groove's gold, in the Piano roll the
+        /// line's violet or the tune's blue, on the Chop lane the sample's magenta, and the waveform's
+        /// trace and a selected row's tint follow it (`Design.follow(hue:)`). With nothing on the
+        /// bench that is a part, it is this electric blue — Studio's own, turned up.
+        ///
+        /// One appearance only: every pair is the same in both, and choosing it sets the window dark.
+        static let vibrant = Values(
+            paper: .fixed(0x09090b),
+            panel: .fixed(0x121215),
+            panelAlt: .fixed(0x0e0e11),
+            raised: .fixed(0x1a1a1f),
+            ink: .fixed(0xf4f4f8),
+            inkSecondary: .fixed(0xbdbdc8),
+            inkTertiary: .fixed(0x8d8d99),
+            inkQuiet: .fixed(0x585862),
+            line: .fixed(0x29292f),
+            lineStrong: .fixed(0x37373f),
+            fill: ColorPair(0x8e8e9a, 0x8e8e9a, lightAlpha: 0.14, darkAlpha: 0.14),
+            hover: ColorPair(0x8e8e9a, 0x8e8e9a, lightAlpha: 0.2, darkAlpha: 0.2),
+            selected: ColorPair(0x8e8e9a, 0x8e8e9a, lightAlpha: 0.3, darkAlpha: 0.3),
+            accent: .fixed(0x5c8dff),
+            accentSoft: .fixed(0x18233f),
+            emphasis: .fixed(0xf4f4f8),
+            warn: .fixed(0xffc247),
+            warnSoft: .fixed(0x3a2c0c),
+            danger: .fixed(0xff5a52),
+            dangerSoft: .fixed(0x3d1414),
+            sounding: .fixed(0xf97f23),
+            soundingInk: .fixed(0xff9d4f),
+            onSounding: .fixed(0x24160a),
+            solo: .fixed(0xffd60a),
+            mute: .fixed(0x4fb3e8),
+            ok: .fixed(0x3ddc84),
+            plate: .fixed(0x060608),
+            trace: .fixed(0x7cc4ff),
+            lcdInk: .fixed(0xe8f2ff),
+            lcdLabel: .fixed(0x8696aa),
+            lcdRecording: .fixed(0x2a0b0a),
+            lcdRecordingInk: .fixed(0xffc4bf),
+            lanes: [0xff4d6a, 0x36c5ff, 0xf5d63a, 0x1fd6c4, 0xb083ff, 0x4fe07f, 0xff4fc0, 0xa6b9ff].map(ColorPair.fixed))
+
+        /// A selected row's tint in Vibrant when the accent is a lane's: the lane at 18% over the
+        /// panel, which keeps the lane itself at 4.5:1 or better on it.
+        static func workSoft(_ lane: ColorPair, over panel: ColorPair) -> ColorPair {
+            func mix(_ base: UInt32, _ top: UInt32) -> UInt32 {
+                let channel = { (shift: UInt32) -> UInt32 in
+                    let b = Double((base >> shift) & 0xff), t = Double((top >> shift) & 0xff)
+                    return UInt32((b + (t - b) * 0.18).rounded())
+                }
+                return channel(16) << 16 | channel(8) << 8 | channel(0)
+            }
+            return ColorPair(mix(panel.light, lane.light), mix(panel.dark, lane.dark))
+        }
+
         // MARK: The tokens themselves
 
-        public static var paper: Color { Design.theme.palette.paper.color }
-        public static var panel: Color { Design.theme.palette.panel.color }
-        public static var panelAlt: Color { Design.theme.palette.panelAlt.color }
-        public static var raised: Color { Design.theme.palette.raised.color }
+        /// The palette in use.
+        static var current: Values { Design.scheme.palette }
 
-        public static var ink: Color { Design.theme.palette.ink.color }
-        public static var inkSecondary: Color { Design.theme.palette.inkSecondary.color }
-        public static var inkTertiary: Color { Design.theme.palette.inkTertiary.color }
-        public static var inkQuiet: Color { Design.theme.palette.inkQuiet.color }
+        public static var paper: Color { current.paper.color }
+        public static var panel: Color { current.panel.color }
+        public static var panelAlt: Color { current.panelAlt.color }
+        public static var raised: Color { current.raised.color }
 
-        public static var line: Color { Design.theme.palette.line.color }
-        public static var lineStrong: Color { Design.theme.palette.lineStrong.color }
+        public static var ink: Color { current.ink.color }
+        public static var inkSecondary: Color { current.inkSecondary.color }
+        public static var inkTertiary: Color { current.inkTertiary.color }
+        public static var inkQuiet: Color { current.inkQuiet.color }
 
-        public static var fill: Color { Design.theme.palette.fill.color }
-        public static var hover: Color { Design.theme.palette.hover.color }
-        public static var selected: Color { Design.theme.palette.selected.color }
+        public static var line: Color { current.line.color }
+        public static var lineStrong: Color { current.lineStrong.color }
+
+        public static var fill: Color { current.fill.color }
+        public static var hover: Color { current.hover.color }
+        public static var selected: Color { current.selected.color }
+
+        /// The lane the accent takes in a palette that follows the work, for the work's hue.
+        static func workLane(in scheme: Scheme, hue: Int?) -> ColorPair? {
+            guard scheme.followsWork, let hue else { return nil }
+            let lanes = scheme.palette.lanes
+            return lanes[((hue % lanes.count) + lanes.count) % lanes.count]
+        }
+
+        /// The same, now. The work's hue is read only in a palette that follows it, so in the others
+        /// a change of surface does not repaint every body that reads the accent.
+        private static var workLane: ColorPair? {
+            let scheme = Design.scheme
+            guard scheme.followsWork else { return nil }
+            return workLane(in: scheme, hue: Design.store.workHue)
+        }
 
         /// What is chosen. Spend it on one thing per surface: the selected candidate, the active
-        /// section, the one primary button. In Studio it is the person's system accent unless they
-        /// chose Multicolor.
+        /// section, the one primary button. It is the person's system accent unless they chose
+        /// Multicolor, and in Vibrant the colour of the part being worked on.
         public static var accent: Color {
-            let theme = Design.theme
-            if theme.followsSystemAccent, let system = SystemAccent.accent { return system }
-            return theme.palette.accent.color
+            if let lane = workLane { return lane.color }
+            if let system = SystemAccent.accent(for: Design.scheme) { return system }
+            return current.accent.color
         }
 
         public static var accentSoft: Color {
-            let theme = Design.theme
-            if theme.followsSystemAccent, let system = SystemAccent.soft { return system }
-            return theme.palette.accentSoft.color
+            if let lane = workLane { return workSoft(lane, over: current.panel).color }
+            if let system = SystemAccent.soft(for: Design.scheme) { return system }
+            return current.accentSoft.color
         }
 
         /// Stands out from its neighbours without claiming to be chosen.
-        public static var emphasis: Color { Design.theme.palette.emphasis.color }
+        public static var emphasis: Color { current.emphasis.color }
 
         /// A critic finding, a caution: never decoration.
-        public static var warn: Color { Design.theme.palette.warn.color }
-        public static var warnSoft: Color { Design.theme.palette.warnSoft.color }
+        public static var warn: Color { current.warn.color }
+        public static var warnSoft: Color { current.warnSoft.color }
 
-        /// The words of a critic's finding. Cool sets the whole sentence in its warn red; Studio sets
-        /// it in ink beside an amber mark, so a finding reads as something to look at rather than
-        /// as an error.
-        public static var findingText: Color { Design.style.filledControls ? ink : warn }
+        /// The words of a critic's finding: ink, beside an amber mark, so a finding reads as
+        /// something to look at rather than as an error.
+        public static var findingText: Color { ink }
 
         /// Record, a failure, a destructive action.
-        public static var danger: Color { Design.theme.palette.danger.color }
-        public static var dangerSoft: Color { Design.theme.palette.dangerSoft.color }
+        public static var danger: Color { current.danger.color }
+        public static var dangerSoft: Color { current.dangerSoft.color }
 
         /// What is making sound, and only that.
-        public static var sounding: Color { Design.theme.palette.sounding.color }
-        public static var soundingInk: Color { Design.theme.palette.soundingInk.color }
-        public static var onSounding: Color { Design.theme.palette.onSounding.color }
+        public static var sounding: Color { current.sounding.color }
+        public static var soundingInk: Color { current.soundingInk.color }
+        public static var onSounding: Color { current.onSounding.color }
 
-        public static var solo: Color { Design.theme.palette.solo.color }
-        public static var mute: Color { Design.theme.palette.mute.color }
-        public static var ok: Color { Design.theme.palette.ok.color }
+        public static var solo: Color { current.solo.color }
+        public static var mute: Color { current.mute.color }
+        public static var ok: Color { current.ok.color }
 
         /// The dark plate a waveform or pitch trace is drawn on.
-        public static var plate: Color { Design.theme.palette.plate.color }
-        public static var trace: Color { Design.theme.palette.trace.color }
+        public static var plate: Color { current.plate.color }
+        /// The waveform on it — in Vibrant, in the colour of the part being worked on.
+        public static var trace: Color { (workLane ?? current.trace).color }
 
-        public static var lcdInk: Color { Design.theme.palette.lcdInk.color }
-        public static var lcdLabel: Color { Design.theme.palette.lcdLabel.color }
-        public static var lcdRecording: Color { Design.theme.palette.lcdRecording.color }
-        public static var lcdRecordingInk: Color { Design.theme.palette.lcdRecordingInk.color }
+        public static var lcdInk: Color { current.lcdInk.color }
+        public static var lcdLabel: Color { current.lcdLabel.color }
+        public static var lcdRecording: Color { current.lcdRecording.color }
+        public static var lcdRecordingInk: Color { current.lcdRecordingInk.color }
 
         /// One hue of the eight, by index, wrapping.
         public static func lane(_ index: Int) -> Color {
-            let lanes = Design.theme.palette.lanes
+            let lanes = current.lanes
             return lanes[((index % lanes.count) + lanes.count) % lanes.count].color
         }
     }
 
     // MARK: - Type
 
-    /// IBM Plex Sans for prose and for controls — one family, told apart by size and weight — and
-    /// IBM Plex Mono for anything that lines up in a column. That is Cool's voice.
+    /// Three voices with a size range each, so two grotesques never meet at one size: SF Pro for
+    /// every control and every line of UI at 13 pt and under, with the system's own optical sizing
+    /// and tracking; IBM Plex Sans for titles at 15 pt and over, and for the transport's readout in
+    /// its condensed width; and tabular figures for numbers rather than a monospace. Type is set on
+    /// eight sizes — 10, 11, 12, 13, 15, 17, 22 and the readout — the eight Apple's own scale uses,
+    /// where the calls across the app had asked for twenty.
     ///
-    /// Studio's is three voices with a size range each, so two grotesques never meet at one size:
-    /// SF Pro for every control and every line of UI at 13 pt and under, with the system's own
-    /// optical sizing and tracking; Plex Sans for titles at 15 pt and over, and for the transport's
-    /// readout in its condensed width; and tabular figures for numbers rather than a monospace. It
-    /// sets type on eight sizes — 10, 11, 12, 13, 15, 17, 22 and the readout — the eight Apple's own
-    /// scale uses, where the calls across the app had asked for twenty.
-    ///
-    /// Both families ship with the app — see `FontRegistration`, which registers them from
-    /// `Bundle.module` before the first view renders. The fallback stacks below are not decoration:
-    /// PNG and PDF export run outside that registration, and any face that fails to register lands
-    /// here. They are named families with close metrics, not a shrug at the system font.
+    /// Plex ships with the app — see `FontRegistration`, which registers it from `Bundle.module`
+    /// before the first view renders. The fallback stacks below are not decoration: PNG and PDF
+    /// export run outside that registration, and any face that fails to register lands here. They
+    /// are named families with close metrics, not a shrug at the system font.
     public enum Typography {
 
-        /// The three stacks a theme draws with, in preference order.
+        /// The three Plex stacks, in preference order.
         public struct Faces: Sendable, Equatable, Hashable {
             public let prose: [String]
             public let ui: [String]
@@ -669,32 +677,17 @@ public enum Design {
             var all: [[String]] { [prose, ui, numeric] }
         }
 
-        /// How a theme turns a call — "UI text, 11.5 pt, medium" — into a face.
-        public enum Voice: Sendable, Equatable, Hashable {
-            /// Plex at exactly the size asked for.
-            case plex
-            /// The size snapped to the scale; SF Pro at 13 and under, Plex above.
-            case studio
-        }
-
-        /// Every stack any theme can ask for. Deliberately independent of the current theme:
-        /// `FontRegistration` consults it while it is registering, from whichever thread it was
-        /// called on, and must not have to know what is selected.
+        /// Every stack the app can ask for. Deliberately a constant: `FontRegistration` consults it
+        /// while it is registering, from whichever thread it was called on.
         static var allStacks: [[String]] {
             var seen: [[String]] = []
-            for theme in Theme.allCases {
-                for stack in theme.typeface.all where !seen.contains(stack) { seen.append(stack) }
-            }
+            for stack in Faces.plex.all where !seen.contains(stack) { seen.append(stack) }
             return seen
         }
 
-        static var proseStack: [String] { Design.theme.typeface.prose }
-        static var uiStack: [String] { Design.theme.typeface.ui }
-        static var numericStack: [String] { Design.theme.typeface.numeric }
-
-        static var proseFamily: String { resolvedFamily(in: proseStack) }
-        static var uiFamily: String { resolvedFamily(in: uiStack) }
-        static var numericFamily: String { resolvedFamily(in: numericStack) }
+        static var proseFamily: String { resolvedFamily(in: Faces.plex.prose) }
+        static var uiFamily: String { resolvedFamily(in: Faces.plex.ui) }
+        static var numericFamily: String { resolvedFamily(in: Faces.plex.numeric) }
 
         /// Whether CoreText can resolve a family by name right now.
         static func isAvailable(_ family: String) -> Bool {
@@ -734,49 +727,24 @@ public enum Design {
 
         /// Reading text: a sentence, a description, a lyric.
         public static func prose(_ size: CGFloat = 15.5, weight: Font.Weight = .regular) -> Font {
-            switch Design.theme.voice {
-            case .plex: return .custom(proseFamily, size: size, relativeTo: .body).weight(weight)
-            case .studio: return Scale.prose(size, weight: weight)
-            }
+            Scale.prose(size, weight: weight)
         }
 
-        /// A control's text, a row, a value. Without a weight it is the theme's own: Plex Medium in
-        /// Cool, SF Regular in Studio — the uniform Medium was half of why nothing stood out.
+        /// A control's text, a row, a value: SF at the size snapped to the scale, Regular unless
+        /// asked otherwise — a uniform Medium was half of why nothing stood out.
         public static func ui(_ size: CGFloat = 13, weight: Font.Weight? = nil) -> Font {
-            switch Design.theme.voice {
-            case .plex: return .custom(uiFamily, size: size, relativeTo: .body).weight(weight ?? .medium)
-            case .studio: return Scale.ui(size, weight: weight)
-            }
+            Scale.ui(size, weight: weight)
         }
 
-        /// The label above a control or a column: uppercase and letterspaced in Cool, sentence case
-        /// in Studio. Cased and spaced by `labelText` and `labelTracking`, or by `SmallLabel`.
-        public static var label: Font {
-            switch Design.theme.voice {
-            case .plex: return .custom(uiFamily, size: 11, relativeTo: .caption).weight(.medium)
-            case .studio: return .system(size: 11, weight: .medium)
-            }
-        }
+        /// The label above a control or a column, in sentence case: `SmallLabel` sets it.
+        public static var label: Font { .system(size: 11, weight: .medium) }
 
-        /// A label's words, cased for the theme.
-        public static func labelText(_ text: String) -> String {
-            Design.style.uppercaseLabels ? text.uppercased() : text
-        }
-
-        /// A label's letterspacing: 1.1 under Cool's capitals, none in sentence case.
-        public static var labelTracking: CGFloat { Design.style.uppercaseLabels ? 1.1 : 0 }
-
-        /// Figures, for anything a reader compares down a column: Plex Mono in Cool, tabular figures
-        /// of the UI face in Studio.
+        /// Figures, for anything a reader compares down a column: tabular figures of the UI face.
         public static func numeric(_ size: CGFloat = 12, weight: Font.Weight = .regular) -> Font {
-            switch Design.theme.voice {
-            case .plex: return .custom(numericFamily, size: size, relativeTo: .body).weight(weight)
-            case .studio: return Scale.numeric(size, weight: weight)
-            }
+            Scale.numeric(size, weight: weight)
         }
 
-        /// The named roles, for code written against the scale rather than a size. Cool maps each to
-        /// the size it used for the same job.
+        /// The named roles, for code written against the scale rather than a size.
         public enum Role: Sendable {
             /// 10 pt: counts, timestamps, the meter's scale.
             case caption
@@ -799,43 +767,26 @@ public enum Design {
         }
 
         public static func role(_ role: Role) -> Font {
-            switch Design.theme.voice {
-            case .plex:
-                switch role {
-                case .caption: return ui(10, weight: .regular)
-                case .eyebrow, .label: return label
-                case .callout: return ui(11.5, weight: .regular)
-                case .body: return ui(13, weight: .regular)
-                case .headline: return ui(13, weight: .semibold)
-                case .title3: return prose(15.5, weight: .medium)
-                case .title2: return ui(17, weight: .medium)
-                case .title1: return ui(24, weight: .medium)
-                }
-            case .studio:
-                switch role {
-                case .caption: return .system(size: 10)
-                case .eyebrow: return .system(size: 10, weight: .semibold)
-                case .label: return .system(size: 11, weight: .medium)
-                case .callout: return .system(size: 12)
-                case .body: return .system(size: 13)
-                case .headline: return .system(size: 13, weight: .semibold)
-                case .title3: return Scale.display(15, weight: .semibold)
-                case .title2: return Scale.display(17, weight: .semibold)
-                case .title1: return Scale.display(22, weight: .semibold)
-                }
+            switch role {
+            case .caption: return .system(size: 10)
+            case .eyebrow: return .system(size: 10, weight: .semibold)
+            case .label: return .system(size: 11, weight: .medium)
+            case .callout: return .system(size: 12)
+            case .body: return .system(size: 13)
+            case .headline: return .system(size: 13, weight: .semibold)
+            case .title3: return Scale.display(15, weight: .semibold)
+            case .title2: return Scale.display(17, weight: .semibold)
+            case .title1: return Scale.display(22, weight: .semibold)
             }
         }
 
         /// The transport's readout: Plex Sans in its condensed width, tabular figures and a slashed
-        /// zero, so "10.1" never jitters and an O is never a 0. Cool sets it in Plex Mono.
+        /// zero, so "10.1" never jitters and an O is never a 0.
         public static func readout(_ size: CGFloat, weight: Font.Weight = .medium) -> Font {
-            switch Design.theme.voice {
-            case .plex: return numeric(size, weight: weight)
-            case .studio: return Scale.condensed(size, weight: weight)
-            }
+            Scale.condensed(size, weight: weight)
         }
 
-        /// Studio's scale: what a size asks for, and the face and weight it gets.
+        /// The scale: what a size asks for, and the face and weight it gets.
         enum Scale {
             /// The eight sizes, by nearest: 9.5 is a caption, 11.5 a label, 14 is body text, 16 the
             /// band's question, 19 a title.
@@ -925,59 +876,21 @@ public enum Design {
 
     // MARK: - Metrics
 
+    /// What the controls are built to: small and dense, at the sizes Mac controls are — a 28-point
+    /// button, a 22-point chip, a four-point grid of spacing. A surface runs edge to edge in the
+    /// bench, and two of them share a single hairline. There is no header of the app's own: the
+    /// window's toolbar is the header, and AppKit draws it outside the content.
     public enum Metric {
-        /// What a theme builds its controls to.
-        public struct Values: Sendable, Equatable, Hashable {
-            /// A control's corner: a chip, a button, a field.
-            public let corner: CGFloat
-            /// A card's corner: the band's options, a popover, a well.
-            public let containerCorner: CGFloat
-            /// A step's or a pad's corner, which sits close to its neighbours.
-            public let cellCorner: CGFloat
-            public let controlHeight: CGFloat
-            public let chipHeight: CGFloat
-            public let tagHeight: CGFloat
-            public let gutter: CGFloat
-            public let inset: CGFloat
-            /// The side columns' own margin: the band's column, the header.
-            public let regionInset: CGFloat
-            public let headerHeight: CGFloat
-            public let dockHeight: CGFloat
-            public let transportHeight: CGFloat
-            /// The bench's own padding around a surface, and the gap between two.
-            public let benchPadding: CGFloat
-            public let benchSpacing: CGFloat
-        }
-
-        static let cool = Values(corner: 3, containerCorner: 3, cellCorner: 3,
-                                 controlHeight: 36, chipHeight: 28, tagHeight: 20,
-                                 gutter: 18, inset: 18, regionInset: 28,
-                                 headerHeight: 56, dockHeight: 56, transportHeight: 84,
-                                 benchPadding: 18, benchSpacing: 18)
-
-        /// Smaller and denser, at the sizes Mac controls are: a 28-point button where Cool's was
-        /// 36, a 22-point chip, a four-point grid of spacing. A surface runs edge to edge in the
-        /// bench, and two of them share a single hairline. No header of its own: the window's
-        /// toolbar is the header, and AppKit draws it outside the content.
-        static let studio = Values(corner: 5, containerCorner: 10, cellCorner: 2,
-                                   controlHeight: 28, chipHeight: 22, tagHeight: 18,
-                                   gutter: 16, inset: 16, regionInset: 16,
-                                   headerHeight: 0, dockHeight: 44, transportHeight: 56,
-                                   benchPadding: 0, benchSpacing: 1)
-
-        private static var current: Values { Design.theme.metrics }
-
         /// The side regions, at the width they are drawn when they are open. They no longer set the
         /// window's minimum — every one of them collapses to `collapsedRegionWidth` — so these are
         /// what a region costs when you have asked for it, not what the frame costs you always.
         ///
-        /// The band's column. Open from the first launch, so it is what the bench pays most for: 340 holds the band's
-        /// question, the log and the field, and leaves the bench 824 at the 1440 default.
+        /// The band's column is open from the first launch, so it is what the bench pays most for:
+        /// 340 holds the band's question, the log and the field.
         public static let conversationRailWidth: CGFloat = 340
         public static let partsLedgerWidth: CGFloat = 230
-        public static var headerHeight: CGFloat { current.headerHeight }
-        public static var dockHeight: CGFloat { current.dockHeight }
-        public static var transportHeight: CGFloat { current.transportHeight }
+        public static let dockHeight: CGFloat = 44
+        public static let transportHeight: CGFloat = 56
 
         /// A collapsed region: wide enough for a rotated title, a count and the control that brings
         /// it back, and nothing else. A region never disappears entirely — the strip is the way back.
@@ -992,24 +905,29 @@ public enum Design {
         public static let surfaceMinimumWidth: CGFloat = 640
         public static let surfaceMinimumHeight: CGFloat = 460
 
-        public static var corner: CGFloat { current.corner }
-        public static var containerCorner: CGFloat { current.containerCorner }
-        public static var cellCorner: CGFloat { current.cellCorner }
+        /// A control's corner: a chip, a button, a field.
+        public static let corner: CGFloat = 5
+        /// A card's corner: the band's options, a popover, a well.
+        public static let containerCorner: CGFloat = 10
+        /// A step's or a pad's corner, which sits close to its neighbours.
+        public static let cellCorner: CGFloat = 2
         public static let hairline: CGFloat = 1
 
         /// A control a finger or a hurried cursor has to hit.
-        public static var controlHeight: CGFloat { current.controlHeight }
-        public static var chipHeight: CGFloat { current.chipHeight }
+        public static let controlHeight: CGFloat = 28
+        public static let chipHeight: CGFloat = 22
         /// A label you read but do not aim at: the verb on a parts-ledger row, which is part of the
         /// row's own hit area rather than a control of its own. Deliberately below `chipHeight` so it
         /// cannot be mistaken for something separately clickable.
-        public static var tagHeight: CGFloat { current.tagHeight }
+        public static let tagHeight: CGFloat = 18
 
-        public static var gutter: CGFloat { current.gutter }
-        public static var inset: CGFloat { current.inset }
-        public static var regionInset: CGFloat { current.regionInset }
-        public static var benchPadding: CGFloat { current.benchPadding }
-        public static var benchSpacing: CGFloat { current.benchSpacing }
+        public static let gutter: CGFloat = 16
+        public static let inset: CGFloat = 16
+        /// The side columns' own margin: the band's column, the parts.
+        public static let regionInset: CGFloat = 16
+        /// The bench's own padding around a surface, and the gap between two: none, and a hairline.
+        public static let benchPadding: CGFloat = 0
+        public static let benchSpacing: CGFloat = 1
     }
 
     /// How many surfaces are drawn at once: the one you are working in, plus one you pinned.
@@ -1030,19 +948,75 @@ public enum Design {
 enum SystemAccent {
     static let isChosen = UserDefaults.standard.object(forKey: "AppleAccentColor") != nil
 
-    static let accent: Color? = isChosen ? Color(nsColor: .controlAccentColor) : nil
+    /// The accent, made legible on the palette's ground. macOS draws its accents for a white or a
+    /// near-black window; on Mid Dark's charcoal a blue can fall under 4.5:1, so there it is
+    /// lightened until it reads on the panel.
+    static func accent(for scheme: Design.Scheme) -> Color? {
+        guard isChosen else { return nil }
+        return memo("accent.\(scheme.rawValue)") {
+            let panel = scheme.palette.panel
+            return Color(nsColor: NSColor(name: nil) { appearance in
+                let dark = appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+                let accent = resolved(NSColor.controlAccentColor, in: appearance)
+                return legible(accent, on: NSColor(hex: dark ? panel.dark : panel.light))
+            })
+        }
+    }
 
-    /// The accent laid over the panel at the strength Studio's own soft accent has, resolved at draw
-    /// time so it follows the appearance.
-    static let soft: Color? = isChosen
-        ? Color(nsColor: NSColor(name: nil) { appearance in
-            let dark = appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
-            let panel = Design.Palette.studio.panel
-            let ground = NSColor(hex: dark ? panel.dark : panel.light)
-            let accent = NSColor.controlAccentColor.usingColorSpace(.sRGB) ?? .systemBlue
-            return ground.blended(withFraction: dark ? 0.24 : 0.12, of: accent) ?? accent
-        })
-        : nil
+    /// The accent laid over the palette's panel at the strength the palette's own soft accent has,
+    /// resolved at draw time so it follows the appearance.
+    static func soft(for scheme: Design.Scheme) -> Color? {
+        guard isChosen else { return nil }
+        return memo("soft.\(scheme.rawValue)") {
+            let panel = scheme.palette.panel
+            return Color(nsColor: NSColor(name: nil) { appearance in
+                let dark = appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+                let ground = NSColor(hex: dark ? panel.dark : panel.light)
+                let accent = resolved(NSColor.controlAccentColor, in: appearance)
+                return ground.blended(withFraction: dark ? 0.24 : 0.12, of: accent) ?? accent
+            })
+        }
+    }
+
+    /// One colour per palette and kind, made once: a token is read hundreds of times per frame.
+    /// Guarded by `lock`, the way `Design`'s own colour memo is.
+    private nonisolated(unsafe) static var made: [String: Color] = [:]
+    private static let lock = NSLock()
+
+    private static func memo(_ key: String, make: () -> Color) -> Color {
+        lock.lock()
+        defer { lock.unlock() }
+        if let color = made[key] { return color }
+        let color = make()
+        made[key] = color
+        return color
+    }
+
+    private static func resolved(_ color: NSColor, in appearance: NSAppearance) -> NSColor {
+        var out = color
+        appearance.performAsCurrentDrawingAppearance { out = color.usingColorSpace(.sRGB) ?? color }
+        return out
+    }
+
+    /// Lightened toward white in steps until it reads at 4.5:1 on `ground`, or as far as it goes.
+    static func legible(_ color: NSColor, on ground: NSColor) -> NSColor {
+        func luminance(_ c: NSColor) -> Double {
+            guard let c = c.usingColorSpace(.sRGB) else { return 0 }
+            func linear(_ v: CGFloat) -> Double {
+                let v = Double(v)
+                return v <= 0.04045 ? v / 12.92 : pow((v + 0.055) / 1.055, 2.4)
+            }
+            return 0.2126 * linear(c.redComponent) + 0.7152 * linear(c.greenComponent) + 0.0722 * linear(c.blueComponent)
+        }
+        let floor = luminance(ground)
+        var out = color.usingColorSpace(.sRGB) ?? color
+        for _ in 0..<12 {
+            let l = luminance(out)
+            if (max(l, floor) + 0.05) / (min(l, floor) + 0.05) >= 4.5 || l < floor { break }
+            out = out.blended(withFraction: 0.12, of: .white) ?? out
+        }
+        return out
+    }
 }
 
 extension Font.Weight {
@@ -1074,7 +1048,8 @@ extension NSColor {
 }
 
 extension Color {
-    /// One definition per colour, light and dark together, so no token can exist in only one theme.
+    /// One definition per colour, light and dark together, so no token can exist in only one
+    /// appearance.
     init(hex light: UInt32, dark: UInt32, lightAlpha: Double = 1, darkAlpha: Double = 1) {
         self.init(nsColor: NSColor(name: nil) { appearance in
             appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua

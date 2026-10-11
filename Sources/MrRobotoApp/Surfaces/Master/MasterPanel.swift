@@ -219,8 +219,8 @@ struct MasterPanel: View {
             }
             ForEach(model.reading?.readings ?? []) { reading in
                 HStack(alignment: .top, spacing: 6) {
-                    // A reading that holds is Studio's green "kept, fine"; Cool kept its accent.
-                    Circle().fill(reading.holds ? (Design.style.filledControls ? Design.Palette.ok : Design.Palette.emphasis) : Design.Palette.warn).frame(width: 6, height: 6).padding(.top, 5)
+                    // A reading that holds is green, "kept, fine"; one that does not, amber.
+                    Circle().fill(reading.holds ? Design.Palette.ok : Design.Palette.warn).frame(width: 6, height: 6).padding(.top, 5)
                         .accessibilityHidden(true)
                     Text(reading.says).font(Design.Typography.ui(12)).foregroundStyle(Design.Palette.ink).fixedSize(horizontal: false, vertical: true)
                 }

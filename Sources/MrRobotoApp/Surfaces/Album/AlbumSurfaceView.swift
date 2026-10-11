@@ -337,24 +337,11 @@ private struct AlbumBody: View {
                 CoverView(design: design, title: album.title, artist: album.artist, side: 220)
                     .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
                     .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.line, lineWidth: Design.Metric.hairline))
-                if Design.style.filledControls {
-                    SegmentedChoice(options: CoverDesign.Layout.allCases, selection: design.layout, title: \.rawValue,
-                                    help: { "The \($0.rawValue) layout for the drawn cover" }) { layout in
-                        var next = design
-                        next.layout = layout
-                        app.setCover(next, for: album.id)
-                    }
-                } else {
-                    HStack(spacing: 6) {
-                        ForEach(CoverDesign.Layout.allCases, id: \.self) { layout in
-                            AlbumChip(layout.rawValue, isOn: design.layout == layout) {
-                                var next = design
-                                next.layout = layout
-                                app.setCover(next, for: album.id)
-                            }
-                            .help("The \(layout.rawValue) layout for the drawn cover")
-                        }
-                    }
+                SegmentedChoice(options: CoverDesign.Layout.allCases, selection: design.layout, title: \.rawValue,
+                                help: { "The \($0.rawValue) layout for the drawn cover" }) { layout in
+                    var next = design
+                    next.layout = layout
+                    app.setCover(next, for: album.id)
                 }
             case .image(let media):
                 if let store = app.store, let url = try? store.mediaURL(for: media), let image = NSImage(contentsOf: url) {
@@ -403,18 +390,9 @@ private struct AlbumBody: View {
                         .foregroundStyle(Design.Palette.ink)
                         .lineLimit(1)
                     Spacer()
-                    if Design.style.filledControls {
-                        SegmentedChoice(options: ClearanceStatus.allCases, selection: clearance.status,
-                                        title: { AlbumSurfaceView.label($0) }, help: { AlbumSurfaceView.help($0) }) { status in
-                            app.setClearance(status, forSource: clearance.source, record: clearance.record, media: clearance.media, in: album.id)
-                        }
-                    } else {
-                        ForEach(ClearanceStatus.allCases, id: \.self) { status in
-                            AlbumChip(AlbumSurfaceView.label(status), isOn: clearance.status == status) {
-                                app.setClearance(status, forSource: clearance.source, record: clearance.record, media: clearance.media, in: album.id)
-                            }
-                            .help(AlbumSurfaceView.help(status))
-                        }
+                    SegmentedChoice(options: ClearanceStatus.allCases, selection: clearance.status,
+                                    title: { AlbumSurfaceView.label($0) }, help: { AlbumSurfaceView.help($0) }) { status in
+                        app.setClearance(status, forSource: clearance.source, record: clearance.record, media: clearance.media, in: album.id)
                     }
                 }
                 .padding(.vertical, 3)
@@ -516,21 +494,7 @@ private struct AlbumChipLabel: View {
     init(_ title: String, isOn: Bool = false) { self.title = title; self.isOn = isOn }
 
     var body: some View {
-        if Design.style.filledControls {
-            StudioChip(isOn: isOn) { ChipText(title, isOn: isOn, size: 11.5) }
-        } else {
-            Text(title)
-                .font(Design.Typography.ui(11.5, weight: isOn ? .semibold : .regular))
-                .foregroundStyle(isOn ? Design.Palette.accent : Design.Palette.inkSecondary)
-                .lineLimit(1)
-                .fixedSize()
-                .padding(.horizontal, 8)
-                .frame(height: Design.Metric.chipHeight)
-                .background(isOn ? Design.Palette.accentSoft : Design.Palette.panelAlt,
-                            in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-                .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
-                    .stroke(isOn ? Design.Palette.accent.opacity(0.35) : Design.Palette.line, lineWidth: Design.Metric.hairline))
-        }
+        StudioChip(isOn: isOn) { ChipText(title, isOn: isOn, size: 11.5) }
     }
 }
 

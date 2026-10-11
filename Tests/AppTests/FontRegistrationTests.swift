@@ -207,18 +207,16 @@ struct FontRegistrationTests {
         }
     }
 
-    /// Whatever theme is current, the families it asks for are families that resolve. A theme that
-    /// named a face nobody bundled would degrade silently to Helvetica everywhere.
-    @Test("Every theme's typeface stack resolves to a bundled family",
-          arguments: Design.Theme.allCases)
-    func themeFacesResolve(theme: Design.Theme) {
+    /// The families the design asks for are families that resolve. A stack that named a face nobody
+    /// bundled would degrade silently to Helvetica everywhere.
+    @Test("Every typeface stack resolves to a bundled family")
+    func stacksResolve() {
         register()
         let bundled = Set(FontRegistration.faces.map(\.family))
-        for stack in theme.typeface.all {
+        for stack in Design.Typography.Faces.plex.all {
             let head = stack[0]
-            #expect(bundled.contains(head), "\(theme.displayName) asks for \(head), which is not bundled")
-            #expect(Design.Typography.firstAvailable(in: stack) == head,
-                    "\(theme.displayName) falls back off \(head)")
+            #expect(bundled.contains(head), "the design asks for \(head), which is not bundled")
+            #expect(Design.Typography.firstAvailable(in: stack) == head, "the design falls back off \(head)")
         }
     }
 }

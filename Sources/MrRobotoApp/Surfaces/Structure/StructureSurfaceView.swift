@@ -140,7 +140,7 @@ private struct SectionBlock: View {
 
     var body: some View {
         Button { model.select(section.id) } label: {
-            if Design.style.laneColours { studio } else { cool }
+            block
         }
         .buttonStyle(.plain)
         .modifier(SectionReorder(model: model, section: section.id))
@@ -150,11 +150,13 @@ private struct SectionBlock: View {
                   + (section.intensity.map { " · intensity \(Int(($0 * 100).rounded()))%" } ?? ""))
     }
 
-    /// Studio's block: the section's kind in its hue — a bar of it along the top and a wash of it
-    /// behind — so a verse is the same colour here, in the transport's strip and in every song. The
-    /// one selected wears the accent as a ring.
-    private var studio: some View {
+    /// The section's kind in its hue — a bar of it along the top and a wash of it behind — so a
+    /// verse is the same colour here, in the transport's strip and in every song. The one selected
+    /// wears the accent as a ring. Vibrant washes the hue in deeper, as far as the words on it
+    /// still read.
+    private var block: some View {
         let hue = SectionHue.color(for: section.name)
+        let vivid = Design.scheme.isVivid
         let shape = RoundedRectangle(cornerRadius: Design.Metric.corner + 1, style: .continuous)
         return VStack(alignment: .leading, spacing: 3) {
             Text(section.name)
@@ -187,8 +189,8 @@ private struct SectionBlock: View {
         }
         .background {
             ZStack(alignment: .top) {
-                shape.fill(hue.opacity(isSelected ? 0.22 : 0.12))
-                Rectangle().fill(hue).frame(height: 4)
+                shape.fill(hue.opacity(isSelected ? (vivid ? 0.3 : 0.22) : (vivid ? 0.2 : 0.12)))
+                Rectangle().fill(hue).frame(height: vivid ? 5 : 4)
             }
             .clipShape(shape)
         }
@@ -198,46 +200,6 @@ private struct SectionBlock: View {
         .contentShape(Rectangle())
     }
 
-    private var cool: some View {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(section.name.uppercased())
-                    .font(Design.Typography.label)
-                    .tracking(1.1)
-                    .lineLimit(1)
-                    .foregroundStyle(isSelected ? Design.Palette.accent : Design.Palette.ink)
-                Text("\(section.lengthInBars) bars")
-                    .font(Design.Typography.numeric(10))
-                    .foregroundStyle(Design.Palette.inkTertiary)
-                // What it plays, in words. Anonymous dots said how many parts were stitched in and
-                // never which, which is the one thing you want to know while reading a form.
-                Text(kinds.isEmpty ? "silent" : kinds.joined(separator: " · "))
-                    .font(Design.Typography.ui(9.5, weight: .regular))
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .foregroundStyle(kinds.isEmpty ? Design.Palette.inkTertiary : Design.Palette.inkSecondary)
-                    .frame(height: 11, alignment: .leading)
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .frame(width: width, alignment: .leading)
-            // How much is happening, as a line along the foot of the block: read across the strip
-            // it is the song's shape. Only a developed form has one.
-            .overlay(alignment: .bottomLeading) {
-                if let intensity = section.intensity {
-                    Rectangle()
-                        .fill(isSelected ? Design.Palette.accent : Design.Palette.inkTertiary)
-                        .frame(width: max(2, (width - 2 * Design.Metric.corner) * min(1, max(0, intensity))), height: 2)
-                        .padding(.leading, Design.Metric.corner)
-                        .accessibilityLabel("Intensity \(Int((intensity * 100).rounded())) percent")
-                }
-            }
-            .background(isSelected ? Design.Palette.accentSoft : Design.Palette.panelAlt,
-                        in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-            .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
-                .stroke(isSelected ? Design.Palette.accent.opacity(0.5) : Design.Palette.line,
-                        lineWidth: Design.Metric.hairline))
-            .contentShape(Rectangle())
-    }
 }
 
 /// A block dragged onto another goes before it. Off in offscreen renders, like every drop target:
@@ -382,15 +344,15 @@ private struct SectionDetail: View {
                     ForEach(model.choices(for: section), id: \.type) { choice in
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
                             HStack(spacing: 5) {
-                                // Studio: the kind's colour, as on its strip and its row of the parts.
-                                if Design.style.laneColours, let hue = PartHue.color(for: choice.type) {
+                                // The kind's colour, as on its strip and its row of the parts.
+                                if let hue = PartHue.color(for: choice.type) {
                                     Circle().fill(hue).frame(width: 6, height: 6)
                                 }
                                 Text(StructureModel.name(of: choice.type))
                                     .font(Design.Typography.ui(11, weight: .medium))
                                     .foregroundStyle(Design.Palette.inkSecondary)
                             }
-                            .frame(width: Design.style.laneColours ? 58 : 48, alignment: .leading)
+                            .frame(width: 58, alignment: .leading)
                             FlowRow(spacing: 4) {
                                 ForEach(choice.layers) { layer in
                                     FormChip(Self.chipTitle(layer) + (model.isRegrooved(layer) ? " · loop" : ""),
@@ -557,22 +519,9 @@ struct FormChip: View {
 
     var body: some View {
         Button(action: action) {
-            if Design.style.filledControls {
-                // The armed Remove is a destructive second press: Studio's red.
-                StudioChip(isOn: isOn, tone: warns ? .danger : .plain) {
-                    ChipText(title, isOn: isOn || warns, size: 11.5)
-                }
-            } else {
-                Text(title)
-                    .font(Design.Typography.ui(11.5, weight: isOn || warns ? .semibold : .regular))
-                    .foregroundStyle(ink)
-                    .lineLimit(1)
-                    .fixedSize()
-                    .padding(.horizontal, 8)
-                    .frame(height: Design.Metric.chipHeight)
-                    .background(ground, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-                    .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
-                        .stroke(edge, lineWidth: Design.Metric.hairline))
+            // The armed Remove is a destructive second press: red.
+            StudioChip(isOn: isOn, tone: warns ? .danger : .plain) {
+                ChipText(title, isOn: isOn || warns, size: 11.5)
             }
         }
         .buttonStyle(.plain)

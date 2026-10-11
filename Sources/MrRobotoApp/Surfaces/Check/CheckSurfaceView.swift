@@ -7,7 +7,7 @@ import SwiftUI
 ///
 /// The warn colour is spent on exactly one thing here: the finding's own severity mark. The accent
 /// is spent on exactly one thing: whatever is currently sounding. Everything else is ink on panel,
-/// so all three themes carry the card without it knowing they exist.
+/// so every palette carries the card without it knowing there is more than one.
 public struct CheckSurfaceView: View {
     @Bindable public var model: CheckModel
 
@@ -121,45 +121,22 @@ private struct HearIt: View {
 
     var body: some View {
         Button { model.isPlayingProblem ? model.stop() : model.hearProblem() } label: {
-            if Design.style.filledControls {
-                // Grey at rest like any control, orange while the problem sounds.
-                StudioChip(tone: model.isPlayingProblem ? .sounding : .plain,
-                           height: CheckLayout.hearHeight, horizontalPadding: 14) {
-                    HStack(spacing: 10) {
-                        Circle()
-                            .fill(model.isPlayingProblem ? Design.Palette.onSounding : Design.Palette.inkSecondary)
-                            .frame(width: 10, height: 10)
-                        Text(model.isPlayingProblem ? "Playing — \(model.where_)" : "Hear the problem")
-                            .font(Design.Typography.ui(13))
-                            .foregroundStyle(model.isPlayingProblem ? Design.Palette.onSounding : Design.Palette.ink)
-                        Spacer()
-                        Text(String(format: "%.3g s", max(0.05, model.finding.locus.duration)))
-                            .font(Design.Typography.numeric(11))
-                            .foregroundStyle(model.isPlayingProblem ? Design.Palette.onSounding : Design.Palette.inkTertiary)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            } else {
+            // Grey at rest like any control, orange while the problem sounds.
+            StudioChip(tone: model.isPlayingProblem ? .sounding : .plain,
+                       height: CheckLayout.hearHeight, horizontalPadding: 14) {
                 HStack(spacing: 10) {
                     Circle()
-                        .fill(model.isPlayingProblem ? Design.Palette.accent : Design.Palette.inkSecondary)
+                        .fill(model.isPlayingProblem ? Design.Palette.onSounding : Design.Palette.inkSecondary)
                         .frame(width: 10, height: 10)
                     Text(model.isPlayingProblem ? "Playing — \(model.where_)" : "Hear the problem")
                         .font(Design.Typography.ui(13))
+                        .foregroundStyle(model.isPlayingProblem ? Design.Palette.onSounding : Design.Palette.ink)
                     Spacer()
                     Text(String(format: "%.3g s", max(0.05, model.finding.locus.duration)))
                         .font(Design.Typography.numeric(11))
-                        .foregroundStyle(Design.Palette.inkTertiary)
+                        .foregroundStyle(model.isPlayingProblem ? Design.Palette.onSounding : Design.Palette.inkTertiary)
                 }
-                .padding(.horizontal, 14)
-                .frame(height: CheckLayout.hearHeight)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(model.isPlayingProblem ? Design.Palette.accentSoft : Design.Palette.panelAlt)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Design.Metric.corner)
-                        .stroke(model.isPlayingProblem ? Design.Palette.accent : Design.Palette.line,
-                                lineWidth: Design.Metric.hairline))
-                .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
             }
         }
         .buttonStyle(.plain)
@@ -189,8 +166,7 @@ private struct Arithmetic: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        // Never had an edge: a clear one keeps Cool's panel as it was.
-        .groupedArea(Design.Palette.panelAlt, stroke: .clear)
+        .groupedArea()
     }
 
     private struct Reading: View {
@@ -279,11 +255,10 @@ private struct FixCard: View {
         .frame(width: layout.fixWidth == layout.cardWidth ? nil : layout.fixWidth,
                height: layout.fixHeight, alignment: .topLeading)
         .frame(maxWidth: layout.fixWidth == layout.cardWidth ? .infinity : nil, alignment: .leading)
-        .groupedArea(isChosen ? Design.Palette.accentSoft : Design.Palette.panelAlt,
-                     stroke: isChosen ? Design.Palette.accent : Design.Palette.line)
+        .groupedArea(isChosen ? Design.Palette.accentSoft : Design.Palette.panelAlt)
         .overlay {
             // A soft card has no edge of its own, so the fix that resolved it is given one.
-            if !Design.style.surfaceCards && isChosen {
+            if isChosen {
                 RoundedRectangle(cornerRadius: Design.Metric.containerCorner, style: .continuous)
                     .strokeBorder(Design.Palette.accent, lineWidth: 1.5)
             }
@@ -299,9 +274,8 @@ private struct Tag: View {
     let ground: Color
 
     var body: some View {
-        Text(Design.Typography.labelText(text))
+        Text(text)
             .font(Design.Typography.label)
-            .tracking(Design.Typography.labelTracking)
             .padding(.horizontal, 7)
             .frame(height: Design.Metric.tagHeight)
             .background(ground)

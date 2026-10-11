@@ -80,34 +80,21 @@ struct BoothSurfaceView: View {
             if model.state == .recording {
                 // No bare Space here: the app's transport already owns Space, and two controls
                 // on one key stop different things depending on which one wins.
-                if Design.style.filledControls {
-                    // Record's place stays red while the take records: it is Stop now.
-                    Button { Task { await model.stopRecording(stopSong: true) } } label: {
-                        RecordFace(title: "Stop", systemImage: "stop.fill")
-                    }
-                    .buttonStyle(.plain)
-                    .help("Ends the take and stops the song.")
-                } else {
-                    Button("Stop") { Task { await model.stopRecording(stopSong: true) } }
-                        .help("Ends the take and stops the song.")
+                // Record's place stays red while the take records: it is Stop now.
+                Button { Task { await model.stopRecording(stopSong: true) } } label: {
+                    RecordFace(title: "Stop", systemImage: "stop.fill")
                 }
+                .buttonStyle(.plain)
+                .help("Ends the take and stops the song.")
                 Button("Stop and keep playing") { Task { await model.stopRecording() } }
                     .help("Ends the take; the song plays on.")
             } else {
-                if Design.style.filledControls {
-                    Button { Task { await model.record() } } label: {
-                        RecordFace(title: "Record", systemImage: "circle.fill")
-                    }
-                    .buttonStyle(.plain)
-                    .keyboardShortcut("r", modifiers: [])
-                    .help(recordHelp)
-                } else {
-                    Button("Record") { Task { await model.record() } }
-                        .keyboardShortcut("r", modifiers: [])
-                        .buttonStyle(.borderedProminent)
-                        .tint(Design.Palette.danger)
-                        .help(recordHelp)
+                Button { Task { await model.record() } } label: {
+                    RecordFace(title: "Record", systemImage: "circle.fill")
                 }
+                .buttonStyle(.plain)
+                .keyboardShortcut("r", modifiers: [])
+                .help(recordHelp)
                 KeyHint("R")
             }
             if let count = model.countInLine {
@@ -288,7 +275,7 @@ struct BoothSurfaceView: View {
                     .padding(.vertical, 8)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .groupedArea(Design.Palette.panelAlt, stroke: Design.Palette.line)
+                .groupedArea()
             } else {
                 EmptyNote(title: "No words yet.",
                           detail: "Words are written on the Lyrics surface (⌘9). The song's newest lyric shows here while you sing.")
@@ -345,10 +332,6 @@ struct BoothSurfaceView: View {
     private var footer: some View {
         if let error = model.lastError ?? model.lanes?.lastError {
             Text(error).font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.danger).lineLimit(2)
-        } else if Design.style.inlinePrimers {
-            // The primer says this; Studio keeps it behind the `?`.
-            Text("Every take stays, untouched. The band flags what it hears on the bar it hears it; a fix is a new version.")
-                .font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.inkTertiary).lineLimit(2)
         }
     }
 }
@@ -390,9 +373,8 @@ struct SungWords: View {
         VStack(alignment: .leading, spacing: 5) {
             ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
                 if let label = row.label {
-                    Text(Design.Typography.labelText(label))
+                    Text(label)
                         .font(Design.Typography.label)
-                        .tracking(Design.Typography.labelTracking)
                         .foregroundStyle(faint ? Design.Palette.inkTertiary : Design.Palette.emphasis)
                         .accessibilityLabel("Stanza: \(label)")
                 }
@@ -414,10 +396,9 @@ struct SungWords: View {
         for (index, syllable) in line.syllables.enumerated() {
             let stressed = syllable.stress != .unstressed
             var piece = AttributedString((index > 0 && syllable.startsWord ? " " : "") + syllable.text)
-            // Studio's scale would set both at 13; the line being sung keeps its reading size.
-            piece.font = Design.style.filledControls
-                ? (stressed ? Design.Typography.role(faint ? .body : .title3).weight(.semibold) : Design.Typography.role(faint ? .body : .title3))
-                : Design.Typography.prose(faint ? 13 : 15, weight: stressed ? .semibold : .regular)
+            // The scale would set both at 13; the line being sung keeps its reading size.
+            let size = Design.Typography.role(faint ? .body : .title3)
+            piece.font = stressed ? size.weight(.semibold) : size
             piece.foregroundColor = faint
                 ? (stressed ? Design.Palette.inkSecondary : Design.Palette.inkTertiary)
                 : (stressed ? Design.Palette.ink : Design.Palette.inkSecondary)
@@ -430,12 +411,8 @@ struct SungWords: View {
 private struct LevelBar: View {
     let level: Float
     var body: some View {
-        if Design.style.filledControls {
-            // The input as a desk meters it: the same meter as a mixer strip's.
-            StudioMeter(peak: level, rms: level)
-        } else {
-            coolBar
-        }
+        // The input as a desk meters it: the same meter as a mixer strip's.
+        StudioMeter(peak: level, rms: level)
     }
 
     private var coolBar: some View {
@@ -451,10 +428,9 @@ private struct LevelBar: View {
     }
 }
 
-/// Record in Studio: the one control on the surface drawn in the danger red, a fill with its words
-/// and its glyph in the panel's colour — white on the light red, near-black on the dark appearance's
-/// brighter one, where white would not read — and still red as Stop while the take records. Cool
-/// keeps the system's prominent button in the same red.
+/// Record: the one control on the surface drawn in the danger red, a fill with its words and its
+/// glyph in the panel's colour — white on the light red, near-black on the dark palettes' brighter
+/// one, where white would not read — and still red as Stop while the take records.
 private struct RecordFace: View {
     let title: String
     let systemImage: String
@@ -485,21 +461,7 @@ struct BoothChip: View {
 
     var body: some View {
         Button(action: action) {
-            if Design.style.filledControls {
-                StudioChip(isOn: isOn) { ChipText(title, isOn: isOn, size: 11.5) }
-            } else {
-                Text(title)
-                    .font(Design.Typography.ui(11.5, weight: isOn ? .semibold : .regular))
-                    .foregroundStyle(isOn ? Design.Palette.accent : Design.Palette.inkSecondary)
-                    .lineLimit(1)
-                    .fixedSize()
-                    .padding(.horizontal, 8)
-                    .frame(height: Design.Metric.chipHeight)
-                    .background(isOn ? Design.Palette.accentSoft : Design.Palette.panelAlt,
-                                in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-                    .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
-                        .stroke(isOn ? Design.Palette.accent.opacity(0.35) : Design.Palette.line, lineWidth: Design.Metric.hairline))
-            }
+            StudioChip(isOn: isOn) { ChipText(title, isOn: isOn, size: 11.5) }
         }
         .buttonStyle(.plain)
     }

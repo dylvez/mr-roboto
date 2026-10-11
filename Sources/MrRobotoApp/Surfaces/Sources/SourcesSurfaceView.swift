@@ -124,7 +124,7 @@ struct SourcesSurfaceView: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, minHeight: 170, alignment: .topLeading)
-        .groupedArea(Design.Palette.panelAlt, stroke: Design.Palette.line)
+        .groupedArea()
     }
 
     /// "Vocals −2 dB": the stem, and how much of the record it is.
@@ -193,7 +193,7 @@ struct SourcesSurfaceView: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, minHeight: 170, alignment: .topLeading)
-        .groupedArea(Design.Palette.panelAlt, stroke: Design.Palette.line)
+        .groupedArea()
     }
 
     @ViewBuilder

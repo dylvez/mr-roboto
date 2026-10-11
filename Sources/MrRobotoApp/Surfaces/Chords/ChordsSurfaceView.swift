@@ -54,7 +54,7 @@ extension ChordsSurfaceView {
                 .frame(maxWidth: 520)
                 // The typo, if there is one, with its mark; the way the line reads otherwise. Once
                 // something is typed that is the primer's line, said here only where primers are.
-                if model.problem != nil || model.isDefault || Design.style.inlinePrimers {
+                if model.problem != nil || model.isDefault {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
                         if model.problem != nil {
                             Image(systemName: "exclamationmark.triangle")
@@ -176,9 +176,8 @@ private struct PlayingPicker: View {
 
     private func row<Chips: View>(_ label: String, @ViewBuilder chips: () -> Chips) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text(Design.Typography.labelText(label))
+            Text(label)
                 .font(Design.Typography.label)
-                .tracking(Design.Typography.labelTracking)
                 .foregroundStyle(Design.Palette.inkTertiary)
                 .frame(width: 58, alignment: .leading)
             FlowRow(spacing: 4) { chips() }
@@ -301,17 +300,10 @@ private struct BarCard: View {
     }
 }
 
-/// A bar's cell: an outlined box in Cool; in Studio a soft fill with no edge, a cell among cells.
+/// A bar's cell: a soft fill with no edge, a cell among cells.
 private struct BarCell: ViewModifier {
     func body(content: Content) -> some View {
-        if Design.style.filledControls {
-            content
-                .background(Design.Palette.fill, in: RoundedRectangle(cornerRadius: Design.Metric.corner, style: .continuous))
-        } else {
-            content
-                .background(Design.Palette.panelAlt)
-                .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.line, lineWidth: Design.Metric.hairline))
-                .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
-        }
+        content
+            .background(Design.Palette.fill, in: RoundedRectangle(cornerRadius: Design.Metric.corner, style: .continuous))
     }
 }

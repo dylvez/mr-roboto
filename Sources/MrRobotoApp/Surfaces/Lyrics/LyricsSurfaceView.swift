@@ -91,11 +91,6 @@ struct LyricsSurfaceView: View {
         let choices = model.labelChoices
         if choices.isEmpty {
             // The primer says this; said here only where primers are.
-            if Design.style.inlinePrimers {
-                Text("Type [Verse] above a stanza to name it after a section.")
-                    .font(Design.Typography.ui(11, weight: .regular))
-                    .foregroundStyle(Design.Palette.inkTertiary)
-            }
         } else {
             FlowRow(spacing: 6) {
                 Text("Label a stanza")
@@ -242,18 +237,7 @@ private struct SetToMelodyMenu: View {
             if !choices.isEmpty { Divider() }
             Toggle("Not set", isOn: Binding(get: { model.setTo == nil }, set: { _ in model.setMelody(nil) }))
         } label: {
-            if Design.style.filledControls {
-                StudioChip(isOn: set != nil) {
-                    HStack(spacing: 4) {
-                        Text(set.map { "Set to \($0.title)" } ?? "Set to melody")
-                            .font(Design.Typography.ui(11.5, weight: set == nil ? .regular : .semibold))
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                        Image(systemName: "chevron.down")
-                            .font(Design.Typography.ui(8, weight: .bold))
-                    }
-                }
-            } else {
+            StudioChip(isOn: set != nil) {
                 HStack(spacing: 4) {
                     Text(set.map { "Set to \($0.title)" } ?? "Set to melody")
                         .font(Design.Typography.ui(11.5, weight: set == nil ? .regular : .semibold))
@@ -262,13 +246,6 @@ private struct SetToMelodyMenu: View {
                     Image(systemName: "chevron.down")
                         .font(Design.Typography.ui(8, weight: .bold))
                 }
-                .foregroundStyle(set == nil ? Design.Palette.inkSecondary : Design.Palette.accent)
-                .padding(.horizontal, 8)
-                .frame(height: Design.Metric.chipHeight)
-                .background(set == nil ? Design.Palette.panelAlt : Design.Palette.accentSoft,
-                            in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-                .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
-                    .stroke(set == nil ? Design.Palette.line : Design.Palette.accent.opacity(0.35), lineWidth: Design.Metric.hairline))
             }
         }
         .menuStyle(.button)

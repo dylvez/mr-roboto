@@ -447,9 +447,9 @@ struct ChopLanePads: View {
         .frame(maxWidth: .infinity, minHeight: layout.padHeight, alignment: .topLeading)
         .background(selected ? Design.Palette.accentSoft : Design.Palette.panelAlt)
         .overlay(alignment: .leading) {
-            // Studio: the class's hue down the pad's edge, the hue of the voice a groove on this
+            // The class's hue down the pad's edge, the hue of the voice a groove on this
             // chop plays the slice as.
-            if Design.style.laneColours, let kind = classification?.kind {
+            if let kind = classification?.kind {
                 Rectangle()
                     .fill(LaneClass(ChopLaneSurface.voice(for: kind)).color)
                     .frame(width: 3)

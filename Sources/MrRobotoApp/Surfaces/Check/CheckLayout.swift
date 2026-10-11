@@ -78,7 +78,7 @@ public struct CheckLayout: Equatable, Sendable {
 
         cardWidth = min(content.width, Self.maximumCardWidth)
         // The two anchors are the geometries the surface is actually drawn in: 17 points at the
-        // window minimum's content (604 in Cool, 608 in Studio's narrower margins), 22 from 267
+        // window minimum's content (608), 22 from 267
         // points wider, and no further. A headline is read once; it can afford the size, and it
         // cannot afford to be a poster.
         let floor = SurfaceGeometry.content(of: SurfaceGeometry.minimum).width

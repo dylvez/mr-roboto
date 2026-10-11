@@ -38,8 +38,8 @@ struct MrRobotoApp: App {
                 // region back asks the window for its width rather than crushing the instrument.
                 .frame(minWidth: FrameLayout.minimumWindowWidth, minHeight: FrameLayout.minimumWindowHeight)
         }
-        // A unified toolbar: Studio's song title, History and Save sit in it beside the window's
-        // buttons; Cool hides its title and background and keeps its own header under it.
+        // A unified toolbar: the song's title, History and Save sit in it beside the window's
+        // buttons.
         .windowToolbarStyle(.unified(showsTitle: true))
         .windowResizability(.contentMinSize)
         .defaultSize(width: FrameLayout.defaultWindowWidth, height: FrameLayout.defaultWindowHeight)
@@ -253,9 +253,9 @@ struct FrameCommands: Commands {
             .disabled(midi.mode == .off || app.song == nil)
         }
 
-        // The two visual directions, live. Switching repaints every body that reads a token and
-        // touches nothing else — the bench, the loaded song and the transport are not disturbed —
-        // and the choice is remembered in UserDefaults for the next launch.
+        // The columns, and the palette. Switching palettes repaints every body that reads a token
+        // and touches nothing else — the bench, the loaded song and the transport are not disturbed
+        // — and the choice is remembered in UserDefaults for the next launch.
         //
         // In the standard View menu rather than a menu of its own: this is how a window looks, not a
         // thing the instrument does.
@@ -273,19 +273,15 @@ struct FrameCommands: Commands {
                 .keyboardShortcut(KeyEquivalent(region.shortcut), modifiers: [.command, .option])
             }
             Divider()
-            ForEach(Design.Theme.allCases) { theme in
-                Toggle(theme.displayName, isOn: Binding(
-                    get: { Design.theme == theme },
-                    set: { if $0 { Design.select(theme) } }))
-                .keyboardShortcut(KeyEquivalent(Character("\(themeShortcutNumber(theme))")),
-                                  modifiers: [.command, .control])
-            }
-            // Light, dark or the system's, for either theme: what Petrol used to decide for itself.
-            Menu("Appearance") {
-                ForEach(Design.Appearance.allCases) { appearance in
-                    Toggle(appearance.displayName, isOn: Binding(
-                        get: { Design.appearance == appearance },
-                        set: { if $0 { Design.select(appearance) } }))
+            // Auto, Light and Dark, as System Settings lists them; then the two drawn for a dark
+            // window only. ⌃⌘1–5: plain ⌘1–7 are the surfaces.
+            Menu("Palette") {
+                ForEach(Design.Scheme.allCases) { scheme in
+                    Toggle(scheme.displayName, isOn: Binding(
+                        get: { Design.scheme == scheme },
+                        set: { if $0 { Design.select(scheme) } }))
+                    .keyboardShortcut(KeyEquivalent(scheme.shortcut), modifiers: [.command, .control])
+                    if scheme == .dark { Divider() }
                 }
             }
             Divider()
@@ -332,11 +328,6 @@ struct FrameCommands: Commands {
                 .disabled(app.bench.items.isEmpty)
         }
     }
-}
-
-/// ⌃⌘1/2. Plain ⌘1–2 already belong to the Surfaces menu, and these are pressed far less often.
-private func themeShortcutNumber(_ theme: Design.Theme) -> Int {
-    (Design.Theme.allCases.firstIndex(of: theme) ?? 0) + 1
 }
 
 extension MrRobotoApp {

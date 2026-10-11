@@ -38,8 +38,8 @@ public enum FrameRegion: String, CaseIterable, Sendable, Identifiable {
 
     /// ⌥⌘2 the band, ⌥⌘3 the parts — the keys they had when the band sat left of the bench and the
     /// parts right of it, kept when the two changed sides so the hand does not have to learn them
-    /// again. ⌥⌘1 was the library's, and opens the Library surface now. ⌘1–4 are the surfaces and
-    /// ⌃⌘1–2 the themes; these are pressed about as often as the themes are.
+    /// again. ⌥⌘1 was the library's, and opens the Library surface now. ⌘1–7 are the surfaces and
+    /// ⌃⌘1–5 the palettes; these are pressed about as often as the palettes are.
     public var shortcut: Character {
         switch self {
         case .rail: return "2"
@@ -149,9 +149,9 @@ struct CollapsedStrip: View {
 
     private var tint: Color {
         if isWarning { return Design.Palette.warn }
-        // Studio: a folded column holding something new reads in ink, not in the accent, which is
+        // A folded column holding something new reads in ink, not in the accent, which is
         // for what is chosen.
-        if isAccented { return Design.style.filledControls ? Design.Palette.ink : Design.Palette.accent }
+        if isAccented { return Design.Palette.ink }
         return Design.Palette.inkSecondary
     }
 
@@ -168,8 +168,8 @@ struct CollapsedStrip: View {
                         .foregroundStyle(tint)
                 }
                 Text(region.title.uppercased())
-                    .font(Design.style.uppercaseLabels ? Design.Typography.label : Design.Typography.role(.eyebrow))
-                    .tracking(Design.style.uppercaseLabels ? 1.4 : 0.8)
+                    .font(Design.Typography.role(.eyebrow))
+                    .tracking(0.8)
                     .foregroundStyle(tint)
                     .fixedSize()
                     .rotationEffect(.degrees(-90))

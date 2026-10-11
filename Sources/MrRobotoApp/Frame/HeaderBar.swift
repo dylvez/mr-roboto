@@ -1,86 +1,6 @@
 import SongGraph
 import SwiftUI
 
-/// The header: which song you are in, and the two things you can do to the song as a whole.
-/// History is the song graph's own history — every version, newest first — not an invented feed.
-struct HeaderBar: View {
-    @Bindable var app: AppState
-    @State private var isShowingHistory = false
-    @State private var isShowingSettings = false
-
-    var body: some View {
-        HStack(spacing: 14) {
-            // The app's own mark, then a rule, then the song you are in.
-            HStack(spacing: 8) {
-                AppIconArt()
-                    .frame(width: Design.style.filledControls ? 26 : 34, height: Design.style.filledControls ? 26 : 34)
-                Wordmark(size: Design.style.filledControls ? 14 : 16)
-            }
-            .accessibilityElement(children: .combine)
-            Rectangle()
-                .fill(Design.Palette.lineStrong)
-                .frame(width: Design.Metric.hairline, height: Design.style.filledControls ? 18 : 22)
-            // Studio lets the title say it is the song.
-            if Design.style.uppercaseLabels { SmallLabel("Song") }
-            // The title is the way into the song's settings: press it to rename the song or set
-            // its tempo, key and meter. Before this the title was a label, and a song made with
-            // File ▸ New Song kept "Untitled, Sept 17" at 120 with no key for as long as it lived.
-            Button {
-                isShowingSettings.toggle()
-            } label: {
-                HStack(spacing: 6) {
-                    Text(app.song?.title ?? "No song open")
-                        .font(Design.Typography.ui(17, weight: .medium))
-                        .foregroundStyle(app.song == nil ? Design.Palette.inkTertiary : Design.Palette.ink)
-                        .lineLimit(1)
-                    if app.song != nil {
-                        Image(systemName: "pencil")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(Design.Palette.inkTertiary)
-                    }
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(app.song == nil)
-            .help("Rename the song, or set its tempo, key and meter (⌘⇧,)")
-            .accessibilityLabel(app.song.map { "Song: \($0.title). Settings" } ?? "No song open")
-            .popover(isPresented: $isShowingSettings, arrowEdge: .bottom) {
-                SongSettingsPopover(app: app)
-            }
-            .onChange(of: app.wantsSongSettings) { _, wants in
-                // File ▸ New Song and the menu item ask for the settings; the header opens them.
-                guard wants else { return }
-                app.wantsSongSettings = false
-                if app.song != nil { isShowingSettings = true }
-            }
-            if app.hasUnsavedChanges {
-                // Not an error: autosave is a few seconds away. Studio says so in a quiet word, as a
-                // Mac document's title does.
-                Text(Design.style.uppercaseLabels ? "unsaved" : "Edited")
-                    .font(Design.style.uppercaseLabels ? Design.Typography.label : Design.Typography.role(.callout))
-                    .foregroundStyle(Design.style.uppercaseLabels ? Design.Palette.warn : Design.Palette.inkTertiary)
-                    .help("Saved on its own a few seconds after the last change, and on ⌘S.")
-            }
-            Spacer(minLength: 16)
-            HeaderStatus(app: app)
-            FrameButton(title: "History", emphasis: .quiet, isEnabled: app.song != nil) {
-                isShowingHistory.toggle()
-            }
-            .popover(isPresented: $isShowingHistory, arrowEdge: .bottom) {
-                HistoryList(app: app)
-            }
-            FrameButton(title: "Save", emphasis: app.hasUnsavedChanges ? .accent : .outlined,
-                        isEnabled: app.song != nil && app.store != nil) {
-                app.save()
-            }
-        }
-        .padding(.horizontal, Design.Metric.regionInset)
-        .frame(height: FrameLayout.headerHeight)
-        .background(Design.Palette.paper)
-    }
-}
-
 /// Every version in the song, newest first, with the operation that made it. The song graph is
 /// append-only, so this is the whole history — nothing is reconstructed.
 struct HistoryList: View {
@@ -132,8 +52,8 @@ struct HistoryList: View {
 }
 
 /// What the song as a whole is waiting on — the band or a save at work, the crate reading and
-/// separating records, a save that failed — said where the song's title is: in Cool's header, and
-/// in the middle of Studio's toolbar.
+/// separating records, a save that failed — said where the song's title is, in the middle of the
+/// window's toolbar.
 struct HeaderStatus: View {
     let app: AppState
 
@@ -186,62 +106,55 @@ struct HeaderStatus: View {
     }
 }
 
-/// The window's own chrome. Studio puts the song in the window's title, with "Edited" under it while
-/// it is unsaved, and History and Save in the toolbar, the way a Mac document window does; the
-/// title's menu has the song's settings. Cool keeps an empty title bar over its own header.
+/// The window's own chrome: the song in the window's title, with "Edited" under it while it is
+/// unsaved, and History and Save in the toolbar, the way a Mac document window does; the title's
+/// menu has the song's settings.
 struct WindowChrome: ViewModifier {
     let app: AppState
     @State private var isShowingHistory = false
 
     func body(content: Content) -> some View {
-        if Design.style.nativeChrome {
-            content
-                .navigationTitle(app.song?.title ?? "Mr. Roboto")
-                .navigationSubtitle(app.hasUnsavedChanges ? "Edited" : "")
-                .toolbarTitleMenu {
-                    Button("Song Settings…") { app.wantsSongSettings = true }
-                        .disabled(app.song == nil)
-                    Button("History") { isShowingHistory = true }
-                        .disabled(app.song == nil)
-                    Divider()
-                    Button("Close Song") { app.closeSong() }
-                        .disabled(app.song == nil)
-                }
-                .toolbar {
-                    // Only while there is something to say: an empty status item still draws its
-                    // divider in the middle of the toolbar.
-                    if app.busy != nil || app.crate.line != nil || app.lastSaveError != nil {
-                        ToolbarItem(placement: .status) {
-                            HeaderStatus(app: app)
-                        }
-                    }
-                    ToolbarItemGroup(placement: .primaryAction) {
-                        Button {
-                            app.isShowingPalette.toggle()
-                        } label: {
-                            Label("Command Palette", systemImage: "command")
-                        }
-                        .help("Go to a surface or a song, or do anything, by typing (⇧⌘P)")
-                        Button {
-                            isShowingHistory.toggle()
-                        } label: {
-                            Label("History", systemImage: "clock.arrow.circlepath")
-                        }
-                        .help("Every version in the song, newest first")
-                        .disabled(app.song == nil)
-                        .popover(isPresented: $isShowingHistory, arrowEdge: .bottom) {
-                            HistoryList(app: app)
-                        }
-                        SaveButton(app: app)
+        content
+            .navigationTitle(app.song?.title ?? "Mr. Roboto")
+            .navigationSubtitle(app.hasUnsavedChanges ? "Edited" : "")
+            .toolbarTitleMenu {
+                Button("Song Settings…") { app.wantsSongSettings = true }
+                    .disabled(app.song == nil)
+                Button("History") { isShowingHistory = true }
+                    .disabled(app.song == nil)
+                Divider()
+                Button("Close Song") { app.closeSong() }
+                    .disabled(app.song == nil)
+            }
+            .toolbar {
+                // Only while there is something to say: an empty status item still draws its
+                // divider in the middle of the toolbar.
+                if app.busy != nil || app.crate.line != nil || app.lastSaveError != nil {
+                    ToolbarItem(placement: .status) {
+                        HeaderStatus(app: app)
                     }
                 }
-                .containerBackground(Design.Palette.paper, for: .window)
-        } else {
-            content
-                .toolbar(removing: .title)
-                .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
-                .containerBackground(Design.Palette.paper, for: .window)
-        }
+                ToolbarItemGroup(placement: .primaryAction) {
+                    Button {
+                        app.isShowingPalette.toggle()
+                    } label: {
+                        Label("Command Palette", systemImage: "command")
+                    }
+                    .help("Go to a surface or a song, or do anything, by typing (⇧⌘P)")
+                    Button {
+                        isShowingHistory.toggle()
+                    } label: {
+                        Label("History", systemImage: "clock.arrow.circlepath")
+                    }
+                    .help("Every version in the song, newest first")
+                    .disabled(app.song == nil)
+                    .popover(isPresented: $isShowingHistory, arrowEdge: .bottom) {
+                        HistoryList(app: app)
+                    }
+                    SaveButton(app: app)
+                }
+            }
+            .containerBackground(Design.Palette.paper, for: .window)
     }
 }
 

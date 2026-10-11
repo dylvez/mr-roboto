@@ -242,8 +242,8 @@ struct MixerSurfaceView: View {
                 .frame(height: 10)
         }
         .padding(.vertical, 3)
-        // Studio: the part's colour down the strip's leading edge, a track colour as a desk has.
-        .padding(.leading, Design.style.laneColours && PartHue.color(for: row.type) != nil ? 10 : 0)
+        // The part's colour down the strip's leading edge, a track colour as a desk has.
+        .padding(.leading, PartHue.color(for: row.type) != nil ? 10 : 0)
         .modifier(PartStripe(type: row.type, inset: 3))
     }
 
@@ -326,7 +326,7 @@ struct MixerSurfaceView: View {
         let ended: (Bool) -> Void = { editing in if !editing { model.endGesture() } }
         return VStack(alignment: .leading, spacing: 1) {
             Group {
-                if Design.style.filledControls, let neutral {
+                if let neutral {
                     Slider(value: binding, in: range, neutralValue: neutral) {
                         Text(name)
                     } onEditingChanged: { ended($0) }
@@ -342,7 +342,7 @@ struct MixerSurfaceView: View {
             .controlSize(.mini)
             .tint(Design.Palette.accent)
             .accessibilityLabel(name)
-            .help(Design.style.filledControls && neutral != nil
+            .help(neutral != nil
                   ? "\(name): heard while held, a mix version when let go. ⌥-click puts it back."
                   : "\(name): heard while held, a mix version when let go.")
             Text(readout ?? String(format: format, value)).font(Design.Typography.numeric(9.5)).foregroundStyle(Design.Palette.inkTertiary)
@@ -471,10 +471,6 @@ struct MixerSurfaceView: View {
             Text(error).font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.danger)
         } else if let note = model.lastNote {
             Text("Kept: \(note)").font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.inkTertiary)
-        } else if Design.style.inlinePrimers {
-            // The primer says this too; where the primer sits behind the `?`, it is not said twice.
-            Text("Every move you let go of is a mix version; step back from Parts. Pick two strips and Compare to see where they share energy.")
-                .font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.inkTertiary)
         }
     }
 }
@@ -519,8 +515,8 @@ struct MixLabel: View {
 /// A one-letter switch on a strip: M, S, the compressor's on/off. Terse on the strip, so it
 /// carries the whole verb in its help and its accessibility label.
 struct MixToggle: View {
-    /// What the switch is. Studio lights a mute and a solo in colours of their own, as a console's
-    /// strip does; anything else is a plain chip. Cool draws every one in its `tint`.
+    /// What the switch is. A mute and a solo light in colours of their own, as a console's strip
+    /// does; anything else is a plain chip.
     enum Kind { case plain, mute, solo }
 
     let title: String
@@ -535,18 +531,7 @@ struct MixToggle: View {
     }
     var body: some View {
         Button(action: action) {
-            if Design.style.filledControls {
-                studioFace
-            } else {
-                Text(title)
-                    .font(Design.Typography.numeric(10, weight: .semibold))
-                    .foregroundStyle(isOn ? tint : Design.Palette.inkTertiary)
-                    .padding(.horizontal, 4)
-                    .frame(minWidth: Design.Metric.tagHeight, minHeight: Design.Metric.tagHeight)
-                    .background(isOn ? tint.opacity(0.15) : Design.Palette.panelAlt, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-                    .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(isOn ? tint.opacity(0.4) : Design.Palette.line, lineWidth: Design.Metric.hairline))
-                    .contentShape(Rectangle())
-            }
+            studioFace
         }
         .buttonStyle(.plain)
         .help(help)
@@ -554,7 +539,7 @@ struct MixToggle: View {
         .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 
-    /// Studio: a plain chip when off. On, a mute is filled with the mute colour and a solo with the
+    /// A plain chip when off. On, a mute is filled with the mute colour and a solo with the
     /// solo colour, so a strip that is out, or alone, says so down the whole column.
     @ViewBuilder
     private var studioFace: some View {
@@ -574,7 +559,7 @@ struct MixToggle: View {
         }
     }
 
-    /// The fill a lit mute or solo takes in Studio, and the ink on it; nil for a plain switch.
+    /// The fill a lit mute or solo takes, and the ink on it; nil for a plain switch.
     private var litColours: (fill: Color, ink: Color)? {
         switch kind {
         case .plain: return nil
@@ -588,29 +573,12 @@ struct MeterBar: View {
     let peak: Float
     let rms: Float
     var body: some View {
-        if Design.style.filledControls {
-            StudioMeter(peak: peak, rms: rms)
-        } else {
-            coolMeter
-        }
+        StudioMeter(peak: peak, rms: rms)
     }
 
-    private var coolMeter: some View {
-        GeometryReader { geometry in
-            ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: 2).fill(Design.Palette.panelAlt)
-                RoundedRectangle(cornerRadius: 2).fill(Design.Palette.sounding.opacity(0.5)).frame(width: geometry.size.width * CGFloat(min(1, rms)))
-                // Studio: no peak tick while nothing sounds — orange is for sound, and a silent
-                // strip's meter is empty.
-                Rectangle().fill(peak > 0.9 ? Design.Palette.danger : Design.Palette.sounding).frame(width: 2).offset(x: geometry.size.width * CGFloat(min(1, peak)))
-                    .opacity(peak > 0.001 || !Design.style.filledControls ? 1 : 0)
-            }
-            .overlay(RoundedRectangle(cornerRadius: 2).stroke(Design.Palette.line, lineWidth: Design.Metric.hairline))
-        }
-    }
 }
 
-/// Studio's meter: a slim bar in the sounding orange up to −6 dBFS and a lighter orange above it, a
+/// The meter: a slim bar in the sounding orange up to −6 dBFS and a lighter orange above it, a
 /// peak tick that holds for a second and a half the way a desk's does, and a red mark at the right
 /// end once anything reaches 0 dBFS, which stays until it is clicked. Empty, and grey, while
 /// nothing sounds.

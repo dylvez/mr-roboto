@@ -20,14 +20,14 @@ struct NextQuestionCard: View {
             }
             VStack(alignment: .leading, spacing: 3) {
                 Text(question.observation)
-                    .font(Design.style.filledControls ? Design.Typography.role(.callout) : Design.Typography.ui(12, weight: .regular))
+                    .font(Design.Typography.role(.callout))
                     .foregroundStyle(Design.Palette.inkSecondary)
                 Text(question.question)
-                    .font(Design.style.filledControls ? Design.Typography.role(.title3) : Design.Typography.prose(15.5, weight: .medium))
+                    .font(Design.Typography.role(.title3))
                     .foregroundStyle(Design.Palette.ink)
             }
             .fixedSize(horizontal: false, vertical: true)
-            VStack(alignment: .leading, spacing: Design.style.filledControls ? 6 : 10) {
+            VStack(alignment: .leading, spacing: 6) {
                 ForEach(Array(question.options.enumerated()), id: \.element.id) { index, option in
                     NextOptionButton(option: option, isLeading: index == 0, rank: index + 1,
                                      take: { app.take(option, from: question) },
@@ -37,11 +37,11 @@ struct NextQuestionCard: View {
             }
             // The one place Studio lets anything bounce: the band asking something new. A new
             // question's options settle in from above; one waved away closes up behind it.
-            .animation(Design.style.filledControls && !reduceMotion ? .bouncy(duration: 0.45, extraBounce: 0.1) : nil,
+            .animation(!reduceMotion ? .bouncy(duration: 0.45, extraBounce: 0.1) : nil,
                        value: question.options.map(\.id))
             Button { app.askTheBand() } label: {
                 Text("Something else… ask the band")
-                    .font(Design.style.filledControls ? Design.Typography.role(.callout) : Design.Typography.ui(12, weight: .medium))
+                    .font(Design.Typography.role(.callout))
                     .foregroundStyle(Design.Palette.accent)
             }
             .buttonStyle(.plain)
@@ -78,40 +78,20 @@ struct DockQuestion: View {
                     .help("\(question.asker.label) asks: \(question.observation) \(question.question)")
             }
             Button { app.take(option, from: question) } label: {
-                if Design.style.filledControls {
-                    StudioChip(height: Design.Metric.controlHeight, horizontalPadding: 10) {
-                        HStack(spacing: 6) {
-                            Text(room == .both || room == .answer ? "Next:" : "Next")
-                                .font(.system(size: 12.5, weight: .semibold))
-                                .foregroundStyle(Design.Palette.accent)
-                            if room == .both || room == .answer {
-                                Text(option.title)
-                                    .font(.system(size: 12.5))
-                                    .foregroundStyle(Design.Palette.ink)
-                                    .lineLimit(1)
-                                    .truncationMode(.tail)
-                                    .frame(maxWidth: 200, alignment: .leading)
-                            }
-                        }
-                    }
-                } else {
-                    HStack(spacing: 8) {
-                        SmallLabel(room == .both || room == .answer ? "Next" : "Next →", color: Design.Palette.accent)
+                StudioChip(height: Design.Metric.controlHeight, horizontalPadding: 10) {
+                    HStack(spacing: 6) {
+                        Text(room == .both || room == .answer ? "Next:" : "Next")
+                            .font(.system(size: 12.5, weight: .semibold))
+                            .foregroundStyle(Design.Palette.accent)
                         if room == .both || room == .answer {
                             Text(option.title)
-                                .font(Design.Typography.ui(12.5, weight: .medium))
-                                .foregroundStyle(Design.Palette.accent)
+                                .font(.system(size: 12.5))
+                                .foregroundStyle(Design.Palette.ink)
                                 .lineLimit(1)
                                 .truncationMode(.tail)
                                 .frame(maxWidth: 200, alignment: .leading)
                         }
                     }
-                    .padding(.horizontal, 10)
-                    .frame(height: Design.Metric.controlHeight)
-                    .background(Design.Palette.accentSoft)
-                    .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.accent, lineWidth: Design.Metric.hairline))
-                    .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
-                    .contentShape(Rectangle())
                 }
             }
             .buttonStyle(.plain)

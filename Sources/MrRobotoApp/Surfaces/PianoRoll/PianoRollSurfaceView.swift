@@ -48,13 +48,9 @@ struct PianoRollSurfaceView: View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             // What this roll is writing. The same grid either way.
             SegmentedChoice(options: PianoRollModel.Mode.allCases, selection: model.mode, title: \.title) { model.setMode($0) }
+            // In melody mode the primer, behind the `?`, says how a tune is drawn.
             if model.mode == .melody {
-                // The primer says this; Studio keeps it behind the `?`.
-                if Design.style.inlinePrimers {
-                    Text("Drawn here, played in on Keys, or written by the band for the Melodist.")
-                        .font(Design.Typography.ui(11.5, weight: .regular))
-                        .foregroundStyle(Design.Palette.inkTertiary)
-                }
+                EmptyView()
             } else if model.groove == nil {
                 Text("No groove yet — the line plays to the bar on its own. Open the Grid to paint one and this roll will sit under it.")
                     .font(Design.Typography.ui(11.5, weight: .regular))
@@ -78,13 +74,6 @@ struct PianoRollSurfaceView: View {
             HStack(alignment: .top, spacing: 18) {
                 InstrumentPicker(selected: model.instrument) { model.setInstrument($0) }
                 // The primer and the lane's own caption both say this; Studio says it once.
-                if Design.style.inlinePrimers {
-                    Text("Click an empty cell to add a note; drag to move; double-click to delete.")
-                        .font(Design.Typography.ui(11.5, weight: .regular))
-                        .foregroundStyle(Design.Palette.inkSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.top, 2)
-                }
                 Spacer(minLength: 0)
             }
         } else {
@@ -352,12 +341,8 @@ struct KeepButton: View {
 
     var body: some View {
         Button(action: action) {
-            // Studio fills the one primary action with the accent; Cool sets it as accented words.
-            if Design.style.filledControls {
-                StudioChip(tone: .primary) { ChipText("Keep as a new version", isOn: true, size: 12) }
-            } else {
-                Text("Keep as a new version")
-            }
+            // The one primary action, filled with the accent.
+            StudioChip(tone: .primary) { ChipText("Keep as a new version", isOn: true, size: 12) }
         }
         .buttonStyle(.plain)
         .font(Design.Typography.ui(12, weight: .semibold))
@@ -564,7 +549,7 @@ private struct NoteLane: View {
                     model.addNote(pitch: midi, at: beat)
                 }
             // The notes. The selected one is outlined in ink so it reads apart from its
-            // neighbours in any theme, not only by a shade of the accent.
+            // neighbours in any palette, not only by a shade of the accent.
             ForEach(Array(model.notes.enumerated()), id: \.offset) { index, note in
                 let row = register.upperBound - note.pitch.midi
                 let isGhost = note.velocity < 56
@@ -631,21 +616,7 @@ private struct RollChip: View {
 
     var body: some View {
         Button(action: action) {
-            if Design.style.filledControls {
-                StudioChip(isOn: isOn) { ChipText(title, isOn: isOn, size: 11.5) }
-            } else {
-                Text(title)
-                    .font(Design.Typography.ui(11.5, weight: isOn ? .semibold : .regular))
-                    .foregroundStyle(isOn ? Design.Palette.accent : Design.Palette.inkSecondary)
-                    .lineLimit(1)
-                    .fixedSize()
-                    .padding(.horizontal, 8)
-                    .frame(height: Design.Metric.chipHeight)
-                    .background(isOn ? Design.Palette.accentSoft : Design.Palette.panelAlt,
-                                in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-                    .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
-                        .stroke(isOn ? Design.Palette.accent.opacity(0.35) : Design.Palette.line, lineWidth: Design.Metric.hairline))
-            }
+            StudioChip(isOn: isOn) { ChipText(title, isOn: isOn, size: 11.5) }
         }
         .buttonStyle(.plain)
     }

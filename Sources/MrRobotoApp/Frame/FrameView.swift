@@ -23,19 +23,16 @@ public enum FrameLayout {
     public static let conversationRailWidth = Design.Metric.conversationRailWidth
     public static let partsLedgerWidth = Design.Metric.partsLedgerWidth
     public static let collapsedRegionWidth = Design.Metric.collapsedRegionWidth
-    // The rest are the theme's, and so computed: a stored `let` would freeze whichever theme was
-    // current the first time it was read.
-    public static var headerHeight: CGFloat { Design.Metric.headerHeight }
-    public static var transportHeight: CGFloat { Design.Metric.transportHeight }
+    public static let transportHeight = Design.Metric.transportHeight
 
     /// The bench's own header: the surface dock, which is how you move between surfaces now that
     /// only one is drawn at a time.
-    public static var dockHeight: CGFloat { Design.Metric.dockHeight }
+    public static let dockHeight = Design.Metric.dockHeight
 
     /// The padding between the bench's edge and a surface, on both axes.
-    public static var benchPadding: CGFloat { Design.Metric.benchPadding }
+    public static let benchPadding = Design.Metric.benchPadding
     /// The gap between two surfaces when a pin has split the bench.
-    public static var benchSpacing: CGFloat { Design.Metric.benchSpacing }
+    public static let benchSpacing = Design.Metric.benchSpacing
 
     /// What a surface actually needs, from the design tokens. The window's minimum is built from
     /// this rather than from the sum of the furniture — that inversion is the point.
@@ -43,13 +40,13 @@ public enum FrameLayout {
     public static let surfaceMinimumHeight = Design.Metric.surfaceMinimumHeight
 
     /// The bench at its narrowest: a surface at its minimum, plus the bench's own padding.
-    public static var benchMinimumWidth: CGFloat { surfaceMinimumWidth + 2 * benchPadding }
+    public static let benchMinimumWidth: CGFloat = surfaceMinimumWidth + 2 * benchPadding
 
     /// The vertical hairlines between the three columns: ledger│bench│rail.
     public static let verticalDividers: CGFloat = 2 * Design.Metric.hairline
-    /// The horizontal hairlines under the header and above the transport — only the one above the
-    /// transport when the window's toolbar is the header.
-    public static var horizontalDividers: CGFloat { (Design.style.nativeChrome ? 1 : 2) * Design.Metric.hairline }
+    /// The one horizontal hairline, above the transport: the window's toolbar is the header, and
+    /// AppKit draws it outside the content.
+    public static let horizontalDividers: CGFloat = Design.Metric.hairline
 
     // MARK: Regions
 
@@ -97,9 +94,9 @@ public enum FrameLayout {
 
     // MARK: Height
 
-    /// The bench column: everything between the header and the transport.
+    /// The bench column: everything above the transport.
     public static func benchHeight(inWindowOfHeight height: CGFloat) -> CGFloat {
-        height - headerHeight - transportHeight - horizontalDividers
+        height - transportHeight - horizontalDividers
     }
 
     /// The bench's interior, below the dock and inside its padding.
@@ -131,11 +128,10 @@ public enum FrameLayout {
         minimumWindowWidth(collapsed: Set(FrameRegion.allCases))
     }
 
-    /// Header, transport, dock, padding, and one surface at the height it needs.
-    public static var minimumWindowHeight: CGFloat {
-        surfaceMinimumHeight + headerHeight + transportHeight + horizontalDividers
+    /// Transport, dock, padding, and one surface at the height it needs.
+    public static let minimumWindowHeight: CGFloat =
+        surfaceMinimumHeight + transportHeight + horizontalDividers
             + dockHeight + Design.Metric.hairline + 2 * benchPadding
-    }
 
     // MARK: Growing the window to fit
 
@@ -207,10 +203,6 @@ struct FrameView: View {
     var body: some View {
         let minimumWidth = FrameLayout.minimumWindowWidth(collapsed: app.regions.collapsed)
         VStack(spacing: 0) {
-            if !Design.style.nativeChrome {
-                HeaderBar(app: app)
-                Hairline()
-            }
             // The parts to the left of the work, the band to the right of it.
             HStack(spacing: 0) {
                 RegionColumn(region: .ledger, app: app, badge: ledgerBadge) {
@@ -228,7 +220,7 @@ struct FrameView: View {
             }
             .frame(maxHeight: .infinity)
             // A region folding or opening slides its width on the same spring as the bench.
-            .animation(Design.style.filledControls && !reduceMotion ? .snappy(duration: 0.25) : nil,
+            .animation(!reduceMotion ? .snappy(duration: 0.25) : nil,
                        value: app.regions.collapsed)
             Hairline()
             TransportBar(app: app)
@@ -265,6 +257,12 @@ struct FrameView: View {
         .onChange(of: app.regions.isCollapsed(.rail)) { _, collapsed in
             // The rail opened: its lines have been looked at.
             if !collapsed { app.markRailSeen() }
+        }
+        // What fills the bench, for Vibrant: its accent is the colour of the work. Set here rather
+        // than read by the palette, which knows nothing of songs; a palette that does not follow the
+        // work does not read it, so this repaints nothing there.
+        .onChange(of: app.workHue, initial: true) { _, hue in
+            Design.follow(hue: hue)
         }
     }
 

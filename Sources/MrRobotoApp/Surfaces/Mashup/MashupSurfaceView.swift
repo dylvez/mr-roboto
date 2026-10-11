@@ -45,7 +45,7 @@ struct MashupSurfaceView: View {
             HStack(spacing: 8) {
                 BoothLabel(side == .a ? "Song A" : "Song B")
                 if model.backbone == side {
-                    Text(Design.Typography.labelText("Sets the tempo")).font(Design.Typography.label).tracking(Design.Typography.labelTracking).foregroundStyle(Design.Palette.accent)
+                    Text("Sets the tempo").font(Design.Typography.label).foregroundStyle(Design.Palette.accent)
                         .help("Both songs meet on this one's tempo and bars")
                 }
             }
@@ -110,7 +110,7 @@ struct MashupSurfaceView: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, minHeight: 170, alignment: .topLeading)
-        .groupedArea(Design.Palette.panelAlt, stroke: model.backbone == side ? Design.Palette.accent.opacity(0.45) : Design.Palette.line)
+        .groupedArea()
     }
 
     private func semitoneLine(_ side: MashupModel.Side) -> String {

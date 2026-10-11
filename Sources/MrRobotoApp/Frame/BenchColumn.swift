@@ -48,9 +48,9 @@ struct BenchColumn: View {
         }
         .padding(FrameLayout.benchPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        // Studio: a surface brought forward cross-fades in on a quick spring with no bounce —
+        // A surface brought forward cross-fades in on a quick spring with no bounce —
         // structure moves, and gets out of the way. Not when the system asks for less motion.
-        .animation(Design.style.filledControls && !reduceMotion ? .snappy(duration: 0.22) : nil,
+        .animation(!reduceMotion ? .snappy(duration: 0.22) : nil,
                    value: visible.map(\.id))
         // A library row dropped on the bench is adopted into the open song and opened on the
         // surface it belongs on: a sample on the Chop lane, a groove idea in the Grid, a record cut
@@ -91,20 +91,13 @@ struct BenchColumn: View {
     }
 }
 
-/// A recessed panel for a note or a question on an empty bench: outlined in Cool, a soft fill with a
-/// card's corner in Studio. With no surface to inset it from, Studio's empty bench keeps a margin.
+/// A recessed panel for a note or a question on an empty bench: a soft fill with a card's corner.
+/// With no surface to inset it from, the empty bench keeps a margin.
 private struct Well: ViewModifier {
     func body(content: Content) -> some View {
-        if Design.style.surfaceCards {
-            content
-                .background(Design.Palette.panelAlt)
-                .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.line, lineWidth: Design.Metric.hairline))
-                .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
-        } else {
-            content
-                .background(Design.Palette.panelAlt, in: RoundedRectangle(cornerRadius: Design.Metric.containerCorner, style: .continuous))
-                .padding(Design.Metric.gutter)
-        }
+        content
+            .background(Design.Palette.panelAlt, in: RoundedRectangle(cornerRadius: Design.Metric.containerCorner, style: .continuous))
+            .padding(Design.Metric.gutter)
     }
 }
 
@@ -229,29 +222,27 @@ private struct DockChip: View {
     @State private var isHovering = false
 
     var body: some View {
-        let studio = Design.style.filledControls
         Button(action: action) {
             HStack(spacing: style == .tight ? 4 : 6) {
                 Glyph(name: kind.glyph.name, symbol: kind.glyph.symbol, size: 13)
-                    .foregroundStyle(studio && isActive ? Design.Palette.accent : (studio ? Design.Palette.inkSecondary : (isActive ? Design.Palette.accent : Design.Palette.ink)))
+                    .foregroundStyle(isActive ? Design.Palette.accent : Design.Palette.inkSecondary)
                 if style == .full || style == .compact || style == .tight || (style == .current && isActive) {
                     Text(kind.rawValue)
-                        .font(studio ? .system(size: 12.5, weight: isActive ? .semibold : .regular)
-                                     : Design.Typography.ui(12.5, weight: isActive ? .semibold : .medium))
+                        .font(.system(size: 12.5, weight: isActive ? .semibold : .regular))
                         .lineLimit(1)
                         .fixedSize()
                 }
                 if let count, style != .glyphs {
                     Text("\(count)")
                         .font(Design.Typography.numeric(11))
-                        .foregroundStyle(studio ? Design.Palette.inkTertiary : (isActive ? Design.Palette.accent : Design.Palette.inkSecondary))
+                        .foregroundStyle(Design.Palette.inkTertiary)
                         .lineLimit(1)
                         .fixedSize()
                 }
                 if style == .full {
                     Text(shortcut)
                         .font(Design.Typography.numeric(10))
-                        .foregroundStyle(isActive && !studio ? Design.Palette.accent : Design.Palette.inkTertiary)
+                        .foregroundStyle(Design.Palette.inkTertiary)
                         .lineLimit(1)
                         .fixedSize()
                 }
@@ -272,9 +263,9 @@ private struct DockChip: View {
     }
 }
 
-/// A dock chip's face. Cool outlines every chip and fills the one in front with the accent's tint.
-/// Studio draws no chip at all until the pointer is over it: the one filling the bench sits on the
-/// selected fill with its glyph in the accent, the open ones are in ink, the closed ones are quiet.
+/// A dock chip's face: no chip at all until the pointer is over it. The one filling the bench sits
+/// on the selected fill with its glyph in the accent, the open ones are in ink, the closed ones are
+/// quiet.
 private struct DockChipFace: ViewModifier {
     let isOpen: Bool
     let isActive: Bool
@@ -282,33 +273,18 @@ private struct DockChipFace: ViewModifier {
     let tight: Bool
 
     func body(content: Content) -> some View {
-        if Design.style.filledControls {
-            content
-                .foregroundStyle(isActive || isOpen ? Design.Palette.ink : Design.Palette.inkSecondary)
-                .padding(.horizontal, tight ? 6 : 9)
-                .frame(height: Design.Metric.controlHeight)
-                .background(isActive ? Design.Palette.selected : (isHovering ? Design.Palette.hover : .clear),
-                            in: RoundedRectangle(cornerRadius: Design.Metric.corner + 1, style: .continuous))
-                .overlay(alignment: .bottom) {
-                    // An open surface not in front: a dot under it, so the dock still says what is open.
-                    if isOpen && !isActive {
-                        Circle().fill(Design.Palette.inkTertiary).frame(width: 3, height: 3).offset(y: -2)
-                    }
+        content
+            .foregroundStyle(isActive || isOpen ? Design.Palette.ink : Design.Palette.inkSecondary)
+            .padding(.horizontal, tight ? 6 : 9)
+            .frame(height: Design.Metric.controlHeight)
+            .background(isActive ? Design.Palette.selected : (isHovering ? Design.Palette.hover : .clear),
+                        in: RoundedRectangle(cornerRadius: Design.Metric.corner + 1, style: .continuous))
+            .overlay(alignment: .bottom) {
+                // An open surface not in front: a dot under it, so the dock still says what is open.
+                if isOpen && !isActive {
+                    Circle().fill(Design.Palette.inkTertiary).frame(width: 3, height: 3).offset(y: -2)
                 }
-                .contentShape(Rectangle())
-        } else {
-            content
-                .foregroundStyle(isActive ? Design.Palette.accent : Design.Palette.ink)
-                .padding(.horizontal, tight ? 7 : 10)
-                .frame(height: Design.Metric.controlHeight)
-                .background(isActive ? Design.Palette.accentSoft : Design.Palette.panel)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Design.Metric.corner)
-                        .stroke(isActive ? Design.Palette.accent : (isOpen ? Design.Palette.ink : Design.Palette.lineStrong),
-                                lineWidth: Design.Metric.hairline)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
-                .contentShape(Rectangle())
-        }
+            }
+            .contentShape(Rectangle())
     }
 }

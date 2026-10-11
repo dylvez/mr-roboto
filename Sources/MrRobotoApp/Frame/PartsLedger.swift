@@ -168,7 +168,7 @@ struct PartsLedger: View {
         .padding(.horizontal, Design.Metric.inset)
         .padding(.vertical, 10)
         .background(isSelected ? Design.Palette.accentSoft : .clear)
-        // Studio: the part's colour, the same as its strip in the Mixer.
+        // The part's colour, the same as its strip in the Mixer.
         .modifier(PartStripe(type: version.type, inset: 10))
     }
 }
@@ -326,29 +326,21 @@ private struct ActionTag: View {
         .foregroundStyle(Design.Palette.accent)
         .padding(.horizontal, 6)
         .frame(height: Design.Metric.tagHeight)
-        // Studio: the verb is a link, so it keeps the accent's ink but not a tinted ground.
-        .background(isSelected ? Design.Palette.panel : (Design.style.filledControls ? Design.Palette.fill : Design.Palette.accentSoft))
+        // The verb is a link, so it keeps the accent's ink but not a tinted ground.
+        .background(isSelected ? Design.Palette.panel : Design.Palette.fill)
         .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
         .padding(.top, 2)
     }
 }
 
-/// A version's chip on a ledger row: outlined, and outlined in the accent when it is the one
-/// selected, in Cool; a fill that deepens when selected, with no line, in Studio.
+/// A version's chip on a ledger row: a fill that deepens when it is the one selected, with no
+/// line.
 private struct VersionChipFace: ViewModifier {
     let isSelected: Bool
 
     func body(content: Content) -> some View {
-        if Design.style.filledControls {
-            content
-                .background(isSelected ? Design.Palette.accentSoft : Design.Palette.fill,
-                            in: RoundedRectangle(cornerRadius: Design.Metric.corner, style: .continuous))
-        } else {
-            content
-                .background(isSelected ? Design.Palette.panel : Design.Palette.panelAlt)
-                .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
-                    .stroke(isSelected ? Design.Palette.accent : Design.Palette.line, lineWidth: Design.Metric.hairline))
-                .clipShape(RoundedRectangle(cornerRadius: Design.Metric.corner))
-        }
+        content
+            .background(isSelected ? Design.Palette.accentSoft : Design.Palette.fill,
+                        in: RoundedRectangle(cornerRadius: Design.Metric.corner, style: .continuous))
     }
 }

@@ -38,29 +38,15 @@ struct LibraryListen: View {
                 if sounding { await preview.stop() } else { await preview.play(facts.id) }
             }
         } label: {
-            if Design.style.filledControls {
-                // Grey at rest like any control, orange while it sounds.
-                StudioChip(tone: sounding ? .sounding : .plain) {
-                    HStack(spacing: 5) {
-                        Image(systemName: sounding ? "stop.fill" : "play.fill").font(.system(size: 10, weight: .bold))
-                        Text(sounding ? "Stop" : facts.id.shelf == .songs ? "Play the song" : facts.id.shelf == .records && preview.stem != nil && isRecord
-                             ? "Play the \(preview.stem!)" : "Play")
-                            .font(Design.Typography.ui(12, weight: .semibold))
-                    }
-                    .foregroundStyle(sounding ? Design.Palette.onSounding : Design.Palette.ink)
-                }
-            } else {
+            // Grey at rest like any control, orange while it sounds.
+            StudioChip(tone: sounding ? .sounding : .plain) {
                 HStack(spacing: 5) {
                     Image(systemName: sounding ? "stop.fill" : "play.fill").font(.system(size: 10, weight: .bold))
                     Text(sounding ? "Stop" : facts.id.shelf == .songs ? "Play the song" : facts.id.shelf == .records && preview.stem != nil && isRecord
                          ? "Play the \(preview.stem!)" : "Play")
                         .font(Design.Typography.ui(12, weight: .semibold))
                 }
-                .foregroundStyle(Design.Palette.accent)
-                .padding(.horizontal, 10)
-                .frame(height: Design.Metric.chipHeight)
-                .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.accent, lineWidth: Design.Metric.hairline))
-                .contentShape(Rectangle())
+                .foregroundStyle(sounding ? Design.Palette.onSounding : Design.Palette.ink)
             }
         }
         .buttonStyle(.plain)

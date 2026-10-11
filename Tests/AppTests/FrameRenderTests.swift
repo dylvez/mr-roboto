@@ -24,8 +24,11 @@ struct FrameRenderTests {
         URL(fileURLWithPath: ProcessInfo.processInfo.environment["MRROBOTO_RENDER"] ?? NSTemporaryDirectory())
     }
 
-    /// `MRROBOTO_DARK` draws every render in the dark appearance.
-    private var rendersDark: Bool { ProcessInfo.processInfo.environment["MRROBOTO_DARK"] != nil }
+    /// Every render in the dark appearance: with `MRROBOTO_DARK` set, or under a palette that sets
+    /// the window dark (`MRROBOTO_PALETTE` dark, mid or vibrant).
+    private var rendersDark: Bool {
+        ProcessInfo.processInfo.environment["MRROBOTO_DARK"] != nil || Design.scheme.appearanceName == .darkAqua
+    }
 
     private func write<V: View>(_ view: V, size: CGSize, name: String) throws {
         let before = NSApplication.shared.appearance

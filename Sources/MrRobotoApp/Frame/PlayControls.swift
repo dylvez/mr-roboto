@@ -16,32 +16,17 @@ struct SurfacePlayControl: View {
             Button {
                 if isPlaying { player.stop() } else { Task { await audition.play(player) } }
             } label: {
-                if Design.style.filledControls {
-                    // Grey at rest like any control, orange while it sounds: the one place on the
-                    // surface that says it is making noise.
-                    StudioChip(tone: isPlaying ? .sounding : .plain, height: Design.Metric.chipHeight + 2, horizontalPadding: 10) {
-                        HStack(spacing: 6) {
-                            Image(systemName: isPlaying ? "stop.fill" : "play.fill").font(.system(size: 9, weight: .semibold))
-                            Text(isPlaying ? "Stop" : "Play \(audition.label)")
-                                .font(.system(size: 12, weight: .medium))
-                                .lineLimit(1)
-                                .fixedSize()
-                        }
-                        .foregroundStyle(isPlaying ? Design.Palette.onSounding : Design.Palette.ink)
-                    }
-                } else {
-                    HStack(spacing: 5) {
-                        Image(systemName: isPlaying ? "stop.fill" : "play.fill").font(.system(size: 9, weight: .medium))
+                // Grey at rest like any control, orange while it sounds: the one place on the
+                // surface that says it is making noise.
+                StudioChip(tone: isPlaying ? .sounding : .plain, height: Design.Metric.chipHeight + 2, horizontalPadding: 10) {
+                    HStack(spacing: 6) {
+                        Image(systemName: isPlaying ? "stop.fill" : "play.fill").font(.system(size: 9, weight: .semibold))
                         Text(isPlaying ? "Stop" : "Play \(audition.label)")
-                            .font(Design.Typography.ui(11.5, weight: .medium))
+                            .font(.system(size: 12, weight: .medium))
                             .lineLimit(1)
                             .fixedSize()
                     }
-                    .padding(.horizontal, 9)
-                    .frame(height: Design.Metric.chipHeight)
-                    .foregroundStyle(isPlaying ? Design.Palette.panel : Design.Palette.accent)
-                    .background(isPlaying ? Design.Palette.accent : Design.Palette.accentSoft, in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-                    .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.accent.opacity(0.45), lineWidth: Design.Metric.hairline))
+                    .foregroundStyle(isPlaying ? Design.Palette.onSounding : Design.Palette.ink)
                 }
             }
             .buttonStyle(.plain)
@@ -54,12 +39,7 @@ struct SurfacePlayControl: View {
             }
             .padding(.horizontal, 9)
             .frame(height: Design.Metric.chipHeight)
-            .foregroundStyle(Design.style.filledControls ? Design.Palette.inkQuiet : Design.Palette.inkTertiary)
-            .overlay {
-                if Design.style.surfaceCards {
-                    RoundedRectangle(cornerRadius: Design.Metric.corner).stroke(Design.Palette.line, lineWidth: Design.Metric.hairline)
-                }
-            }
+            .foregroundStyle(Design.Palette.inkQuiet)
             .help("This surface plays from here once it holds something: a painted step, a note, a chord, a selection.")
         }
     }
@@ -87,15 +67,13 @@ struct PartPlayButton: View {
         }
     }
 
-    /// Cool plays in its accent; Studio is a grey button that goes orange while it sounds.
+    /// A grey button that goes orange while it sounds.
     private func foreground(_ isPlaying: Bool) -> Color {
-        if Design.style.filledControls { return isPlaying ? Design.Palette.onSounding : Design.Palette.ink }
-        return isPlaying ? Design.Palette.panel : Design.Palette.accent
+        isPlaying ? Design.Palette.onSounding : Design.Palette.ink
     }
 
     private func background(_ isPlaying: Bool) -> Color {
-        if Design.style.filledControls { return isPlaying ? Design.Palette.sounding : Design.Palette.fill }
-        return isPlaying ? Design.Palette.accent : Design.Palette.accentSoft
+        isPlaying ? Design.Palette.sounding : Design.Palette.fill
     }
 }
 

@@ -96,7 +96,7 @@ struct CastSurfaceView: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .groupedArea(Design.Palette.panelAlt, stroke: Design.Palette.line)
+        .groupedArea()
     }
 
     private func chipHelp(_ name: String, present: Bool) -> String {
@@ -198,21 +198,7 @@ private struct CastChip: View {
 
     var body: some View {
         Button(action: action) {
-            if Design.style.filledControls {
-                StudioChip(isOn: isOn) { ChipText(title, isOn: isOn, size: 11.5) }
-            } else {
-                Text(title)
-                    .font(Design.Typography.ui(11.5, weight: isOn ? .semibold : .regular))
-                    .foregroundStyle(isOn ? Design.Palette.accent : Design.Palette.inkSecondary)
-                    .lineLimit(1)
-                    .fixedSize()
-                    .padding(.horizontal, 8)
-                    .frame(height: Design.Metric.chipHeight)
-                    .background(isOn ? Design.Palette.accentSoft : Design.Palette.panel,
-                                in: RoundedRectangle(cornerRadius: Design.Metric.corner))
-                    .overlay(RoundedRectangle(cornerRadius: Design.Metric.corner)
-                        .stroke(isOn ? Design.Palette.accent.opacity(0.35) : Design.Palette.line, lineWidth: Design.Metric.hairline))
-            }
+            StudioChip(isOn: isOn) { ChipText(title, isOn: isOn, size: 11.5) }
         }
         .buttonStyle(.plain)
     }
