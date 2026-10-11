@@ -56,9 +56,12 @@ struct CastSurfaceView: View {
     private func row(_ persona: any Persona) -> some View {
         let bible = persona.bible
         let present = inRoom.contains(bible.id.rawValue)
+        // In Vibrant each member wears the colour it speaks in everywhere else: its ring, its name,
+        // a wash from the card's edge, and its chip while it is in the room.
+        let hue = present ? MemberHue.color(forPersona: bible.name) : nil
         return HStack(alignment: .top, spacing: 12) {
             if let emblem = Art.emblem(forPersona: bible.name) {
-                ArtImage(emblem, width: 44, height: 44)
+                MemberEmblem(name: emblem, hue: hue, width: 44)
                     .opacity(present ? 1 : 0.35)
             } else {
                 Circle().fill(Design.Palette.panelAlt).frame(width: 44, height: 44)
@@ -68,7 +71,7 @@ struct CastSurfaceView: View {
                 HStack(spacing: 8) {
                     Text(bible.name)
                         .font(Design.Typography.ui(14, weight: .semibold))
-                        .foregroundStyle(present ? Design.Palette.ink : Design.Palette.inkTertiary)
+                        .foregroundStyle(present ? (hue ?? Design.Palette.ink) : Design.Palette.inkTertiary)
                     Text(bible.lineages.map(\.name).joined(separator: " · "))
                         .font(Design.Typography.ui(11, weight: .regular))
                         .foregroundStyle(Design.Palette.inkTertiary)
@@ -90,12 +93,20 @@ struct CastSurfaceView: View {
             }
             Spacer()
             // Lit and "In the room" when they are; unlit, the chip says what pressing it does.
-            CastChip(present ? "In the room" : "Bring in", isOn: present) { toggle(bible.id) }
+            CastChip(present ? "In the room" : "Bring in", isOn: present, tint: hue) { toggle(bible.id) }
                 .disabled(app.song == nil)
                 .help(chipHelp(bible.name, present: present))
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            if let hue {
+                LinearGradient(colors: [hue.opacity(0.16), hue.opacity(0)], startPoint: .leading, endPoint: .trailing)
+            }
+        }
+        .overlay(alignment: .leading) {
+            if let hue { Rectangle().fill(hue).frame(width: 3) }
+        }
         .groupedArea()
     }
 
@@ -193,12 +204,15 @@ struct CastSurfaceView: View {
 private struct CastChip: View {
     let title: String
     var isOn = false
+    var tint: Color? = nil
     let action: () -> Void
-    init(_ title: String, isOn: Bool = false, action: @escaping () -> Void) { self.title = title; self.isOn = isOn; self.action = action }
+    init(_ title: String, isOn: Bool = false, tint: Color? = nil, action: @escaping () -> Void) {
+        self.title = title; self.isOn = isOn; self.tint = tint; self.action = action
+    }
 
     var body: some View {
         Button(action: action) {
-            StudioChip(isOn: isOn) { ChipText(title, isOn: isOn, size: 11.5) }
+            StudioChip(isOn: isOn, tint: tint) { ChipText(title, isOn: isOn, size: 11.5) }
         }
         .buttonStyle(.plain)
     }

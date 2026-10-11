@@ -67,8 +67,9 @@ struct ConversationRail: View {
                         .font(.system(size: 9, weight: .semibold))
                         .foregroundStyle(Design.Palette.inkTertiary)
                         .frame(width: 10)
-                    if let emblem = Art.emblem(for: question.asker) { ArtImage(emblem, width: 22) }
-                    SmallLabel("\(question.asker.label) asks")
+                    let hue = MemberHue.color(for: question.asker)
+                    if let emblem = Art.emblem(for: question.asker) { MemberEmblem(name: emblem, hue: hue, width: 22) }
+                    SmallLabel("\(question.asker.label) asks", color: hue ?? Design.Palette.inkSecondary)
                     Spacer()
                 }
                 .contentShape(Rectangle())
@@ -197,9 +198,11 @@ struct LogLine: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 7) {
-                if let emblem = Art.emblem(for: source) { ArtImage(emblem, width: 22) }
+                // In Vibrant a member speaks in its own colour, as it does over its readings.
+                let hue = MemberHue.color(for: source)
+                if let emblem = Art.emblem(for: source) { MemberEmblem(name: emblem, hue: hue, width: 22) }
                 SmallLabel(source.label,
-                           color: source.isBand ? Design.Palette.emphasis : Design.Palette.inkSecondary)
+                           color: hue ?? (source.isBand ? Design.Palette.emphasis : Design.Palette.inkSecondary))
             }
             Text(text)
                 .font(Design.Typography.prose(16))

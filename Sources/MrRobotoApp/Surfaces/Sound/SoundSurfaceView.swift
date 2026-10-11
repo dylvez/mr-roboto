@@ -22,7 +22,7 @@ struct SoundSurfaceView: View {
             VStack(alignment: .leading, spacing: Design.Metric.gutter) {
                 header(layout)
                 Divider().overlay(Design.Palette.line)
-                if layout.showsVoiceReadout { VoiceReadout(surface: surface, layout: layout) }
+                if layout.showsVoiceReadout { VoiceReadout(surface: surface, layout: layout, hue: hue) }
                 if surface.subject.isPart { partStatus }
                 if surface.panel == .voice, let recording = surface.recordedAs { recordedNote(recording) }
                 if surface.panel == .chain { chainPresets }
@@ -35,6 +35,15 @@ struct SoundSurfaceView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         .background(Design.Palette.panel)
+    }
+
+    /// The colour of what is being shaped, in Vibrant: a drum voice's own, as the Grid paints its
+    /// row — a kick red, a tom magenta — or a chop's or a groove's part colour. Every chosen chip,
+    /// the two prominent sliders and the drawn sound wear it. Nil in the other palettes.
+    private var hue: Color? {
+        guard Design.scheme.isVivid else { return nil }
+        if case .part(let type) = surface.subject { return PartHue.color(for: type) }
+        return LaneClass(surface.draft.voice.drumVoice).color
     }
 
     // MARK: Header
@@ -144,9 +153,17 @@ struct SoundSurfaceView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
                 ForEach(surface.draft.availableVoices, id: \.self) { voice in
-                    chip(voice.rawValue, isOn: surface.draft.voice == voice) {
-                        surface.select(voice)
+                    let isOn = surface.draft.voice == voice
+                    let colour = Design.scheme.isVivid ? LaneClass(voice.drumVoice).color : nil
+                    Button { surface.select(voice) } label: {
+                        StudioChip(isOn: isOn, tint: colour) {
+                            HStack(spacing: 5) {
+                                if let colour { Circle().fill(colour).frame(width: 6, height: 6) }
+                                ChipText(voice.rawValue, isOn: isOn, size: 12)
+                            }
+                        }
                     }
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -265,7 +282,7 @@ struct SoundSurfaceView: View {
             if !editing { surface.commit() }
         }
         .controlSize(.small)
-        .tint(control.isProminent ? Design.Palette.accent : Design.Palette.lineStrong)
+        .tint(control.isProminent ? (hue ?? Design.Palette.accent) : Design.Palette.lineStrong)
         .accessibilityLabel(control.name)
         .accessibilityValue(control.readout)
     }
@@ -360,12 +377,18 @@ struct SoundSurfaceView: View {
                 VStack(spacing: 3) {
                     ArtImage(Art.machine(preset.rawValue), width: 64, height: 40)
                     ChipText(name, isOn: isOn, size: 11)
-                        .foregroundStyle(isOn ? Design.Palette.ink : Design.Palette.inkSecondary)
+                        .foregroundStyle(isOn ? (hue ?? Design.Palette.ink) : Design.Palette.inkSecondary)
                 }
                 .padding(.horizontal, 6)
                 .padding(.vertical, 5)
-                .background(isOn ? Design.Palette.selected : Design.Palette.fill,
+                .background(isOn ? (hue.map { $0.opacity(0.2) } ?? Design.Palette.selected) : Design.Palette.fill,
                             in: RoundedRectangle(cornerRadius: Design.Metric.corner, style: .continuous))
+                .overlay {
+                    if isOn, let hue {
+                        RoundedRectangle(cornerRadius: Design.Metric.corner, style: .continuous)
+                            .strokeBorder(hue.opacity(0.6), lineWidth: 1)
+                    }
+                }
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -377,7 +400,7 @@ struct SoundSurfaceView: View {
 
     private func chip(_ label: String, isOn: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            StudioChip(isOn: isOn) { ChipText(label, isOn: isOn, size: 12) }
+            StudioChip(isOn: isOn, tint: hue) { ChipText(label, isOn: isOn, size: 12) }
         }
         .buttonStyle(.plain)
     }
@@ -401,11 +424,13 @@ struct SoundSurfaceView: View {
 private struct VoiceReadout: View {
     @Bindable var surface: SoundSurface
     let layout: SoundLayout
+    /// The colour of what is being shaped, in Vibrant.
+    var hue: Color? = nil
 
     var body: some View {
         HStack(alignment: .top, spacing: Design.Metric.gutter) {
             VStack(alignment: .leading, spacing: 4) {
-                SmallLabel(surface.panel == .chain ? "Chain on" : "Editing", color: Design.Palette.inkTertiary)
+                SmallLabel(surface.panel == .chain ? "Chain on" : "Editing", color: hue ?? Design.Palette.inkTertiary)
                 Text(surface.subject.isPart ? surface.subjectName : surface.draft.voice.rawValue)
                     .font(Design.Typography.prose(layout.readoutNameSize, weight: .medium))
                     .foregroundStyle(Design.Palette.ink)
@@ -414,6 +439,12 @@ private struct VoiceReadout: View {
                     .font(Design.Typography.ui(12))
                     .foregroundStyle(Design.Palette.inkSecondary)
                     .lineLimit(1)
+            }
+            .fixedSize(horizontal: true, vertical: false)
+            if let hue {
+                VoiceScope(surface: surface, hue: hue)
+                    .frame(minWidth: 120, maxWidth: 420, maxHeight: .infinity)
+                    .padding(.vertical, 12)
             }
             Spacer(minLength: Design.Metric.gutter)
             // The two prominent knobs, in the units you would measure them in.
@@ -433,6 +464,11 @@ private struct VoiceReadout: View {
         .padding(.horizontal, Design.Metric.inset)
         .frame(height: layout.readoutHeight)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            if let hue {
+                LinearGradient(colors: [hue.opacity(0.2), hue.opacity(0)], startPoint: .leading, endPoint: .trailing)
+            }
+        }
         .groupedArea()
     }
 
@@ -453,7 +489,7 @@ private struct VoiceReadout: View {
             HStack(spacing: 6) {
                 ForEach(SoundMonitor.allCases, id: \.self) { side in
                     Button { surface.monitor = side } label: {
-                        StudioChip(isOn: surface.monitor == side, height: Design.Metric.controlHeight, horizontalPadding: 14) {
+                        StudioChip(isOn: surface.monitor == side, height: Design.Metric.controlHeight, horizontalPadding: 14, tint: hue) {
                             ChipText(side == .chain ? "Chain" : "Dry", isOn: surface.monitor == side, size: 13)
                         }
                     }
@@ -463,6 +499,73 @@ private struct VoiceReadout: View {
             Text("Dry is a true bypass")
                 .font(Design.Typography.ui(10.5))
                 .foregroundStyle(Design.Palette.inkTertiary)
+        }
+    }
+}
+
+/// The sound being shaped, drawn: its loudness along its length on the dark plate, the clean sound
+/// as a grey shadow and what the chain makes of it in the colour of what is being shaped — so a
+/// shorter decay, a crusher's grit or a chop's dust is seen as well as heard. Vibrant only.
+private struct VoiceScope: View {
+    let surface: SoundSurface
+    let hue: Color
+
+    @State private var dry: [Float] = []
+    @State private var wet: [Float] = []
+
+    /// What the drawing depends on: the draft, whether the dry part has arrived, and which pass is
+    /// being edited.
+    private struct Inputs: Equatable {
+        var draft: SoundState
+        var ready: Bool
+        var stacks: Bool
+    }
+
+    var body: some View {
+        Canvas { context, size in
+            let mid = size.height / 2
+            context.fill(Path(CGRect(x: 0, y: mid - 0.5, width: size.width, height: 1)), with: .color(hue.opacity(0.3)))
+            context.fill(Self.shape(dry, in: size), with: .color(Design.Palette.inkQuiet.opacity(0.5)))
+            var lit = context
+            lit.addFilter(.shadow(color: hue.opacity(0.75), radius: 6))
+            lit.fill(Self.shape(wet, in: size),
+                     with: .linearGradient(Gradient(colors: [hue, hue.opacity(0.55)]),
+                                           startPoint: .zero, endPoint: CGPoint(x: size.width, y: 0)))
+        }
+        .background(Design.Palette.plate, in: RoundedRectangle(cornerRadius: Design.Metric.corner, style: .continuous))
+        .task(id: Inputs(draft: surface.draft, ready: surface.dryPart != nil, stacks: surface.stacksPass)) {
+            // A knob dragged moves the draft at the display's rate; drawing waits for it to pause.
+            try? await Task.sleep(for: .milliseconds(50))
+            guard !Task.isCancelled else { return }
+            dry = Self.peaks(surface.rendered(.dry))
+            wet = Self.peaks(surface.rendered(.chain))
+        }
+        .help("The sound as it is now, in colour, over the clean sound in grey")
+        .accessibilityHidden(true)
+    }
+
+    /// A waveform's outline, mirrored about the middle.
+    static func shape(_ peaks: [Float], in size: CGSize) -> Path {
+        var path = Path()
+        guard peaks.count > 1 else { return path }
+        let mid = size.height / 2
+        let step = size.width / CGFloat(peaks.count - 1)
+        path.move(to: CGPoint(x: 0, y: mid))
+        for (i, v) in peaks.enumerated() { path.addLine(to: CGPoint(x: CGFloat(i) * step, y: mid - CGFloat(v) * (mid - 2))) }
+        for (i, v) in peaks.enumerated().reversed() { path.addLine(to: CGPoint(x: CGFloat(i) * step, y: mid + CGFloat(v) * (mid - 2))) }
+        path.closeSubpath()
+        return path
+    }
+
+    /// The loudest sample in each of `count` slices, on a decibel scale from −54 dB to full: a drum
+    /// dies away exponentially, and drawn on a straight scale its tail would be a line.
+    static func peaks(_ samples: [Float], count: Int = 180) -> [Float] {
+        guard !samples.isEmpty else { return [] }
+        let size = max(1, samples.count / count)
+        return stride(from: 0, to: samples.count, by: size).map { start in
+            let peak = samples[start..<min(samples.count, start + size)].reduce(Float(0)) { max($0, abs($1)) }
+            let db = 20 * log10(max(peak, 1e-6))
+            return max(0, min(1, (db + 54) / 54))
         }
     }
 }

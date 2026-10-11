@@ -503,6 +503,15 @@ public enum Design {
         /// trace and a selected row's tint follow it (`Design.follow(hue:)`). With nothing on the
         /// bench that is a part, it is this electric blue — Studio's own, turned up.
         ///
+        /// **The colours mean something wherever they appear.** A chip that is on wears the work's
+        /// colour as a wash with a rim (`StudioChip`). A chord wears the colour of the step of the
+        /// key it stands on, on the Chords surface's bars and across the Piano roll's lane
+        /// (`HarmonyHue`); a note on the chord under it is lit and one between is hollow. A drum voice
+        /// wears its class's colour, and the Sound surface draws the sound it is shaping in it
+        /// (`LaneClass`). A band member speaks in the colour of what it owns (`MemberHue`), a rhyme
+        /// in its letter's (`RhymeHue`), and the Master's spectrum runs through the hues from the
+        /// lows to the highs. The other palettes keep all of these in ink.
+        ///
         /// One appearance only: every pair is the same in both, and choosing it sets the window dark.
         /// Its numbers are `SharedPalette.Vibrant`'s, which Roboto Capture is drawn in too.
         static let vibrant: Values = {

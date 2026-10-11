@@ -14,8 +14,9 @@ struct NextQuestionCard: View {
         VStack(alignment: .leading, spacing: 10) {
             if showsAsker {
                 HStack(spacing: 8) {
-                    if let emblem = Art.emblem(for: question.asker) { ArtImage(emblem, width: 26) }
-                    SmallLabel("\(question.asker.label) asks")
+                    let hue = MemberHue.color(for: question.asker)
+                    if let emblem = Art.emblem(for: question.asker) { MemberEmblem(name: emblem, hue: hue, width: 26) }
+                    SmallLabel("\(question.asker.label) asks", color: hue ?? Design.Palette.inkSecondary)
                 }
             }
             VStack(alignment: .leading, spacing: 3) {

@@ -158,7 +158,8 @@ struct LyricsSurfaceView: View {
                     Text(name.uppercased())
                         .font(Design.Typography.label)
                         .tracking(1.1)
-                        .foregroundStyle(Design.Palette.emphasis)
+                        // In Vibrant, in the colour its section wears in Structure and the transport.
+                        .foregroundStyle(Design.scheme.isVivid ? SectionHue.color(for: name) : Design.Palette.emphasis)
                         .padding(.leading, 22)
                         .padding(.top, index == 0 ? 0 : 4)
                         .accessibilityLabel("Stanza: \(name)")
@@ -167,9 +168,10 @@ struct LyricsSurfaceView: View {
                     Color.clear.frame(height: 6)
                 } else {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(index < letters.count ? letters[index] : "")
-                            .font(Design.Typography.numeric(11, weight: .medium))
-                            .foregroundStyle(Design.Palette.emphasis)
+                        let letter = index < letters.count ? letters[index] : ""
+                        Text(letter)
+                            .font(Design.Typography.numeric(11, weight: Design.scheme.isVivid ? .bold : .medium))
+                            .foregroundStyle(RhymeHue.color(for: letter) ?? Design.Palette.emphasis)
                             .frame(width: 14)
                         HStack(spacing: 1) {
                             ForEach(Array(line.syllables.enumerated()), id: \.offset) { position, syllable in
@@ -185,7 +187,9 @@ struct LyricsSurfaceView: View {
             let pinnedCount = pinned.count
             let rest = Array(model.readings.filter { !$0.holds }.dropFirst(pinnedCount)) + model.readings.filter(\.holds)
             if !rest.isEmpty {
-                LyricLabel(pinnedCount > 0 ? "More from the Lyricist" : "The Lyricist").padding(.top, 8)
+                SmallLabel(pinnedCount > 0 ? "More from the Lyricist" : "The Lyricist",
+                           color: MemberHue.color(forPersona: "Lyricist") ?? Design.Palette.inkTertiary)
+                    .padding(.top, 8)
                 ForEach(Array(rest.enumerated()), id: \.offset) { _, reading in
                     Text(reading.says)
                         .font(Design.Typography.ui(11.5, weight: .regular))
@@ -296,6 +300,19 @@ private struct SyllableMark: View {
                 Rectangle().fill(rule).frame(height: 1.5).offset(y: 2)
             }
             .help(offBeat ? "A stressed syllable on a note that starts off the beat." : unset ? "Past the melody's last note." : "")
+    }
+}
+
+/// A rhyme's colour in Vibrant: the lines that rhyme share a letter, and the letter a hue, so an
+/// ABAB stanza reads as two colours taking turns. Nil in the other palettes, which set it in ink.
+enum RhymeHue {
+    static func color(for letter: String) -> Color? {
+        let a = UnicodeScalar("A").value
+        guard Design.scheme.isVivid, let scalar = letter.unicodeScalars.first,
+              (a...UnicodeScalar("Z").value).contains(scalar.value) else { return nil }
+        // Sky, gold, teal, violet, green, magenta, periwinkle, red: the lanes after the first, so
+        // the first rhyme is not the kick's red.
+        return Design.Palette.lane(Int(scalar.value - a) + 1)
     }
 }
 

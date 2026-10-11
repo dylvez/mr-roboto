@@ -812,8 +812,9 @@ private struct BeatmakerReadings: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
                 HStack(spacing: 6) {
-                    if let emblem = Art.emblem(forPersona: "Beatmaker") { ArtImage(emblem, width: 18) }
-                    GridLabel("The Beatmaker")
+                    let hue = MemberHue.color(forPersona: "Beatmaker")
+                    if let emblem = Art.emblem(forPersona: "Beatmaker") { MemberEmblem(name: emblem, hue: hue, width: 18) }
+                    SmallLabel("The Beatmaker", color: hue ?? Design.Palette.inkTertiary)
                 }
                 .help("The Beatmaker reads the groove on screen after every edit, rule by rule: what is flagged first, then what holds.")
                 Text(summary(flags: flags.count))
@@ -859,8 +860,9 @@ private struct BeatmakerLine: View {
     var body: some View {
         let flags = model.flags
         HStack(spacing: 6) {
-            if let emblem = Art.emblem(forPersona: "Beatmaker") { ArtImage(emblem, width: 16) }
-            GridLabel("The Beatmaker")
+            let hue = MemberHue.color(forPersona: "Beatmaker")
+            if let emblem = Art.emblem(forPersona: "Beatmaker") { MemberEmblem(name: emblem, hue: hue, width: 16) }
+            SmallLabel("The Beatmaker", color: hue ?? Design.Palette.inkTertiary)
             if let first = flags.first {
                 Image(systemName: "exclamationmark.triangle")
                     .font(Design.Typography.ui(9, weight: .bold))
@@ -895,7 +897,7 @@ private struct ReadingLine: View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
             Image(systemName: reading.holds ? "checkmark" : "exclamationmark.triangle")
                 .font(Design.Typography.ui(9, weight: .bold))
-                .foregroundStyle(reading.holds ? Design.Palette.inkTertiary : Design.Palette.warn)
+                .foregroundStyle(reading.holds ? (Design.scheme.isVivid ? Design.Palette.ok : Design.Palette.inkTertiary) : Design.Palette.warn)
                 .frame(width: 12)
             Text(reading.says)
                 .font(Design.Typography.prose(12.5))

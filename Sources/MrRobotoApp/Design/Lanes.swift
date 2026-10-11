@@ -1,3 +1,4 @@
+import MusicTheory
 import SongGraph
 import SwiftUI
 
@@ -56,6 +57,102 @@ enum PartHue {
 
     static func color(for type: PartType?) -> Color? {
         type.flatMap(index(for:)).map(Design.Palette.lane)
+    }
+}
+
+/// A chord's hue, by the step of the key its root stands on, so a progression reads as colours the
+/// way Hooktheory's lead sheets do: home red, then round the wheel — two gold, three green, four
+/// teal, five sky, six violet, seven magenta. The Chords surface's bars and the Piano roll's chord
+/// band both wear it, so a iv is the same teal on both. Vibrant draws with it; the other palettes
+/// leave the chords in ink.
+enum HarmonyHue {
+    /// The lane for a scale degree, 1…7.
+    static func index(degree: Int) -> Int {
+        let lanes = [0, 2, 5, 3, 1, 4, 6]
+        return lanes[((degree - 1) % 7 + 7) % 7]
+    }
+
+    /// The step of the key a chord's root stands on, and whether every note of it is the key's own:
+    /// a borrowed chord keeps its step's hue and is drawn as borrowed. The Harmonist's rule, so the
+    /// bars and its reading agree: the major chord on a minor key's fifth is the key's own.
+    static func reading(of chord: Chord, in key: Key) -> (degree: Int, inKey: Bool)? {
+        guard let numeral = key.romanNumeral(for: chord) else { return nil }
+        let own = Set(key.pitchClasses)
+        let isMinor = key.scale.diatonicChord(degree: 1, root: key.tonic.pitchClass)?.quality.hasMinorThird ?? false
+        let isTheFive = isMinor && key.tonic.pitchClass.distance(to: chord.root) == 7
+            && (chord.quality.third == 4 || chord.quality.isSuspended)
+        return (numeral.degree, isTheFive || chord.pitchClasses.allSatisfy(own.contains))
+    }
+
+    /// The chord's colour in Vibrant; nil in the other palettes, and for a root the key cannot spell.
+    static func color(for chord: Chord, in key: Key) -> Color? {
+        guard Design.scheme.isVivid, let reading = reading(of: chord, in: key) else { return nil }
+        return Design.Palette.lane(index(degree: reading.degree))
+    }
+}
+
+/// A band member's hue: the colour of what it owns, so the Beatmaker speaks in the groove's gold and
+/// the Harmonist in the chords' teal wherever either appears. The three who own no part take what
+/// is left — the Producer red, the Engineer the take's green, the Peer the words' periwinkle — and the
+/// Director keeps Vibrant's own blue. Vibrant only: the other palettes leave the names in ink.
+enum MemberHue {
+    static func index(forPersona name: String) -> Int? {
+        let key = name.lowercased()
+        if key.contains("beat") { return SharedPalette.PartLane.groove }
+        if key.contains("sampl") { return SharedPalette.PartLane.sample }
+        if key.contains("bass") { return SharedPalette.PartLane.bassline }
+        if key.contains("harmon") { return SharedPalette.PartLane.progression }
+        if key.contains("melod") { return SharedPalette.PartLane.melody }
+        if key.contains("lyric") { return SharedPalette.PartLane.lyric }
+        if key.contains("engineer") { return SharedPalette.PartLane.audio }
+        if key.contains("produc") { return 0 }
+        if key.contains("peer") { return SharedPalette.PartLane.lyric }
+        return nil
+    }
+
+    /// The member's colour in Vibrant; nil in the other palettes and for a name it does not know.
+    static func color(forPersona name: String) -> Color? {
+        guard Design.scheme.isVivid, let index = index(forPersona: name) else { return nil }
+        return Design.Palette.lane(index)
+    }
+
+    /// The colour of a line's speaker in the rail: a member's own, the Director's blue; none for you
+    /// or for the app.
+    static func color(for source: SessionEntry.Source) -> Color? {
+        switch source {
+        case .persona(let name): return color(forPersona: name)
+        case .director: return color(for: Proposal.Source.director)
+        case .you, .session: return nil
+        }
+    }
+
+    /// The colour of whoever is speaking: a member's own, the Director's blue, nothing for the app.
+    static func color(for source: Proposal.Source) -> Color? {
+        guard Design.scheme.isVivid else { return nil }
+        switch source {
+        case .persona(let name): return color(forPersona: name)
+        case .director: return Design.ColorPair.fixed(SharedPalette.Vibrant.accent).color
+        case .session: return nil
+        }
+    }
+}
+
+/// A member's portrait, ringed in its hue in Vibrant so the face and the colour are learned together.
+struct MemberEmblem: View {
+    let name: String
+    var hue: Color?
+    var width: CGFloat
+
+    var body: some View {
+        ArtImage(name, width: width)
+            .overlay {
+                if let hue {
+                    Circle()
+                        .strokeBorder(hue, lineWidth: 1.5)
+                        .padding(-2.5)
+                        .accessibilityHidden(true)
+                }
+            }
     }
 }
 
