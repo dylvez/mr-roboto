@@ -31,23 +31,7 @@ enum SectionHue {
     /// The hue index for a section named `name`. Names the app writes — Intro, Verse, Hook, Bridge,
     /// Outro and their numbered kin — get fixed hues; anything else gets one from its letters, so it
     /// is at least the same every time.
-    static func index(for name: String) -> Int {
-        let word = name.lowercased()
-        // Neighbours in a form get hues apart: an intro's green against a verse's blue, a verse's
-        // blue against a hook's gold. The kick's red is left to the drums, where it means kick; on
-        // a section it would read as record.
-        let kinds: [(keys: [String], hue: Int)] = [
-            (["pre-chorus", "prechorus", "pre-hook", "pre chorus", "build"], 4),
-            (["intro"], 5),
-            (["verse"], 1),
-            (["hook", "chorus", "refrain"], 2),
-            (["bridge", "middle"], 6),
-            (["break", "drop", "solo", "interlude"], 7),
-            (["outro", "ending", "coda", "tag"], 3),
-        ]
-        for kind in kinds where kind.keys.contains(where: word.contains) { return kind.hue }
-        return 1 + word.unicodeScalars.reduce(0) { ($0 &* 31 &+ Int($1.value)) & 0xffff } % 7
-    }
+    static func index(for name: String) -> Int { SharedPalette.sectionLane(for: name) }
 
     static func color(for name: String) -> Color { Design.Palette.lane(index(for: name)) }
 }
@@ -59,13 +43,13 @@ enum SectionHue {
 enum PartHue {
     static func index(for type: PartType) -> Int? {
         switch type {
-        case .groove: return 2
-        case .bassline: return 4
-        case .progression: return 3
-        case .melody: return 1
-        case .sample: return 6
-        case .audio: return 5
-        case .lyric: return 7
+        case .groove: return SharedPalette.PartLane.groove
+        case .bassline: return SharedPalette.PartLane.bassline
+        case .progression: return SharedPalette.PartLane.progression
+        case .melody: return SharedPalette.PartLane.melody
+        case .sample: return SharedPalette.PartLane.sample
+        case .audio: return SharedPalette.PartLane.audio
+        case .lyric: return SharedPalette.PartLane.lyric
         case .sound, .analysis, .mix: return nil
         }
     }

@@ -42,3 +42,14 @@ the headphones at full quality and the take comes in on the phone's own micropho
 folder, the song and section are typed, captures live in the app's Documents (Files › On My iPhone ›
 Roboto Capture), and a share — AirDrop to the Mac — gets one to the inbox. A device build is yours:
 set `DEVELOPMENT_TEAM` in `project.yml`.
+
+**How it looks.** Vibrant, the Mac's default palette, from the same numbers: `Capture/project.yml`
+compiles `Sources/MrRobotoApp/Design/SharedPalette.swift` into the phone, so a hue retuned on the Mac
+is retuned here (`DesignPaletteTests` checks the project still lists the file). The ground is
+near-black and the accent is the colour of what the take is for — the section's, as the Mac colours
+it (a verse blue, a hook gold, an intro green), or an idea's green — on the pickers, the toggle and a
+stripe down the take's card. The display is a black plate like the Mac's transport: the time, what
+the take is, and the microphone's level in the sounding orange; while the guide plays it glows in the
+section's colour, as the Mac's display does while that section plays, and recording without one it
+goes the Booth's red. Record is the one red control. Each capture in the list wears its section's
+colour, or an idea's green.

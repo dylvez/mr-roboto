@@ -404,7 +404,7 @@ struct DesignPaletteTests {
     @Test("The chosen palette survives a launch", arguments: Design.Scheme.allCases)
     func paletteIsPersisted(scheme: Design.Scheme) throws {
         try withDefaults { defaults in
-            #expect(Design.storedScheme(defaults) == .system, "an empty defaults should give Auto")
+            #expect(Design.storedScheme(defaults) == .vibrant, "an empty defaults should give Vibrant")
             defaults.set(scheme.rawValue, forKey: Design.schemeDefaultsKey)
             #expect(Design.storedScheme(defaults) == scheme)
         }
@@ -414,7 +414,7 @@ struct DesignPaletteTests {
     /// now; a palette chosen since wins over it.
     @Test("Light or Dark chosen before the palettes carries over")
     func appearanceCarriesOver() throws {
-        for (old, carried) in [("light", Design.Scheme.light), ("dark", .dark), ("system", .system), ("sepia", .system)] {
+        for (old, carried) in [("light", Design.Scheme.light), ("dark", .dark), ("system", .system), ("sepia", .vibrant)] {
             try withDefaults { defaults in
                 defaults.set(old, forKey: Design.appearanceDefaultsKey)
                 #expect(Design.storedScheme(defaults) == carried, "\(old)")
@@ -425,20 +425,20 @@ struct DesignPaletteTests {
     }
 
     /// The themes are gone: a theme remembered from before — Cool Neutral, Studio, or the two
-    /// retired before them — opens in Auto, and a palette name we do not have falls back rather
-    /// than trapping on an optional.
-    @Test("A theme remembered from before, or an unknown palette, opens in Auto")
+    /// retired before them — opens in the default, Vibrant, and a palette name we do not have falls
+    /// back rather than trapping on an optional.
+    @Test("A theme remembered from before, or an unknown palette, opens in Vibrant")
     func oldThemesFallBack() throws {
         for theme in ["cool", "studio", "notebook", "petrol"] {
             try withDefaults { defaults in
                 defaults.set(theme, forKey: "design.theme")
                 defaults.set(2, forKey: "design.themeVersion")
-                #expect(Design.storedScheme(defaults) == .system, "\(theme)")
+                #expect(Design.storedScheme(defaults) == .vibrant, "\(theme)")
             }
         }
         try withDefaults { defaults in
             defaults.set("parchment", forKey: Design.schemeDefaultsKey)
-            #expect(Design.storedScheme(defaults) == .system)
+            #expect(Design.storedScheme(defaults) == .vibrant)
         }
     }
 
@@ -451,7 +451,7 @@ struct DesignPaletteTests {
         #expect(Design.Scheme.dark.appearanceName == .darkAqua)
         #expect(Design.Scheme.mid.appearanceName == .darkAqua)
         #expect(Design.Scheme.vibrant.appearanceName == .darkAqua)
-        #expect(Design.defaultScheme == .system)
+        #expect(Design.defaultScheme == .vibrant)
     }
 
     /// The View menu's shortcuts are positional, so the order of `allCases` is load-bearing: it is
@@ -499,5 +499,27 @@ struct DesignPaletteTests {
         #expect(app.workHue == PartHue.index(for: .groove))
         app.showSurface(.library)
         #expect(app.workHue == nil)
+    }
+
+    // MARK: The phone
+
+    /// Roboto Capture is drawn in Vibrant from the same numbers: its project compiles the shared
+    /// file rather than a copy of it, so a hue retuned here is retuned there.
+    @Test("Roboto Capture compiles the same palette file, and Vibrant is built from it")
+    func thePhoneSharesThePalette() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let project = try String(contentsOf: root.appendingPathComponent("Capture/project.yml"), encoding: .utf8)
+        #expect(project.contains("../Sources/MrRobotoApp/Design/SharedPalette.swift"))
+        let phone = try FileManager.default.contentsOfDirectory(atPath: root.appendingPathComponent("Capture/RobotoCapture").path)
+        #expect(!phone.contains("SharedPalette.swift"), "the phone keeps a copy instead of the shared file")
+
+        let vibrant = Design.Palette.vibrant
+        #expect(vibrant.paper.dark == SharedPalette.Vibrant.paper && vibrant.ink.dark == SharedPalette.Vibrant.ink)
+        #expect(vibrant.lanes.map(\.dark) == SharedPalette.Vibrant.lanes)
+        #expect(vibrant.accent.dark == SharedPalette.Vibrant.accent)
+        #expect(SharedPalette.Vibrant.soft(SharedPalette.Vibrant.lanes[2]) == Design.Palette.workSoft(vibrant.lanes[2], over: vibrant.panel).dark)
+        for name in ["Intro", "Verse 2", "Hook", "Bridge", "Outro", "Pre-Chorus", "Breakdown", "Whatever"] {
+            #expect(SectionHue.index(for: name) == SharedPalette.sectionLane(for: name))
+        }
     }
 }

@@ -10,7 +10,11 @@ targets:
   RobotoCapture:
     type: application
     platform: iOS
-    sources: [RobotoCapture]
+    sources:
+      - RobotoCapture
+      # The colours the Mac app is drawn in, as numbers: the same file, not a copy of it.
+      - path: ../Sources/MrRobotoApp/Design/SharedPalette.swift
+        group: RobotoCapture/Shared
     info:
       path: RobotoCapture/Info.plist
       properties:

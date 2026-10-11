@@ -81,12 +81,12 @@ public enum Design {
     ///
     /// Auto, Light and Dark are one palette in its two appearances. Mid Dark and Vibrant are each
     /// drawn for a dark window only, so choosing one sets the window dark as well: menus, popovers
-    /// and fields go dark with the rest.
+    /// and fields go dark with the rest. Vibrant is what the app opens in until another is chosen.
     ///
     /// There were themes before these — Notebook, Petrol and last Cool Neutral, each with its own
     /// way of drawing a control. A second look meant every control was drawn twice, and what was
     /// wanted from a choice was colour, so the look is Studio's alone and the choice is the palette.
-    /// A choice remembered from then opens in Auto.
+    /// A choice remembered from then opens in the default.
     public enum Scheme: String, CaseIterable, Identifiable, Sendable {
         /// Light or dark, as macOS is set.
         case system
@@ -209,8 +209,9 @@ public enum Design {
     /// over the first time the app opens without a palette remembered.
     public static let appearanceDefaultsKey = "design.appearance"
 
-    /// The palette the app opens in when nothing has been chosen yet.
-    public static let defaultScheme = Scheme.system
+    /// The palette the app opens in when nothing has been chosen yet: Vibrant, the one the user
+    /// chose to live in, and the one Roboto Capture is drawn in.
+    public static let defaultScheme = Scheme.vibrant
 
     public static let store = SchemeStore(renderScheme ?? storedScheme())
 
@@ -503,52 +504,49 @@ public enum Design {
         /// bench that is a part, it is this electric blue — Studio's own, turned up.
         ///
         /// One appearance only: every pair is the same in both, and choosing it sets the window dark.
-        static let vibrant = Values(
-            paper: .fixed(0x09090b),
-            panel: .fixed(0x121215),
-            panelAlt: .fixed(0x0e0e11),
-            raised: .fixed(0x1a1a1f),
-            ink: .fixed(0xf4f4f8),
-            inkSecondary: .fixed(0xbdbdc8),
-            inkTertiary: .fixed(0x8d8d99),
-            inkQuiet: .fixed(0x585862),
-            line: .fixed(0x29292f),
-            lineStrong: .fixed(0x37373f),
-            fill: ColorPair(0x8e8e9a, 0x8e8e9a, lightAlpha: 0.14, darkAlpha: 0.14),
-            hover: ColorPair(0x8e8e9a, 0x8e8e9a, lightAlpha: 0.2, darkAlpha: 0.2),
-            selected: ColorPair(0x8e8e9a, 0x8e8e9a, lightAlpha: 0.3, darkAlpha: 0.3),
-            accent: .fixed(0x5c8dff),
-            accentSoft: .fixed(0x18233f),
-            emphasis: .fixed(0xf4f4f8),
-            warn: .fixed(0xffc247),
-            warnSoft: .fixed(0x3a2c0c),
-            danger: .fixed(0xff5a52),
-            dangerSoft: .fixed(0x3d1414),
-            sounding: .fixed(0xf97f23),
-            soundingInk: .fixed(0xff9d4f),
-            onSounding: .fixed(0x24160a),
-            solo: .fixed(0xffd60a),
-            mute: .fixed(0x4fb3e8),
-            ok: .fixed(0x3ddc84),
-            plate: .fixed(0x060608),
-            trace: .fixed(0x7cc4ff),
-            lcdInk: .fixed(0xe8f2ff),
-            lcdLabel: .fixed(0x8696aa),
-            lcdRecording: .fixed(0x2a0b0a),
-            lcdRecordingInk: .fixed(0xffc4bf),
-            lanes: [0xff4d6a, 0x36c5ff, 0xf5d63a, 0x1fd6c4, 0xb083ff, 0x4fe07f, 0xff4fc0, 0xa6b9ff].map(ColorPair.fixed))
+        /// Its numbers are `SharedPalette.Vibrant`'s, which Roboto Capture is drawn in too.
+        static let vibrant: Values = {
+            typealias V = SharedPalette.Vibrant
+            return Values(
+                paper: .fixed(V.paper),
+                panel: .fixed(V.panel),
+                panelAlt: .fixed(V.panelAlt),
+                raised: .fixed(V.raised),
+                ink: .fixed(V.ink),
+                inkSecondary: .fixed(V.inkSecondary),
+                inkTertiary: .fixed(V.inkTertiary),
+                inkQuiet: .fixed(V.inkQuiet),
+                line: .fixed(V.line),
+                lineStrong: .fixed(V.lineStrong),
+                fill: ColorPair(V.fillGrey, V.fillGrey, lightAlpha: 0.14, darkAlpha: 0.14),
+                hover: ColorPair(V.fillGrey, V.fillGrey, lightAlpha: 0.2, darkAlpha: 0.2),
+                selected: ColorPair(V.fillGrey, V.fillGrey, lightAlpha: 0.3, darkAlpha: 0.3),
+                accent: .fixed(V.accent),
+                accentSoft: .fixed(V.accentSoft),
+                emphasis: .fixed(V.ink),
+                warn: .fixed(V.warn),
+                warnSoft: .fixed(V.warnSoft),
+                danger: .fixed(V.danger),
+                dangerSoft: .fixed(V.dangerSoft),
+                sounding: .fixed(SharedPalette.sounding),
+                soundingInk: .fixed(V.soundingInk),
+                onSounding: .fixed(SharedPalette.onSounding),
+                solo: .fixed(SharedPalette.solo),
+                mute: .fixed(V.mute),
+                ok: .fixed(V.ok),
+                plate: .fixed(V.plate),
+                trace: .fixed(V.trace),
+                lcdInk: .fixed(V.lcdInk),
+                lcdLabel: .fixed(V.lcdLabel),
+                lcdRecording: .fixed(V.lcdRecording),
+                lcdRecordingInk: .fixed(0xffc4bf),
+                lanes: V.lanes.map(ColorPair.fixed))
+        }()
 
         /// A selected row's tint in Vibrant when the accent is a lane's: the lane at 18% over the
         /// panel, which keeps the lane itself at 4.5:1 or better on it.
         static func workSoft(_ lane: ColorPair, over panel: ColorPair) -> ColorPair {
-            func mix(_ base: UInt32, _ top: UInt32) -> UInt32 {
-                let channel = { (shift: UInt32) -> UInt32 in
-                    let b = Double((base >> shift) & 0xff), t = Double((top >> shift) & 0xff)
-                    return UInt32((b + (t - b) * 0.18).rounded())
-                }
-                return channel(16) << 16 | channel(8) << 8 | channel(0)
-            }
-            return ColorPair(mix(panel.light, lane.light), mix(panel.dark, lane.dark))
+            ColorPair(SharedPalette.mix(panel.light, lane.light, 0.18), SharedPalette.mix(panel.dark, lane.dark, 0.18))
         }
 
         // MARK: The tokens themselves

@@ -461,8 +461,10 @@ struct LibraryDragPayloadTests {
 // MARK: - Light and dark
 
 /// The frame cannot be screenshotted from this shell, so the appearance check is made where it is
-/// decidable: every token the frame paints resolves to a different colour in the two appearances, and
-/// paper/ink keep their polarity. A token defined in only one theme cannot pass this.
+/// decidable. Studio's palette — what Auto, Light and Dark draw with — follows the appearance: every
+/// token the frame paints resolves to a different colour in the two, and paper and ink keep their
+/// polarity. Mid Dark and Vibrant are drawn for a dark window only, so they are held to the dark
+/// side's polarity here, and to the rest in `DesignPaletteTests`.
 @Suite("Appearances") @MainActor
 struct AppearanceTests {
     private func resolve(_ color: Color, _ name: NSAppearance.Name) -> NSColor {
@@ -477,30 +479,32 @@ struct AppearanceTests {
         0.2126 * color.redComponent + 0.7152 * color.greenComponent + 0.0722 * color.blueComponent
     }
 
-    @Test("Every token the frame paints is defined in both appearances")
+    @Test("Every token the frame paints is defined in both of Studio's appearances")
     func bothAppearances() {
-        let tokens: [(String, Color)] = [
-            ("paper", Design.Palette.paper), ("panel", Design.Palette.panel),
-            ("panelAlt", Design.Palette.panelAlt), ("ink", Design.Palette.ink),
-            ("inkSecondary", Design.Palette.inkSecondary), ("inkTertiary", Design.Palette.inkTertiary),
-            ("line", Design.Palette.line), ("lineStrong", Design.Palette.lineStrong),
-            ("accent", Design.Palette.accent), ("accentSoft", Design.Palette.accentSoft),
-            ("warn", Design.Palette.warn),
+        let studio = Design.Palette.studio
+        let tokens: [(String, Design.ColorPair)] = [
+            ("paper", studio.paper), ("panel", studio.panel), ("panelAlt", studio.panelAlt), ("ink", studio.ink),
+            ("inkSecondary", studio.inkSecondary), ("inkTertiary", studio.inkTertiary),
+            ("line", studio.line), ("lineStrong", studio.lineStrong),
+            ("accent", studio.accent), ("accentSoft", studio.accentSoft), ("warn", studio.warn),
         ]
-        for (name, color) in tokens {
-            let light = resolve(color, .aqua)
-            let dark = resolve(color, .darkAqua)
+        for (name, pair) in tokens {
+            let light = resolve(pair.color, .aqua)
+            let dark = resolve(pair.color, .darkAqua)
             #expect(light != dark, "\(name) is the same colour in both appearances")
         }
     }
 
-    @Test("Paper stays behind ink in both appearances")
+    @Test("Paper stays behind ink in both of Studio's appearances, and in every dark palette")
     func polarity() {
-        #expect(luminance(resolve(Design.Palette.paper, .aqua)) > luminance(resolve(Design.Palette.ink, .aqua)))
-        #expect(luminance(resolve(Design.Palette.paper, .darkAqua)) < luminance(resolve(Design.Palette.ink, .darkAqua)))
+        let studio = Design.Palette.studio
+        #expect(luminance(resolve(studio.paper.color, .aqua)) > luminance(resolve(studio.ink.color, .aqua)))
         // The accent has to read against paper in both, not only in light.
-        #expect(abs(luminance(resolve(Design.Palette.accent, .aqua)) - luminance(resolve(Design.Palette.paper, .aqua))) > 0.2)
-        #expect(abs(luminance(resolve(Design.Palette.accent, .darkAqua)) - luminance(resolve(Design.Palette.paper, .darkAqua))) > 0.2)
+        #expect(abs(luminance(resolve(studio.accent.color, .aqua)) - luminance(resolve(studio.paper.color, .aqua))) > 0.2)
+        for palette in [studio, Design.Palette.mid, Design.Palette.vibrant] {
+            #expect(luminance(resolve(palette.paper.color, .darkAqua)) < luminance(resolve(palette.ink.color, .darkAqua)))
+            #expect(abs(luminance(resolve(palette.accent.color, .darkAqua)) - luminance(resolve(palette.paper.color, .darkAqua))) > 0.2)
+        }
     }
 }
 
