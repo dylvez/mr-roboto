@@ -28,6 +28,8 @@ public final class MixerModel {
     public struct Row: Identifiable, Equatable, Sendable {
         public var part: PartID
         public var label: String
+        /// What kind of part the strip is, for its colour.
+        public var type: PartType? = nil
         public var id: PartID { part }
     }
 
@@ -98,8 +100,9 @@ public final class MixerModel {
             // A part set aside has no fader; its strip is kept in the mix for when it comes back.
             guard let part, !seen.contains(part), song?.isAside(part) != true else { return }
             seen.append(part)
-            let title = song?.versions.last { $0.partID == part }.map(PartLabel.title(of:)) ?? label
-            out.append(Row(part: part, label: title))
+            let newest = song?.versions.last { $0.partID == part }
+            let title = newest.map(PartLabel.title(of:)) ?? label
+            out.append(Row(part: part, label: title, type: newest?.type))
         }
         // Every part the plan sounds, in the order the transport claims strips for them, so the
         // Mixer and `MixGraph.reserve` are reading the same list. This used to name the first of

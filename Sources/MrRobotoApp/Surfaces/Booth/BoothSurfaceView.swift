@@ -430,6 +430,15 @@ struct SungWords: View {
 private struct LevelBar: View {
     let level: Float
     var body: some View {
+        if Design.style.filledControls {
+            // The input as a desk meters it: the same meter as a mixer strip's.
+            StudioMeter(peak: level, rms: level)
+        } else {
+            coolBar
+        }
+    }
+
+    private var coolBar: some View {
         GeometryReader { geometry in
             ZStack(alignment: .leading) {
                 RoundedRectangle(cornerRadius: 2).fill(Design.Palette.panelAlt)

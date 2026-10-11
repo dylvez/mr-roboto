@@ -50,3 +50,46 @@ enum SectionHue {
 
     static func color(for name: String) -> Color { Design.Palette.lane(index(for: name)) }
 }
+
+/// A part's hue in Studio, by its kind, the way a desk colours its tracks: the drums gold, the bass
+/// violet, the chords teal, the tune blue, a chop magenta, a take green, the words periwinkle. The
+/// same eight hues as the lanes and the sections, read in a different place: a strip, a row of the
+/// parts, a line of what a section plays. Nil for what is not a track — a sound, a mix, a reading.
+enum PartHue {
+    static func index(for type: PartType) -> Int? {
+        switch type {
+        case .groove: return 2
+        case .bassline: return 4
+        case .progression: return 3
+        case .melody: return 1
+        case .sample: return 6
+        case .audio: return 5
+        case .lyric: return 7
+        case .sound, .analysis, .mix: return nil
+        }
+    }
+
+    static func color(for type: PartType?) -> Color? {
+        type.flatMap(index(for:)).map(Design.Palette.lane)
+    }
+}
+
+/// A part's colour as a stripe down the leading edge of its row, in Studio; nothing in Cool.
+struct PartStripe: ViewModifier {
+    let type: PartType?
+    var inset: CGFloat = 0
+
+    func body(content: Content) -> some View {
+        if Design.style.laneColours, let hue = PartHue.color(for: type) {
+            content.overlay(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+                    .fill(hue)
+                    .frame(width: 3)
+                    .padding(.vertical, inset)
+                    .accessibilityHidden(true)
+            }
+        } else {
+            content
+        }
+    }
+}

@@ -7,7 +7,8 @@ import Testing
 @testable import MrRobotoApp
 
 // The frame's geometry, in numbers — Studio's, the default theme's. Cool Neutral's padded bench and
-// taller bars gave 973 × 665 at the default window and a minimum of 811 × 695.
+// taller bars gave 973 × 665 at the default window and a minimum of 811 × 695. A window's height
+// here is its content's: Studio's header is the window's own toolbar, which AppKit draws above it.
 //
 // The complaint these tests exist to keep answered: at the default 1440-point window the bench — the
 // only place work happens — was 610 points, 42% of the width, and the three-stacked rule then cut it
@@ -121,13 +122,14 @@ struct LayoutWidthTests {
 @Suite("Layout: height")
 struct LayoutHeightTests {
 
-    @Test("One surface fills the bench: 749 points of height at the default window, not 253")
+    @Test("One surface fills the bench: 798 points of height at the default window, not 253")
     func oneSurfaceFills() {
         let height = FrameLayout.defaultWindowHeight
-        // Studio's header (48), dock (44) and transport (56) are smaller than Cool's 56, 56 and 84.
-        #expect(FrameLayout.benchHeight(inWindowOfHeight: height) == 794)
-        #expect(FrameLayout.benchContentHeight(inWindowOfHeight: height) == 749)
-        #expect(FrameLayout.surfaceHeight(inWindowOfHeight: height, visibleSurfaces: 1) == 749)
+        // Studio draws no header of its own (the toolbar is the header), and its dock (44) and
+        // transport (56) are smaller than Cool's 56 and 84.
+        #expect(FrameLayout.benchHeight(inWindowOfHeight: height) == 843)
+        #expect(FrameLayout.benchContentHeight(inWindowOfHeight: height) == 798)
+        #expect(FrameLayout.surfaceHeight(inWindowOfHeight: height, visibleSurfaces: 1) == 798)
         #expect(FrameLayout.surfaceHeight(inWindowOfHeight: height, visibleSurfaces: 1)
                     > Before.surfaceHeightAt900 * 2.5)
     }
@@ -136,8 +138,8 @@ struct LayoutHeightTests {
     func splitting() {
         let height = FrameLayout.defaultWindowHeight
         // Two surfaces share a single hairline in Studio rather than an 18-point gutter.
-        #expect(FrameLayout.surfaceHeight(inWindowOfHeight: height, visibleSurfaces: 2) == 374)
-        #expect(FrameLayout.surfaceHeight(inWindowOfHeight: height, visibleSurfaces: 3) == 249)
+        #expect(FrameLayout.surfaceHeight(inWindowOfHeight: height, visibleSurfaces: 2) == 398.5)
+        #expect(FrameLayout.surfaceHeight(inWindowOfHeight: height, visibleSurfaces: 3) == 265.333_333_333_333_3)
         // Nothing is asked for below one: a bench with nothing in it still measures its one slot.
         #expect(FrameLayout.surfaceHeight(inWindowOfHeight: height, visibleSurfaces: 0)
                     == FrameLayout.surfaceHeight(inWindowOfHeight: height, visibleSurfaces: 1))
@@ -153,7 +155,7 @@ struct LayoutMinimumTests {
     func minimumIsTheSurface() {
         // 640, three 44-point strips and three hairlines: in Studio the bench has no padding of its own.
         #expect(FrameLayout.minimumWindowWidth == 775)
-        #expect(FrameLayout.minimumWindowHeight == 611)
+        #expect(FrameLayout.minimumWindowHeight == 562)
 
         // At the floor, a surface is drawn at exactly the size the tokens say it needs.
         #expect(FrameLayout.surfaceWidth(inWindowOfWidth: FrameLayout.minimumWindowWidth,

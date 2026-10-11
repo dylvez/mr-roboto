@@ -38,7 +38,9 @@ struct MrRobotoApp: App {
                 // region back asks the window for its width rather than crushing the instrument.
                 .frame(minWidth: FrameLayout.minimumWindowWidth, minHeight: FrameLayout.minimumWindowHeight)
         }
-        .windowStyle(.hiddenTitleBar)
+        // A unified toolbar: Studio's song title, History and Save sit in it beside the window's
+        // buttons; Cool hides its title and background and keeps its own header under it.
+        .windowToolbarStyle(.unified(showsTitle: true))
         .windowResizability(.contentMinSize)
         .defaultSize(width: FrameLayout.defaultWindowWidth, height: FrameLayout.defaultWindowHeight)
         .commands { FrameCommands(app: app) }
@@ -287,6 +289,10 @@ struct FrameCommands: Commands {
         }
 
         CommandMenu("Surfaces") {
+            // Every surface, the band's question, the song's actions and every song, by typing.
+            Button("Command Palette…") { app.isShowingPalette.toggle() }
+                .keyboardShortcut("p", modifiers: [.command, .shift])
+            Divider()
             // The same call the bench dock makes, so the menu and the chips cannot drift: a surface
             // picked by name opens on the most useful thing the song has for it.
             ForEach(Array(SurfaceKind.gateA.enumerated()), id: \.element) { index, kind in

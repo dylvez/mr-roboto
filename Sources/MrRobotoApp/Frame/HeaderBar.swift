@@ -63,49 +63,7 @@ struct HeaderBar: View {
                     .help("Saved on its own a few seconds after the last change, and on ⌘S.")
             }
             Spacer(minLength: 16)
-            if let busy = app.busy {
-                HStack(spacing: 6) {
-                    ProgressView()
-                        .controlSize(.small)
-                        .tint(Design.Palette.accent)
-                    Text(busy)
-                        .font(Design.Typography.ui(12, weight: .regular))
-                        .foregroundStyle(Design.Palette.inkSecondary)
-                        .lineLimit(1)
-                }
-                .help("Working. The rail says what happened when it is done.")
-            }
-            // The crate's work runs beside anything else, so it has a line of its own.
-            if let crate = app.crate.line {
-                HStack(spacing: 6) {
-                    if Design.isOffscreenRender {
-                        // A render draws AppKit's progress views as a prohibited block.
-                        Circle().fill(Design.Palette.accent).frame(width: 6, height: 6)
-                    } else if let fraction = app.crate.step?.fraction, app.crate.running?.kind == .separate {
-                        ProgressView(value: fraction)
-                            .progressViewStyle(.linear)
-                            .frame(width: 60)
-                            .tint(Design.Palette.accent)
-                    } else {
-                        ProgressView()
-                            .controlSize(.small)
-                            .tint(Design.Palette.accent)
-                    }
-                    Text(crate)
-                        .font(Design.Typography.ui(12, weight: .regular))
-                        .foregroundStyle(Design.Palette.inkSecondary)
-                        .lineLimit(1)
-                }
-                .help("The crate, reading and separating records in the background. Close what you like; it carries on.")
-            }
-            if let failure = app.lastSaveError {
-                // A save that failed in a folded rail is a save you believe happened. Said here,
-                // beside the button that failed.
-                Text("Save failed")
-                    .font(Design.Typography.label)
-                    .foregroundStyle(Design.Palette.danger)
-                    .help(failure)
-            }
+            HeaderStatus(app: app)
             FrameButton(title: "History", emphasis: .quiet, isEnabled: app.song != nil) {
                 isShowingHistory.toggle()
             }
@@ -125,7 +83,7 @@ struct HeaderBar: View {
 
 /// Every version in the song, newest first, with the operation that made it. The song graph is
 /// append-only, so this is the whole history — nothing is reconstructed.
-private struct HistoryList: View {
+struct HistoryList: View {
     let app: AppState
 
     var body: some View {
@@ -170,5 +128,138 @@ private struct HistoryList: View {
         }
         .frame(width: 300)
         .background(Design.Palette.panel)
+    }
+}
+
+/// What the song as a whole is waiting on — the band or a save at work, the crate reading and
+/// separating records, a save that failed — said where the song's title is: in Cool's header, and
+/// in the middle of Studio's toolbar.
+struct HeaderStatus: View {
+    let app: AppState
+
+    var body: some View {
+        HStack(spacing: 14) {
+            if let busy = app.busy {
+                HStack(spacing: 6) {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(Design.Palette.accent)
+                    Text(busy)
+                        .font(Design.Typography.ui(12, weight: .regular))
+                        .foregroundStyle(Design.Palette.inkSecondary)
+                        .lineLimit(1)
+                }
+                .help("Working. The rail says what happened when it is done.")
+            }
+            // The crate's work runs beside anything else, so it has a line of its own.
+            if let crate = app.crate.line {
+                HStack(spacing: 6) {
+                    if Design.isOffscreenRender {
+                        // A render draws AppKit's progress views as a prohibited block.
+                        Circle().fill(Design.Palette.accent).frame(width: 6, height: 6)
+                    } else if let fraction = app.crate.step?.fraction, app.crate.running?.kind == .separate {
+                        ProgressView(value: fraction)
+                            .progressViewStyle(.linear)
+                            .frame(width: 60)
+                            .tint(Design.Palette.accent)
+                    } else {
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(Design.Palette.accent)
+                    }
+                    Text(crate)
+                        .font(Design.Typography.ui(12, weight: .regular))
+                        .foregroundStyle(Design.Palette.inkSecondary)
+                        .lineLimit(1)
+                }
+                .help("The crate, reading and separating records in the background. Close what you like; it carries on.")
+            }
+            if let failure = app.lastSaveError {
+                // A save that failed in a folded rail is a save you believe happened. Said here,
+                // beside the button that failed.
+                Text("Save failed")
+                    .font(Design.Typography.label)
+                    .foregroundStyle(Design.Palette.danger)
+                    .help(failure)
+            }
+        }
+    }
+}
+
+/// The window's own chrome. Studio puts the song in the window's title, with "Edited" under it while
+/// it is unsaved, and History and Save in the toolbar, the way a Mac document window does; the
+/// title's menu has the song's settings. Cool keeps an empty title bar over its own header.
+struct WindowChrome: ViewModifier {
+    let app: AppState
+    @State private var isShowingHistory = false
+
+    func body(content: Content) -> some View {
+        if Design.style.nativeChrome {
+            content
+                .navigationTitle(app.song?.title ?? "Mr. Roboto")
+                .navigationSubtitle(app.hasUnsavedChanges ? "Edited" : "")
+                .toolbarTitleMenu {
+                    Button("Song Settings…") { app.wantsSongSettings = true }
+                        .disabled(app.song == nil)
+                    Button("History") { isShowingHistory = true }
+                        .disabled(app.song == nil)
+                    Divider()
+                    Button("Close Song") { app.closeSong() }
+                        .disabled(app.song == nil)
+                }
+                .toolbar {
+                    // Only while there is something to say: an empty status item still draws its
+                    // divider in the middle of the toolbar.
+                    if app.busy != nil || app.crate.line != nil || app.lastSaveError != nil {
+                        ToolbarItem(placement: .status) {
+                            HeaderStatus(app: app)
+                        }
+                    }
+                    ToolbarItemGroup(placement: .primaryAction) {
+                        Button {
+                            app.isShowingPalette.toggle()
+                        } label: {
+                            Label("Command Palette", systemImage: "command")
+                        }
+                        .help("Go to a surface or a song, or do anything, by typing (⇧⌘P)")
+                        Button {
+                            isShowingHistory.toggle()
+                        } label: {
+                            Label("History", systemImage: "clock.arrow.circlepath")
+                        }
+                        .help("Every version in the song, newest first")
+                        .disabled(app.song == nil)
+                        .popover(isPresented: $isShowingHistory, arrowEdge: .bottom) {
+                            HistoryList(app: app)
+                        }
+                        SaveButton(app: app)
+                    }
+                }
+                .containerBackground(Design.Palette.paper, for: .window)
+        } else {
+            content
+                .toolbar(removing: .title)
+                .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+                .containerBackground(Design.Palette.paper, for: .window)
+        }
+    }
+}
+
+/// Save, in the toolbar: the one prominent control while the song has unsaved work, a plain one
+/// once it is saved — autosave is a few seconds behind, so most of the time it is quiet.
+private struct SaveButton: View {
+    let app: AppState
+
+    var body: some View {
+        if app.hasUnsavedChanges {
+            Button("Save") { app.save() }
+                .buttonStyle(.glassProminent)
+                .disabled(app.song == nil || app.store == nil)
+                .help("Save the song now (⌘S). It saves itself a few seconds after the last change.")
+        } else {
+            Button("Save") { app.save() }
+                .disabled(app.song == nil || app.store == nil)
+                .help("Saved. It saves itself a few seconds after the last change.")
+        }
     }
 }

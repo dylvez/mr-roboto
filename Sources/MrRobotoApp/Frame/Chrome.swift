@@ -78,6 +78,7 @@ struct ChipButton: View {
         .disabled(!isEnabled)
         .opacity(isEnabled ? 1 : 0.4)
         .onHover { isHovering = $0 }
+        .animation(.easeOut(duration: 0.12), value: isHovering)
         .help(help)
     }
 }
@@ -178,6 +179,8 @@ struct StudioChip<Label: View>: View {
             .background(background, in: RoundedRectangle(cornerRadius: Design.Metric.corner, style: .continuous))
             .contentShape(Rectangle())
             .onHover { isHovering = $0 }
+            .animation(.easeOut(duration: 0.12), value: isHovering)
+            .animation(.easeOut(duration: 0.12), value: isOn)
     }
 
     private var foreground: Color {

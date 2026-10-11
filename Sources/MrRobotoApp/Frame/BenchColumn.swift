@@ -15,6 +15,7 @@ import SwiftUI
 struct BenchColumn: View {
     let app: AppState
     var registry: SurfaceRegistry = .shared
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: 0) {
@@ -47,6 +48,10 @@ struct BenchColumn: View {
         }
         .padding(FrameLayout.benchPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        // Studio: a surface brought forward cross-fades in on a quick spring with no bounce —
+        // structure moves, and gets out of the way. Not when the system asks for less motion.
+        .animation(Design.style.filledControls && !reduceMotion ? .snappy(duration: 0.22) : nil,
+                   value: visible.map(\.id))
         // A library row dropped on the bench is adopted into the open song and opened on the
         // surface it belongs on: a sample on the Chop lane, a groove idea in the Grid, a record cut
         // into a bar. A song opens; an album opens its surface.

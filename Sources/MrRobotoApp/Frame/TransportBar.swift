@@ -429,6 +429,13 @@ struct TransportDisplay: View {
         .popover(isPresented: $isShowingSettings, arrowEdge: .top) {
             SongSettingsPopover(app: app)
         }
+        // Studio has no header to open the settings from: File ▸ New Song, the title's menu and
+        // the band ask for them here, on the display that shows the tempo and the key.
+        .onChange(of: app.wantsSongSettings, initial: true) { _, wants in
+            guard wants else { return }
+            app.wantsSongSettings = false
+            if app.song != nil { isShowingSettings = true }
+        }
     }
 
     /// Bar and beat while it plays; at rest, the bar Play starts from.

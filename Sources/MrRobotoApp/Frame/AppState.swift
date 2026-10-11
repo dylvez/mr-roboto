@@ -303,6 +303,9 @@ public final class AppState {
     /// unasked. The header takes it, so it fires once.
     public var wantsSongSettings = false
 
+    /// ⇧⌘P: the command palette is over the frame.
+    public var isShowingPalette = false
+
     /// A stem dropped on the song or asked for from the crate, waiting for the Sources surface to
     /// choose it. The surface takes it, so it is chosen once.
     public var askedSource: AskedSource?

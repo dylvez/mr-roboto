@@ -195,7 +195,7 @@ struct MixerSurfaceView: View {
             ForEach(0..<3, id: \.self) { band in
                 if strip.eq.indices.contains(band) {
                     fader(value: strip.eq[band].gainDB, range: -18...18, format: "%+.0f", width: 72,
-                          name: "\(row.label) EQ band \(band + 1)") { model.setEQ(band: band, gainDB: $0, for: row.part) }
+                          name: "\(row.label) EQ band \(band + 1)", neutral: 0) { model.setEQ(band: band, gainDB: $0, for: row.part) }
                 }
             }
         }
@@ -220,7 +220,7 @@ struct MixerSurfaceView: View {
             // bench at a 1440 window, so the meters were one sideways scroll away on the most
             // common size there is.
             levelFader(row)
-            fader(value: strip.pan, range: -1...1, format: "%+.2f", width: 90, name: "\(row.label) pan") { model.setPan($0, for: row.part) }
+            fader(value: strip.pan, range: -1...1, format: "%+.2f", width: 90, name: "\(row.label) pan", neutral: 0) { model.setPan($0, for: row.part) }
             fader(value: strip.sendDB ?? MixerModel.sendOffDB, range: MixerModel.sendOffDB...0, format: "%.0f dB", width: 90,
                   name: "\(row.label) send", readout: MixerModel.sendReadout(strip.sendDB)) { model.setSend(MixerModel.send(fromFader: $0), for: row.part) }
             fader(value: strip.echoDB ?? MixerModel.sendOffDB, range: MixerModel.sendOffDB...0, format: "%.0f dB", width: 90,
@@ -242,6 +242,9 @@ struct MixerSurfaceView: View {
                 .frame(height: 10)
         }
         .padding(.vertical, 3)
+        // Studio: the part's colour down the strip's leading edge, a track colour as a desk has.
+        .padding(.leading, Design.style.laneColours && PartHue.color(for: row.type) != nil ? 10 : 0)
+        .modifier(PartStripe(type: row.type, inset: 3))
     }
 
     /// The strip's insert: the instrument's own, nothing, an amp or a rotating speaker; and with a
@@ -299,7 +302,7 @@ struct MixerSurfaceView: View {
                   name: section.map { "\(row.label) level in \($0)" } ?? "\(row.label) level",
                   readout: section.map { name in
                       String(format: "%+.1f dB", model.level(for: row.part)) + (own ? " in \(name)" : ", as everywhere")
-                  }) { model.setLevel($0, for: row.part) }
+                  }, neutral: 0) { model.setLevel($0, for: row.part) }
             if own {
                 Button("Reset") { model.clearSectionLevel(for: row.part) }
                     .buttonStyle(.plain)
@@ -313,16 +316,35 @@ struct MixerSurfaceView: View {
 
     /// A slider with its value under it. `readout` overrides the formatted value where the number
     /// would lie — a send at the bottom of its travel is off, not −60 dB.
+    ///
+    /// `neutral` is where the control rests — 0 dB, the centre of a pan. In Studio the slider's fill
+    /// grows from it, so a level shows how far it is from unity and a pan which way it leans, and
+    /// ⌥-click puts it back there, as on a desk.
     private func fader(value: Double, range: ClosedRange<Double>, format: String, width: CGFloat, name: String,
-                       readout: String? = nil, set: @escaping (Double) -> Void) -> some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Slider(value: Binding(get: { value }, set: set), in: range) { editing in
-                if !editing { model.endGesture() }
+                       readout: String? = nil, neutral: Double? = nil, set: @escaping (Double) -> Void) -> some View {
+        let binding = Binding(get: { value }, set: set)
+        let ended: (Bool) -> Void = { editing in if !editing { model.endGesture() } }
+        return VStack(alignment: .leading, spacing: 1) {
+            Group {
+                if Design.style.filledControls, let neutral {
+                    Slider(value: binding, in: range, neutralValue: neutral) {
+                        Text(name)
+                    } onEditingChanged: { ended($0) }
+                    .labelsHidden()
+                    .simultaneousGesture(TapGesture().modifiers(.option).onEnded {
+                        set(neutral)
+                        model.endGesture()
+                    })
+                } else {
+                    Slider(value: binding, in: range, onEditingChanged: ended)
+                }
             }
             .controlSize(.mini)
             .tint(Design.Palette.accent)
             .accessibilityLabel(name)
-            .help("\(name): heard while held, a mix version when let go.")
+            .help(Design.style.filledControls && neutral != nil
+                  ? "\(name): heard while held, a mix version when let go. ⌥-click puts it back."
+                  : "\(name): heard while held, a mix version when let go.")
             Text(readout ?? String(format: format, value)).font(Design.Typography.numeric(9.5)).foregroundStyle(Design.Palette.inkTertiary)
         }
         .frame(width: width)
@@ -342,7 +364,7 @@ struct MixerSurfaceView: View {
                 learnChip(.master)
             }
             .frame(width: 120, alignment: .leading)
-            fader(value: model.mix.master.gainDB, range: -24...24, format: "%+.1f dB", width: 160, name: "Master gain") { model.setMaster(gainDB: $0) }
+            fader(value: model.mix.master.gainDB, range: -24...24, format: "%+.1f dB", width: 160, name: "Master gain", neutral: 0) { model.setMaster(gainDB: $0) }
             fader(value: model.mix.master.ceilingDBTP, range: -12...0, format: "ceiling %.1f dBTP", width: compact ? 110 : 140, name: "Master ceiling") { model.setMaster(ceilingDBTP: $0) }
             fader(value: model.mix.master.targetLUFS, range: -30 ... -6, format: "target %.0f LUFS", width: compact ? 110 : 140, name: "Master target") { model.setMaster(targetLUFS: $0) }
             if let master { lastReading(master) }
@@ -566,6 +588,14 @@ struct MeterBar: View {
     let peak: Float
     let rms: Float
     var body: some View {
+        if Design.style.filledControls {
+            StudioMeter(peak: peak, rms: rms)
+        } else {
+            coolMeter
+        }
+    }
+
+    private var coolMeter: some View {
         GeometryReader { geometry in
             ZStack(alignment: .leading) {
                 RoundedRectangle(cornerRadius: 2).fill(Design.Palette.panelAlt)
@@ -576,6 +606,65 @@ struct MeterBar: View {
                     .opacity(peak > 0.001 || !Design.style.filledControls ? 1 : 0)
             }
             .overlay(RoundedRectangle(cornerRadius: 2).stroke(Design.Palette.line, lineWidth: Design.Metric.hairline))
+        }
+    }
+}
+
+/// Studio's meter: a slim bar in the sounding orange up to −6 dBFS and a lighter orange above it, a
+/// peak tick that holds for a second and a half the way a desk's does, and a red mark at the right
+/// end once anything reaches 0 dBFS, which stays until it is clicked. Empty, and grey, while
+/// nothing sounds.
+struct StudioMeter: View {
+    let peak: Float
+    let rms: Float
+
+    @State private var held: Float = 0
+    @State private var heldAt = Date.distantPast
+    @State private var clipped = false
+
+    /// −6 dBFS, as a linear amplitude: where the orange turns lighter.
+    static let hot: CGFloat = 0.501
+    static let holdSeconds = 1.5
+
+    var body: some View {
+        GeometryReader { geometry in
+            let width = geometry.size.width
+            ZStack(alignment: .leading) {
+                Capsule().fill(Design.Palette.fill)
+                LinearGradient(stops: [.init(color: Design.Palette.sounding, location: 0),
+                                       .init(color: Design.Palette.sounding, location: Self.hot),
+                                       .init(color: Design.Palette.sounding.opacity(0.55), location: Self.hot),
+                                       .init(color: Design.Palette.sounding.opacity(0.55), location: 1)],
+                               startPoint: .leading, endPoint: .trailing)
+                    .mask(alignment: .leading) {
+                        Capsule().frame(width: width * CGFloat(min(1, max(0, rms))))
+                    }
+                if held > 0.001 {
+                    Rectangle()
+                        .fill(held >= 1 ? Design.Palette.danger : Design.Palette.ink)
+                        .frame(width: 1.5)
+                        .offset(x: min(width - 1.5, width * CGFloat(min(1, held))))
+                }
+                if clipped {
+                    Circle()
+                        .fill(Design.Palette.danger)
+                        .frame(width: 5, height: 5)
+                        .offset(x: width + 4)
+                }
+            }
+        }
+        .frame(height: 5)
+        .padding(.trailing, 9)
+        .contentShape(Rectangle())
+        .onTapGesture { clipped = false }
+        .help(clipped ? "A peak reached 0 dBFS. Click to clear." : "Level: orange to −6 dBFS, lighter above; the tick holds the peak")
+        .onChange(of: peak) { _, now in
+            let at = Date()
+            if now >= held || at.timeIntervalSince(heldAt) > Self.holdSeconds {
+                held = now
+                heldAt = at
+            }
+            if now >= 1 { clipped = true }
         }
     }
 }

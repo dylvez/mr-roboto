@@ -162,11 +162,16 @@ public enum Design {
         public let laneColours: Bool
         /// A surface drawn as a bordered card inset in the bench (Cool), or edge to edge (Studio).
         public let surfaceCards: Bool
+        /// The window's own toolbar carries the song's title and History and Save (Studio), where
+        /// Cool draws a header of its own under an empty title bar.
+        public let nativeChrome: Bool
 
         static let cool = Style(uppercaseLabels: true, filledControls: false, inlinePrimers: true,
-                                lcdTransport: false, laneColours: false, surfaceCards: true)
+                                lcdTransport: false, laneColours: false, surfaceCards: true,
+                                nativeChrome: false)
         static let studio = Style(uppercaseLabels: false, filledControls: true, inlinePrimers: false,
-                                  lcdTransport: true, laneColours: true, surfaceCards: false)
+                                  lcdTransport: true, laneColours: true, surfaceCards: false,
+                                  nativeChrome: true)
     }
 
     /// The current theme's style.
@@ -952,11 +957,12 @@ public enum Design {
 
         /// Smaller and denser, at the sizes Mac controls are: a 28-point button where Cool's was
         /// 36, a 22-point chip, a four-point grid of spacing. A surface runs edge to edge in the
-        /// bench, and two of them share a single hairline.
+        /// bench, and two of them share a single hairline. No header of its own: the window's
+        /// toolbar is the header, and AppKit draws it outside the content.
         static let studio = Values(corner: 5, containerCorner: 10, cellCorner: 2,
                                    controlHeight: 28, chipHeight: 22, tagHeight: 18,
                                    gutter: 16, inset: 16, regionInset: 16,
-                                   headerHeight: 48, dockHeight: 44, transportHeight: 56,
+                                   headerHeight: 0, dockHeight: 44, transportHeight: 56,
                                    benchPadding: 0, benchSpacing: 1)
 
         private static var current: Values { Design.theme.metrics }

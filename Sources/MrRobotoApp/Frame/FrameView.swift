@@ -48,8 +48,9 @@ public enum FrameLayout {
 
     /// The vertical hairlines between the four columns: library│rail│bench│ledger.
     public static let verticalDividers: CGFloat = 3 * Design.Metric.hairline
-    /// The horizontal hairlines under the header and above the transport.
-    public static let horizontalDividers: CGFloat = 2 * Design.Metric.hairline
+    /// The horizontal hairlines under the header and above the transport — only the one above the
+    /// transport when the window's toolbar is the header.
+    public static var horizontalDividers: CGFloat { (Design.style.nativeChrome ? 1 : 2) * Design.Metric.hairline }
 
     // MARK: Regions
 
@@ -185,7 +186,9 @@ private struct WindowFitter: NSViewRepresentable {
         DispatchQueue.main.async {
             guard let window = view.window, !window.styleMask.contains(.fullScreen) else { return }
             let visible = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? window.frame
-            guard let fitted = FrameLayout.fittedFrame(for: window.frame, minimum: minimum, visible: visible) else { return }
+            // The minimum is the content's; the window's frame adds its title bar or toolbar.
+            let framed = window.frameRect(forContentRect: NSRect(origin: .zero, size: minimum)).size
+            guard let fitted = FrameLayout.fittedFrame(for: window.frame, minimum: framed, visible: visible) else { return }
             window.setFrame(fitted, display: true, animate: false)
         }
     }
@@ -200,12 +203,15 @@ private struct WindowFitter: NSViewRepresentable {
 struct FrameView: View {
     @Bindable var app: AppState
     var registry: SurfaceRegistry = .shared
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let minimumWidth = FrameLayout.minimumWindowWidth(collapsed: app.regions.collapsed)
         VStack(spacing: 0) {
-            HeaderBar(app: app)
-            Hairline()
+            if !Design.style.nativeChrome {
+                HeaderBar(app: app)
+                Hairline()
+            }
             HStack(spacing: 0) {
                 RegionColumn(region: .library, app: app, badge: libraryBadge) {
                     LibrarySidebar(app: app)
@@ -225,11 +231,30 @@ struct FrameView: View {
                 }
             }
             .frame(maxHeight: .infinity)
+            // A region folding or opening slides its width on the same spring as the bench.
+            .animation(Design.style.filledControls && !reduceMotion ? .snappy(duration: 0.25) : nil,
+                       value: app.regions.collapsed)
             Hairline()
             TransportBar(app: app)
         }
         .background(Design.Palette.paper)
         .foregroundStyle(Design.Palette.ink)
+        .overlay {
+            // The palette floats over the frame, a third of the way down, the rest of the window
+            // dimmed behind it; a click outside it puts it away.
+            if app.isShowingPalette {
+                ZStack(alignment: .top) {
+                    Color.black.opacity(0.16)
+                        .contentShape(Rectangle())
+                        .onTapGesture { app.isShowingPalette = false }
+                    CommandPaletteView(app: app) { app.isShowingPalette = false }
+                        .padding(.top, 72)
+                }
+                .transition(.opacity)
+            }
+        }
+        .animation(.snappy(duration: 0.18), value: app.isShowingPalette)
+        .modifier(WindowChrome(app: app))
         .frame(minWidth: minimumWidth, minHeight: FrameLayout.minimumWindowHeight)
         // "Asking for a region back asks the window for its width" — but SwiftUI only raises the
         // window's *minimum*; it does not grow a window that is already smaller than it. With

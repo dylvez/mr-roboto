@@ -74,6 +74,17 @@ struct FrameRenderTests {
         try write(FieldGuideView(), size: CGSize(width: 620, height: 900), name: "field-guide")
     }
 
+    @Test("the command palette over the frame, nothing typed")
+    func commandPalette() throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        let built = GuidanceFixture.grooved()
+        let app = app(built.song)
+        app.perform(SurfaceAction(surface: .grid, title: "New groove"))
+        app.isShowingPalette = true
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-palette")
+    }
+
     @Test("every region open at the window's minimum: the dock falls back to glyphs and nothing paints over the rail")
     func everyRegionOpenAtTheMinimum() throws {
         FontRegistration.registerBundledFonts()

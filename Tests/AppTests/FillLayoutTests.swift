@@ -6,7 +6,7 @@ import Testing
 
 // Do the surfaces use the room they have?
 //
-// The frame was rebuilt so that one surface fills the bench — 1009 × 749 at the default window, 1305
+// The frame was rebuilt so that one surface fills the bench — 1009 × 798 at the default window, 1305
 // wide with the side regions folded, 640 × 460 at the window minimum — and every surface in the
 // catalog had been authored when a surface got about 610 × 253. They sized themselves to their
 // content and top-aligned, leaving a third of a very expensive panel blank.
@@ -35,8 +35,8 @@ struct FillGeometryTests {
         #expect(Geometry.minimum == CGSize(width: 640, height: 460))
         // Studio's: the surface runs edge to edge and the bars above and below it are shorter.
         // Cool Neutral's were 973 × 665 and 1269 × 665.
-        #expect(Geometry.standard == CGSize(width: 1009, height: 749))
-        #expect(Geometry.wide == CGSize(width: 1305, height: 749))
+        #expect(Geometry.standard == CGSize(width: 1009, height: 798))
+        #expect(Geometry.wide == CGSize(width: 1305, height: 798))
 
         // And they are derived, so a change to `Design.Metric` or to the regions moves them.
         #expect(Geometry.minimum.width == Design.Metric.surfaceMinimumWidth)
@@ -66,7 +66,7 @@ struct FillChopLaneTests {
         ChopLaneLayout(size: size, sliceCount: slices)
     }
 
-    @Test("The plate is not a constant: 140 at the window minimum, 399 at the default window")
+    @Test("The plate is not a constant: 140 at the window minimum, 420 at the default window")
     func plateGrows() {
         let tight = layout(Geometry.minimum)
         let standard = layout(Geometry.standard)
@@ -77,7 +77,7 @@ struct FillChopLaneTests {
         // The old fixed `minHeight: 168` is the thing this replaces: at the default window the plate
         // is now most of a marker drag's worth of waveform rather than a strip.
         #expect(standard.plateHeight > 168 * 1.7)
-        #expect(standard.plateHeight == 399)
+        #expect(standard.plateHeight == 420)
 
         // Folding the side regions is width, not height, so the plate is unchanged — and that is
         // right. A wider plate is a longer bar, not a taller one.
@@ -137,7 +137,10 @@ struct FillChopLaneTests {
         let four = layout(Geometry.standard, slices: 4)
         #expect(four.padRows == 1)
         #expect(four.padsScroll == false)
-        #expect(four.plateHeight > layout(Geometry.standard).plateHeight)
+        // The plate takes what the second row of pads gave back — up to its ceiling, which Studio's
+        // taller surface reaches with sixteen slices already. At the minimum it shows.
+        #expect(four.plateHeight >= layout(Geometry.standard).plateHeight)
+        #expect(layout(Geometry.minimum, slices: 4).plateHeight > layout(Geometry.minimum).plateHeight)
 
         // And nothing is asked of a lane with no slices at all.
         let none = layout(Geometry.standard, slices: 0)

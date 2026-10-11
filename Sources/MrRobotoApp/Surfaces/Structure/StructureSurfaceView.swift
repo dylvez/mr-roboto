@@ -381,10 +381,16 @@ private struct SectionDetail: View {
                     // joins only the sections that have none of its kind.
                     ForEach(model.choices(for: section), id: \.type) { choice in
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text(StructureModel.name(of: choice.type))
-                                .font(Design.Typography.ui(11, weight: .medium))
-                                .foregroundStyle(Design.Palette.inkSecondary)
-                                .frame(width: 48, alignment: .leading)
+                            HStack(spacing: 5) {
+                                // Studio: the kind's colour, as on its strip and its row of the parts.
+                                if Design.style.laneColours, let hue = PartHue.color(for: choice.type) {
+                                    Circle().fill(hue).frame(width: 6, height: 6)
+                                }
+                                Text(StructureModel.name(of: choice.type))
+                                    .font(Design.Typography.ui(11, weight: .medium))
+                                    .foregroundStyle(Design.Palette.inkSecondary)
+                            }
+                            .frame(width: Design.style.laneColours ? 58 : 48, alignment: .leading)
                             FlowRow(spacing: 4) {
                                 ForEach(choice.layers) { layer in
                                     FormChip(Self.chipTitle(layer) + (model.isRegrooved(layer) ? " · loop" : ""),

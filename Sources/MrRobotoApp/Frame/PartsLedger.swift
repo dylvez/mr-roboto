@@ -168,6 +168,8 @@ struct PartsLedger: View {
         .padding(.horizontal, Design.Metric.inset)
         .padding(.vertical, 10)
         .background(isSelected ? Design.Palette.accentSoft : .clear)
+        // Studio: the part's colour, the same as its strip in the Mixer.
+        .modifier(PartStripe(type: version.type, inset: 10))
     }
 }
 

@@ -8,6 +8,7 @@ struct NextQuestionCard: View {
     let question: NextQuestion
     /// The asker's portrait and name above the question, where nothing else says who is asking.
     var showsAsker = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -31,8 +32,13 @@ struct NextQuestionCard: View {
                     NextOptionButton(option: option, isLeading: index == 0, rank: index + 1,
                                      take: { app.take(option, from: question) },
                                      decline: { app.decline(option, in: question) })
+                        .transition(.move(edge: .top).combined(with: .opacity))
                 }
             }
+            // The one place Studio lets anything bounce: the band asking something new. A new
+            // question's options settle in from above; one waved away closes up behind it.
+            .animation(Design.style.filledControls && !reduceMotion ? .bouncy(duration: 0.45, extraBounce: 0.1) : nil,
+                       value: question.options.map(\.id))
             Button { app.askTheBand() } label: {
                 Text("Something else… ask the band")
                     .font(Design.style.filledControls ? Design.Typography.role(.callout) : Design.Typography.ui(12, weight: .medium))
