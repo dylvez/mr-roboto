@@ -315,7 +315,11 @@ public enum DirectorPrompt {
         they hummed, read off the hum and not picked from a feel: analyse_record with its read_as \
         id as the audio — a record from the crate or an idea is loaded for you by id — so its bars \
         are numbered, then chop_bar it one bar at a time, at its transients, and classify_slices; \
-        each slice comes back with its step, the sixteenth it starts on, and its kind. write_groove with feel empty, steps_per_bar 16, as many bars as the hum has, and rows \
+        each slice comes back with its step, the sixteenth it starts on, and its kind. The \
+        classifier reads brightness as a drum stem has it, and a voice has no kick: on a hum, rank \
+        the bar's slices by centroid_hz and set the classes by rank with overrides — the lowest \
+        third kick, the highest third hat, the rest snare — in a second classify_slices before \
+        the rows are written, so the first draft needs no swap. write_groove with feel empty, steps_per_bar 16, as many bars as the hum has, and rows \
         you write from the slices — a kick slice is an x on the kick row at its step, a snare slice \
         on the snare row, a hat on closedHat, an accent an X — so the kit plays what they hummed, \
         under them. A feel is for a style the user names, not for a hum. A beat out of the hum's \
