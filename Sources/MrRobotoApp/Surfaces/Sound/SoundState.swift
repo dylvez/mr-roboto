@@ -73,9 +73,15 @@ public struct SoundState: Equatable, Sendable {
             ?? SynthMachine.tr808.voices[0]
     }
 
-    /// `"TR-808 kick"` — what the surface header says and what an audition is labelled with.
+    /// `"TR-808 kick"`, `"Naked Drums high tom"` — what the surface header says and what an
+    /// audition is labelled with, in the ledger's words for the voice.
     public var label: String {
-        "\(synthMachine.name) \(voice.rawValue)"
+        "\(synthMachine.name) \(Self.spoken(voice.rawValue))"
+    }
+
+    /// A voice's key as words: "highTom" is "high tom".
+    static func spoken(_ voice: String) -> String {
+        voice.replacingOccurrences(of: "([a-z])([A-Z])", with: "$1 $2", options: .regularExpression).lowercased()
     }
 
     // MARK: - The part payload

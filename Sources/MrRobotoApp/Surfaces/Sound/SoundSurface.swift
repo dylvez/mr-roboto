@@ -47,8 +47,9 @@ public enum SoundSubject: Hashable, Sendable {
 /// ## The four rules
 ///
 /// * **Binds to parts.** It opens against the host's selected part version and reads `SoundState`
-///   out of it. The only state of its own is a *draft* of the edit in progress plus which panel and
-///   which side of the A/B you are on — the things a reopen is allowed to forget.
+///   out of it — a version it can edit (`canEdit`); anything else reads as nothing selected. The
+///   only state of its own is a *draft* of the edit in progress plus which panel and which side of
+///   the A/B you are on — the things a reopen is allowed to forget.
 /// * **Plays on touch.** `setValue` re-renders that one voice and auditions it. `DrumSynthesizer`
 ///   is a pure generator, so this is a few milliseconds of arithmetic and no engine round trip. It
 ///   never calls `SynthesizedKit.rerender`: re-rendering twelve voices at three velocity layers to
@@ -93,6 +94,19 @@ public final class SoundSurface {
     public var subjectName: String {
         if subject.isPart, let boundVersion { return PartLabel.title(of: boundVersion) }
         return draft.label
+    }
+
+    /// The version the next keep goes on, which is the part this surface is working on: for a chop
+    /// or a groove, the version bound; for a voice, the song's newest edit of the voice in front, or
+    /// the bound version when it is that voice. Nil for a voice nothing has kept, whose first keep
+    /// starts a part. The frame's header traces the part from this rather than from the binding,
+    /// which may be the machine's pick or a voice the surface has since switched away from.
+    public var editing: PartVersion? {
+        if subject.isPart { return boundVersion }
+        let bound = boundVersion.flatMap { version in
+            SoundState(version).flatMap { $0.machine == draft.machine && $0.voice == draft.voice ? version : nil }
+        }
+        return host?.keptVoice(draft.voice, on: draft.machine) ?? bound
     }
 
     // MARK: Host
@@ -197,18 +211,19 @@ public final class SoundSurface {
         self.host = host
         self.sampleRate = sampleRate
         self.auditionVelocity = auditionVelocity
-        let state = host.selectedPart.flatMap(SoundState.init) ?? Self.opening(on: host)
+        let version = Self.editable(host.selectedPart)
+        let state = version.flatMap(SoundState.init) ?? Self.opening(on: host, pick: version)
         self.draft = state
         self.committed = state
-        self.boundVersion = host.selectedPart
-        bindPart(host.selectedPart, lever: host.dustLever)
+        self.boundVersion = version
+        bindPart(version, lever: host.dustLever)
     }
 
     /// Re-reads the host's selection, discarding any draft. The frame calls this when the selection
     /// changes under the surface.
     public func reload() {
-        let version = host?.selectedPart
-        let state = version.flatMap(SoundState.init) ?? host.map(Self.opening(on:)) ?? SoundState()
+        let version = Self.editable(host?.selectedPart)
+        let state = version.flatMap(SoundState.init) ?? host.map { Self.opening(on: $0, pick: version) } ?? SoundState()
         boundVersion = version
         recordedHit = nil
         draft = state
@@ -217,12 +232,30 @@ public final class SoundSurface {
         bindPart(version, lever: nil)
     }
 
+    /// Whether this surface can edit a version, and so be bound to it: a drum voice it keeps, a
+    /// drum machine whose voices it opens on, or a chop or a groove whose chain it is.
+    ///
+    /// Nothing else. Not a tune, and not the instrument a tune plays on — a `.sound` too, but with
+    /// none of these knobs, and picked where its part is written — nor a groove's chop kit, which
+    /// is the chop's slices and is shaped in the Chop lane. Bound to a tune's instrument, the
+    /// surface shaped the song's kit under the instrument's name ("Horn Trio" over a kit voice).
+    public nonisolated static func canEdit(_ version: PartVersion) -> Bool {
+        guard case .sound(let sound) = version.kind else { return version.kind.canCarryDegradation }
+        return SoundState(sound) != nil || SynthMachine.preset(id: sound.instrument) != nil
+    }
+
+    /// What the host handed over, when it is something this surface can edit. Anything else reads
+    /// as nothing selected: a new voice, on the song's kit.
+    private static func editable(_ version: PartVersion?) -> PartVersion? {
+        version.flatMap { canEdit($0) ? $0 : nil }
+    }
+
     /// What a surface opened on no drum voice opens on: the kick of the machine the song plays —
     /// or of the machine that was picked, when the pick is what is bound — as the song has kept it.
     /// With no song, the TR-808's. It used to be the 808's whatever the song played.
-    private static func opening(on host: any SoundSurfaceHost) -> SoundState {
+    private static func opening(on host: any SoundSurfaceHost, pick: PartVersion?) -> SoundState {
         var machine = host.songMachine
-        if case .sound(let sound)? = host.selectedPart?.kind, SynthMachine.preset(id: sound.instrument) != nil {
+        if case .sound(let sound)? = pick?.kind, SynthMachine.preset(id: sound.instrument) != nil {
             machine = sound.instrument
         }
         guard let machine, let preset = SynthMachine.preset(id: machine) else { return SoundState() }
@@ -568,12 +601,9 @@ public final class SoundSurface {
         if subject.isPart { return commitPart(note: note) }
         let kind = PartKind.sound(draft.sound)
         // A voice is a part of its own: the next version of what the song has kept of it, or of
-        // what is bound when that is this voice, and a new part otherwise. An edit of the snare
-        // used to go on whatever was bound — the kick's part, or the pick of the machine itself.
-        let bound = boundVersion.flatMap { version in
-            SoundState(version).flatMap { $0.machine == draft.machine && $0.voice == draft.voice ? version : nil }
-        }
-        let parent = host?.keptVoice(draft.voice, on: draft.machine) ?? bound
+        // what is bound when that is this voice, and a new part otherwise (`editing`). An edit of
+        // the snare used to go on whatever was bound — the kick's part, or the pick of the machine.
+        let parent = editing
         let version = parent?.deriving(kind, by: .user, operation: Operation.edit, note: note)
             ?? PartVersion(partID: PartID(), kind: kind, author: .user,
                            operation: Operation.written, note: note)

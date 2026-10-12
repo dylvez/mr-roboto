@@ -25,7 +25,8 @@ import SongGraph
 public protocol SoundSurfaceHost: AnyObject {
 
     /// The part version the surface opened against, or `nil` when nothing is selected — in which
-    /// case the surface starts a new part from a machine preset.
+    /// case the surface starts a new part from a machine preset. A version the surface cannot edit
+    /// (`SoundSurface.canEdit`) is taken as nothing selected.
     var selectedPart: PartVersion? { get }
 
     /// Play this now. No agent round trip, no scheduling: the Komma lesson is that the payoff has

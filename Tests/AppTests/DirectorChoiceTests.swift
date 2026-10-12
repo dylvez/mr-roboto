@@ -83,6 +83,41 @@ struct DirectorChoiceTests {
         }
     }
 
+    @Test("Sound refuses the instrument a tune plays on, in words the band can act on, and still opens on a machine")
+    func soundRefusesATunesInstrument() throws {
+        let built = Self.build()
+        defer { Self.clean(built) }
+        let tune = PartVersion(partID: PartID(), kind: .melody(Melody(notes: [])), author: .persona("Melodist"),
+                               operation: Operation.written, note: "Horns")
+        let horns = PartVersion(partID: PartID(), kind: .sound(Sound(instrument: "horns", forPart: tune.partID)),
+                                author: .persona("Director"), operation: Operation.written, note: "French Horns for Horns")
+        let machine = PartVersion(partID: PartID(), kind: .sound(Sound(instrument: "tr909")), author: .persona("Director"),
+                                  operation: Operation.written, note: "The drum machine for this song")
+        for version in [tune, horns, machine] { #expect(built.app.record(version)) }
+
+        // The tune is refused by its notation, as it always was.
+        #expect(throws: DirectorChoiceProblem.self) {
+            try DirectorSurfaceChoice.make(surface: .sound, title: "Horns", fill: .parts([tune.id]),
+                                           because: "", in: built.stage)
+        }
+        // Its instrument is a `.sound`, but not one Sound shapes: refused, saying what it does take.
+        do {
+            _ = try DirectorSurfaceChoice.make(surface: .sound, title: "Horn Trio", fill: .parts([horns.id]),
+                                               because: "", in: built.stage)
+            Issue.record("Sound was chosen on a tune's instrument")
+        } catch let problem as DirectorChoiceProblem {
+            #expect(problem.reason.contains("drum voice"), "\(problem)")
+            #expect(problem.suggestion?.contains("set_instrument") == true, "\(problem)")
+        }
+        #expect(!built.app.bench.items.contains { $0.kind == .sound })
+
+        // The song's machine still opens, bound as chosen.
+        let kit = try DirectorSurfaceChoice.make(surface: .sound, title: "The kit", fill: .parts([machine.id]),
+                                                 because: "The kick rings over the bass.", in: built.stage)
+        let id = try #require(built.stage.open(kit))
+        #expect(built.app.bound(for: id) == [machine.id])
+    }
+
     @Test("Every Gate A surface has a notation, and the answer surfaces take anything")
     func everySurfaceSaysWhatItDraws() {
         #expect(SurfaceKind.grid.notation == [.groove])

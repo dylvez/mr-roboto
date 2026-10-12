@@ -31,6 +31,8 @@ extension SurfaceKind {
     /// true bypass against the dry part. "Make it dustier" is a sound question about a chop, and the
     /// notation it is answered in is the chain. A take, a stem, an analysis or anything melodic is
     /// still refused: dust is carried by a sample or a groove (`Degradation`), and nothing else.
+    /// Nor is every `.sound` a drum voice: the instrument a tune plays on is one too, and the frame's
+    /// gate refuses it on Sound (`SoundSurface.canEdit`).
     ///
     /// The two answer surfaces take anything, because what they draw is the comparison and the
     /// finding rather than the part: a Compare of three grooves and a Compare of three chops are the
@@ -424,6 +426,15 @@ public struct DirectorSurfaceChoice: Sendable, Equatable, Hashable, Identifiable
         let choice = DirectorSurfaceChoice(surface: surface, title: title, fill: fill,
                                            levers: levers, because: because)
         guard stage.canPerform(choice.action) else {
+            // Every version is in the song and in Sound's notation, so this is a `.sound` it has no
+            // knobs for: the instrument a part plays on, or a groove's chop kit.
+            if surface == .sound {
+                throw DirectorChoiceProblem(
+                    "The Sound surface shapes a drum voice, a drum machine, or the dust on a chop or a groove. "
+                        + "That sound is the instrument a part plays on, or a chop's slices, and has none of its knobs.",
+                    suggestion: "Bind it to a drum voice or machine, or to a sample or groove version from read_song; "
+                        + "put a part on another instrument with set_instrument.")
+            }
             throw DirectorChoiceProblem(
                 "The frame cannot open that right now.",
                 suggestion: "Call read_song and bind to something the song actually holds.")
