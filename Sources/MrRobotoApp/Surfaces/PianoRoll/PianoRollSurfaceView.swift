@@ -524,7 +524,7 @@ struct NoteLane: View {
             ForEach(chords.spans.indices, id: \.self) { i in
                 let span = chords.spans[i]
                 let hue = HarmonyHue.color(for: span.chord, in: model.key)
-                let symbol = span.chord.symbol(preferring: model.key.signature.preference)
+                let symbol = model.symbol(of: span.chord)
                 if let hue, let words = HarmonyHue.color(for: span.chord, in: model.key, .ink) {
                     // The chord as a band across the top in its step's colour, its name on it.
                     Text(symbol)

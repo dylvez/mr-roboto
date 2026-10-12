@@ -131,7 +131,7 @@ struct BassWriterTests {
         #expect(!line.notes.isEmpty)
         for note in line.notes {
             let chord = chords[min(chords.count - 1, Int(note.start / 4))].chord
-            #expect(chord.pitchClassSet.contains(note.pitch.pitchClass), "\(note.pitch) at beat \(note.start) is no note of \(chord.symbol)")
+            #expect(chord.pitchClassSet.contains(note.pitch.pitchClass), "\(note.pitch) at beat \(note.start) is no note of \(chord.symbol())")
         }
         // The line still starts each bar on the chord's bass note (a one drop leaves beat one empty).
         for (bar, span) in chords.enumerated() where lineage != .oneDrop {

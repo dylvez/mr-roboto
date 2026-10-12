@@ -358,9 +358,13 @@ public final class ChordsModel {
         return true
     }
 
+    /// A chord's symbol as its bar shows it: its root spelled as the key spells it, so the sixth of
+    /// E♭ minor is C♭maj7 on the card as it is in the line kept, and not Bmaj7.
+    public func symbol(of chord: Chord) -> String { chord.symbol(in: key) }
+
     /// The Roman numeral of a chord in the key, or its symbol when it is not diatonic.
     public func numeral(of chord: Chord) -> String {
-        key.romanNumeral(for: chord).map { "\($0)" } ?? chord.symbol(preferring: key.signature.preference)
+        key.romanNumeral(for: chord).map { "\($0)" } ?? symbol(of: chord)
     }
 
     // MARK: Playing
