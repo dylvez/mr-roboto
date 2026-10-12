@@ -568,7 +568,8 @@ struct ChopLaneInspector: View {
     private func controls(for index: Int) -> some View {
         let edit = surface.edit(forSlice: index)
         return HStack(spacing: 12) {
-            Text("SLICE \(index)")
+            // Counted from 1, like the pad it names; the index stays 0-based underneath.
+            Text("SLICE \(index + 1)")
                 .font(Design.Typography.label)
                 .tracking(0.8)
                 .foregroundStyle(Design.Palette.inkTertiary)
