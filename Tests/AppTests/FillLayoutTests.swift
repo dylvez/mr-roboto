@@ -443,6 +443,104 @@ struct FillSoundTests {
     }
 }
 
+// MARK: - Piano roll
+
+// The lane drew a row as an equal share of its height, held to nine points, and nothing held the
+// lane to its register. A tune's two octaves at nine points are 225, and on a short bench the lane
+// was shorter: C4's row went under the kick lane and its name was set below "kick".
+
+@Suite("Fill: the Piano roll's lane keeps every row of its register above the kick lane")
+struct FillNoteLaneTests {
+
+    /// What the roll draws a tune in: C4 to C6, 25 rows.
+    private static let tune = 60...84
+    /// C4's row, the lowest. Rows count down from the register's top.
+    private static let c4 = tune.upperBound - 60
+
+    private func lane(height: CGFloat, rows: Int = Self.tune.count, beats: Double = 8,
+                      width: CGFloat = SurfaceGeometry.content(of: Geometry.minimum).width) -> NoteLaneLayout {
+        NoteLaneLayout(size: CGSize(width: width, height: height), rows: rows, beats: beats)
+    }
+
+    @Test("The floor is every row at the smallest row and the kick lane under them: 247 points for two octaves")
+    func floor() {
+        #expect(NoteLaneLayout.minimumHeight(rows: Self.tune.count) == 247)
+        #expect(NoteLaneLayout.minimumHeight(rows: Self.tune.count)
+                    == 25 * NoteLaneLayout.minimumRowHeight + NoteLaneLayout.kickGap + NoteLaneLayout.kickLaneHeight)
+        // The old floor was 220 for the lane and its caption together: short of two octaves.
+        #expect(NoteLaneLayout.minimumHeight(rows: Self.tune.count) > 220)
+        // Thundercat's three octaves, the tallest register a bass line opens on.
+        #expect(NoteLaneLayout.minimumHeight(rows: 33) == 319)
+    }
+
+    @Test("From its floor up, every row is inside the lane and the kick lane starts under the lowest")
+    func rowsStayInside() {
+        // Two octaves, a walking line's, Thundercat's three, and a tune widened to four.
+        for rows in [25, 28, 33, 49] {
+            let floor = NoteLaneLayout.minimumHeight(rows: rows)
+            for height in stride(from: floor, through: 900, by: 11) {
+                let lane = self.lane(height: height, rows: rows)
+                #expect(abs(lane.height - height) < 0.001, "the lane takes the height it is handed")
+                #expect(lane.rowHeight >= NoteLaneLayout.minimumRowHeight)
+                let lowest = lane.top(ofRow: rows - 1) + lane.rowHeight
+                #expect(abs(lowest - lane.rowsHeight) < 0.001, "the rows end where the lane's rows end")
+                #expect(abs(lane.kickLaneTop - lowest - NoteLaneLayout.kickGap) < 0.001)
+            }
+        }
+    }
+
+    @Test("Handed less than its floor, the lane draws at the floor rather than put C4 under the kicks")
+    func squeezed() {
+        // 196 is about what a short bench left the lane under the old floor, its caption taken out.
+        for height in [0, 120, 196, 246] as [CGFloat] {
+            let lane = self.lane(height: height)
+            #expect(lane.rowHeight == NoteLaneLayout.minimumRowHeight)
+            #expect(lane.height == NoteLaneLayout.minimumHeight(rows: Self.tune.count))
+            #expect(lane.top(ofRow: Self.c4) + lane.rowHeight <= lane.kickLaneTop - NoteLaneLayout.kickGap + 0.001)
+        }
+    }
+
+    @Test("C4's name is set above \"kick\", whatever the lane was handed")
+    func namesClearTheKickLabel() {
+        for height in [196, 247, 300, 420, 700] as [CGFloat] {
+            let lane = self.lane(height: height)
+            #expect(lane.labelTop(ofRow: Self.c4) + NoteLaneLayout.labelHeight < lane.kickLabelTop,
+                    "C4's name runs into \"kick\" at \(height)")
+            #expect(lane.kickLabelTop >= lane.kickLaneTop, "\"kick\" is set in the kick lane")
+        }
+    }
+
+    @Test("A click lands on the pitch drawn under it, down to C4, and never on one under the register")
+    func clicksFindTheirRows() {
+        for height in [247, 330, 560] as [CGFloat] {
+            let lane = self.lane(height: height)
+            for row in 0..<lane.rows {
+                #expect(lane.row(atY: lane.top(ofRow: row) + lane.rowHeight / 2) == row)
+            }
+            let pitch = { (y: CGFloat) in Self.tune.upperBound - lane.row(atY: y) }
+            #expect(pitch(0) == 84)
+            #expect(pitch(lane.rowsHeight - 0.5) == 60)
+            // The lane's bottom edge is still C4, not B3.
+            #expect(pitch(lane.rowsHeight) == 60)
+        }
+    }
+
+    @Test("Two bars fill the width; sixteen keep a beat wide enough to hit and scroll sideways")
+    func longLinesScroll() {
+        for size in SurfaceGeometry.all {
+            let width = SurfaceGeometry.content(of: size).width
+            let short = lane(height: 300, beats: 8, width: width)
+            #expect(short.scrolls == false, "two bars fit at \(size)")
+            #expect(abs(short.gridWidth - short.visibleWidth) < 0.001)
+            let long = lane(height: 300, beats: 64, width: width)
+            #expect(long.scrolls, "sixteen bars scroll at \(size)")
+            #expect(long.beatWidth == NoteLaneLayout.minimumBeatWidth)
+            #expect(long.gridWidth == 64 * NoteLaneLayout.minimumBeatWidth)
+            #expect(long.visibleWidth == width - NoteLaneLayout.labelWidth)
+        }
+    }
+}
+
 // MARK: - Across all four
 
 @Suite("Fill: nothing stretches into ugliness")
