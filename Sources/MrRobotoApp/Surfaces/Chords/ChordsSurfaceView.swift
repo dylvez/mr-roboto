@@ -318,7 +318,7 @@ private struct ChordFace: View {
         let borrowed = hue != nil && HarmonyHue.reading(of: span.chord, in: model.key)?.inKey == false
         HStack(alignment: .bottom, spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(span.chord.symbol(preferring: model.key.signature.preference))
+                Text(model.symbol(of: span.chord))
                     .font(Design.Typography.ui(17, weight: .semibold))
                     .foregroundStyle(Design.Palette.ink)
                 HStack(alignment: .firstTextBaseline, spacing: 5) {

@@ -486,6 +486,10 @@ public final class PianoRollModel {
     /// Whether the line was written to the key's default harmony rather than stated chords.
     public var usesDefaultChords: Bool { chords.isEmpty }
 
+    /// A chord's name on the band across the top: its root spelled as the song's key spells it, so
+    /// the sixth of E♭ minor is C♭maj7 there as it is on the Chords sheet, and not Bmaj7.
+    public func symbol(of chord: Chord) -> String { chord.symbol(in: key) }
+
     // MARK: The writer
 
     private var request: BassRequest? {

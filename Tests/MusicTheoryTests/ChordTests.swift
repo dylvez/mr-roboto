@@ -170,6 +170,87 @@ struct ChordExtraTests {
     }
 }
 
+@Suite("Chord symbols in a key")
+struct ChordSymbolInKeyTests {
+    private let eFlatMinor = Key(tonic: .eFlat, mode: .aeolian)
+    private let eMajor = Key(tonic: NoteName(.e))
+
+    private func chords(_ line: String) throws -> [Chord] {
+        try line.split(separator: " ").map { try #require(Chord(parsing: String($0))) }
+    }
+
+    /// Every major and minor key with no more than seven sharps or flats.
+    private var keys: [Key] {
+        (-7...7).flatMap { fifths -> [Key] in
+            let signature = KeySignature(fifths: fifths)
+            return [Key(tonic: signature.majorTonic), Key(tonic: signature.minorTonic, mode: .aeolian)]
+        }
+    }
+
+    @Test("a root on a step of the key is spelled as the key spells that step: the sixth of E♭ minor is C♭")
+    func rootsOnTheKeysSteps() throws {
+        let line = try chords("Ebm9 Ab7 Cbmaj7 Bb7")
+        #expect(line[2] == Chord(.b, .majorSeventh), "a chord keeps its pitch, not its letter")
+        #expect(line.map { $0.symbol(in: eFlatMinor) } == ["Ebm9", "Ab7", "Cbmaj7", "Bb7"])
+        #expect(line[2].symbol(preferring: eFlatMinor.spellingPreference) == "Bmaj7", "a preference alone cannot reach C♭")
+        // The bass of an inversion is spelled from the root, as the chord tone it is.
+        #expect(try chords("Cbmaj7/Eb Cb/Gb").map { $0.symbol(in: eFlatMinor) } == ["Cbmaj7/Eb", "Cb/Gb"])
+        // The other white keys a key writes as accidentals: IV of G♭, vii° of F♯, and vii°7 of C♯
+        // harmonic minor, whose raised seventh is B♯.
+        #expect(Chord(.b, .major).symbol(in: Key(tonic: .gFlat)) == "Cb")
+        #expect(Chord(.f, .diminished).symbol(in: Key(tonic: .fSharp)) == "E#dim")
+        #expect(Chord(.c, .diminishedSeventh).symbol(in: Key(tonic: NoteName(.c, .sharp), colour: .harmonicMinor)) == "B#dim7")
+    }
+
+    @Test("a sharp key keeps its sharps: C♯m7 and F♯ in E major")
+    func sharpKey() throws {
+        #expect(try chords("Emaj7 C#m7 F#m7 B7").map { $0.symbol(in: eMajor) } == ["Emaj7", "C#m7", "F#m7", "B7"])
+        #expect(try chords("F# E/G# B7/D#").map { $0.symbol(in: eMajor) } == ["F#", "E/G#", "B7/D#"])
+    }
+
+    @Test("a root off the key is spelled as it always was, by the key's preference, its bass from it")
+    func rootsOffTheKey() throws {
+        #expect(try chords("D7 E/G# A7").map { $0.symbol(in: eFlatMinor) } == ["D7", "E/G#", "A7"])
+        #expect(try chords("A#dim7").map { $0.symbol(in: eMajor) } == ["A#dim7"])
+        #expect(try chords("Dbmaj7").map { $0.symbol(in: Key(tonic: NoteName(.f))) } == ["Dbmaj7"])
+        #expect(try chords("F#dim7").map { $0.symbol(in: .cMajor) } == ["F#dim7"])
+        for key in keys {
+            for root in PitchClass.allCases where !key.pitchClasses.contains(root) {
+                for quality in [ChordQuality.major, .minor, .dominantSeventh, .diminishedSeventh, .majorNinth] {
+                    for inversion in 0...2 {
+                        let chord = Chord(root: root, quality: quality, inversion: inversion)
+                        #expect(chord.symbol(in: key) == chord.symbol(preferring: key.spellingPreference), "\(chord) in \(key)")
+                    }
+                }
+            }
+        }
+    }
+
+    @Test("in C, the key a song with none is read in, every chord is spelled as it was")
+    func cMajorIsUnchanged() {
+        for quality in ChordQuality.allCases {
+            for root in PitchClass.allCases {
+                for inversion in 0...1 {
+                    let chord = Chord(root: root, quality: quality, inversion: inversion)
+                    #expect(chord.symbol(in: .cMajor) == chord.symbol(), "\(chord)")
+                }
+            }
+        }
+    }
+
+    @Test("the key's own chords are spelled as the line it keeps spells them, inversions too")
+    func agreesWithTheKeptLine() {
+        for key in keys {
+            for chord in key.diatonicTriads + key.diatonicSevenths {
+                for inversion in 0...2 {
+                    let inverted = chord.inverted(inversion)
+                    #expect(inverted.symbol(in: key) == key.symbol(of: inverted), "\(inverted) in \(key)")
+                }
+            }
+        }
+    }
+}
+
 @Suite("Roman numerals")
 struct RomanNumeralTests {
     @Test func rendersCaseAndSuffixFromQuality() {

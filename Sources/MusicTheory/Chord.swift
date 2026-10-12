@@ -345,7 +345,21 @@ public struct Chord: Hashable, Codable, Sendable, CustomStringConvertible {
 
     /// Chord symbol such as "C#m7" or, when inverted, a slash chord such as "C/E".
     public func symbol(preferring preference: SpellingPreference = .sharps) -> String {
-        let rootName = root.spelling(preferring: preference)
+        symbol(rootName: root.spelling(preferring: preference), preferring: preference)
+    }
+
+    /// Chord symbol with its root spelled as `key` spells it (`Key.spell(_:)`): a root on a step of
+    /// the key as the key writes that step, any other as `symbol(preferring:)` writes it in the key's
+    /// preference. A preference only chooses between a sharp and a flat on a black key, so the sixth
+    /// of E♭ minor read "Bmaj7" where the key has C♭maj7, and the seventh of F♯ major "Fdim" for
+    /// E♯dim. Unlike `Key.symbol(of:)`, which weighs every note against the signature, it never
+    /// respells a root the key does not have.
+    public func symbol(in key: Key) -> String {
+        symbol(rootName: key.spell(root), preferring: key.spellingPreference)
+    }
+
+    /// The symbol on a root already spelled, the bass of an inversion spelled from it.
+    private func symbol(rootName: NoteName, preferring preference: SpellingPreference) -> String {
         var text = rootName.description + quality.symbol
         if inversion > 0 { text += "/" + bassName(under: rootName, preferring: preference).description }
         return text
