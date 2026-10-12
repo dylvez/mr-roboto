@@ -106,10 +106,9 @@ extension ChordsSurfaceView {
                     .padding(.top, 4)
             }
             if let progression = model.progression {
-                // How each chord is voiced, for the notes drawn beside it in Vibrant, and the span
-                // of all of them, so a voice that climbs is seen to climb from one bar to the next.
-                let voiced = Design.scheme.isVivid
-                    ? Voicing.voicings(of: progression.bars.flatMap(\.chords).map(\.chord), as: model.voicing) : []
+                // How each chord is voiced, for the notes drawn beside it, and the span of all of
+                // them, so a voice that climbs is seen to climb from one bar to the next.
+                let voiced = Voicing.voicings(of: progression.bars.flatMap(\.chords).map(\.chord), as: model.voicing)
                 let notes = voiced.flatMap { $0 }
                 let range = notes.min().flatMap { low in notes.max().map { low...$0 } }
                 VStack(alignment: .leading, spacing: 6) {
@@ -211,7 +210,7 @@ private struct HarmonistReadings: View {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Image(systemName: reading.holds ? "checkmark" : "exclamationmark.triangle")
                         .font(Design.Typography.ui(9, weight: .bold))
-                        .foregroundStyle(reading.holds ? (hue == nil ? Design.Palette.inkTertiary : Design.Palette.ok) : Design.Palette.warn)
+                        .foregroundStyle(reading.holds ? Design.Palette.ok : Design.Palette.warn)
                         .frame(width: 12)
                         .accessibilityHidden(true)
                     Text(reading.says)
@@ -277,7 +276,7 @@ private struct BarCard: View {
     let index: Int
     let bar: ProgressionBar
     let model: ChordsModel
-    /// Each chord's notes as voiced, in Vibrant; empty in the other palettes.
+    /// Each chord's notes as voiced.
     var voiced: [[Int]] = []
     var range: ClosedRange<Int>? = nil
 
@@ -290,7 +289,7 @@ private struct BarCard: View {
             HStack(alignment: .bottom, spacing: 12) {
                 ForEach(Array(bar.chords.enumerated()), id: \.offset) { position, span in
                     Button { model.audition(span.chord) } label: {
-                        ChordFace(span: span, model: model, hue: hues[position],
+                        ChordFace(span: span, model: model,
                                   voiced: position < voiced.count ? voiced[position] : [], range: range)
                     }
                     .buttonStyle(.plain)
@@ -303,18 +302,19 @@ private struct BarCard: View {
     }
 }
 
-/// One chord of a bar: its symbol, its numeral and how long it lasts. In Vibrant the numeral is in
-/// the colour of its step, a chord from outside the key says it is borrowed, and the notes it is
-/// voiced on stand beside it with the top one in ink — the line the Played row's caption spells
-/// out, seen moving from bar to bar.
+/// One chord of a bar: its symbol, its numeral and how long it lasts. The numeral is in the colour
+/// of its step, a chord from outside the key says it is borrowed, and the notes it is voiced on
+/// stand beside it on a small plate with the top one in the display's white — the line the Played
+/// row's caption spells out, seen moving from bar to bar.
 private struct ChordFace: View {
     let span: ChordSpan
     let model: ChordsModel
-    let hue: Color?
     let voiced: [Int]
     let range: ClosedRange<Int>?
 
     var body: some View {
+        let hue = HarmonyHue.color(for: span.chord, in: model.key, .ink)
+        let tick = HarmonyHue.color(for: span.chord, in: model.key, .plate)
         let borrowed = hue != nil && HarmonyHue.reading(of: span.chord, in: model.key)?.inKey == false
         HStack(alignment: .bottom, spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
@@ -336,8 +336,8 @@ private struct ChordFace: View {
                     .font(Design.Typography.numeric(9.5))
                     .foregroundStyle(Design.Palette.inkTertiary)
             }
-            if let hue, let range, !voiced.isEmpty {
-                VoicedNotes(notes: voiced, range: range, hue: hue)
+            if let tick, let range, !voiced.isEmpty {
+                VoicedNotes(notes: voiced, range: range, hue: tick)
                     .help("Voiced \(model.voicing.name.lowercased()): " + voiced.map { model.key.name(of: Pitch(midi: $0)) }.joined(separator: " · "))
             }
         }
@@ -346,7 +346,7 @@ private struct ChordFace: View {
 }
 
 /// A chord's notes as they are voiced, drawn as a keyboard turned on its side: one tick a note at
-/// its height in the progression's whole span, the top note in ink.
+/// its height in the progression's whole span, on a plate, the top note in the display's white.
 private struct VoicedNotes: View {
     let notes: [Int]
     let range: ClosedRange<Int>
@@ -361,19 +361,20 @@ private struct VoicedNotes: View {
                 let y = size.height - CGFloat(note - range.lowerBound + 1) * step
                 let rect = CGRect(x: 0, y: y - 1.5, width: size.width, height: 3)
                 context.fill(Path(roundedRect: rect, cornerRadius: 1.5),
-                             with: .color(note == top ? Design.Palette.ink : hue))
+                             with: .color(note == top ? Design.Palette.lcdInk : hue))
             }
         }
         .frame(width: 12, height: 50)
         .padding(.vertical, 2)
         .padding(.horizontal, 3)
-        .background(Design.Palette.plate.opacity(0.55), in: RoundedRectangle(cornerRadius: 3, style: .continuous))
+        .background(Design.Palette.plate, in: RoundedRectangle(cornerRadius: 3, style: .continuous))
         .accessibilityHidden(true)
     }
 }
 
-/// A bar's cell: a soft fill with no edge, a cell among cells. In Vibrant it is washed in the hues of
-/// its chords, deepest at the top under a cap of the hue itself.
+/// A bar's cell: a soft fill with no edge, a cell among cells, washed in the hues of its chords,
+/// deepest at the top under a cap of the hue itself. The wash lies over the palette's tint ground,
+/// so a numeral in its chord's colour reads on it on charcoal as on black and on white.
 private struct BarCell: ViewModifier {
     var hues: [Color] = []
 
@@ -385,7 +386,7 @@ private struct BarCell: ViewModifier {
             content
                 .background {
                     ZStack(alignment: .top) {
-                        shape.fill(Design.Palette.raised)
+                        shape.fill(Design.Palette.tintGround)
                         LinearGradient(colors: hues.map { $0.opacity(0.34) }, startPoint: .leading, endPoint: .trailing)
                             .mask(LinearGradient(colors: [.black, .black.opacity(0.25)], startPoint: .top, endPoint: .bottom))
                         LinearGradient(colors: hues.count == 1 ? [hues[0], hues[0]] : hues,

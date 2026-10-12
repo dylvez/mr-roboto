@@ -169,7 +169,7 @@ struct PartsLedger: View {
         .padding(.vertical, 10)
         .background(isSelected ? Design.Palette.accentSoft : .clear)
         // The part's colour, the same as its strip in the Mixer.
-        .modifier(PartStripe(type: version.type, inset: 10))
+        .modifier(PartStripe(type: version.type))
     }
 }
 

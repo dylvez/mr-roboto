@@ -23,18 +23,23 @@ enum LaneClass: Int, CaseIterable, Sendable {
     }
 
     var color: Color { Design.Palette.lane(rawValue) }
+
+    /// The class's colour as `role` draws it: as words on the ground, or as a figure on a plate.
+    func color(_ role: Design.LaneRole) -> Color { Design.Palette.lane(rawValue, role) }
 }
 
 /// A section's hue, by its kind, so a verse is the same colour in every song: the Structure
-/// surface's blocks and the transport's strip both wear it, and in Vibrant the transport's display
-/// glows in it while the section plays.
+/// surface's blocks and the transport's strip both wear it, and the transport's display glows in it
+/// while the section plays.
 enum SectionHue {
     /// The hue index for a section named `name`. Names the app writes — Intro, Verse, Hook, Bridge,
     /// Outro and their numbered kin — get fixed hues; anything else gets one from its letters, so it
     /// is at least the same every time.
     static func index(for name: String) -> Int { SharedPalette.sectionLane(for: name) }
 
-    static func color(for name: String) -> Color { Design.Palette.lane(index(for: name)) }
+    static func color(for name: String, _ role: Design.LaneRole = .fill) -> Color {
+        Design.Palette.lane(index(for: name), role)
+    }
 }
 
 /// A part's hue, by its kind, the way a desk colours its tracks: the drums gold, the bass
@@ -55,16 +60,15 @@ enum PartHue {
         }
     }
 
-    static func color(for type: PartType?) -> Color? {
-        type.flatMap(index(for:)).map(Design.Palette.lane)
+    static func color(for type: PartType?, _ role: Design.LaneRole = .fill) -> Color? {
+        type.flatMap(index(for:)).map { Design.Palette.lane($0, role) }
     }
 }
 
 /// A chord's hue, by the step of the key its root stands on, so a progression reads as colours the
 /// way Hooktheory's lead sheets do: home red, then round the wheel — two gold, three green, four
 /// teal, five sky, six violet, seven magenta. The Chords surface's bars and the Piano roll's chord
-/// band both wear it, so a iv is the same teal on both. Vibrant draws with it; the other palettes
-/// leave the chords in ink.
+/// band both wear it, so a iv is the same teal on both.
 enum HarmonyHue {
     /// The lane for a scale degree, 1…7.
     static func index(degree: Int) -> Int {
@@ -84,17 +88,18 @@ enum HarmonyHue {
         return (numeral.degree, isTheFive || chord.pitchClasses.allSatisfy(own.contains))
     }
 
-    /// The chord's colour in Vibrant; nil in the other palettes, and for a root the key cannot spell.
-    static func color(for chord: Chord, in key: Key) -> Color? {
-        guard Design.scheme.isVivid, let reading = reading(of: chord, in: key) else { return nil }
-        return Design.Palette.lane(index(degree: reading.degree))
+    /// The chord's colour as `role` draws it; nil for a root the key cannot spell.
+    static func color(for chord: Chord, in key: Key, _ role: Design.LaneRole = .fill) -> Color? {
+        guard let reading = reading(of: chord, in: key) else { return nil }
+        return Design.Palette.lane(index(degree: reading.degree), role)
     }
 }
 
 /// A band member's hue: the colour of what it owns, so the Beatmaker speaks in the groove's gold and
 /// the Harmonist in the chords' teal wherever either appears. The three who own no part take what
 /// is left — the Producer red, the Engineer the take's green, the Peer the words' periwinkle — and the
-/// Director keeps Vibrant's own blue. Vibrant only: the other palettes leave the names in ink.
+/// Director keeps the palette's own blue. A member's colour is mostly its name, so it is the colour
+/// as words.
 enum MemberHue {
     static func index(forPersona name: String) -> Int? {
         let key = name.lowercased()
@@ -110,10 +115,9 @@ enum MemberHue {
         return nil
     }
 
-    /// The member's colour in Vibrant; nil in the other palettes and for a name it does not know.
+    /// The member's colour; nil for a name it does not know.
     static func color(forPersona name: String) -> Color? {
-        guard Design.scheme.isVivid, let index = index(forPersona: name) else { return nil }
-        return Design.Palette.lane(index)
+        index(forPersona: name).map { Design.Palette.lane($0, .ink) }
     }
 
     /// The colour of a line's speaker in the rail: a member's own, the Director's blue; none for you
@@ -128,16 +132,15 @@ enum MemberHue {
 
     /// The colour of whoever is speaking: a member's own, the Director's blue, nothing for the app.
     static func color(for source: Proposal.Source) -> Color? {
-        guard Design.scheme.isVivid else { return nil }
         switch source {
         case .persona(let name): return color(forPersona: name)
-        case .director: return Design.ColorPair.fixed(SharedPalette.Vibrant.accent).color
+        case .director: return Design.scheme.palette.accent.color
         case .session: return nil
         }
     }
 }
 
-/// A member's portrait, ringed in its hue in Vibrant so the face and the colour are learned together.
+/// A member's portrait, ringed in its hue so the face and the colour are learned together.
 struct MemberEmblem: View {
     let name: String
     var hue: Color?
@@ -156,28 +159,23 @@ struct MemberEmblem: View {
     }
 }
 
-/// A part's colour as a stripe down the leading edge of its row. In Vibrant the stripe is wider and
-/// the colour washes out from it across the row, so a list of parts reads as their colours first.
+/// A part's colour as a stripe down the leading edge of its row, washing out from it across the
+/// row, so a list of parts reads as their colours first.
 struct PartStripe: ViewModifier {
     let type: PartType?
-    var inset: CGFloat = 0
 
     func body(content: Content) -> some View {
         if let hue = PartHue.color(for: type) {
-            let vivid = Design.scheme.isVivid
             content
                 .background {
-                    if vivid {
-                        LinearGradient(colors: [hue.opacity(0.2), hue.opacity(0)],
-                                       startPoint: .leading, endPoint: .trailing)
-                            .accessibilityHidden(true)
-                    }
+                    LinearGradient(colors: [hue.opacity(0.2), hue.opacity(0)],
+                                   startPoint: .leading, endPoint: .trailing)
+                        .accessibilityHidden(true)
                 }
                 .overlay(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 1.5, style: .continuous)
                         .fill(hue)
-                        .frame(width: vivid ? 4 : 3)
-                        .padding(.vertical, vivid ? 0 : inset)
+                        .frame(width: 4)
                         .accessibilityHidden(true)
                 }
         } else {
@@ -226,7 +224,7 @@ extension AppState {
         return PartHue.work(of: item.kind, bound: types)
     }
 
-    /// The hue of the section playing, while the transport plays: what Vibrant's display glows in.
+    /// The hue of the section playing, while the transport plays: what the display glows in.
     var playingSectionHue: Int? {
         guard transport.isPlaying, let id = activeSection,
               let section = song?.sections.first(where: { $0.id == id }) else { return nil }

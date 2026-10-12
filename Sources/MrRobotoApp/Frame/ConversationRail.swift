@@ -198,7 +198,7 @@ struct LogLine: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 7) {
-                // In Vibrant a member speaks in its own colour, as it does over its readings.
+                // A member speaks in its own colour, as it does over its readings.
                 let hue = MemberHue.color(for: source)
                 if let emblem = Art.emblem(for: source) { MemberEmblem(name: emblem, hue: hue, width: 22) }
                 SmallLabel(source.label,

@@ -43,7 +43,7 @@ folder, the song and section are typed, captures live in the app's Documents (Fi
 Roboto Capture), and a share — AirDrop to the Mac — gets one to the inbox. A device build is yours:
 set `DEVELOPMENT_TEAM` in `project.yml`.
 
-**How it looks.** Vibrant, the Mac's default palette, from the same numbers: `Capture/project.yml`
+**How it looks.** Vibrant Dark, the Mac's default palette, from the same numbers: `Capture/project.yml`
 compiles `Sources/MrRobotoApp/Design/SharedPalette.swift` into the phone, so a hue retuned on the Mac
 is retuned here (`DesignPaletteTests` checks the project still lists the file). The ground is
 near-black and the accent is the colour of what the take is for — the section's, as the Mac colours

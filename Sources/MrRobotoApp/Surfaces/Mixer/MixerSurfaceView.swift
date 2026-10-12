@@ -244,7 +244,7 @@ struct MixerSurfaceView: View {
         .padding(.vertical, 3)
         // The part's colour down the strip's leading edge, a track colour as a desk has.
         .padding(.leading, PartHue.color(for: row.type) != nil ? 10 : 0)
-        .modifier(PartStripe(type: row.type, inset: 3))
+        .modifier(PartStripe(type: row.type))
     }
 
     /// The strip's insert: the instrument's own, nothing, an amp or a rotating speaker; and with a

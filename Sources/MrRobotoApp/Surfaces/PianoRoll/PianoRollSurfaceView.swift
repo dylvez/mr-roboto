@@ -478,7 +478,6 @@ struct NoteLane: View {
     /// The rows, the bars, the chords, the kicks and the notes, across the whole line.
     private func grid(register: ClosedRange<Int>, layout: NoteLaneLayout) -> some View {
         let chords = HarmonyMap(chords: model.chords, totalBeats: model.totalBeats)
-        let vivid = Design.scheme.isVivid
         return ZStack(alignment: .topLeading) {
             // Rows: the register, black keys shaded, a line over every C.
             ForEach(Array(register.reversed().enumerated()), id: \.element) { row, midi in
@@ -492,17 +491,15 @@ struct NoteLane: View {
                     }
                     .offset(y: layout.top(ofRow: row))
             }
-            // In Vibrant each chord lays its colour faintly down the lane while it lasts, so where the
-            // harmony moves under the line can be seen without reading the names.
-            if vivid {
-                ForEach(chords.spans.indices, id: \.self) { i in
-                    let span = chords.spans[i]
-                    if let hue = HarmonyHue.color(for: span.chord, in: model.key) {
-                        LinearGradient(colors: [hue.opacity(0.11), hue.opacity(0.035)], startPoint: .top, endPoint: .bottom)
-                            .frame(width: max(1, CGFloat(span.end - span.start) * layout.beatWidth), height: layout.rowsHeight)
-                            .offset(x: CGFloat(span.start) * layout.beatWidth)
-                            .allowsHitTesting(false)
-                    }
+            // Each chord lays its colour faintly down the lane while it lasts, so where the harmony
+            // moves under the line can be seen without reading the names.
+            ForEach(chords.spans.indices, id: \.self) { i in
+                let span = chords.spans[i]
+                if let hue = HarmonyHue.color(for: span.chord, in: model.key) {
+                    LinearGradient(colors: [hue.opacity(0.11), hue.opacity(0.035)], startPoint: .top, endPoint: .bottom)
+                        .frame(width: max(1, CGFloat(span.end - span.start) * layout.beatWidth), height: layout.rowsHeight)
+                        .offset(x: CGFloat(span.start) * layout.beatWidth)
+                        .allowsHitTesting(false)
                 }
             }
             // Beat lines, the bar lines heavier and numbered, so bar nine of a long line is findable
@@ -528,15 +525,15 @@ struct NoteLane: View {
                 let span = chords.spans[i]
                 let hue = HarmonyHue.color(for: span.chord, in: model.key)
                 let symbol = span.chord.symbol(preferring: model.key.signature.preference)
-                if let hue {
+                if let hue, let words = HarmonyHue.color(for: span.chord, in: model.key, .ink) {
                     // The chord as a band across the top in its step's colour, its name on it.
                     Text(symbol)
                         .font(Design.Typography.ui(10.5, weight: .semibold))
-                        .foregroundStyle(hue)
+                        .foregroundStyle(words)
                         .lineLimit(1)
                         .padding(.horizontal, 4)
                         .frame(width: max(1, CGFloat(span.end - span.start) * layout.beatWidth - 2), height: 15, alignment: .leading)
-                        .background(hue.opacity(0.2), in: RoundedRectangle(cornerRadius: 3, style: .continuous))
+                        .background(Design.Palette.wash(hue, 0.2), in: RoundedRectangle(cornerRadius: 3, style: .continuous))
                         .overlay(alignment: .top) {
                             Rectangle().fill(hue).frame(height: 2)
                                 .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
@@ -551,17 +548,17 @@ struct NoteLane: View {
                 }
             }
             // Kick lane: the groove's kicks repeated across the whole line, as the song plays them.
-            // It starts under the lowest row, never over it. In Vibrant the kicks are the kick's own
-            // red, as the Grid paints it.
+            // It starts under the lowest row, never over it. The kicks are the kick's own red, as the
+            // Grid paints it.
             Rectangle()
                 .fill(Design.Palette.panelAlt)
                 .frame(width: layout.gridWidth, height: NoteLaneLayout.kickLaneHeight)
                 .offset(y: layout.kickLaneTop)
             ForEach(model.kickBeats, id: \.self) { beat in
                 RoundedRectangle(cornerRadius: 1)
-                    .fill(vivid ? LaneClass.kick.color : Design.Palette.ink.opacity(0.7))
+                    .fill(LaneClass.kick.color)
                     .frame(width: 3, height: NoteLaneLayout.kickLaneHeight - 6)
-                    .shadow(color: vivid ? LaneClass.kick.color.opacity(0.6) : .clear, radius: 3)
+                    .shadow(color: LaneClass.kick.color.opacity(0.6), radius: 3)
                     .offset(x: CGFloat(beat) * layout.beatWidth - 1, y: layout.kickLaneTop + 3)
             }
             // Empty-cell clicks add a note, on the pitch whose row is under the pointer.
@@ -575,24 +572,24 @@ struct NoteLane: View {
                     model.addNote(pitch: midi, at: beat)
                 }
             // The notes. The selected one is outlined in ink so it reads apart from its
-            // neighbours in any palette, not only by a shade of the accent. In Vibrant a note on
-            // the chord under it is lit and glows; one between the chord's notes is drawn hollow, so
-            // what the Melodist counts as "on the chord" is there to be seen.
+            // neighbours, not only by a shade of the accent. A note on the chord under it is lit and
+            // glows; one between the chord's notes is drawn hollow, so what the Melodist counts as
+            // "on the chord" is there to be seen.
             ForEach(Array(model.notes.enumerated()), id: \.offset) { index, note in
                 let row = register.upperBound - note.pitch.midi
                 let isGhost = note.velocity < 56
                 let isSelected = model.selectedNote == index
                 let onChord = chords.chord(at: note.start + 0.001).pitchClasses.contains(note.pitch.pitchClass)
-                let lit = !vivid || onChord
+                let lit = onChord
                 RoundedRectangle(cornerRadius: 2)
-                    .fill(Design.Palette.accent.opacity(isGhost ? (lit ? 0.35 : 0.14) : (lit ? (vivid ? 0.95 : 0.85) : 0.3)))
+                    .fill(Design.Palette.accent.opacity(isGhost ? (lit ? 0.35 : 0.14) : (lit ? 0.95 : 0.3)))
                     .overlay(RoundedRectangle(cornerRadius: 2)
                         .strokeBorder(isSelected ? Design.Palette.ink : Design.Palette.accent,
-                                      lineWidth: isSelected ? 2 : (vivid && !lit ? 1.2 : Design.Metric.hairline)))
+                                      lineWidth: isSelected ? 2 : (lit ? Design.Metric.hairline : 1.2)))
                     .overlay(alignment: .trailing) {
                         Rectangle().fill(Design.Palette.panel.opacity(0.6)).frame(width: 3)
                     }
-                    .shadow(color: vivid && lit && !isGhost ? Design.Palette.accent.opacity(0.55) : .clear, radius: 4)
+                    .shadow(color: lit && !isGhost ? Design.Palette.accent.opacity(0.55) : .clear, radius: 4)
                     .frame(width: max(6, CGFloat(note.duration) * layout.beatWidth - 1), height: max(4, layout.rowHeight - 1))
                     .offset(x: CGFloat(note.start) * layout.beatWidth, y: layout.top(ofRow: row))
                     .onTapGesture(count: 2) { model.deleteNote(at: index) }

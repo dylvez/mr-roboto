@@ -25,7 +25,7 @@ struct FrameRenderTests {
     }
 
     /// Every render in the dark appearance: with `MRROBOTO_DARK` set, or under a palette that sets
-    /// the window dark (`MRROBOTO_PALETTE` dark, mid or vibrant).
+    /// the window dark (`MRROBOTO_PALETTE` mid or dark).
     private var rendersDark: Bool {
         ProcessInfo.processInfo.environment["MRROBOTO_DARK"] != nil || Design.scheme.appearanceName == .darkAqua
     }

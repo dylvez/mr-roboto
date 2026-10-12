@@ -152,11 +152,10 @@ private struct SectionBlock: View {
 
     /// The section's kind in its hue — a bar of it along the top and a wash of it behind — so a
     /// verse is the same colour here, in the transport's strip and in every song. The one selected
-    /// wears the accent as a ring. Vibrant washes the hue in deeper, as far as the words on it
-    /// still read.
+    /// wears the accent as a ring, and its wash is deeper, as far as the words on it still read: the
+    /// wash is mixed over the palette's tint ground, so they read on charcoal as on black and white.
     private var block: some View {
         let hue = SectionHue.color(for: section.name)
-        let vivid = Design.scheme.isVivid
         let shape = RoundedRectangle(cornerRadius: Design.Metric.corner + 1, style: .continuous)
         return VStack(alignment: .leading, spacing: 3) {
             Text(section.name)
@@ -189,8 +188,8 @@ private struct SectionBlock: View {
         }
         .background {
             ZStack(alignment: .top) {
-                shape.fill(hue.opacity(isSelected ? (vivid ? 0.3 : 0.22) : (vivid ? 0.2 : 0.12)))
-                Rectangle().fill(hue).frame(height: vivid ? 5 : 4)
+                shape.fill(Design.Palette.wash(hue, isSelected ? 0.3 : 0.2))
+                Rectangle().fill(hue).frame(height: 5)
             }
             .clipShape(shape)
         }

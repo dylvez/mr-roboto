@@ -51,10 +51,8 @@ struct ChipButton: View {
             Image(systemName: systemImage)
                 .font(.system(size: 12, weight: .regular))
                 .frame(width: Design.Metric.chipHeight + 4, height: Design.Metric.chipHeight + 4)
-                .foregroundStyle(isOn ? (Design.scheme.isVivid ? Design.Palette.accent : Design.Palette.ink)
-                                      : Design.Palette.inkSecondary)
-                .background(isOn ? (Design.scheme.isVivid ? Design.Palette.accentSoft : Design.Palette.selected)
-                                 : (isHovering ? Design.Palette.hover : .clear),
+                .foregroundStyle(isOn ? Design.Palette.accent : Design.Palette.inkSecondary)
+                .background(isOn ? Design.Palette.accentSoft : (isHovering ? Design.Palette.hover : .clear),
                             in: RoundedRectangle(cornerRadius: Design.Metric.corner, style: .continuous))
                 .contentShape(Rectangle())
         }
@@ -112,13 +110,13 @@ struct FrameButton: View {
     }
 }
 
-/// The chip, for every surface: no outline, a grey fill that steps up under the pointer and
-/// again when the chip is on. A tone gives a chip a meaning instead — a caution, a destructive
-/// second press, the one primary action — and nothing else is coloured.
+/// The chip, for every surface: no outline, and a grey fill that steps up under the pointer. A
+/// tone gives a chip a meaning instead — a caution, a destructive second press, the one primary
+/// action.
 ///
-/// In Vibrant a chip that is on wears the colour of the work — the accent, or the `tint` it was
-/// given, a drum voice's own or a chord's — as a wash with a rim, its words in the colour itself:
-/// what is chosen on a surface is said in that surface's colour rather than in a lighter grey.
+/// A chip that is on wears the colour of the work — the accent, or the `tint` it was given, a drum
+/// voice's own or a band member's — as a wash with a rim, its words in the colour itself: what is
+/// chosen on a surface is said in that surface's colour rather than in a lighter grey.
 struct StudioChip<Label: View>: View {
     enum Tone { case plain, warn, danger, primary, sounding }
 
@@ -126,7 +124,8 @@ struct StudioChip<Label: View>: View {
     var tone: Tone = .plain
     var height: CGFloat? = nil
     var horizontalPadding: CGFloat = 8
-    /// The colour an on chip wears in Vibrant, when it is not the accent.
+    /// The colour an on chip wears when it is not the accent: a colour as words
+    /// (`Design.LaneRole.ink`), since it is the chip's words, its rim and its wash.
     var tint: Color? = nil
     @ViewBuilder let label: Label
 
@@ -148,15 +147,14 @@ struct StudioChip<Label: View>: View {
             .animation(.easeOut(duration: 0.12), value: isOn)
     }
 
-    /// An on chip in Vibrant: washed and rimmed in its colour.
-    private var wearsColour: Bool { tone == .plain && isOn && Design.scheme.isVivid }
+    /// An on chip: washed and rimmed in its colour.
+    private var wearsColour: Bool { tone == .plain && isOn }
     private var colour: Color { tint ?? Design.Palette.accent }
 
     private var foreground: Color {
         switch tone {
         case .plain:
-            if wearsColour { return colour }
-            return isOn ? Design.Palette.ink : Design.Palette.inkSecondary
+            return wearsColour ? colour : Design.Palette.inkSecondary
         case .warn: return Design.Palette.warn
         case .danger: return Design.Palette.danger
         case .primary: return Design.Palette.panel
@@ -167,8 +165,12 @@ struct StudioChip<Label: View>: View {
     private var background: Color {
         switch tone {
         case .plain:
-            if wearsColour { return tint.map { $0.opacity(0.2) } ?? Design.Palette.accentSoft }
-            return isOn ? Design.Palette.selected : (isHovering ? Design.Palette.hover : Design.Palette.fill)
+            // A tint's wash is mixed over the palette's tint ground, as the accent's own is, so the
+            // words keep 4.5:1 on it on charcoal as well as on black and on white.
+            if wearsColour {
+                return tint.map { Design.Palette.wash($0) } ?? Design.Palette.accentSoft
+            }
+            return isHovering ? Design.Palette.hover : Design.Palette.fill
         case .warn: return Design.Palette.warnSoft
         case .danger: return Design.Palette.dangerSoft
         case .primary: return Design.Palette.accent
@@ -220,9 +222,8 @@ struct SegmentedChoice<Value: Hashable>: View {
                 let isOn = option == selection
                 Button { choose(option) } label: {
                     ChipText(title(option), isOn: isOn, size: 11.5)
-                        // The raised segment's words in the work's colour, in Vibrant.
-                        .foregroundStyle(isOn ? (Design.scheme.isVivid ? Design.Palette.accent : Design.Palette.ink)
-                                              : Design.Palette.inkSecondary)
+                        // The raised segment's words in the work's colour.
+                        .foregroundStyle(isOn ? Design.Palette.accent : Design.Palette.inkSecondary)
                         .padding(.horizontal, 8)
                         .frame(height: Design.Metric.chipHeight - 4)
                         .background {

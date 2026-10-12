@@ -5,12 +5,12 @@ import Observation
 import Synchronization
 import SwiftUI
 
-/// The instrument's visual identity: one look, drawn in one of five palettes.
+/// The instrument's visual identity: one look, drawn in one of three palettes.
 ///
 /// The look is fixed — the type, the controls, the metrics and the layout are Studio's, and there is
-/// one way of drawing each thing. What can be chosen is colour: `Scheme` picks a complete set of
-/// tokens, and `Design.Palette` reads through it, so a surface still writes `Design.Palette.accent`
-/// and never knows which palette is current.
+/// one way of drawing each thing. What can be chosen is the ground: `Scheme` picks a complete set of
+/// tokens — Vibrant on white, on charcoal or on near-black — and `Design.Palette` reads through it,
+/// so a surface still writes `Design.Palette.accent` and never knows which palette is current.
 ///
 /// Switching is live. `SchemeStore` is `Observable`, and every token read goes through it, so a read
 /// inside a SwiftUI `body` registers a dependency on the current palette the same way a read of any
@@ -77,81 +77,76 @@ public enum Design {
 
     // MARK: - Palettes
 
-    /// The palettes, as the View menu's Palette list offers them.
+    /// The palettes, as the View menu's Palette list offers them: Vibrant on three grounds.
     ///
-    /// Auto, Light and Dark are one palette in its two appearances. Mid Dark and Vibrant are each
-    /// drawn for a dark window only, so choosing one sets the window dark as well: menus, popovers
-    /// and fields go dark with the rest. Vibrant is what the app opens in until another is chosen.
+    /// Each is drawn for one appearance and sets the window to it, so menus, popovers and fields go
+    /// light or dark with the rest. All three follow the work — the accent is the colour of the part
+    /// being edited, and the transport's display glows in the colour of the section playing — and
+    /// all three colour by meaning: a chord by its step of the key, a drum voice by its class, a band
+    /// member by what it owns. Vibrant Dark is what the app opens in until another is chosen.
     ///
-    /// There were themes before these — Notebook, Petrol and last Cool Neutral, each with its own
-    /// way of drawing a control. A second look meant every control was drawn twice, and what was
-    /// wanted from a choice was colour, so the look is Studio's alone and the choice is the palette.
-    /// A choice remembered from then opens in the default.
+    /// There were palettes before these that kept the music's colours to a mark — Auto, Light, Dark
+    /// and Mid Dark, Studio's own — and themes before them. A choice remembered from then opens in
+    /// the Vibrant palette on the same ground: Light in Vibrant Light, Mid Dark in Vibrant Mid Dark,
+    /// anything else in Vibrant Dark.
     public enum Scheme: String, CaseIterable, Identifiable, Sendable {
-        /// Light or dark, as macOS is set.
-        case system
+        /// White panels and near-black text. The music's colours fill at full strength, and where
+        /// they are words they are deepened until they read on white; the plates stay black.
         case light
-        case dark
-        /// Charcoal: between Light and Dark, nearer Dark. The panels are a grey you can see, the
-        /// text is light, the plates stay black — Logic's and Ableton's mid greys.
+        /// Charcoal: the panels a grey you can see, the text light, the plates black — Logic's and
+        /// Ableton's mid greys. The colours fill at full strength and are lifted where they are words.
         case mid
-        /// Near-black, with the music's colours at full strength. The accent is the colour of the
-        /// part being worked on — a groove's gold in the Grid, a tune's blue in the Piano roll — and
-        /// the transport's display glows in the colour of the section that is playing.
-        case vibrant
+        /// Near-black, with the music's colours at full strength everywhere.
+        case dark
 
         public var id: String { rawValue }
 
         /// What the View menu calls it.
         public var displayName: String {
             switch self {
-            case .system: return "Auto"
-            case .light: return "Light"
-            case .dark: return "Dark"
-            case .mid: return "Mid Dark"
-            case .vibrant: return "Vibrant"
+            case .light: return "Vibrant Light"
+            case .mid: return "Vibrant Mid Dark"
+            case .dark: return "Vibrant Dark"
             }
         }
 
         /// One line on what it is, for the command palette.
         public var summary: String {
             switch self {
-            case .system: return "Light or dark, as macOS is"
-            case .light: return "Light panels, dark text"
-            case .dark: return "Near-black panels, light text"
-            case .mid: return "Charcoal panels, light text"
-            case .vibrant: return "Near-black, coloured by what you work on"
+            case .light: return "White panels, coloured by what you work on"
+            case .mid: return "Charcoal panels, coloured by what you work on"
+            case .dark: return "Near-black panels, coloured by what you work on"
             }
         }
 
         public var palette: Palette.Values {
             switch self {
-            case .system, .light, .dark: return Palette.studio
+            case .light: return Palette.light
             case .mid: return Palette.mid
-            case .vibrant: return Palette.vibrant
+            case .dark: return Palette.dark
             }
         }
 
-        /// What `NSApp.appearance` is set to; nil hands it back to the system.
-        public var appearanceName: NSAppearance.Name? {
-            switch self {
-            case .system: return nil
-            case .light: return .aqua
-            case .dark, .mid, .vibrant: return .darkAqua
-            }
+        /// What `NSApp.appearance` is set to: each palette is drawn for one.
+        public var appearanceName: NSAppearance.Name {
+            self == .light ? .aqua : .darkAqua
         }
 
-        /// Whether the accent, a selected row's tint and a waveform's trace take the hue of the part
-        /// being worked on.
-        public var followsWork: Bool { self == .vibrant }
-
-        /// Whether the music's colours are carried further than a mark: a part's colour washed
-        /// across its row, a section's filling its block, the display lit by the section playing.
-        public var isVivid: Bool { self == .vibrant }
-
-        /// ⌃⌘1–5, in the order the menu lists them. Plain ⌘1–7 are the surfaces.
+        /// ⌃⌘1–3, in the order the menu lists them. Plain ⌘1–7 are the surfaces.
         public var shortcut: Character {
             Character("\((Scheme.allCases.firstIndex(of: self) ?? 0) + 1)")
+        }
+
+        /// The palette a remembered name opens in: one of these three, or a retired one on the same
+        /// ground — Vibrant and Dark were near-black, Studio's Light was white — and nil for a name
+        /// that says nothing about a ground, Auto among them.
+        public init?(remembered name: String) {
+            switch name {
+            case "light": self = .light
+            case "mid": self = .mid
+            case "dark", "vibrant": self = .dark
+            default: return nil
+            }
         }
     }
 
@@ -186,8 +181,8 @@ public enum Design {
         }
 
         /// One of the eight lane hues — the part being worked on — or nil when what fills the bench
-        /// is not a part. Only Vibrant reads it, so in the other palettes a change repaints nothing,
-        /// and setting the value it already has does not count as a change.
+        /// is not a part. Setting the value it already has does not count as a change, so switching
+        /// between two Grids repaints nothing.
         public var workHue: Int? {
             get {
                 registrar.access(self, keyPath: \.workHue)
@@ -205,20 +200,20 @@ public enum Design {
     /// Where the choice is remembered between launches.
     public static let schemeDefaultsKey = "design.palette"
 
-    /// Where Light or Dark was remembered before there were palettes: the same choice now, carried
+    /// Where Light or Dark was remembered before there were palettes: the same ground now, carried
     /// over the first time the app opens without a palette remembered.
     public static let appearanceDefaultsKey = "design.appearance"
 
-    /// The palette the app opens in when nothing has been chosen yet: Vibrant, the one the user
+    /// The palette the app opens in when nothing has been chosen yet: Vibrant Dark, the one the user
     /// chose to live in, and the one Roboto Capture is drawn in.
-    public static let defaultScheme = Scheme.vibrant
+    public static let defaultScheme = Scheme.dark
 
     public static let store = SchemeStore(renderScheme ?? storedScheme())
 
-    /// Under `MRROBOTO_RENDER`, `MRROBOTO_PALETTE` names the palette the renders are drawn in, so the
-    /// same frames can be drawn in each and laid side by side.
+    /// Under `MRROBOTO_RENDER`, `MRROBOTO_PALETTE` names the palette the renders are drawn in —
+    /// light, mid or dark — so the same frames can be drawn in each and laid side by side.
     static let renderScheme: Scheme? = isOffscreenRender
-        ? ProcessInfo.processInfo.environment["MRROBOTO_PALETTE"].flatMap(Scheme.init(rawValue:))
+        ? ProcessInfo.processInfo.environment["MRROBOTO_PALETTE"].flatMap(Scheme.init(remembered:))
         : nil
 
     /// The current palette. Reading this inside a `body` is what makes a switch repaint.
@@ -227,9 +222,9 @@ public enum Design {
     /// What `UserDefaults` remembers, or the default if it remembers nothing usable.
     static func storedScheme(_ defaults: UserDefaults = .standard) -> Scheme {
         if let raw = defaults.string(forKey: schemeDefaultsKey) {
-            return Scheme(rawValue: raw) ?? defaultScheme
+            return Scheme(remembered: raw) ?? defaultScheme
         }
-        return defaults.string(forKey: appearanceDefaultsKey).flatMap(Scheme.init(rawValue:)) ?? defaultScheme
+        return defaults.string(forKey: appearanceDefaultsKey).flatMap(Scheme.init(remembered:)) ?? defaultScheme
     }
 
     /// Choose a palette: repaint, remember it, and set the window light or dark to suit it.
@@ -246,17 +241,31 @@ public enum Design {
     @MainActor
     public static func applyAppearance() {
         guard let app = NSApp else { return }
-        app.appearance = scheme.appearanceName.flatMap { NSAppearance(named: $0) }
+        app.appearance = NSAppearance(named: scheme.appearanceName)
     }
 
     /// The hue of the part being worked on — a lane index, from `PartHue` — or nil for a surface
-    /// that is not about one part. The frame calls this as the bench changes; Vibrant draws with it.
+    /// that is not about one part. The frame calls this as the bench changes; the accent is drawn
+    /// with it.
     @MainActor
     public static func follow(hue: Int?) {
         store.workHue = hue
     }
 
     // MARK: - Colour
+
+    /// What a lane's colour is drawn as. On Vibrant Dark the three are one colour; on Mid Dark and
+    /// Light the words take a colour that reads on the ground, and on a plate — the waveform's, the
+    /// display's — a colour is always the full-strength one the dark palette has, since every plate
+    /// is near-black.
+    public enum LaneRole: Sendable {
+        /// A step, a block, a stripe, a wash, a dot: colour as an area or a mark on the ground.
+        case fill
+        /// Words, a numeral, a rim, and the accent: colour that has to read at 4.5:1 on the ground.
+        case ink
+        /// A figure, a trace or a tick on a dark plate.
+        case plate
+    }
 
     /// Paper, panel and ink, per palette, and the colours with one meaning each. The token names
     /// are the contract: a surface asks for `Design.Palette.sounding` and gets whichever orange the
@@ -286,11 +295,15 @@ public enum Design {
             public let selected: ColorPair
 
             // What is chosen.
+            /// The accent when the bench holds no part: a selection, a focus ring, the primary button.
             public let accent: ColorPair
             public let accentSoft: ColorPair
             /// Text or a mark that stands out from its neighbours without being a choice: ink, since
             /// the accent means chosen and nothing else.
             public let emphasis: ColorPair
+            /// The grey a selected row's tint is mixed over when the accent is a lane's: the panel,
+            /// or on charcoal a step under it, so the lifted lane still reads on its own tint.
+            public let tintGround: ColorPair
 
             // Fixed meanings.
             /// A critic's finding, a caution, a notice: never decoration.
@@ -310,7 +323,7 @@ public enum Design {
             /// Kept, in the song, saved.
             public let ok: ColorPair
 
-            // Plates: dark in both appearances.
+            // Plates: near-black in every palette.
             /// The dark plate a waveform or pitch trace is drawn on.
             public let plate: ColorPair
             public let trace: ColorPair
@@ -320,10 +333,26 @@ public enum Design {
             public let lcdRecording: ColorPair
             public let lcdRecordingInk: ColorPair
 
-            /// Eight hues for the music itself: drum lanes by class, sections by kind. Lightness
-            /// alternates from one to the next, so neighbours stay apart for a colour-blind eye, and
-            /// none of them is orange, so the sounding orange stays the only one on screen.
+            /// Eight hues for the music itself, as fills: drum lanes by class, sections by kind,
+            /// parts by type, chords by step. Lightness alternates from one to the next, so
+            /// neighbours stay apart for a colour-blind eye, and none of them is orange, so the
+            /// sounding orange stays the only one on screen.
             public let lanes: [ColorPair]
+            /// The same eight as words, each reading at 4.5:1 or better on the paper, the panel, a
+            /// raised card and its own tint, and under the panel as a button's label — so any of
+            /// them can be the accent. On near-black they are the fills themselves.
+            public let laneInks: [ColorPair]
+
+            /// One hue of the eight, by index, wrapping, as `role` draws it.
+            public func lane(_ index: Int, _ role: LaneRole) -> ColorPair {
+                let set: [ColorPair]
+                switch role {
+                case .fill: set = lanes
+                case .ink: set = laneInks
+                case .plate: set = Palette.plateLanes
+                }
+                return set[((index % set.count) + set.count) % set.count]
+            }
 
             /// The tokens with their names, for anything that has to walk the whole set — the tests
             /// that check every palette's contrast and the hue of every neutral, mainly.
@@ -332,7 +361,7 @@ public enum Design {
                  ("ink", ink), ("inkSecondary", inkSecondary), ("inkTertiary", inkTertiary), ("inkQuiet", inkQuiet),
                  ("line", line), ("lineStrong", lineStrong),
                  ("fill", fill), ("hover", hover), ("selected", selected),
-                 ("accent", accent), ("accentSoft", accentSoft), ("emphasis", emphasis),
+                 ("accent", accent), ("accentSoft", accentSoft), ("emphasis", emphasis), ("tintGround", tintGround),
                  ("warn", warn), ("warnSoft", warnSoft), ("danger", danger), ("dangerSoft", dangerSoft),
                  ("sounding", sounding), ("soundingInk", soundingInk), ("onSounding", onSounding),
                  ("solo", solo), ("mute", mute), ("ok", ok),
@@ -340,6 +369,7 @@ public enum Design {
                  ("lcdInk", lcdInk), ("lcdLabel", lcdLabel), ("lcdRecording", lcdRecording),
                  ("lcdRecordingInk", lcdRecordingInk)]
                     + lanes.enumerated().map { ("lane\($0.offset)", $0.element) }
+                    + laneInks.enumerated().map { ("laneInk\($0.offset)", $0.element) }
             }
 
             /// The subset that is a grey rather than a colour: everything the frame is built out of
@@ -347,156 +377,26 @@ public enum Design {
             /// wrong by letting them drift warm.
             public static let neutralTokenNames = ["paper", "panel", "panelAlt", "raised", "ink",
                                                    "inkSecondary", "inkTertiary", "inkQuiet",
-                                                   "line", "lineStrong", "fill", "hover", "selected"]
-
-            /// Kick, snare, closed hat, open hat, clap, perc, toms, cymbal — the order `LaneClass`
-            /// counts in, and the order sections borrow them in. Lightness alternates down the list
-            /// (OKLCH L 60, 74, 82, 68, 64, 76, 58, 80 in dark), which keeps every pair of neighbours
-            /// at least ΔE 9.6 apart under simulated deuteranopia; a palette at one lightness let
-            /// two of them fall under 1. The light-appearance values are a step deeper, so a hat's
-            /// yellow still reads as a filled step on a white panel.
-            static let laneHues: [ColorPair] = [
-                ColorPair(0xc0433f, 0xca5551),
-                ColorPair(0x2f8fc4, 0x5eb6e6),
-                ColorPair(0xb89e1a, 0xd8c65a),
-                ColorPair(0x1e8f84, 0x2baea1),
-                ColorPair(0x8456b8, 0x9f76cb),
-                ColorPair(0x4e9f52, 0x79c77c),
-                ColorPair(0x9c3f78, 0xaf578c),
-                ColorPair(0x6e8dcf, 0xa8beec),
-            ]
+                                                   "line", "lineStrong", "fill", "hover", "selected", "tintGround"]
         }
 
-        // MARK: Studio
+        /// The eight hues on a plate, in every palette: the full-strength ones, which read on black at
+        /// 5:1 or better — the display's figures while a section plays, the waveform's trace, the
+        /// ticks of a chord's voicing, the drawn sound.
+        static let plateLanes: [ColorPair] = SharedPalette.Vibrant.lanes.map(ColorPair.fixed)
 
-        /// The instrument's palette, built the way the music apps people trust build theirs.
-        ///
-        /// **The ground is a ramp, not a set of boxes.** Paper, the alternate panel, the panel and a
-        /// raised step sit a few lightness points apart — Logic's own grounds step 2–3.5 L* at a time
-        /// — and a region is told from its neighbour by that step rather than by a line drawn round
-        /// it. The cast is faintly cool, as Apple's is: blue leads red by a few units, never by the
-        /// eight the old dark panel carried.
-        ///
-        /// **Control fills are translucent.** `fill`, `hover` and `selected` are one grey (Apple's
-        /// #767680 in light, a lighter one in dark) at three opacities, so each is the same step up
-        /// from paper, from a panel or from the band's column.
-        ///
-        /// **Every colour has one job.** The accent is what is chosen: a selection, a focus ring, the
-        /// one primary button, a link — #3264C4, Carbon's blue with its chroma taken down, which is
-        /// what the app uses when the person's system accent is Multicolor. Orange is what is sounding:
-        /// the TR-808's step-key orange the app icon is drawn in. Red is record and failure. Amber is
-        /// a critic's finding, which used to be red and read as an error. Solo is yellow and mute a
-        /// cyan-blue, as on Logic's strips.
-        ///
-        /// **The plates stay dark in both appearances.** The waveform's plate and the transport's
-        /// display are a piece of equipment, not a page: Logic's display is #0E1012 with #CDE7FF
-        /// values, and so is this one.
-        ///
-        /// Contrast, measured: ink on paper 15.3:1 light and 15.4:1 dark; `inkTertiary` 4.6:1 on
-        /// light paper (the old one was 2.6:1) and 5.7:1 on dark; the accent 4.8:1 on light paper
-        /// and 9.5:1 on dark.
-        static let studio = Values(
-            paper: ColorPair(0xeceef1, 0x0f0f11),
-            panel: ColorPair(0xffffff, 0x18181b),
-            panelAlt: ColorPair(0xf5f6f8, 0x141416),
-            raised: ColorPair(0xffffff, 0x1f1f23),
-            ink: ColorPair(0x16181b, 0xe6e6eb),
-            inkSecondary: ColorPair(0x555b63, 0xb4b4bc),
-            inkTertiary: ColorPair(0x656c75, 0x8c8c95),
-            inkQuiet: ColorPair(0xa0a6ad, 0x5a5a62),
-            line: ColorPair(0xdfe2e7, 0x2c2c31),
-            lineStrong: ColorPair(0xc4c9d0, 0x3a3a40),
-            fill: ColorPair(0x767680, 0x8e8e96, lightAlpha: 0.08, darkAlpha: 0.14),
-            hover: ColorPair(0x767680, 0x8e8e96, lightAlpha: 0.13, darkAlpha: 0.2),
-            selected: ColorPair(0x767680, 0x8e8e96, lightAlpha: 0.2, darkAlpha: 0.3),
-            accent: ColorPair(0x3264c4, 0x8bb9fd),
-            accentSoft: ColorPair(0xe8eefb, 0x21304a),
-            emphasis: ColorPair(0x16181b, 0xe6e6eb),
-            warn: ColorPair(0x8a5a00, 0xf1ba4b),
-            warnSoft: ColorPair(0xfbf1dc, 0x33280f),
-            danger: ColorPair(0xc42b27, 0xff6b61),
-            dangerSoft: ColorPair(0xfbe5e4, 0x3a1716),
-            sounding: .fixed(0xf97f23),
-            soundingInk: ColorPair(0xb0500c, 0xff9a4d),
-            onSounding: .fixed(0x24160a),
-            solo: ColorPair(0xf2c200, 0xffd60a),
-            mute: ColorPair(0x4299bd, 0x4fa9cf),
-            ok: ColorPair(0x2b7a3b, 0x4cc56a),
-            plate: ColorPair(0x0e1012, 0x0b0c0e),
-            trace: ColorPair(0x6fa8e6, 0x8cbcf0),
-            lcdInk: .fixed(0xcde7ff),
-            lcdLabel: .fixed(0x7e93a8),
-            lcdRecording: .fixed(0x220d0c),
-            lcdRecordingInk: .fixed(0xffc4bf),
-            lanes: Values.laneHues)
-
-        // MARK: Mid Dark
-
-        /// Charcoal, with light text: between Studio's two appearances, nearer the dark one.
-        ///
-        /// **The ground sits where a mid grey can still carry text.** A true middle grey leaves no
-        /// room under body text for a quieter ink, so the ramp is set lower: paper at L* 29, the
-        /// panel at 33 and a raised step at 38, four points apart as Studio's dark steps are, where
-        /// Studio's dark paper is at 4. Ink is 9.0:1 on the paper, the secondary ink 6.7:1 and the
-        /// tertiary 4.5:1.
-        ///
-        /// **Every colour is lifted to stand off charcoal.** The accent, the meanings and the eight
-        /// lanes are Studio's dark values raised in lightness (OKLCH +0.06, +0.08 for the three
-        /// darkest lanes), so a red kick step or a magenta section still reads on a grey that is
-        /// thirty points lighter than the one they were drawn for.
-        ///
-        /// **The plates stay black.** The waveform's plate and the transport's display are the
-        /// darkest things on screen, set into the grey the way a display is set into a desk.
-        ///
-        /// One appearance only: every pair is the same in both, and choosing it sets the window dark.
-        static let mid = Values(
-            paper: .fixed(0x444449),
-            panel: .fixed(0x4e4e54),
-            panelAlt: .fixed(0x49494e),
-            raised: .fixed(0x58585e),
-            ink: .fixed(0xf6f6f8),
-            inkSecondary: .fixed(0xd6d6dc),
-            inkTertiary: .fixed(0xb0b0b8),
-            inkQuiet: .fixed(0x88888f),
-            line: .fixed(0x5f5f66),
-            lineStrong: .fixed(0x74747b),
-            fill: ColorPair(0xa8a8b0, 0xa8a8b0, lightAlpha: 0.14, darkAlpha: 0.14),
-            hover: ColorPair(0xa8a8b0, 0xa8a8b0, lightAlpha: 0.22, darkAlpha: 0.22),
-            selected: ColorPair(0xa8a8b0, 0xa8a8b0, lightAlpha: 0.32, darkAlpha: 0.32),
-            accent: .fixed(0xaed0ff),
-            accentSoft: .fixed(0x44526b),
-            emphasis: .fixed(0xf6f6f8),
-            warn: .fixed(0xf8c962),
-            warnSoft: .fixed(0x5a4c2c),
-            danger: .fixed(0xff958c),
-            dangerSoft: .fixed(0x5e3b3b),
-            sounding: .fixed(0xf97f23),
-            soundingInk: .fixed(0xffb073),
-            onSounding: .fixed(0x24160a),
-            solo: .fixed(0xffd60a),
-            mute: .fixed(0x74c3e6),
-            ok: .fixed(0x72dc90),
-            plate: .fixed(0x131416),
-            trace: .fixed(0x8cbcf0),
-            lcdInk: .fixed(0xcde7ff),
-            lcdLabel: .fixed(0x7e93a8),
-            lcdRecording: .fixed(0x220d0c),
-            lcdRecordingInk: .fixed(0xffc4bf),
-            lanes: [0xe76d67, 0x70cafb, 0xecda6b, 0x41c2b4, 0xb88ee7, 0x8bdb8d, 0xcb6ea5, 0xbcd1fe].map(ColorPair.fixed))
-
-        // MARK: Vibrant
+        // MARK: Vibrant Dark
 
         /// Near-black, with the music's colours at full strength.
         ///
-        /// **The ground is darker than Studio's dark and has no colour in it.** Paper at L* 2.5 and
-        /// the panel at 5.6, with the same faint cool cast as the other greys: a saturated dark
-        /// ground was tried once, as Petrol, and it was the colour of everything. Here the colour is
-        /// spent on the work.
+        /// **The ground has no colour in it.** Paper at L* 2.5 and the panel at 5.6, with a faint
+        /// cool cast: a saturated dark ground was tried once, as Petrol, and it was the colour of
+        /// everything. Here the colour is spent on the work.
         ///
         /// **The eight hues are turned up.** The lanes keep their order and their alternating
         /// lightness (OKLCH L 0.68 to 0.88), with chroma taken as far as sRGB allows, and every one
         /// is bright enough to be the accent: each reads at 4.5:1 or better as text on the paper and
-        /// the panel, and under the panel as a button's label.
+        /// the panel, and under the panel as a button's label. So the fills are the words as well.
         ///
         /// **The accent is the work's.** In the Grid it is the groove's gold, in the Piano roll the
         /// line's violet or the tune's blue, on the Chop lane the sample's magenta, and the waveform's
@@ -510,12 +410,12 @@ public enum Design {
         /// wears its class's colour, and the Sound surface draws the sound it is shaping in it
         /// (`LaneClass`). A band member speaks in the colour of what it owns (`MemberHue`), a rhyme
         /// in its letter's (`RhymeHue`), and the Master's spectrum runs through the hues from the
-        /// lows to the highs. The other palettes keep all of these in ink.
+        /// lows to the highs.
         ///
-        /// One appearance only: every pair is the same in both, and choosing it sets the window dark.
         /// Its numbers are `SharedPalette.Vibrant`'s, which Roboto Capture is drawn in too.
-        static let vibrant: Values = {
+        static let dark: Values = {
             typealias V = SharedPalette.Vibrant
+            let lanes = V.lanes.map(ColorPair.fixed)
             return Values(
                 paper: .fixed(V.paper),
                 panel: .fixed(V.panel),
@@ -533,6 +433,7 @@ public enum Design {
                 accent: .fixed(V.accent),
                 accentSoft: .fixed(V.accentSoft),
                 emphasis: .fixed(V.ink),
+                tintGround: .fixed(V.panel),
                 warn: .fixed(V.warn),
                 warnSoft: .fixed(V.warnSoft),
                 danger: .fixed(V.danger),
@@ -548,14 +449,131 @@ public enum Design {
                 lcdInk: .fixed(V.lcdInk),
                 lcdLabel: .fixed(V.lcdLabel),
                 lcdRecording: .fixed(V.lcdRecording),
-                lcdRecordingInk: .fixed(0xffc4bf),
-                lanes: V.lanes.map(ColorPair.fixed))
+                lcdRecordingInk: .fixed(V.lcdRecordingInk),
+                lanes: lanes,
+                laneInks: lanes)
         }()
 
-        /// A selected row's tint in Vibrant when the accent is a lane's: the lane at 18% over the
-        /// panel, which keeps the lane itself at 4.5:1 or better on it.
-        static func workSoft(_ lane: ColorPair, over panel: ColorPair) -> ColorPair {
-            ColorPair(SharedPalette.mix(panel.light, lane.light, 0.18), SharedPalette.mix(panel.dark, lane.dark, 0.18))
+        // MARK: Vibrant Mid Dark
+
+        /// Charcoal, with light text: the colours of Vibrant Dark on a grey you can see.
+        ///
+        /// **The ground sits where a mid grey can still carry coloured words.** A true middle grey
+        /// leaves no room under body text for a quieter ink, and none for a colour as words, so the
+        /// ramp is set lower: paper at L* 25, the panel at 29 and a raised step at 33 — a step under
+        /// Studio's Mid Dark, so a member's name still reads on a raised card. Ink is 10.3:1 on the
+        /// paper, the secondary ink 7.7:1 and the tertiary 5.2:1.
+        ///
+        /// **The fills are Vibrant Dark's, at full strength.** A kick step, a section's block and a
+        /// part's stripe are the same colour they are on near-black, and stand off the grey.
+        ///
+        /// **The words are lifted.** As text a red or a violet that reads on black falls under 3:1 on
+        /// charcoal, so the colours as words are raised in lightness (OKLCH L 0.79 to 0.83, chroma
+        /// as far as sRGB allows there) until each reads at 4.6:1 on the paper, the panel and a
+        /// raised card — and on its own tint, which is mixed over a grey a step under the paper
+        /// (`tintGround`) rather than over the panel, so the tint stays darker than the words.
+        ///
+        /// **The plates stay black**, set into the grey the way a display is set into a desk.
+        static let mid = Values(
+            paper: .fixed(0x3b3b40),
+            panel: .fixed(0x45454a),
+            panelAlt: .fixed(0x404045),
+            raised: .fixed(0x4e4e54),
+            ink: .fixed(0xf6f6f8),
+            inkSecondary: .fixed(0xd6d6dc),
+            inkTertiary: .fixed(0xb0b0b8),
+            inkQuiet: .fixed(0x88888f),
+            line: .fixed(0x55555c),
+            lineStrong: .fixed(0x6a6a71),
+            fill: ColorPair(0xa8a8b0, 0xa8a8b0, lightAlpha: 0.14, darkAlpha: 0.14),
+            hover: ColorPair(0xa8a8b0, 0xa8a8b0, lightAlpha: 0.22, darkAlpha: 0.22),
+            selected: ColorPair(0xa8a8b0, 0xa8a8b0, lightAlpha: 0.32, darkAlpha: 0.32),
+            accent: .fixed(0xaed0ff),
+            accentSoft: .fixed(0x4e5665),
+            emphasis: .fixed(0xf6f6f8),
+            tintGround: .fixed(0x303035),
+            warn: .fixed(0xf8c962),
+            warnSoft: .fixed(0x5a4c2c),
+            danger: .fixed(0xff958c),
+            dangerSoft: .fixed(0x5e3b3b),
+            sounding: .fixed(SharedPalette.sounding),
+            soundingInk: .fixed(0xffb073),
+            onSounding: .fixed(SharedPalette.onSounding),
+            solo: .fixed(SharedPalette.solo),
+            mute: .fixed(0x74c3e6),
+            ok: .fixed(0x72dc90),
+            plate: .fixed(SharedPalette.Vibrant.plate),
+            trace: .fixed(SharedPalette.Vibrant.trace),
+            lcdInk: .fixed(SharedPalette.Vibrant.lcdInk),
+            lcdLabel: .fixed(SharedPalette.Vibrant.lcdLabel),
+            lcdRecording: .fixed(SharedPalette.Vibrant.lcdRecording),
+            lcdRecordingInk: .fixed(SharedPalette.Vibrant.lcdRecordingInk),
+            lanes: SharedPalette.Vibrant.lanes.map(ColorPair.fixed),
+            laneInks: [0xffacb0, 0x66cfff, 0xe1c200, 0x00d9c6, 0xceb8ff, 0x2cdd72, 0xffa8d8, 0xaebfff].map(ColorPair.fixed))
+
+        // MARK: Vibrant Light
+
+        /// White panels and near-black text, with the music's colours as strong as white allows.
+        ///
+        /// **The ground is Studio's light ramp.** Paper a cool #ECEEF1, panels white, a few lightness
+        /// points between each region the way Logic's grounds step, the control fills one
+        /// translucent grey (Apple's #767680) at three strengths.
+        ///
+        /// **The fills are Vibrant's, a step deeper.** Each of the eight is Vibrant Dark's hue at
+        /// OKLCH L 0.11 lower with chroma as far as sRGB goes, so a hat's gold still reads as a filled
+        /// step on white and the lightness still alternates down the list.
+        ///
+        /// **The words are deepened until they read.** As text on white the colours sit at OKLCH L
+        /// 0.49 to 0.53 — a crimson, a cerulean, a goldenrod, a teal, a violet, a green, a magenta and
+        /// an indigo — each 5:1 or better on the paper and on its own tint, and dark enough to carry a
+        /// white label as the primary button. Gold is the one that changes most: yellow as words on
+        /// white has to be nearly brown.
+        ///
+        /// **The plates stay black** — the waveform's and the display's, a piece of equipment in a
+        /// white room — and on them the colours are Vibrant Dark's, at full strength.
+        static let light = Values(
+            paper: .fixed(0xeceef1),
+            panel: .fixed(0xffffff),
+            panelAlt: .fixed(0xf5f6f8),
+            raised: .fixed(0xffffff),
+            ink: .fixed(0x16181b),
+            inkSecondary: .fixed(0x555b63),
+            inkTertiary: .fixed(0x656c75),
+            inkQuiet: .fixed(0xa0a6ad),
+            line: .fixed(0xdfe2e7),
+            lineStrong: .fixed(0xc4c9d0),
+            fill: ColorPair(0x767680, 0x767680, lightAlpha: 0.08, darkAlpha: 0.08),
+            hover: ColorPair(0x767680, 0x767680, lightAlpha: 0.13, darkAlpha: 0.13),
+            selected: ColorPair(0x767680, 0x767680, lightAlpha: 0.2, darkAlpha: 0.2),
+            accent: .fixed(0x2f5fe0),
+            accentSoft: .fixed(0xe6edfd),
+            emphasis: .fixed(0x16181b),
+            tintGround: .fixed(0xffffff),
+            warn: .fixed(0x8a5a00),
+            warnSoft: .fixed(0xfbf1dc),
+            danger: .fixed(0xc42b27),
+            dangerSoft: .fixed(0xfbe5e4),
+            sounding: .fixed(SharedPalette.sounding),
+            soundingInk: .fixed(0xb0500c),
+            onSounding: .fixed(SharedPalette.onSounding),
+            solo: .fixed(0xf2c200),
+            mute: .fixed(0x4299bd),
+            ok: .fixed(0x2b7a3b),
+            plate: .fixed(SharedPalette.Vibrant.plate),
+            trace: .fixed(SharedPalette.Vibrant.trace),
+            lcdInk: .fixed(SharedPalette.Vibrant.lcdInk),
+            lcdLabel: .fixed(SharedPalette.Vibrant.lcdLabel),
+            lcdRecording: .fixed(SharedPalette.Vibrant.lcdRecording),
+            lcdRecordingInk: .fixed(SharedPalette.Vibrant.lcdRecordingInk),
+            lanes: [0xdc0047, 0x00a1d6, 0xd0b200, 0x00b0a0, 0x9259e6, 0x00bc5b, 0xdc009f, 0x8295e3].map(ColorPair.fixed),
+            laneInks: [0xbe003c, 0x006b90, 0x7a6200, 0x007066, 0x8137dc, 0x007436, 0xb70084, 0x4e5fb3].map(ColorPair.fixed))
+
+        /// A selected row's tint when the accent is a lane's: the lane's fill at 18% over the
+        /// palette's `tintGround`, which keeps the lane's words at 4.5:1 or better on it. From the
+        /// fill rather than the words, so a gold tint on white is a pale gold and not a khaki.
+        static func workSoft(_ lane: ColorPair, in palette: Values) -> ColorPair {
+            ColorPair(SharedPalette.mix(palette.tintGround.light, lane.light, 0.18),
+                      SharedPalette.mix(palette.tintGround.dark, lane.dark, 0.18))
         }
 
         // MARK: The tokens themselves
@@ -580,24 +598,21 @@ public enum Design {
         public static var hover: Color { current.hover.color }
         public static var selected: Color { current.selected.color }
 
-        /// The lane the accent takes in a palette that follows the work, for the work's hue.
+        /// The lane the accent takes for the work's hue, in a palette: the lane as words, which
+        /// reads on the ground. Nil when the bench holds no part.
         static func workLane(in scheme: Scheme, hue: Int?) -> ColorPair? {
-            guard scheme.followsWork, let hue else { return nil }
-            let lanes = scheme.palette.lanes
-            return lanes[((hue % lanes.count) + lanes.count) % lanes.count]
+            hue.map { scheme.palette.lane($0, .ink) }
         }
 
-        /// The same, now. The work's hue is read only in a palette that follows it, so in the others
-        /// a change of surface does not repaint every body that reads the accent.
+        /// The same, now.
         private static var workLane: ColorPair? {
-            let scheme = Design.scheme
-            guard scheme.followsWork else { return nil }
-            return workLane(in: scheme, hue: Design.store.workHue)
+            workLane(in: Design.scheme, hue: Design.store.workHue)
         }
 
         /// What is chosen. Spend it on one thing per surface: the selected candidate, the active
-        /// section, the one primary button. It is the person's system accent unless they chose
-        /// Multicolor, and in Vibrant the colour of the part being worked on.
+        /// section, the one primary button. It is the colour of the part being worked on; with no
+        /// part on the bench, the person's system accent unless they chose Multicolor, else the
+        /// palette's blue.
         public static var accent: Color {
             if let lane = workLane { return lane.color }
             if let system = SystemAccent.accent(for: Design.scheme) { return system }
@@ -605,13 +620,29 @@ public enum Design {
         }
 
         public static var accentSoft: Color {
-            if let lane = workLane { return workSoft(lane, over: current.panel).color }
+            if let hue = Design.store.workHue { return workSoft(current.lane(hue, .fill), in: current).color }
             if let system = SystemAccent.soft(for: Design.scheme) { return system }
             return current.accentSoft.color
         }
 
+        /// The accent where it is drawn on a plate — a chosen slice on the waveform: the work's
+        /// colour at full strength, which reads on black in every palette.
+        public static var accentOnPlate: Color {
+            Design.store.workHue.map { lane($0, .plate) } ?? ColorPair.fixed(SharedPalette.Vibrant.accent).color
+        }
+
         /// Stands out from its neighbours without claiming to be chosen.
         public static var emphasis: Color { current.emphasis.color }
+
+        /// The grey a chosen chip's or row's tint is mixed over: see `Values.tintGround`.
+        public static var tintGround: Color { current.tintGround.color }
+
+        /// A colour as a tint under words in that colour — a chord's band, a chip that is on: mixed
+        /// over the palette's tint ground rather than laid over whatever is under it, so the words
+        /// read on it on charcoal as they do on black and on white.
+        public static func wash(_ colour: Color, _ amount: Double = 0.18) -> Color {
+            tintGround.mix(with: colour, by: amount, in: .device)
+        }
 
         /// A critic finding, a caution: never decoration.
         public static var warn: Color { current.warn.color }
@@ -636,18 +667,20 @@ public enum Design {
 
         /// The dark plate a waveform or pitch trace is drawn on.
         public static var plate: Color { current.plate.color }
-        /// The waveform on it — in Vibrant, in the colour of the part being worked on.
-        public static var trace: Color { (workLane ?? current.trace).color }
+        /// The waveform on it, in the colour of the part being worked on.
+        public static var trace: Color {
+            Design.store.workHue.map { lane($0, .plate) } ?? current.trace.color
+        }
 
         public static var lcdInk: Color { current.lcdInk.color }
         public static var lcdLabel: Color { current.lcdLabel.color }
         public static var lcdRecording: Color { current.lcdRecording.color }
         public static var lcdRecordingInk: Color { current.lcdRecordingInk.color }
 
-        /// One hue of the eight, by index, wrapping.
-        public static func lane(_ index: Int) -> Color {
-            let lanes = current.lanes
-            return lanes[((index % lanes.count) + lanes.count) % lanes.count].color
+        /// One hue of the eight, by index, wrapping, as `role` draws it: a fill unless asked for
+        /// words or a plate.
+        public static func lane(_ index: Int, _ role: LaneRole = .fill) -> Color {
+            current.lane(index, role).color
         }
     }
 

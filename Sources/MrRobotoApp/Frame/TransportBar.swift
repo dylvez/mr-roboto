@@ -93,7 +93,6 @@ struct TransportBar: View {
             // block. Blocks of a fixed width with whole names under them used to make the bar wider
             // than the window — an eight-section form pushed Play and Save off both edges at 1440.
             GeometryReader { geometry in
-                let vivid = Design.scheme.isVivid
                 let strip = TransportBar.strip(names: sections.map(\.name), bars: sections.map(\.lengthInBars),
                                                room: geometry.size.width)
                 HStack(alignment: .bottom, spacing: 3) {
@@ -104,15 +103,15 @@ struct TransportBar: View {
                         // A click lights the section; a double-click plays from it. Not a Button: a
                         // button's own tap would take the first click and the double never arrives.
                         VStack(alignment: .leading, spacing: 5) {
-                            // Each section in its kind's hue, the lit one at full strength — and in
-                            // Vibrant, glowing while it plays.
+                            // Each section in its kind's hue, the lit one at full strength and glowing
+                            // while it plays, its name in the hue as words.
                             RoundedRectangle(cornerRadius: 2)
-                                .fill(hue.opacity(isLit ? 1 : (vivid ? 0.55 : 0.45)))
+                                .fill(hue.opacity(isLit ? 1 : 0.55))
                                 .frame(width: width, height: 6)
-                                .shadow(color: vivid && isLit && app.transport.isPlaying ? hue.opacity(0.9) : .clear, radius: 5)
+                                .shadow(color: isLit && app.transport.isPlaying ? hue.opacity(0.9) : .clear, radius: 5)
                             Text(section.name)
                                 .font(.system(size: 10, weight: isLit ? .semibold : .regular))
-                                .foregroundStyle(isLit ? (vivid ? hue : Design.Palette.ink) : Design.Palette.inkTertiary)
+                                .foregroundStyle(isLit ? SectionHue.color(for: section.name, .ink) : Design.Palette.inkTertiary)
                                 .lineLimit(1)
                                 .truncationMode(.tail)
                                 .frame(width: strip.names[index], alignment: .leading)
@@ -238,9 +237,10 @@ struct TransportDisplay: View {
 
     var body: some View {
         let recording = SurfaceWiring.shared.isRecording(for: app)
-        // Vibrant lights the display in the colour of the section playing: the figures in its hue,
-        // a glow round them and round the plate. Recording keeps its own red.
-        let glow = Design.scheme.isVivid && !recording ? app.playingSectionHue.map(Design.Palette.lane) : nil
+        // The display lights in the colour of the section playing: the figures in its hue, a glow
+        // round them and round the plate — the hue at full strength, as a plate wears it in every
+        // palette. Recording keeps its own red.
+        let glow = recording ? nil : app.playingSectionHue.map { Design.Palette.lane($0, .plate) }
         let ink = recording ? Design.Palette.lcdRecordingInk : (glow ?? Design.Palette.lcdInk)
         let label = recording ? Design.Palette.lcdRecordingInk.opacity(0.6) : (glow?.opacity(0.7) ?? Design.Palette.lcdLabel)
         let isPlaying = app.transport.isPlaying

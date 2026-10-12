@@ -7,19 +7,18 @@ import Testing
 
 @testable import MrRobotoApp
 
-/// The palettes are three sets of tokens — Studio in its two appearances, Mid Dark and Vibrant —
-/// and what used to be guaranteed by one person reading one list of constants has to be guaranteed
-/// by arithmetic instead.
+/// The palettes are three sets of tokens — Vibrant on white, on charcoal and on near-black — and
+/// what used to be guaranteed by one person reading one list of constants has to be guaranteed by
+/// arithmetic instead.
 ///
-/// Everything here works on the declared `UInt32` pairs rather than on a rendered view: a token's two
-/// values are the design, and every claim worth making about a colour — is it warm, does it read
-/// against its ground — is decidable from them. The one test that goes through `NSAppearance` is the
+/// Everything here works on the declared `UInt32` values rather than on a rendered view: a token's
+/// value is the design, and every claim worth making about a colour — is it warm, does it read
+/// against its ground — is decidable from it. The one test that goes through `NSAppearance` is the
 /// one checking that the declared values are actually what the system resolves.
 @Suite("Palettes")
 struct DesignPaletteTests {
 
-    /// One scheme per distinct palette: Auto, Light and Dark are Studio's one palette.
-    static let palettes: [Design.Scheme] = [.system, .mid, .vibrant]
+    static let palettes = Design.Scheme.allCases
 
     // MARK: Colour arithmetic
 
@@ -62,22 +61,11 @@ struct DesignPaletteTests {
         return (hue, saturation)
     }
 
-    /// Both values of a token, labelled, so a failure says which appearance broke.
-    private static var appearances: [(String, KeyPath<Design.ColorPair, UInt32>)] {
-        [("light", \.light), ("dark", \.dark)]
-    }
-
-    /// The tokens the frame paints with, as opposed to the two that only appear inside a waveform
-    /// plate. These are the ones that must visibly change between Studio's appearances.
-    private static let frameTokenNames = ["paper", "panel", "panelAlt", "ink", "inkSecondary",
-                                          "inkTertiary", "line", "lineStrong", "accent",
-                                          "accentSoft", "warn", "warnSoft"]
-
     // MARK: Completeness
 
     /// Structurally a `ColorPair` cannot be half-defined, but the resolver in between could still be
     /// wrong. This runs the whole set through `NSAppearance` and checks that what the system draws is
-    /// exactly what the palette declared, in both appearances.
+    /// exactly what the palette declared, in the appearance the palette sets.
     @Test("Every palette defines every token, and resolves to the declared value", arguments: Self.palettes)
     @MainActor
     func everyTokenResolves(scheme: Design.Scheme) throws {
@@ -94,33 +82,23 @@ struct DesignPaletteTests {
         }
 
         let palette = scheme.palette
-        #expect(palette.tokens.count == 40, "\(scheme.displayName) has \(palette.tokens.count) tokens, expected 40")
+        #expect(palette.tokens.count == 49, "\(scheme.displayName) has \(palette.tokens.count) tokens, expected 49")
         #expect(palette.lanes.count == 8, "\(scheme.displayName) has \(palette.lanes.count) lane hues, expected 8")
+        #expect(palette.laneInks.count == 8, "\(scheme.displayName) has \(palette.laneInks.count) lane inks, expected 8")
         for (name, pair) in palette.tokens {
-            #expect(resolved(pair.color, .aqua) == pair.light, "\(scheme.displayName).\(name) light")
-            #expect(resolved(pair.color, .darkAqua) == pair.dark, "\(scheme.displayName).\(name) dark")
+            #expect(resolved(pair.color, scheme.appearanceName) == pair.light, "\(scheme.displayName).\(name)")
         }
     }
 
-    /// A Studio token that is the same colour in both appearances is usually a token somebody forgot
-    /// to finish. The plate tokens are the deliberate exception.
-    @Test("Every one of Studio's frame tokens is a different colour in its two appearances")
-    func studioFrameTokensDifferBetweenAppearances() {
-        for (name, pair) in Design.Palette.studio.tokens where Self.frameTokenNames.contains(name) {
-            #expect(pair.light != pair.dark, "studio.\(name) is the same colour in both appearances")
-        }
-    }
-
-    /// Mid Dark and Vibrant are drawn for a dark window and set the window dark, so a value in only
-    /// one appearance would be a value nobody sees — or worse, one somebody does, in a render.
-    @Test("Mid Dark and Vibrant are one appearance only, and set the window dark",
-          arguments: [Design.Scheme.mid, .vibrant])
+    /// Each palette is drawn for one appearance and sets the window to it, so a value in only one
+    /// appearance would be a value nobody sees — or worse, one somebody does, in a render.
+    @Test("Each palette is one appearance only, and sets the window to it", arguments: Self.palettes)
     func singleAppearancePalettes(scheme: Design.Scheme) {
         for (name, pair) in scheme.palette.tokens {
             #expect(pair.light == pair.dark && pair.lightAlpha == pair.darkAlpha,
                     "\(scheme.displayName).\(name) differs between appearances")
         }
-        #expect(scheme.appearanceName == .darkAqua)
+        #expect(scheme.appearanceName == (scheme == .light ? .aqua : .darkAqua))
     }
 
     /// Each one has to earn its place in the menu: if two converge, one of them has stopped.
@@ -132,34 +110,57 @@ struct DesignPaletteTests {
         #expect(Set(palettes.map(\.panel)).count == palettes.count)
     }
 
-    /// Mid Dark is in between: lighter than Studio's dark by a long way, and nowhere near its light.
-    @Test("Mid Dark sits between Studio's appearances, nearer the dark")
+    /// Mid Dark is in between: lighter than Vibrant Dark by a long way, and nowhere near the light.
+    @Test("Vibrant Mid Dark sits between the other two, nearer the dark")
     func midIsInBetween() {
-        let studio = Design.Palette.studio, mid = Design.Palette.mid
+        let light = Design.Palette.light, dark = Design.Palette.dark, mid = Design.Palette.mid
         for token in [\Design.Palette.Values.paper, \.panel, \.raised] {
-            let dark = luminance(studio[keyPath: token].dark)
-            let light = luminance(studio[keyPath: token].light)
             let between = luminance(mid[keyPath: token].dark)
-            #expect(between > dark * 4 && between < light / 4)
+            #expect(between > luminance(dark[keyPath: token].dark) * 4 && between < luminance(light[keyPath: token].dark) / 4)
+        }
+    }
+
+    /// The three roles are one colour on near-black; on charcoal and on white the words differ from
+    /// the fills, and a plate wears the full-strength colours wherever it is.
+    @Test("A lane's fill, its words and its plate colour")
+    func laneRoles() {
+        let dark = Design.Palette.dark
+        for index in 0..<8 {
+            #expect(dark.lane(index, .fill) == dark.lane(index, .ink))
+            #expect(dark.lane(index, .fill) == dark.lane(index, .plate))
+            for palette in [Design.Palette.light, Design.Palette.mid] {
+                #expect(palette.lane(index, .plate) == dark.lane(index, .fill), "lane \(index) on a plate")
+            }
+            #expect(Design.Palette.light.lane(index, .ink) != Design.Palette.light.lane(index, .fill))
+        }
+        // An index wraps rather than traps, in every role.
+        #expect(dark.lane(10, .ink) == dark.lanes[2] && dark.lane(-1, .plate) == dark.lanes[7])
+    }
+
+    /// A fill is a step, a block, a stripe: it has to be seen against the panel it sits on, even
+    /// where it is not text.
+    @Test("Every fill stands off its panel", arguments: Self.palettes)
+    func fillsAreSeen(scheme: Design.Scheme) {
+        let palette = scheme.palette
+        for (offset, lane) in palette.lanes.enumerated() {
+            #expect(contrast(lane.dark, palette.panel.dark) >= 1.8, "\(scheme.displayName) fill \(offset) is \(ratio(lane.dark, palette.panel.dark)) on its panel")
         }
     }
 
     // MARK: Warmth
 
     /// The greys are near-neutral, the way Apple's are: faintly cool where they lean at all, and
-    /// never warm, in any palette or appearance — including the translucent fills. A saturated
-    /// ground was Petrol's mistake, and Vibrant's colour is spent on the work, not on its ground.
+    /// never warm, in any palette — including the translucent fills and the tint ground. A saturated
+    /// ground was Petrol's mistake, and the colour is spent on the work, not on its ground.
     @Test("Not one grey drifts warm, and none of them is a colour", arguments: Self.palettes)
     func neutralsAreNearNeutral(scheme: Design.Scheme) {
         for (name, pair) in scheme.palette.tokens where Design.Palette.Values.neutralTokenNames.contains(name) {
-            for (appearance, index) in Self.appearances {
-                let (r, g, b) = channels(pair[keyPath: index])
-                #expect(r <= b, "\(scheme.displayName).\(name) (\(appearance)) is warm: red \(Int(r)) leads blue \(Int(b))")
-                // The spread between the channels, not HSL saturation, which runs high for any
-                // near-white: #F5F6F8 is 18% "saturated" and three units of blue.
-                let spread = max(r, g, b) - min(r, g, b)
-                #expect(spread <= 16, "\(scheme.displayName).\(name) (\(appearance)) leans \(Int(spread)) units — a colour, not a grey")
-            }
+            let (r, g, b) = channels(pair.dark)
+            #expect(r <= b, "\(scheme.displayName).\(name) is warm: red \(Int(r)) leads blue \(Int(b))")
+            // The spread between the channels, not HSL saturation, which runs high for any
+            // near-white: #F5F6F8 is 18% "saturated" and three units of blue.
+            let spread = max(r, g, b) - min(r, g, b)
+            #expect(spread <= 16, "\(scheme.displayName).\(name) leans \(Int(spread)) units — a colour, not a grey")
         }
     }
 
@@ -168,83 +169,73 @@ struct DesignPaletteTests {
     @Test("Sounding, record, caution and the accent are a colour each", arguments: Self.palettes)
     func meaningsAreDistinct(scheme: Design.Scheme) {
         let palette = scheme.palette
-        for (appearance, index) in Self.appearances {
-            let meanings = [palette.accent, palette.sounding, palette.danger, palette.warn,
-                            palette.solo, palette.mute, palette.ok].map { $0[keyPath: index] }
-            #expect(Set(meanings).count == meanings.count, "two of \(scheme.displayName)'s meanings share a colour (\(appearance))")
-            // No lane hue sits in the orange the sounding colour owns.
-            for (offset, lane) in palette.lanes.enumerated() {
-                let (hue, saturation) = hueAndSaturation(lane[keyPath: index])
-                #expect(saturation < 0.2 || !(20...45).contains(hue),
-                        "\(scheme.displayName) lane \(offset) (\(appearance)) sits at \(Int(hue))°, in the sounding orange")
-            }
-            // And the orange is the one the app icon is drawn in, everywhere.
-            #expect(palette.sounding[keyPath: index] == 0xf97f23)
+        let meanings = [palette.accent, palette.sounding, palette.danger, palette.warn,
+                        palette.solo, palette.mute, palette.ok].map(\.dark)
+        #expect(Set(meanings).count == meanings.count, "two of \(scheme.displayName)'s meanings share a colour")
+        // No lane hue, as a fill or as words, sits in the orange the sounding colour owns.
+        for (offset, lane) in (palette.lanes + palette.laneInks).enumerated() {
+            let (hue, saturation) = hueAndSaturation(lane.dark)
+            #expect(saturation < 0.2 || !(20...45).contains(hue),
+                    "\(scheme.displayName) lane \(offset % 8) (\(offset < 8 ? "fill" : "words")) sits at \(Int(hue))°, in the sounding orange")
         }
+        // And the orange is the one the app icon is drawn in, everywhere.
+        #expect(palette.sounding.dark == 0xf97f23)
     }
 
     // MARK: The display and the plates
 
-    /// The display and the plate are a piece of equipment: dark in every palette, with figures that
-    /// read on them at a glance.
+    /// The display and the plate are a piece of equipment: near-black in every palette, the white
+    /// room's included, with figures that read on them at a glance.
     @Test("The transport display reads", arguments: Self.palettes)
     func displayReads(scheme: Design.Scheme) {
         let palette = scheme.palette
-        for (appearance, index) in Self.appearances {
-            let plate = palette.plate[keyPath: index]
-            #expect(contrast(palette.lcdInk[keyPath: index], plate) >= 12, "\(scheme.displayName) figures (\(appearance)) are faint")
-            #expect(contrast(palette.lcdLabel[keyPath: index], plate) >= 4.5, "\(scheme.displayName) labels (\(appearance)) are under AA")
-            #expect(contrast(palette.lcdRecordingInk[keyPath: index], palette.lcdRecording[keyPath: index]) >= 12,
-                    "\(scheme.displayName) recording figures (\(appearance)) are faint")
-            #expect(luminance(plate) < 0.02, "\(scheme.displayName) plate (\(appearance)) is not dark")
+        let plate = palette.plate.dark
+        #expect(contrast(palette.lcdInk.dark, plate) >= 12, "\(scheme.displayName) figures are faint")
+        #expect(contrast(palette.lcdLabel.dark, plate) >= 4.5, "\(scheme.displayName) labels are under AA")
+        #expect(contrast(palette.lcdRecordingInk.dark, palette.lcdRecording.dark) >= 12,
+                "\(scheme.displayName) recording figures are faint")
+        #expect(luminance(plate) < 0.02, "\(scheme.displayName) plate is not dark")
+    }
+
+    /// The display lights in the colour of the section playing, so every lane on a plate has to read
+    /// as a figure does: not at the 12:1 of the display's own ink, but well past AA — on every
+    /// palette's plate.
+    @Test("The display's figures read in every section's colour", arguments: Self.palettes)
+    func displayGlowReads(scheme: Design.Scheme) {
+        let palette = scheme.palette
+        for index in 0..<8 {
+            let lane = palette.lane(index, .plate).dark
+            #expect(contrast(lane, palette.plate.dark) >= 5, "\(scheme.displayName) lane \(index) on the plate is \(ratio(lane, palette.plate.dark))")
         }
     }
 
-    /// Vibrant lights the display in the colour of the section playing, so every lane has to read
-    /// on the plate as a figure does: not at the 12:1 of the display's own ink, but well past AA.
-    @Test("Vibrant's display figures read in every section's colour")
-    func vibrantDisplayGlowReads() {
-        let palette = Design.Palette.vibrant
-        for (offset, lane) in palette.lanes.enumerated() {
-            #expect(contrast(lane.dark, palette.plate.dark) >= 5, "lane \(offset) on the plate is \(ratio(lane.dark, palette.plate.dark))")
-        }
-    }
-
-    /// The waveform plate is drawn in the palette's own dark, and the trace on top of it — in
-    /// Vibrant, in the colour of the part being worked on.
+    /// The waveform plate is drawn in near-black, and the trace on top of it in the colour of the
+    /// part being worked on.
     @Test("The trace reads on its plate", arguments: Self.palettes)
     func traceOnPlate(scheme: Design.Scheme) {
         let palette = scheme.palette
-        for (appearance, index) in Self.appearances {
-            #expect(contrast(palette.trace[keyPath: index], palette.plate[keyPath: index]) >= 4.5,
-                    "\(scheme.displayName) trace on plate (\(appearance)) is faint")
-        }
-        guard scheme.followsWork else { return }
-        for (offset, lane) in palette.lanes.enumerated() {
-            #expect(contrast(lane.dark, palette.plate.dark) >= 4.5, "lane \(offset) as a trace is faint")
-        }
+        #expect(contrast(palette.trace.dark, palette.plate.dark) >= 4.5, "\(scheme.displayName) trace on plate is faint")
     }
 
     /// The text on an orange fill — Stop while a part plays, the lit Play — reads on it.
     @Test("Text on the sounding orange reads", arguments: Self.palettes)
     func onSoundingReads(scheme: Design.Scheme) {
         let palette = scheme.palette
-        for (_, index) in Self.appearances {
-            #expect(contrast(palette.onSounding[keyPath: index], palette.sounding[keyPath: index]) >= 4.5)
-            #expect(contrast(palette.soundingInk[keyPath: index], palette.paper[keyPath: index]) >= 4.5)
-        }
+        #expect(contrast(palette.onSounding.dark, palette.sounding.dark) >= 4.5)
+        #expect(contrast(palette.soundingInk.dark, palette.paper.dark) >= 4.5)
     }
 
     // MARK: Contrast
 
     /// The accent is spent on the one thing worth doing on a surface, so it has to be legible as
-    /// text on the ground it is spent on, and legible under its own fill when it becomes a button.
-    private func accentCarries(_ accent: UInt32, soft: UInt32, on palette: Design.Palette.Values,
-                               _ index: KeyPath<Design.ColorPair, UInt32>, _ label: String) {
-        let paper = palette.paper[keyPath: index], panel = palette.panel[keyPath: index]
-        #expect(contrast(accent, paper) >= 4.5, "\(label) on paper is \(ratio(accent, paper))")
-        #expect(contrast(accent, panel) >= 4.5, "\(label) on panel is \(ratio(accent, panel))")
+    /// text on the ground it is spent on — paper, a panel, a raised card — and legible under its own
+    /// fill when it becomes a button.
+    private func accentCarries(_ accent: UInt32, soft: UInt32, on palette: Design.Palette.Values, _ label: String) {
+        for (name, ground) in [("paper", palette.paper.dark), ("panel", palette.panel.dark), ("a raised card", palette.raised.dark)] {
+            #expect(contrast(accent, ground) >= 4.5, "\(label) on \(name) is \(ratio(accent, ground))")
+        }
         // `FrameButton.accent` fills with the accent and sets its label in `panel`.
+        let panel = palette.panel.dark
         #expect(contrast(panel, accent) >= 4.5, "panel label on \(label) is \(ratio(panel, accent))")
         // And the accent has to stay visible on its own soft tint, which a selected row is painted with.
         #expect(contrast(accent, soft) >= 4.5, "\(label) on its soft tint is \(ratio(accent, soft))")
@@ -253,34 +244,32 @@ struct DesignPaletteTests {
     @Test("The accent carries its own ground", arguments: Self.palettes)
     func accentContrast(scheme: Design.Scheme) {
         let palette = scheme.palette
-        for (appearance, index) in Self.appearances {
-            accentCarries(palette.accent[keyPath: index], soft: palette.accentSoft[keyPath: index],
-                          on: palette, index, "\(scheme.displayName) accent (\(appearance))")
-        }
+        accentCarries(palette.accent.dark, soft: palette.accentSoft.dark, on: palette, "\(scheme.displayName) accent")
     }
 
-    /// Vibrant's accent is whichever of the eight hues the work is: each one has to carry the ground
-    /// the way the accent does, with its own soft tint under a selected row.
-    @Test("Each of Vibrant's eight hues carries the ground as its accent")
-    func vibrantWorkAccents() throws {
-        let palette = Design.Palette.vibrant
+    /// The accent is whichever of the eight hues the work is, as words: each one has to carry the
+    /// ground the way the accent does, with its own soft tint under a selected row.
+    @Test("Each of the eight hues carries the ground as the accent", arguments: Self.palettes)
+    func workAccents(scheme: Design.Scheme) throws {
+        let palette = scheme.palette
         for hue in 0..<8 {
-            let lane = try #require(Design.Palette.workLane(in: .vibrant, hue: hue))
-            #expect(lane == palette.lanes[hue])
-            let soft = Design.Palette.workSoft(lane, over: palette.panel)
-            accentCarries(lane.dark, soft: soft.dark, on: palette, \.dark, "lane \(hue)")
+            let lane = try #require(Design.Palette.workLane(in: scheme, hue: hue))
+            #expect(lane == palette.laneInks[hue])
+            let soft = Design.Palette.workSoft(palette.lane(hue, .fill), in: palette)
+            accentCarries(lane.dark, soft: soft.dark, on: palette, "\(scheme.displayName) lane \(hue)")
         }
     }
 
-    /// Only Vibrant follows the work; the others keep their accent wherever you are.
-    @Test("Only Vibrant's accent follows the work, and a hue wraps rather than traps")
-    func onlyVibrantFollowsTheWork() {
-        for scheme in Design.Scheme.allCases where scheme != .vibrant {
-            #expect(Design.Palette.workLane(in: scheme, hue: 2) == nil)
+    /// Every palette follows the work; with no part on the bench there is nothing to follow, and a
+    /// hue wraps rather than traps.
+    @Test("The accent follows the work in every palette, and a hue wraps rather than traps")
+    func everyPaletteFollowsTheWork() {
+        for scheme in Design.Scheme.allCases {
+            #expect(Design.Palette.workLane(in: scheme, hue: nil) == nil)
+            #expect(Design.Palette.workLane(in: scheme, hue: 2) == scheme.palette.laneInks[2])
+            #expect(Design.Palette.workLane(in: scheme, hue: 10) == scheme.palette.laneInks[2])
+            #expect(Design.Palette.workLane(in: scheme, hue: -1) == scheme.palette.laneInks[7])
         }
-        #expect(Design.Palette.workLane(in: .vibrant, hue: nil) == nil)
-        #expect(Design.Palette.workLane(in: .vibrant, hue: 10) == Design.Palette.vibrant.lanes[2])
-        #expect(Design.Palette.workLane(in: .vibrant, hue: -1) == Design.Palette.vibrant.lanes[7])
     }
 
     /// Body text, and the two quieter inks under it. `inkTertiary` is a deliberately faint label, so
@@ -288,13 +277,11 @@ struct DesignPaletteTests {
     @Test("Ink reads on paper", arguments: Self.palettes)
     func inkContrast(scheme: Design.Scheme) {
         let palette = scheme.palette
-        for (appearance, index) in Self.appearances {
-            let paper = palette.paper[keyPath: index]
-            #expect(contrast(palette.ink[keyPath: index], paper) >= 7, "\(scheme.displayName) ink (\(appearance)) is under AAA")
-            #expect(contrast(palette.inkSecondary[keyPath: index], paper) >= 4.5, "\(scheme.displayName) inkSecondary (\(appearance)) is under AA")
-            #expect(contrast(palette.inkTertiary[keyPath: index], paper) >= 2.3, "\(scheme.displayName) inkTertiary (\(appearance)) has vanished")
-            #expect(contrast(palette.warn[keyPath: index], paper) >= 4, "\(scheme.displayName) warn (\(appearance)) is under AA")
-        }
+        let paper = palette.paper.dark
+        #expect(contrast(palette.ink.dark, paper) >= 7, "\(scheme.displayName) ink is under AAA")
+        #expect(contrast(palette.inkSecondary.dark, paper) >= 4.5, "\(scheme.displayName) inkSecondary is under AA")
+        #expect(contrast(palette.inkTertiary.dark, paper) >= 2.3, "\(scheme.displayName) inkTertiary has vanished")
+        #expect(contrast(palette.warn.dark, paper) >= 4, "\(scheme.displayName) warn is under AA")
     }
 
     /// A hairline is the only thing separating two panels, so it has to be a visible step off both
@@ -302,13 +289,10 @@ struct DesignPaletteTests {
     @Test("Hairlines separate", arguments: Self.palettes)
     func hairlineSeparation(scheme: Design.Scheme) {
         let palette = scheme.palette
-        for (appearance, index) in Self.appearances {
-            let line = palette.line[keyPath: index]
-            #expect(contrast(line, palette.paper[keyPath: index]) >= 1.10, "\(scheme.displayName) line on paper (\(appearance))")
-            #expect(contrast(line, palette.panel[keyPath: index]) >= 1.25, "\(scheme.displayName) line on panel (\(appearance))")
-            #expect(contrast(palette.lineStrong[keyPath: index], palette.panel[keyPath: index]) >= 1.50,
-                    "\(scheme.displayName) lineStrong on panel (\(appearance))")
-        }
+        let line = palette.line.dark
+        #expect(contrast(line, palette.paper.dark) >= 1.10, "\(scheme.displayName) line on paper")
+        #expect(contrast(line, palette.panel.dark) >= 1.25, "\(scheme.displayName) line on panel")
+        #expect(contrast(palette.lineStrong.dark, palette.panel.dark) >= 1.50, "\(scheme.displayName) lineStrong on panel")
     }
 
     /// A system accent drawn for a near-black window can fall under AA on Mid Dark's charcoal; it is
@@ -342,7 +326,9 @@ struct DesignPaletteTests {
         #expect(Design.Palette.warn == palette.warn.color)
         #expect(Design.Palette.warnSoft == palette.warnSoft.color)
         #expect(Design.Palette.plate == palette.plate.color)
-        if !Design.scheme.followsWork {
+        // With nothing on the bench the accent and the trace are the palette's own; a test that
+        // draws a surface sets a work hue on the shared store, so this holds only when none is set.
+        if Design.store.workHue == nil {
             #expect(Design.Palette.trace == palette.trace.color)
             if !SystemAccent.isChosen {
                 #expect(Design.Palette.accent == palette.accent.color)
@@ -362,7 +348,7 @@ struct DesignPaletteTests {
             }
         }
         // Different pairs stay different, so the memo is not collapsing tokens onto one key.
-        let distinct = Set(Design.Palette.studio.tokens.map(\.pair))
+        let distinct = Set(Design.Palette.light.tokens.map(\.pair))
         #expect(Set(distinct.map(\.color)).count == distinct.count)
     }
 
@@ -381,9 +367,9 @@ struct DesignPaletteTests {
         }
 
         track { _ = store.scheme }
-        store.scheme = .vibrant
+        store.scheme = .light
         #expect(notified.withLock { $0 } == 1, "a palette change did not reach observation tracking")
-        #expect(store.scheme == .vibrant)
+        #expect(store.scheme == .light)
 
         track { _ = store.workHue }
         store.workHue = 2
@@ -404,63 +390,68 @@ struct DesignPaletteTests {
     @Test("The chosen palette survives a launch", arguments: Design.Scheme.allCases)
     func paletteIsPersisted(scheme: Design.Scheme) throws {
         try withDefaults { defaults in
-            #expect(Design.storedScheme(defaults) == .vibrant, "an empty defaults should give Vibrant")
+            #expect(Design.storedScheme(defaults) == .dark, "an empty defaults should give Vibrant Dark")
             defaults.set(scheme.rawValue, forKey: Design.schemeDefaultsKey)
             #expect(Design.storedScheme(defaults) == scheme)
         }
     }
 
-    /// Light or Dark chosen in the Appearance menu, before there were palettes, is the same choice
+    /// The palettes chosen before these were all on one of the three grounds: each opens in the
+    /// Vibrant palette on its own. Auto said nothing about a ground and opens in the default.
+    @Test("A palette chosen before opens on the same ground")
+    func retiredPalettesCarryOver() throws {
+        for (old, carried) in [("light", Design.Scheme.light), ("mid", .mid), ("dark", .dark), ("vibrant", .dark),
+                               ("system", .dark), ("parchment", .dark)] {
+            try withDefaults { defaults in
+                defaults.set(old, forKey: Design.schemeDefaultsKey)
+                #expect(Design.storedScheme(defaults) == carried, "\(old)")
+            }
+        }
+    }
+
+    /// Light or Dark chosen in the Appearance menu, before there were palettes, is the same ground
     /// now; a palette chosen since wins over it.
     @Test("Light or Dark chosen before the palettes carries over")
     func appearanceCarriesOver() throws {
-        for (old, carried) in [("light", Design.Scheme.light), ("dark", .dark), ("system", .system), ("sepia", .vibrant)] {
+        for (old, carried) in [("light", Design.Scheme.light), ("dark", .dark), ("system", .dark), ("sepia", .dark)] {
             try withDefaults { defaults in
                 defaults.set(old, forKey: Design.appearanceDefaultsKey)
                 #expect(Design.storedScheme(defaults) == carried, "\(old)")
-                defaults.set("vibrant", forKey: Design.schemeDefaultsKey)
-                #expect(Design.storedScheme(defaults) == .vibrant)
+                defaults.set("mid", forKey: Design.schemeDefaultsKey)
+                #expect(Design.storedScheme(defaults) == .mid)
             }
         }
     }
 
     /// The themes are gone: a theme remembered from before — Cool Neutral, Studio, or the two
-    /// retired before them — opens in the default, Vibrant, and a palette name we do not have falls
-    /// back rather than trapping on an optional.
-    @Test("A theme remembered from before, or an unknown palette, opens in Vibrant")
+    /// retired before them — opens in the default, Vibrant Dark.
+    @Test("A theme remembered from before opens in Vibrant Dark")
     func oldThemesFallBack() throws {
         for theme in ["cool", "studio", "notebook", "petrol"] {
             try withDefaults { defaults in
                 defaults.set(theme, forKey: "design.theme")
                 defaults.set(2, forKey: "design.themeVersion")
-                #expect(Design.storedScheme(defaults) == .vibrant, "\(theme)")
+                #expect(Design.storedScheme(defaults) == .dark, "\(theme)")
             }
-        }
-        try withDefaults { defaults in
-            defaults.set("parchment", forKey: Design.schemeDefaultsKey)
-            #expect(Design.storedScheme(defaults) == .vibrant)
         }
     }
 
-    /// Auto hands the window back to the system; Light and Dark pin it; Mid Dark and Vibrant are
-    /// drawn for a dark window and pin it dark.
+    /// Vibrant Light pins the window light; the other two pin it dark.
     @Test("Each palette sets the window's appearance")
     func appearanceFollowsThePalette() {
-        #expect(Design.Scheme.system.appearanceName == nil)
         #expect(Design.Scheme.light.appearanceName == .aqua)
-        #expect(Design.Scheme.dark.appearanceName == .darkAqua)
         #expect(Design.Scheme.mid.appearanceName == .darkAqua)
-        #expect(Design.Scheme.vibrant.appearanceName == .darkAqua)
-        #expect(Design.defaultScheme == .vibrant)
+        #expect(Design.Scheme.dark.appearanceName == .darkAqua)
+        #expect(Design.defaultScheme == .dark)
     }
 
     /// The View menu's shortcuts are positional, so the order of `allCases` is load-bearing: it is
-    /// what ⌃⌘1–5 mean.
+    /// what ⌃⌘1–3 mean.
     @Test("The menu order is the shortcut order")
     func menuOrder() {
-        #expect(Design.Scheme.allCases == [.system, .light, .dark, .mid, .vibrant])
-        #expect(Design.Scheme.allCases.map(\.displayName) == ["Auto", "Light", "Dark", "Mid Dark", "Vibrant"])
-        #expect(Design.Scheme.allCases.map(\.shortcut) == ["1", "2", "3", "4", "5"])
+        #expect(Design.Scheme.allCases == [.light, .mid, .dark])
+        #expect(Design.Scheme.allCases.map(\.displayName) == ["Vibrant Light", "Vibrant Mid Dark", "Vibrant Dark"])
+        #expect(Design.Scheme.allCases.map(\.shortcut) == ["1", "2", "3"])
     }
 
     // MARK: The work
@@ -503,9 +494,9 @@ struct DesignPaletteTests {
 
     // MARK: The phone
 
-    /// Roboto Capture is drawn in Vibrant from the same numbers: its project compiles the shared
-    /// file rather than a copy of it, so a hue retuned here is retuned there.
-    @Test("Roboto Capture compiles the same palette file, and Vibrant is built from it")
+    /// Roboto Capture is drawn in Vibrant Dark from the same numbers: its project compiles the
+    /// shared file rather than a copy of it, so a hue retuned here is retuned there.
+    @Test("Roboto Capture compiles the same palette file, and Vibrant Dark is built from it")
     func thePhoneSharesThePalette() throws {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let project = try String(contentsOf: root.appendingPathComponent("Capture/project.yml"), encoding: .utf8)
@@ -513,11 +504,17 @@ struct DesignPaletteTests {
         let phone = try FileManager.default.contentsOfDirectory(atPath: root.appendingPathComponent("Capture/RobotoCapture").path)
         #expect(!phone.contains("SharedPalette.swift"), "the phone keeps a copy instead of the shared file")
 
-        let vibrant = Design.Palette.vibrant
-        #expect(vibrant.paper.dark == SharedPalette.Vibrant.paper && vibrant.ink.dark == SharedPalette.Vibrant.ink)
-        #expect(vibrant.lanes.map(\.dark) == SharedPalette.Vibrant.lanes)
-        #expect(vibrant.accent.dark == SharedPalette.Vibrant.accent)
-        #expect(SharedPalette.Vibrant.soft(SharedPalette.Vibrant.lanes[2]) == Design.Palette.workSoft(vibrant.lanes[2], over: vibrant.panel).dark)
+        let dark = Design.Palette.dark
+        #expect(dark.paper.dark == SharedPalette.Vibrant.paper && dark.ink.dark == SharedPalette.Vibrant.ink)
+        #expect(dark.lanes.map(\.dark) == SharedPalette.Vibrant.lanes)
+        #expect(dark.laneInks.map(\.dark) == SharedPalette.Vibrant.lanes)
+        #expect(dark.accent.dark == SharedPalette.Vibrant.accent)
+        #expect(SharedPalette.Vibrant.soft(SharedPalette.Vibrant.lanes[2]) == Design.Palette.workSoft(dark.lane(2, .fill), in: dark).dark)
+        // Every plate is the phone's plate, and the colours on it the phone's colours.
+        for palette in [Design.Palette.light, Design.Palette.mid, dark] {
+            #expect(palette.plate.dark == SharedPalette.Vibrant.plate && palette.lcdInk.dark == SharedPalette.Vibrant.lcdInk)
+            #expect((0..<8).map { palette.lane($0, .plate).dark } == SharedPalette.Vibrant.lanes)
+        }
         for name in ["Intro", "Verse 2", "Hook", "Bridge", "Outro", "Pre-Chorus", "Breakdown", "Whatever"] {
             #expect(SectionHue.index(for: name) == SharedPalette.sectionLane(for: name))
         }

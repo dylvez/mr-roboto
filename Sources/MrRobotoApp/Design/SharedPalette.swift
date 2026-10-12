@@ -6,8 +6,9 @@
 /// these into its own colours.
 enum SharedPalette {
 
-    /// Vibrant: near-black, with the music's colours at full strength. `Design.Palette.vibrant` is
-    /// built from these, and Roboto Capture is drawn in them.
+    /// Vibrant Dark: near-black, with the music's colours at full strength. `Design.Palette.dark`
+    /// is built from these, the Mac's other two palettes take their plates and the colours drawn on
+    /// them from here, and Roboto Capture is drawn in them.
     enum Vibrant {
         static let paper: UInt32 = 0x09090b
         static let panel: UInt32 = 0x121215
@@ -36,6 +37,7 @@ enum SharedPalette {
         static let lcdInk: UInt32 = 0xe8f2ff
         static let lcdLabel: UInt32 = 0x8696aa
         static let lcdRecording: UInt32 = 0x2a0b0a
+        static let lcdRecordingInk: UInt32 = 0xffc4bf
 
         /// Kick, snare, closed hat, open hat, clap, perc, toms, cymbal — and, borrowed in the same
         /// order, the parts' and the sections' hues. Lightness alternates down the list, chroma as

@@ -22,7 +22,7 @@ struct SoundSurfaceView: View {
             VStack(alignment: .leading, spacing: Design.Metric.gutter) {
                 header(layout)
                 Divider().overlay(Design.Palette.line)
-                if layout.showsVoiceReadout { VoiceReadout(surface: surface, layout: layout, hue: hue) }
+                if layout.showsVoiceReadout { VoiceReadout(surface: surface, layout: layout, lane: lane) }
                 if surface.subject.isPart { partStatus }
                 if surface.panel == .voice, let recording = surface.recordedAs { recordedNote(recording) }
                 if surface.panel == .chain { chainPresets }
@@ -37,14 +37,16 @@ struct SoundSurfaceView: View {
         .background(Design.Palette.panel)
     }
 
-    /// The colour of what is being shaped, in Vibrant: a drum voice's own, as the Grid paints its
-    /// row — a kick red, a tom magenta — or a chop's or a groove's part colour. Every chosen chip,
-    /// the two prominent sliders and the drawn sound wear it. Nil in the other palettes.
-    private var hue: Color? {
-        guard Design.scheme.isVivid else { return nil }
-        if case .part(let type) = surface.subject { return PartHue.color(for: type) }
-        return LaneClass(surface.draft.voice.drumVoice).color
+    /// The lane of what is being shaped: a drum voice's own, as the Grid paints its row — a kick
+    /// red, a tom magenta — or a chop's or a groove's part colour. Every chosen chip, the two
+    /// prominent sliders and the drawn sound wear it.
+    private var lane: Int? {
+        if case .part(let type) = surface.subject { return PartHue.index(for: type) }
+        return LaneClass(surface.draft.voice.drumVoice).rawValue
     }
+
+    /// The same, as words: a chip's, a card's, a slider's.
+    private var hue: Color? { lane.map { Design.Palette.lane($0, .ink) } }
 
     // MARK: Header
 
@@ -154,11 +156,11 @@ struct SoundSurfaceView: View {
             HStack(spacing: 6) {
                 ForEach(surface.draft.availableVoices, id: \.self) { voice in
                     let isOn = surface.draft.voice == voice
-                    let colour = Design.scheme.isVivid ? LaneClass(voice.drumVoice).color : nil
+                    let lane = LaneClass(voice.drumVoice)
                     Button { surface.select(voice) } label: {
-                        StudioChip(isOn: isOn, tint: colour) {
+                        StudioChip(isOn: isOn, tint: lane.color(.ink)) {
                             HStack(spacing: 5) {
-                                if let colour { Circle().fill(colour).frame(width: 6, height: 6) }
+                                Circle().fill(lane.color).frame(width: 6, height: 6)
                                 ChipText(voice.rawValue, isOn: isOn, size: 12)
                             }
                         }
@@ -381,7 +383,7 @@ struct SoundSurfaceView: View {
                 }
                 .padding(.horizontal, 6)
                 .padding(.vertical, 5)
-                .background(isOn ? (hue.map { $0.opacity(0.2) } ?? Design.Palette.selected) : Design.Palette.fill,
+                .background(isOn ? (hue.map { Design.Palette.wash($0) } ?? Design.Palette.selected) : Design.Palette.fill,
                             in: RoundedRectangle(cornerRadius: Design.Metric.corner, style: .continuous))
                 .overlay {
                     if isOn, let hue {
@@ -424,8 +426,11 @@ struct SoundSurfaceView: View {
 private struct VoiceReadout: View {
     @Bindable var surface: SoundSurface
     let layout: SoundLayout
-    /// The colour of what is being shaped, in Vibrant.
-    var hue: Color? = nil
+    /// The lane of what is being shaped.
+    var lane: Int? = nil
+
+    /// The lane as words: the label over the name, the A/B's chosen side.
+    private var hue: Color? { lane.map { Design.Palette.lane($0, .ink) } }
 
     var body: some View {
         HStack(alignment: .top, spacing: Design.Metric.gutter) {
@@ -441,8 +446,8 @@ private struct VoiceReadout: View {
                     .lineLimit(1)
             }
             .fixedSize(horizontal: true, vertical: false)
-            if let hue {
-                VoiceScope(surface: surface, hue: hue)
+            if let lane {
+                VoiceScope(surface: surface, hue: Design.Palette.lane(lane, .plate))
                     .frame(minWidth: 120, maxWidth: 420, maxHeight: .infinity)
                     .padding(.vertical, 12)
             }
@@ -465,8 +470,9 @@ private struct VoiceReadout: View {
         .frame(height: layout.readoutHeight)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
-            if let hue {
-                LinearGradient(colors: [hue.opacity(0.2), hue.opacity(0)], startPoint: .leading, endPoint: .trailing)
+            if let lane {
+                let fill = Design.Palette.lane(lane)
+                LinearGradient(colors: [fill.opacity(0.2), fill.opacity(0)], startPoint: .leading, endPoint: .trailing)
             }
         }
         .groupedArea()
@@ -505,7 +511,7 @@ private struct VoiceReadout: View {
 
 /// The sound being shaped, drawn: its loudness along its length on the dark plate, the clean sound
 /// as a grey shadow and what the chain makes of it in the colour of what is being shaped — so a
-/// shorter decay, a crusher's grit or a chop's dust is seen as well as heard. Vibrant only.
+/// shorter decay, a crusher's grit or a chop's dust is seen as well as heard.
 private struct VoiceScope: View {
     let surface: SoundSurface
     let hue: Color

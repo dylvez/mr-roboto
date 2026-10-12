@@ -158,8 +158,8 @@ struct LyricsSurfaceView: View {
                     Text(name.uppercased())
                         .font(Design.Typography.label)
                         .tracking(1.1)
-                        // In Vibrant, in the colour its section wears in Structure and the transport.
-                        .foregroundStyle(Design.scheme.isVivid ? SectionHue.color(for: name) : Design.Palette.emphasis)
+                        // In the colour its section wears in Structure and the transport, as words.
+                        .foregroundStyle(SectionHue.color(for: name, .ink))
                         .padding(.leading, 22)
                         .padding(.top, index == 0 ? 0 : 4)
                         .accessibilityLabel("Stanza: \(name)")
@@ -170,7 +170,7 @@ struct LyricsSurfaceView: View {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         let letter = index < letters.count ? letters[index] : ""
                         Text(letter)
-                            .font(Design.Typography.numeric(11, weight: Design.scheme.isVivid ? .bold : .medium))
+                            .font(Design.Typography.numeric(11, weight: .bold))
                             .foregroundStyle(RhymeHue.color(for: letter) ?? Design.Palette.emphasis)
                             .frame(width: 14)
                         HStack(spacing: 1) {
@@ -303,16 +303,16 @@ private struct SyllableMark: View {
     }
 }
 
-/// A rhyme's colour in Vibrant: the lines that rhyme share a letter, and the letter a hue, so an
-/// ABAB stanza reads as two colours taking turns. Nil in the other palettes, which set it in ink.
+/// A rhyme's colour: the lines that rhyme share a letter, and the letter a hue, so an ABAB stanza
+/// reads as two colours taking turns. Nil for a mark that is not a letter, which is set in ink.
 enum RhymeHue {
     static func color(for letter: String) -> Color? {
         let a = UnicodeScalar("A").value
-        guard Design.scheme.isVivid, let scalar = letter.unicodeScalars.first,
+        guard let scalar = letter.unicodeScalars.first,
               (a...UnicodeScalar("Z").value).contains(scalar.value) else { return nil }
         // Sky, gold, teal, violet, green, magenta, periwinkle, red: the lanes after the first, so
-        // the first rhyme is not the kick's red.
-        return Design.Palette.lane(Int(scalar.value - a) + 1)
+        // the first rhyme is not the kick's red. A letter is words.
+        return Design.Palette.lane(Int(scalar.value - a) + 1, .ink)
     }
 }
 

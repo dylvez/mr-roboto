@@ -56,7 +56,7 @@ struct CastSurfaceView: View {
     private func row(_ persona: any Persona) -> some View {
         let bible = persona.bible
         let present = inRoom.contains(bible.id.rawValue)
-        // In Vibrant each member wears the colour it speaks in everywhere else: its ring, its name,
+        // Each member wears the colour it speaks in everywhere else: its ring, its name,
         // a wash from the card's edge, and its chip while it is in the room.
         let hue = present ? MemberHue.color(forPersona: bible.name) : nil
         return HStack(alignment: .top, spacing: 12) {

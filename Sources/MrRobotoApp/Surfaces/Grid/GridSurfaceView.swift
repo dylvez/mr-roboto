@@ -897,7 +897,7 @@ private struct ReadingLine: View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
             Image(systemName: reading.holds ? "checkmark" : "exclamationmark.triangle")
                 .font(Design.Typography.ui(9, weight: .bold))
-                .foregroundStyle(reading.holds ? (Design.scheme.isVivid ? Design.Palette.ok : Design.Palette.inkTertiary) : Design.Palette.warn)
+                .foregroundStyle(reading.holds ? Design.Palette.ok : Design.Palette.warn)
                 .frame(width: 12)
             Text(reading.says)
                 .font(Design.Typography.prose(12.5))

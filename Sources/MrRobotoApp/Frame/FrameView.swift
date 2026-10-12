@@ -258,9 +258,8 @@ struct FrameView: View {
             // The rail opened: its lines have been looked at.
             if !collapsed { app.markRailSeen() }
         }
-        // What fills the bench, for Vibrant: its accent is the colour of the work. Set here rather
-        // than read by the palette, which knows nothing of songs; a palette that does not follow the
-        // work does not read it, so this repaints nothing there.
+        // What fills the bench: the accent is the colour of the work. Set here rather than read by
+        // the palette, which knows nothing of songs.
         .onChange(of: app.workHue, initial: true) { _, hue in
             Design.follow(hue: hue)
         }

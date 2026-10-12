@@ -141,24 +141,20 @@ struct MasterPanel: View {
                     return
                 }
                 let width = size.width / CGFloat(bars.count)
-                // In Vibrant the bars run through the music's colours from the lows to the highs —
-                // violet, blue, teal, green, gold — and glow, the way a hardware analyser's do.
-                let vivid = Design.scheme.isVivid
+                // The bars run through the music's colours from the lows to the highs — violet, blue,
+                // teal, green, gold — and glow, the way a hardware analyser's do.
                 let spectrumGradient = Gradient(colors: [Design.Palette.lane(4), Design.Palette.lane(1), Design.Palette.lane(3),
                                                          Design.Palette.lane(5), Design.Palette.lane(2)])
                 var bodies = Path()
                 for (i, dB) in bars.enumerated() {
                     let h = size.height * CGFloat(max(0, min(1, (dB + 60) / 60)))
                     let rect = CGRect(x: CGFloat(i) * width + 1, y: size.height - h, width: max(1, width - 2), height: h)
-                    if vivid { bodies.addRoundedRect(in: rect, cornerSize: CGSize(width: 1.5, height: 1.5)) }
-                    else { context.fill(Path(rect), with: .color(Design.Palette.emphasis.opacity(0.7))) }
+                    bodies.addRoundedRect(in: rect, cornerSize: CGSize(width: 1.5, height: 1.5))
                 }
-                if vivid {
-                    var glow = context
-                    glow.addFilter(.shadow(color: Design.Palette.lane(1).opacity(0.45), radius: 5))
-                    glow.fill(bodies, with: .linearGradient(spectrumGradient, startPoint: .zero,
-                                                             endPoint: CGPoint(x: size.width, y: 0)))
-                }
+                var glow = context
+                glow.addFilter(.shadow(color: Design.Palette.lane(1).opacity(0.45), radius: 5))
+                glow.fill(bodies, with: .linearGradient(spectrumGradient, startPoint: .zero,
+                                                         endPoint: CGPoint(x: size.width, y: 0)))
             }
             .frame(maxWidth: 560)
             .frame(height: 110)

@@ -273,15 +273,13 @@ struct FrameCommands: Commands {
                 .keyboardShortcut(KeyEquivalent(region.shortcut), modifiers: [.command, .option])
             }
             Divider()
-            // Auto, Light and Dark, as System Settings lists them; then the two drawn for a dark
-            // window only. ⌃⌘1–5: plain ⌘1–7 are the surfaces.
+            // Vibrant on its three grounds, light to dark. ⌃⌘1–3: plain ⌘1–7 are the surfaces.
             Menu("Palette") {
                 ForEach(Design.Scheme.allCases) { scheme in
                     Toggle(scheme.displayName, isOn: Binding(
                         get: { Design.scheme == scheme },
                         set: { if $0 { Design.select(scheme) } }))
                     .keyboardShortcut(KeyEquivalent(scheme.shortcut), modifiers: [.command, .control])
-                    if scheme == .dark { Divider() }
                 }
             }
             Divider()
