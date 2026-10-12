@@ -127,7 +127,8 @@ extension SurfaceWiring {
             let model = takesModel(for: item, app: app)
             return version(model.comp ?? model.takes.last, model.comp != nil ? "the comp" : "the newest take")
         case .sound:
-            return version(bound.first { PartPlayer.canPlay($0) }, "this sound") ?? song()
+            // What it shapes and nothing else bound to it: a tune here would play as "this sound".
+            return version(bound.first { SoundSurface.canEdit($0) && PartPlayer.canPlay($0) }, "this sound") ?? song()
         case .structure:
             // The form you are looking at, which means the working copy: an arrangement with
             // unkept edits is kept first, as `StructureModel.play()` was written to do, so what

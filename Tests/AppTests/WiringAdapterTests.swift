@@ -181,6 +181,74 @@ struct WiringAdapterTests {
         #expect(app.versions.map(\.id).contains(version.id))
     }
 
+    @Test("Sound asked for on a tune or its instrument opens on the song's kit, and its header names the voice")
+    func soundOnAPartItCannotEdit() throws {
+        let directory = WiringFixture.temporaryDirectory()
+        defer { WiringFixture.remove(directory) }
+        // Danzón Dub's shape: a drum machine, a horn line, and the instrument the line plays on — the
+        // song's newest sound, which the dock used to open Sound on, under the instrument's name.
+        var song = Song(title: "Danzón Dub", artist: "Swag Hooks", tempo: 82)
+        let machine = PartVersion(partID: PartID(), kind: .sound(Sound(instrument: SynthMachine.tr909.id)),
+                                  author: .persona("Director"), operation: Operation.written, note: "The drum machine for this song")
+        let tune = PartVersion(partID: PartID(), kind: .melody(Melody(notes: [NoteEvent(pitch: Pitch(midi: 65), start: 0, duration: 1)])),
+                               author: .persona("Melodist"), operation: Operation.written, note: "Horns: four notes down a step")
+        let horns = PartVersion(partID: PartID(), kind: .sound(Sound(instrument: "horns", forPart: tune.partID)),
+                                author: .persona("Director"), operation: Operation.written, note: "French Horns for Horns")
+        for version in [machine, tune, horns] { try song.append(version) }
+        let app = WiringFixture.app(in: directory, song: song)
+        let wiring = SurfaceWiring()
+        wiring.use(WiringFixture.silentService())
+
+        // The dock opens Sound on the machine; the instrument's row opens the tune it voices, and
+        // Sound's title menu does not offer it.
+        let dock = Guidance.dockAction(for: .sound, in: song)
+        #expect(dock.bound == [machine.id] && dock.title == "TR-909", "\(dock.title)")
+        let row = try #require(PartActions.primary(for: horns, in: song))
+        #expect(row.action.surface == .pianoRoll && row.action.bound == [tune.id])
+        #expect(app.partChoices(for: .sound).map(\.part) == [machine.partID])
+        #expect(app.partChoices(for: .pianoRoll).map(\.part) == [tune.partID], "the instrument is the tune's, not a part of its own")
+
+        for asked in [tune, horns] {
+            let action = SurfaceAction(surface: .sound, title: PartLabel.title(of: asked), bound: [asked.id])
+            #expect(!app.canPerform(action), "Sound cannot do this as asked")
+            app.select(asked.id)
+            let id = try #require(app.perform(action))
+            let item = try #require(app.bench.items.first { $0.id == id })
+            #expect(app.bound(for: id) == [machine.id], "bound to what the dock binds")
+            #expect(item.title == "TR-909")
+
+            let (surface, adapter) = wiring.soundSurface(for: item, app: app)
+            #expect(adapter.selectedPart?.id == machine.id)
+            #expect(surface.subject == .voice)
+            #expect(surface.draft.machine == SynthMachine.tr909.id && surface.draft.voice == .kick)
+            // The header: the voice in front, and no lineage, hue or part of something it is not editing.
+            #expect(surface.title == "TR-909 kick")
+            #expect(wiring.liveTitle(for: item) == "TR-909 kick")
+            #expect(wiring.part(for: item, app: app) == nil)
+            #expect(PartHue.work(of: .sound, bound: app.bound(for: id).compactMap { app.version($0)?.type }) == nil)
+            app.closeSurface(id)
+        }
+
+        // With no machine to open on, it binds to nothing: a voice on the song's kit, the 808 here.
+        var bare = Song(title: "Danzón Dub", artist: "Swag Hooks", tempo: 82)
+        for version in [tune, horns] { try bare.append(version) }
+        let other = WiringFixture.app(in: directory, song: bare)
+        other.select(horns.id)
+        let id = try #require(other.perform(SurfaceAction(surface: .sound, title: "Horn Trio", bound: [horns.id])))
+        let item = try #require(other.bench.items.first { $0.id == id })
+        #expect(other.bound(for: id).isEmpty && item.title != "Horn Trio")
+        let (surface, adapter) = wiring.soundSurface(for: item, app: other)
+        #expect(adapter.selectedPart == nil, "the instrument is selected, and is not taken for a sound")
+        #expect(surface.boundVersion == nil && wiring.liveTitle(for: item) == "TR-808 kick")
+
+        // A knob kept there is a voice of its own, and that is the part the header now traces.
+        surface.setValue(0.3, for: .machine(.decay))
+        let kept = try #require(surface.commit())
+        #expect(other.version(kept.id) != nil && kept.partID != horns.partID)
+        #expect(wiring.part(for: item, app: other) == kept.partID)
+        #expect(other.song?.versions.last { $0.partID == horns.partID }?.id == horns.id, "the instrument is untouched")
+    }
+
     // MARK: Chop lane
 
     @Test("the Chop lane adapter reads the frame's song and records through it")

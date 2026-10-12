@@ -9,10 +9,11 @@ import SongGraph
 /// * **`selectedPart`** is the one place the two vocabularies genuinely differ. The surface wants
 ///   `PartVersion?`; `AppState` has `selectedVersion: VersionID?` plus `version(_:)`. That is
 ///   resolved here rather than by widening `AppState`, and it is also filtered. What the surface was
-///   *bound* to may be a `.sound`, or a `.sample` or `.groove` to put through the chain — dust is a
-///   sound job, and this is where a chop gets one. What is merely *accented* in the ledger is only
-///   taken when it is a `.sound`: opening Sound off the dock should not quietly start dirtying
-///   whatever row happened to be selected. Anything else reads as nothing selected.
+///   *bound* to may be a drum voice or a drum machine, or a `.sample` or `.groove` to put through
+///   the chain — dust is a sound job, and this is where a chop gets one. What is merely *accented*
+///   in the ledger is only taken when it is a drum voice or machine: opening Sound off the dock
+///   should not quietly start dirtying whatever row happened to be selected. Anything else — a
+///   tune, or the instrument a tune plays on — reads as nothing selected (`SoundSurface.canEdit`).
 /// * **`audition`** is the rendered voice or part — floats and a rate — which is exactly what the
 ///   shared `AuditionService` plays. Fire-and-forget, interrupted by the next one, as the protocol says.
 /// * **`record`** is `AppState.record(_:)` unchanged, including its `false` for "the host refused
@@ -40,14 +41,11 @@ final class SoundAdapter: SoundSurfaceHost {
 
     var selectedPart: PartVersion? {
         if let bound {
-            guard let version = app.version(bound) else { return nil }
-            switch version.kind {
-            case .sound, .sample, .groove: return version
-            default: return nil
-            }
+            guard let version = app.version(bound), SoundSurface.canEdit(version) else { return nil }
+            return version
         }
         guard let id = app.selectedVersion, let version = app.version(id) else { return nil }
-        guard case .sound = version.kind else { return nil }
+        guard case .sound = version.kind, SoundSurface.canEdit(version) else { return nil }
         return version
     }
 

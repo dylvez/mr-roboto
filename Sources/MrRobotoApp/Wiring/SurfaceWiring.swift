@@ -623,10 +623,13 @@ final class SurfaceWiring {
     }
 
     /// A title the surface keeps up to date itself, for the card's header, when its bench title can
-    /// go stale: a Piano roll opened on a bass line and switched to melody mode is writing a tune.
+    /// go stale: a Piano roll opened on a bass line and switched to melody mode is writing a tune;
+    /// Sound names the voice in front, which its own chips change, or the chop or groove it dusts —
+    /// never what it was opened with, which once was a tune's instrument while it shaped the kit.
     func liveTitle(for item: BenchItem) -> String? {
         switch item.kind {
         case .pianoRoll: return rolls[item.id]?.title
+        case .sound: return sounds[item.id]?.title
         default: return nil
         }
     }
@@ -643,6 +646,9 @@ final class SurfaceWiring {
             return nil
         case .chords:
             if let model = chordSheets[item.id] { return model.part }
+        case .sound:
+            // The voice in front as its next keep extends it, or the chop or groove it dusts.
+            if let model = sounds[item.id] { return model.editing?.partID }
         case .mixer, .master, .structure, .booth, .takes, .album, .cast, .mashup, .sources, .merge, .compare, .check, .lyrics, .library:
             return nil
         default:

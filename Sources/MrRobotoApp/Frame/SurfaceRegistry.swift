@@ -172,13 +172,17 @@ struct SurfaceHost: View {
     @State private var isShowingPrimer = false
 
     var body: some View {
+        // The surface is built before its header is drawn. The header reads what the surface is
+        // working on off its model — Sound's voice, the Piano roll's tune — and on a first frame
+        // drawn before the model existed it named whatever the surface was opened with instead.
+        let resolution = registry.resolve(item, app: app)
         VStack(alignment: .leading, spacing: 0) {
             header
             if app.primers.isShowing(item.kind) {
                 PrimerLine(kind: item.kind, store: app.primers, variant: SurfaceWiring.shared.primerVariant(for: item, app: app))
             }
             Divider().overlay(Design.Palette.line)
-            content
+            content(resolution)
                 // The surface takes everything the bench gives it. This is the other half of drawing
                 // one at a time: a panel that sized itself to its content left the rest of the bench
                 // blank, which looked like the frame had simply run out of things to say.
@@ -280,17 +284,18 @@ struct SurfaceHost: View {
     /// bound one. A Piano roll switched to melody mode showed the bass line's lineage over the tune.
     private var crumbs: [PartLineage.Crumb] {
         guard let song = app.song else { return [] }
-        // A surface writing a part it has not kept yet — a roll's tune, a line under a groove — has
-        // no lineage of its own, and the binding's is someone else's.
-        if boundPart == nil, [.pianoRoll, .chords, .grid].contains(item.kind) { return [] }
+        // A surface writing a part it has not kept yet — a roll's tune, a line under a groove, a
+        // drum voice on the machine's pick — has no lineage of its own, and the binding's is
+        // someone else's.
+        if boundPart == nil, [.pianoRoll, .chords, .grid, .sound].contains(item.kind) { return [] }
         let working = boundPart.flatMap { part in song.versions.last { $0.partID == part }?.id }
         guard let id = working ?? app.bound(for: item.id).first else { return [] }
         return PartLineage.crumbs(for: id, in: song)
     }
 
     @ViewBuilder
-    private var content: some View {
-        switch registry.resolve(item, app: app) {
+    private func content(_ resolution: SurfaceResolution) -> some View {
+        switch resolution {
         case .surface(let view):
             view
         case .placeholder(let kind):

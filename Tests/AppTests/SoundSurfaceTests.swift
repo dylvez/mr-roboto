@@ -420,6 +420,54 @@ struct SoundSurfaceTests {
         #expect(written.operation == Operation.written)
     }
 
+    @Test("on a tune, or the instrument a tune plays on, it binds to nothing and is named for the voice it shapes")
+    func aPartItCannotEditIsNotBound() throws {
+        // Danzón Dub's horn line and its Horn Trio: the surface opened on the instrument, shaped the
+        // song's kit and kept the instrument's name.
+        let tune = PartVersion(partID: PartID(), kind: .melody(Melody(notes: [])), author: .persona("Melodist"),
+                               operation: Operation.written, note: "Horns: four notes down a step")
+        let instrument = PartVersion(partID: PartID(), kind: .sound(Sound(instrument: "horns", forPart: tune.partID)),
+                                     author: .persona("Director"), operation: Operation.written, note: "French Horns for Horns")
+        for version in [tune, instrument] {
+            let host = SoundHostStub(selectedPart: version)
+            let surface = SoundSurface(host: host, sampleRate: SoundFixture.sampleRate)
+            let name = PartLabel.title(of: version)
+            #expect(surface.subject == .voice, "\(name)")
+            #expect(surface.boundVersion == nil, "\(name) is not something Sound edits")
+            #expect(surface.title == "TR-808 kick" && surface.subjectName == "TR-808 kick", "\(surface.title) on \(name)")
+            #expect(surface.panel == .voice && surface.controls(for: .voice).count > 1)
+            #expect(surface.editing == nil, "no voice kept yet")
+
+            // A knob kept starts the voice's own part: not a version of the tune, nor of its instrument.
+            surface.setValue(0.7, for: .machine(.decay))
+            let kept = try #require(surface.commit())
+            #expect(kept.partID != version.partID && kept.parents.isEmpty)
+            #expect(SoundState(kept)?.voice == .kick)
+            #expect(surface.editing?.id == kept.id)
+
+            surface.reload()
+            #expect(surface.boundVersion == nil && surface.title == "TR-808 kick", "reloaded on \(name)")
+        }
+    }
+
+    @Test("what it can edit: a drum voice, a drum machine, a chop or a groove, and nothing else")
+    func whatItCanEdit() {
+        func sound(_ instrument: String, for part: PartID? = nil) -> PartVersion {
+            PartVersion(partID: PartID(), kind: .sound(Sound(instrument: instrument, forPart: part)),
+                        author: .user, operation: Operation.written)
+        }
+        #expect(SoundSurface.canEdit(SoundFixture.version(SoundFixture.state("tr909", .snare))))
+        #expect(SoundSurface.canEdit(sound(SynthMachine.tr909.id)), "a machine: its voices")
+        #expect(SoundSurface.canEdit(WiringFixture.groove()) && SoundSurface.canEdit(WiringFixture.promotedBar()), "dust")
+
+        let groove = WiringFixture.groove()
+        #expect(!SoundSurface.canEdit(sound("rhodes")), "the song's instrument")
+        #expect(!SoundSurface.canEdit(sound("horns", for: PartID())), "a tune's instrument")
+        #expect(!SoundSurface.canEdit(sound(ChopSound.id(for: PartID()), for: groove.partID)), "a chop kit is the Chop lane's")
+        #expect(!SoundSurface.canEdit(PartVersion(partID: PartID(), kind: .melody(Melody(notes: [])),
+                                                  author: .user, operation: Operation.written)))
+    }
+
     @Test("reverting throws the draft away and reload follows the host's selection")
     func revertAndReload() throws {
         let original = SoundFixture.state("tr808", .kick)
