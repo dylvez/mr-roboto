@@ -565,7 +565,8 @@ struct ChopLaneInspector: View {
     private func controls(for index: Int) -> some View {
         let edit = surface.edit(forSlice: index)
         return HStack(spacing: 12) {
-            SmallLabel("Slice \(index)", color: Design.Palette.inkTertiary)
+            // Counted from 1, like the pad it names; the index stays 0-based underneath.
+            SmallLabel("Slice \(index + 1)", color: Design.Palette.inkTertiary)
             slider("pitch", binding: tuneBinding(index), range: Self.tuneRange,
                    readout: ChopLaneReadout.pitch(edit.tuneCents),
                    isNeutral: edit.tuneCents == 0,
