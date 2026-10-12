@@ -685,3 +685,45 @@ extension FrameRenderTests {
         try write(FrameView(app: app), size: CGSize(width: all, height: FrameLayout.minimumWindowHeight), name: "frame-chords-played-all-open")
     }
 }
+
+extension FrameRenderTests {
+    /// A short bench is where the lane ran out: under about 247 points the register's lowest rows
+    /// were drawn under the kick lane, C4's name below "kick". Wherever the lane is drawn, C4 to C6
+    /// should sit above the kicks, and Thundercat's three octaves too.
+    @Test("the Piano roll on a short bench: every row of the register above the kick lane, in melody mode and on Thundercat's three octaves")
+    func shortBench() throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        let song = FormFixture.build(tempo: 92).song
+        let app = app(song)
+        let id = try #require(app.perform(Guidance.dockAction(for: .pianoRoll, in: app.song)))
+        let item = try #require(app.bench.items.first { $0.id == id })
+        let model = SurfaceWiring.shared.pianoRollModel(for: item, app: app)
+        model.setMode(.melody)
+        while !model.notes.isEmpty { model.deleteNote(at: 0) }
+        // A horn line from the register's floor to its ceiling, so both ends have a note on them.
+        for (pitch, beat) in [(60, 0.0), (64, 1), (67, 2), (72, 3), (76, 4), (79, 5), (84, 6), (60, 7)] {
+            model.addNote(pitch: pitch, at: beat, duration: 0.5)
+        }
+        #expect(model.register == 60...84)
+        // Offscreen the scrolled work is clipped rather than scrolled, so the short heights show its
+        // top; 700 is where the lane fits at its floor, and the lane alone shows the floor itself.
+        let width = FrameLayout.surfaceMinimumWidth
+        for height in [395, 560, 700, 798] as [CGFloat] {
+            try write(PianoRollSurfaceView(model: model), size: CGSize(width: width, height: height),
+                      name: "roll-short-melody-\(Int(height))")
+        }
+        let floor = NoteLaneLayout.minimumHeight(rows: model.register.count)
+        try write(NoteLane(model: model, fills: false).padding(16).background(Design.Palette.panel),
+                  size: CGSize(width: width, height: floor + 70), name: "roll-lane-floor")
+        try write(FrameView(app: app), size: CGSize(width: FrameLayout.minimumWindowWidth(collapsed: app.regions.collapsed),
+                                                    height: FrameLayout.minimumWindowHeight), name: "frame-melody-minimum")
+
+        model.setMode(.bass)
+        model.setLineage(.thundercat)
+        for height in [560, 798] as [CGFloat] {
+            try write(PianoRollSurfaceView(model: model), size: CGSize(width: width, height: height),
+                      name: "roll-short-thundercat-\(Int(height))")
+        }
+    }
+}

@@ -12,7 +12,8 @@ struct PianoRollSurfaceView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Design.Metric.gutter) {
             header
-            // The lane fills whatever is left when everything fits. When it does not — a bench
+            // The lane fills whatever is left when everything fits, the lane counted at its floor:
+            // every row of the register at the smallest row it draws. When it does not — a bench
             // at the window's smallest, the Bassist with a lot to say — the work scrolls under the
             // title and the keep line stays in view; it used to push the keep line off the bench.
             ViewThatFits(in: .vertical) {
@@ -31,13 +32,14 @@ struct PianoRollSurfaceView: View {
             levers
             lengthRow
             if !model.tuneWays.isEmpty { waysRow }
+            // Where the work scrolls, the lane is drawn at its floor (`NoteLaneLayout.minimumHeight`).
+            // A fixed 240 for the lane and its caption together ran a tune's lowest rows under the kicks.
             if laneFills {
                 NoteLane(model: model)
-                    .frame(maxWidth: .infinity, minHeight: 220, maxHeight: .infinity)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                NoteLane(model: model)
+                NoteLane(model: model, fills: false)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 240)
             }
             readings
         }
@@ -377,15 +379,11 @@ struct KeptNote: View {
 /// The notes over the bar, with the kicks under them. Beats across, pitches down (high at the
 /// top). Drag a note to move it, its right edge to lengthen it; click a note to select it and
 /// Delete removes it (double-click does too); click an empty cell to add.
-private struct NoteLane: View {
+struct NoteLane: View {
     @Bindable var model: PianoRollModel
-
-    static let labelWidth: CGFloat = 34
-    static let kickLaneHeight: CGFloat = 18
-    static let minimumRowHeight: CGFloat = 9
-    /// The narrowest a beat is drawn before the lane scrolls instead: a sixteenth at this width is
-    /// still wider than the smallest note the roll draws, so every note stays grabbable.
-    static let minimumBeatWidth: CGFloat = 28
+    /// Whether the lane takes whatever height the surface has spare. Where the work scrolls it does
+    /// not, and the lane is drawn at its floor.
+    var fills = true
 
     @State private var drag: Drag?
     /// The lane takes keyboard focus on a click so Delete and Escape reach it. Without focus the
@@ -421,36 +419,29 @@ private struct NoteLane: View {
     }
 
     private var lane: some View {
-        GeometryReader { geometry in
+        // Never shorter than every row of the register at the smallest row the lane draws, with
+        // the kicks under them. Squeezed below that, the lowest pitches went under the kick lane.
+        let floor = NoteLaneLayout.minimumHeight(rows: model.register.count)
+        return GeometryReader { geometry in
             let register = model.register
-            let rows = register.count
-            let visibleWidth = max(1, geometry.size.width - Self.labelWidth)
-            let laneHeight = geometry.size.height - Self.kickLaneHeight - 4
-            let rowHeight = max(Self.minimumRowHeight, laneHeight / CGFloat(rows))
-            let totalBeats = CGFloat(max(1, model.totalBeats))
-            // A short line fills the width; a long one keeps a beat wide enough to hit a sixteenth
-            // and scrolls, rather than squeezing sixteen bars into the panel until nothing can be
-            // grabbed.
-            let beatWidth = max(Self.minimumBeatWidth, visibleWidth / totalBeats)
-            let gridWidth = beatWidth * totalBeats
-            let scrolls = gridWidth > visibleWidth + 0.5
+            let layout = NoteLaneLayout(size: geometry.size, rows: register.count, beats: model.totalBeats)
 
             HStack(alignment: .top, spacing: 0) {
-                labels(register: register, rowHeight: rowHeight, laneHeight: laneHeight)
-                    .frame(width: Self.labelWidth, height: geometry.size.height, alignment: .topLeading)
-                let content = grid(register: register, rowHeight: rowHeight, laneHeight: laneHeight,
-                                   beatWidth: beatWidth, width: gridWidth)
-                    .frame(width: gridWidth, height: geometry.size.height, alignment: .topLeading)
+                labels(register: register, layout: layout)
+                    .frame(width: NoteLaneLayout.labelWidth, height: layout.height, alignment: .topLeading)
+                let content = grid(register: register, layout: layout)
+                    .frame(width: layout.gridWidth, height: layout.height, alignment: .topLeading)
                 // Only a line that overflows gets a scroll view: a bar or two fits, and a
                 // scroll view around it would be one more thing between a click and its note.
-                if scrolls {
+                if layout.scrolls {
                     ScrollView(.horizontal, showsIndicators: true) { content }
-                        .frame(width: visibleWidth, height: geometry.size.height)
+                        .frame(width: layout.visibleWidth, height: layout.height)
                 } else {
                     content
                 }
             }
         }
+        .frame(minHeight: floor, idealHeight: floor, maxHeight: fills ? .infinity : floor)
         .focusable()
         .focusEffectDisabled()
         .focused($isFocused)
@@ -464,28 +455,27 @@ private struct NoteLane: View {
     }
 
     /// The pitch names down the left, which stay put while a long line scrolls under them.
-    private func labels(register: ClosedRange<Int>, rowHeight: CGFloat, laneHeight: CGFloat) -> some View {
+    private func labels(register: ClosedRange<Int>, layout: NoteLaneLayout) -> some View {
         ZStack(alignment: .topLeading) {
             ForEach(Array(register.reversed().enumerated()), id: \.element) { row, midi in
                 if midi % 12 == 0 {
                     Text(Pitch(midi: midi).name())
                         .font(Design.Typography.numeric(9))
                         .foregroundStyle(Design.Palette.inkTertiary)
-                        .frame(width: Self.labelWidth - 4, alignment: .trailing)
-                        .offset(y: CGFloat(row) * rowHeight - 2)
+                        .frame(width: NoteLaneLayout.labelWidth - 4, height: NoteLaneLayout.labelHeight, alignment: .trailing)
+                        .offset(y: layout.labelTop(ofRow: row))
                 }
             }
             Text("kick")
                 .font(Design.Typography.numeric(9))
                 .foregroundStyle(Design.Palette.inkTertiary)
-                .frame(width: Self.labelWidth - 4, alignment: .trailing)
-                .offset(y: laneHeight + 6)
+                .frame(width: NoteLaneLayout.labelWidth - 4, height: NoteLaneLayout.labelHeight, alignment: .trailing)
+                .offset(y: layout.kickLabelTop)
         }
     }
 
     /// The rows, the bars, the chords, the kicks and the notes, across the whole line.
-    private func grid(register: ClosedRange<Int>, rowHeight: CGFloat, laneHeight: CGFloat,
-                      beatWidth: CGFloat, width: CGFloat) -> some View {
+    private func grid(register: ClosedRange<Int>, layout: NoteLaneLayout) -> some View {
         let chords = HarmonyMap(chords: model.chords, totalBeats: model.totalBeats)
         return ZStack(alignment: .topLeading) {
             // Rows: the register, black keys shaded, a line over every C.
@@ -494,11 +484,11 @@ private struct NoteLane: View {
                 let isC = midi % 12 == 0
                 Rectangle()
                     .fill(isBlack ? Design.Palette.panelAlt : Design.Palette.panel)
-                    .frame(width: width, height: rowHeight)
+                    .frame(width: layout.gridWidth, height: layout.rowHeight)
                     .overlay(alignment: .top) {
                         if isC { Rectangle().fill(Design.Palette.lineStrong).frame(height: Design.Metric.hairline) }
                     }
-                    .offset(y: CGFloat(row) * rowHeight)
+                    .offset(y: layout.top(ofRow: row))
             }
             // Beat lines, the bar lines heavier and numbered, so bar nine of a long line is findable
             // once the lane has scrolled; the chord's name over each change.
@@ -506,15 +496,15 @@ private struct NoteLane: View {
                 let isBar = beat % model.beatsPerBar == 0
                 Rectangle()
                     .fill(isBar ? Design.Palette.lineStrong : Design.Palette.line)
-                    .frame(width: Design.Metric.hairline, height: laneHeight)
-                    .offset(x: CGFloat(beat) * beatWidth)
+                    .frame(width: Design.Metric.hairline, height: layout.rowsHeight)
+                    .offset(x: CGFloat(beat) * layout.beatWidth)
             }
             if model.bars > 1 {
                 ForEach(0..<model.bars, id: \.self) { bar in
                     Text("\(bar + 1)")
                         .font(Design.Typography.numeric(9))
                         .foregroundStyle(Design.Palette.inkTertiary)
-                        .offset(x: CGFloat(bar * model.beatsPerBar) * beatWidth + 3, y: laneHeight - 12)
+                        .offset(x: CGFloat(bar * model.beatsPerBar) * layout.beatWidth + 3, y: layout.rowsHeight - 12)
                         .allowsHitTesting(false)
                         .accessibilityHidden(true)
                 }
@@ -524,28 +514,28 @@ private struct NoteLane: View {
                 Text(span.chord.symbol(preferring: model.key.signature.preference))
                     .font(Design.Typography.ui(10.5, weight: .medium))
                     .foregroundStyle(Design.Palette.inkSecondary)
-                    .offset(x: CGFloat(span.start) * beatWidth + 3, y: 1)
+                    .offset(x: CGFloat(span.start) * layout.beatWidth + 3, y: 1)
             }
             // Kick lane: the groove's kicks repeated across the whole line, as the song plays them.
+            // It starts under the lowest row, never over it.
             Rectangle()
                 .fill(Design.Palette.panelAlt)
-                .frame(width: width, height: Self.kickLaneHeight)
-                .offset(y: laneHeight + 4)
+                .frame(width: layout.gridWidth, height: NoteLaneLayout.kickLaneHeight)
+                .offset(y: layout.kickLaneTop)
             ForEach(model.kickBeats, id: \.self) { beat in
                 RoundedRectangle(cornerRadius: 1)
                     .fill(Design.Palette.ink.opacity(0.7))
-                    .frame(width: 3, height: Self.kickLaneHeight - 6)
-                    .offset(x: CGFloat(beat) * beatWidth - 1, y: laneHeight + 7)
+                    .frame(width: 3, height: NoteLaneLayout.kickLaneHeight - 6)
+                    .offset(x: CGFloat(beat) * layout.beatWidth - 1, y: layout.kickLaneTop + 3)
             }
-            // Empty-cell clicks add a note.
+            // Empty-cell clicks add a note, on the pitch whose row is under the pointer.
             Color.clear
                 .contentShape(Rectangle())
-                .frame(width: width, height: laneHeight)
+                .frame(width: layout.gridWidth, height: layout.rowsHeight)
                 .onTapGesture { location in
                     isFocused = true
-                    let beat = Double(location.x / beatWidth)
-                    let row = Int(location.y / rowHeight)
-                    let midi = register.upperBound - row
+                    let beat = Double(location.x / layout.beatWidth)
+                    let midi = register.upperBound - layout.row(atY: location.y)
                     model.addNote(pitch: midi, at: beat)
                 }
             // The notes. The selected one is outlined in ink so it reads apart from its
@@ -562,15 +552,15 @@ private struct NoteLane: View {
                     .overlay(alignment: .trailing) {
                         Rectangle().fill(Design.Palette.panel.opacity(0.6)).frame(width: 3)
                     }
-                    .frame(width: max(6, CGFloat(note.duration) * beatWidth - 1), height: max(4, rowHeight - 1))
-                    .offset(x: CGFloat(note.start) * beatWidth, y: CGFloat(row) * rowHeight)
+                    .frame(width: max(6, CGFloat(note.duration) * layout.beatWidth - 1), height: max(4, layout.rowHeight - 1))
+                    .offset(x: CGFloat(note.start) * layout.beatWidth, y: layout.top(ofRow: row))
                     .onTapGesture(count: 2) { model.deleteNote(at: index) }
                     .onTapGesture {
                         isFocused = true
                         model.select(index)
                         model.audition(note)
                     }
-                    .gesture(noteDrag(index: index, note: note, beatWidth: beatWidth, rowHeight: rowHeight))
+                    .gesture(noteDrag(index: index, note: note, beatWidth: layout.beatWidth, rowHeight: layout.rowHeight))
                     .help("\(note.pitch.name()) · \(place(of: note)) · \(String(format: "%.2f", note.duration)) beats · click to select, Delete to remove")
                     .accessibilityLabel("\(note.pitch.name()) at \(place(of: note))\(isSelected ? ", selected" : "")")
             }
