@@ -348,14 +348,13 @@ public struct Chord: Hashable, Codable, Sendable, CustomStringConvertible {
         symbol(rootName: root.spelling(preferring: preference), preferring: preference)
     }
 
-    /// Chord symbol with its root spelled as `key` spells it (`Key.spell(_:)`): a root on a step of
-    /// the key as the key writes that step, any other as `symbol(preferring:)` writes it in the key's
-    /// preference. A preference only chooses between a sharp and a flat on a black key, so the sixth
-    /// of E♭ minor read "Bmaj7" where the key has C♭maj7, and the seventh of F♯ major "Fdim" for
-    /// E♯dim. Unlike `Key.symbol(of:)`, which weighs every note against the signature, it never
-    /// respells a root the key does not have.
+    /// Chord symbol spelled as `key` spells it (`Key.symbol(of:)`): a root on a step of the key as
+    /// the key writes that step, a root off the key by its place beside one — ♭VII in C is B♭, not
+    /// A♯ — and the bass of an inversion as the chord tone it is. A preference alone only chooses
+    /// between a sharp and a flat on a black key, so the sixth of E♭ minor read "Bmaj7" where the key
+    /// has C♭maj7, and ♭VII in C "A#".
     public func symbol(in key: Key) -> String {
-        symbol(rootName: key.spell(root), preferring: key.spellingPreference)
+        key.symbol(of: self)
     }
 
     /// The symbol on a root already spelled, the bass of an inversion spelled from it.

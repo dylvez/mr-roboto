@@ -255,7 +255,16 @@ public struct Key: Hashable, Codable, Sendable, CustomStringConvertible {
         pitch.name(spelledAs: spell(pitch.pitchClass))
     }
 
-    /// Spells a chord's tones in this key, choosing the root spelling that needs the fewest accidentals (E♭ G B♭, not D♯ F𝄪 A♯).
+    /// Spells a chord's tones in this key, each on the letter its step above the root names.
+    ///
+    /// A root on a step of the key is that step as the key writes it: the sixth of E♭ minor is C♭
+    /// E♭ G♭ B♭, never B D♯ F♯ A♯. A root off the key is a step of it raised or lowered once, never
+    /// a double sharp or flat itself, and of the two the one whose chord needs no double accidental
+    /// and the fewest accidentals against the signature — a natural root, then the step a chord of
+    /// its kind usually stands on, then the key's preference breaking a tie: ♭VII in C is B♭ D F,
+    /// ♭II7 D♭ F A♭ C♭, ♯iv°7 F♯ A C E♭, the Neapolitan of E♭ minor F♭ A♭ C♭, and its leading
+    /// tone's seventh D F♯ A C. Against the signature alone, a double flat on a flatted
+    /// letter cost no more than a natural, and that D7 was spelled E𝄫 G♭ B𝄫 D𝄫.
     public func spell(_ chord: Chord) -> [NoteName] {
         let signature = self.signature
         func cost(_ names: [NoteName]) -> Int {
@@ -265,23 +274,44 @@ public struct Key: Hashable, Codable, Sendable, CustomStringConvertible {
             names.reduce(0) { $0 + abs($1.accidental.rawValue) }
         }
         let steps = chord.quality.letterSteps
-        var candidates: [[NoteName]] = []
-        for rootName in chord.root.enharmonicSpellings {
+        func tones(on rootName: NoteName) -> [NoteName]? {
             let names = zip(chord.intervals, steps).compactMap { interval, step in
                 NoteName.spelling(of: chord.root.transposed(by: interval), letter: rootName.letter.advanced(by: step))
             }
-            if names.count == chord.intervals.count { candidates.append(names) }
+            return names.count == chord.intervals.count ? names : nil
         }
+        if let index = pitchClasses.firstIndex(of: chord.root), let names = tones(on: spelledScale[index]) {
+            return names
+        }
+        var candidates = chord.root.enharmonicSpellings.compactMap(tones(on:))
+        // A root off the key is a step of it raised or lowered once, and is never itself a double
+        // sharp or flat; over it, a spelling with no double accidental while there is one.
+        let beside = candidates.filter { names in
+            let root = names[0].accidental.rawValue
+            return abs(root) < 2 && abs(root - signature.accidental(for: names[0].letter).rawValue) < 2
+        }
+        if !beside.isEmpty { candidates = beside }
+        let plain = candidates.filter { $0.allSatisfy { abs($0.accidental.rawValue) < 2 } }
+        if !plain.isEmpty { candidates = plain }
         let preferSharps = spellingPreference == .sharps
+        // Then a natural root before a sharp or a flat (B major in F is B, not C♭); then, off the
+        // key, the step a chord of its kind usually is — a diminished chord the raised step it leads
+        // up from (F♯°7 in C), any other the lowered one it is borrowed as (D♭7, the tritone's
+        // substitute in C, not C♯7); then the key's way.
+        let leadsUp = [.diminished, .diminishedSeventh, .halfDiminishedSeventh].contains(chord.quality)
+        func side(_ names: [NoteName]) -> Int {
+            let root = names[0].accidental.rawValue
+            return pitchClasses.contains(chord.root) ? 0 : (leadsUp ? -root : root)
+        }
         let best = candidates.min { a, b in
-            let ka = (cost(a), weight(a), preferSharps ? -a[0].accidental.rawValue : a[0].accidental.rawValue)
-            let kb = (cost(b), weight(b), preferSharps ? -b[0].accidental.rawValue : b[0].accidental.rawValue)
+            let ka = (cost(a), weight(a), abs(a[0].accidental.rawValue), side(a), preferSharps ? -a[0].accidental.rawValue : a[0].accidental.rawValue)
+            let kb = (cost(b), weight(b), abs(b[0].accidental.rawValue), side(b), preferSharps ? -b[0].accidental.rawValue : b[0].accidental.rawValue)
             return ka < kb
         }
         return best ?? chord.pitchClasses.map(spell)
     }
 
-    /// Chord symbol spelled in this key ("Bb" in F major, "A#" in B major).
+    /// Chord symbol spelled in this key ("Bb" in F major, "A#" in B major, "Bb" for ♭VII in C).
     public func symbol(of chord: Chord) -> String {
         let names = spell(chord)
         var text = names[0].description + chord.quality.symbol

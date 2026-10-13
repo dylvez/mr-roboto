@@ -161,12 +161,11 @@ enum PartLabel {
         case .bassline:
             return note(of: version) ?? "Bass line"
         case .progression(let progression):
-            // Spelled against the progression's own key. `symbol()` defaults to sharps, so the
-            // second degree of D minor came out "A♯maj7" — a spelling that key does not contain —
-            // in the ledger, on a Structure chip and anywhere else a part is named. Every other
-            // place chords are drawn already asks the key; this one did not.
+            // Spelled in the progression's own key. `symbol()` defaults to sharps, so the sixth
+            // degree of D minor came out "A♯maj7" — a spelling that key does not contain — in the
+            // ledger, on a Structure chip and anywhere else a part is named.
             return note(of: version) ?? progression.chords.prefix(4)
-                .map { $0.symbol(preferring: progression.key.spellingPreference) }
+                .map { $0.symbol(in: progression.key) }
                 .joined(separator: " ")
         case .melody, .lyric:
             // Its own note, like every other kind. A melody called "Melody" on a chip beside a

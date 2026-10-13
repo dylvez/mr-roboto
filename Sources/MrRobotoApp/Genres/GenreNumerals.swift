@@ -29,11 +29,10 @@ public enum GenreNumerals {
         return out
     }
 
-    /// Lead-sheet symbols, a bar each: what `Progression.parse` reads.
+    /// Lead-sheet symbols, a bar each: what `Progression.parse` reads, spelled as the key spells
+    /// them — bVII in C is Bb, not A#, and the sixth of E♭ minor C♭.
     public static func symbols(_ roman: String, in key: Key, mode: String? = nil) -> String? {
-        // A flat written in the numerals is spelled as a flat: bVII in C is Bb, not A#.
-        let preference: SpellingPreference = roman.contains { $0 == "b" || $0 == "♭" } ? .flats : key.signature.preference
-        return chords(roman, in: key, mode: mode)?.map { $0.symbol(preferring: preference) }.joined(separator: " | ")
+        chords(roman, in: key, mode: mode)?.map { $0.symbol(in: key) }.joined(separator: " | ")
     }
 
     /// Whether a progression written in `mode` belongs in a key: minor modes in a minor key, major

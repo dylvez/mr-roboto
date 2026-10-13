@@ -98,7 +98,7 @@ public struct SetProgressionTool: DirectorTool {
         return Output(version: version.id.description, part: version.partID.description, key: "\(key)",
                       chords: progression.symbols(),
                       numerals: progression.chords.map { chord in
-                          key.romanNumeral(for: chord).map { "\($0)" } ?? chord.symbol(preferring: key.signature.preference)
+                          key.romanNumeral(for: chord).map { "\($0)" } ?? chord.symbol(in: key)
                       },
                       bars: progression.bars.count, recorded: recorded, flags: flags.map(\.says))
     }
@@ -310,7 +310,7 @@ public struct WriteBasslineTool: DirectorTool {
         return Output(version: version.id.description, part: version.partID.description,
                       groove: grooveVersion.id.description, hands: lineage.rawValue, seed: seed, sound: sound, lagMS: lag,
                       chords: chords.isEmpty ? "none stated: the key's I–IV–V–I in \(key)"
-                                             : chords.map { $0.chord.symbol(preferring: key.signature.preference) }.joined(separator: " "),
+                                             : chords.map { $0.chord.symbol(in: key) }.joined(separator: " "),
                       noteCount: line.notes.count, note: version.note ?? "",
                       readings: readings.map(\.says), flags: flags.map(\.says), recorded: recorded,
                       detail: recorded

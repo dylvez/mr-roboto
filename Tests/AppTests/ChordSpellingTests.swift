@@ -7,9 +7,9 @@ import Testing
 @testable import MrRobotoApp
 
 // A chord's name on the Chords sheet's bars and on the Piano roll's band is spelled as the key
-// spells its root. Both used to ask the key only whether it prefers sharps or flats, and a
-// preference never reaches a C♭: Malecón's VImaj7, Cbmaj7 in the line it kept and in the part's
-// name, read "Bmaj7" on both.
+// spells it, off the key as well as on it. Both used to ask the key only whether it prefers sharps
+// or flats, and a preference never reaches a C♭: Malecón's VImaj7, Cbmaj7 in the line it kept and
+// in the part's name, read "Bmaj7" on both, and ♭VII in C read "A#".
 
 @Suite("Chord names spelled in the key: the Chords sheet's bars and the Piano roll's band") @MainActor
 struct ChordSpellingTests {
@@ -57,11 +57,17 @@ struct ChordSpellingTests {
         #expect(try names(on: model) == ["Cbmaj7/Eb"])
     }
 
-    @Test("a chord off the key is named as it was: a natural as a natural, a black key by the key's preference")
+    @Test("a chord off the key is named by the step of the key it stands beside, as its numeral is")
     func sheetOffTheKey() throws {
-        let model = ChordsModel(host: ChordsStub(), key: Self.eFlatMinor)
+        // ♭VII in C is B♭, typed as A♯ or not, and the numeral under it agrees.
+        let model = ChordsModel(host: ChordsStub(), key: .cMajor)
+        model.text = "C | A# | F | C"
+        #expect(try names(on: model) == ["C", "Bb", "F", "C"])
+        #expect(try #require(model.progression).chords.map { model.numeral(of: $0) } == ["I", "\u{266D}VII", "IV", "I"])
+        // In E♭ minor the leading tone's seventh is D7, never E𝄫7, and the Neapolitan F♭.
+        model.setKey(Self.eFlatMinor)
         model.text = "Ebm | D7 | E/G# | Bb7"
-        #expect(try names(on: model) == ["Ebm", "D7", "E/G#", "Bb7"])
+        #expect(try names(on: model) == ["Ebm", "D7", "Fb/Ab", "Bb7"])
         model.setKey(Self.eMajor)
         model.text = "E | A#dim7 | B7 | E"
         #expect(try names(on: model) == ["E", "A#dim7", "B7", "E"])

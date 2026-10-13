@@ -208,43 +208,60 @@ struct ChordSymbolInKeyTests {
         #expect(try chords("F# E/G# B7/D#").map { $0.symbol(in: eMajor) } == ["F#", "E/G#", "B7/D#"])
     }
 
-    @Test("a root off the key is spelled as it always was, by the key's preference, its bass from it")
+    @Test("a root off the key is a step of it raised or lowered: ♭VII in C is B♭, ♭II7 D♭7, ♯iv°7 F♯°7")
     func rootsOffTheKey() throws {
-        #expect(try chords("D7 E/G# A7").map { $0.symbol(in: eFlatMinor) } == ["D7", "E/G#", "A7"])
-        #expect(try chords("A#dim7").map { $0.symbol(in: eMajor) } == ["A#dim7"])
-        #expect(try chords("Dbmaj7").map { $0.symbol(in: Key(tonic: NoteName(.f))) } == ["Dbmaj7"])
-        #expect(try chords("F#dim7").map { $0.symbol(in: .cMajor) } == ["F#dim7"])
+        #expect(try chords("A# A#m A#7 C#7 D# G# F#dim7 C#dim7").map { $0.symbol(in: .cMajor) }
+                == ["Bb", "Bbm", "Bb7", "Db7", "Eb", "Ab", "F#dim7", "C#dim7"])
+        #expect(try chords("A# A#7 C#7 F#dim7").compactMap { Key.cMajor.romanNumeral(for: $0)?.description }
+                == ["\u{266D}VII", "\u{266D}VII7", "\u{266D}II7", "\u{266F}iv\u{00B0}7"])
+        // In E♭ minor a white key is a raised step, never a double flat: D7 is the leading tone's
+        // seventh, not E𝄫7, and the Neapolitan is F♭, in its sixth position too.
+        #expect(try chords("D7 A7 Cdim7 E E/G# Bb7").map { $0.symbol(in: eFlatMinor) } == ["D7", "A7", "Cdim7", "Fb", "Fb/Ab", "Bb7"])
+        #expect(try chords("D7").compactMap { eFlatMinor.romanNumeral(for: $0)?.description } == ["\u{266F}VII7"])
+        // A sharp key's lowered steps are naturals; a root keeps a natural on a tie.
+        #expect(try chords("D C F A#dim7 Cdim7").map { $0.symbol(in: eMajor) } == ["D", "C", "F", "A#dim7", "B#dim7"])
+        #expect(try chords("Dbmaj7 B").map { $0.symbol(in: Key(tonic: NoteName(.f))) } == ["Dbmaj7", "B"])
+        #expect(try chords("Cm C7").map { $0.symbol(in: Key(tonic: .fSharp)) } == ["Cm", "C7"])
+        #expect(try chords("E B").map { $0.symbol(in: Key(tonic: NoteName(.a, .flat))) } == ["Fb", "Cb"])
         for key in keys {
             for root in PitchClass.allCases where !key.pitchClasses.contains(root) {
-                for quality in [ChordQuality.major, .minor, .dominantSeventh, .diminishedSeventh, .majorNinth] {
+                for quality in [ChordQuality.major, .minor, .dominantSeventh, .diminishedSeventh, .halfDiminishedSeventh, .majorNinth] {
                     for inversion in 0...2 {
                         let chord = Chord(root: root, quality: quality, inversion: inversion)
-                        #expect(chord.symbol(in: key) == chord.symbol(preferring: key.spellingPreference), "\(chord) in \(key)")
+                        let name = key.spell(chord)[0]
+                        // One step of the key, raised or lowered once, and never a double sharp or flat.
+                        #expect(abs(name.accidental.rawValue) < 2, "\(chord) in \(key): \(name)")
+                        #expect(abs(name.accidental.rawValue - key.signature.accidental(for: name.letter).rawValue) < 2,
+                                "\(chord) in \(key): \(name) is two steps from the key's \(name.letter)")
+                        // The card's name and the numeral under it stand on the same step.
+                        #expect(chord.symbol(in: key).hasPrefix(name.description), "\(chord) in \(key)")
+                        let numeral = try #require(key.romanNumeral(for: chord), "\(chord) in \(key)")
+                        #expect([Accidental.flat, .natural, .sharp].contains(numeral.accidental), "\(chord) in \(key): \(numeral)")
                     }
                 }
             }
         }
     }
 
-    @Test("in C, the key a song with none is read in, every chord is spelled as it was")
-    func cMajorIsUnchanged() {
+    @Test("in C, the key a song with none is read in, a white key's chord is named as it always was")
+    func cMajorWhiteKeys() {
         for quality in ChordQuality.allCases {
-            for root in PitchClass.allCases {
-                for inversion in 0...1 {
-                    let chord = Chord(root: root, quality: quality, inversion: inversion)
-                    #expect(chord.symbol(in: .cMajor) == chord.symbol(), "\(chord)")
-                }
+            for root in PitchClass.allCases where Key.cMajor.pitchClasses.contains(root) {
+                let chord = Chord(root: root, quality: quality)
+                #expect(chord.symbol(in: .cMajor) == chord.symbol(), "\(chord)")
             }
         }
     }
 
-    @Test("the key's own chords are spelled as the line it keeps spells them, inversions too")
+    @Test("the key's own chords stand on its spelled steps, inversions too")
     func agreesWithTheKeptLine() {
         for key in keys {
             for chord in key.diatonicTriads + key.diatonicSevenths {
+                let index = key.pitchClasses.firstIndex(of: chord.root)
                 for inversion in 0...2 {
                     let inverted = chord.inverted(inversion)
                     #expect(inverted.symbol(in: key) == key.symbol(of: inverted), "\(inverted) in \(key)")
+                    if let index { #expect(inverted.symbol(in: key).hasPrefix(key.spelledScale[index].description), "\(inverted) in \(key)") }
                 }
             }
         }
