@@ -65,11 +65,12 @@ struct TransportBar: View {
         }
         // The label and four chips side by side: Off, Kit, Bass and Keys.
         .frame(width: 210, alignment: .leading)
-        .help("A MIDI controller plays the song's kit, its bass or its keys now. Play in, or the Booth recording, keeps what you play as a groove, a bass line or a melody.")
+        .help("A MIDI controller plays the song's kit, its bass or its keys now. Play in, or the Booth recording, keeps what you play as a groove, a bass line or a melody. To record into what is on screen, press Record MIDI on the Grid, the Piano roll or the Chords.")
     }
 
     private func midiLine(_ control: MIDIControl) -> String {
         if let error = control.lastError { return error }
+        if let name = control.takeName { return "Recording into \(name)" }
         if control.isCapturing { return "Capturing on \(control.lastSource ?? control.sources.first ?? "MIDI")" }
         if let source = control.lastSource ?? control.sources.first { return control.mode == .off ? source : "\(source) → \(control.mode.title)" }
         return "No controller"

@@ -300,3 +300,34 @@ struct RomanNumeralTests {
         #expect(render(.pentatonicMajor).isEmpty)
     }
 }
+
+@Suite("recognise a played chord")
+struct RecognisePlayedChordTests {
+    @Test("the notes exactly: the chord built on the lowest key first, a slash chord over it otherwise")
+    func exactly() {
+        #expect(Chord.recognise(playedNotes: [60, 64, 67]) == Chord(.c, .major))
+        #expect(Chord.recognise(playedNotes: [67, 60, 64, 71]) == Chord(.c, .majorSeventh), "order played is not the voicing")
+        #expect(Chord.recognise(playedNotes: [62, 65, 69, 72]) == Chord(.d, .minorSeventh))
+        // C E G A over C is C6, not Am7: the bass says which.
+        #expect(Chord.recognise(playedNotes: [48, 64, 67, 69]) == Chord(.c, .sixth))
+        #expect(Chord.recognise(playedNotes: [45, 60, 64, 67]) == Chord(.a, .minorSeventh))
+        // E G C: C major over its third.
+        let overE = Chord.recognise(playedNotes: [52, 55, 60])
+        #expect(overE == Chord(.c, .major).inverted(1))
+        #expect(overE?.symbol() == "C/E")
+        #expect(Chord.recognise(playedNotes: [55, 60, 64])?.symbol() == "C/G")
+        #expect(Chord.recognise(playedNotes: [48, 55]) == Chord(.c, .power))
+    }
+
+    @Test("a voicing with the fifth left out is read with it; one note, or a cluster, is no chord")
+    func filled() {
+        #expect(Chord.recognise(playedNotes: [48, 52, 58]) == Chord(.c, .dominantSeventh), "root, third, seventh")
+        #expect(Chord.recognise(playedNotes: [50, 53, 60]) == Chord(.d, .minorSeventh))
+        #expect(Chord.recognise(playedNotes: [60, 64]) == Chord(.c, .major))
+        #expect(Chord.recognise(playedNotes: [60, 63]) == Chord(.c, .minor))
+        #expect(Chord.recognise(playedNotes: [52, 60]) == Chord(.c, .major).inverted(1), "a sixth over E is C over its third")
+        #expect(Chord.recognise(playedNotes: [60]) == nil)
+        #expect(Chord.recognise(playedNotes: [60, 72]) == nil, "an octave is one note")
+        #expect(Chord.recognise(playedNotes: [60, 61, 62]) == nil)
+    }
+}

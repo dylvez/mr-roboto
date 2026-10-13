@@ -55,17 +55,8 @@ public enum MIDICapture {
         var placed: [(voice: DrumVoice, step: Int, velocity: Int, lateness: Double?)] = []
         for note in notes {
             let position = clock.beat(forSeconds: note.start - sectionStart) * stepsPerBeat
-            guard position > -0.5 else { continue }
-            let pair = max(0, position).truncatingRemainder(dividingBy: 2)
-            let step: Int
-            var lateness: Double?
-            if pair >= 0.5, pair < 1.5 {
-                step = Int(floor(max(0, position) / 2)) * 2 + 1
-                lateness = pair - 1
-            } else {
-                step = Int((max(0, position) / 2).rounded()) * 2
-            }
-            placed.append((DrumMap.voice(for: note.note), step, note.velocity, lateness))
+            guard let onGrid = step(at: position) else { continue }
+            placed.append((DrumMap.voice(for: note.note), onGrid.step, note.velocity, onGrid.lateness))
         }
         guard !placed.isEmpty else { return nil }
         let length = bars ?? max(1, Int(ceil(Double(placed.map(\.step).max()! + 1) / Double(stepsPerBar))))
@@ -73,7 +64,7 @@ public enum MIDICapture {
         var patterns: [DrumVoice: [VelocityTier]] = [:]
         for hit in placed where hit.step < total {
             var steps = patterns[hit.voice] ?? [VelocityTier](repeating: .rest, count: total)
-            let tier: VelocityTier = hit.velocity <= 50 ? .ghost : (hit.velocity >= 110 ? .accent : .normal)
+            let tier = Self.tier(forVelocity: hit.velocity)
             if steps[hit.step] == .rest || tier.velocity > steps[hit.step].velocity { steps[hit.step] = tier }
             patterns[hit.voice] = steps
         }
@@ -82,6 +73,24 @@ public enum MIDICapture {
         let swing = late.isEmpty ? 0 : min(1, max(0, 2 * late[late.count / 2]))
         let ordered = DrumMap.notes.map(\.0).compactMap { voice in patterns[voice].map { GroovePattern(voice: voice, steps: $0) } }
         return Groove(stepsPerBar: stepsPerBar, bars: length, swing: swing, patterns: ordered)
+    }
+
+    /// A hit's step, from where it was played in steps: the nearest sixteenth on a grid that
+    /// tolerates swing — a hit up to half a step late off an odd step is that odd step, not the
+    /// next even one — and how late it was off an odd step, for the swing. Nil for a hit more than
+    /// half a step before the first.
+    public static func step(at position: Double) -> (step: Int, lateness: Double?)? {
+        guard position > -0.5 else { return nil }
+        let pair = max(0, position).truncatingRemainder(dividingBy: 2)
+        if pair >= 0.5, pair < 1.5 {
+            return (Int(floor(max(0, position) / 2)) * 2 + 1, pair - 1)
+        }
+        return (Int((max(0, position) / 2).rounded()) * 2, nil)
+    }
+
+    /// The tier a hit's velocity is: 50 and under a ghost, 110 and over an accent.
+    public static func tier(forVelocity velocity: Int) -> VelocityTier {
+        velocity <= 50 ? .ghost : (velocity >= 110 ? .accent : .normal)
     }
 
     /// The bass line, unquantised: starts and lengths in beats from the section's first bar, as

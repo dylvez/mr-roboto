@@ -256,7 +256,7 @@ public final class PianoRollModel {
     /// octave as the tune's first notes. The draft is parked for Bass mode, and nothing is kept
     /// until a note is drawn.
     public func startFreshTune() {
-        guard base == nil, versions.isEmpty, mode == .bass else { return }
+        guard !isTaking, base == nil, versions.isEmpty, mode == .bass else { return }
         parked[.bass] = (notes, lengthInBars)
         mode = .melody
         notes = []
@@ -287,7 +287,8 @@ public final class PianoRollModel {
     public var readingPersona: String { mode == .bass ? "Bassist" : "Melodist" }
 
     public func setMode(_ value: Mode) {
-        guard value != mode else { return }
+        // A take is written into the line on screen; it cannot change line halfway.
+        guard value != mode, !isTaking else { return }
         // What this mode has not kept yet is kept before it goes off screen.
         if isTouched, hasUnkeptChanges { _ = keepNow() }
         willEdit("mode")
@@ -516,6 +517,7 @@ public final class PianoRollModel {
     /// The explicit step: the writer replaces a hand-edited line with one from the levers as they
     /// stand now. Pressed, not slid into.
     public func writeOverHandEdits() {
+        guard !isTaking else { return }
         willEdit("rewrite-over")
         write()
         didEdit()
@@ -524,7 +526,8 @@ public final class PianoRollModel {
     /// A lever moved. Runs the writer unless the line is edited by hand, in which case the lever
     /// has moved and the notes have not — the readings refresh because the sound may have.
     private func writeUnlessHeld() {
-        guard !leversAreHeld else { refreshReadings(); return }
+        // Held while a take comes in, too: the writer would replace the notes being played.
+        guard !leversAreHeld, !isTaking else { refreshReadings(); return }
         write()
     }
 
@@ -627,7 +630,7 @@ public final class PianoRollModel {
     /// would ring over it is cut at it. Both are one step of ⌘Z.
     public func setLength(_ bars: Int) {
         let target = min(Self.longestLine, max(1, bars))
-        guard target != lengthInBars else { return }
+        guard target != lengthInBars, !isTaking else { return }
         willEdit("length")
         defer { didEdit() }
         lengthInBars = target
@@ -647,7 +650,7 @@ public final class PianoRollModel {
     /// way a one-bar idea becomes a phrase — the copy is there to be changed, and changing it is
     /// the point, so the line is the person's from here and the levers hold off it.
     public func double() {
-        guard canDouble else { return }
+        guard canDouble, !isTaking else { return }
         willEdit("double")
         defer { didEdit() }
         let offset = totalBeats
@@ -684,7 +687,7 @@ public final class PianoRollModel {
 
     /// The tune on the roll played another way, as one edit: ⌘Z puts it back.
     public func play(as treatment: TuneTreatment) {
-        guard mode == .melody, let varied = treated(treatment) else { return }
+        guard mode == .melody, !isTaking, let varied = treated(treatment) else { return }
         willEdit("way-\(treatment.rawValue)-\(notes.count)")
         defer { didEdit() }
         notes = varied.notes.sorted { ($0.start, $0.pitch.midi) < ($1.start, $1.pitch.midi) }
@@ -715,7 +718,7 @@ public final class PianoRollModel {
     /// Two notes that land on the same step and pitch become the louder one. One step of ⌘Z puts
     /// the feel back.
     public func tighten() {
-        guard canTighten else { return }
+        guard canTighten, !isTaking else { return }
         willEdit("tighten")
         defer { didEdit() }
         notes = tightened
@@ -757,6 +760,8 @@ public final class PianoRollModel {
     // MARK: Editing notes
 
     public func addNote(pitch: Int, at beat: Double, duration: Double = 0.5) {
+        // The notes of a take are held by their place in the list: nothing moves it under them.
+        guard !isTaking else { return }
         willEdit("add")
         defer { didEdit() }
         // On the grid, inside the loop: a click in the last sixteenth snaps to that sixteenth, not a
@@ -774,7 +779,7 @@ public final class PianoRollModel {
     }
 
     public func moveNote(at index: Int, toStart start: Double, pitch: Int) {
-        guard notes.indices.contains(index) else { return }
+        guard notes.indices.contains(index), !isTaking else { return }
         willEdit("move \(index)")
         defer { didEdit() }
         var note = notes[index]
@@ -788,7 +793,7 @@ public final class PianoRollModel {
     }
 
     public func resizeNote(at index: Int, toDuration duration: Double) {
-        guard notes.indices.contains(index) else { return }
+        guard notes.indices.contains(index), !isTaking else { return }
         willEdit("resize \(index)")
         defer { didEdit() }
         notes[index].duration = max(0.125, min(totalBeats - notes[index].start, Self.snap(duration)))
@@ -797,13 +802,113 @@ public final class PianoRollModel {
     }
 
     public func deleteNote(at index: Int) {
-        guard notes.indices.contains(index) else { return }
+        guard notes.indices.contains(index), !isTaking else { return }
         willEdit("delete")
         defer { didEdit() }
         notes.remove(at: index)
         isHandEdited = true
         selectedNote = nil
         refreshReadings()
+    }
+
+    // MARK: Played in from the controller
+
+    /// Whether the controller is recording into the roll now. Each note is drawn as it is played
+    /// and grows while its key is held; the take is one step of ⌘Z, and is kept once it ends.
+    public private(set) var isTaking = false
+    /// The keys down in the take, by pitch: the index of the note each one began.
+    private var takeHeld: [Int: Int] = [:]
+    /// Beats from the section's first bar the take may write to: the section, when it is played
+    /// over one, and never past the longest line.
+    private var takeLimit: Double = 0
+    /// Whether the take writes over what is on the roll rather than into it. See `takeReplaces`.
+    private var takeClears = false
+    private var takeLanded = 0
+
+    /// Whether a take played now writes over the line rather than into it. The writer's draft and a
+    /// first tune carried up from the bass line are proposals nobody has touched, and what is
+    /// played is the line; a line that is the person's — kept, drawn, played in before — is played
+    /// into, as a take overdubs.
+    public var takeReplaces: Bool {
+        guard !isTouched else { return false }
+        if mode == .bass { return !isHandEdited }
+        return notes == (carriedInto[.melody] ?? [])
+    }
+
+    /// The take begins. Nothing changes until a note lands.
+    public func beginTake(bars: Int?) {
+        guard !isTaking else { return }
+        // An edit waiting to keep itself is kept on its own, and nothing keeps half a take.
+        if isTouched, hasUnkeptChanges { _ = keepNow() }
+        autoKeep.cancel()
+        takeClears = takeReplaces
+        takeLimit = Double(min(Self.longestLine, bars ?? Self.longestLine) * beatsPerBar)
+        takeHeld = [:]
+        takeLanded = 0
+        selectedNote = nil
+        isTaking = true
+    }
+
+    /// A key put down `beat` beats from the section's first bar, at the pitch and velocity played:
+    /// not quantised — Tighten is the press that does that, where it can be heard and undone. A
+    /// note a little early off the first downbeat is on it. The line grows by whole bars to hold a
+    /// note past its end.
+    public func takeNoteOn(pitch: Int, velocity: Int, beat: Double) {
+        guard isTaking, beat > -0.25 else { return }
+        let start = max(0, beat)
+        guard start < takeLimit else { return }
+        if takeLanded == 0 {
+            // The take is one step of ⌘Z, taken back to the line as it stood before its first note.
+            lastEdit = nil
+            willEdit("take")
+            lastEdit = nil
+            if takeClears { notes = [] }
+        }
+        if let open = takeHeld[pitch] { hold(open, until: start) }
+        grow(toHold: start + 1.0 / 16)
+        let note = NoteEvent(pitch: Pitch(midi: max(0, min(127, pitch))), start: start,
+                             duration: min(0.25, totalBeats - start), velocity: max(1, min(127, velocity)))
+        notes.append(note)
+        takeHeld[pitch] = notes.count - 1
+        takeLanded += 1
+        isHandEdited = true
+    }
+
+    /// The key let go: the note is as long as it was held.
+    public func takeNoteOff(pitch: Int, beat: Double) {
+        guard isTaking, let index = takeHeld.removeValue(forKey: pitch) else { return }
+        hold(index, until: beat)
+    }
+
+    /// The take is over: a key still down is let go at `beat`, the notes go into the order they
+    /// sound, and the line is read and kept like any edit.
+    public func endTake(at beat: Double?) {
+        guard isTaking else { return }
+        for index in takeHeld.values {
+            hold(index, until: beat ?? notes[index].end)
+        }
+        takeHeld = [:]
+        isTaking = false
+        guard takeLanded > 0 else { return }
+        notes.sort { ($0.start, $0.pitch.midi) < ($1.start, $1.pitch.midi) }
+        lastEdit = nil
+        refreshReadings()
+        didEdit()
+    }
+
+    /// A note of the take held to `beat`: at least a sixty-fourth, and no further than the take
+    /// may write. The line grows to hold it.
+    private func hold(_ index: Int, until beat: Double) {
+        guard notes.indices.contains(index) else { return }
+        let end = min(takeLimit, max(beat, notes[index].start + 1.0 / 16))
+        grow(toHold: end)
+        notes[index].duration = max(1.0 / 16, min(end, totalBeats) - notes[index].start)
+    }
+
+    /// Lengthens the line by whole bars until it reaches `beat`, up to the longest line.
+    private func grow(toHold beat: Double) {
+        let needed = Int((beat / Double(beatsPerBar)).rounded(.up))
+        if needed > lengthInBars { lengthInBars = min(Self.longestLine, needed) }
     }
 
     // MARK: Selection
@@ -922,23 +1027,25 @@ public final class PianoRollModel {
 extension PianoRollModel: KeepsAsItGoes {
     @discardableResult
     public func keepNow() -> Bool {
+        // Half a take is not a version: the take keeps itself when it ends.
+        guard !isTaking else { return true }
         guard hasUnkeptChanges else { autoKeep.cancel(); return true }
         let version = commit()
         return versions.last?.id == version.id
     }
 
-    public var canUndo: Bool { history.canUndo }
-    public var canRedo: Bool { history.canRedo }
+    public var canUndo: Bool { history.canUndo && !isTaking }
+    public var canRedo: Bool { history.canRedo && !isTaking }
 
     public func undo() {
-        guard let previous = history.undo(from: state) else { return }
+        guard !isTaking, let previous = history.undo(from: state) else { return }
         lastEdit = nil
         state = previous
         didEdit()
     }
 
     public func redo() {
-        guard let next = history.redo(from: state) else { return }
+        guard !isTaking, let next = history.redo(from: state) else { return }
         lastEdit = nil
         state = next
         didEdit()
@@ -949,5 +1056,22 @@ extension PianoRollModel: KeepsAsItGoes {
         if hasUnkeptChanges { return .pending }
         if let kept = lastKeptOfThisKind { return .kept(title: PartLabel.title(of: kept)) }
         return .untouched
+    }
+}
+
+extension PianoRollModel: TakesFromController {
+    public var takeName: String { "the Piano roll" }
+    /// The line's own voice: its bass sound, or in melody mode the tune's instrument.
+    public var controllerVoice: MIDIControl.Voice { mode == .melody ? .keys(instrument) : .bass(sound) }
+    public var takesInTime: Bool { true }
+
+    public func takeNoteOn(_ note: Int, velocity: Int, beat: Double?) {
+        guard let beat else { return }
+        takeNoteOn(pitch: note, velocity: velocity, beat: beat)
+    }
+
+    public func takeNoteOff(_ note: Int, beat: Double?) {
+        guard let beat else { return }
+        takeNoteOff(pitch: note, beat: beat)
     }
 }

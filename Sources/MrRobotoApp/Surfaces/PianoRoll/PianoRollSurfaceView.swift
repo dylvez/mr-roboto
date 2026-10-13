@@ -8,6 +8,8 @@ import SwiftUI
 /// under that.
 struct PianoRollSurfaceView: View {
     @Bindable var model: PianoRollModel
+    /// The controller, for Record. Nil where there is none to record — a render, a preview.
+    var midi: MIDIControl? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: Design.Metric.gutter) {
@@ -34,12 +36,16 @@ struct PianoRollSurfaceView: View {
             if !model.tuneWays.isEmpty { waysRow }
             // Where the work scrolls, the lane is drawn at its floor (`NoteLaneLayout.minimumHeight`).
             // A fixed 240 for the lane and its caption together ran a tune's lowest rows under the kicks.
+            // While a take comes in the lane is drawn, not edited: the notes being played are held
+            // by their place in the line, and a click would move them.
             if laneFills {
                 NoteLane(model: model)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .allowsHitTesting(!model.isTaking)
             } else {
                 NoteLane(model: model, fills: false)
                     .frame(maxWidth: .infinity)
+                    .allowsHitTesting(!model.isTaking)
             }
             readings
         }
@@ -50,6 +56,11 @@ struct PianoRollSurfaceView: View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             // What this roll is writing. The same grid either way.
             SegmentedChoice(options: PianoRollModel.Mode.allCases, selection: model.mode, title: \.title) { model.setMode($0) }
+                // A take is written into the line on screen: it cannot change line halfway.
+                .disabled(model.isTaking)
+            if let midi {
+                TakeButton(midi: midi, target: model, help: recordHelp)
+            }
             // In melody mode the primer, behind the `?`, says how a tune is drawn.
             if model.mode == .melody {
                 EmptyView()
@@ -66,6 +77,17 @@ struct PianoRollSurfaceView: View {
             // The line plays from the surface's header, where every surface's play control is.
             Spacer()
         }
+    }
+
+    /// What Record does on this line, said before it is pressed.
+    private var recordHelp: String {
+        let what = model.mode == .melody ? "tune" : "bass line"
+        let lands = model.takeReplaces
+            ? "replaces the drafted \(what)"
+            : "plays into the \(what), on top of what is there"
+        return "Record from the controller on the \(what)'s own sound: the song plays from the lit section after a bar of click, "
+            + "and the notes land where you play them — \(lands) — until the section ends or you press Stop. "
+            + "Tighten puts them on the grid; ⌘Z takes the take back."
     }
 
     /// The writer's levers in bass mode; in melody mode nothing writes, so the row is the instrument

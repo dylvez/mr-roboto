@@ -30,7 +30,8 @@ public enum Primer {
         case .grid:
             return ("Grid",
                     "A groove is steps, swing and ghost notes for each drum voice, one bar or several. Paint steps, choose "
-                        + "a feel, set the bars; it keeps itself a moment after you stop, as a new version, and ⌘Z steps back.")
+                        + "a feel, set the bars, or press Record MIDI and play pads against the song: each hit lands on its step. "
+                        + "It keeps itself a moment after you stop, as a new version, and ⌘Z steps back.")
         case .sound:
             return ("Sound",
                     "Two jobs. On a chop or a groove, it adds dust — a machine at a mix, kept as a new version "
@@ -38,18 +39,20 @@ public enum Primer {
         case .chords:
             return ("Chords",
                     "A progression, typed the way a lead sheet says it: Dm9 G13 | Cmaj9. Bars are separated by |. "
-                        + "Click a bar to hear it. What you type keeps itself, and the bass writer reads it. With none, the bass "
+                        + "Click a bar to hear it, or press Record MIDI and play chords: each is written as the next bar. "
+                        + "What you type keeps itself, and the bass writer reads it. With none, the bass "
                         + "is written to the key. Played and Voiced say how a player plays them: the rhythm they are struck "
                         + "in, and where the notes of each chord sit.")
         case .pianoRoll where variant == "melody":
             return ("Piano roll · melody",
-                    "A tune, as many bars long as you set: click to place a note, drag it to move it, or play one in on a "
-                        + "controller in Keys and Tighten it to the grid. Ask the band and the Director writes one for the "
+                    "A tune, as many bars long as you set: click to place a note, drag it to move it, or press Record MIDI "
+                        + "and play it against the song, then Tighten it to the grid. Ask the band and the Director writes one for the "
                         + "Melodist. The Melodist reads it below, and it keeps itself as you go.")
         case .pianoRoll:
             return ("Piano roll",
                     "A bass line, with the groove's kicks drawn under it so the lag is visible. The levers re-run the writer "
-                        + "in a named player's hands; drag a note to move it. The writer's line is a proposal until you touch it; "
+                        + "in a named player's hands; drag a note to move it, or press Record MIDI and play your own. The writer's "
+                        + "line is a proposal until you touch it; "
                         + "then it keeps itself. The Bassist reads the result below.")
         case .structure:
             return ("Structure",

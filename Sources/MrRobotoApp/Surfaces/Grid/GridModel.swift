@@ -414,6 +414,60 @@ public final class GridModel {
         paintBefore = nil
     }
 
+    // MARK: Played in from the controller
+
+    /// Whether the controller is recording into the grid now. Its hits light their steps as they
+    /// are played; the take is one step of ⌘Z, and is kept once it ends.
+    public private(set) var isTaking = false
+    /// The grid as it stood when the take began.
+    private var takeBefore: Snapshot?
+    /// How many steps the section under the take runs, when it is played over one: a hit past its
+    /// end — a crash on the next section's downbeat — is not in the take.
+    private var takeSteps: Double?
+
+    /// The take begins. Nothing changes until a hit lands.
+    public func beginTake(bars: Int?) {
+        guard !isTaking else { return }
+        // An edit waiting to keep itself is kept on its own, and nothing keeps half a take.
+        if hasUnkeptChanges { _ = keepNow() }
+        autoKeep.cancel()
+        takeBefore = snapshot
+        takeSteps = bars.map { Double($0 * stepsPerBar) }
+        isTaking = true
+    }
+
+    /// A pad struck `beat` beats from the section's first bar: on the nearest step — a hit up to
+    /// half a step late off an odd step is that odd step, as a swung hand plays it — folded into the
+    /// loop's length, so every bar of a long section plays into the one loop, at the tier its
+    /// velocity says. A step already louder keeps its tier; a voice with no row gets one.
+    public func takeHit(_ note: Int, velocity: Int, beat: Double) {
+        guard isTaking else { return }
+        let position = beat * Double(stepsPerBar) / Double(max(1, timeSignature.beatsPerBar))
+        if let takeSteps, position >= takeSteps - 0.5 { return }
+        guard let placed = MIDICapture.step(at: position) else { return }
+        let voice = DrumMap.voice(for: note)
+        if !voices.contains(voice) {
+            voices.append(voice)
+            steps[voice] = Array(repeating: .rest, count: stepCount)
+        }
+        let step = placed.step % stepCount
+        let tier = MIDICapture.tier(forVelocity: velocity)
+        guard var row = steps[voice], row.indices.contains(step),
+              row[step] == .rest || tier.velocity > row[step].velocity else { return }
+        row[step] = tier
+        steps[voice] = row
+    }
+
+    /// The take is over: what it put down is an edit, heard and read and kept like any other.
+    public func endTake(at beat: Double? = nil) {
+        guard isTaking else { return }
+        isTaking = false
+        takeSteps = nil
+        guard let before = takeBefore else { return }
+        takeBefore = nil
+        if before != snapshot { edited(from: before) }
+    }
+
     /// Clears one voice's row.
     public func clear(_ voice: DrumVoice) {
         guard steps[voice] != nil else { return }
@@ -826,16 +880,18 @@ public final class GridModel {
 extension GridModel: KeepsAsItGoes {
     @discardableResult
     public func keepNow() -> Bool {
+        // Half a take is not a version: the take keeps itself when it ends.
+        guard !isTaking else { return true }
         guard hasUnkeptChanges else { autoKeep.cancel(); return true }
         let version = commit()
         return versions.last?.id == version.id
     }
 
-    public var canUndo: Bool { history.canUndo }
-    public var canRedo: Bool { history.canRedo }
+    public var canUndo: Bool { history.canUndo && !isTaking }
+    public var canRedo: Bool { history.canRedo && !isTaking }
 
     public func undo() {
-        guard let previous = history.undo(from: snapshot) else { return }
+        guard !isTaking, let previous = history.undo(from: snapshot) else { return }
         apply(previous)
         push()
         refreshReadings()
@@ -843,7 +899,7 @@ extension GridModel: KeepsAsItGoes {
     }
 
     public func redo() {
-        guard let next = history.redo(from: snapshot) else { return }
+        guard !isTaking, let next = history.redo(from: snapshot) else { return }
         apply(next)
         push()
         refreshReadings()
@@ -855,5 +911,24 @@ extension GridModel: KeepsAsItGoes {
         if hasUnkeptChanges { return .pending }
         if let kept = versions.last ?? base { return .kept(title: PartLabel.title(of: kept)) }
         return .untouched
+    }
+}
+
+extension GridModel: TakesFromController {
+    public var takeName: String { "the Grid" }
+    public var controllerVoice: MIDIControl.Voice { .kit(machine.id) }
+    public var takesInTime: Bool { true }
+
+    public func takeNoteOn(_ note: Int, velocity: Int, beat: Double?) {
+        guard let beat else { return }
+        takeHit(note, velocity: velocity, beat: beat)
+    }
+
+    public func takeNoteOff(_ note: Int, beat: Double?) {}
+
+    /// Through the grid's own kit — its machine, or its chop's slices — as a step touch is.
+    public func soundTakeHit(_ note: Int, velocity: Int) -> Bool {
+        play(DrumMap.voice(for: note), velocity: velocity)
+        return true
     }
 }

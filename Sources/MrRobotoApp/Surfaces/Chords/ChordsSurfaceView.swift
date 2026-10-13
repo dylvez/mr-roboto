@@ -6,6 +6,8 @@ import SwiftUI
 /// The lead sheet: a line of symbols in, bars with Roman numerals out, each bar playable.
 struct ChordsSurfaceView: View {
     @Bindable var model: ChordsModel
+    /// The controller, for Record. Nil where there is none to record — a render, a preview.
+    var midi: MIDIControl? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: Design.Metric.gutter) {
@@ -37,6 +39,13 @@ extension ChordsSurfaceView {
         VStack(alignment: .leading, spacing: Design.Metric.gutter) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text(model.title).font(Design.Typography.prose(16, weight: .medium))
+                if let midi {
+                    TakeButton(midi: midi, target: model,
+                               help: "Record from the controller: play a chord, and when your hand comes off the keys it is "
+                                   + "written as the next bar, named and spelled in the key — the lowest key is its bass. "
+                                   + "Nothing needs to play. Press again to stop; ⌘Z takes a chord back.",
+                               line: model.isTaking ? model.takeLine : nil)
+                }
                 Spacer()
                 KeyField(model: model)
             }

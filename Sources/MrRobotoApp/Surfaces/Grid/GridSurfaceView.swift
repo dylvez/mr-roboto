@@ -12,9 +12,12 @@ import SwiftUI
 /// Beatmaker reads the groove under it, the way the Bassist reads the line under the Piano roll.
 public struct GridSurfaceView: View {
     @Bindable public var model: GridModel
+    /// The controller, for Record. Nil where there is none to record — a render, a preview.
+    public var midi: MIDIControl?
 
-    public init(model: GridModel) {
+    public init(model: GridModel, midi: MIDIControl? = nil) {
         self.model = model
+        self.midi = midi
     }
 
     public var body: some View {
@@ -51,6 +54,12 @@ public struct GridSurfaceView: View {
                 .lineLimit(1)
             // The loop's length sits by its name: "Motown, 104 · 2 bars" is what the groove is.
             LengthMenu(model: model)
+            if let midi {
+                TakeButton(midi: midi, target: model,
+                           help: "Record from the controller: the song plays from the lit section after a bar of click, "
+                               + "and each pad you hit lands on its step, every bar of the section into this "
+                               + "\(LengthMenu.bars(model.bars)) loop — until the section ends or you press Stop. ⌘Z takes the take back.")
+            }
             Spacer(minLength: 8)
             // No Keep button: the groove keeps itself a moment after the last edit. What is shown
             // here is whether it has, and the way back.

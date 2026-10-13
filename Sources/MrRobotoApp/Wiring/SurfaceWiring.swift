@@ -87,11 +87,13 @@ final class SurfaceWiring {
         return built
     }
 
-    /// Whether anything is recording: a take in the Booth, or a controller playing in. The
-    /// transport's display turns red for it, the way a desk's does. Asks the controller only if one
-    /// was ever built, rather than building one to ask.
+    /// Whether anything is recording: a take in the Booth, a controller playing in, or a surface
+    /// recording the controller against the song. The transport's display turns red for it, the
+    /// way a desk's does. Asks the controller only if one was ever built, rather than building one
+    /// to ask.
     func isRecording(for app: AppState) -> Bool {
         booths.values.contains { $0.state == .recording } || (midiControl?.isPlayingIn ?? false)
+            || (midiControl?.isTakingInTime ?? false)
     }
 
     private var headlessMixer: MixerModel?

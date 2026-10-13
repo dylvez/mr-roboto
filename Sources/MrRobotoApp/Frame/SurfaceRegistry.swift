@@ -62,17 +62,20 @@ public final class SurfaceRegistry {
             ChopLanePanel(binding: SurfaceWiring.shared.chopBinding(for: item, app: app), app: app)
         }
         registry.register(.grid) { item, app in
-            GridSurfaceView(model: SurfaceWiring.shared.gridModel(for: item, app: app))
+            GridSurfaceView(model: SurfaceWiring.shared.gridModel(for: item, app: app),
+                            midi: SurfaceWiring.shared.midi(for: app))
         }
         registry.register(.sound) { item, app in
             let (surface, adapter) = SurfaceWiring.shared.soundSurface(for: item, app: app)
             SoundSurfacePanel(surface: surface, hasSelection: adapter.selectedPart != nil, app: app)
         }
         registry.register(.chords) { item, app in
-            ChordsSurfaceView(model: SurfaceWiring.shared.chordsModel(for: item, app: app))
+            ChordsSurfaceView(model: SurfaceWiring.shared.chordsModel(for: item, app: app),
+                              midi: SurfaceWiring.shared.midi(for: app))
         }
         registry.register(.pianoRoll) { item, app in
-            PianoRollSurfaceView(model: SurfaceWiring.shared.pianoRollModel(for: item, app: app))
+            PianoRollSurfaceView(model: SurfaceWiring.shared.pianoRollModel(for: item, app: app),
+                                 midi: SurfaceWiring.shared.midi(for: app))
         }
         registry.register(.structure) { item, app in
             StructureSurfaceView(model: SurfaceWiring.shared.structureModel(for: item, app: app))

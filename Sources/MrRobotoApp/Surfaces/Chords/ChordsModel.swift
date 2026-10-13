@@ -378,6 +378,69 @@ public final class ChordsModel {
         Task { [host] in await host.audition(pitches: pitches, duration: 0.9, for: part) }
     }
 
+    // MARK: Played in from the controller
+
+    /// Whether Record is on: each chord played on the controller is written into the line as the
+    /// next bar, as the hand comes off the keys.
+    public private(set) var isTaking = false
+    /// The keys down now, and every key put down since the hand was last off them all — the chord
+    /// being played, its lowest key its bass.
+    private var takeHeld: Set<Int> = []
+    private var takeChord: [Int] = []
+    /// What the last chord played was written as, or why it was not: for the line under the field.
+    public private(set) var takeLine: String?
+
+    public func beginTake(bars: Int?) {
+        isTaking = true
+        takeHeld = []
+        takeChord = []
+        takeLine = nil
+    }
+
+    public func takeNoteOn(_ note: Int, velocity: Int, beat: Double?) {
+        guard isTaking else { return }
+        takeHeld.insert(note)
+        if !takeChord.contains(note) { takeChord.append(note) }
+    }
+
+    public func takeNoteOff(_ note: Int, beat: Double?) {
+        guard isTaking, takeHeld.remove(note) != nil, takeHeld.isEmpty else { return }
+        let played = takeChord
+        takeChord = []
+        write(played: played)
+    }
+
+    /// Record off. A chord still held is written: Record pressed with the other hand is the end of
+    /// a chord, not the loss of it.
+    public func endTake(at beat: Double?) {
+        guard isTaking else { return }
+        isTaking = false
+        if !takeChord.isEmpty { write(played: takeChord) }
+        takeHeld = []
+        takeChord = []
+    }
+
+    /// Keys played together, written into the line as the next bar — the chord they are, spelled as
+    /// the key spells it — each one a step of ⌘Z of its own. Typed after a sheet showing the key's
+    /// I–IV–V–I they are the first bar: that sheet was a suggestion.
+    func write(played keys: [Int]) {
+        let names = keys.sorted().map { key.name(of: Pitch(midi: $0)) }.joined(separator: " ")
+        guard keys.count >= 2 else {
+            takeLine = "One note is not a chord — play two or more together."
+            return
+        }
+        guard let chord = Chord.recognise(playedNotes: keys) else {
+            takeLine = "\(names) is not a chord I can name."
+            return
+        }
+        let symbol = symbol(of: chord)
+        let line = text.trimmingCharacters(in: .whitespaces)
+        lastEdit = nil
+        text = line.isEmpty ? symbol : line + " | " + symbol
+        lastEdit = nil
+        takeLine = "\(names) → \(symbol)"
+    }
+
     // MARK: Versions
 
     @discardableResult
@@ -437,4 +500,12 @@ extension ChordsModel: KeepsAsItGoes {
         if let kept = versions.last ?? base { return .kept(title: PartLabel.title(of: kept)) }
         return .untouched
     }
+}
+
+extension ChordsModel: TakesFromController {
+    public var takeName: String { "the Chords sheet" }
+    /// The instrument the chords are voiced on, so a chord played is heard as the sheet will play it.
+    public var controllerVoice: MIDIControl.Voice { .keys(instrument) }
+    /// A chord at a time, as it is played: nothing needs to run under a lead sheet.
+    public var takesInTime: Bool { false }
 }

@@ -343,6 +343,33 @@ public struct Chord: Hashable, Codable, Sendable, CustomStringConvertible {
         return found
     }
 
+    /// The chord a hand played, from its keys as MIDI notes: what a lead sheet writes for them.
+    ///
+    /// The notes exactly, when a chord has them: the one built on the lowest key first — C E G A
+    /// over a C is C6, not Am7 — and otherwise a slash chord over that key, so E G C is C/E. A
+    /// voicing that leaves the fifth out, as a seventh played root, third and seventh does, is read
+    /// with it: C E B♭ is C7, and a third alone over its root is that triad. Nil for a single note,
+    /// and for keys no chord in the catalog holds.
+    public static func recognise(playedNotes notes: [Int]) -> Chord? {
+        let classes = Set(notes.map { PitchClass(wrapping: $0) })
+        guard classes.count >= 2, let lowest = notes.min() else { return nil }
+        let bass = PitchClass(wrapping: lowest)
+        func over(_ chords: [Chord]) -> Chord? {
+            if let rooted = chords.first(where: { $0.root == bass }) { return rooted }
+            guard let chord = chords.first, let index = chord.pitchClasses.firstIndex(of: bass) else { return nil }
+            return chord.inverted(index)
+        }
+        if let exact = over(identify(classes)) { return exact }
+        // The fifth left out: above the lowest key first, then above each of the others, a chord
+        // only on the key whose fifth was supplied.
+        let others = PitchClass.allCases.filter { $0 != bass && classes.contains($0) }
+        for root in [bass] + others {
+            let filled = identify(classes.union([root.transposed(by: 7)])).filter { $0.root == root }
+            if let chord = over(filled) { return chord }
+        }
+        return nil
+    }
+
     /// Chord symbol such as "C#m7" or, when inverted, a slash chord such as "C/E".
     public func symbol(preferring preference: SpellingPreference = .sharps) -> String {
         symbol(rootName: root.spelling(preferring: preference), preferring: preference)

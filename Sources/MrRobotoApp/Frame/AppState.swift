@@ -1474,7 +1474,7 @@ public final class AppState {
         plan = plan.clicking((click ?? false) || isClicking)
         // The Booth's own section, while it records: the take being replaced is not sung over.
         if let silenced { plan.tracks.removeAll { $0.part == silenced } }
-        guard plan.isPlayable else {
+        guard plan.isPlayable || plan.isClickTake else {
             let silence = plan.silence ?? SongPlayback.Silence(headline: "Nothing to play", detail: "")
             transport = .nothingToPlay(silence)
             note(.session, silence.headline, detail: silence.detail)

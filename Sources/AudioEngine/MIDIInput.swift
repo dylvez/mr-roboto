@@ -190,7 +190,10 @@ public final class MIDIInput: @unchecked Sendable {
             let words = withUnsafePointer(to: &copy.words) { tuple in
                 tuple.withMemoryRebound(to: UInt32.self, capacity: 64) { Array(UnsafeBufferPointer(start: $0, count: min(64, count))) }
             }
-            for event in MIDIParse.events(words: words, hostTime: copy.timeStamp, source: source) { handler(event) }
+            // A source that does not stamp its packets sends 0, which means "now": read as a host
+            // time it was the machine's boot, and a take timed against the song lost every note.
+            let stamp = copy.timeStamp != 0 ? copy.timeStamp : mach_absolute_time()
+            for event in MIDIParse.events(words: words, hostTime: stamp, source: source) { handler(event) }
         }
     }
 

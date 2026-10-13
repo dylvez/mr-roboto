@@ -530,6 +530,11 @@ public struct SongPlayback: Equatable, Sendable {
         !voices.isEmpty || !tracks.isEmpty || segments.contains(where: \.isSounding)
     }
 
+    /// A take counted in against the click: something to play to even in a song with nothing in
+    /// it yet. Recording the first beat on the Grid, or a first line sung in the Booth, used to be
+    /// refused as "nothing to play" — the one time a click is all a take wants under it.
+    public var isClickTake: Bool { click && countInBars > 0 }
+
     /// Whether the transport is playing sections in order rather than the newest of everything.
     public var isArranged: Bool { !segments.isEmpty }
 

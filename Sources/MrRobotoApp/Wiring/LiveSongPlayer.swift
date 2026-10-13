@@ -188,15 +188,20 @@ final class LiveSongPlayer: SongPlaybackHost {
             next += 1
         }
 
-        guard !sectionGrooves.isEmpty || !sectionBasses.isEmpty || !sectionKeys.isEmpty
-                || !tracks.isEmpty else {
+        let scheduled = !sectionGrooves.isEmpty || !sectionBasses.isEmpty || !sectionKeys.isEmpty || !tracks.isEmpty
+        // A take against the click alone is a run with nothing else in it, and it is allowed.
+        guard scheduled || plan.isClickTake else {
             throw Failure.nothingScheduled
         }
         startClick(plan, clock: clock, engine: engine, graph: graph, firstFreeNode: next)
 
         // When only audio is playing and nothing loops, the plan has an end; a groove loops (or runs
         // to the song's length, which `GroovePlayer.endTime` already knows) so the reading below
-        // asks it rather than guessing.
+        // asks it rather than guessing. The click alone runs to the song's length, count-in and all.
+        if !scheduled {
+            endsAt = plan.lengthInBars.map { Double($0 * plan.timeSignature.beatsPerBar) * 60 / max(1, plan.tempo) }
+            return
+        }
         endsAt = plan.loops ? nil : Self.end(of: plan, players: placedPlayers,
                                              longestTrack: tracks.map { $0.startsAt + $0.duration }.max())
     }
@@ -303,7 +308,7 @@ final class LiveSongPlayer: SongPlaybackHost {
         }
 
         guard !sectionGrooves.isEmpty || !sectionBasses.isEmpty || !sectionKeys.isEmpty
-                || !sequences.isEmpty else {
+                || !sequences.isEmpty || plan.isClickTake else {
             throw Failure.nothingScheduled
         }
         endsAt = plan.loops ? nil : plan.formSeconds
