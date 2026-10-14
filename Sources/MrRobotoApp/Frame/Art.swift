@@ -71,6 +71,14 @@ enum Art {
         return image
     }
 
+    /// A member's mark: the subject of its portrait, drawn for the small sizes where the portrait's
+    /// detail turns to grey. A glyph, so the member's hue colours it. Nil for a name that is not a
+    /// member's emblem.
+    static func mark(forEmblem emblem: String) -> NSImage? {
+        guard emblem.hasPrefix("cast-") else { return nil }
+        return glyph("member-" + emblem.dropFirst("cast-".count))
+    }
+
     /// The machine card for a chain preset, by its raw name.
     static func machine(_ preset: String) -> String { "machine-\(preset.lowercased())" }
 }

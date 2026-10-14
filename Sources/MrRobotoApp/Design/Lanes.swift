@@ -141,21 +141,49 @@ enum MemberHue {
 }
 
 /// A member's portrait, ringed in its hue so the face and the colour are learned together.
+///
+/// Under `markBelow` the portrait's detail is lost, so the member's mark stands in: the same
+/// subject drawn as a line, in the hue, on a disc washed with it. The ring sits outside the face
+/// but inside the emblem's frame, so a container that clips at its edge never cuts the ring; the
+/// room is kept with or without a hue, so a member joining or leaving does not move its row.
 struct MemberEmblem: View {
     let name: String
     var hue: Color?
     var width: CGFloat
 
+    static let ringInset: CGFloat = 2.5
+    static let markBelow: CGFloat = 32
+
     var body: some View {
-        ArtImage(name, width: width)
+        face
+            .padding(Self.ringInset)
             .overlay {
                 if let hue {
                     Circle()
                         .strokeBorder(hue, lineWidth: 1.5)
-                        .padding(-2.5)
                         .accessibilityHidden(true)
                 }
             }
+    }
+
+    @ViewBuilder private var face: some View {
+        if width < Self.markBelow, let mark = Art.mark(forEmblem: name) {
+            let ink = hue ?? Design.Palette.inkSecondary
+            Circle()
+                .fill(ink.opacity(0.2))
+                .frame(width: width, height: width)
+                .overlay {
+                    Image(nsImage: mark)
+                        .renderingMode(.template)
+                        .resizable()
+                        .interpolation(.high)
+                        .frame(width: width * 0.76, height: width * 0.76)
+                        .foregroundStyle(ink)
+                }
+                .accessibilityHidden(true)
+        } else {
+            ArtImage(name, width: width)
+        }
     }
 }
 

@@ -66,6 +66,7 @@ struct CastSurfaceView: View {
             } else {
                 Circle().fill(Design.Palette.panelAlt).frame(width: 44, height: 44)
                     .overlay(Text(String(bible.name.prefix(1))).font(Design.Typography.ui(16, weight: .semibold)))
+                    .padding(MemberEmblem.ringInset)
             }
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 8) {

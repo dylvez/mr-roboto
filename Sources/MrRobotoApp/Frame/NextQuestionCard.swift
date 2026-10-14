@@ -67,7 +67,9 @@ struct DockQuestion: View {
     var body: some View {
         HStack(spacing: 6) {
             if let emblem = Art.emblem(for: question.asker) {
-                ArtImage(emblem, width: 22).help("\(question.asker.label) asks")
+                // 17 and the ring's room make the 22 the dock has always given the asker.
+                MemberEmblem(name: emblem, hue: MemberHue.color(for: question.asker), width: 17)
+                    .help("\(question.asker.label) asks")
             }
             if room == .both || room == .question {
                 Text(question.question)

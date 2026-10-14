@@ -54,4 +54,16 @@ struct ArtTests {
         }
         #expect(Art.emblem(for: Proposal.Source.session) == nil)
     }
+
+    @Test("every emblem has a mark for the small sizes, coloured by the member's hue")
+    func marks() {
+        let emblems = Self.used.filter { $0.hasPrefix("cast-") }
+            + Cast.standard.bibles.compactMap { Art.emblem(forPersona: $0.name) }
+        for emblem in Set(emblems) {
+            let mark = Art.mark(forEmblem: emblem)
+            #expect(mark != nil, "no mark for \(emblem): glyph-member-\(emblem.dropFirst(5)).svg")
+            #expect(mark?.isTemplate == true, "\(emblem)'s mark must be a template so the hue colours it")
+        }
+        #expect(Art.mark(forEmblem: "empty-grid") == nil)
+    }
 }
