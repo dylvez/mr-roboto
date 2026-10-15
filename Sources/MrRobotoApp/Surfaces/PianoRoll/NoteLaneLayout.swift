@@ -17,6 +17,12 @@ import Foundation
 /// Across, a short line fills the width; a long one keeps a beat wide enough to hit a sixteenth and
 /// scrolls sideways under the pitch names, rather than squeezing sixteen bars into the panel until
 /// nothing can be grabbed.
+///
+/// That floor is a sixteenth seven points wide, which is grabbable and not much more. A line
+/// doubled to eight or sixteen bars is the one you then want to vary bar by bar, so the lane can be
+/// looked at closer: `beatsAcross` is how much of the line fills the width — four bars of it, two,
+/// one — and the rest scrolls. Closer is never narrower than the whole line, so a level wider than
+/// the line is the line itself, and zoom is only ever a wider beat.
 public struct NoteLaneLayout: Equatable, Sendable {
 
     /// The pitch names' column, which stays put while a long line scrolls under it.
@@ -51,14 +57,20 @@ public struct NoteLaneLayout: Equatable, Sendable {
     /// True when the line is wider than the room beside the names, and so scrolls sideways.
     public let scrolls: Bool
 
-    public init(size: CGSize, rows: Int, beats: Double) {
+    /// - Parameters:
+    ///   - beats: every beat of the line.
+    ///   - beatsAcross: how many of them fill the width, or nil for all of them: the whole line
+    ///     across, or scrolling at the floor once it is too long for that. Never more than the
+    ///     line has, so a level wider than the line is the whole line.
+    public init(size: CGSize, rows: Int, beats: Double, beatsAcross: Double? = nil) {
         self.rows = max(1, rows)
         rowsHeight = max(CGFloat(self.rows) * Self.minimumRowHeight,
                          size.height - Self.kickGap - Self.kickLaneHeight)
         rowHeight = rowsHeight / CGFloat(self.rows)
         visibleWidth = max(1, size.width - Self.labelWidth)
         let beats = CGFloat(max(1, beats))
-        beatWidth = max(Self.minimumBeatWidth, visibleWidth / beats)
+        let across = min(beats, CGFloat(max(1, beatsAcross ?? Double(beats))))
+        beatWidth = max(Self.minimumBeatWidth, visibleWidth / across)
         gridWidth = beatWidth * beats
         scrolls = gridWidth > visibleWidth + 0.5
     }

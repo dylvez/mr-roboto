@@ -666,6 +666,12 @@ final class SurfaceWiring {
     func canUndo(for item: BenchItem) -> Bool { keeper(for: item)?.canUndo ?? false }
     func canRedo(for item: BenchItem) -> Bool { keeper(for: item)?.canRedo ?? false }
 
+    /// ⌘= and ⌘− on the surface in front: the Piano roll's lane, looked at closer or whole. Nil for
+    /// a surface that is looked at one way, and for one the bench has not drawn yet.
+    func zoomer(for item: BenchItem) -> (any ZoomsItsWork)? {
+        item.kind == .pianoRoll ? rolls[item.id] : nil
+    }
+
     /// The first bound version that actually holds a groove. A grid opened on a sample (say, from
     /// the ledger) is an empty grid rather than a crash.
     private func boundGroove(for item: BenchItem, app: AppState) -> PartVersion? {

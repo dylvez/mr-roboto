@@ -283,6 +283,21 @@ struct FrameCommands: Commands {
                 }
             }
             Divider()
+            // The surface in front, looked at closer: the Piano roll's lane. ⌘= steps through eight,
+            // four, two and one bars across it and ⌘− back; Fit is the whole line, as the lane
+            // opens. A trackpad pinch on the lane takes the same steps. Greyed on every other
+            // surface, as the lane's own − and + are at the ends.
+            let zoomer = app.bench.active.flatMap { SurfaceWiring.shared.zoomer(for: $0) }
+            Button("Zoom In") { zoomer?.zoomIn() }
+                .keyboardShortcut("=", modifiers: .command)
+                .disabled(!(zoomer?.canZoomIn ?? false))
+            Button("Zoom Out") { zoomer?.zoomOut() }
+                .keyboardShortcut("-", modifiers: .command)
+                .disabled(!(zoomer?.canZoomOut ?? false))
+            Button("Zoom to Fit") { zoomer?.zoomToFit() }
+                .keyboardShortcut("0", modifiers: [.command, .option])
+                .disabled(!(zoomer?.canZoomOut ?? false))
+            Divider()
         }
 
         CommandMenu("Surfaces") {

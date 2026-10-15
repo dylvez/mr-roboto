@@ -119,6 +119,12 @@ public final class PianoRollModel {
     /// is a different note.
     public private(set) var selectedNote: Int?
 
+    /// How close the lane is looked at, as chosen: this many bars across its width, or nil for the
+    /// whole line. Kept as chosen through a line shortened under it, so a line doubled back is
+    /// looked at as it was; read through `barsAcross`, which holds it to the line. Not an edit —
+    /// nothing moves — so not a step of undo, and not kept with the part.
+    private var zoomBars: Int?
+
     // MARK: Versions and readings
 
     public private(set) var base: PartVersion?
@@ -911,6 +917,39 @@ public final class PianoRollModel {
         if needed > lengthInBars { lengthInBars = min(Self.longestLine, needed) }
     }
 
+    // MARK: Looking closer
+
+    /// The levels the lane is looked at closer: this many bars across its width. From the whole
+    /// line, ⌘= steps down them and ⌘− back up. A level no narrower than the line is the whole line.
+    public static let zoomLevels = [8, 4, 2, 1]
+
+    /// How many bars the lane shows across its width, or nil for the whole line.
+    public var barsAcross: Int? { zoomBars.flatMap { $0 < lengthInBars ? $0 : nil } }
+
+    /// The same in beats, as the lane lays itself out.
+    public var beatsAcross: Double? { barsAcross.map { Double($0 * beatsPerBar) } }
+
+    /// The levels narrower than the line: the ones that show less of it than the whole.
+    private var zoomLevelsForLine: [Int] { Self.zoomLevels.filter { $0 < lengthInBars } }
+
+    public var canZoomIn: Bool { zoomLevelsForLine.contains { $0 < (barsAcross ?? Int.max) } }
+    public var canZoomOut: Bool { barsAcross != nil }
+
+    /// One level closer: fewer bars across, every beat wider. Nothing closer than one bar.
+    public func zoomIn() {
+        guard let next = zoomLevelsForLine.first(where: { $0 < (barsAcross ?? Int.max) }) else { return }
+        zoomBars = next
+    }
+
+    /// One level wider, up to the whole line.
+    public func zoomOut() {
+        guard let current = barsAcross else { return }
+        zoomBars = zoomLevelsForLine.last(where: { $0 > current })
+    }
+
+    /// The whole line across, as the lane opens.
+    public func zoomToFit() { zoomBars = nil }
+
     // MARK: Selection
 
     /// A click on a note. An index the list does not have clears the selection rather than
@@ -1075,3 +1114,5 @@ extension PianoRollModel: TakesFromController {
         takeNoteOff(pitch: note, beat: beat)
     }
 }
+
+extension PianoRollModel: ZoomsItsWork {}

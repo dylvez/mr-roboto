@@ -409,6 +409,12 @@ struct NoteLane: View {
     var fills = true
 
     @State private var drag: Drag?
+    /// How many zoom steps the pinch in progress has taken, so a pinch that goes on steps again
+    /// rather than once a frame, and one that comes back undoes its own steps and no more.
+    @State private var pinchSteps = 0
+    /// Where the lane has scrolled to, so a zoom keeps the beat under the middle of the view there.
+    @State private var scrollX: CGFloat = 0
+    @State private var scrollPosition = ScrollPosition(edge: .leading)
     /// The lane takes keyboard focus on a click so Delete and Escape reach it. Without focus the
     /// keys go to whatever had it last, which is usually a text field on another surface.
     @FocusState private var isFocused: Bool
@@ -424,10 +430,36 @@ struct NoteLane: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             lane
-            Text(caption)
-                .font(Design.Typography.ui(11, weight: .regular))
+            HStack(alignment: .center, spacing: 10) {
+                Text(caption)
+                    .font(Design.Typography.ui(11, weight: .regular))
+                    .foregroundStyle(Design.Palette.inkTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+                // A line of one bar has nothing to look closer at, and the control stays out of the way.
+                if model.canZoomIn || model.canZoomOut { zoomControl }
+            }
+        }
+    }
+
+    /// How much of the line the lane shows, and a step either way. The menu's Zoom In and Zoom Out
+    /// and a pinch on the lane take the same steps; this is where they are found.
+    private var zoomControl: some View {
+        HStack(spacing: 4) {
+            RollChip("−", isOn: false) { model.zoomOut() }
+                .disabled(!model.canZoomOut)
+                .opacity(model.canZoomOut ? 1 : 0.4)
+                .help(model.canZoomOut ? "More of the line across the lane (⌘−)" : "The whole line is across the lane")
+                .accessibilityLabel("Zoom out")
+            Text(model.barsAcross.map { "\($0) of \(model.bars) bars" } ?? "Whole line")
+                .font(Design.Typography.numeric(11))
                 .foregroundStyle(Design.Palette.inkTertiary)
-                .fixedSize(horizontal: false, vertical: true)
+                .help("How much of the line is across the lane. Pinch on the lane, or ⌘= and ⌘−; Zoom to Fit in the View menu shows the whole line.")
+            RollChip("+", isOn: false) { model.zoomIn() }
+                .disabled(!model.canZoomIn)
+                .opacity(model.canZoomIn ? 1 : 0.4)
+                .help(model.canZoomIn ? "Closer: fewer bars across the lane, every beat wider (⌘=)" : "One bar across is as close as the lane looks")
+                .accessibilityLabel("Zoom in")
         }
     }
 
@@ -447,7 +479,8 @@ struct NoteLane: View {
         let floor = NoteLaneLayout.minimumHeight(rows: model.register.count)
         return GeometryReader { geometry in
             let register = model.register
-            let layout = NoteLaneLayout(size: geometry.size, rows: register.count, beats: model.totalBeats)
+            let layout = NoteLaneLayout(size: geometry.size, rows: register.count, beats: model.totalBeats,
+                                        beatsAcross: model.beatsAcross)
 
             HStack(alignment: .top, spacing: 0) {
                 labels(register: register, layout: layout)
@@ -458,10 +491,16 @@ struct NoteLane: View {
                 // scroll view around it would be one more thing between a click and its note.
                 if layout.scrolls {
                     ScrollView(.horizontal, showsIndicators: true) { content }
+                        .scrollPosition($scrollPosition)
+                        .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.x } action: { _, x in scrollX = x }
                         .frame(width: layout.visibleWidth, height: layout.height)
                 } else {
                     content
                 }
+            }
+            .gesture(pinch)
+            .onChange(of: model.barsAcross) { before, after in
+                keepPlace(from: before, to: after, size: geometry.size, rows: register.count)
             }
         }
         .frame(minHeight: floor, idealHeight: floor, maxHeight: fills ? .infinity : floor)
@@ -475,6 +514,41 @@ struct NoteLane: View {
             model.clearSelection()
             return .handled
         }
+    }
+
+    /// A pinch on the trackpad steps the zoom: closer as the fingers spread, wider as they close,
+    /// a level for every half again of magnification. A step the lane cannot take is not counted,
+    /// so spreading past one bar and closing back lands where the pinch began, not two levels wider.
+    private var pinch: some Gesture {
+        MagnifyGesture(minimumScaleDelta: 0.05)
+            .onChanged { value in
+                let steps = Int((log(Double(value.magnification)) / log(1.5)).rounded(.towardZero))
+                while pinchSteps < steps, model.canZoomIn { model.zoomIn(); pinchSteps += 1 }
+                while pinchSteps > steps, model.canZoomOut { model.zoomOut(); pinchSteps -= 1 }
+            }
+            .onEnded { _ in pinchSteps = 0 }
+    }
+
+    /// A zoom keeps its place. The selected note stays in view, centred; with none selected, the
+    /// beat under the middle of the view stays under it. Without this the scroll view clamped its
+    /// offset and every step read as a jump to somewhere else in the line.
+    private func keepPlace(from before: Int?, to after: Int?, size: CGSize, rows: Int) {
+        let beats = model.totalBeats
+        let across = { (bars: Int?) in bars.map { Double($0 * model.beatsPerBar) } }
+        let was = NoteLaneLayout(size: size, rows: rows, beats: beats, beatsAcross: across(before))
+        let now = NoteLaneLayout(size: size, rows: rows, beats: beats, beatsAcross: across(after))
+        let anchor: Double
+        if let index = model.selectedNote, model.notes.indices.contains(index) {
+            let note = model.notes[index]
+            anchor = note.start + note.duration / 2
+        } else {
+            // Without a scroll view the lane is at its start, whatever the last one left behind.
+            let x = was.scrolls ? scrollX : 0
+            anchor = Double((x + was.visibleWidth / 2) / was.beatWidth)
+        }
+        let furthest = max(0, now.gridWidth - now.visibleWidth)
+        let x = min(furthest, max(0, CGFloat(anchor) * now.beatWidth - now.visibleWidth / 2))
+        scrollPosition.scrollTo(x: x)
     }
 
     /// The pitch names down the left, which stay put while a long line scrolls under them.
