@@ -196,6 +196,17 @@ struct FrameCommands: Commands {
                 .keyboardShortcut("z", modifiers: [.command, .shift])
         }
 
+        // Cut, Copy and Paste are the system's, and reach whatever has keyboard focus: a text field,
+        // or the Piano roll's lane, which puts its selected notes on the pasteboard and takes them
+        // back. Duplicate sits beside them and reaches the surface in front, as Undo does: the
+        // selection laid again right after itself, no pasteboard involved.
+        CommandGroup(after: .pasteboard) {
+            let duplicator = app.bench.active.flatMap { SurfaceWiring.shared.duplicator(for: $0) }
+            Button("Duplicate") { duplicator?.duplicateSelection() }
+                .keyboardShortcut("d", modifiers: .command)
+                .disabled(!(duplicator?.canDuplicate ?? false))
+        }
+
         CommandGroup(replacing: .saveItem) {
             // Replacing the save group took the system's Close with it: ⌘W did nothing, even in the
             // Field Guide's window.

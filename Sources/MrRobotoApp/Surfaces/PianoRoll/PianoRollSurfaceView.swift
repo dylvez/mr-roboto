@@ -400,15 +400,19 @@ struct KeptNote: View {
 // MARK: - The lane
 
 /// The notes over the bar, with the kicks under them. Beats across, pitches down (high at the
-/// top). Drag a note to move it, its right edge to lengthen it; click a note to select it and
-/// Delete removes it (double-click does too); click an empty cell to add.
+/// top). Click a note to select it, shift-click to add another, drag over empty space to select
+/// what the box covers; drag any selected note to move them all, its right edge to lengthen it;
+/// Delete removes the selection (a double-click removes one note); click an empty cell to add.
 struct NoteLane: View {
     @Bindable var model: PianoRollModel
     /// Whether the lane takes whatever height the surface has spare. Where the work scrolls it does
     /// not, and the lane is drawn at its floor.
     var fills = true
 
+    /// The drag in progress on a note: the selection moving, or one note's right edge.
     @State private var drag: Drag?
+    /// The box being drawn over empty space, in the grid's points.
+    @State private var marquee: Marquee?
     /// How many zoom steps the pinch in progress has taken, so a pinch that goes on steps again
     /// rather than once a frame, and one that comes back undoes its own steps and no more.
     @State private var pinchSteps = 0
@@ -421,10 +425,20 @@ struct NoteLane: View {
 
     private struct Drag {
         var index: Int
-        var originalStart: Double
-        var originalPitch: Int
         var originalDuration: Double
         var resizing: Bool
+    }
+
+    /// Where the box began and where it is now, and what was selected when it began — kept under
+    /// it with shift held, and otherwise replaced by what the box covers.
+    private struct Marquee {
+        var origin: CGPoint
+        var current: CGPoint
+        var base: Set<Int>
+        var rect: CGRect {
+            CGRect(x: min(origin.x, current.x), y: min(origin.y, current.y),
+                   width: abs(current.x - origin.x), height: abs(current.y - origin.y))
+        }
     }
 
     var body: some View {
@@ -463,14 +477,30 @@ struct NoteLane: View {
         }
     }
 
-    /// Says what the gestures do, because none of them is labelled. The selected note is named so
-    /// Delete is never a guess about what it will remove.
+    /// Says what the gestures do, because none of them is labelled. The selection is named — the
+    /// note, or how many — so Delete is never a guess about what it will remove.
     private var caption: String {
+        let count = model.selectedNotes.count
         if let index = model.selectedNote, model.notes.indices.contains(index) {
             let note = model.notes[index]
-            return "\(note.pitch.name()) at \(place(of: note)) selected — Delete removes it, Escape clears the selection. Drag to move, drag the right edge to lengthen."
+            return "\(note.pitch.name()) at \(place(of: note)) selected — Delete removes it, ⌘D lays it again after itself, ⌘C copies it. "
+                + "Shift-click adds another, or drag over empty space to select several; Escape clears the selection."
         }
-        return "Click a note to select it; Delete or a double-click removes it. Drag to move, drag the right edge to lengthen; click an empty cell to add a note."
+        if count > 1 {
+            return "\(count) notes selected\(span) — Delete removes them, ⌘D lays them again after the last, ⌘C copies them; "
+                + "drag any of them to move them all. Shift-click adds or removes one; Escape clears the selection."
+        }
+        return "Click a note to select it, or drag over empty space to select what the box covers. Drag to move, "
+            + "drag the right edge to lengthen; click an empty cell to add a note, and ⌘V pastes there."
+    }
+
+    /// Where the selection is, as a player counts: "in bar 3", or "from bar 1 to bar 2".
+    private var span: String {
+        guard let span = model.selectionSpan else { return "" }
+        let perBar = Double(model.beatsPerBar)
+        let first = Int(span.lowerBound / perBar) + 1
+        let last = Int(max(span.lowerBound, span.upperBound - 0.001) / perBar) + 1
+        return first == last ? " in bar \(first)" : " from bar \(first) to bar \(last)"
     }
 
     private var lane: some View {
@@ -507,13 +537,27 @@ struct NoteLane: View {
         .focusable()
         .focusEffectDisabled()
         .focused($isFocused)
-        .onKeyPress(.delete) { model.deleteSelectedNote(); return .handled }
-        .onKeyPress(.deleteForward) { model.deleteSelectedNote(); return .handled }
+        .onKeyPress(.delete) { model.deleteSelection(); return .handled }
+        .onKeyPress(.deleteForward) { model.deleteSelection(); return .handled }
         .onKeyPress(.escape) {
-            guard model.selectedNote != nil else { return .ignored }
+            guard !model.selectedNotes.isEmpty else { return .ignored }
             model.clearSelection()
             return .handled
         }
+        // The Edit menu's Cut, Copy, Paste and Select All, once the lane has focus: the selection
+        // onto the pasteboard in both of the clip's forms, and a clip off it onto the caret. Paste
+        // is offered only while the pasteboard holds notes, in either form.
+        .onCopyCommand { model.clipOfSelection.map { [$0.itemProvider] } ?? [] }
+        .onCutCommand {
+            guard let clip = model.clipOfSelection else { return [] }
+            model.deleteSelection()
+            return [clip.itemProvider]
+        }
+        .onPasteCommand(of: [NoteClip.contentType, .utf8PlainText, .plainText],
+                        validator: { _ in model.canPaste ? NoteClip(reading: .general) : nil }) { clip in
+            model.paste(clip)
+        }
+        .onCommand(#selector(NSText.selectAll(_:))) { model.selectAll() }
     }
 
     /// A pinch on the trackpad steps the zoom: closer as the fingers spread, wider as they close,
@@ -529,18 +573,17 @@ struct NoteLane: View {
             .onEnded { _ in pinchSteps = 0 }
     }
 
-    /// A zoom keeps its place. The selected note stays in view, centred; with none selected, the
-    /// beat under the middle of the view stays under it. Without this the scroll view clamped its
-    /// offset and every step read as a jump to somewhere else in the line.
+    /// A zoom keeps its place. The selection stays in view, its middle centred; with nothing
+    /// selected, the beat under the middle of the view stays under it. Without this the scroll view
+    /// clamped its offset and every step read as a jump to somewhere else in the line.
     private func keepPlace(from before: Int?, to after: Int?, size: CGSize, rows: Int) {
         let beats = model.totalBeats
         let across = { (bars: Int?) in bars.map { Double($0 * model.beatsPerBar) } }
         let was = NoteLaneLayout(size: size, rows: rows, beats: beats, beatsAcross: across(before))
         let now = NoteLaneLayout(size: size, rows: rows, beats: beats, beatsAcross: across(after))
         let anchor: Double
-        if let index = model.selectedNote, model.notes.indices.contains(index) {
-            let note = model.notes[index]
-            anchor = note.start + note.duration / 2
+        if let span = model.selectionSpan {
+            anchor = (span.lowerBound + span.upperBound) / 2
         } else {
             // Without a scroll view the lane is at its start, whatever the last one left behind.
             let x = was.scrolls ? scrollX : 0
@@ -657,7 +700,9 @@ struct NoteLane: View {
                     .shadow(color: LaneClass.kick.color.opacity(0.6), radius: 3)
                     .offset(x: CGFloat(beat) * layout.beatWidth - 1, y: layout.kickLaneTop + 3)
             }
-            // Empty-cell clicks add a note, on the pitch whose row is under the pointer.
+            // Empty-cell clicks add a note, on the pitch whose row is under the pointer. A drag
+            // from an empty cell draws a box instead, and the notes it covers are the selection:
+            // the tap fails once the drag has moved, so a click that stays put still adds a note.
             Color.clear
                 .contentShape(Rectangle())
                 .frame(width: layout.gridWidth, height: layout.rowsHeight)
@@ -667,6 +712,7 @@ struct NoteLane: View {
                     let midi = register.upperBound - layout.row(atY: location.y)
                     model.addNote(pitch: midi, at: beat)
                 }
+                .gesture(marqueeDrag(register: register, layout: layout))
             // The notes. The selected one is outlined in ink so it reads apart from its
             // neighbours, not only by a shade of the accent. A note on the chord under it is lit and
             // glows; one between the chord's notes is drawn hollow, so what the Melodist counts as
@@ -674,7 +720,7 @@ struct NoteLane: View {
             ForEach(Array(model.notes.enumerated()), id: \.offset) { index, note in
                 let row = register.upperBound - note.pitch.midi
                 let isGhost = note.velocity < 56
-                let isSelected = model.selectedNote == index
+                let isSelected = model.selectedNotes.contains(index)
                 let onChord = chords.chord(at: note.start + 0.001).pitchClasses.contains(note.pitch.pitchClass)
                 let lit = onChord
                 RoundedRectangle(cornerRadius: 2)
@@ -691,14 +737,55 @@ struct NoteLane: View {
                     .onTapGesture(count: 2) { model.deleteNote(at: index) }
                     .onTapGesture {
                         isFocused = true
-                        model.select(index)
+                        // Shift (or ⌘) puts the note into the selection or takes it out; a plain
+                        // click makes it the selection.
+                        if NSEvent.modifierFlags.intersection([.shift, .command]).isEmpty {
+                            model.select(index)
+                        } else {
+                            model.toggle(index)
+                        }
                         model.audition(note)
                     }
                     .gesture(noteDrag(index: index, note: note, beatWidth: layout.beatWidth, rowHeight: layout.rowHeight))
-                    .help("\(note.pitch.name()) · \(place(of: note)) · \(String(format: "%.2f", note.duration)) beats · click to select, Delete to remove")
+                    .help("\(note.pitch.name()) · \(place(of: note)) · \(String(format: "%.2f", note.duration)) beats · click to select, shift-click to add, Delete to remove")
                     .accessibilityLabel("\(note.pitch.name()) at \(place(of: note))\(isSelected ? ", selected" : "")")
             }
+            // The box, while it is drawn: the accent's wash, so it reads as the selection it makes.
+            if let marquee {
+                let box = marquee.rect
+                Rectangle()
+                    .fill(Design.Palette.accent.opacity(0.12))
+                    .overlay(Rectangle().strokeBorder(Design.Palette.accent, lineWidth: 1))
+                    .frame(width: max(1, box.width), height: max(1, box.height))
+                    .offset(x: box.minX, y: box.minY)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
         }
+    }
+
+    /// A drag over empty space draws a box, and the notes it covers — any part of them, on a pitch
+    /// in its rows — are the selection as it goes. With shift held they join what was selected.
+    /// Where the box began is where the next paste lands.
+    private func marqueeDrag(register: ClosedRange<Int>, layout: NoteLaneLayout) -> some Gesture {
+        DragGesture(minimumDistance: 3)
+            .onChanged { value in
+                if marquee == nil {
+                    isFocused = true
+                    let keeps = !NSEvent.modifierFlags.intersection([.shift, .command]).isEmpty
+                    marquee = Marquee(origin: value.startLocation, current: value.location,
+                                      base: keeps ? model.selectedNotes : [])
+                    model.placeCaret(at: Double(value.startLocation.x / layout.beatWidth))
+                }
+                marquee?.current = value.location
+                guard let marquee else { return }
+                let box = marquee.rect
+                let beats = max(0, Double(box.minX / layout.beatWidth))...max(0, Double(box.maxX / layout.beatWidth))
+                let high = register.upperBound - layout.row(atY: box.minY)
+                let low = register.upperBound - layout.row(atY: box.maxY)
+                model.select(beats: beats, pitches: min(low, high)...max(low, high), over: marquee.base)
+            }
+            .onEnded { _ in marquee = nil }
     }
 
     /// Where a note starts, as a player counts: "bar 3, beat 2.50". A line longer than a bar
@@ -710,24 +797,34 @@ struct NoteLane: View {
         return "bar \(bar + 1), beat \(String(format: "%.2f", beat + 1))"
     }
 
+    /// A drag on a note moves the selection — the note becomes it first, if it was not in — by the
+    /// whole translation since the drag began, so every frame is a place and not a step. A drag
+    /// that begins at the right edge lengthens that one note instead.
     private func noteDrag(index: Int, note: NoteEvent, beatWidth: CGFloat, rowHeight: CGFloat) -> some Gesture {
         DragGesture(minimumDistance: 3)
             .onChanged { value in
                 if drag == nil {
+                    isFocused = true
                     let noteWidth = CGFloat(note.duration) * beatWidth
-                    drag = Drag(index: index, originalStart: note.start, originalPitch: note.pitch.midi,
-                                originalDuration: note.duration, resizing: value.startLocation.x > noteWidth - 8)
+                    let resizing = value.startLocation.x > noteWidth - 8
+                    drag = Drag(index: index, originalDuration: note.duration, resizing: resizing)
+                    if !resizing {
+                        if !model.selectedNotes.contains(index) { model.select(index) }
+                        model.beginMove()
+                    }
                 }
                 guard let d = drag else { return }
                 if d.resizing {
                     model.resizeNote(at: d.index, toDuration: d.originalDuration + Double(value.translation.width / beatWidth))
                 } else {
-                    let start = d.originalStart + Double(value.translation.width / beatWidth)
-                    let pitch = d.originalPitch - Int((value.translation.height / rowHeight).rounded())
-                    model.moveNote(at: d.index, toStart: start, pitch: pitch)
+                    model.moveSelection(by: Double(value.translation.width / beatWidth),
+                                        semitones: -Int((value.translation.height / rowHeight).rounded()))
                 }
             }
-            .onEnded { _ in drag = nil }
+            .onEnded { _ in
+                if drag?.resizing == false { model.endMove() }
+                drag = nil
+            }
     }
 }
 

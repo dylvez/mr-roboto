@@ -672,6 +672,12 @@ final class SurfaceWiring {
         item.kind == .pianoRoll ? rolls[item.id] : nil
     }
 
+    /// ⌘D on the surface in front: the Piano roll's selection laid again after itself. Nil for a
+    /// surface with no selection to duplicate, and for one the bench has not drawn yet.
+    func duplicator(for item: BenchItem) -> (any DuplicatesItsSelection)? {
+        item.kind == .pianoRoll ? rolls[item.id] : nil
+    }
+
     /// The first bound version that actually holds a groove. A grid opened on a sample (say, from
     /// the ledger) is an empty grid rather than a crash.
     private func boundGroove(for item: BenchItem, app: AppState) -> PartVersion? {

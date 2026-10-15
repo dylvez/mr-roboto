@@ -29,8 +29,10 @@ public struct PianoRollSurface: Surface {
 /// a rail two panels away.
 ///
 /// Notes are edited in place: drag to move (across for time, up and down for pitch), drag the
-/// right edge to lengthen, double-click to delete, click an empty cell to add. An edit refreshes
-/// the readings and keeps itself a moment later.
+/// right edge to lengthen, double-click to delete, click an empty cell to add. Several at once: a
+/// marquee over empty space, or shift-click, picks out a set, and the set moves and goes together,
+/// is laid again after itself (⌘D), and goes to the pasteboard and comes back from it (⌘C, ⌘V).
+/// An edit refreshes the readings and keeps itself a moment later.
 ///
 /// The line has a length of its own, in bars, that is not the groove's. A four-bar melody or an
 /// eight-bar bass phrase over a one-bar groove is a line the roll can hold: the groove is read
@@ -114,10 +116,14 @@ public final class PianoRollModel {
     /// lets the writer replace the line; nothing else does.
     public var leversAreHeld: Bool { writesFromLevers && isHandEdited && groove != nil }
 
-    /// The note a click picked out, as an index into `notes`. Delete removes it, Escape clears it.
-    /// Dropped whenever the list is replaced or re-ordered, because an index into a different list
-    /// is a different note.
-    public private(set) var selectedNote: Int?
+    /// The notes a click, a marquee or a shift-click picked out, as indices into `notes`. Delete
+    /// removes them, a drag on any of them moves them all, Escape clears them. Dropped whenever the
+    /// list is replaced or re-ordered, because an index into a different list is a different note.
+    public private(set) var selectedNotes: Set<Int> = []
+
+    /// Where the lane was last clicked on empty space, in beats: where a paste lands. Nil until a
+    /// click, and then a paste lands after the line.
+    public private(set) var caret: Double?
 
     /// How close the lane is looked at, as chosen: this many bars across its width, or nil for the
     /// whole line. Kept as chosen through a line shortened under it, so a line doubled back is
@@ -231,7 +237,7 @@ public final class PianoRollModel {
             earlyAlternation = newValue.earlyAlternation
             seed = newValue.seed
             isHandEdited = newValue.isHandEdited
-            selectedNote = nil
+            selectedNotes = []
             refreshReadings()
         }
     }
@@ -266,7 +272,7 @@ public final class PianoRollModel {
         parked[.bass] = (notes, lengthInBars)
         mode = .melody
         notes = []
-        selectedNote = nil
+        selectedNotes = []
         refreshReadings()
     }
 
@@ -300,7 +306,7 @@ public final class PianoRollModel {
         willEdit("mode")
         parked[mode] = (notes, lengthInBars)
         mode = value
-        selectedNote = nil
+        selectedNotes = []
         defer { settle() }
         if let back = parked[value] {
             notes = back.notes
@@ -516,7 +522,7 @@ public final class PianoRollModel {
         sound = line.sound ?? sound
         lengthInBars = line.lengthInBars ?? lengthInBars
         isHandEdited = false
-        selectedNote = nil
+        selectedNotes = []
         refreshReadings()
     }
 
@@ -645,7 +651,7 @@ public final class PianoRollModel {
             return
         }
         trimToLength()
-        selectedNote = nil
+        selectedNotes = []
         refreshReadings()
     }
 
@@ -667,7 +673,7 @@ public final class PianoRollModel {
         notes += copies
         notes.sort { ($0.start, $0.pitch.midi) < ($1.start, $1.pitch.midi) }
         if !copies.isEmpty { isHandEdited = true }
-        selectedNote = nil
+        selectedNotes = []
         refreshReadings()
     }
 
@@ -699,7 +705,7 @@ public final class PianoRollModel {
         notes = varied.notes.sorted { ($0.start, $0.pitch.midi) < ($1.start, $1.pitch.midi) }
         lengthInBars = varied.loopBars(beatsPerBar: beatsPerBar)
         isHandEdited = true
-        selectedNote = nil
+        selectedNotes = []
         refreshReadings()
     }
 
@@ -729,7 +735,7 @@ public final class PianoRollModel {
         defer { didEdit() }
         notes = tightened
         isHandEdited = true
-        selectedNote = nil
+        selectedNotes = []
         refreshReadings()
     }
 
@@ -775,13 +781,24 @@ public final class PianoRollModel {
         let start = max(0, min(totalBeats - 0.25, Self.snap(beat)))
         let note = NoteEvent(pitch: Pitch(midi: pitch), start: start,
                              duration: max(0.125, min(duration, totalBeats - start)), velocity: 100)
-        notes.append(note)
-        notes.sort { ($0.start, $0.pitch.midi) < ($1.start, $1.pitch.midi) }
         isHandEdited = true
-        // The new note is the selection, so a stray click is one Delete from undone.
-        selectedNote = notes.firstIndex(of: note)
+        // The new note is the selection, so a stray click is one Delete from undone; and the click
+        // is where a paste lands next.
+        selectedNotes = place([note])
+        caret = start
         refreshReadings()
         audition(note)
+    }
+
+    /// `added` into the list, in the order the line sounds, and where they landed: the indices a
+    /// selection of them is. Two notes alike are told apart by their place in the list, so a copy
+    /// laid over its original is found and not its original.
+    private func place(_ added: [NoteEvent]) -> Set<Int> {
+        let all = notes.enumerated().map { (note: $0.element, added: false, order: $0.offset) }
+            + added.enumerated().map { (note: $0.element, added: true, order: notes.count + $0.offset) }
+        let sorted = all.sorted { ($0.note.start, $0.note.pitch.midi, $0.order) < ($1.note.start, $1.note.pitch.midi, $1.order) }
+        notes = sorted.map(\.note)
+        return Set(sorted.indices.filter { sorted[$0].added })
     }
 
     public func moveNote(at index: Int, toStart start: Double, pitch: Int) {
@@ -813,7 +830,8 @@ public final class PianoRollModel {
         defer { didEdit() }
         notes.remove(at: index)
         isHandEdited = true
-        selectedNote = nil
+        // The rest of the selection stays selected, a place further up the list past the gap.
+        selectedNotes = Set(selectedNotes.compactMap { $0 == index ? nil : ($0 > index ? $0 - 1 : $0) })
         refreshReadings()
     }
 
@@ -851,7 +869,7 @@ public final class PianoRollModel {
         takeLimit = Double(min(Self.longestLine, bars ?? Self.longestLine) * beatsPerBar)
         takeHeld = [:]
         takeLanded = 0
-        selectedNote = nil
+        selectedNotes = []
         isTaking = true
     }
 
@@ -952,18 +970,220 @@ public final class PianoRollModel {
 
     // MARK: Selection
 
-    /// A click on a note. An index the list does not have clears the selection rather than
-    /// pointing at nothing.
-    public func select(_ index: Int?) {
-        selectedNote = index.flatMap { notes.indices.contains($0) ? $0 : nil }
+    /// The selected note when there is exactly one: what the caption names. Nil with none, and
+    /// nil with several.
+    public var selectedNote: Int? { selectedNotes.count == 1 ? selectedNotes.first : nil }
+
+    /// The selected notes themselves, in the order they sound.
+    public var selection: [NoteEvent] {
+        selectedNotes.sorted().compactMap { notes.indices.contains($0) ? notes[$0] : nil }
+            .sorted { ($0.start, $0.pitch.midi) < ($1.start, $1.pitch.midi) }
     }
 
-    public func clearSelection() { selectedNote = nil }
+    /// The beats the selection covers, from the earliest start to the latest end. Nil with nothing
+    /// selected. A zoom keeps the middle of it in view.
+    public var selectionSpan: ClosedRange<Double>? {
+        let picked = selection
+        guard let first = picked.map(\.start).min(), let last = picked.map(\.end).max() else { return nil }
+        return first...max(first, last)
+    }
 
-    /// The Delete key. Nothing selected, nothing removed.
-    public func deleteSelectedNote() {
-        guard let selectedNote else { return }
-        deleteNote(at: selectedNote)
+    /// A click on a note: that note, alone. An index the list does not have clears the selection
+    /// rather than pointing at nothing.
+    public func select(_ index: Int?) {
+        selectedNotes = index.flatMap { notes.indices.contains($0) ? [$0] : nil } ?? []
+    }
+
+    /// A shift-click: the note joins the selection, or leaves it if it was in.
+    public func toggle(_ index: Int) {
+        guard notes.indices.contains(index) else { return }
+        if selectedNotes.contains(index) { selectedNotes.remove(index) } else { selectedNotes.insert(index) }
+    }
+
+    /// The marquee: every note that sounds within `beats` — any part of it, so a note that starts
+    /// before the box and rings into it is covered — on a pitch within `pitches`. Called on every
+    /// frame of the drag, so the box can shrink; `base` is what was selected when it began, which
+    /// shift keeps and a plain drag does not.
+    public func select(beats: ClosedRange<Double>, pitches: ClosedRange<Int>, over base: Set<Int> = []) {
+        let covered = notes.indices.filter { index in
+            let note = notes[index]
+            return note.start < beats.upperBound && note.end > beats.lowerBound && pitches.contains(note.pitch.midi)
+        }
+        selectedNotes = Set(covered).union(base.filter { notes.indices.contains($0) })
+    }
+
+    /// Every note: the Edit menu's Select All.
+    public func selectAll() { selectedNotes = Set(notes.indices) }
+
+    public func clearSelection() { selectedNotes = [] }
+
+    /// The Delete key: the selection goes, one step of ⌘Z however many it was. Nothing selected,
+    /// nothing removed.
+    public func deleteSelection() {
+        let going = selectedNotes.filter { notes.indices.contains($0) }
+        guard !going.isEmpty, !isTaking else { return }
+        willEdit("delete")
+        defer { didEdit() }
+        notes = notes.indices.filter { !going.contains($0) }.map { notes[$0] }
+        isHandEdited = true
+        selectedNotes = []
+        refreshReadings()
+    }
+
+    /// The same, by the name the key had when it removed one note.
+    public func deleteSelectedNote() { deleteSelection() }
+
+    // MARK: Moving the selection
+
+    /// Where the selection stood when a drag of it began, and the line as it was, for ⌘Z. Each
+    /// frame of the drag is the whole translation from there and not a step from the last frame,
+    /// so a drag that comes back lands where it started; and the step of ⌘Z is recorded on the
+    /// first frame that moves something, so a drag that moves nothing leaves nothing to undo.
+    private var moveOrigin: (notes: [NoteEvent], state: RollState, recorded: Bool, semitones: Int)?
+
+    /// A drag of the selection begins. `moveSelection` begins one on its own when none has.
+    public func beginMove() {
+        guard !isTaking else { return }
+        moveOrigin = (notes, state, false, 0)
+    }
+
+    /// The selection moved as one: every selected note `beats` later and `semitones` up from where
+    /// it stood when the drag began. The beats are snapped to the sixteenth, as a note dragged alone
+    /// is, and the same for all of them — so the lag a line carries, and the rhythm the notes make
+    /// between them, keep. Held inside the line and the keyboard as a group: the set stops at the
+    /// last sixteenth that keeps its earliest note at or after the start and its latest at or before
+    /// the end — a line behind the kick stays behind it at the start of the line too — and at the
+    /// lowest and highest pitches likewise.
+    public func moveSelection(by beats: Double, semitones: Int) {
+        guard !isTaking else { return }
+        if moveOrigin == nil { beginMove() }
+        guard var origin = moveOrigin else { return }
+        let picked = selectedNotes.filter { origin.notes.indices.contains($0) && notes.indices.contains($0) }.sorted()
+        guard let firstStart = picked.map({ origin.notes[$0].start }).min(),
+              let lastEnd = picked.map({ origin.notes[$0].end }).max(),
+              let lowest = picked.map({ origin.notes[$0].pitch.midi }).min(),
+              let highest = picked.map({ origin.notes[$0].pitch.midi }).max() else { return }
+        let grid = 0.25
+        var shift = Self.snap(beats, to: grid)
+        let earliest = -firstStart, latest = max(0, totalBeats - lastEnd)
+        if shift < earliest { shift = (earliest / grid).rounded(.up) * grid }
+        if shift > latest { shift = (latest / grid).rounded(.down) * grid }
+        let rise = min(127 - highest, max(-lowest, semitones))
+        var moved = notes
+        for index in picked {
+            var note = origin.notes[index]
+            note.start += shift
+            note.pitch = Pitch(midi: note.pitch.midi + rise)
+            moved[index] = note
+        }
+        guard moved != notes else { return }
+        if !origin.recorded {
+            history.record(origin.state)
+            lastEdit = nil
+            origin.recorded = true
+        }
+        notes = moved
+        isHandEdited = true
+        refreshReadings()
+        // Heard as the pitch changes, on the earliest of them: the note itself, dragged alone.
+        if rise != origin.semitones, let first = picked.first { audition(moved[first]) }
+        origin.semitones = rise
+        moveOrigin = origin
+    }
+
+    /// The drag ends: the line keeps itself, if anything moved.
+    public func endMove() {
+        guard let origin = moveOrigin else { return }
+        moveOrigin = nil
+        if origin.recorded { didEdit() }
+    }
+
+    // MARK: Duplicating, and the pasteboard
+
+    /// How far past a beat a note may ring and still count as ending on it: a thirty-second. A line
+    /// behind the kick ends its last note a hair over the bar, and a duplicate of it that waited
+    /// for the next whole beat would leave a beat's gap in every copy.
+    nonisolated static let ringOver = 0.125
+
+    /// How far on the copies ⌘D lays go: a whole number of beats, the fewest that put the first copy
+    /// after the last selected note's end. Whole beats, so each copy keeps its place in its beat and
+    /// a line behind the kick stays behind it. Nil with nothing selected.
+    private var duplicateOffset: Double? {
+        guard let span = selectionSpan else { return nil }
+        return max(1, (span.upperBound - span.lowerBound - Self.ringOver).rounded(.up))
+    }
+
+    /// Whether ⌘D has room: something is selected, and its copies would start inside the longest line.
+    public var canDuplicate: Bool {
+        guard !isTaking, let span = selectionSpan, let offset = duplicateOffset else { return false }
+        return span.lowerBound + offset < Double(Self.longestLine * beatsPerBar) - 1e-9
+    }
+
+    /// ⌘D: the selection again, right after itself, and the copies are the selection — so ⌘D again
+    /// lays a third. The line grows by whole bars to hold them, up to the longest line; a copy past
+    /// that is not made, and one that rings over it is cut there.
+    public func duplicateSelection() {
+        guard canDuplicate, let offset = duplicateOffset else { return }
+        let copies = selection.map { note in
+            NoteEvent(pitch: note.pitch, start: note.start + offset, duration: note.duration, velocity: note.velocity)
+        }
+        lay(copies, as: "duplicate-\(notes.count)")
+    }
+
+    /// The selection as a clip for the pasteboard: the notes in beats from the beat the first of
+    /// them sits in, so the lag a line carries is kept through a paste. Nil with nothing selected.
+    public var clipOfSelection: NoteClip? {
+        let picked = selection
+        guard !picked.isEmpty else { return nil }
+        return NoteClip(lifting: picked, beatsPerBar: beatsPerBar)
+    }
+
+    /// A click on empty space, at `beat`: where the next paste lands.
+    public func placeCaret(at beat: Double) {
+        caret = max(0, min(totalBeats, beat))
+    }
+
+    /// Where a paste lands: the beat the lane was last clicked on, else right after the line's last
+    /// note, on the beat, as a duplicate lands. The first beat of an empty line.
+    public var pasteLanding: Double {
+        if let caret { return max(0, Self.snap(caret, to: 1)) }
+        guard let last = notes.map(\.end).max() else { return 0 }
+        return max(0, (last - Self.ringOver).rounded(.up))
+    }
+
+    /// Whether a paste would land inside the longest line.
+    public var canPaste: Bool { !isTaking && pasteLanding < Double(Self.longestLine * beatsPerBar) - 1e-9 }
+
+    /// ⌘V: the clip laid with its first beat on `pasteLanding`, the pasted notes the selection, and
+    /// the caret moved past them, so ⌘V again lays the clip after the first paste as ⌘D would.
+    /// Cut to the longest line as a duplicate is, and the line grown to hold it.
+    public func paste(_ clip: NoteClip) {
+        guard canPaste, !clip.notes.isEmpty else { return }
+        let landing = pasteLanding
+        let placed = clip.notes.map { note in
+            NoteEvent(pitch: note.pitch, start: note.start + landing, duration: note.duration, velocity: note.velocity)
+        }
+        let count = notes.count
+        lay(placed, as: "paste-\(count)")
+        if notes.count != count { caret = landing + clip.lengthInBeats }
+    }
+
+    /// `added` laid into the line as one edit: cut to the longest line, the line grown by whole
+    /// bars to hold them, and the selection moved onto them. Nothing lands, nothing changes.
+    private func lay(_ added: [NoteEvent], as kind: String) {
+        let limit = Double(Self.longestLine * beatsPerBar)
+        let fitted = added.compactMap { note -> NoteEvent? in
+            guard note.start < limit - 1e-9 else { return nil }
+            return NoteEvent(pitch: note.pitch, start: note.start,
+                             duration: max(0.125, min(note.duration, limit - note.start)), velocity: note.velocity)
+        }
+        guard !fitted.isEmpty, !isTaking else { return }
+        willEdit(kind)
+        defer { didEdit() }
+        grow(toHold: (fitted.map(\.end).max() ?? 0) - Self.ringOver)
+        selectedNotes = place(fitted)
+        isHandEdited = true
+        refreshReadings()
     }
 
     /// Sixteenths, with the lag kept: snapping moves the grid part of a start and leaves the
@@ -1116,3 +1336,5 @@ extension PianoRollModel: TakesFromController {
 }
 
 extension PianoRollModel: ZoomsItsWork {}
+
+extension PianoRollModel: DuplicatesItsSelection {}
