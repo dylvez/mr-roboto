@@ -49,71 +49,7 @@ extension ChordsSurfaceView {
                 Spacer()
                 KeyField(model: model)
             }
-            VStack(alignment: .leading, spacing: 4) {
-                SmallLabel("Chords", color: Design.Palette.inkTertiary)
-                Group {
-                    if Design.isOffscreenRender {
-                        RenderedField(text: model.text, placeholder: "Dm7 G7 | Cmaj7 | Am7 | Fmaj7", font: Design.Typography.ui(14))
-                    } else {
-                        TextField("Dm7 G7 | Cmaj7 | Am7 | Fmaj7", text: $model.text)
-                            .textFieldStyle(.roundedBorder)
-                            .font(Design.Typography.ui(14))
-                    }
-                }
-                .frame(maxWidth: 520)
-                // The typo, if there is one, with its mark; the way the line reads otherwise. Once
-                // something is typed that is the primer's line, said here only where primers are.
-                if model.problem != nil || model.isDefault {
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        if model.problem != nil {
-                            Image(systemName: "exclamationmark.triangle")
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundStyle(Design.Palette.warn)
-                        }
-                        Text(model.problem ?? (model.isDefault
-                                ? "Nothing typed: the key's I–IV–V–I, a bar each. Bars are separated by |, chords in a bar share it."
-                                : "Bars are separated by |; chords in a bar share its beats. Click a bar to hear it."))
-                            .font(Design.Typography.ui(11.5, weight: .regular))
-                            .foregroundStyle(model.problem == nil ? Design.Palette.inkSecondary : Design.Palette.warn)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                // The genre's own progressions, in the sheet's key, a press away.
-                let offered = model.genreProgressions
-                if !offered.isEmpty {
-                    HStack(spacing: 6) {
-                        SmallLabel(offered[0].genre, color: Design.Palette.inkTertiary)
-                        ForEach(offered, id: \.roman) { entry in
-                            FormChip(entry.roman, isOn: model.text == entry.text) { model.use(progression: entry.text) }
-                                .help("\(entry.text) — \(entry.about)")
-                        }
-                    }
-                    .padding(.top, 2)
-                }
-                // The same sheet said another way, a move a press away: what the Harmonist's
-                // "nothing of its own" points at.
-                let ways = model.anotherWays
-                if !ways.isEmpty {
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        SmallLabel("Another way", color: Design.Palette.inkTertiary)
-                        FlowRow(spacing: 4) {
-                            ForEach(ways, id: \.move) { way in
-                                FormChip(way.move.name, isOn: false) { model.use(way: way) }
-                                    .help("\(way.progression.symbols()) — \(way.says) ⌘Z puts it back.")
-                                    .accessibilityLabel("Another way: \(way.move.name)")
-                            }
-                        }
-                    }
-                    .padding(.top, 2)
-                }
-                // What voices them. Chords used to play on the bass sampler, an octave below where
-                // they were written; now they go through whatever this names.
-                InstrumentPicker(selected: model.instrument, choose: { model.setInstrument($0) }, label: "Voiced on")
-                    .padding(.top, 4)
-                // How they are played: the two things a player decides that a lead sheet does not.
-                PlayingPicker(model: model)
-                    .padding(.top, 4)
-            }
+            ChordsControls(model: model)
             if let progression = model.progression {
                 // How each chord is voiced, for the notes drawn beside it, and the span of all of
                 // them, so a voice that climbs is seen to climb from one bar to the next.
@@ -150,6 +86,80 @@ extension ChordsSurfaceView {
             }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+}
+
+/// The sheet's controls, above the bars: the line of chords, what voices it and how it is
+/// played. Its own view so a layout test can measure what the bars sit under.
+struct ChordsControls: View {
+    @Bindable var model: ChordsModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            SmallLabel("Chords", color: Design.Palette.inkTertiary)
+            Group {
+                if Design.isOffscreenRender {
+                    RenderedField(text: model.text, placeholder: "Dm7 G7 | Cmaj7 | Am7 | Fmaj7", font: Design.Typography.ui(14))
+                } else {
+                    TextField("Dm7 G7 | Cmaj7 | Am7 | Fmaj7", text: $model.text)
+                        .textFieldStyle(.roundedBorder)
+                        .font(Design.Typography.ui(14))
+                }
+            }
+            .frame(maxWidth: 520)
+            // The typo, if there is one, with its mark; the way the line reads otherwise. Once
+            // something is typed that is the primer's line, said here only where primers are.
+            if model.problem != nil || model.isDefault {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    if model.problem != nil {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(Design.Palette.warn)
+                    }
+                    Text(model.problem ?? (model.isDefault
+                            ? "Nothing typed: the key's I–IV–V–I, a bar each. Bars are separated by |, chords in a bar share it."
+                            : "Bars are separated by |; chords in a bar share its beats. Click a bar to hear it."))
+                        .font(Design.Typography.ui(11.5, weight: .regular))
+                        .foregroundStyle(model.problem == nil ? Design.Palette.inkSecondary : Design.Palette.warn)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            // The genre's own progressions, in the sheet's key, a press away.
+            let offered = model.genreProgressions
+            if !offered.isEmpty {
+                HStack(spacing: 6) {
+                    SmallLabel(offered[0].genre, color: Design.Palette.inkTertiary)
+                    ForEach(offered, id: \.roman) { entry in
+                        FormChip(entry.roman, isOn: model.text == entry.text) { model.use(progression: entry.text) }
+                            .help("\(entry.text) — \(entry.about)")
+                    }
+                }
+                .padding(.top, 2)
+            }
+            // The same sheet said another way, a move a press away: what the Harmonist's
+            // "nothing of its own" points at.
+            let ways = model.anotherWays
+            if !ways.isEmpty {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    SmallLabel("Another way", color: Design.Palette.inkTertiary)
+                    FlowRow(spacing: 4) {
+                        ForEach(ways, id: \.move) { way in
+                            FormChip(way.move.name, isOn: false) { model.use(way: way) }
+                                .help("\(way.progression.symbols()) — \(way.says) ⌘Z puts it back.")
+                                .accessibilityLabel("Another way: \(way.move.name)")
+                        }
+                    }
+                }
+                .padding(.top, 2)
+            }
+            // What voices them. Chords used to play on the bass sampler, an octave below where
+            // they were written; now they go through whatever this names.
+            InstrumentPicker(selected: model.instrument, choose: { model.setInstrument($0) }, label: "Voiced on")
+                .padding(.top, 4)
+            // How they are played: the two things a player decides that a lead sheet does not.
+            PlayingPicker(model: model)
+                .padding(.top, 4)
+        }
     }
 }
 

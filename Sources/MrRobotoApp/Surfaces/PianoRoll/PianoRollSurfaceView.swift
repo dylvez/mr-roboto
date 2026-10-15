@@ -126,18 +126,30 @@ struct PianoRollSurfaceView: View {
         }
     }
 
-    /// The writer's levers. They wrap onto a second line on a narrow bench rather than running off
-    /// its edge: a row wider than the bench is what used to push the frame's own columns aside.
-    private var bassLevers: some View {
+    private var bassLevers: some View { BassLevers(model: model) }
+}
+
+/// The writer's levers. They wrap onto a second line on a narrow bench rather than running off
+/// its edge: a row wider than the bench is what used to push the frame's own columns aside.
+struct BassLevers: View {
+    @Bindable var model: PianoRollModel
+
+    var body: some View {
         FlowRow(spacing: 18, lineSpacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
                 RollLabel("Hands")
-                HStack(spacing: 4) {
+                // Fifteen players in a row was the widest thing on the surface. The chip names the
+                // one writing; the menu holds the rest, each saying what it does where its chip's
+                // tooltip did.
+                ChipMenu(model.lineage.name) {
                     ForEach(BassLineage.allCases, id: \.self) { lineage in
-                        RollChip(lineage.name, isOn: model.lineage == lineage) { model.setLineage(lineage) }
-                            .help("Write the line the way \(lineage.name) would")
+                        MenuChoice(lineage.name, isOn: model.lineage == lineage, help: Self.hands(lineage)) {
+                            model.setLineage(lineage)
+                        }
                     }
                 }
+                .help(Self.hands(model.lineage))
+                .accessibilityLabel("Hands: \(model.lineage.name)")
             }
             VStack(alignment: .leading, spacing: 3) {
                 RollLabel("Behind the kick")
@@ -170,43 +182,37 @@ struct PianoRollSurfaceView: View {
             }
             VStack(alignment: .leading, spacing: 3) {
                 RollLabel("Sound")
-                // Played by hand, then programmed: sixteen chips in one row was a wall.
-                ForEach(BassVoiceSpec.Family.allCases, id: \.self) { family in
-                    HStack(alignment: .firstTextBaseline, spacing: 4) {
-                        Text(family == .played ? "Played" : "Synth")
-                            .font(Design.Typography.ui(10.5, weight: .medium))
-                            .foregroundStyle(Design.Palette.inkTertiary)
-                            .frame(width: 56, alignment: .leading)
-                        FlowRow(spacing: 4) {
+                // Played by hand, then programmed, then the recordings brought in from SFZ packs:
+                // three rows of chips, thirty-six of them, were most of the surface's height.
+                let voice = BassVoiceSpec.resolve(id: model.sound)
+                ChipMenu(voice?.name ?? "Choose a sound") {
+                    ForEach(BassVoiceSpec.Family.allCases, id: \.self) { family in
+                        Section(family == .played ? "Played" : "Synth") {
                             ForEach(BassVoiceSpec.all.filter { $0.family == family }) { voice in
-                                RollChip(voice.name, isOn: model.sound == voice.id) { model.setSound(voice.id) }
-                                    .help(voice.summary)
+                                MenuChoice(voice.name, isOn: model.sound == voice.id, help: voice.summary) { model.setSound(voice.id) }
                             }
                         }
                     }
-                }
-                // Recordings brought in from SFZ packs, played as the bass.
-                let imported = model.importedSounds
-                if !imported.isEmpty {
-                    HStack(alignment: .firstTextBaseline, spacing: 4) {
-                        Text("Imported")
-                            .font(Design.Typography.ui(10.5, weight: .medium))
-                            .foregroundStyle(Design.Palette.inkTertiary)
-                            .frame(width: 56, alignment: .leading)
-                        FlowRow(spacing: 4) {
+                    let imported = model.importedSounds
+                    if !imported.isEmpty {
+                        Section("Imported") {
                             ForEach(imported) { voice in
-                                RollChip(voice.name, isOn: model.sound == voice.id) { model.setSound(voice.id) }
-                                    .help(voice.summary)
+                                MenuChoice(voice.name, isOn: model.sound == voice.id, help: voice.summary) { model.setSound(voice.id) }
                             }
                         }
                     }
                 }
-                if let voice = BassVoiceSpec.resolve(id: model.sound), !voice.summary.isEmpty {
+                .help("The sound the line plays on: a bass played by hand, a programmed one, or a recording imported from an SFZ pack. The same notes through another voice.")
+                .accessibilityLabel("Sound: \(voice?.name ?? "none chosen")")
+                if let voice, !voice.summary.isEmpty {
+                    // Two lines in a column's width, so a long summary wraps under its chip
+                    // rather than pushing the other levers onto the next line.
                     Text(voice.summary)
                         .font(Design.Typography.ui(11))
                         .foregroundStyle(Design.Palette.inkTertiary)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
+                        .frame(width: Self.summaryWidth, alignment: .leading)
                 }
             }
             VStack(alignment: .leading, spacing: 3) {
@@ -222,6 +228,17 @@ struct PianoRollSurfaceView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// The width the sound's summary wraps in. Wide enough for two lines of a long one, narrow
+    /// enough that the five levers share one row from the default window up.
+    static let summaryWidth: CGFloat = 260
+
+    /// What a player would be told about the hands: the chip's tooltip, and each menu item's.
+    static func hands(_ lineage: BassLineage) -> String {
+        "Write the line the way \(lineage.name) would: \(lineage.about)"
+    }
+}
+
+extension PianoRollSurfaceView {
     /// How long the line is, in bars, and the one-press way to make a phrase of an idea. The same
     /// in both modes: a tune is as free of the groove's length as a bass line is.
     private var lengthRow: some View {
