@@ -482,6 +482,97 @@ public final class GridModel {
         edited(from: before)
     }
 
+    // MARK: Bars and rows, lifted and put down
+
+    /// One bar of every row, as a clip. Nil for a bar the grid does not have.
+    public func clip(bar: Int) -> GridClip? {
+        guard (0..<bars).contains(bar) else { return nil }
+        let range = bar * stepsPerBar ..< (bar + 1) * stepsPerBar
+        return GridClip(stepsPerBar: stepsPerBar, bars: 1,
+                        rows: voices.map { GroovePattern(voice: $0, steps: Array(row($0)[range])) })
+    }
+
+    /// One row, every bar of it, as a clip. Nil for a voice with no row.
+    public func clip(row voice: DrumVoice) -> GridClip? {
+        guard steps[voice] != nil else { return nil }
+        return GridClip(stepsPerBar: stepsPerBar, bars: bars, rows: [GroovePattern(voice: voice, steps: row(voice))])
+    }
+
+    /// A row read as exactly the grid's length, however it was stored.
+    private func row(_ voice: DrumVoice) -> [VelocityTier] {
+        let stored = steps[voice] ?? []
+        return (0..<stepCount).map { $0 < stored.count ? stored[$0] : .rest }
+    }
+
+    /// The clip put down from `bar` on: each of its rows onto the row of the same voice — a voice
+    /// the grid has no row for gets one, so a bar with a shaker in it brings the shaker — and as
+    /// many of its bars as there are before the end; a longer clip gives up the rest. A clip from
+    /// another kind of grid lands on the nearest steps (`resampled`). One step of ⌘Z; putting down
+    /// what is already there is no edit at all.
+    public func paste(_ clip: GridClip, intoBar bar: Int) {
+        guard (0..<bars).contains(bar), !isTaking else { return }
+        let before = snapshot
+        let span = min(clip.bars, bars - bar)
+        for pattern in clip.rows {
+            if !voices.contains(pattern.voice) {
+                voices.append(pattern.voice)
+                steps[pattern.voice] = Array(repeating: .rest, count: stepCount)
+            }
+            var target = row(pattern.voice)
+            let source = Self.resampled(pattern.steps, from: clip.stepsPerBar, to: stepsPerBar)
+            for step in 0..<(span * stepsPerBar) {
+                target[bar * stepsPerBar + step] = step < source.count ? source[step] : .rest
+            }
+            steps[pattern.voice] = target
+        }
+        guard snapshot != before else { return }
+        edited(from: before)
+    }
+
+    /// The clip put down on one row: its row of the same voice, else its first, repeated bar by
+    /// bar to the grid's length — a one-bar hat on a four-bar grid is four bars of hat, as a
+    /// lengthened grid repeats — or cut at the grid's end. One step of ⌘Z.
+    public func paste(_ clip: GridClip, ontoRow voice: DrumVoice) {
+        guard steps[voice] != nil, !isTaking,
+              let pattern = clip.rows.first(where: { $0.voice == voice }) ?? clip.rows.first else { return }
+        let source = Self.resampled(pattern.steps, from: clip.stepsPerBar, to: stepsPerBar)
+        guard !source.isEmpty else { return }
+        let before = snapshot
+        steps[voice] = (0..<stepCount).map { source[$0 % source.count] }
+        guard snapshot != before else { return }
+        edited(from: before)
+    }
+
+    /// Clears one bar of every row and nothing else. One step of ⌘Z.
+    public func clear(bar: Int) {
+        guard (0..<bars).contains(bar), !isTaking else { return }
+        let before = snapshot
+        for voice in voices {
+            var target = row(voice)
+            for step in bar * stepsPerBar ..< (bar + 1) * stepsPerBar { target[step] = .rest }
+            steps[voice] = target
+        }
+        guard snapshot != before else { return }
+        edited(from: before)
+    }
+
+    /// Steps of one kind of grid on another's: every hit onto the nearest step of its bar, so
+    /// eighths put down on a triplet grid are still eight hits and a shuffle on sixteenths keeps
+    /// its lilt as near as sixteenths come. Two hits that land on one step leave the louder. The
+    /// same grid comes back as it was.
+    static func resampled(_ steps: [VelocityTier], from source: Int, to target: Int) -> [VelocityTier] {
+        guard source != target, source > 0, target > 0 else { return steps }
+        let bars = (steps.count + source - 1) / source
+        var out = Array(repeating: VelocityTier.rest, count: bars * target)
+        for (index, tier) in steps.enumerated() where tier != .rest {
+            let bar = index / source
+            let place = Double(index % source) * Double(target) / Double(source)
+            let step = bar * target + min(target - 1, Int(place.rounded(.toNearestOrAwayFromZero)))
+            if tier.velocity > out[step].velocity { out[step] = tier }
+        }
+        return out
+    }
+
     // MARK: Length
 
     /// The lengths the grid offers. Any count in `barRange` is a legal groove; these are the ones a
@@ -525,7 +616,7 @@ public final class GridModel {
     /// Every voice a row can be: the drums and hand percussion the synthesized machines have sounds
     /// for, in the order a kit lists them, and `perc`, which MIDI import writes for a note it has no
     /// voice for and which every machine plays on its shaker.
-    public static let knownVoices: [DrumVoice] = {
+    public nonisolated static let knownVoices: [DrumVoice] = {
         var voices = SynthVoiceKind.allCases.map(\.drumVoice)
         if !voices.contains(.perc) { voices.append(.perc) }
         return voices
@@ -551,7 +642,7 @@ public final class GridModel {
     }
 
     /// A voice as a person says it: "closed hat", not "closedHat"; "güiro", with its accent.
-    public static func name(of voice: DrumVoice) -> String {
+    public nonisolated static func name(of voice: DrumVoice) -> String {
         if let spoken = spoken[voice.rawValue] { return spoken }
         var words = ""
         for character in voice.rawValue {
@@ -562,7 +653,7 @@ public final class GridModel {
     }
 
     /// The voices whose names are not their words run together.
-    static let spoken: [String: String] = [
+    nonisolated static let spoken: [String: String] = [
         "highAgogo": "high agogô", "lowAgogo": "low agogô", "guiro": "güiro", "guiroLong": "güiro, long",
         "openTriangle": "triangle", "muteTriangle": "triangle, held", "cajon": "cajón", "cajonSlap": "cajón slap",
         "darbukaTek": "darbuka tek",

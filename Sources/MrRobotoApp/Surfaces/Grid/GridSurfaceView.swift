@@ -561,12 +561,20 @@ private struct StepGrid: View {
         HStack(spacing: GridLayout.stepSpacing) {
             ForEach(Array(0..<model.stepCount), id: \.self) { step in
                 let leads = step == 0 || model.startsBar(step: step)
+                let bar = step / max(1, model.stepsPerBar)
                 Text(model.rulerLabel(step: step))
                     .font(Design.Typography.numeric(9, weight: leads ? .semibold : .regular))
                     .foregroundStyle(leads ? Design.Palette.ink : Design.Palette.inkTertiary)
                     .fixedSize()
                     .padding(.leading, 2)
                     .frame(width: layout.stepWidth, height: GridLayout.rulerHeight, alignment: .leading)
+                    .contentShape(Rectangle())
+                    // The bar is lifted, put down or cleared from its number, as the row is
+                    // from its name.
+                    .contextMenu { BarItems(model: model, bar: bar) }
+                    .help(leads && model.bars > 1
+                          ? "Bar \(bar + 1). Right-click to copy, paste or clear the bar."
+                          : "Right-click to copy, paste or clear the bar.")
             }
         }
     }
@@ -622,14 +630,45 @@ private struct VoiceLabel: View {
         }
         .buttonStyle(.plain)
         .help(sounds
-              ? "Hear the \(name) at the brush's velocity. Right-click to clear the row or remove it."
-              : "The \(model.machine.name) has no sound for the \(name): the row paints and keeps, but plays nothing on this machine. Right-click to clear or remove it.")
+              ? "Hear the \(name) at the brush's velocity. Right-click to copy, paste, clear or remove the row."
+              : "The \(model.machine.name) has no sound for the \(name): the row paints and keeps, but plays nothing on this machine. Right-click to copy, paste, clear or remove it.")
         .accessibilityLabel(sounds ? "Hear the \(name)" : "\(name), silent on the \(model.machine.name)")
         .contextMenu {
-            Button("Clear the \(name) row") { model.clear(voice) }
+            RowItems(model: model, voice: voice)
+            Divider()
             Button("Remove the \(name) row") { model.removeVoice(voice) }
                 .disabled(!model.canRemoveVoice)
         }
+    }
+}
+
+/// A bar's right-click items: on its number in the ruler and on every one of its cells. Through
+/// the pasteboard, so a bar crosses grids, machines and songs, and reads as text anywhere else.
+private struct BarItems: View {
+    @Bindable var model: GridModel
+    let bar: Int
+
+    var body: some View {
+        let name = model.bars > 1 ? "bar \(bar + 1)" : "the bar"
+        Button("Copy \(name)") { model.copy(bar: bar) }
+        Button("Paste into \(name)") { model.paste(intoBar: bar) }
+            .disabled(!model.canPaste())
+        Button("Clear \(name)") { model.clear(bar: bar) }
+    }
+}
+
+/// A row's right-click items: on the voice's name and on every one of its cells. A pasted bar
+/// lands on this row by its voice, else by its first row; a one-bar clip repeats to the grid's length.
+private struct RowItems: View {
+    @Bindable var model: GridModel
+    let voice: DrumVoice
+
+    var body: some View {
+        let name = GridModel.name(of: voice)
+        Button("Copy the \(name) row") { model.copy(row: voice) }
+        Button("Paste onto the \(name) row") { model.paste(ontoRow: voice) }
+            .disabled(!model.canPaste())
+        Button("Clear the \(name) row") { model.clear(voice) }
     }
 }
 
@@ -661,6 +700,12 @@ private struct StepRow: View {
                         } else {
                             model.toggle(voice, step: step)
                         }
+                    }
+                    // Right-click on any cell: its bar and its row, lifted, put down or cleared.
+                    .contextMenu {
+                        BarItems(model: model, bar: step / max(1, model.stepsPerBar))
+                        Divider()
+                        RowItems(model: model, voice: voice)
                     }
                     .help("\(name), \(position(of: step)): \(model.tier(voice, step: step).rawValue)")
             }
