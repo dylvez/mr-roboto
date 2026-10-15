@@ -10,7 +10,7 @@ import SongGraph
 // job, not an arrangement job." It was right that dust does not belong in `create_part_version` — a
 // chain is not an arrangement, and a groove handle cannot say "through an SP-1200". It was wrong
 // that the band therefore cannot do it. Dust is carried on the part it dirties (`Degradation`), the
-// Sound surface already writes it there, and this is the same write with the band's hand on it.
+// Dust menu already writes it there, and this is the same write with the band's hand on it.
 
 // MARK: - degrade_part
 
@@ -71,7 +71,7 @@ public struct DegradePartTool: DirectorTool {
         public var version: String
         /// The version named, which is this one's parent.
         public var parent: String
-        /// The nearest version up the line with no chain on it: what the Sound surface's bypass plays.
+        /// The nearest version up the line with no chain on it: what Dry beside a Dust menu plays.
         public var dry: String
         public var part: String
         public var type: String
@@ -185,8 +185,9 @@ public struct DegradePartTool: DirectorTool {
                               + DegradePartTool.fixes($0, named: bound, dry: dry)
                       },
                       detail: recorded
-                          ? "Open the Sound surface on \(version.id.description) to put it against "
-                              + "the dry version; its chain is already on it, so it needs no dust lever."
+                          ? "Open \(version.id.description) on its own surface — the Grid for a groove, the Chop lane "
+                              + "for a chop — to hear it against the dry version: Dry beside its Dust menu is a true "
+                              + "bypass. Its chain is already on it, so it needs no dust lever."
                           : "No song is open, so this was not recorded anywhere.")
     }
 

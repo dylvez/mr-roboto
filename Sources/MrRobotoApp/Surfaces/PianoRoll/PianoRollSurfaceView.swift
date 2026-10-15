@@ -851,7 +851,7 @@ struct NoteLane: View {
     }
 }
 
-/// The surface's own chip: the Sound surface's, so a lever reads the same on every surface.
+/// The surface's own chip: the Grid's, so a lever reads the same on every surface.
 private struct RollChip: View {
     let title: String
     let isOn: Bool

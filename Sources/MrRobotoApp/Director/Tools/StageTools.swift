@@ -80,7 +80,7 @@ enum StageChoiceBuilder {
                     suggestion: "Pass `finding`: the one thing you found, in the song's own numbers.")
             }
             return .check(of: subject, finding: finding)
-        case .importRecord, .chopLane, .grid, .sound, .chords, .pianoRoll, .structure, .album, .merge, .cast, .lyrics, .booth, .takes, .mixer, .master, .mashup, .sources, .library:
+        case .importRecord, .chopLane, .grid, .chords, .pianoRoll, .structure, .album, .merge, .cast, .lyrics, .booth, .takes, .mixer, .master, .mashup, .sources, .library:
             guard reference == nil else {
                 throw DirectorToolFailure(
                     tool: tool,

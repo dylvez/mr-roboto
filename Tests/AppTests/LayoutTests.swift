@@ -294,7 +294,7 @@ struct LayoutBenchTests {
     func oneFills() {
         let app = state()
         let first = app.openSurface(.grid, title: "one")
-        let second = app.openSurface(.sound, title: "two")
+        let second = app.openSurface(.chords, title: "two")
 
         #expect(app.bench.items.count == 2)
         #expect(app.bench.activeID == second)
@@ -325,7 +325,7 @@ struct LayoutBenchTests {
     func pinsNeverEvictTheActive() {
         let app = state()
         let first = app.openSurface(.grid, title: "one")
-        let second = app.openSurface(.sound, title: "two")
+        let second = app.openSurface(.chords, title: "two")
         app.setPinned(true, for: first)
         app.setPinned(true, for: second)
         let third = app.openSurface(.chopLane, title: "three")
@@ -340,7 +340,7 @@ struct LayoutBenchTests {
     func dockSwitches() {
         let app = state()
         let grid = app.openSurface(.grid, title: "one")
-        let sound = app.openSurface(.sound, title: "two")
+        let chords = app.openSurface(.chords, title: "two")
         let opened = app.log.count
 
         app.showSurface(.grid)
@@ -350,22 +350,22 @@ struct LayoutBenchTests {
         #expect(app.bench.visible.map(\.id) == [grid])
         #expect(app.log.count == opened, "bringing a surface forward is not an event")
 
-        app.showSurface(.sound)
-        #expect(app.bench.activeID == sound)
+        app.showSurface(.chords)
+        #expect(app.bench.activeID == chords)
     }
 
     @Test("One of each kind: a second bar opens in the Chop lane that is open, and its chip finds it")
     func oneOfEachKind() {
         let app = state()
         let first = app.openSurface(.chopLane, title: "bar 5")
-        let sound = app.openSurface(.sound, title: "kit")
+        let chords = app.openSurface(.chords, title: "chords")
         let second = app.openSurface(.chopLane, title: "bar 9")
         #expect(second == first && app.bench.activeID == first)
         #expect(app.bench.items.count == 2)
         #expect(app.bench.items.first { $0.id == first }?.title == "bar 9")
 
-        app.showSurface(.sound)
-        #expect(app.bench.activeID == sound)
+        app.showSurface(.chords)
+        #expect(app.bench.activeID == chords)
         app.showSurface(.chopLane)
         #expect(app.bench.activeID == first)
     }
@@ -374,7 +374,7 @@ struct LayoutBenchTests {
     func closingFallsBack() {
         let app = state()
         let first = app.openSurface(.grid, title: "one")
-        let second = app.openSurface(.sound, title: "two")
+        let second = app.openSurface(.chords, title: "two")
 
         app.closeSurface(second)
         #expect(app.bench.activeID == first)

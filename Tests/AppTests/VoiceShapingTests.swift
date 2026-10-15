@@ -4,11 +4,11 @@ import SongGraph
 import Testing
 @testable import MrRobotoApp
 
-// A drum voice kept on the Sound surface is a voice the song plays, and a voice a recording plays
+// A drum voice kept from the Shape popover is a voice the song plays, and a voice a recording plays
 // shows what a recording has: its level.
 //
-// Before this the surface opened on the TR-808's kick whatever the song played, kept a voice into
-// the ledger that no kit was ever built from, and on a recorded kit showed the knobs of a
+// Before this the Sound surface opened on the TR-808's kick whatever the song played, kept a voice
+// into the ledger that no kit was ever built from, and on a recorded kit showed the knobs of a
 // synthesizer that was not sounding.
 
 @MainActor
@@ -75,8 +75,7 @@ private enum VoiceFixture {
 
 /// A host with a song's side of a voice, and no song: what a recording is called and what it sounds like.
 @MainActor
-private final class RecordedVoiceHost: SoundSurfaceHost {
-    var selectedPart: PartVersion?
+private final class RecordedVoiceHost: SoundShapingHost {
     var songMachine: String?
     var recordings: [SynthVoiceKind: String] = [:]
     var hit: [Float] = []
@@ -123,8 +122,8 @@ struct VoiceShapingTests {
         #expect(SongPlayback.voiceEdit(of: .kick, on: "linn", in: song)?.id == song.versions.last?.id)
     }
 
-    @Test("Sound opens on the machine the song plays, and a knob kept there is in the song's kit, on a part of its own")
-    func keptOnTheSurface() throws {
+    @Test("a voice shaped from the Grid is on the machine the song plays, and a knob kept there is in the song's kit, on a part of its own")
+    func keptFromTheGrid() throws {
         let directory = WiringFixture.temporaryDirectory()
         defer { WiringFixture.remove(directory) }
         let (song, _) = try VoiceFixture.song(on: "linn")
@@ -132,33 +131,29 @@ struct VoiceShapingTests {
         let app = WiringFixture.app(in: directory, song: song)
         let wiring = SurfaceWiring()
         wiring.use(WiringFixture.silentService())
-        // Opened on the machine's pick, as the dock opens it.
-        let id = try #require(app.perform(SurfaceAction(surface: .sound, title: "Sound", bound: [pick.id])))
-        let item = try #require(app.bench.items.first { $0.id == id })
-        let (surface, _) = wiring.soundSurface(for: item, app: app)
-        #expect(surface.draft.machine == "linn" && surface.draft.voice == .kick, "\(surface.draft.label)")
-        #expect(surface.recordedAs == nil && surface.controls(for: .voice).count > 1)
+        // Opened from the kick's name on the Grid, on the machine the grid plays.
+        let shaping = wiring.shaping(for: app).voice(.kick, on: "linn")
+        #expect(shaping.draft.machine == "linn" && shaping.draft.voice == .kick, "\(shaping.draft.label)")
+        #expect(shaping.recordedAs == nil && shaping.voiceControls.count > 1)
 
-        surface.setValue(0.25, for: .machine(.decay))
-        let kept = try #require(surface.commit())
+        shaping.setValue(0.25, for: .machine(.decay))
+        let kept = try #require(shaping.commit())
         #expect(kept.partID != pick.partID, "a voice is a part of its own, not the machine's pick")
         let now = try #require(app.song)
         #expect(SongPlayback.machineID(in: now) == "linn", "the pick still stands")
         #expect(SongPlayback.machine(in: now).spec(for: .kick)?.controls.decay == 0.25)
 
         // Again, it is that voice's next version; another voice opens as the preset has it.
-        surface.setValue(0.5, for: .machine(.decay))
-        let again = try #require(surface.commit())
+        shaping.setValue(0.5, for: .machine(.decay))
+        let again = try #require(shaping.commit())
         #expect(again.partID == kept.partID && again.parents == [kept.id])
-        surface.select(.snare)
-        #expect(surface.draft.controls == SynthMachine.preset(id: "linn")?.spec(for: .snare)?.controls)
-        surface.select(.kick)
-        #expect(surface.draft.controls.decay == 0.5, "back on the kick, it is the kick as kept")
+        let snare = wiring.shaping(for: app).voice(.snare, on: "linn")
+        #expect(snare.draft.controls == SynthMachine.preset(id: "linn")?.spec(for: .snare)?.controls)
 
-        // A surface opened afresh on the song opens on what was kept.
-        let other = BenchItem(id: SurfaceID(), kind: .sound, title: "Sound")
-        let (fresh, _) = wiring.soundSurface(for: other, app: app)
+        // A popover opened afresh on the kick opens on what was kept.
+        let fresh = wiring.shaping(for: app).voice(.kick, on: "linn")
         #expect(fresh.draft.machine == "linn" && fresh.draft.controls.decay == 0.5)
+        #expect(fresh.editing?.id == again.id)
     }
 
     @Test("a voice a recording plays has LEVEL and nothing else, and plays the recording at it")
@@ -167,33 +162,35 @@ struct VoiceShapingTests {
         host.songMachine = "studio"
         host.recordings = [.kick: "Room Kit kick"]
         host.hit = VoiceFixture.hit(seed: 7)
-        let surface = SoundSurface(host: host)
-        #expect(surface.draft.machine == "studio" && surface.recordedAs == "Room Kit kick")
-        let controls = surface.controls(for: .voice)
+        let shaping = SoundShaping(host: host)
+        #expect(shaping.draft.machine == "studio" && shaping.recordedAs == "Room Kit kick")
+        let controls = shaping.voiceControls
         #expect(controls.map(\.parameter) == [.machine(.level)], "\(controls.map(\.name))")
-        #expect(surface.prominentControls.count == 1 && surface.quietControls.isEmpty)
+        #expect(controls.filter(\.isProminent).count == 1)
+        #expect(controls.first?.honestly?.contains("kit") == true, "what LEVEL is, in a recording's words")
 
         // Touched, it is the recording that plays, as the kit has it.
-        surface.audition()
-        await surface.waitForRecording()
+        shaping.audition()
+        await shaping.waitForRecording()
         #expect(host.asked == 1)
         #expect(host.auditions.last?.samples == host.hit)
-        #expect(surface.rendered(.dry) == host.hit)
+        #expect(shaping.rendered(.dry) == host.hit)
 
         // LEVEL is a gain on that hit, and does not ask for the kit again.
-        let level = surface.draft.controls.level
-        surface.setValue(level / 2, for: .machine(.level))
+        let level = shaping.draft.controls.level
+        shaping.setValue(level / 2, for: .machine(.level))
         #expect(host.asked == 1)
         let played = try #require(host.auditions.last?.samples)
         #expect(played.count == host.hit.count)
         #expect(abs(SoundFixture.peak(played) - SoundFixture.peak(host.hit) / 2) < 1e-4)
-        let kept = try #require(surface.commit())
+        let kept = try #require(shaping.commit())
         #expect(SoundState(kept)?.controls.level == level / 2)
 
         // The snare beside it is the synthesizer's, with the synthesizer's knobs.
-        surface.select(.snare)
-        #expect(surface.recordedAs == nil)
-        #expect(surface.controls(for: .voice).count > 1)
+        let snare = SoundShaping(host: host, voice: .snare)
+        #expect(snare.recordedAs == nil)
+        #expect(snare.voiceControls.count > 1)
+        snare.audition()
         #expect(host.auditions.last?.samples != host.hit)
     }
 
@@ -206,7 +203,7 @@ struct VoiceShapingTests {
         var (song, _) = try VoiceFixture.song(on: kit.id)
         let app = WiringFixture.app(in: directory.appendingPathComponent("Library"), song: song)
         let service = AuditionService(engine: { throw NoAudioDevice() }, kitsDirectory: directory.appendingPathComponent("built"))
-        let adapter = SoundAdapter(app: app, service: service)
+        let adapter = SoundShapingAdapter(app: app, service: service)
 
         #expect(adapter.songMachine == kit.id)
         #expect(adapter.recording(of: .kick, on: kit.id)?.hasSuffix("kick") == true)
@@ -214,14 +211,14 @@ struct VoiceShapingTests {
         #expect(adapter.recording(of: .crash, on: kit.id) == nil, "the base machine plays what was not recorded")
         #expect(adapter.recording(of: .kick, on: "studio") == nil)
 
-        let surface = SoundSurface(host: adapter)
-        #expect(surface.draft.machine == kit.id && surface.recordedAs != nil)
-        #expect(surface.controls(for: .voice).map(\.parameter) == [.machine(.level)])
+        let shaping = SoundShaping(host: adapter)
+        #expect(shaping.draft.machine == kit.id && shaping.recordedAs != nil)
+        #expect(shaping.voiceControls.map(\.parameter) == [.machine(.level)])
 
         // The hit is the recording, not the Studio Kit's synthesized kick.
         let machine = try #require(SynthMachine.preset(id: kit.id))
         let hit = try await adapter.kitHit(of: .kick, on: machine)
-        #expect(!hit.samples.isEmpty && hit.durationSeconds < SoundAdapter.longestHit)
+        #expect(!hit.samples.isEmpty && hit.durationSeconds < SoundShapingAdapter.longestHit)
         let loud = SoundFixture.peak(hit.samples)
         #expect(loud > 0.01)
 
@@ -293,14 +290,14 @@ struct VoiceShapingTests {
         let (song, _) = try VoiceFixture.song(on: kit.id)
         let app = WiringFixture.app(in: directory.appendingPathComponent("Library"), song: song)
         let service = AuditionService(engine: { throw NoAudioDevice() }, kitsDirectory: directory.appendingPathComponent("built"))
-        let adapter = SoundAdapter(app: app, service: service)
+        let adapter = SoundShapingAdapter(app: app, service: service)
         let machine = try #require(SynthMachine.preset(id: kit.id))
         let before = try await adapter.kitHit(of: .kick, on: machine)
 
-        // Kept from the surface, as a knob let go keeps it.
-        let surface = SoundSurface(host: adapter)
-        surface.apply(.sp1200)
-        let kept = try #require(surface.lastKept)
+        // Kept from the popover, as a knob let go keeps it.
+        let shaping = SoundShaping(host: adapter)
+        shaping.apply(.sp1200)
+        let kept = try #require(shaping.lastKept)
         #expect(SoundState(kept)?.degrade == DegradeSettings(preset: .sp1200))
         let shaped = SongPlayback.machine(in: try #require(app.song))
         #expect(shaped.spec(for: .kick)?.dust == DegradeSettings(preset: .sp1200))
@@ -320,7 +317,7 @@ struct VoiceShapingTests {
         #expect(zones(built, .snare).map(\.sample) == zones(plain, .snare).map(\.sample), "the snare is the snare")
         #expect(zones(built, .snare).map(\.gainDB) == zones(plain, .snare).map(\.gainDB))
 
-        // What the surface is handed to put its chain on is still the recording with none.
+        // What the popover is handed to put its chain on is still the recording with none.
         let after = try await adapter.kitHit(of: .kick, on: machine)
         #expect(after.samples == before.samples, "the hit came back through the chain it is about to be put through")
     }

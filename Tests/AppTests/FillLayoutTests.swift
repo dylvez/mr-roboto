@@ -370,79 +370,6 @@ struct FillGridTests {
     }
 }
 
-// MARK: - Sound
-
-@Suite("Fill: Sound spends the room on what it is editing, not on longer sliders")
-struct FillSoundTests {
-
-    private func layout(_ size: CGSize) -> SoundLayout { SoundLayout(size: size) }
-
-    @Test("The voice readout appears once there is height for it, and not before")
-    func readoutEarnsItsPlace() {
-        #expect(layout(Geometry.minimum).showsVoiceReadout == false)
-        #expect(layout(Geometry.standard).showsVoiceReadout)
-        #expect(layout(Geometry.wide).showsVoiceReadout)
-
-        let standard = layout(Geometry.standard)
-        #expect(standard.readoutHeight > 80)
-        #expect(standard.readoutNameSize > 20, "the voice should be named at a size you can read")
-        #expect(standard.readoutValueSize > 14, "a real unit set at 11 points is a footnote")
-        #expect(standard.readoutHeight < standard.contentSize.height / 4,
-                "the readout is a banner, not the panel")
-
-        let tight = layout(Geometry.minimum)
-        #expect(tight.readoutHeight == 0)
-        #expect(tight.readoutNameSize == 0)
-    }
-
-    @Test("The A/B is two chips in a corner only when there is nowhere better for it")
-    func monitorSwitchMovesIntoTheReadout() {
-        #expect(layout(Geometry.minimum).showsLargeMonitorSwitch == false)
-        #expect(layout(Geometry.standard).showsLargeMonitorSwitch)
-        #expect(layout(Geometry.wide).showsLargeMonitorSwitch)
-    }
-
-    @Test("The sliders are capped. This is the point of the whole surface's answer.")
-    func controlsDoNotStretch() {
-        for size in SurfaceGeometry.all {
-            let layout = self.layout(size)
-            #expect(layout.controlWidth <= SoundLayout.maximumControlWidth)
-            #expect(layout.controlWidth >= SoundLayout.minimumControlWidth)
-            // A control never spans the panel: at 1350 points that would be the ugliness.
-            #expect(layout.controlWidth < layout.contentSize.width)
-        }
-        #expect(layout(Geometry.wide).controlWidth == SoundLayout.maximumControlWidth)
-    }
-
-    @Test("Columns follow the width: one prominent lever, then two; two quiet columns, then three")
-    func columnsFollowWidth() {
-        #expect(layout(Geometry.minimum).prominentColumns == 1)
-        #expect(layout(Geometry.standard).prominentColumns == 2)
-        #expect(layout(Geometry.wide).prominentColumns == 2)
-
-        #expect(layout(Geometry.minimum).quietColumns == 2)
-        #expect(layout(Geometry.standard).quietColumns == 2)
-        #expect(layout(Geometry.wide).quietColumns == 3)
-    }
-
-    @Test("What a control is really wired to is drawn rather than hidden in a tooltip, given room")
-    func unitsComeOutOfTheTooltip() {
-        #expect(layout(Geometry.minimum).showsInlineUnits == false)
-        #expect(layout(Geometry.standard).showsInlineUnits)
-        #expect(layout(Geometry.wide).showsInlineUnits)
-    }
-
-    @Test("Nine chain controls in three columns still fit the panel")
-    func theChainFits() {
-        let wide = layout(Geometry.wide)
-        let rows = (9 + wide.quietColumns - 1) / wide.quietColumns
-        #expect(rows == 3)
-        // Row: a label line, a slider, and the units line, plus the grid's own spacing.
-        let estimate = CGFloat(rows) * (16 + 20 + 14 + 12)
-        #expect(estimate + wide.readoutHeight < wide.contentSize.height)
-    }
-}
-
 // MARK: - Piano roll
 
 // The lane drew a row as an equal share of its height, held to nine points, and nothing held the
@@ -541,7 +468,7 @@ struct FillNoteLaneTests {
     }
 }
 
-// MARK: - Across all four
+// MARK: - Across all of them
 
 @Suite("Fill: nothing stretches into ugliness")
 struct FillRestraintTests {
@@ -556,8 +483,6 @@ struct FillRestraintTests {
         #expect(ImportLayout(size: tight).waveformHeight != ImportLayout(size: standard).waveformHeight)
         #expect(GridLayout(size: tight, voices: 5, steps: 16).rowHeight
                     != GridLayout(size: standard, voices: 5, steps: 16).rowHeight)
-        #expect(SoundLayout(size: tight).showsVoiceReadout
-                    != SoundLayout(size: standard).showsVoiceReadout)
     }
 
     @Test("Every surface has something that changes between the default window and a folded one")
@@ -570,7 +495,6 @@ struct FillRestraintTests {
         #expect(ImportLayout(size: standard).laneLabelWidth != ImportLayout(size: wide).laneLabelWidth)
         #expect(GridLayout(size: standard, voices: 5, steps: 16).stepWidth
                     != GridLayout(size: wide, voices: 5, steps: 16).stepWidth)
-        #expect(SoundLayout(size: standard).quietColumns != SoundLayout(size: wide).quietColumns)
     }
 
     @Test("A silly size does not produce a silly layout")
@@ -591,11 +515,6 @@ struct FillRestraintTests {
             let record = ImportLayout(size: size)
             #expect(record.waveformHeight >= ImportLayout.minimumWaveformHeight)
             #expect(record.stemLaneHeight >= ImportLayout.minimumStemLaneHeight)
-
-            let sound = SoundLayout(size: size)
-            #expect(sound.controlWidth >= SoundLayout.minimumControlWidth)
-            #expect(sound.controlWidth <= SoundLayout.maximumControlWidth)
-            #expect(sound.quietColumns >= 2)
         }
     }
 }

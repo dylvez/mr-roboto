@@ -39,11 +39,13 @@ public struct SurfaceID: Hashable, Sendable, CustomStringConvertible {
 public enum SurfaceKind: String, CaseIterable, Sendable {
     /// The record: its waveform, key, tempo, bars, sections and stems. Named for what it shows
     /// rather than for how it got there — you meet it far more often by opening a song than by
-    /// importing a file, and the dock reads as the workflow: Record, Chop lane, Grid, Sound.
+    /// importing a file, and the dock reads as the workflow: Record, Chop lane, Grid.
     case importRecord = "Record"
     case chopLane = "Chop lane"
+    /// The groove: steps, swing and ghosts, the machine it plays on and the dust it plays through.
+    /// There was a Sound surface for a drum voice's knobs and a part's chain; both are on the Grid
+    /// and the Chop lane now, a voice shaped from its name and the chain from a Dust menu.
     case grid = "Grid"
-    case sound = "Sound"
     /// M2. The lead sheet (catalog #5): chord symbols over bars, as a `.progression` part.
     case chords = "Chords"
     /// M2. Catalog #7: a bass line's notes over the bar, with the groove's kicks under them.
@@ -95,9 +97,9 @@ public enum SurfaceKind: String, CaseIterable, Sendable {
     /// One finding about one part, flagged and never silently fixed.
     case check = "Check"
 
-    /// The ones the user drives themselves: the dock, ⌘1–⌘7, the Surfaces menu. In workflow
-    /// order: a record, its chop, the groove, the chords, the bass under them, the sound, the form.
-    public static let gateA: [SurfaceKind] = [.importRecord, .chopLane, .grid, .chords, .pianoRoll, .sound, .structure]
+    /// The ones the user drives themselves: the dock, ⌘1–⌘6, the Surfaces menu. In workflow
+    /// order: a record, its chop, the groove, the chords, the bass under them, the form.
+    public static let gateA: [SurfaceKind] = [.importRecord, .chopLane, .grid, .chords, .pianoRoll, .structure]
 
     /// The surfaces that draw the song or the library rather than a version of a part, and so
     /// open on nothing.
@@ -123,7 +125,7 @@ public enum SurfaceKind: String, CaseIterable, Sendable {
     /// The band member whose work this surface is: who "Ask" in its header addresses.
     public var owner: PersonaID? {
         switch self {
-        case .grid, .sound: return PersonaID("beatmaker")
+        case .grid: return PersonaID("beatmaker")
         case .chopLane, .importRecord, .merge, .mashup, .sources: return PersonaID("sampler")
         case .pianoRoll: return PersonaID("bassist")
         case .chords: return PersonaID("harmonist")

@@ -329,9 +329,10 @@ struct DirectorDustToolboxTests {
         // M5 (Booth, Takes) and M6 (Mixer, Master) joined `SurfaceKind`, so the two schemas that enumerate it changed bytes again.
         // And once on 2026-09-29, on purpose: its sentence still said the bench holds three and
         // retires the oldest, which stopped being true when the bench became one of each kind.
-        // And on 2026-10-03, when Sources joined `SurfaceKind`.
-        ("open_surface", "6eb77f1ea096bd263f11c7463625005a90fe0b2ce29eb93d577540e8cd41f23d"),
-        ("propose", "8be80e43f81d84baed351fdc1df79c7af8f4e6e223c560df0227e9e27607644b"),
+        // And on 2026-10-03, when Sources joined `SurfaceKind`; and on 2026-10-15, when the Sound
+        // surface left it.
+        ("open_surface", "63c273e56d9be4c1ee9d9ef0ab3d383462a2faf3b74677868c58ce1a0e47dd6c"),
+        ("propose", "ec5c25fb05fe335aa618f0e6f5a790632c12fe965b4498c41d72daadc73d7fab"),
     ]
 
     static func digest(_ definition: ClaudeToolDefinition) throws -> String {
@@ -407,7 +408,7 @@ struct DirectorDustToolboxTests {
         if let answer, let dust { #expect(answer.upperBound <= dust.lowerBound, "it belongs to How you answer") }
         #expect(prompt.contains("degrade_part"))
         #expect(prompt.contains("the dry version one parent back"))
-        #expect(prompt.contains("open the Sound surface on the dusty version"))
+        #expect(prompt.contains("open the dusty version on its own surface"))
         #expect(prompt.contains("\"SP-1200 at 60%\""))
         #expect(prompt.contains("not only that it refused."))
         #expect(prompt.contains("the line is written to the key and you say so."))

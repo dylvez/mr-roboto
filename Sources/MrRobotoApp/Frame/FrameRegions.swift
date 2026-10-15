@@ -38,7 +38,7 @@ public enum FrameRegion: String, CaseIterable, Sendable, Identifiable {
 
     /// ⌥⌘2 the band, ⌥⌘3 the parts — the keys they had when the band sat left of the bench and the
     /// parts right of it, kept when the two changed sides so the hand does not have to learn them
-    /// again. ⌥⌘1 was the library's, and opens the Library surface now. ⌘1–7 are the surfaces and
+    /// again. ⌥⌘1 was the library's, and opens the Library surface now. ⌘1–6 are the surfaces and
     /// ⌃⌘1–5 the palettes; these are pressed about as often as the palettes are.
     public var shortcut: Character {
         switch self {

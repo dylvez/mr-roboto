@@ -407,7 +407,8 @@ struct GuidanceLedgerTests {
         .audio: .chopLane,          // a stem; the take is checked separately
         .sample: .chopLane,
         .groove: .grid,
-        .sound: .sound,
+        // A drum voice is shaped from its name on the Grid, on the song's newest groove.
+        .sound: .grid,
         .progression: .chords,
         .melody: .pianoRoll,
         .lyric: .lyrics,
@@ -447,8 +448,7 @@ struct GuidanceLedgerTests {
         app.open(built.song)
 
         for (version, kind) in [(built.sample!, SurfaceKind.chopLane),
-                                (built.groove!, SurfaceKind.grid),
-                                (built.sound!, SurfaceKind.sound)] {
+                                (built.groove!, SurfaceKind.grid)] {
             let action = try #require(PartActions.primary(for: version, in: app.song!)).action
             let id = try #require(app.perform(action))
             #expect(app.bench.items.first { $0.id == id }?.kind == kind)
@@ -552,7 +552,6 @@ struct GuidanceDockTests {
             .importRecord: [built.take.id, built.analysis.id],
             .chopLane: [built.sample!.id],
             .grid: [built.groove!.id],
-            .sound: [built.sound!.id],
             .chords: [built.song.versions.first { $0.type == .progression }!.id],
             .pianoRoll: [built.song.versions.first { $0.type == .bassline }!.id],
             .structure: [],

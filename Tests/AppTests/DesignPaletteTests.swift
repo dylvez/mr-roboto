@@ -471,7 +471,7 @@ struct DesignPaletteTests {
         #expect(PartHue.work(of: .lyrics, bound: []) == PartHue.index(for: .lyric))
         // A Compare or a Check is about whichever part it is bound to; a sound or a mix is not a track.
         #expect(PartHue.work(of: .compare, bound: [.melody]) == PartHue.index(for: .melody))
-        #expect(PartHue.work(of: .sound, bound: [.sound]) == nil)
+        #expect(PartHue.work(of: .check, bound: [.sound]) == nil)
         for kind in [SurfaceKind.library, .mixer, .master, .cast, .album, .sources, .mashup, .merge] {
             #expect(PartHue.work(of: kind, bound: [.groove]) == nil, "\(kind.rawValue)")
         }

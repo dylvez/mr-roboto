@@ -132,7 +132,7 @@ public enum Design {
             self == .light ? .aqua : .darkAqua
         }
 
-        /// ⌃⌘1–3, in the order the menu lists them. Plain ⌘1–7 are the surfaces.
+        /// ⌃⌘1–3, in the order the menu lists them. Plain ⌘1–6 are the surfaces.
         public var shortcut: Character {
             Character("\((Scheme.allCases.firstIndex(of: self) ?? 0) + 1)")
         }
@@ -407,7 +407,7 @@ public enum Design {
         /// colour as a wash with a rim (`StudioChip`). A chord wears the colour of the step of the
         /// key it stands on, on the Chords surface's bars and across the Piano roll's lane
         /// (`HarmonyHue`); a note on the chord under it is lit and one between is hollow. A drum voice
-        /// wears its class's colour, and the Sound surface draws the sound it is shaping in it
+        /// wears its class's colour, and the Shape popover's prominent sliders wear it
         /// (`LaneClass`). A band member speaks in the colour of what it owns (`MemberHue`), a rhyme
         /// in its letter's (`RhymeHue`), and the Master's spectrum runs through the hues from the
         /// lows to the highs.

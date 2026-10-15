@@ -79,7 +79,7 @@ struct BenchTests {
     @Test("Opens as many as are asked for and never closes one to make room")
     func noCeiling() {
         let bench = Bench()
-        let kinds: [SurfaceKind] = [.grid, .chords, .pianoRoll, .sound, .structure, .lyrics]
+        let kinds: [SurfaceKind] = [.grid, .chords, .pianoRoll, .structure, .lyrics]
         for (index, kind) in kinds.enumerated() {
             bench.open(item("s\(index)", kind: kind, openedAt: Date(timeIntervalSinceReferenceDate: Double(index))))
         }
@@ -92,7 +92,7 @@ struct BenchTests {
         let bench = Bench()
         let one = item("one")
         bench.open(one)
-        bench.open(BenchItem(id: one.id, kind: .sound, title: "one, again"))
+        bench.open(BenchItem(id: one.id, kind: .chords, title: "one, again"))
 
         #expect(bench.items.count == 1)
         #expect(bench.items[0].title == "one, again")
@@ -245,16 +245,16 @@ struct AppStateTests {
     func oneOfEachKind() {
         let app = FrameFixture.state(song: FrameFixture.song())
         let grid = app.openSurface(.grid, title: "first")
-        let sound = app.openSurface(.sound, title: "sound")
+        let chords = app.openSurface(.chords, title: "chords")
         let again = app.openSurface(.grid, title: "second")
 
         #expect(again == grid, "the Grid that was open")
-        #expect(app.bench.items.map(\.kind) == [.grid, .sound])
+        #expect(app.bench.items.map(\.kind) == [.grid, .chords])
         #expect(app.bench.activeID == grid)
         #expect(app.bench.items.first { $0.id == grid }?.title == "second")
         #expect(!app.log.contains { $0.text.hasPrefix("Closed") })
-        app.showSurface(.sound)
-        #expect(app.bench.activeID == sound, "the dock brings it forward as it was")
+        app.showSurface(.chords)
+        #expect(app.bench.activeID == chords, "the dock brings it forward as it was")
     }
 
     @Test("Notes land in the rail in order, attributed")
@@ -405,19 +405,19 @@ struct SurfaceRegistryTests {
         #expect(registry.resolve(item(.grid), app: app).isPlaceholder == false)
         #expect(registry.registeredKinds == [.grid])
         // Every other kind still falls back.
-        #expect(registry.resolve(item(.sound), app: app).isPlaceholder)
+        #expect(registry.resolve(item(.chords), app: app).isPlaceholder)
     }
 
     @Test("Last registration for a kind wins, and unregistering restores the placeholder")
     func reregistration() {
         let registry = SurfaceRegistry()
         let app = FrameFixture.state()
-        registry.register(.sound) { _, _ in Text("first") }
-        registry.register(.sound) { _, _ in Text("second") }
-        #expect(registry.hasBuilder(for: .sound))
+        registry.register(.chords) { _, _ in Text("first") }
+        registry.register(.chords) { _, _ in Text("second") }
+        #expect(registry.hasBuilder(for: .chords))
 
-        registry.unregister(.sound)
-        #expect(registry.resolve(item(.sound), app: app).isPlaceholder)
+        registry.unregister(.chords)
+        #expect(registry.resolve(item(.chords), app: app).isPlaceholder)
     }
 }
 

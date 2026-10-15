@@ -1,7 +1,7 @@
 import Foundation
 import Instrument
 
-/// One control on the Sound surface: its machine name, what it is really wired to when the name
+/// One control in a Shape popover: its machine name, what it is really wired to when the name
 /// would mislead, its position, and — quietly — what it is doing in a unit you can check against a
 /// real machine by ear.
 ///
@@ -48,12 +48,13 @@ public struct SoundControl: Identifiable, Hashable, Sendable {
     /// What it is really wired to, when the name alone would lie. `nil` when the name is honest.
     public var honestly: String?
     public var value: Double
-    /// The range the surface drives it over. Machine knobs are 0…1 knob positions; chain parameters
+    /// The range the popover drives it over. Machine knobs are 0…1 knob positions; chain parameters
     /// are in their own units, because that is what they mean.
     public var range: ClosedRange<Double>
     /// The value in a unit you can measure: `"49 Hz"`, `"900 ms"`, `"12.0 bits"`.
     public var readout: String
-    /// At most two of these per panel — the M1 spec's rule, asserted in the tests.
+    /// At most two of these per set of controls — the M1 spec's rule, asserted in the tests. The
+    /// popover sets a prominent control's label and readout a size larger.
     public var isProminent: Bool
 
     public var id: Parameter { parameter }

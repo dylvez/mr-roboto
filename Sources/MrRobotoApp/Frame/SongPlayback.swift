@@ -1013,7 +1013,7 @@ public struct SongPlayback: Equatable, Sendable {
     }
 
     /// The song's own drum machine, from its newest `.sound` part that names one and is *the
-    /// song's* — not a part's own. A song that has never opened the Sound surface plays its groove
+    /// song's* — not a part's own. A song that has never picked a machine plays its groove
     /// on the 808, which is what a new Grid opens on.
     static func machineID(in song: Song) -> String {
         sound(in: song, for: nil, recognisedBy: { SynthMachine.preset(id: $0) != nil })
@@ -1027,7 +1027,7 @@ public struct SongPlayback: Equatable, Sendable {
     }
 
     /// The machine a groove part plays on, as the song has shaped it: the pick (`machineID`), with
-    /// every voice the Sound surface has kept an edit of at the knob positions it was kept at.
+    /// every voice the Shape popover has kept an edit of at the knob positions it was kept at.
     static func machine(for part: PartID?, in song: Song) -> SynthMachine {
         shaped(SynthMachine.preset(id: machineID(for: part, in: song)) ?? .tr808, in: song)
     }
@@ -1037,7 +1037,7 @@ public struct SongPlayback: Equatable, Sendable {
         shaped(SynthMachine.preset(id: machineID(in: song)) ?? .tr808, in: song)
     }
 
-    /// `machine` with the song's voice edits on it. The Sound surface keeps a voice as a `.sound`
+    /// `machine` with the song's voice edits on it. The Shape popover keeps a voice as a `.sound`
     /// called `"drum.<machine>.<voice>"` carrying its knob positions and its chain; the newest of
     /// each voice is the one in effect, and one kept for another machine is that machine's. A kit is built from
     /// the machine's voices, so this is what makes a kept knob something the song plays — before

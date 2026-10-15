@@ -443,7 +443,6 @@ enum NextAdvisor {
         case .takes: return "comp"
         case .mixer: return "mix"
         case .master: return "master"
-        case .sound: return "sound"
         default: return action.surface.rawValue.lowercased()
         }
     }
@@ -457,7 +456,10 @@ enum NextAdvisor {
         case .groove: return ["groove", "regroove"]
         case .chords: return ["chords"]
         case .bass: return ["bass"]
-        case .kit, .dust: return ["sound"]
+        // The kit is picked and a voice shaped on the Grid; dust is a Dust menu on the Grid or the
+        // Chop lane. Neither has a move of its own.
+        case .kit: return ["groove"]
+        case .dust: return ["groove", "regroove"]
         case .arrange: return ["arrange", "develop"]
         case .words: return ["words"]
         case .sing: return ["sing", "comp"]

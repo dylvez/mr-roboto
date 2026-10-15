@@ -23,16 +23,13 @@ extension SurfaceKind {
     /// The part types this surface can actually draw.
     ///
     /// Rule 1 — *answer in the notation the question is about* — made checkable. A question about a
-    /// feel gets the Grid because the Grid draws grooves; binding a melody to the Sound surface is
-    /// not a stylistic mistake, it is a surface asked to draw something it has no marks for.
+    /// feel gets the Grid because the Grid draws grooves; binding a melody to the Grid is not a
+    /// stylistic mistake, it is a surface asked to draw something it has no marks for.
     ///
-    /// The Sound surface draws a drum voice (`.sound`) and a **chain** — and a chain is drawn over
-    /// the thing it dirties, so a chop or a groove bound to Sound opens its degradation chain with a
-    /// true bypass against the dry part. "Make it dustier" is a sound question about a chop, and the
-    /// notation it is answered in is the chain. A take, a stem, an analysis or anything melodic is
-    /// still refused: dust is carried by a sample or a groove (`Degradation`), and nothing else.
-    /// Nor is every `.sound` a drum voice: the instrument a tune plays on is one too, and the frame's
-    /// gate refuses it on Sound (`SoundSurface.canEdit`).
+    /// Dust is carried by the chop or the groove it dirties (`Degradation`), and drawn where that
+    /// part is: the Grid's and the Chop lane's Dust menus name the machine, and the A/B beside each
+    /// is a true bypass against the dry part. "Make it dustier" is answered with `degrade_part` and
+    /// the part's own surface; a take, a stem, an analysis or anything melodic carries no chain.
     ///
     /// The two answer surfaces take anything, because what they draw is the comparison and the
     /// finding rather than the part: a Compare of three grooves and a Compare of three chops are the
@@ -42,7 +39,6 @@ extension SurfaceKind {
         case .importRecord: return [.audio, .analysis]
         case .chopLane: return [.sample, .audio]
         case .grid: return [.groove]
-        case .sound: return [.sound, .sample, .groove]
         case .chords: return [.progression]
         // A tune too: the roll has drawn one since it could write one, and the Director, which
         // writes them, was the one thing that could not open it on what it had written.
@@ -119,17 +115,17 @@ public struct SurfaceLever: Sendable, Equatable, Hashable {
             }
         }
 
-        /// The surfaces this quantity means something on. A swing lever on the Sound surface is a
-        /// control with nothing behind it; the catalog says so rather than the reviewer.
+        /// The surfaces this quantity means something on. A swing lever on a Compare is a control
+        /// with nothing behind it; the catalog says so rather than the reviewer.
         public var surfaces: Set<SurfaceKind> {
             switch self {
             case .tempo: return [.chopLane, .grid, .compare]
             case .swing: return [.chopLane, .grid, .compare]
             case .velocity: return [.chopLane, .grid, .compare]
             case .density: return [.grid, .pianoRoll, .compare]
-            case .dust: return [.chopLane, .sound, .compare]
-            case .pitch: return [.chopLane, .sound]
-            case .gain: return [.chopLane, .grid, .sound, .compare]
+            case .dust: return [.chopLane, .compare]
+            case .pitch: return [.chopLane]
+            case .gain: return [.chopLane, .grid, .compare]
             case .lag: return [.pianoRoll, .compare]
             }
         }
@@ -185,7 +181,7 @@ public struct SurfaceLever: Sendable, Equatable, Hashable {
 /// assembled by hand at each call site.
 public enum DirectorFill: Sendable, Equatable, Hashable {
 
-    /// A surface that opens onto part versions and edits them: Record, Chop lane, Grid, Sound.
+    /// A surface that opens onto part versions and edits them: Record, Chop lane, Grid.
     case parts([VersionID])
 
     /// Alternatives, and the thing they have to beat. `against` is drawn at the top and is never
@@ -426,15 +422,6 @@ public struct DirectorSurfaceChoice: Sendable, Equatable, Hashable, Identifiable
         let choice = DirectorSurfaceChoice(surface: surface, title: title, fill: fill,
                                            levers: levers, because: because)
         guard stage.canPerform(choice.action) else {
-            // Every version is in the song and in Sound's notation, so this is a `.sound` it has no
-            // knobs for: the instrument a part plays on, or a groove's chop kit.
-            if surface == .sound {
-                throw DirectorChoiceProblem(
-                    "The Sound surface shapes a drum voice, a drum machine, or the dust on a chop or a groove. "
-                        + "That sound is the instrument a part plays on, or a chop's slices, and has none of its knobs.",
-                    suggestion: "Bind it to a drum voice or machine, or to a sample or groove version from read_song; "
-                        + "put a part on another instrument with set_instrument.")
-            }
             throw DirectorChoiceProblem(
                 "The frame cannot open that right now.",
                 suggestion: "Call read_song and bind to something the song actually holds.")
@@ -447,7 +434,7 @@ public struct DirectorSurfaceChoice: Sendable, Equatable, Hashable, Identifiable
         switch surface {
         case .compare: return "a reference and two to four candidates"
         case .check: return "one part and one finding"
-        case .importRecord, .chopLane, .grid, .sound, .chords, .pianoRoll: return "part versions, and no reference"
+        case .importRecord, .chopLane, .grid, .chords, .pianoRoll: return "part versions, and no reference"
         case .structure: return "nothing bound: it draws the song's sections"
         case .album: return "nothing bound: it draws a library album"
         case .merge: return "exactly two versions, each a chop, a bass line, a progression or a groove"

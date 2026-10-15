@@ -18,8 +18,6 @@ import Foundation
 /// * `ImportLayout` — the waveform and the stem lanes expand; four stems in a tall panel are
 ///   readable rather than four 28-point slivers.
 /// * `GridLayout` — the steps take the width and the voice rows take the height.
-/// * `SoundLayout` — the extra room buys a readout of the voice being edited, the A/B at a size you
-///   can hit, and the parameters' real units inline. The sliders themselves are *capped*.
 ///
 /// Keeping these as values rather than as view modifiers is the whole point: `FillLayoutTests` can
 /// ask each one what it would draw at 640 × 460, 907 × 665 and 1269 × 665 without a window, so a

@@ -243,7 +243,7 @@ final class CompareAdapter: CompareHosting {
     /// The chain a row plays through.
     ///
     /// The `dust` lever means exactly what dust means everywhere else: `Dust.pass(_:)`, the pass a
-    /// Sound surface commits when it is set to the same amount. With the lever on the surface every
+    /// Dust menu commits when it is set to the same amount. With the lever on the surface every
     /// row plays its **dry** part through that one pass — a lever is applied to every row alike, so
     /// a row that was already dusty does not get a second machine on top of the lever's and win the
     /// comparison for being louder in the noise. With no lever, each row plays as its version says

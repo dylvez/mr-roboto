@@ -218,8 +218,9 @@ extension WorkPath {
         return (path, steps)
     }
 
-    /// Which step a surface belongs to. The Sound surface is two steps: bound to a chop or a groove
-    /// it is putting dust on it; bound to a sound, or to nothing, it is shaping the kit.
+    /// Which step a surface belongs to. The kit and the dust have no surface of their own: both
+    /// are on the Grid and the Chop lane, a voice shaped from its name and a machine chosen from a
+    /// Dust menu, so neither is "here" from a surface.
     static func stepKind(for surface: SurfaceKind, bound: [VersionID], in song: Song,
                          path: WorkPath) -> PathStep.Kind? {
         switch surface {
@@ -236,10 +237,6 @@ extension WorkPath {
         case .album, .merge, .cast, .mashup, .library: return nil
         case .booth, .takes: return .sing
         case .mixer, .master: return .mix
-        case .sound:
-            let carries = bound.compactMap { song.version($0) }.contains { $0.kind.canCarryDegradation }
-            if carries { return .dust }
-            return path.steps.contains(.kit) ? .kit : nil
         case .compare, .check:
             return nil
         }
@@ -372,19 +369,18 @@ extension WorkPath {
             return nil
 
         case .kit:
-            if let sound = Guidance.shapeableSounds(in: song).last {
-                return SurfaceAction(surface: .sound, title: PartLabel.title(of: sound), bound: [sound.id])
-            }
-            return SurfaceAction(surface: .sound, title: "Kit")
+            // The kit is picked under the Grid, and a voice shaped from its name there.
+            return Guidance.dockAction(for: .grid, in: song)
 
         case .dust:
             // The newest dusty part if there is one, else the newest thing that could carry dust —
-            // a groove before a chop, since a groove is further along.
+            // a groove before a chop, since a groove is further along — on its own surface, whose
+            // Dust menu is the chain.
             if let dusty = newestVersions(in: song).last(where: { !$0.kind.degradation.isEmpty }) {
-                return SurfaceAction(surface: .sound, title: PartLabel.title(of: dusty), bound: [dusty.id])
+                return Self.dustAction(on: dusty)
             }
             if let target = Guidance.grooves(in: song).last ?? Guidance.samples(in: song).last {
-                return SurfaceAction(surface: .sound, title: PartLabel.title(of: target), bound: [target.id])
+                return Self.dustAction(on: target)
             }
             return nil
 
@@ -393,6 +389,16 @@ extension WorkPath {
             guard !song.sections.isEmpty || !Guidance.grooves(in: song).isEmpty
                 || !Guidance.basslines(in: song).isEmpty || !Guidance.samples(in: song).isEmpty else { return nil }
             return SurfaceAction(surface: .structure, title: song.title)
+        }
+    }
+
+    /// Where a part's dust is: a groove's on the Grid, a chop's on the Chop lane. Nil for a kind
+    /// that carries no chain.
+    static func dustAction(on version: PartVersion) -> SurfaceAction? {
+        switch version.kind {
+        case .groove: return SurfaceAction(surface: .grid, title: PartLabel.title(of: version), bound: [version.id])
+        case .sample: return SurfaceAction(surface: .chopLane, title: PartLabel.title(of: version), bound: [version.id])
+        default: return nil
         }
     }
 }

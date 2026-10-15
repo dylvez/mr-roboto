@@ -2,8 +2,7 @@ import SwiftUI
 
 /// The faint drawing behind each surface's header, so a surface is recognisable before its title is
 /// read: a waveform with section brackets for the Record, cut lines and pads for the Chop lane, the
-/// 808's four key colours for the Grid, knobs over a circuit trace for Sound, a ruler for Compare, a
-/// flagged tick for Check.
+/// 808's four key colours for the Grid, a ruler for Compare, a flagged tick for Check.
 ///
 /// Drawn rather than generated. The image model drew these as small centred objects rather than as
 /// textures, and a texture wants to be exact anyway: crisp at any width, in the palette's own line
@@ -22,7 +21,6 @@ struct SurfaceBand: View {
             case .importRecord: record(context, size, ink)
             case .chopLane: chop(context, size, ink)
             case .grid: grid(context, size)
-            case .sound: sound(context, size, ink)
             case .chords: chords(context, size, ink)
             case .pianoRoll: roll(context, size, ink)
             case .structure: structure(context, size, ink)
@@ -151,39 +149,6 @@ struct SurfaceBand: View {
         }
     }
 
-    private func sound(_ context: GraphicsContext, _ size: CGSize, _ ink: Color) {
-        let radius: CGFloat = 6
-        let y = size.height * 0.36
-        var x: CGFloat = 14
-        var index = 0
-        while x < size.width {
-            context.stroke(Path(ellipseIn: CGRect(x: x - radius, y: y - radius, width: radius * 2, height: radius * 2)),
-                           with: .color(ink), lineWidth: 1)
-            let angle = -2.3 + Double(index % 7) * 0.62
-            var pointer = Path()
-            pointer.move(to: CGPoint(x: x, y: y))
-            pointer.addLine(to: CGPoint(x: x + CGFloat(cos(angle)) * radius, y: y + CGFloat(sin(angle)) * radius))
-            context.stroke(pointer, with: .color(ink), lineWidth: 1)
-            x += 40
-            index += 1
-        }
-        // A circuit trace underneath: runs, steps and vias.
-        var trace = Path()
-        let base = size.height - 8
-        trace.move(to: CGPoint(x: 0, y: base))
-        var tx: CGFloat = 0
-        var up = false
-        while tx < size.width {
-            tx += 34
-            trace.addLine(to: CGPoint(x: tx, y: up ? base - 5 : base))
-            tx += 5
-            up.toggle()
-            trace.addLine(to: CGPoint(x: tx, y: up ? base - 5 : base))
-        }
-        context.stroke(trace, with: .color(ink), lineWidth: 1)
-    }
-
-    /// Bar brackets with a chord's worth of stacked dots in each.
     private func chords(_ context: GraphicsContext, _ size: CGSize, _ ink: Color) {
         var path = Path()
         let barWidth: CGFloat = 56

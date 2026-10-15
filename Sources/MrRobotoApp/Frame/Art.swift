@@ -4,7 +4,7 @@ import SwiftUI
 /// The generated illustrations, bundled under `Resources/Art` by `Art/make_art.py`.
 ///
 /// Art is decoration on top of a frame that already works without it, so a missing file is never an
-/// error: `ArtImage` draws nothing and the layout around it holds; the Sound surface's machine cards
+/// error: `ArtImage` draws nothing and the layout around it holds; the Mashup's record sleeves
 /// fall back to plain chips.
 /// That is what lets art arrive a piece at a time. Provenance for every file — which model, which
 /// prompt, which references, what it cost — is in `Art/ledger.jsonl` and `Art/picks.json`.
@@ -137,7 +137,6 @@ extension SurfaceKind {
         case .importRecord: return ("record", "record.circle")
         case .chopLane: return ("chop", "scissors")
         case .grid: return ("groove", "square.grid.4x3.fill")
-        case .sound: return ("sound", "dial.medium")
         case .chords: return ("chords", "music.note.list")
         case .pianoRoll: return ("stem-bass", "waveform.path")
         case .structure: return ("section", "rectangle.split.3x1")

@@ -223,18 +223,18 @@ struct DirectorFirstProofTests {
                 "t18", "open_surface",
                 #"{"surface":"Compare","title":"Three slower reads","bound":["\#(grooves[1])","\#(grooves[2])","\#(grooves[3])"],"reference":"\#(grooves[0])","finding":null,"because":"Each one is bar 9 on a different feel, judged against the straight read at 90.","levers":[{"quantity":"tempo","label":"Slower","value":78},{"quantity":"dust","label":"Dustier","value":0.6}]}"#)
         })
-        // Dirt is answered on the Sound surface, bound to the dusty version: the chain is on it
-        // already, so no dust lever — the bypass is the dry cut.
+        // Dirt is answered on the chop's own surface, bound to the dusty version: the chain is on
+        // it already, so no dust lever — Dry beside the lane's Dust menu is the dry cut.
         replies.append({
             let samples = await DirectorTurnFixture.versions(workspace.value, ofType: .sample)
             return DirectorTurnFixture.call(
                 "t19", "open_surface",
-                #"{"surface":"Sound","title":"Bar 9 through an SP-1200","bound":["\#(samples[1])"],"reference":null,"finding":null,"because":"Bar 9 at 60% SP-1200, against the dry cut one parent back.","levers":null}"#)
+                #"{"surface":"Chop lane","title":"Bar 9 through an SP-1200","bound":["\#(samples[1])"],"reference":null,"finding":null,"because":"Bar 9 at 60% SP-1200, against the dry cut one parent back.","levers":null}"#)
         })
         replies.append(DirectorLateTransport.fixed(DirectorSSE.reply(
             "Cut bar 9 into slices and played it three ways, against the straight read at 90. "
             + "The Compare is open; press one to hear it. The dust is on the chop itself: SP-1200 "
-            + "at 60%, open in Sound against the dry cut.")))
+            + "at 60%, open in the Chop lane with the dry cut a click away.")))
 
         let rig = try await MainActor.run { try DirectorTurnFixture.rig(replies) }
         defer { rig.clean() }
@@ -280,10 +280,10 @@ struct DirectorFirstProofTests {
         #expect(lane.title == "Bar 9 of Arrival")
         #expect(lane.fill.bound.map(\.description) == [samples[0]], "the lane is on the dry cut")
 
-        let sound = try #require(turn.opened.last)
-        #expect(sound.surface == .sound)
-        #expect(sound.fill.bound == [dusty.id], "Sound is opened on the dusty version itself")
-        #expect(sound.levers.isEmpty, "its chain is on it; a lever would put a second draft over it")
+        let dust = try #require(turn.opened.last)
+        #expect(dust.surface == .chopLane)
+        #expect(dust.fill.bound == [dusty.id], "the lane is opened on the dusty version itself")
+        #expect(dust.levers.isEmpty, "its chain is on it; a lever would put a second draft over it")
 
         let compare = try #require(turn.opened.dropLast().last)
         #expect(compare.surface == .compare)
@@ -300,10 +300,10 @@ struct DirectorFirstProofTests {
         #expect(compare.levers.map(\.quantity) == [.tempo, .dust])
 
         try await MainActor.run {
-            // The bench holds them, bound as asked, with the levers hung on the Compare.
-            #expect(rig.app.bench.items.contains { $0.kind == .chopLane })
-            let benchSound = try #require(rig.app.bench.items.first { $0.kind == .sound })
-            #expect(rig.app.bound(for: benchSound.id) == [dusty.id])
+            // The bench holds them, bound as asked, with the levers hung on the Compare. One lane:
+            // opened on the dry cut, then turned to the dusty version.
+            let lane = try #require(rig.app.bench.items.first { $0.kind == .chopLane })
+            #expect(rig.app.bound(for: lane.id) == [dusty.id])
             let benchCompare = try #require(rig.app.bench.items.first { $0.kind == .compare })
             #expect(rig.app.bound(for: benchCompare.id).count == 4)
             #expect(rig.app.levers(for: benchCompare.id).count == 2)
@@ -317,7 +317,7 @@ struct DirectorFirstProofTests {
         #expect(turn.spend.turnCount == 13, "one ledger entry per request")
 
         // The model read what degrade_part wrote — a degrade version with the dry cut as its
-        // parent — in the request after the call, which is where it got the id Sound opened on.
+        // parent — in the request after the call, which is where it got the id the lane opened on.
         let afterDust = try await rig.transport.request(9).bodyJSON().jsonText
         #expect(afterDust.contains("sp1200 at 60%"))
         #expect(afterDust.contains(dusty.id.description))

@@ -763,7 +763,7 @@ public final class ChopLaneSurface: Surface {
     public func refreshAudition() {
         guard let host else { return }
         do {
-            try host.prepareAudition(chopMap.render(source: source.planar, stretch: stretch))
+            try host.prepareAudition(chopMap.render(source: auditionPlanar, stretch: stretch))
             needsAuditionRefresh = false
             lastError = nil
         } catch {
@@ -815,7 +815,7 @@ public final class ChopLaneSurface: Surface {
         guard let host else { return }
         do {
             let performance = try regroove()
-            try host.prepareAudition(performance.map.render(source: source.planar,
+            try host.prepareAudition(performance.map.render(source: auditionPlanar,
                                                             stretch: stretch))
             host.audition(performance.hits)
             // The host is now holding the re-groove's kit, so the pad map has to be re-sent
@@ -913,10 +913,64 @@ public final class ChopLaneSurface: Surface {
     }
 
     /// The version this lane's next commit derives from: the part's newest in the song, so dust
-    /// Sound put on the chop since the lane opened goes with the next cut rather than being lost.
-    private var parent: PartVersion? {
+    /// put on the chop since the lane opened goes with the next cut rather than being lost.
+    var parent: PartVersion? {
         guard let id = versions.last, let known = host?.song?.version(id) else { return nil }
         return host?.song?.versions.last { $0.partID == known.partID } ?? known
+    }
+
+    // MARK: Dust
+
+    /// The chain the chop plays through: its newest version's. What the Dust menu names, and what
+    /// the pads and the bar are heard through.
+    public var dustPasses: [Degradation] { parent?.kind.degradation ?? [] }
+
+    /// The A/B beside the Dust menu: the pads and the bar with no chain on them at all, a true
+    /// bypass, against the version that carries one. A way of listening, not an edit: nothing is
+    /// kept, and the kit is rendered again from the bar as recorded.
+    public var hearsDry = false {
+        didSet {
+            guard hearsDry != oldValue else { return }
+            needsAuditionRefresh = true
+            refreshAudition()
+        }
+    }
+
+    /// The bar the kit is rendered from: as recorded, or through the chop's chain. Rendered once
+    /// per chain and kept, so a marker dragged does not put the bar through the chain again.
+    @ObservationIgnored private var wet: (passes: [Degradation], planar: [[Float]])?
+
+    private var auditionPlanar: [[Float]] {
+        let passes = hearsDry ? [] : dustPasses
+        guard !passes.isEmpty else { return source.planar }
+        if let wet, wet.passes == passes { return wet.planar }
+        let rendered = (try? Dust.render(source.planar, sampleRate: source.sampleRate, passes: passes)) ?? source.planar
+        wet = (passes, rendered)
+        return rendered
+    }
+
+    /// Keeps the chop through a machine, as its next version: the Dust menu's choice. The top pass
+    /// is replaced, or taken off for Clean; a cut not yet kept is kept first, so the dusty version
+    /// plays the slices on screen. The pads play through it at once.
+    public func setDust(_ preset: DegradeSettings.Preset) {
+        guard let host else { lastError = ChopLaneError.noHost.description; return }
+        if hasUnkeptChopEdits, !keepNow() { return }
+        guard let parent else { lastError = "The chop is not in the song yet, so there is nothing to make dusty."; return }
+        guard let dusty = Dust.version(choosing: preset, on: parent, by: .user) else { return }
+        guard host.record(dusty) else { lastError = ChopLaneError.versionRefused.description; return }
+        versions = [dusty.id]
+        lastError = nil
+        needsAuditionRefresh = true
+        refreshAudition()
+    }
+
+    /// A version of this chop kept elsewhere with a chain on it — the Shape popover's — taken as
+    /// the lane's own: the pads play through it, and the Dust menu names its machine.
+    public func adopt(_ dusty: PartVersion) {
+        guard dusty.partID == partID, dusty.type == .sample else { return }
+        versions = [dusty.id]
+        needsAuditionRefresh = true
+        refreshAudition()
     }
 
     // MARK: Keeping

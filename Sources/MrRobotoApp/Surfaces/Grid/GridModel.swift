@@ -182,8 +182,49 @@ public final class GridModel {
     }
 
     /// The chain the groove plays through, carried across an edit untouched: painting a step is not
-    /// a request to clean the groove. The Grid does not draw or move it — that is the Sound surface's.
+    /// a request to clean the groove. The Grid's Dust menu names it and chooses the machine on top
+    /// (`setDust`); the Shape popover behind the menu moves its stages, and hands what it keeps
+    /// back here (`adopt`).
     public private(set) var degradation: [Degradation] = []
+
+    /// The A/B beside the Dust menu: the surface's own play with the chain bypassed, so the groove
+    /// is heard with no chain on it at all against the version that carries one. Not kept with the
+    /// groove — it is a way of listening, not an edit — and off again when the grid is next built.
+    public var hearsDry = false
+
+    /// Whether there is a groove to put through a machine. An empty grid nobody has kept has
+    /// nothing to make dusty.
+    public var canDust: Bool { isPainted || base != nil || !versions.isEmpty }
+
+    /// Keeps the groove through a machine, as its next version: the Dust menu's choice. The top
+    /// pass is replaced, or taken off for Clean; steps not yet kept are kept first, so the dusty
+    /// version plays what is on screen.
+    public func setDust(_ preset: DegradeSettings.Preset) {
+        guard canDust else { return }
+        if hasUnkeptChanges || (versions.last ?? base) == nil {
+            commit()
+            guard lastError == nil else { return }
+        }
+        guard let known = versions.last ?? base else { return }
+        let newest = host.newest(of: known.partID) ?? known
+        guard let dusty = Dust.version(choosing: preset, on: newest, by: .user) else { return }
+        guard host.commit(dusty) else {
+            lastError = "The song would not take that version."
+            return
+        }
+        adopt(dusty)
+    }
+
+    /// A version of this groove kept elsewhere with a chain on it — the Shape popover's — taken as
+    /// the grid's own: the next keep derives from it, and the Dust menu names its machine.
+    public func adopt(_ dusty: PartVersion) {
+        guard case .groove(let groove) = dusty.kind,
+              dusty.partID == (versions.last ?? base)?.partID else { return }
+        versions.append(dusty)
+        degradation = groove.degradation
+        lastKept = dusty
+        lastError = nil
+    }
 
     // MARK: Collaborators
 
@@ -869,8 +910,8 @@ public final class GridModel {
     /// derives when the grid was opened against one and roots a new part when it was not.
     @discardableResult
     public func commit(note: String? = nil) -> PartVersion {
-        // On the part's newest version, not the one this grid last saw: dust added in Sound since
-        // is carried, not wiped. The grid owns the steps and the swing; the chain is Sound's.
+        // On the part's newest version, not the one this grid last saw: dust added from the popover
+        // since is carried, not wiped. The grid owns the steps and the swing; the Dust menu the chain.
         let known = versions.last ?? base
         let newest = known.flatMap { host.newest(of: $0.partID) } ?? known
         if case .groove(let current)? = newest?.kind { degradation = current.degradation }

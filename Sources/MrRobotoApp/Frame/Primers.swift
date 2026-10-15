@@ -26,16 +26,14 @@ public enum Primer {
             return ("Chop lane",
                     "A chop is one bar cut from a stem, and it plays in the song as cut. Its slices play on the pads, and "
                         + "onset sensitivity sets how many there are; your edits keep themselves. Re-groove puts the slices on a "
-                        + "feel, and Make the groove keeps it: a groove that plays these slices in the song, in place of the loop.")
+                        + "feel, and Make the groove keeps it: a groove that plays these slices in the song, in place of the loop. "
+                        + "Dust puts the bar through a machine — an SP-1200, a cassette — as a new version, the clean one a step back.")
         case .grid:
             return ("Grid",
                     "A groove is steps, swing and ghost notes for each drum voice, one bar or several. Paint steps, choose "
                         + "a feel, set the bars, or press Record MIDI and play pads against the song: each hit lands on its step. "
-                        + "It keeps itself a moment after you stop, as a new version, and ⌘Z steps back.")
-        case .sound:
-            return ("Sound",
-                    "Two jobs. On a chop or a groove, it adds dust — a machine at a mix, kept as a new version "
-                        + "with the clean one a step back. On a kit sound, it shapes the synthesized voice.")
+                        + "It keeps itself a moment after you stop, as a new version, and ⌘Z steps back. Dust puts the groove "
+                        + "through a machine; right-click a voice's name to shape its sound.")
         case .chords:
             return ("Chords",
                     "A progression, typed the way a lead sheet says it: Dm9 G13 | Cmaj9. Bars are separated by |. "
@@ -140,9 +138,8 @@ extension Primer {
     public static func summary(for kind: SurfaceKind, variant: String? = nil) -> String {
         switch kind {
         case .importRecord: return "The record as measured — key, tempo, bars, form — and its stems, ready to chop."
-        case .chopLane: return "One bar cut from a stem, its slices on the pads; Re-groove puts them on a feel."
-        case .grid: return "Steps, swing and ghost notes for each drum voice. It keeps itself as you paint."
-        case .sound: return "Dust on a chop or a groove; the shape of a kit sound's synthesized voice."
+        case .chopLane: return "One bar cut from a stem, its slices on the pads; Re-groove puts them on a feel, Dust through a machine."
+        case .grid: return "Steps, swing and ghost notes for each drum voice, its machine and its dust. It keeps itself as you paint."
         case .chords: return "A progression, typed the way a lead sheet says it: Dm9 G13 | Cmaj9."
         case .pianoRoll where variant == "melody": return "A tune: click to place a note, drag to move it, or play one in."
         case .pianoRoll: return "A bass line over the groove's kicks; the levers re-run it in a player's hands."

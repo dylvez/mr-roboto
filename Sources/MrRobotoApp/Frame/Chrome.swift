@@ -246,6 +246,80 @@ struct SegmentedChoice<Value: Hashable>: View {
     }
 }
 
+/// A menu that opens from a chip. The chip reads what is chosen and a chevron says it opens; the
+/// menu holds the rest, in sections or a submenu a family, where a row of chips would have been a
+/// wall. The Grid's feel and length open from one, and so do the instrument, the bass sound and
+/// the hands.
+///
+/// Which a set gets is a rule, not a taste: **a set stays as chips only when the whole of it fits
+/// in one row at the window's minimum (`SurfaceGeometry.minimum`) and its options are peers
+/// compared at a glance** — Bass or Melody, the Length's four counts, Played's patterns. Anything
+/// larger, and anything with a hierarchy in it — forty instruments in fourteen families, thirty-six
+/// bass sounds by how they are made, fifteen hands — is a menu. `PickerLayoutTests` holds the
+/// rows that stay chips to the one-row half of the rule, and the menus to the height they won back.
+/// Two rows are the rule's named exceptions, kept as chips on the other half of it: the Chords'
+/// Played, ten patterns, and its Another way, six moves, are peers compared at a glance, sit in one
+/// row from the default window up and take two at the minimum — a line, not a wall.
+struct ChipMenu<Items: View>: View {
+    let title: String
+    @ViewBuilder let items: () -> Items
+
+    init(_ title: String, @ViewBuilder items: @escaping () -> Items) {
+        self.title = title
+        self.items = items
+    }
+
+    var body: some View {
+        Menu(content: items) {
+            ChipMenuLabel(title)
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+    }
+}
+
+/// The chip a menu opens from: what is chosen, and the chevron. The same face as the chip you
+/// press, so a surface's levers read as one row whichever kind each is.
+struct ChipMenuLabel: View {
+    let title: String
+
+    init(_ title: String) { self.title = title }
+
+    var body: some View {
+        StudioChip {
+            HStack(spacing: 4) {
+                ChipText(title, size: 11.5)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .bold))
+            }
+        }
+    }
+}
+
+/// One choice in a chip's menu, checked when it is the one chosen. Choosing the checked one again
+/// is allowed and does what the chip did — hands picked again write again — so the check is not a
+/// toggle that turns off. The help is the item's tooltip.
+struct MenuChoice: View {
+    let title: String
+    let isOn: Bool
+    var help: String = ""
+    let choose: () -> Void
+
+    init(_ title: String, isOn: Bool, help: String = "", choose: @escaping () -> Void) {
+        self.title = title
+        self.isOn = isOn
+        self.help = help
+        self.choose = choose
+    }
+
+    var body: some View {
+        Toggle(title, isOn: Binding(get: { isOn }, set: { _ in choose() }))
+            .help(help)
+    }
+}
+
 /// A proposal, as a thing you press: the verb, the surface it opens, and the quiet line saying why.
 ///
 /// Shared by the rail's "What next" block and by the surfaces that are empty because nothing is bound

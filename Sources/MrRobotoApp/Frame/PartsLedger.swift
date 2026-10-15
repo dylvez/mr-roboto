@@ -301,12 +301,10 @@ public enum LedgerGroups {
         return version.operation
     }
 
-    /// A dusty version opens where its dust is (Sound); anything else opens where its kind does.
+    /// A version opens where its kind does: a dusty groove on the Grid and a dusty chop on the
+    /// Chop lane, whose Dust menus are the chain.
     static func action(for version: PartVersion, in song: Song) -> SurfaceAction? {
-        if !version.kind.degradation.isEmpty {
-            return SurfaceAction(surface: .sound, title: PartLabel.title(of: version), bound: [version.id])
-        }
-        return PartActions.primary(for: version, in: song)?.action
+        PartActions.primary(for: version, in: song)?.action
     }
 }
 

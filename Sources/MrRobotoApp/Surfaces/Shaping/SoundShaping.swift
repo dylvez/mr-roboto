@@ -4,20 +4,6 @@ import Instrument
 import Observation
 import SongGraph
 
-/// Which panel is in front. The surface is one thing at a time on purpose: the question is either
-/// "what is this drum" or "how dusty is it", and asking both at once is the mixer strip the M1 spec
-/// says not to build.
-public enum SoundPanel: String, Hashable, Sendable, CaseIterable {
-    case voice, chain
-
-    public var title: String {
-        switch self {
-        case .voice: "Voice"
-        case .chain: "Chain"
-        }
-    }
-}
-
 /// Which side of the A/B you are hearing.
 public enum SoundMonitor: String, Hashable, Sendable, CaseIterable {
     /// Through the degradation chain.
@@ -26,14 +12,15 @@ public enum SoundMonitor: String, Hashable, Sendable, CaseIterable {
     case dry
 }
 
-/// What the surface is shaping.
+/// What a Shape popover is shaping.
 ///
-/// A drum voice is the surface's first job: a `.sound` part, or a new one from a machine preset,
-/// with the voice's knobs and a chain over it. The second is the one this app's first idiom turns
-/// on — a clean chop made dusty — and there the surface binds to the chop (or a groove) itself and
-/// is only the chain: the part is not a voice, so there are no voice knobs to show.
+/// A drum voice is its first job: a `.sound` part, or a new one from a machine preset, with the
+/// voice's knobs and a chain over it, opened from the voice's name on the Grid. The second is the
+/// one this app's first idiom turns on — a clean chop made dusty — and there the popover opens on
+/// the chop (or a groove) itself from its Dust menu and is only the chain: the part is not a voice,
+/// so there are no voice knobs to show.
 public enum SoundSubject: Hashable, Sendable {
-    /// A drum voice: a `.sound` part, or nothing bound.
+    /// A drum voice: one of the machine's, kept or not.
     case voice
     /// A sample or a groove being put through the chain. The payload is which.
     case part(PartType)
@@ -41,15 +28,143 @@ public enum SoundSubject: Hashable, Sendable {
     public var isPart: Bool { if case .part = self { return true } else { return false } }
 }
 
-/// The Sound surface: four to six controls for the voice or the chain in front of you, every one of
-/// which makes a sound the moment you move it.
+// MARK: - The host
+
+/// What a `SoundShaping` needs from whatever is hosting it — and nothing else.
+///
+/// Three members matching the three things a surface does: it **plays on touch** (`audition`), an
+/// **edit produces a new version** (`record`), and it reads the song it is working in (`newest`).
+/// The shaping never mutates a version and never reaches for an engine directly.
+///
+/// Note what is *not* here: re-rendering the kit on disk. A knob turn renders one voice with
+/// `DrumSynthesizer.render`; catching the kit up is the host's business when it sees a new version,
+/// because the host is what owns the kit. The app's host does it by building every kit from the
+/// machine as the song has shaped it (`SongPlayback.shaped`).
+///
+/// The members after `dryAudio` are the song's side of a drum voice: which machine the song plays,
+/// what it has kept of a voice, and whether a voice is a recording. Each has a default that says
+/// "no song", so a host with none is still the whole of the first three.
+@MainActor
+public protocol SoundShapingHost: AnyObject {
+
+    /// Play this now. No agent round trip, no scheduling: the Komma lesson is that the payoff has
+    /// to be in the first five seconds, so an audition is fire-and-forget and may be interrupted by
+    /// the next one.
+    func audition(_ audition: SoundAudition)
+
+    /// Take a new, immutable part version. The shaping builds it with `PartVersion.deriving` (or
+    /// starts a part when there was none) and hands it over; where it goes is the host's business.
+    ///
+    /// - Returns: `false` when the host refused it, so the edit stays a draft rather than
+    ///   pretending it was kept.
+    @discardableResult
+    func record(_ version: PartVersion) -> Bool
+
+    /// The newest version of a part in the song, so a new chain goes on what the Grid or the lane
+    /// kept since the popover opened, not under it.
+    func newest(of part: PartID) -> PartVersion?
+
+    /// The dry sound of a sample or a groove — the part with **no chain on it at all**, whatever
+    /// the version carries — to put through the chain being edited. A chop is its bar of the
+    /// record; a groove is one pass bounced on the song's machine.
+    ///
+    /// Asynchronous because it reads a file or renders a bounce; called once per binding, never on
+    /// the touch path. A host that cannot render parts throws, and the popover says so.
+    func dryAudio(of version: PartVersion) async throws -> SoundAudition
+
+    /// The drum machine the song plays, by id. Nil when there is no song.
+    var songMachine: String? { get }
+
+    /// The newest edit of this voice of this machine the song has kept, when it has kept one. A
+    /// voice opens at it, and the next edit is its next version.
+    func keptVoice(_ voice: SynthVoiceKind, on machine: String) -> PartVersion?
+
+    /// What the recording that plays this voice is called, when one does: a recorded kit's kick,
+    /// a conga from the hand percussion in use. Nil is a synthesized voice.
+    func recording(of voice: SynthVoiceKind, on machine: String) -> String?
+
+    /// One hit of a voice as the song's kit plays it — `machine` shaped as the song has kept it —
+    /// which for a recorded voice is the recording at the level the kit brings it to. Dry: with
+    /// no chain of the voice's own on it, because the popover puts the draft's chain on.
+    /// Asynchronous because it builds the kit when nobody has yet. A host with no kit throws.
+    func kitHit(of voice: SynthVoiceKind, on machine: SynthMachine) async throws -> SoundAudition
+}
+
+public extension SoundShapingHost {
+    func newest(of part: PartID) -> PartVersion? { nil }
+    var songMachine: String? { nil }
+    func keptVoice(_ voice: SynthVoiceKind, on machine: String) -> PartVersion? { nil }
+    func recording(of voice: SynthVoiceKind, on machine: String) -> String? { nil }
+    func kitHit(of voice: SynthVoiceKind, on machine: SynthMachine) async throws -> SoundAudition {
+        throw SoundShapingUnavailable(what: "this host has no kit to play the \(voice.rawValue) on")
+    }
+    func dryAudio(of version: PartVersion) async throws -> SoundAudition {
+        throw SoundShapingUnavailable(what: "this host cannot render a \(version.type.rawValue) to put through the chain")
+    }
+}
+
+/// Why the popover could not get at the thing it was asked to dirty. Carried verbatim.
+public struct SoundShapingUnavailable: Error, CustomStringConvertible, Sendable {
+    public let what: String
+    public init(what: String) { self.what = what }
+    public var description: String { what }
+}
+
+/// One rendered hit, ready to play.
+///
+/// Mono float samples because that is what `DrumSynthesizer.render` produces and what a drum voice
+/// is; the host widens it if its output does.
+public struct SoundAudition: Hashable, Sendable {
+
+    /// Planar float channels at `sampleRate`. One channel for a drum voice; a chop keeps the
+    /// channels of the record it was cut from.
+    public var planar: [[Float]]
+    public var sampleRate: Double
+
+    /// What made it, for a host that wants to label or cache: `"tr808 kick"`.
+    public var label: String
+
+    /// True when the degradation chain was bypassed for this render — the dry half of an A/B.
+    ///
+    /// The chain normalises every saturation curve by its slope at the origin, so `|y| <= |x|` at
+    /// any drive and the chain can only ever compress. That is what makes the comparison fair, and
+    /// it is only worth anything if the dry side really is untouched: a dry audition is the
+    /// synthesizer's own samples, not the chain set to `.clean`.
+    public var isDry: Bool
+
+    public init(samples: [Float], sampleRate: Double, label: String, isDry: Bool) {
+        self.init(planar: [samples], sampleRate: sampleRate, label: label, isDry: isDry)
+    }
+
+    public init(planar: [[Float]], sampleRate: Double, label: String, isDry: Bool) {
+        self.planar = planar
+        self.sampleRate = sampleRate
+        self.label = label
+        self.isDry = isDry
+    }
+
+    /// The first channel: all of a drum voice, and the left of a stereo chop.
+    public var samples: [Float] { planar.first ?? [] }
+
+    public var durationSeconds: Double {
+        sampleRate > 0 ? Double(samples.count) / sampleRate : 0
+    }
+}
+
+// MARK: - The shaping
+
+/// What a Shape popover works on: four to six knobs for a drum voice and the nine stages of the
+/// chain, every one of which makes a sound the moment you move it.
+///
+/// It is the model the Sound surface had, with the surface taken away. A voice is shaped from its
+/// name on the Grid, a chop or a groove is made dusty from its Dust menu, and this opens behind
+/// either for the rest: the knobs, the chain's parameters, and the A/B.
 ///
 /// ## The four rules
 ///
-/// * **Binds to parts.** It opens against the host's selected part version and reads `SoundState`
-///   out of it — a version it can edit (`canEdit`); anything else reads as nothing selected. The
-///   only state of its own is a *draft* of the edit in progress plus which panel and which side of
-///   the A/B you are on — the things a reopen is allowed to forget.
+/// * **Binds to parts.** A voice opens at the song's newest edit of it, a part at its newest
+///   version. The only state of its own is a *draft* of the edit in progress plus which side of the
+///   A/B you are on — the things a reopen is allowed to forget.
 /// * **Plays on touch.** `setValue` re-renders that one voice and auditions it. `DrumSynthesizer`
 ///   is a pure generator, so this is a few milliseconds of arithmetic and no engine round trip. It
 ///   never calls `SynthesizedKit.rerender`: re-rendering twelve voices at three velocity layers to
@@ -68,16 +183,9 @@ public enum SoundSubject: Hashable, Sendable {
 /// audible rather than merely documented.
 @MainActor
 @Observable
-public final class SoundSurface {
+public final class SoundShaping: Identifiable {
 
-    // MARK: Identity
-
-    public nonisolated let id: SurfaceID
-
-    /// A value the frame can put in its bench and hold across isolation domains.
-    public var binding: SoundSurfaceBinding {
-        SoundSurfaceBinding(id: id, bound: boundVersion.map { [$0.id] } ?? [], title: title)
-    }
+    public nonisolated let id = UUID()
 
     /// `"TR-808 kick"`, or `"TR-808 kick · vinyl"` once the chain is doing something.
     public var title: String {
@@ -96,22 +204,35 @@ public final class SoundSurface {
         return draft.label
     }
 
-    /// The version the next keep goes on, which is the part this surface is working on: for a chop
-    /// or a groove, the version bound; for a voice, the song's newest edit of the voice in front, or
-    /// the bound version when it is that voice. Nil for a voice nothing has kept, whose first keep
-    /// starts a part. The frame's header traces the part from this rather than from the binding,
-    /// which may be the machine's pick or a voice the surface has since switched away from.
+    /// Where this sound came from, for the line under the title: the machine, and the chain preset
+    /// when one is doing something; for a part, what it plays through.
+    public var provenance: String {
+        if subject.isPart {
+            let passes = chainPasses
+            return passes.isEmpty ? "dry · chain off" : Dust.spoken(passes)
+        }
+        let machine = draft.synthMachine.name
+        guard !draft.degrade.isBypass else { return "\(machine) · chain off" }
+        return "\(machine) · \(draft.degrade.matchingPreset.map { Dust.machineName($0.rawValue) } ?? "chain")"
+    }
+
+    /// The version the next keep goes on, which is the part this is working on: for a chop or a
+    /// groove, the version bound; for a voice, the song's newest edit of it, or the version it
+    /// opened on when that is this voice. Nil for a voice nothing has kept, whose first keep starts
+    /// a part.
     public var editing: PartVersion? {
         if subject.isPart { return boundVersion }
         let bound = boundVersion.flatMap { version in
             SoundState(version).flatMap { $0.machine == draft.machine && $0.voice == draft.voice ? version : nil }
         }
-        return host?.keptVoice(draft.voice, on: draft.machine) ?? bound
+        return host.keptVoice(draft.voice, on: draft.machine) ?? bound
     }
 
     // MARK: Host
 
-    private weak var host: (any SoundSurfaceHost)?
+    /// Held strongly: the popover's model is the one thing that keeps its adapter alive, and the
+    /// adapter holds the app, which outlives them both.
+    private let host: any SoundShapingHost
 
     /// Render rate. The sampler's rate, so a commit does not resample what you auditioned.
     public let sampleRate: Double
@@ -120,19 +241,21 @@ public final class SoundSurface {
     /// voice, not a performance.
     public let auditionVelocity: Int
 
+    /// Told when a version lands, so the surface the popover opened from can take it as its own:
+    /// the Grid carries the chain into its next keep, and names it on its Dust menu.
+    public var kept: ((PartVersion) -> Void)?
+
     // MARK: State
 
     /// The edit in progress. Seeded from the bound version and written back by `commit`; it is a
-    /// draft, not state the surface owns, which is why `isDirty` is visible and `revert` exists.
+    /// draft, not state the model owns, which is why `isDirty` is visible and `revert` exists.
     public private(set) var draft: SoundState
 
     /// The state as the bound version has it.
     public private(set) var committed: SoundState
 
-    /// The version this surface opened against, if there was one.
+    /// The version this opened against, if there was one.
     public private(set) var boundVersion: PartVersion?
-
-    public var panel: SoundPanel = .voice
 
     /// Which side of the A/B. Setting it re-auditions, because that is the whole point of a
     /// comparison: one gesture, the same hit, the other side.
@@ -140,25 +263,20 @@ public final class SoundSurface {
         didSet { if monitor != oldValue { audition() } }
     }
 
-    /// The chain panel shows its two prominent levers and the presets; the remaining seven are
-    /// behind this. A chain is nine parameters and a surface is four to six controls, so the rest
-    /// of it is available rather than present.
-    public var showsFullChain = false
-
     /// Set when a render could not be put through the chain — `DegradeChain` refused the rate or
     /// could not allocate. The dry signal is auditioned instead; nothing is corrected silently.
     public private(set) var chainFailure: String?
 
     public var isDirty: Bool { draft != committed }
 
-    /// The version the last commit wrote, so the panel can say what a knob let go of became. Nil
+    /// The version the last commit wrote, so the popover can say what a knob let go of became. Nil
     /// until something has been kept here.
     public private(set) var lastKept: PartVersion?
-    /// How many versions this surface has written since it opened. The panel cannot number a
-    /// version the way the ledger does — it has no song to count in — so it counts its own.
+    /// How many versions this has written since it opened. The popover cannot number a version
+    /// the way the ledger does — it has no song to count in — so it counts its own.
     public private(set) var keptCount = 0
-    /// Set when the host refused the last commit, so the draft is still on the knobs and the panel
-    /// says so rather than "no change". Cleared by the next commit that lands.
+    /// Set when the host refused the last commit, so the draft is still on the knobs and the
+    /// popover says so rather than "no change". Cleared by the next commit that lands.
     public private(set) var lastCommitWasRefused = false
 
     // MARK: Dirtying a part
@@ -170,7 +288,7 @@ public final class SoundSurface {
     /// Nil until then, and nil for a voice, which renders its own.
     public private(set) var dryPart: SoundAudition?
 
-    /// Set when the host could not render the dry part. The panel says so; nothing plays.
+    /// Set when the host could not render the dry part. The popover says so; nothing plays.
     public private(set) var dryFailure: String?
 
     /// The bound version's passes *beneath* the one being edited. Empty for a dry part. When
@@ -203,64 +321,39 @@ public final class SoundSurface {
 
     // MARK: Init
 
-    public init(id: SurfaceID = SurfaceID(),
-                host: any SoundSurfaceHost,
-                sampleRate: Double = 48_000,
-                auditionVelocity: Int = 100) {
-        self.id = id
+    /// A drum voice of a machine: at the song's newest edit of it when the song has kept one, else
+    /// as the machine preset has it. `machine` nil opens on the machine the song plays, and with
+    /// no song on the TR-808.
+    public init(host: any SoundShapingHost, voice: SynthVoiceKind = .kick, machine: String? = nil,
+                sampleRate: Double = 48_000, auditionVelocity: Int = 100) {
         self.host = host
         self.sampleRate = sampleRate
         self.auditionVelocity = auditionVelocity
-        let version = Self.editable(host.selectedPart)
-        let state = version.flatMap(SoundState.init) ?? Self.opening(on: host, pick: version)
+        let picked = machine ?? host.songMachine ?? SynthMachine.tr808.id
+        let preset = SynthMachine.preset(id: picked) ?? .tr808
+        let kind = preset.voices.contains { $0.kind == voice } ? voice
+            : preset.voices.first { $0.kind == .kick }?.kind ?? preset.voices.first?.kind ?? .kick
+        let bound = host.keptVoice(kind, on: preset.id)
+        let state = bound.flatMap(SoundState.init) ?? SoundState(machine: preset.id, voice: kind)
         self.draft = state
         self.committed = state
-        self.boundVersion = version
-        bindPart(version, lever: host.dustLever)
+        self.boundVersion = bound
+        self.subject = .voice
     }
 
-    /// Re-reads the host's selection, discarding any draft. The frame calls this when the selection
-    /// changes under the surface.
-    public func reload() {
-        let version = Self.editable(host?.selectedPart)
-        let state = version.flatMap(SoundState.init) ?? host.map { Self.opening(on: $0, pick: version) } ?? SoundState()
-        boundVersion = version
-        recordedHit = nil
-        draft = state
-        committed = state
-        chainFailure = nil
-        bindPart(version, lever: nil)
-    }
-
-    /// Whether this surface can edit a version, and so be bound to it: a drum voice it keeps, a
-    /// drum machine whose voices it opens on, or a chop or a groove whose chain it is.
-    ///
-    /// Nothing else. Not a tune, and not the instrument a tune plays on — a `.sound` too, but with
-    /// none of these knobs, and picked where its part is written — nor a groove's chop kit, which
-    /// is the chop's slices and is shaped in the Chop lane. Bound to a tune's instrument, the
-    /// surface shaped the song's kit under the instrument's name ("Horn Trio" over a kit voice).
-    public nonisolated static func canEdit(_ version: PartVersion) -> Bool {
-        guard case .sound(let sound) = version.kind else { return version.kind.canCarryDegradation }
-        return SoundState(sound) != nil || SynthMachine.preset(id: sound.instrument) != nil
-    }
-
-    /// What the host handed over, when it is something this surface can edit. Anything else reads
-    /// as nothing selected: a new voice, on the song's kit.
-    private static func editable(_ version: PartVersion?) -> PartVersion? {
-        version.flatMap { canEdit($0) ? $0 : nil }
-    }
-
-    /// What a surface opened on no drum voice opens on: the kick of the machine the song plays —
-    /// or of the machine that was picked, when the pick is what is bound — as the song has kept it.
-    /// With no song, the TR-808's. It used to be the 808's whatever the song played.
-    private static func opening(on host: any SoundSurfaceHost, pick: PartVersion?) -> SoundState {
-        var machine = host.songMachine
-        if case .sound(let sound)? = pick?.kind, SynthMachine.preset(id: sound.instrument) != nil {
-            machine = sound.instrument
-        }
-        guard let machine, let preset = SynthMachine.preset(id: machine) else { return SoundState() }
-        let voice = preset.voices.first { $0.kind == .kick }?.kind ?? preset.voices.first?.kind ?? .kick
-        return host.keptVoice(voice, on: machine).flatMap(SoundState.init) ?? SoundState(machine: machine, voice: voice)
+    /// A sample or a groove, to put through the chain: opens on its newest version's top pass, with
+    /// the dry part asked for from the host. A `lever` (0…1) starts the draft at `Dust.lever(_:)`
+    /// instead — the same pass the Compare's `dust` lever plays at that amount.
+    public init(host: any SoundShapingHost, part version: PartVersion, lever: Double? = nil,
+                sampleRate: Double = 48_000, auditionVelocity: Int = 100) {
+        self.host = host
+        self.sampleRate = sampleRate
+        self.auditionVelocity = auditionVelocity
+        let bound = version.kind.canCarryDegradation ? (host.newest(of: version.partID) ?? version) : nil
+        self.draft = SoundState()
+        self.committed = SoundState()
+        self.boundVersion = bound
+        bindPart(bound, lever: lever)
     }
 
     /// What the recording playing the voice in front of you is called, when one does. Then the
@@ -268,7 +361,7 @@ public final class SoundSurface {
     /// recording as the kit plays it.
     public var recordedAs: String? {
         guard !subject.isPart else { return nil }
-        return host?.recording(of: draft.voice, on: draft.machine)
+        return host.recording(of: draft.voice, on: draft.machine)
     }
 
     /// The recording's hit as the host's kit played it, and the LEVEL the kit was built at, so a
@@ -276,8 +369,8 @@ public final class SoundSurface {
     @ObservationIgnored private var recordedHit: (machine: String, voice: SynthVoiceKind, level: Double, audition: SoundAudition)?
     @ObservationIgnored private var recordedLoad: Task<Void, Never>?
 
-    /// Opens onto a sample or a groove, when that is what is bound: chain panel only, the draft at
-    /// the part's top pass, and the dry part asked for from the host.
+    /// Opens onto a sample or a groove, when that is what is bound: the draft at the part's top
+    /// pass, and the dry part asked for from the host.
     private func bindPart(_ version: PartVersion?, lever: Double?) {
         dryLoad?.cancel()
         dryPart = nil
@@ -289,7 +382,6 @@ public final class SoundSurface {
             return
         }
         subject = .part(version.type)
-        panel = .chain
         rebase()
         if let lever {
             // The Director's lever means what the Compare's does: `Dust.lever`, as a draft to hear
@@ -312,7 +404,6 @@ public final class SoundSurface {
     }
 
     private func loadDry(_ version: PartVersion) async {
-        guard let host else { return }
         do {
             let audio = try await host.dryAudio(of: version)
             guard !Task.isCancelled, boundVersion?.id == version.id || boundVersion?.parents.contains(version.id) == true
@@ -326,7 +417,7 @@ public final class SoundSurface {
     }
 
     /// Waits for the dry part the binding asked for. Tests use this; so does anything that wants to
-    /// render before the panel draws.
+    /// render before the popover draws.
     public func waitForDry() async {
         await dryLoad?.value
     }
@@ -342,31 +433,26 @@ public final class SoundSurface {
 
     // MARK: Controls
 
-    /// The controls for the panel in front of you.
-    public var controls: [SoundControl] { controls(for: panel) }
-
-    public func controls(for panel: SoundPanel) -> [SoundControl] {
-        switch panel {
-        case .voice:
-            if subject.isPart { [] }
-            else if recordedAs != nil { SoundControl.recordedControls(for: draft.spec) }
-            else { SoundControl.voiceControls(for: draft.spec) }
-        case .chain: SoundControl.chainControls(for: draft.degrade)
-        }
+    /// The voice's knobs: the machine's own for a synthesized voice, LEVEL alone for a recording,
+    /// and none at all for a chop or a groove, which has no voice to turn.
+    public var voiceControls: [SoundControl] {
+        if subject.isPart { [] }
+        else if recordedAs != nil { SoundControl.recordedControls(for: draft.spec) }
+        else { SoundControl.voiceControls(for: draft.spec) }
     }
 
-    /// At most two. The M1 spec's rule, and the reason this is a surface and not a mixer strip.
-    public var prominentControls: [SoundControl] { controls.filter(\.isProminent) }
+    /// The chain's nine stages, in signal order.
+    public var chainControls: [SoundControl] { SoundControl.chainControls(for: draft.degrade) }
 
-    public var quietControls: [SoundControl] { controls.filter { !$0.isProminent } }
+    /// Every control, voice first.
+    public var controls: [SoundControl] { voiceControls + chainControls }
 
     /// Moves a control, re-renders that one voice, and plays it.
     ///
     /// Called from a slider's `onChange`, so it runs at gesture rate. That is affordable: a 1.6 s
     /// 808 kick at 48 kHz is about 77 000 samples of straight-line arithmetic.
     public func setValue(_ value: Double, for parameter: SoundControl.Parameter) {
-        guard let control = controls(for: panel(of: parameter))
-            .first(where: { $0.parameter == parameter }) else { return }
+        guard let control = controls.first(where: { $0.parameter == parameter }) else { return }
         let clamped = min(max(value, control.range.lowerBound), control.range.upperBound)
         guard apply(clamped, to: parameter) else { return }
         audition()
@@ -384,22 +470,10 @@ public final class SoundSurface {
         commit()
     }
 
-    /// Switches voice within the same machine. The chain is unchanged — it is a chain, not part of
-    /// the voice — and the new voice's own knob positions come from the machine preset.
-    public func select(_ voice: SynthVoiceKind) {
-        guard !subject.isPart, voice != draft.voice, draft.availableVoices.contains(voice) else { return }
-        draft.voice = voice
-        // As the song has kept it, when it has; the machine preset's otherwise.
-        draft.controls = host?.keptVoice(voice, on: draft.machine).flatMap(SoundState.init)?.controls
-            ?? SoundState.factorySpec(machine: draft.machine, voice: voice).controls
-        panel = .voice
-        audition()
-    }
-
     /// Whether a control sits where the machine preset (or the chain's base preset) put it, so the
-    /// panel can offer "back to the preset" only where there is somewhere to go back to.
+    /// popover can offer "back to the preset" only where there is somewhere to go back to.
     public func isAtPreset(_ parameter: SoundControl.Parameter) -> Bool {
-        guard let current = controls(for: panel(of: parameter)).first(where: { $0.parameter == parameter })?.value
+        guard let current = controls.first(where: { $0.parameter == parameter })?.value
         else { return true }
         return abs(current - presetValue(of: parameter)) < 1e-9
     }
@@ -484,8 +558,8 @@ public final class SoundSurface {
         } else {
             chainFailure = nil
         }
-        host?.audition(SoundAudition(samples: samples, sampleRate: sampleRate,
-                                     label: draft.label, isDry: isDry))
+        host.audition(SoundAudition(samples: samples, sampleRate: sampleRate,
+                                    label: draft.label, isDry: isDry))
     }
 
     /// The recording in front of you at the draft's LEVEL, when it has been fetched for this voice.
@@ -506,11 +580,10 @@ public final class SoundSurface {
             // The kit the song plays, not one built for the draft: the host shapes the machine as
             // its song has, and that is the LEVEL the hit comes back at.
             let preset = draft.synthMachine
-            let level = host?.keptVoice(voice, on: machine).flatMap(SoundState.init)?.controls.level
+            let level = host.keptVoice(voice, on: machine).flatMap(SoundState.init)?.controls.level
                 ?? draft.factorySpec.controls.level
             recordedLoad?.cancel()
-            recordedLoad = Task { [weak self] in
-                guard let host = self?.host else { return }
+            recordedLoad = Task { [weak self, host] in
                 do {
                     let hit = try await host.kitHit(of: voice, on: preset)
                     guard let self, !Task.isCancelled, self.draft.machine == machine, self.draft.voice == voice else { return }
@@ -537,7 +610,7 @@ public final class SoundSurface {
         } else {
             chainFailure = nil
         }
-        host?.audition(SoundAudition(planar: planar, sampleRate: dry.sampleRate, label: draft.label, isDry: isDry))
+        host.audition(SoundAudition(planar: planar, sampleRate: dry.sampleRate, label: draft.label, isDry: isDry))
     }
 
     /// Waits for the recording a voice is to arrive from the host. Tests use this.
@@ -546,7 +619,7 @@ public final class SoundSurface {
     }
 
     private func auditionPart() {
-        // Before the dry part arrives there is nothing to put through the chain, and the panel is
+        // Before the dry part arrives there is nothing to put through the chain, and the popover is
         // already saying so; a touch is not the place to say it again.
         guard let dry = dryPart else { return }
         var planar = dry.planar
@@ -563,8 +636,8 @@ public final class SoundSurface {
         } else {
             chainFailure = nil
         }
-        host?.audition(SoundAudition(planar: planar, sampleRate: dry.sampleRate,
-                                     label: title, isDry: isDry))
+        host.audition(SoundAudition(planar: planar, sampleRate: dry.sampleRate,
+                                    label: title, isDry: isDry))
     }
 
     /// One offline pass through a fresh chain, latency-compensated, so sample *n* out is sample *n*
@@ -592,7 +665,7 @@ public final class SoundSurface {
     /// Writes the draft back as a **new** part version and hands it to the host.
     ///
     /// Never mutates the version it opened against: an edit derives from it, keeping the same part
-    /// and naming it as a parent. With nothing selected, this starts a part instead.
+    /// and naming it as a parent. A voice nothing has kept starts a part instead.
     ///
     /// - Returns: the version written, or `nil` when nothing moved or the host refused it.
     @discardableResult
@@ -601,26 +674,27 @@ public final class SoundSurface {
         if subject.isPart { return commitPart(note: note) }
         let kind = PartKind.sound(draft.sound)
         // A voice is a part of its own: the next version of what the song has kept of it, or of
-        // what is bound when that is this voice, and a new part otherwise (`editing`). An edit of
-        // the snare used to go on whatever was bound — the kick's part, or the pick of the machine.
+        // what it opened on when that is this voice, and a new part otherwise (`editing`).
         let parent = editing
         let version = parent?.deriving(kind, by: .user, operation: Operation.edit, note: note)
             ?? PartVersion(partID: PartID(), kind: kind, author: .user,
                            operation: Operation.written, note: note)
-        guard host?.record(version) == true else {
+        guard host.record(version) else {
             lastCommitWasRefused = true
             return nil
         }
         boundVersion = version
         committed = draft
-        kept(version)
+        landed(version)
         return version
     }
 
-    private func kept(_ version: PartVersion) {
+    /// A version the host took: counted, named, and told to the surface that opened the popover.
+    private func landed(_ version: PartVersion) {
         lastKept = version
         keptCount += 1
         lastCommitWasRefused = false
+        kept?(version)
     }
 
     /// A dirtied part: a new version of the **same** part — the bound version as its parent,
@@ -628,12 +702,12 @@ public final class SoundSurface {
     /// touched, so the dry chop is one parent away and still plays clean. The seed goes in as the
     /// `UInt64` the draft holds; nothing here passes it through a `Double`.
     private func commitPart(note: String?) -> PartVersion? {
-        // On the part's newest version: steps kept on the Grid since this surface opened stay kept.
+        // On the part's newest version: steps kept on the Grid since the popover opened stay kept.
         guard let opened = boundVersion else { return nil }
-        let bound = host?.newest(of: opened.partID) ?? opened
+        let bound = host.newest(of: opened.partID) ?? opened
         guard let version = Dust.version(dirtying: bound, through: chainPasses, by: .user, note: note)
         else { return nil }
-        guard host?.record(version) == true else {
+        guard host.record(version) else {
             lastCommitWasRefused = true
             return nil
         }
@@ -645,17 +719,11 @@ public final class SoundSurface {
         // exactly (it is equal, bar a preset name the pass could not name).
         draft = heard
         committed = heard
-        kept(version)
+        landed(version)
         return version
-
     }
 
     // MARK: Applying a value
-
-    private func panel(of parameter: SoundControl.Parameter) -> SoundPanel {
-        if case .machine = parameter { return .voice }
-        return .chain
-    }
 
     /// - Returns: whether anything actually moved, so an audition is not fired for a no-op.
     private func apply(_ value: Double, to parameter: SoundControl.Parameter) -> Bool {
@@ -677,7 +745,7 @@ public final class SoundSurface {
             case .drive:
                 draft.degrade.drive = value
                 // DRIVE with `saturation == .none` is a plain linear gain, and the A/B's whole
-                // claim is that the chain never adds level. This surface does not offer a curve
+                // claim is that the chain never adds level. The popover does not offer a curve
                 // control — the curve belongs to the preset — so pushing drive up on a chain that
                 // has no curve gives it the soft clip to drive into, and backing off restores the
                 // preset's own curve. Not silent: the DRIVE readout names the curve it is using.
@@ -719,23 +787,5 @@ public final class SoundSurface {
         case .highCut: return settings.highCut
         case .mix: return settings.mix
         }
-    }
-}
-
-/// The catalog entry for an open Sound surface.
-///
-/// `Surface` is a `Sendable` value contract and `SoundSurface` is a `@MainActor` observable model,
-/// so the conformance lives here rather than on the model: the frame holds one of these in its
-/// bench, and the model is what the view talks to.
-public struct SoundSurfaceBinding: Surface {
-    public let id: SurfaceID
-    public static var kind: SurfaceKind { .sound }
-    public let bound: [VersionID]
-    public let title: String
-
-    public init(id: SurfaceID, bound: [VersionID], title: String) {
-        self.id = id
-        self.bound = bound
-        self.title = title
     }
 }

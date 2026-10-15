@@ -182,7 +182,7 @@ struct ChopGrooveTests {
         let pick = try #require(app.song?.versions.last { $0.type == .sound })
         #expect(PartLabel.title(of: pick) == "Bar 1's slices for four on the floor", "named for a person, not by a uuid")
         #expect(PartActions.primary(for: pick, in: app.song!)?.action.surface == .chopLane, "opens where the slices are cut")
-        #expect(Guidance.shapeableSounds(in: app.song!).isEmpty, "and is not offered to Sound")
+        #expect(!Guidance.isKitSound(pick), "a chop kit is not a drum voice to shape")
 
         // The machine the part picked before is picked again, not refused as already playing.
         #expect(app.setMachine(SynthMachine.tr808.id, for: made.partID))

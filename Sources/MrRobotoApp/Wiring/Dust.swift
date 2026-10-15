@@ -7,13 +7,13 @@ import SongGraph
 /// One definition of what "dust" means in this app, shared by everything that makes a part dusty or
 /// plays one.
 ///
-/// Four places used to have their own idea of it — the Sound surface's chain, the Compare's `dust`
+/// Four places used to have their own idea of it — the Shape popover's chain, the Compare's `dust`
 /// lever, the transport (which had none) and the audition service (which played whatever floats it
 /// was handed). They now agree because they all go through here:
 ///
 /// * **`lever(_:)`** is the dust lever as a chain: the SP-1200 preset, its seed intact, at a mix of
-///   the lever's amount. The Compare's `dust` lever, the Director's `dust` lever on a Sound surface
-///   and a Sound surface pressing `sp1200` at full mix are therefore the same pass.
+///   the lever's amount. The Compare's `dust` lever and a Dust menu choosing `sp1200` are therefore
+///   the same pass.
 /// * **`render(_:sampleRate:passes:)`** is how a pass becomes sound: `DegradeChain.rendered`, fresh
 ///   chain per pass, latency-compensated, seeded from the stored seed. Every caller that plays a
 ///   dusty part plays it through this and nothing else, so an audition, a transport bounce and a
@@ -57,7 +57,7 @@ enum Dust {
     /// `Operation.degrade` as the operation — playing through `passes`. `bound` is not touched, so
     /// whatever it was still plays as it did. Nil for a kind that cannot carry a chain.
     ///
-    /// The one construction of a dusty version. The Sound surface's commit and the Director's
+    /// The one construction of a dusty version. The Dust menu, the Shape popover and the Director's
     /// `degrade_part` both come through here, so a chop dirtied by hand and one dirtied by the band
     /// are the same shape in the ledger — same parent edge, same operation, same note — and differ
     /// only in who signed them.
@@ -72,11 +72,47 @@ enum Dust {
                               note: note ?? "\(PartLabel.title(of: bound)) — \(chain)")
     }
 
+    /// A machine chosen from a Dust menu: the part's top pass replaced by that machine at full mix,
+    /// or taken off for Clean, as a new version of the part. The passes beneath the top one stay —
+    /// a machine chosen over a stack changes the one on top, which is what the popover's "Change
+    /// its dust" does; "Add more dust" is the popover's.
+    ///
+    /// Nil when the part already plays through that machine on top (or is clean, for Clean), so a
+    /// menu choice that changes nothing writes nothing; and for a kind that carries no chain.
+    static func version(choosing preset: DegradeSettings.Preset, on bound: PartVersion,
+                        by author: Author) -> PartVersion? {
+        let passes = passes(of: bound)
+        let top = passes.last
+        if preset == .clean, top == nil { return nil }
+        if let top, top.preset == preset.rawValue, DegradeSettings(top) == DegradeSettings(preset: preset) { return nil }
+        var through = Array(passes.dropLast())
+        if preset != .clean { through.append(DegradeSettings(preset: preset).degradation(from: preset)) }
+        return version(dirtying: bound, through: through, by: author)
+    }
+
+    /// The machine on top of a part's chain, as a Dust menu's chip says it: "Clean", "SP-1200",
+    /// "SP-1200 at 60%" once its mix has been moved, "MPC60 over SP-1200" when stacked.
+    static func chip(_ passes: [Degradation]) -> String {
+        guard let top = passes.last else { return "Clean" }
+        var name = machineName(top.name)
+        let mix = top.parameters[DegradeSettings.PassKey.mix] ?? 1
+        if mix < 0.995 { name += " at \(Int((mix * 100).rounded()))%" }
+        if passes.count > 1 { name += " over \(machineName(passes[passes.count - 2].name))" }
+        return name
+    }
+
+    /// The machine a part's top pass was reached from, when it was reached from one and not moved
+    /// since: what a Dust menu checks. Nil for a clean part, and for a chain set by hand.
+    static func preset(on passes: [Degradation]) -> DegradeSettings.Preset? {
+        guard let top = passes.last, let preset = top.preset.flatMap(DegradeSettings.Preset.init(rawValue:)) else { return nil }
+        return DegradeSettings(top) == DegradeSettings(preset: preset) ? preset : nil
+    }
+
     /// The passes a part plays through. Empty for a dry part and for kinds that carry no chain.
     static func passes(of version: PartVersion) -> [Degradation] { version.kind.degradation }
 
     /// Planar audio through `passes`. Returns the input untouched when there is nothing to do, so a
-    /// dry part is bit-identical to its source — which is what makes the Sound surface's `Dry` a
+    /// dry part is bit-identical to its source — which is what makes the Dust menu's `Dry` a
     /// true bypass rather than the chain set to clean.
     static func render(_ planar: [[Float]], sampleRate: Double, passes: [Degradation]) throws -> [[Float]] {
         try DegradeChain.rendered(planar: planar, sampleRate: sampleRate, passes: passes)

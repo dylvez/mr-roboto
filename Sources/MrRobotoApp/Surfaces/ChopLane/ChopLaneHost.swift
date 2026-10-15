@@ -23,7 +23,7 @@ import SongGraph
 ///   because a lane can be opened on a loose idea before a song exists.
 ///
 /// The two graph members are spelled the way the frame's `AppState` already spells them
-/// (`song`, `record(_:)`), and the way the Sound surface's own host protocol does, so the frame has
+/// (`song`, `record(_:)`), and the way `SoundShapingHost` does, so the frame has
 /// nothing to adapt. The audition members are the lane's own: `AppState` hands surfaces an
 /// `Engine` and lets each one drive it, exactly as the Grid surface's `GridHosting` does, so a live
 /// chop-lane host is a small type over a `VoiceSampler` rather than anything the frame owes us.

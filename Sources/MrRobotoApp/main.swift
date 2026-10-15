@@ -290,7 +290,7 @@ struct FrameCommands: Commands {
                 .keyboardShortcut(KeyEquivalent(region.shortcut), modifiers: [.command, .option])
             }
             Divider()
-            // Vibrant on its three grounds, light to dark. ⌃⌘1–3: plain ⌘1–7 are the surfaces.
+            // Vibrant on its three grounds, light to dark. ⌃⌘1–3: plain ⌘1–6 are the surfaces.
             Menu("Palette") {
                 ForEach(Design.Scheme.allCases) { scheme in
                     Toggle(scheme.displayName, isOn: Binding(

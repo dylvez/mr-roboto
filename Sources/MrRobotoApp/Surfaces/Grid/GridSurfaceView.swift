@@ -7,17 +7,28 @@ import SwiftUI
 /// The Grid surface: a step grid over a groove, played by the groove engine.
 ///
 /// Two prominent levers and no more: **swing**, in the MPC's own percentage, and **ghost level**.
-/// Tempo, the machine and the feel are pickers; the tiers are a segmented brush; the loop's length
-/// and its voices are menus beside the things they change; everything else is the grid itself. The
-/// Beatmaker reads the groove under it, the way the Bassist reads the line under the Piano roll.
+/// Tempo, the machine, the dust and the feel are pickers; the tiers are a segmented brush; the
+/// loop's length and its voices are menus beside the things they change; everything else is the
+/// grid itself. A voice is shaped from its name, and the chain's stages from the Dust menu, in a
+/// popover. The Beatmaker reads the groove under it, the way the Bassist reads the line under the
+/// Piano roll.
 public struct GridSurfaceView: View {
     @Bindable public var model: GridModel
     /// The controller, for Record. Nil where there is none to record — a render, a preview.
     public var midi: MIDIControl?
+    /// Where the Shape popovers get their model. Nil where there is no app behind the grid — a
+    /// render, a test — and then a voice's name offers no popover and the Dust menu no last item.
+    var shaping: ShapingSource?
 
     public init(model: GridModel, midi: MIDIControl? = nil) {
         self.model = model
         self.midi = midi
+    }
+
+    init(model: GridModel, midi: MIDIControl?, shaping: ShapingSource?) {
+        self.model = model
+        self.midi = midi
+        self.shaping = shaping
     }
 
     public var body: some View {
@@ -30,7 +41,7 @@ public struct GridSurfaceView: View {
             VStack(alignment: .leading, spacing: Design.Metric.gutter) {
                 header
                 levers
-                StepGrid(model: model, layout: layout)
+                StepGrid(model: model, layout: layout, shaping: shaping)
                 GridNotes(model: model, layout: layout)
                     .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .topLeading)
                 pickers(layout)
@@ -93,6 +104,7 @@ public struct GridSurfaceView: View {
                 }
                 HStack(alignment: .top, spacing: 18) {
                     machine
+                    dust
                     FeelMenu(model: model)
                     ClearControl(model: model)
                     Spacer(minLength: 0)
@@ -103,9 +115,36 @@ public struct GridSurfaceView: View {
                 TierBrush(model: model, showsCaption: true)
                 tempo
                 machine
+                dust
                 FeelMenu(model: model)
                 ClearControl(model: model)
                 Spacer(minLength: 0)
+            }
+        }
+    }
+
+    /// The groove's dust, beside the machine it plays on: the machine it plays through, chosen here
+    /// and kept as a version of the groove; the A/B beside it once it carries one; the rest of the
+    /// chain behind the menu.
+    private var dust: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            GridLabel("Dust")
+            HStack(spacing: 6) {
+                DustMenu(passes: model.degradation, isEnabled: model.canDust, tint: PartHue.color(for: .groove, .ink),
+                         choose: { model.setDust($0) },
+                         shape: shaping.map { source in { [model] in
+                             // On the newest kept version: steps not yet kept are kept first, so
+                             // the chain goes on what is on screen.
+                             if model.hasUnkeptChanges || (model.versions.last ?? model.base) == nil { model.commit() }
+                             guard let version = model.versions.last ?? model.base else { return nil }
+                             let shaping = source.chain(on: version)
+                             shaping.kept = { [weak model] kept in model?.adopt(kept) }
+                             shaping.monitor = model.hearsDry ? .dry : .chain
+                             return shaping
+                         } })
+                if !model.degradation.isEmpty {
+                    DustMonitorChips(hearsDry: $model.hearsDry, tint: PartHue.color(for: .groove, .ink))
+                }
             }
         }
     }
@@ -175,21 +214,14 @@ private struct LengthMenu: View {
     @Bindable var model: GridModel
 
     var body: some View {
-        Menu {
+        ChipMenu(Self.bars(model.bars)) {
             ForEach(GridModel.lengthChoices, id: \.self) { count in
-                Toggle(title(for: count), isOn: Binding(get: { model.bars == count },
-                                                        set: { _ in model.setBars(count) }))
+                MenuChoice(title(for: count), isOn: model.bars == count) { model.setBars(count) }
             }
             Divider()
             Button(doubleTitle) { model.doubleLength() }
                 .disabled(!model.canDoubleLength)
-        } label: {
-            GridChipLabel(Self.bars(model.bars), trailingSymbol: "chevron.down")
         }
-        .menuStyle(.button)
-        .buttonStyle(.plain)
-        .menuIndicator(.hidden)
-        .fixedSize()
         .help("How long the loop is. Longer repeats what is there into the new bars, ready to vary; shorter drops the bars past the end. ⌘Z undoes either.")
         .accessibilityLabel("Length: \(Self.bars(model.bars))")
     }
@@ -264,19 +296,12 @@ private struct FeelMenu: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             GridLabel("Feel")
-            Menu {
+            ChipMenu(model.feelName ?? "Choose a feel") {
                 ForEach(model.feelLibrary.feels) { feel in
                     // Choosing the checked feel again loads it again: the way back to it untouched.
-                    Toggle(feel.name, isOn: Binding(get: { model.feelName == feel.name },
-                                                    set: { _ in model.load(feel) }))
+                    MenuChoice(feel.name, isOn: model.feelName == feel.name) { model.load(feel) }
                 }
-            } label: {
-                GridChipLabel(model.feelName ?? "Choose a feel", trailingSymbol: "chevron.down")
             }
-            .menuStyle(.button)
-            .buttonStyle(.plain)
-            .menuIndicator(.hidden)
-            .fixedSize()
             .help("A pocket from the library: its pattern, swing, velocities and tempo, over what is here. ⌘Z puts back what was there.")
             .accessibilityLabel("Feel: \(model.feelName ?? "none")")
         }
@@ -316,32 +341,25 @@ private struct ClearControl: View {
     }
 }
 
-/// The face of the surface's chip, shared by the chips you press and the menus that open from one.
+/// The face of the surface's chip you press. The menus that open from a chip wear `ChipMenuLabel`,
+/// the same face with a chevron.
 private struct GridChipLabel: View {
     enum Emphasis { case plain, warn }
 
     let title: String
     var isOn = false
     var emphasis: Emphasis = .plain
-    var trailingSymbol: String?
 
-    init(_ title: String, isOn: Bool = false, emphasis: Emphasis = .plain, trailingSymbol: String? = nil) {
+    init(_ title: String, isOn: Bool = false, emphasis: Emphasis = .plain) {
         self.title = title
         self.isOn = isOn
         self.emphasis = emphasis
-        self.trailingSymbol = trailingSymbol
     }
 
     var body: some View {
         // The armed Clear is the destructive half of a two-step: red, not a caution.
         StudioChip(isOn: isOn, tone: emphasis == .warn ? .danger : .plain) {
-            HStack(spacing: 4) {
-                ChipText(title, isOn: isOn || emphasis == .warn, size: 11.5)
-                if let trailingSymbol {
-                    Image(systemName: trailingSymbol)
-                        .font(.system(size: 8, weight: .bold))
-                }
-            }
+            ChipText(title, isOn: isOn || emphasis == .warn, size: 11.5)
         }
     }
 
@@ -498,6 +516,7 @@ private struct TierBrush: View {
 private struct StepGrid: View {
     @Bindable var model: GridModel
     let layout: GridLayout
+    var shaping: ShapingSource?
 
     var body: some View {
         // The rows only scroll at the window minimum with many voices; the steps only scroll once
@@ -526,7 +545,8 @@ private struct StepGrid: View {
             AddVoiceMenu(model: model)
                 .frame(width: layout.labelWidth, height: GridLayout.rulerHeight, alignment: .leading)
             ForEach(model.voices, id: \.rawValue) { voice in
-                VoiceLabel(model: model, voice: voice, width: layout.labelWidth, height: layout.rowHeight)
+                VoiceLabel(model: model, voice: voice, width: layout.labelWidth, height: layout.rowHeight,
+                           shaping: shaping)
             }
         }
     }
@@ -598,13 +618,27 @@ private struct StepGrid: View {
     }
 }
 
-/// A voice's name: press to hear it, right-click to clear or remove its row. A voice the machine has
-/// no sound for says so beside its name, since its hits will paint and keep but play nothing here.
+/// A voice's name: press to hear it, right-click to shape it, or to clear or remove its row. A
+/// voice the machine has no sound for says so beside its name, since its hits will paint and keep
+/// but play nothing here.
 private struct VoiceLabel: View {
     @Bindable var model: GridModel
     let voice: DrumVoice
     let width: CGFloat
     let height: CGFloat
+    /// Where "Shape the kick…" gets its model. Nil, and the item is not offered.
+    var shaping: ShapingSource?
+
+    /// The voice's Shape popover, while it is open.
+    @State private var shapingVoice: SoundShaping?
+
+    /// The machine's voice this row plays, for the popover. Nil on a chop's slices, which have no
+    /// voice to shape, and for a voice the machine has no sound for.
+    private var shapeable: SynthVoiceKind? {
+        guard !model.playsOnChop else { return nil }
+        let asked = voice == .perc ? DrumVoice.shaker : voice
+        return model.machine.voices.first { $0.kind.drumVoice == asked }?.kind
+    }
 
     var body: some View {
         let name = GridModel.name(of: voice)
@@ -630,14 +664,26 @@ private struct VoiceLabel: View {
         }
         .buttonStyle(.plain)
         .help(sounds
-              ? "Hear the \(name) at the brush's velocity. Right-click to copy, paste, clear or remove the row."
+              ? "Hear the \(name) at the brush's velocity. Right-click to shape it, or to copy, paste, clear or remove the row."
               : "The \(model.machine.name) has no sound for the \(name): the row paints and keeps, but plays nothing on this machine. Right-click to copy, paste, clear or remove it.")
         .accessibilityLabel(sounds ? "Hear the \(name)" : "\(name), silent on the \(model.machine.name)")
         .contextMenu {
+            if let shaping, let kind = shapeable {
+                // The voice's knobs and the chain over it, kept as versions of the voice.
+                Button("Shape the \(name)…") {
+                    let model = shaping.voice(kind, on: self.model.machine.id)
+                    model.monitor = self.model.hearsDry ? .dry : .chain
+                    shapingVoice = model
+                }
+                Divider()
+            }
             RowItems(model: model, voice: voice)
             Divider()
             Button("Remove the \(name) row") { model.removeVoice(voice) }
                 .disabled(!model.canRemoveVoice)
+        }
+        .popover(item: $shapingVoice, arrowEdge: .trailing) { shaping in
+            ShapePopover(shaping: shaping)
         }
     }
 }

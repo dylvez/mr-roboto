@@ -49,9 +49,11 @@ extension SurfaceWiring {
 
         switch item.kind {
         case .grid:
-            // The working pattern, kept or not.
+            // The working pattern, kept or not — through its chain, unless the A/B beside the Dust
+            // menu is on Dry, which is a true bypass: no chain at all.
             let model = gridModel(for: item, app: app)
-            let groove = model.groove
+            var groove = model.groove
+            if model.hearsDry { groove.degradation = [] }
             guard groove.patterns.contains(where: { $0.steps.contains { $0 != .rest } }) else { return nil }
             let machine = model.machine
             return SurfaceAudition(id: id, label: "this groove") { player in
@@ -126,9 +128,6 @@ extension SurfaceWiring {
         case .takes:
             let model = takesModel(for: item, app: app)
             return version(model.comp ?? model.takes.last, model.comp != nil ? "the comp" : "the newest take")
-        case .sound:
-            // What it shapes and nothing else bound to it: a tune here would play as "this sound".
-            return version(bound.first { SoundSurface.canEdit($0) && PartPlayer.canPlay($0) }, "this sound") ?? song()
         case .structure:
             // The form you are looking at, which means the working copy: an arrangement with
             // unkept edits is kept first, as `StructureModel.play()` was written to do, so what

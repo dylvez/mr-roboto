@@ -144,7 +144,7 @@ enum PartLabel {
         case .sound(let sound):
             // A groove on a chop names the chop by part, which is not a name anybody reads.
             if ChopSound.part(of: sound.instrument) != nil { return note(of: version) ?? "Chop kit" }
-            // "drum.tr808.kick" is the Sound surface's key, not a name: the machine's name and the
+            // "drum.tr808.kick" is a shaped voice's key, not a name: the machine's name and the
             // voice, and the dust only when there is some.
             let pieces = sound.instrument.split(separator: ".").map(String.init)
             if pieces.count == 3, pieces[0] == "drum" {
@@ -380,15 +380,6 @@ public enum Guidance {
             }
         }
 
-        // 8. A sound to shape.
-        if let sound = shapeableSounds(in: song).last {
-            out.append(Proposal(
-                title: "Shape \(PartLabel.title(of: sound)) in Sound",
-                rationale: "The synthesis and the degradation chain, auditioned on every knob.",
-                action: SurfaceAction(surface: .sound, title: PartLabel.title(of: sound),
-                                      bound: [sound.id])))
-        }
-
         // 7. The record itself, last: it is what opening the song already put on the bench, so it is
         //    here for getting back to rather than for getting started.
         if canShowRecord(in: song) {
@@ -415,9 +406,6 @@ public enum Guidance {
         if let sample = samples(in: song).last {
             return SurfaceAction(surface: .chopLane, title: PartLabel.title(of: sample), bound: [sample.id])
         }
-        if let sound = shapeableSounds(in: song).last {
-            return SurfaceAction(surface: .sound, title: PartLabel.title(of: sound), bound: [sound.id])
-        }
         return nil
     }
 
@@ -426,8 +414,8 @@ public enum Guidance {
     ///
     /// The point is that picking a surface off the shelf lands you in a useful one: the Grid opens on
     /// the song's newest groove rather than on an empty bar, the Chop lane on its newest chop. Every
-    /// one of these surfaces is legitimate unbound as well (the drop target, an empty grid, a new
-    /// sound from the machine preset), so this never fails and never has to be checked.
+    /// one of these surfaces is legitimate unbound as well (the drop target, an empty grid), so this
+    /// never fails and never has to be checked.
     public static func dockAction(for kind: SurfaceKind, in song: Song?) -> SurfaceAction {
         // The library is the same with a song open or not.
         if kind == .library { return SurfaceAction(surface: kind, title: "Library") }
@@ -443,9 +431,6 @@ public enum Guidance {
         case .grid:
             guard let groove = grooves(in: song).last else { return fallback }
             return SurfaceAction(surface: kind, title: PartLabel.title(of: groove), bound: [groove.id])
-        case .sound:
-            guard let sound = shapeableSounds(in: song).last else { return fallback }
-            return SurfaceAction(surface: kind, title: PartLabel.title(of: sound), bound: [sound.id])
         case .chords:
             guard let progression = progressions(in: song).last else { return fallback }
             return SurfaceAction(surface: kind, title: PartLabel.title(of: progression), bound: [progression.id])
@@ -663,12 +648,12 @@ public enum Guidance {
         song.versions.filter { $0.type == .sound }
     }
 
-    /// The sounds the Sound surface can shape: drum voices and drum machines. Not a groove's chop
-    /// kit, which is the chop's slices and is shaped in the Chop lane, and not the instrument a tune
-    /// or the chords play on, which has none of its knobs: the newest of those was what the dock
-    /// opened Sound on, and the surface shaped the kit under the instrument's name.
-    public static func shapeableSounds(in song: Song) -> [PartVersion] {
-        sounds(in: song).filter(SoundSurface.canEdit)
+    /// A `.sound` that is a drum voice or a drum machine — what the Grid shapes from a voice's name
+    /// — as against a groove's chop kit, which is the chop's slices and is shaped in the Chop lane,
+    /// and the instrument a tune or the chords play on, which is picked where that part is written.
+    public static func isKitSound(_ version: PartVersion) -> Bool {
+        guard case .sound(let sound) = version.kind else { return false }
+        return SoundState(sound) != nil || SynthMachine.preset(id: sound.instrument) != nil
     }
 
     /// Mix versions, in graph order. The newest is the one the transport plays.
@@ -886,9 +871,8 @@ public enum PartActions {
                                                       bound: [cut.id]))
             }
             // The instrument a tune or the chords play on is picked where that part is written, so
-            // its row opens the part. Sound has none of its knobs: opened on one, it shaped the kit
-            // under the instrument's name. The song's own instrument, for no part, opens nothing.
-            guard SoundSurface.canEdit(version) else {
+            // its row opens the part. The song's own instrument, for no part, opens nothing.
+            guard Guidance.isKitSound(version) else {
                 guard let part = sound.forPart,
                       let voiced = song.versions.last(where: { $0.partID == part }), voiced.type != .sound,
                       let opens = primary(for: voiced, in: song) else { return nil }
@@ -897,10 +881,13 @@ public enum PartActions {
                                     + "and its instrument is picked there.",
                                 action: opens.action)
             }
-            return Proposal(title: "Open in Sound",
-                            rationale: "Synthesis and the degradation chain, auditioned on every knob.",
-                            action: SurfaceAction(surface: .sound, title: PartLabel.title(of: version),
-                                                  bound: [version.id]))
+            // A drum voice, or the machine's pick: the kit is picked under the Grid and a voice is
+            // shaped from its name there, on the song's newest groove.
+            guard let groove = Guidance.grooves(in: song).last else { return nil }
+            return Proposal(title: "Open the Grid",
+                            rationale: "The kit is picked under the grid; right-click a voice's name to shape it, and its Dust menu is the chain.",
+                            action: SurfaceAction(surface: .grid, title: PartLabel.title(of: groove),
+                                                  bound: [groove.id]))
 
         case .bassline:
             return Proposal(title: "Open in the Piano roll",
@@ -982,15 +969,10 @@ extension AppState {
     /// somewhere else — a persona, a restored session — is held to the same standard.
     public func canPerform(_ action: SurfaceAction) -> Bool {
         for id in action.bound where version(id) == nil { return false }
-        // Sound shapes a drum voice, a drum machine, or the dust on a chop or a groove. On a tune,
-        // or the instrument a tune plays on, it shaped the song's kit under that part's name.
-        if action.surface == .sound, action.bound.contains(where: { version($0).map(SoundSurface.canEdit) == false }) {
-            return false
-        }
         // An answer surface with nothing in it is not an answer. Every other surface in the catalog
-        // is legitimate empty — the drop target, an empty grid, a new sound from the machine preset
-        // — but a Compare with nothing to compare and a Check with nothing to check are panels whose
-        // only content is the reason they are blank, which is the one thing this frame will not draw.
+        // is legitimate empty — the drop target, an empty grid — but a Compare with nothing to
+        // compare and a Check with nothing to check are panels whose only content is the reason
+        // they are blank, which is the one thing this frame will not draw.
         if action.surface.isAnswer && action.bound.isEmpty { return false }
         switch action.prepare {
         case .none:
@@ -1010,7 +992,7 @@ extension AppState {
     }
 
     /// The surfaces whose work is a part of the song, so they need one open to keep it in.
-    static let makesParts: Set<SurfaceKind> = [.grid, .chords, .pianoRoll, .sound, .structure, .lyrics, .booth, .mixer]
+    static let makesParts: Set<SurfaceKind> = [.grid, .chords, .pianoRoll, .structure, .lyrics, .booth, .mixer]
 
     /// Opens what a proposal asks for, doing any preparation first, and returns the surface.
     ///
@@ -1036,7 +1018,6 @@ extension AppState {
             note(.session, "Started \(song?.title ?? "a song") to keep what you make",
                  detail: "Name it and set its tempo in Song Settings (⇧⌘,).")
         }
-        let action = boundToWhatSoundEdits(action)
         guard canPerform(action) else {
             note(.session, "That is not something this song can do right now", detail: action.title)
             return nil
@@ -1065,23 +1046,6 @@ extension AppState {
         // the open song's record is already on, so reuse is the *normal* path for it, not the corner.
         if case .separateStems = action.prepare { file(action.prepare, for: id) }
         return id
-    }
-
-    /// Sound asked to open on parts it cannot edit keeps the ones it can, named for the first; with
-    /// none left it opens as the dock opens it, on the song's kit. It used to keep the binding and
-    /// its title, and shape the kit under the name of a tune's instrument. A version the song does
-    /// not hold is left for `canPerform` to refuse.
-    private func boundToWhatSoundEdits(_ action: SurfaceAction) -> SurfaceAction {
-        guard action.surface == .sound else { return action }
-        let versions = action.bound.compactMap { version($0) }
-        guard versions.count == action.bound.count else { return action }
-        let editable = versions.filter(SoundSurface.canEdit)
-        guard editable.count < versions.count else { return action }
-        guard let first = editable.first else { return Guidance.dockAction(for: .sound, in: song) }
-        var trimmed = action
-        trimmed.bound = editable.map(\.id)
-        trimmed.title = PartLabel.title(of: first)
-        return trimmed
     }
 
     /// Cuts one bar out of an audio version and records it, or returns the chop already cut from it.

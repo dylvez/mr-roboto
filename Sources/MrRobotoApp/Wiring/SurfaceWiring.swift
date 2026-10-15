@@ -14,9 +14,9 @@ import SwiftUI
 /// long as the bench holds the item — the bench's own rule (three open, oldest unpinned retired) is
 /// what decides when they go.
 ///
-/// The adapters live here too, and for a second reason: `SoundSurface` and `ChopLaneSurface` hold
-/// their host `weak`, deliberately, so a surface never keeps the app alive. Something has to own
-/// the adapter, and this is it.
+/// The adapters live here too, and for a second reason: `ChopLaneSurface` holds its host `weak`,
+/// deliberately, so a surface never keeps the app alive. Something has to own the adapter, and
+/// this is it.
 @MainActor
 final class SurfaceWiring {
 
@@ -31,8 +31,6 @@ final class SurfaceWiring {
     private var importAdapters: [SurfaceID: ImportAdapter] = [:]
     private var grids: [SurfaceID: GridModel] = [:]
     private var gridAdapters: [SurfaceID: GridAdapter] = [:]
-    private var sounds: [SurfaceID: SoundSurface] = [:]
-    private var soundAdapters: [SurfaceID: SoundAdapter] = [:]
     private var chops: [SurfaceID: ChopLaneBinding] = [:]
     private var rolls: [SurfaceID: PianoRollModel] = [:]
     private var bassAdapters: [SurfaceID: BassAdapter] = [:]
@@ -77,6 +75,16 @@ final class SurfaceWiring {
 
     private var midiControl: MIDIControl?
     var partPlayer: PartPlayer?
+    private var shapingSource: ShapingSource?
+
+    /// Where the Grid's and the Chop lane's Shape popovers get their model, on the shared rig.
+    /// One per process, like the service it plays through.
+    func shaping(for app: AppState) -> ShapingSource {
+        if let shapingSource { return shapingSource }
+        let built = ShapingSource(app: app, service: service(for: app))
+        shapingSource = built
+        return built
+    }
 
     /// The controller, on the shared rig. One per process, like the service it plays through.
     func midi(for app: AppState) -> MIDIControl {
@@ -233,17 +241,6 @@ final class SurfaceWiring {
             if let version = song.version(parent), version.type == .sample { return version.partID }
         }
         return nil
-    }
-
-    func soundSurface(for item: BenchItem, app: AppState) -> (SoundSurface, SoundAdapter) {
-        prune(app)
-        if let surface = sounds[item.id], let adapter = soundAdapters[item.id] { return (surface, adapter) }
-        let adapter = SoundAdapter(app: app, service: service(for: app),
-                                   bound: app.bound(for: item.id).first, surface: item.id)
-        let surface = SoundSurface(id: item.id, host: adapter)
-        soundAdapters[item.id] = adapter
-        sounds[item.id] = surface
-        return (surface, adapter)
     }
 
     func chopBinding(for item: BenchItem, app: AppState) -> ChopLaneBinding {
@@ -510,7 +507,6 @@ final class SurfaceWiring {
         imports[id]?.abandon()
         imports[id] = nil; importAdapters[id] = nil
         grids[id] = nil; gridAdapters[id] = nil
-        sounds[id] = nil; soundAdapters[id] = nil
         chops[id] = nil
         rolls[id] = nil; bassAdapters[id] = nil
         chordSheets[id] = nil; chordsAdapters[id] = nil
@@ -531,8 +527,6 @@ final class SurfaceWiring {
         importAdapters = importAdapters.filter { open.contains($0.key) }
         grids = grids.filter { open.contains($0.key) }
         gridAdapters = gridAdapters.filter { open.contains($0.key) }
-        sounds = sounds.filter { open.contains($0.key) }
-        soundAdapters = soundAdapters.filter { open.contains($0.key) }
         chops = chops.filter { open.contains($0.key) }
         rolls = rolls.filter { open.contains($0.key) }
         bassAdapters = bassAdapters.filter { open.contains($0.key) }
@@ -561,7 +555,7 @@ final class SurfaceWiring {
 
     /// Whether anything is still held for this surface. For a test; the app never asks.
     func holds(_ id: SurfaceID) -> Bool {
-        imports[id] != nil || grids[id] != nil || sounds[id] != nil || chops[id] != nil
+        imports[id] != nil || grids[id] != nil || chops[id] != nil
             || rolls[id] != nil || chordSheets[id] != nil || structures[id] != nil || merges[id] != nil || lyricSheets[id] != nil
             || compares[id] != nil || checks[id] != nil
     }
@@ -571,8 +565,8 @@ final class SurfaceWiring {
     func chopBinding(holding id: SurfaceID) -> ChopLaneBinding? { chops[id] }
 
     /// The model behind a surface that edits a part, when it has been built. Nil for a surface
-    /// that keeps nothing of its own (Sound and the Mixer keep every move as they make it; the rest
-    /// hold nothing), and for one the bench has not drawn yet.
+    /// that keeps nothing of its own (the Mixer keeps every move as it makes it; the rest hold
+    /// nothing), and for one the bench has not drawn yet.
     func keeper(for item: BenchItem) -> (any KeepsAsItGoes)? {
         switch item.kind {
         case .grid: return grids[item.id]
@@ -594,7 +588,6 @@ final class SurfaceWiring {
         switch item.kind {
         case .importRecord: return imports[item.id]?.hasUnkeptChanges ?? false
         case .booth: return booths[item.id]?.state == .recording
-        case .sound: return sounds[item.id]?.isDirty ?? false
         default: return keeper(for: item)?.hasUnkeptChanges ?? false
         }
     }
@@ -617,21 +610,15 @@ final class SurfaceWiring {
         var allKept = true
         for item in bench.items {
             if let keeper = keeper(for: item), keeper.hasUnkeptChanges, !keeper.keepNow() { allKept = false }
-            // Sound keeps on a knob's release, and a draft it holds — a machine clicked, a knob
-            // not yet let go — is kept here with the rest, before play, a save, a switch or quit.
-            if item.kind == .sound, let sound = sounds[item.id], sound.isDirty, sound.commit() == nil { allKept = false }
         }
         return allKept
     }
 
     /// A title the surface keeps up to date itself, for the card's header, when its bench title can
-    /// go stale: a Piano roll opened on a bass line and switched to melody mode is writing a tune;
-    /// Sound names the voice in front, which its own chips change, or the chop or groove it dusts —
-    /// never what it was opened with, which once was a tune's instrument while it shaped the kit.
+    /// go stale: a Piano roll opened on a bass line and switched to melody mode is writing a tune.
     func liveTitle(for item: BenchItem) -> String? {
         switch item.kind {
         case .pianoRoll: return rolls[item.id]?.title
-        case .sound: return sounds[item.id]?.title
         default: return nil
         }
     }
@@ -648,9 +635,6 @@ final class SurfaceWiring {
             return nil
         case .chords:
             if let model = chordSheets[item.id] { return model.part }
-        case .sound:
-            // The voice in front as its next keep extends it, or the chop or groove it dusts.
-            if let model = sounds[item.id] { return model.editing?.partID }
         case .mixer, .master, .structure, .booth, .takes, .album, .cast, .mashup, .sources, .merge, .compare, .check, .lyrics, .library:
             return nil
         default:
@@ -698,50 +682,5 @@ final class SurfaceWiring {
     /// written to unless an import actually completes.
     private static var scratchLibrary: URL {
         FileManager.default.temporaryDirectory.appendingPathComponent("MrRoboto/Scratch", isDirectory: true)
-    }
-}
-
-// MARK: - The Sound panel
-
-/// The Sound surface as a bench panel.
-///
-/// The surface itself is happy with nothing selected — it starts a new part from a machine preset,
-/// which is a legitimate way to make a sound — but a panel that silently did that would leave you
-/// wondering what it was editing. So the panel says which it is doing, and when the song *does* hold
-/// sounds it offers them rather than telling you to go and find them in the ledger.
-struct SoundSurfacePanel: View {
-    @Bindable var surface: SoundSurface
-    let hasSelection: Bool
-    let app: AppState
-
-    private var offers: [Proposal] {
-        guard !hasSelection, let song = app.song else { return [] }
-        return Guidance.shapeableSounds(in: song).reversed()
-            .compactMap { PartActions.primary(for: $0, in: song) }
-            .filter { app.canPerform($0.action) }
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if !hasSelection {
-                VStack(alignment: .leading, spacing: 12) {
-                    EmptyNote(title: "Nothing selected: this is a new sound.",
-                              detail: offers.isEmpty
-                                  ? "Every knob here is shaping a new part from the machine preset, and the "
-                                    + "first commit starts it. This song holds no sound to edit instead."
-                                  : "Every knob here is shaping a new part from the machine preset. To edit "
-                                    + "one this song already has instead:")
-                    ForEach(Array(offers.enumerated()), id: \.element.id) { index, offer in
-                        ProposalButton(proposal: offer, isLeading: index == 0) {
-                            app.perform(offer.action)
-                        }
-                    }
-                }
-                .padding(.horizontal, Design.Metric.inset)
-                .padding(.top, Design.Metric.inset)
-            }
-            SoundSurfaceView(surface: surface)
-        }
-        .background(Design.Palette.panel)
     }
 }

@@ -20,7 +20,7 @@ struct WiringRegistryTests {
         let registry = SurfaceRegistry()
         SurfaceRegistry.registerGateASurfaces(in: registry)
         #expect(Set(registry.registeredKinds) == Set(SurfaceKind.gateA))
-        #expect(registry.registeredKinds.count == 7, "the Gate A four plus M2's Chords, Piano roll and Structure")
+        #expect(registry.registeredKinds.count == 6, "the Gate A three plus M2's Chords, Piano roll and Structure")
         for kind in SurfaceKind.gateA {
             #expect(registry.hasBuilder(for: kind), "\(kind.rawValue) has no builder")
         }
@@ -68,14 +68,11 @@ struct WiringRegistryTests {
         }, "an unbound grid is silent, not pre-filled")
         app.closeSurface(gridItem.id)
 
-        // Sound with nothing selected still edits something — a new part from the machine preset —
-        // and the panel is told to say so.
-        let soundItem = open(.sound, in: app)
-        let (sound, soundAdapter) = wiring.soundSurface(for: soundItem, app: app)
-        #expect(soundAdapter.selectedPart == nil)
-        #expect(sound.boundVersion == nil)
-        #expect(!sound.controls.isEmpty, "an unbound Sound surface still has its controls")
-        app.closeSurface(soundItem.id)
+        // A voice shaped from the grid with nothing kept of it still edits something — a new part
+        // from the machine preset.
+        let shaping = wiring.shaping(for: app).voice(.kick, on: grid.machine.id)
+        #expect(shaping.boundVersion == nil)
+        #expect(!shaping.controls.isEmpty, "a voice nobody has kept still has its knobs")
 
         // The Chop lane is the one that genuinely has nothing to show, and says which gesture fills it.
         let chopItem = open(.chopLane, in: app)

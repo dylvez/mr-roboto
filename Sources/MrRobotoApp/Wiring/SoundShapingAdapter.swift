@@ -2,56 +2,27 @@ import Foundation
 import Instrument
 import SongGraph
 
-/// `AppState` seen through `SoundSurfaceHost`.
+/// `AppState` seen through `SoundShapingHost`.
 ///
 /// Three members, and two of them are a bridge rather than a delegation:
 ///
-/// * **`selectedPart`** is the one place the two vocabularies genuinely differ. The surface wants
-///   `PartVersion?`; `AppState` has `selectedVersion: VersionID?` plus `version(_:)`. That is
-///   resolved here rather than by widening `AppState`, and it is also filtered. What the surface was
-///   *bound* to may be a drum voice or a drum machine, or a `.sample` or `.groove` to put through
-///   the chain — dust is a sound job, and this is where a chop gets one. What is merely *accented*
-///   in the ledger is only taken when it is a drum voice or machine: opening Sound off the dock
-///   should not quietly start dirtying whatever row happened to be selected. Anything else — a
-///   tune, or the instrument a tune plays on — reads as nothing selected (`SoundSurface.canEdit`).
 /// * **`audition`** is the rendered voice or part — floats and a rate — which is exactly what the
 ///   shared `AuditionService` plays. Fire-and-forget, interrupted by the next one, as the protocol says.
 /// * **`record`** is `AppState.record(_:)` unchanged, including its `false` for "the host refused
-///   it", which is what lets the surface keep the edit as a draft rather than pretending. A dirtied
+///   it", which is what lets the popover keep the edit as a draft rather than pretending. A dirtied
 ///   part that lands is then put to the chain critic, and what it finds goes to the rail in the
 ///   Sampler's name: stacking a second lossy chain is flagged, never silently allowed.
+/// * **`dryAudio`** and **`kitHit`** read the song's side: a chop's bar off disk, a groove bounced
+///   on the song's machine, one hit of the kit as the song has shaped it.
 @MainActor
-final class SoundAdapter: SoundSurfaceHost {
+final class SoundShapingAdapter: SoundShapingHost {
 
     private let app: AppState
     private let service: AuditionService
 
-    /// What the surface was opened against, when it was opened against something. Nil falls back to
-    /// whatever is accented in the parts ledger, so the Surfaces menu opens a useful panel.
-    private let bound: VersionID?
-    /// The bench item, for the levers the Director hung on it.
-    private let surface: SurfaceID?
-
-    init(app: AppState, service: AuditionService, bound: VersionID? = nil, surface: SurfaceID? = nil) {
+    init(app: AppState, service: AuditionService) {
         self.app = app
         self.service = service
-        self.bound = bound
-        self.surface = surface
-    }
-
-    var selectedPart: PartVersion? {
-        if let bound {
-            guard let version = app.version(bound), SoundSurface.canEdit(version) else { return nil }
-            return version
-        }
-        guard let id = app.selectedVersion, let version = app.version(id) else { return nil }
-        guard case .sound = version.kind, SoundSurface.canEdit(version) else { return nil }
-        return version
-    }
-
-    var dustLever: Double? {
-        guard let surface else { return nil }
-        return app.levers(for: surface).first { $0.quantity == .dust }?.value
     }
 
     func audition(_ audition: SoundAudition) {
@@ -67,7 +38,7 @@ final class SoundAdapter: SoundSurfaceHost {
         switch version.kind {
         case .sample(let sample):
             guard let store = app.store else {
-                throw SoundSurfaceUnavailable(what: "this session has no library directory, so \(label) cannot be read")
+                throw SoundShapingUnavailable(what: "this session has no library directory, so \(label) cannot be read")
             }
             let region = ChopLaneBinding.region(of: sample, bars: Guidance.analysis(in: app.song)?.bars ?? [],
                                                 tempo: sample.detectedTempo ?? app.song?.tempo)
@@ -76,7 +47,7 @@ final class SoundAdapter: SoundSurfaceHost {
                 try AudioRegion.read(url, from: region.start, to: region.end).levelled(by: sample.gainDB)
             }.value
             guard let first = span.planar.first, !first.isEmpty else {
-                throw SoundSurfaceUnavailable(what: "\(label) is empty between "
+                throw SoundShapingUnavailable(what: "\(label) is empty between "
                     + String(format: "%.2f s and %.2f s", region.start, region.end))
             }
             return SoundAudition(planar: span.planar, sampleRate: span.sampleRate, label: label, isDry: true)
@@ -85,16 +56,15 @@ final class SoundAdapter: SoundSurfaceHost {
             let tempo = app.song?.tempo ?? 90
             let meter = app.song?.timeSignature ?? .fourFour
             let hits = Dust.hits(for: groove, tempo: tempo, timeSignature: meter)
-            guard !hits.isEmpty else { throw SoundSurfaceUnavailable(what: "\(label) has no hits in it") }
+            guard !hits.isEmpty else { throw SoundShapingUnavailable(what: "\(label) has no hits in it") }
             let seconds = Dust.duration(of: groove, tempo: tempo, timeSignature: meter) + Dust.tail
             let bounce = try await service.bounce(hits, machine: machine, seconds: seconds)
             return SoundAudition(planar: bounce.planar, sampleRate: bounce.sampleRate, label: label, isDry: true)
         default:
-            throw SoundSurfaceUnavailable(what: "a \(version.type.rawValue) has no sound to put through the chain")
+            throw SoundShapingUnavailable(what: "a \(version.type.rawValue) has no sound to put through the chain")
         }
     }
 
-    @discardableResult
     func newest(of part: PartID) -> PartVersion? {
         app.song?.versions.last { $0.partID == part }
     }
@@ -114,7 +84,7 @@ final class SoundAdapter: SoundSurfaceHost {
     }
 
     /// One hit, bounced on the kit the song plays with this voice's chain taken off: the chain is
-    /// the surface's to put on, and a hit that came with it would go through it twice.
+    /// the popover's to put on, and a hit that came with it would go through it twice.
     func kitHit(of voice: SynthVoiceKind, on machine: SynthMachine) async throws -> SoundAudition {
         var shaped = app.song.map { SongPlayback.shaped(machine, in: $0) } ?? machine
         if let index = shaped.voices.firstIndex(where: { $0.kind == voice }) { shaped.voices[index].dust = nil }
@@ -124,7 +94,7 @@ final class SoundAdapter: SoundSurfaceHost {
         let floor: Float = 1e-4
         let end = bounce.planar.map { channel in (channel.lastIndex { abs($0) > floor } ?? 0) + 1 }.max() ?? 0
         guard end > 1 else {
-            throw SoundSurfaceUnavailable(what: "\(shaped.name) played nothing for its \(voice.rawValue)")
+            throw SoundShapingUnavailable(what: "\(shaped.name) played nothing for its \(voice.rawValue)")
         }
         return SoundAudition(planar: bounce.planar.map { Array($0.prefix(end)) }, sampleRate: bounce.sampleRate,
                              label: "\(shaped.name) \(voice.rawValue)", isDry: true)
@@ -143,5 +113,31 @@ final class SoundAdapter: SoundSurfaceHost {
             app.note(.persona(persona), finding.headline, detail: "\(finding.why) \(finding.measurement.description)")
         }
         return true
+    }
+}
+
+// MARK: - Opening a popover
+
+/// Where a Shape popover's model comes from: a surface is handed one of these and asks it for a
+/// voice or a part, the way it is handed `MIDIControl` for Record. Nil where there is no app
+/// behind the surface — a render, a test — and then the surface offers no popover.
+@MainActor
+final class ShapingSource {
+    private let app: AppState
+    private let service: AuditionService
+
+    init(app: AppState, service: AuditionService) {
+        self.app = app
+        self.service = service
+    }
+
+    /// A drum voice of a machine, at the song's newest edit of it.
+    func voice(_ kind: SynthVoiceKind, on machine: String) -> SoundShaping {
+        SoundShaping(host: SoundShapingAdapter(app: app, service: service), voice: kind, machine: machine)
+    }
+
+    /// The chain on a chop or a groove, on the part's newest version.
+    func chain(on version: PartVersion) -> SoundShaping {
+        SoundShaping(host: SoundShapingAdapter(app: app, service: service), part: version)
     }
 }

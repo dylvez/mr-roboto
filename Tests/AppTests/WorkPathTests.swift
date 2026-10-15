@@ -89,7 +89,7 @@ struct WorkPathTests {
         #expect(chords.action?.surface == .chords, "optional, but still pressable")
         let dust = try #require(PathFixture.step(.dust, steps))
         #expect(!dust.isNext)
-        #expect(dust.action?.surface == .sound)
+        #expect(dust.action?.surface == .grid, "dust is the Grid's menu")
         #expect(dust.action?.bound == [grooved.groove!.id], "dust goes on the groove before the chop")
     }
 
@@ -126,7 +126,7 @@ struct WorkPathTests {
         #expect(arrange.isHere, "the Structure surface lights the Arrange step")
     }
 
-    @Test("the surface you are in lights its step; Sound is dust on a chop and the kit on a sound")
+    @Test("the surface you are in lights its step; the kit and the dust, which live on the Grid and the lane, are never lit from one")
     func here() throws {
         let (built, dusty) = try PathFixture.dusty()
         func lit(_ kind: SurfaceKind, _ bound: [VersionID], in song: Song) -> [PathStep.Kind] {
@@ -135,11 +135,11 @@ struct WorkPathTests {
         }
         #expect(lit(.chopLane, [built.sample!.id], in: built.song) == [.chop])
         #expect(lit(.importRecord, [], in: built.song) == [.record])
-        #expect(lit(.sound, [dusty.id], in: built.song) == [.dust])
+        #expect(lit(.chopLane, [dusty.id], in: built.song) == [.chop], "a dusty chop's lane is still the chop step")
         #expect(lit(.compare, [], in: built.song) == [], "an answer surface is not a step")
 
         let beat = try PathFixture.beat()
-        #expect(lit(.sound, [], in: beat) == [.kit])
+        #expect(lit(.grid, [], in: beat) == [.groove], "the kit is picked on the Grid, which is the groove's step")
         #expect(WorkPath.steps(for: beat, active: nil, canPerform: PathFixture.always).steps.map(\.kind)
                 == [.groove, .chords, .bass, .kit, .dust, .arrange, .words, .sing, .mix])
     }
@@ -232,8 +232,8 @@ struct LedgerGroupTests {
         #expect(part.versions.map(\.id) == [built.sample!.id, dusty.id])
         #expect(LedgerGroups.versionLabel(part.versions[0], parent: nil) == "clean")
         #expect(LedgerGroups.versionLabel(part.versions[1], parent: part.versions[0]) == "SP-1200 at 60%")
-        #expect(LedgerGroups.action(for: dusty, in: built.song)?.surface == .sound,
-                "a dusty version opens where its dust is")
+        #expect(LedgerGroups.action(for: dusty, in: built.song)?.surface == .chopLane,
+                "a dusty chop opens on the Chop lane, whose Dust menu is its chain")
         #expect(LedgerGroups.action(for: built.sample!, in: built.song)?.surface == .chopLane)
     }
 }

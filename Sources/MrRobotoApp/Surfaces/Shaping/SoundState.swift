@@ -2,11 +2,11 @@ import Foundation
 import Instrument
 import SongGraph
 
-/// Everything the Sound surface is looking at, as a value: which voice of which machine, where its
+/// Everything a Shape popover is looking at, as a value: which voice of which machine, where its
 /// six knobs are, and what the degradation chain is set to.
 ///
-/// It is a value on purpose. The surface holds one of these as the *draft* of an uncommitted edit
-/// and one as the version it opened against; `isDirty` is `!=` between them and a commit is
+/// It is a value on purpose. `SoundShaping` holds one of these as the *draft* of an uncommitted
+/// edit and one as the version it opened against; `isDirty` is `!=` between them and a commit is
 /// `PartVersion.deriving(.sound(draft.sound), …)`. Nothing here is ever mutated in place inside a
 /// stored version.
 ///
@@ -30,7 +30,7 @@ public struct SoundState: Equatable, Sendable {
     ///
     /// It is stored because `DegradeSettings.seed` is a `UInt64` — `0x9E3779B97F4A7C15` for every
     /// non-clean preset — and a `[String: Double]` cannot carry that without losing the low bits.
-    /// Rather than round-trip a seed badly, the seed comes from this preset and the surface does not
+    /// Rather than round-trip a seed badly, the seed comes from this preset and the popover does not
     /// offer a seed control. Auditioning a different pressing means choosing a preset.
     public var chainBase: DegradeSettings.Preset
 
@@ -73,8 +73,8 @@ public struct SoundState: Equatable, Sendable {
             ?? SynthMachine.tr808.voices[0]
     }
 
-    /// `"TR-808 kick"`, `"Naked Drums high tom"` — what the surface header says and what an
-    /// audition is labelled with, in the ledger's words for the voice.
+    /// `"TR-808 kick"`, `"Naked Drums high tom"` — what the popover is titled and what an audition
+    /// is labelled with, in the ledger's words for the voice.
     public var label: String {
         "\(synthMachine.name) \(Self.spoken(voice.rawValue))"
     }
@@ -134,8 +134,8 @@ public struct SoundState: Equatable, Sendable {
         )
     }
 
-    /// Reads a Sound part back. Returns `nil` only when the instrument is not a drum voice this
-    /// surface can drive — a `"chain.lofi-tape"` part belongs to a different surface.
+    /// Reads a Sound part back. Returns `nil` only when the instrument is not a drum voice the
+    /// popover can drive — a machine's pick, or the instrument a tune plays on, is a `.sound` too.
     ///
     /// Every parameter is optional: an older part that carried fewer keys opens with the machine
     /// preset's values for the rest, the same tolerance `SynthVoiceSpec` decodes with.

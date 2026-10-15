@@ -216,7 +216,7 @@ extension PartHue {
     /// The hue of what a surface is working on, for `Design.follow(hue:)`: the part it edits among
     /// those it is bound to — the bass line, not the groove a Piano roll draws under it — or the
     /// kind of part it makes when it is bound to none yet. Nil for a surface about the song, the mix
-    /// or the library as a whole, and for Sound shaping a drum voice, which is not a track.
+    /// or the library as a whole.
     static func work(of kind: SurfaceKind, bound: [PartType]) -> Int? {
         let edits: [PartType]?
         switch kind {
@@ -226,9 +226,6 @@ extension PartHue {
         case .chopLane: edits = [.sample]
         case .importRecord, .takes, .booth: edits = [.audio]
         case .lyrics: edits = [.lyric]
-        // The chop or the groove it dusts. Whatever else is bound is not what it edits: a tune
-        // bound to it once turned the bench the tune's blue over a kit voice.
-        case .sound: return bound.first { $0 == .sample || $0 == .groove }.flatMap(index(for:))
         // About one part, whichever kind: its candidates, its finding.
         case .compare, .check: edits = nil
         default: return nil

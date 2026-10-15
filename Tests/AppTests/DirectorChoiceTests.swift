@@ -61,11 +61,10 @@ struct DirectorChoiceTests {
         #expect(lane.action.surface == .chopLane)
         #expect(lane.action.bound == [built.sample])
 
-        // A take does not belong on Sound: dust is carried by a chop or a groove, not by the record.
-        // This is rule 1 as an error rather than as a style note. (A groove on Sound is legal now —
-        // it opens the groove's chain; see `DustTests`.)
+        // A take does not belong on the Grid: it draws grooves, and a record is not one. This is
+        // rule 1 as an error rather than as a style note.
         #expect(throws: DirectorChoiceProblem.self) {
-            try DirectorSurfaceChoice.make(surface: .sound, title: "Wrong",
+            try DirectorSurfaceChoice.make(surface: .grid, title: "Wrong",
                                            fill: .parts([built.take]),
                                            because: "", in: built.stage)
         }
@@ -83,45 +82,9 @@ struct DirectorChoiceTests {
         }
     }
 
-    @Test("Sound refuses the instrument a tune plays on, in words the band can act on, and still opens on a machine")
-    func soundRefusesATunesInstrument() throws {
-        let built = Self.build()
-        defer { Self.clean(built) }
-        let tune = PartVersion(partID: PartID(), kind: .melody(Melody(notes: [])), author: .persona("Melodist"),
-                               operation: Operation.written, note: "Horns")
-        let horns = PartVersion(partID: PartID(), kind: .sound(Sound(instrument: "horns", forPart: tune.partID)),
-                                author: .persona("Director"), operation: Operation.written, note: "French Horns for Horns")
-        let machine = PartVersion(partID: PartID(), kind: .sound(Sound(instrument: "tr909")), author: .persona("Director"),
-                                  operation: Operation.written, note: "The drum machine for this song")
-        for version in [tune, horns, machine] { #expect(built.app.record(version)) }
-
-        // The tune is refused by its notation, as it always was.
-        #expect(throws: DirectorChoiceProblem.self) {
-            try DirectorSurfaceChoice.make(surface: .sound, title: "Horns", fill: .parts([tune.id]),
-                                           because: "", in: built.stage)
-        }
-        // Its instrument is a `.sound`, but not one Sound shapes: refused, saying what it does take.
-        do {
-            _ = try DirectorSurfaceChoice.make(surface: .sound, title: "Horn Trio", fill: .parts([horns.id]),
-                                               because: "", in: built.stage)
-            Issue.record("Sound was chosen on a tune's instrument")
-        } catch let problem as DirectorChoiceProblem {
-            #expect(problem.reason.contains("drum voice"), "\(problem)")
-            #expect(problem.suggestion?.contains("set_instrument") == true, "\(problem)")
-        }
-        #expect(!built.app.bench.items.contains { $0.kind == .sound })
-
-        // The song's machine still opens, bound as chosen.
-        let kit = try DirectorSurfaceChoice.make(surface: .sound, title: "The kit", fill: .parts([machine.id]),
-                                                 because: "The kick rings over the bass.", in: built.stage)
-        let id = try #require(built.stage.open(kit))
-        #expect(built.app.bound(for: id) == [machine.id])
-    }
-
     @Test("Every Gate A surface has a notation, and the answer surfaces take anything")
     func everySurfaceSaysWhatItDraws() {
         #expect(SurfaceKind.grid.notation == [.groove])
-        #expect(SurfaceKind.sound.notation == [.sound, .sample, .groove])
         #expect(SurfaceKind.chopLane.notation.contains(.sample))
         #expect(SurfaceKind.importRecord.notation.contains(.audio))
         for kind in SurfaceKind.answers {
@@ -242,11 +205,11 @@ struct DirectorChoiceTests {
                          SurfaceLever(quantity: .tempo, label: "c", value: 90)],
                 because: "", in: built.stage)
         }
-        // Swing means nothing on the Sound surface.
+        // Swing means nothing on the Piano roll.
         #expect(throws: DirectorChoiceProblem.self) {
             try DirectorSurfaceChoice.make(
-                surface: .sound, title: "Nonsense",
-                fill: .parts([built.sound]),
+                surface: .pianoRoll, title: "Nonsense",
+                fill: .parts([built.grooves[0]]),
                 levers: [SurfaceLever(quantity: .swing, label: "Swing", value: 60)],
                 because: "", in: built.stage)
         }

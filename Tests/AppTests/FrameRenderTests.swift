@@ -130,7 +130,7 @@ struct FrameRenderTests {
         }.padding(20).background(Color(white: 0.12)), size: CGSize(width: 380, height: 170), name: "capture-icon-sizes")
     }
 
-    @Test("a real Grid and Sound on the bench, with glyphs and bands")
+    @Test("a real Grid on the bench, with glyphs and bands, and its Dust menu on a groove")
     func realSurfaces() throws {
         FontRegistration.registerBundledFonts()
         SurfaceRegistry.registerSurfaces()
@@ -138,8 +138,8 @@ struct FrameRenderTests {
         let app = app(built.song)
         app.perform(SurfaceAction(surface: .grid, title: "New groove"))
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-grid")
-        app.perform(SurfaceAction(surface: .sound, title: "Motown, 120", bound: [built.groove!.id]))
-        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-sound")
+        app.perform(SurfaceAction(surface: .grid, title: "Motown, 120", bound: [built.groove!.id]))
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-grid-groove")
     }
 
     @Test("the Chop lane on a real bar: slices, pads, the feel and Make the groove")

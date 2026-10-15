@@ -90,8 +90,9 @@ public enum DirectorPrompt {
         with degrade_part on that part: a new version of it playing through a machine — sp1200, \
         mpc60, cassette, vinyl or radio — at a mix, with the dry version one parent back and still \
         playing clean. Say it as the machine and the amount, "SP-1200 at 60%", never as a bit \
-        depth. Then open the Sound surface on the dusty version, which plays it against the dry one; \
-        its chain is already on it, so it needs no dust lever. A dust lever on a Compare lets \
+        depth. Then open the dusty version on its own surface — a groove on the Grid, a chop on the \
+        Chop lane — whose Dust menu names the machine and whose Dry chip plays the part with no \
+        chain at all; its chain is already on it, so it needs no dust lever. A dust lever on a Compare lets \
         someone move an amount, but it is not a version anyone can keep, so on its own it does not \
         answer the question. To change a dusty version's chain, name its dry parent again. If the \
         chain check refuses a second machine, tell the user its reason, not only that it refused.

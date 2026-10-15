@@ -22,7 +22,7 @@ import Foundation
 ///   illegibly. `visibleFeatureCount` is that decision, and it is why this is a value and not a
 ///   stack of `.frame` modifiers.
 /// * **The levers keep their size.** Two sliders at 1269 points of width are not more precise than
-///   two sliders at 640; they are just longer. They are capped, exactly as the Sound surface caps
+///   two sliders at 640; they are just longer. They are capped, exactly as the Shape popover caps
 ///   its own.
 public struct CompareLayout: Equatable, Sendable {
 

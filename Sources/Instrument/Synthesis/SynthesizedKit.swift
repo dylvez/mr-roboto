@@ -112,7 +112,7 @@ public enum SynthesizedKit {
         func render(_ spec: SynthVoiceSpec, _ layer: SynthVelocityLayer) throws -> [Float] {
             var samples = DrumSynthesizer.render(spec, velocity: layer.velocity, sampleRate: sampleRate)
             // The voice's own chain, on the hit at the level it is played at, which is how the
-            // Sound surface plays it when the chain is chosen: a saturator and a twelve-bit
+            // Shape popover plays it when the chain is chosen: a saturator and a twelve-bit
             // converter do not sound the same on a hit that is 12 dB down.
             if let dust = spec.dust { samples = try dusted([samples], through: dust, sampleRate: sampleRate)[0] }
             // Strip the level part of velocity: the kit's `velocityCurve` applies it once, on
@@ -132,7 +132,7 @@ public enum SynthesizedKit {
             }
         }
         // The one factor is the preset's. A machine whose voices somebody has turned (a kick's
-        // LEVEL brought down on the Sound surface) is scaled as the machine was before they did,
+        // LEVEL brought down in the Shape popover) is scaled as the machine was before they did,
         // so the kick is quieter. Scaled by its own peak, the kick stayed where it was and every
         // other voice came up. Never past full scale, when a voice was turned up instead.
         var reference = peak

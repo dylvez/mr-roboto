@@ -8,9 +8,17 @@ import SwiftUI
 /// small print. Nothing here holds state that is not in the model — the view is a projection.
 public struct ChopLaneView: View {
     @Bindable var surface: ChopLaneSurface
+    /// Where the Dust menu's popover gets its model. Nil where there is no app behind the lane — a
+    /// render, a test — and then the menu has no last item.
+    var shaping: ShapingSource?
 
     public init(surface: ChopLaneSurface) {
         self.surface = surface
+    }
+
+    init(surface: ChopLaneSurface, shaping: ShapingSource?) {
+        self.surface = surface
+        self.shaping = shaping
     }
 
     public var body: some View {
@@ -54,6 +62,7 @@ public struct ChopLaneView: View {
         // one of three play buttons with three names.
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             levelControl
+            dust
             Spacer()
             Button("Stop") { surface.stop() }
                 .buttonStyle(.plain)
@@ -93,6 +102,32 @@ public struct ChopLaneView: View {
                 .foregroundStyle(Design.Palette.accent)
                 .help("Bring the bar up to where an instrument sits, at the chop: its pads here, its loop and a groove on its slices in the song. A new version of the chop; the mix does not move.")
         }
+    }
+
+    /// The chop's dust: the machine it plays through, chosen here and kept as a version of the
+    /// chop; the A/B beside it once it carries one; the rest of the chain behind the menu.
+    private var dust: some View {
+        let passes = surface.dustPasses
+        let tint = PartHue.color(for: .sample, .ink)
+        return HStack(spacing: 6) {
+            SmallLabel("Dust", color: Design.Palette.inkTertiary)
+            DustMenu(passes: passes, tint: tint, choose: { surface.setDust($0) },
+                     shape: shaping.map { source in { [weak surface] in
+                         // On the chop's newest version: a cut not yet kept is kept first, so the
+                         // chain goes on the slices on screen.
+                         guard let surface else { return nil }
+                         if surface.hasUnkeptChopEdits || surface.parent == nil { _ = surface.keepNow() }
+                         guard let version = surface.parent else { return nil }
+                         let model = source.chain(on: version)
+                         model.kept = { [weak surface] kept in surface?.adopt(kept) }
+                         model.monitor = surface.hearsDry ? .dry : .chain
+                         return model
+                     } })
+            if !passes.isEmpty {
+                DustMonitorChips(hearsDry: $surface.hearsDry, tint: tint)
+            }
+        }
+        .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 5 }
     }
 
     /// How the plate is worked, said once under it. Everything named here exists: there is no

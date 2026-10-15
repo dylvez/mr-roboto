@@ -59,15 +59,13 @@ public final class SurfaceRegistry {
             ImportSurfaceView(model: SurfaceWiring.shared.importModel(for: item, app: app))
         }
         registry.register(.chopLane) { item, app in
-            ChopLanePanel(binding: SurfaceWiring.shared.chopBinding(for: item, app: app), app: app)
+            ChopLanePanel(binding: SurfaceWiring.shared.chopBinding(for: item, app: app), app: app,
+                          shaping: SurfaceWiring.shared.shaping(for: app))
         }
         registry.register(.grid) { item, app in
             GridSurfaceView(model: SurfaceWiring.shared.gridModel(for: item, app: app),
-                            midi: SurfaceWiring.shared.midi(for: app))
-        }
-        registry.register(.sound) { item, app in
-            let (surface, adapter) = SurfaceWiring.shared.soundSurface(for: item, app: app)
-            SoundSurfacePanel(surface: surface, hasSelection: adapter.selectedPart != nil, app: app)
+                            midi: SurfaceWiring.shared.midi(for: app),
+                            shaping: SurfaceWiring.shared.shaping(for: app))
         }
         registry.register(.chords) { item, app in
             ChordsSurfaceView(model: SurfaceWiring.shared.chordsModel(for: item, app: app),
@@ -176,8 +174,8 @@ struct SurfaceHost: View {
 
     var body: some View {
         // The surface is built before its header is drawn. The header reads what the surface is
-        // working on off its model — Sound's voice, the Piano roll's tune — and on a first frame
-        // drawn before the model existed it named whatever the surface was opened with instead.
+        // working on off its model — the Piano roll's tune — and on a first frame drawn before the
+        // model existed it named whatever the surface was opened with instead.
         let resolution = registry.resolve(item, app: app)
         VStack(alignment: .leading, spacing: 0) {
             header
@@ -288,9 +286,8 @@ struct SurfaceHost: View {
     private var crumbs: [PartLineage.Crumb] {
         guard let song = app.song else { return [] }
         // A surface writing a part it has not kept yet — a roll's tune, a line under a groove, a
-        // drum voice on the machine's pick — has no lineage of its own, and the binding's is
-        // someone else's.
-        if boundPart == nil, [.pianoRoll, .chords, .grid, .sound].contains(item.kind) { return [] }
+        // grid nobody has painted — has no lineage of its own, and the binding's is someone else's.
+        if boundPart == nil, [.pianoRoll, .chords, .grid].contains(item.kind) { return [] }
         let working = boundPart.flatMap { part in song.versions.last { $0.partID == part }?.id }
         guard let id = working ?? app.bound(for: item.id).first else { return [] }
         return PartLineage.crumbs(for: id, in: song)

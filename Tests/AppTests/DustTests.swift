@@ -11,12 +11,12 @@ import Testing
 
 // A clean chop made dusty — the single most common move in the app's first idiom — end to end.
 //
-// The live run's gap was that the Sound surface only took a `.sound` part, so there was no way to
-// say "run this chop through the SP-1200". These tests hold the fix to its properties: the dirtied
-// chop is a real version with the dry one as its parent; the dry one is untouched; the seed survives
-// the trip to disk; a bounce is the same bytes twice; the Sound surface, the audition service, the
-// transport and the Compare's dust lever all mean the same chain; and a second lossy machine over a
-// dusty chop is flagged by the chain critic rather than silently allowed.
+// The live run's gap was that there was no way to say "run this chop through the SP-1200". These
+// tests hold the fix to its properties: the dirtied chop is a real version with the dry one as its
+// parent; the dry one is untouched; the seed survives the trip to disk; a bounce is the same bytes
+// twice; the Shape popover, the Dust menu, the audition service, the transport and the Compare's
+// dust lever all mean the same chain; and a second lossy machine over a dusty chop is flagged by
+// the chain critic rather than silently allowed.
 //
 // Real `AppState`, real temporary library, real WAV on disk. No audio device: everything that would
 // make a sound is rendered through an engine in manual rendering mode.
@@ -102,23 +102,29 @@ enum DustFixture {
                      region: bar)
     }
 
-    /// The wirings the fixtures built. `SoundSurface` holds its host weakly and the wiring is what
-    /// owns the adapter, so a test that dropped the wiring would be testing a surface with no host.
+    /// A Shape popover's model opened on `version`'s chain through the real adapter, as a Dust
+    /// menu's last item opens it.
+    @MainActor
+    static func shaping(on version: PartVersion, in built: Built, kits: URL,
+                        lever: Double? = nil) -> (SoundShaping, SoundShapingAdapter) {
+        let service = AuditionService(engine: { throw NoAudioDevice() }, kitsDirectory: kits)
+        let adapter = SoundShapingAdapter(app: built.app, service: service)
+        return (SoundShaping(host: adapter, part: version, lever: lever), adapter)
+    }
+
+    /// The wirings the fixtures built, so a grid's adapter outlives the call that made it.
     @MainActor static var wirings: [SurfaceWiring] = []
 
-    /// A Sound surface opened on `version` through the real wiring: bench item, binding, adapter.
+    /// A Grid opened on `version` through the real wiring, as the dock opens it.
     @MainActor
-    static func sound(on version: PartVersion, in built: Built, kits: URL,
-                      levers: [SurfaceLever] = []) -> (SoundSurface, SoundAdapter, SurfaceID) {
+    static func grid(on version: PartVersion, in built: Built, kits: URL) -> GridModel {
         let service = AuditionService(engine: { throw NoAudioDevice() }, kitsDirectory: kits)
         let wiring = SurfaceWiring()
         wiring.use(service)
         wirings.append(wiring)
-        let id = built.app.perform(SurfaceAction(surface: .sound, title: PartLabel.title(of: version),
-                                                 bound: [version.id], levers: levers))!
+        let id = built.app.perform(SurfaceAction(surface: .grid, title: PartLabel.title(of: version), bound: [version.id]))!
         let item = built.app.bench.items.first { $0.id == id }!
-        let (surface, adapter) = wiring.soundSurface(for: item, app: built.app)
-        return (surface, adapter, id)
+        return wiring.gridModel(for: item, app: built.app)
     }
 
     /// A chop's region, dry, as the adapters read it.
@@ -153,62 +159,59 @@ enum DustFixture {
 @Suite("Dust: a clean chop made dusty", .serialized)
 struct DustTests {
 
-    // MARK: The Sound surface binds to a sample and to a groove
+    // MARK: The popover opens on a sample and on a groove
 
-    @Test("Dust: Sound opens bound to a chop, as its chain, with the dry chop to compare against")
+    @Test("Dust: the popover opens on a chop as its chain, with the dry chop to compare against")
     @MainActor
-    func dustSoundOpensOnASample() async throws {
+    func dustPopoverOpensOnASample() async throws {
         let built = try DustFixture.build()
         let kits = WiringFixture.temporaryDirectory("dust-kits")
         defer { WiringFixture.remove(built.directory); WiringFixture.remove(kits) }
 
-        let (surface, adapter, _) = DustFixture.sound(on: built.dry, in: built, kits: kits)
-        #expect(adapter.selectedPart?.id == built.dry.id, "the adapter refused the chop it was bound to")
-        #expect(surface.subject == .part(.sample))
-        #expect(surface.boundVersion?.id == built.dry.id)
-        #expect(surface.panel == .chain)
-        #expect(surface.controls(for: .voice).isEmpty, "a chop has no voice knobs to show")
-        #expect(!surface.controls(for: .chain).isEmpty)
-        #expect(surface.draft.degrade.isBypass, "a dry chop opens with the chain off")
+        let (shaping, _) = DustFixture.shaping(on: built.dry, in: built, kits: kits)
+        #expect(shaping.subject == .part(.sample))
+        #expect(shaping.boundVersion?.id == built.dry.id)
+        #expect(shaping.voiceControls.isEmpty, "a chop has no voice knobs to show")
+        #expect(!shaping.chainControls.isEmpty)
+        #expect(shaping.draft.degrade.isBypass, "a dry chop opens with the chain off")
 
-        await surface.waitForDry()
-        #expect(surface.dryFailure == nil)
-        let dry = try #require(surface.dryPart)
+        await shaping.waitForDry()
+        #expect(shaping.dryFailure == nil)
+        let dry = try #require(shaping.dryPart)
         let expected = try DustFixture.dryRegion(built)
         #expect(dry.sampleRate == expected.sampleRate)
         #expect(dry.planar == expected.planar, "the dry side is not the chop's own bar")
 
         // The A/B is a true bypass against the dry part: with the chain on, `.dry` is still the chop
         // bit for bit, and `.chain` is not.
-        surface.apply(.sp1200)
-        #expect(surface.renderedPart(.dry) == expected.planar)
-        #expect(surface.renderedPart(.chain) != expected.planar)
-        #expect(surface.title.contains("sp1200"))
+        shaping.apply(.sp1200)
+        #expect(shaping.renderedPart(.dry) == expected.planar)
+        #expect(shaping.renderedPart(.chain) != expected.planar)
+        #expect(shaping.title.contains("sp1200"))
     }
 
-    @Test("Dust: Sound opens bound to a groove, bounced dry on the song's machine")
+    @Test("Dust: the popover opens on a groove, bounced dry on the song's machine")
     @MainActor
-    func dustSoundOpensOnAGroove() async throws {
+    func dustPopoverOpensOnAGroove() async throws {
         let built = try DustFixture.build()
         let kits = WiringFixture.temporaryDirectory("dust-kits")
         defer { WiringFixture.remove(built.directory); WiringFixture.remove(kits) }
 
-        let (surface, adapter, _) = DustFixture.sound(on: built.groove, in: built, kits: kits)
-        #expect(adapter.selectedPart?.id == built.groove.id)
-        #expect(surface.subject == .part(.groove))
-        #expect(surface.controls(for: .voice).isEmpty)
+        let (shaping, _) = DustFixture.shaping(on: built.groove, in: built, kits: kits)
+        #expect(shaping.subject == .part(.groove))
+        #expect(shaping.voiceControls.isEmpty)
 
-        await surface.waitForDry()
-        #expect(surface.dryFailure == nil, "\(surface.dryFailure ?? "")")
-        let dry = try #require(surface.dryPart)
+        await shaping.waitForDry()
+        #expect(shaping.dryFailure == nil, "\(shaping.dryFailure ?? "")")
+        let dry = try #require(shaping.dryPart)
         #expect(DustFixture.peak(dry.planar) > 0.01, "the groove bounced to silence")
         // One pass at 96 bpm plus the tail.
         #expect(abs(dry.durationSeconds - (DustFixture.barLength + Dust.tail)) < 0.01)
 
         // Picking the machine keeps it: a choice is a version, as on every surface.
-        surface.apply(.vinyl)
-        let version = try #require(surface.lastKept)
-        #expect(!surface.isDirty)
+        shaping.apply(.vinyl)
+        let version = try #require(shaping.lastKept)
+        #expect(!shaping.isDirty)
         #expect(version.parents == [built.groove.id])
         #expect(version.partID == built.groove.partID)
         #expect(version.kind.degradation.map(\.preset) == ["vinyl"])
@@ -218,14 +221,57 @@ struct DustTests {
         #expect(dusty.patterns == original.patterns, "dirtying a groove changed its steps")
     }
 
-    @Test("Dust: an accented chop in the ledger does not hijack Sound opened off the dock")
+    @Test("Dust: the Grid's Dust menu keeps the groove through a machine, replaces it, and takes it off")
     @MainActor
-    func dustDockSoundStaysAVoice() throws {
+    func dustGridMenuKeepsVersions() throws {
         let built = try DustFixture.build()
-        defer { WiringFixture.remove(built.directory) }
-        built.app.select(built.dry.id)
-        let adapter = SoundAdapter(app: built.app, service: WiringFixture.silentService())
-        #expect(adapter.selectedPart == nil, "only an explicit binding opens Sound on a chop")
+        let kits = WiringFixture.temporaryDirectory("dust-kits")
+        defer { WiringFixture.remove(built.directory); WiringFixture.remove(kits) }
+        let model = DustFixture.grid(on: built.groove, in: built, kits: kits)
+        let before = built.app.versions.count
+        #expect(model.canDust && model.degradation.isEmpty)
+        #expect(Dust.chip(model.degradation) == "Clean")
+
+        // Two clicks: the menu, the machine. A version of the groove through it, the dry one its parent.
+        model.setDust(.sp1200)
+        let dusty = try #require(model.lastKept)
+        #expect(built.app.versions.count == before + 1)
+        #expect(dusty.parents == [built.groove.id] && dusty.partID == built.groove.partID)
+        #expect(dusty.operation == Operation.degrade && dusty.author == .user)
+        #expect(dusty.kind.degradation == [DustFixture.sp1200], "exactly the pass the popover commits")
+        #expect(model.degradation == [DustFixture.sp1200], "the grid carries what it kept")
+        #expect(Dust.chip(model.degradation) == "SP-1200" && Dust.preset(on: model.degradation) == .sp1200)
+        #expect(built.app.version(built.groove.id) == built.groove, "the dry groove is untouched")
+
+        // The same machine again writes nothing; another replaces it on top; Clean takes it off.
+        model.setDust(.sp1200)
+        #expect(built.app.versions.count == before + 1)
+        model.setDust(.vinyl)
+        #expect(built.app.versions.count == before + 2)
+        #expect(model.degradation.map(\.preset) == ["vinyl"])
+        #expect(model.lastKept?.parents == [dusty.id])
+        model.setDust(.clean)
+        #expect(built.app.versions.count == before + 3)
+        #expect(model.degradation.isEmpty && Dust.chip(model.degradation) == "Clean")
+        model.setDust(.clean)
+        #expect(built.app.versions.count == before + 3, "clean on clean is not a version")
+
+        // Steps painted since are kept first, so the dusty version plays what is on screen; and
+        // the next keep of the steps carries the chain.
+        model.toggle(.kick, step: 2)
+        model.setDust(.mpc60)
+        let kept = try #require(built.app.song?.versions.suffix(2).map { $0 })
+        #expect(kept.count == 2 && kept[0].kind.degradation.isEmpty && kept[0].operation == Operation.edit)
+        #expect(kept[1].kind.degradation.map(\.preset) == ["mpc60"] && kept[1].parents == [kept[0].id])
+        model.toggle(.kick, step: 6)
+        let next = model.commit()
+        #expect(next.kind.degradation.map(\.preset) == ["mpc60"], "painting a step is not a request to clean the groove")
+
+        // The chain kept from the popover comes back to the grid.
+        let (shaping, _) = DustFixture.shaping(on: next, in: built, kits: kits)
+        shaping.kept = { model.adopt($0) }
+        shaping.apply(.radio)
+        #expect(model.degradation.map(\.preset) == ["radio"] && model.lastKept?.id == shaping.lastKept?.id)
     }
 
     // MARK: The graph model
@@ -238,11 +284,11 @@ struct DustTests {
         defer { WiringFixture.remove(built.directory); WiringFixture.remove(kits) }
         let before = built.app.versions.count
 
-        let (surface, _, _) = DustFixture.sound(on: built.dry, in: built, kits: kits)
-        await surface.waitForDry()
-        surface.apply(.sp1200)
-        #expect(!surface.isDirty, "a machine picked is kept at once")
-        let dusty = try #require(surface.lastKept)
+        let (shaping, _) = DustFixture.shaping(on: built.dry, in: built, kits: kits)
+        await shaping.waitForDry()
+        shaping.apply(.sp1200)
+        #expect(!shaping.isDirty, "a machine picked is kept at once")
+        let dusty = try #require(shaping.lastKept)
 
         #expect(built.app.versions.count == before + 1)
         #expect(dusty.parents == [built.dry.id], "the dusty chop does not name the dry one as its parent")
@@ -488,19 +534,19 @@ struct DustTests {
         engine.stop()
     }
 
-    @Test("Dust: the Compare's dust lever is the pass a Sound surface commits at the same amount")
+    @Test("Dust: the Compare's dust lever is the pass the popover commits at the same amount")
     @MainActor
     func dustCompareLeverMeansTheSameThing() async throws {
         let built = try DustFixture.build()
         let kits = WiringFixture.temporaryDirectory("dust-kits")
         defer { WiringFixture.remove(built.directory); WiringFixture.remove(kits) }
 
-        let (surface, _, _) = DustFixture.sound(on: built.dry, in: built, kits: kits)
-        await surface.waitForDry()
-        surface.apply(.sp1200)
-        let dusty = try #require(surface.lastKept)
+        let (shaping, _) = DustFixture.shaping(on: built.dry, in: built, kits: kits)
+        await shaping.waitForDry()
+        shaping.apply(.sp1200)
+        let dusty = try #require(shaping.lastKept)
 
-        // At full, the lever is exactly what pressing sp1200 on the Sound surface committed.
+        // At full, the lever is exactly what choosing sp1200 in the popover committed.
         #expect(CompareAdapter.passes(for: built.dry, levers: [.degradeMix: 1]) == dusty.kind.degradation)
         // With no lever each row plays as its version says it sounds…
         #expect(CompareAdapter.passes(for: dusty, levers: [:]) == [DustFixture.sp1200])
@@ -511,9 +557,8 @@ struct DustTests {
         #expect(DegradeSettings(Dust.pass(0.45)).mix == 0.45)
         #expect(DegradeSettings(Dust.pass(0.45)).seed == DustFixture.sp1200.seed)
 
-        // The Director's dust lever on a Sound surface starts the draft at the same pass.
-        let (levered, _, _) = DustFixture.sound(on: built.dry, in: built, kits: kits,
-                                                levers: [SurfaceLever(quantity: .dust, label: "Dustier", value: 0.45)])
+        // A popover opened with a lever starts its draft at the same pass.
+        let (levered, _) = DustFixture.shaping(on: built.dry, in: built, kits: kits, lever: 0.45)
         #expect(levered.draft.degrade == Dust.lever(0.45))
         #expect(levered.chainPasses == [Dust.pass(0.45)])
         #expect(levered.isDirty, "the lever's chain is a draft to keep, not a version already written")
@@ -521,44 +566,44 @@ struct DustTests {
 
     // MARK: The choice validator
 
-    @Test("Dust: the choice validator admits Sound on a chop or a groove, and still refuses the rest")
+    @Test("Dust: a dust lever hangs on the Chop lane and the Compare, and a dusty part opens on its own surface")
     @MainActor
-    func dustChoiceAdmitsSoundOnAChopOrGroove() throws {
+    func dustChoiceHangsWhereDustIs() throws {
         let built = DirectorChoiceTests.build()
         defer { DirectorChoiceTests.clean(built) }
 
+        #expect(SurfaceLever.Quantity.dust.surfaces == [.chopLane, .compare])
         let onChop = try DirectorSurfaceChoice.make(
-            surface: .sound, title: "Dustier", fill: .parts([built.sample]),
+            surface: .chopLane, title: "Dustier", fill: .parts([built.sample]),
             levers: [SurfaceLever(quantity: .dust, label: "Dustier", value: 0.6)],
             because: "Dirt is a sound job.", in: built.stage)
-        #expect(onChop.action.surface == .sound)
-        #expect(onChop.action.bound == [built.sample])
+        #expect(onChop.action.surface == .chopLane && onChop.action.bound == [built.sample])
 
+        // The Grid takes a groove, dusty or not, and no dust lever: its Dust menu is the chain.
         let onGroove = try DirectorSurfaceChoice.make(
-            surface: .sound, title: "Dustier groove", fill: .parts([built.grooves[0]]),
+            surface: .grid, title: "Dustier groove", fill: .parts([built.grooves[0]]),
             because: "The groove through the SP-1200.", in: built.stage)
         #expect(onGroove.action.bound == [built.grooves[0]])
-
-        // Still a voice, too.
-        _ = try DirectorSurfaceChoice.make(surface: .sound, title: "Kick", fill: .parts([built.sound]),
-                                           because: "", in: built.stage)
-        // A take is not something dust is carried on.
         #expect(throws: DirectorChoiceProblem.self) {
-            try DirectorSurfaceChoice.make(surface: .sound, title: "No", fill: .parts([built.take]),
+            try DirectorSurfaceChoice.make(surface: .grid, title: "No", fill: .parts([built.grooves[0]]),
+                                           levers: [SurfaceLever(quantity: .dust, label: "Dustier", value: 0.6)],
                                            because: "", in: built.stage)
         }
-        // And a lever the Sound surface has no number for is still refused on a chop.
+        // A lever the lane has no number for is still refused on a chop.
         #expect(throws: DirectorChoiceProblem.self) {
-            try DirectorSurfaceChoice.make(surface: .sound, title: "No", fill: .parts([built.sample]),
-                                           levers: [SurfaceLever(quantity: .swing, label: "Swing", value: 60)],
+            try DirectorSurfaceChoice.make(surface: .chopLane, title: "No", fill: .parts([built.sample]),
+                                           levers: [SurfaceLever(quantity: .lag, label: "Lag", value: 20)],
                                            because: "", in: built.stage)
         }
-        // Opening it through the stage lands a Sound surface bound to the chop.
-        let id = try #require(built.stage.open(onChop))
-        let (surface, _) = SurfaceWiring().soundSurface(
-            for: try #require(built.app.bench.items.first { $0.id == id }), app: built.app)
-        #expect(surface.subject == .part(.sample))
-        #expect(surface.draft.degrade == Dust.lever(0.6))
+        // Where the path and the ledger send a dusty part: the Grid for a groove, the lane for a chop.
+        let song = try #require(built.app.song)
+        let groove = try #require(song.version(built.grooves[0]))
+        let dustyGroove = try #require(Dust.version(choosing: .sp1200, on: groove, by: .user))
+        #expect(WorkPath.dustAction(on: dustyGroove)?.surface == .grid)
+        let sample = try #require(song.version(built.sample))
+        let dustySample = try #require(Dust.version(choosing: .sp1200, on: sample, by: .user))
+        #expect(WorkPath.dustAction(on: dustySample)?.surface == .chopLane)
+        #expect(LedgerGroups.action(for: dustySample, in: song)?.surface == .chopLane)
     }
 
     // MARK: The chain critic
@@ -571,7 +616,7 @@ struct DustTests {
         defer { WiringFixture.remove(built.directory); WiringFixture.remove(kits) }
 
         // The first machine: no finding, because the source had not been through one.
-        let (first, _, _) = DustFixture.sound(on: built.dry, in: built, kits: kits)
+        let (first, _) = DustFixture.shaping(on: built.dry, in: built, kits: kits)
         await first.waitForDry()
         first.apply(.sp1200)
         #expect(first.chainFindings.filter { $0.measurement.feature == .bitDepth }.isEmpty)
@@ -579,7 +624,7 @@ struct DustTests {
         #expect(Dust.findings(for: dusty).isEmpty)
 
         // The second, stacked on top: the critic flags it on the draft, before anything is written…
-        let (second, _, _) = DustFixture.sound(on: dusty, in: built, kits: kits)
+        let (second, _) = DustFixture.shaping(on: dusty, in: built, kits: kits)
         await second.waitForDry()
         #expect(second.draft.degrade == DegradeSettings(preset: .sp1200), "it opens on the chop's own chain")
         second.setStacking(true)

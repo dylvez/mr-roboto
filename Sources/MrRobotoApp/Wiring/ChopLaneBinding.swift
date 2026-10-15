@@ -95,12 +95,12 @@ final class ChopLaneBinding {
             case .failure(let error):
                 self.state = .failed("\(error)")
             case .success(let (span, asks)):
-                // Analysis and drawing read the dry bar; the pads play it through the chop's own
-                // chain. A dusty chop's slices are found on the clean transients — the noise bed
-                // would otherwise read as onsets — and heard the way the version says it sounds.
+                // The bar as recorded, at the chop's level. Analysis and drawing read it dry — a
+                // dusty chop's slices are found on the clean transients, where the noise bed would
+                // otherwise read as onsets — and the lane puts it through the chop's own chain for
+                // the pads (`ChopLaneSurface.dustPasses`), so a machine chosen from its Dust menu is
+                // heard at once, and Dry beside it is a true bypass.
                 let mono = ChopAudio.mono(span.planar)
-                let playing = (try? Dust.render(span.planar, sampleRate: span.sampleRate,
-                                                passes: sample.degradation)) ?? span.planar
                 guard !mono.isEmpty else {
                     self.state = .failed("The bar's audio is empty: \(sample.media.fileName) held nothing between "
                         + String(format: "%.2f s and %.2f s.", region.start, region.end))
@@ -110,7 +110,7 @@ final class ChopLaneBinding {
                                             partID: version.partID,
                                             record: sample.sourceRecord,
                                             mono: mono,
-                                            planar: playing,
+                                            planar: span.planar,
                                             sampleRate: span.sampleRate,
                                             sourceOffset: region.start,
                                             grid: sample.span != nil
@@ -128,6 +128,7 @@ final class ChopLaneBinding {
                 if let before {
                     lane.feelName = before.feelName
                     lane.tempo = before.tempo
+                    lane.hearsDry = before.hearsDry
                 }
                 self.state = .ready(lane)
                 self.app.retitleSurface(self.item.id, to: lane.headline)
@@ -223,6 +224,8 @@ final class ChopLaneBinding {
 struct ChopLanePanel: View {
     @Bindable var binding: ChopLaneBinding
     let app: AppState
+    /// Where the lane's Shape popover gets its model. Nil in a render or a test.
+    var shaping: ShapingSource? = nil
 
     var body: some View {
         Group {
@@ -232,7 +235,7 @@ struct ChopLanePanel: View {
             case .loading(let label):
                 note("Reading \(label)…", "Finding the bar in the record and loading its audio.")
             case .ready(let lane):
-                ChopLaneView(surface: lane)
+                ChopLaneView(surface: lane, shaping: shaping)
             case .failed(let reason):
                 note("This bar could not be opened.", reason)
             }
