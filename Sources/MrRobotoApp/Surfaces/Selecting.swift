@@ -13,3 +13,17 @@ public protocol DuplicatesItsSelection: AnyObject {
     /// The selection again, right after itself, and the copies selected.
     func duplicateSelection()
 }
+
+/// A surface with a selection the Edit menu's Delete (⌫) removes: the Piano roll's notes, so far.
+///
+/// The lane answers the Delete key itself once it has keyboard focus, but focus is a thing a click
+/// may or may not win — a text field keeps it, Full Keyboard Access changes what can take it — and
+/// a key that works only sometimes is a key that does not work. So Delete is a menu item too, and
+/// reaches the surface in front as ⌘Z does, whatever has focus; a text field being typed in keeps
+/// the key, since a letter going back is what ⌫ means there.
+@MainActor
+public protocol DeletesItsSelection: AnyObject {
+    var canDelete: Bool { get }
+    /// The selection goes, as one step of ⌘Z.
+    func deleteSelection()
+}

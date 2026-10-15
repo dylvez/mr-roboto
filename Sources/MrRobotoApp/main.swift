@@ -205,6 +205,12 @@ struct FrameCommands: Commands {
             Button("Duplicate") { duplicator?.duplicateSelection() }
                 .keyboardShortcut("d", modifiers: .command)
                 .disabled(!(duplicator?.canDuplicate ?? false))
+            // Delete reaches the surface in front the same way, by its key. The lane answered ⌫
+            // itself only once it had keyboard focus, which a click did not reliably win, and the
+            // selected note stayed. Always enabled: a greyed item with a bare key swallows the key
+            // with a beep, and a text field being typed in has to keep it.
+            Button("Delete") { MrRobotoApp.deleteSelection(app) }
+                .keyboardShortcut(.delete, modifiers: [])
         }
 
         CommandGroup(replacing: .saveItem) {
@@ -386,6 +392,19 @@ extension MrRobotoApp {
         }
         guard let item = app.bench.active else { return }
         if redo { SurfaceWiring.shared.redo(for: item) } else { SurfaceWiring.shared.undo(for: item) }
+    }
+
+    /// ⌫: the text field being typed in keeps it, a letter going back; otherwise the surface in
+    /// front removes its selection, when it has one. Nothing else happens, and nothing beeps.
+    @MainActor
+    static func deleteSelection(_ app: AppState) {
+        if NSApp.keyWindow?.firstResponder is NSText {
+            NSApp.sendAction(Selector(("deleteBackward:")), to: nil, from: nil)
+            return
+        }
+        guard let item = app.bench.active, let deleter = SurfaceWiring.shared.deleter(for: item),
+              deleter.canDelete else { return }
+        deleter.deleteSelection()
     }
 
     static func untitledName(_ date: Date = Date()) -> String {

@@ -723,6 +723,8 @@ struct NoteLane: View {
                 let isSelected = model.selectedNotes.contains(index)
                 let onChord = chords.chord(at: note.start + 0.001).pitchClasses.contains(note.pitch.pitchClass)
                 let lit = onChord
+                let width = max(6, CGFloat(note.duration) * layout.beatWidth - 1)
+                let handle = NoteLaneLayout.resizeHandle(forNoteWidth: width)
                 RoundedRectangle(cornerRadius: 2)
                     .fill(Design.Palette.accent.opacity(isGhost ? (lit ? 0.35 : 0.14) : (lit ? 0.95 : 0.3)))
                     .overlay(RoundedRectangle(cornerRadius: 2)
@@ -732,22 +734,25 @@ struct NoteLane: View {
                         Rectangle().fill(Design.Palette.panel.opacity(0.6)).frame(width: 3)
                     }
                     .shadow(color: lit && !isGhost ? Design.Palette.accent.opacity(0.55) : .clear, radius: 4)
-                    .frame(width: max(6, CGFloat(note.duration) * layout.beatWidth - 1), height: max(4, layout.rowHeight - 1))
-                    .offset(x: CGFloat(note.start) * layout.beatWidth, y: layout.top(ofRow: row))
+                    .frame(width: width, height: max(4, layout.rowHeight - 1))
                     .onTapGesture(count: 2) { model.deleteNote(at: index) }
-                    .onTapGesture {
-                        isFocused = true
-                        // Shift (or ⌘) puts the note into the selection or takes it out; a plain
-                        // click makes it the selection.
-                        if NSEvent.modifierFlags.intersection([.shift, .command]).isEmpty {
-                            model.select(index)
-                        } else {
-                            model.toggle(index)
+                    .onTapGesture { select(index, note: note) }
+                    .gesture(noteDrag(index: index, beatWidth: layout.beatWidth, rowHeight: layout.rowHeight))
+                    // The right edge, on a note wide enough to have one: a drag there lengthens
+                    // this note and nothing else, under a resize pointer. A short note has no edge
+                    // to catch — every press on it moves it — and is lengthened zoomed in.
+                    .overlay(alignment: .trailing) {
+                        if handle > 0 {
+                            Color.clear
+                                .frame(width: handle)
+                                .contentShape(Rectangle())
+                                .pointerStyle(.columnResize(directions: .all))
+                                .onTapGesture { select(index, note: note) }
+                                .gesture(resizeDrag(index: index, beatWidth: layout.beatWidth))
                         }
-                        model.audition(note)
                     }
-                    .gesture(noteDrag(index: index, note: note, beatWidth: layout.beatWidth, rowHeight: layout.rowHeight))
-                    .help("\(note.pitch.name()) · \(place(of: note)) · \(String(format: "%.2f", note.duration)) beats · click to select, shift-click to add, Delete to remove")
+                    .offset(x: CGFloat(note.start) * layout.beatWidth, y: layout.top(ofRow: row))
+                    .help("\(note.pitch.name()) · \(place(of: note)) · \(String(format: "%.2f", note.duration)) beats · click to select, shift-click to add, Delete to remove; drag to move\(handle > 0 ? ", its right edge to lengthen" : " (zoom in to lengthen it)")")
                     .accessibilityLabel("\(note.pitch.name()) at \(place(of: note))\(isSelected ? ", selected" : "")")
             }
             // The box, while it is drawn: the accent's wash, so it reads as the selection it makes.
@@ -797,34 +802,52 @@ struct NoteLane: View {
         return "bar \(bar + 1), beat \(String(format: "%.2f", beat + 1))"
     }
 
+    /// A click on a note: the selection, or with shift (or ⌘) held, into the selection or out of
+    /// it; heard either way. The lane takes focus so the keys reach it.
+    private func select(_ index: Int, note: NoteEvent) {
+        isFocused = true
+        if NSEvent.modifierFlags.intersection([.shift, .command]).isEmpty {
+            model.select(index)
+        } else {
+            model.toggle(index)
+        }
+        model.audition(note)
+    }
+
     /// A drag on a note moves the selection — the note becomes it first, if it was not in — by the
-    /// whole translation since the drag began, so every frame is a place and not a step. A drag
-    /// that begins at the right edge lengthens that one note instead.
-    private func noteDrag(index: Int, note: NoteEvent, beatWidth: CGFloat, rowHeight: CGFloat) -> some Gesture {
+    /// whole translation since the drag began, so every frame is a place and not a step.
+    private func noteDrag(index: Int, beatWidth: CGFloat, rowHeight: CGFloat) -> some Gesture {
         DragGesture(minimumDistance: 3)
             .onChanged { value in
                 if drag == nil {
                     isFocused = true
-                    let noteWidth = CGFloat(note.duration) * beatWidth
-                    let resizing = value.startLocation.x > noteWidth - 8
-                    drag = Drag(index: index, originalDuration: note.duration, resizing: resizing)
-                    if !resizing {
-                        if !model.selectedNotes.contains(index) { model.select(index) }
-                        model.beginMove()
-                    }
+                    drag = Drag(index: index, originalDuration: 0, resizing: false)
+                    if !model.selectedNotes.contains(index) { model.select(index) }
+                    model.beginMove()
                 }
-                guard let d = drag else { return }
-                if d.resizing {
-                    model.resizeNote(at: d.index, toDuration: d.originalDuration + Double(value.translation.width / beatWidth))
-                } else {
-                    model.moveSelection(by: Double(value.translation.width / beatWidth),
-                                        semitones: -Int((value.translation.height / rowHeight).rounded()))
-                }
+                model.moveSelection(by: Double(value.translation.width / beatWidth),
+                                    semitones: -Int((value.translation.height / rowHeight).rounded()))
             }
             .onEnded { _ in
-                if drag?.resizing == false { model.endMove() }
+                model.endMove()
                 drag = nil
             }
+    }
+
+    /// A drag on a note's right edge lengthens that note, and only that note, from the length it
+    /// had when the drag began.
+    private func resizeDrag(index: Int, beatWidth: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 3)
+            .onChanged { value in
+                if drag == nil {
+                    isFocused = true
+                    guard model.notes.indices.contains(index) else { return }
+                    drag = Drag(index: index, originalDuration: model.notes[index].duration, resizing: true)
+                }
+                guard let d = drag, d.resizing else { return }
+                model.resizeNote(at: d.index, toDuration: d.originalDuration + Double(value.translation.width / beatWidth))
+            }
+            .onEnded { _ in drag = nil }
     }
 }
 

@@ -1017,6 +1017,9 @@ public final class PianoRollModel {
 
     public func clearSelection() { selectedNotes = [] }
 
+    /// Whether Delete has anything to remove: a selection, and no take coming in.
+    public var canDelete: Bool { !isTaking && selectedNotes.contains { notes.indices.contains($0) } }
+
     /// The Delete key: the selection goes, one step of ⌘Z however many it was. Nothing selected,
     /// nothing removed.
     public func deleteSelection() {
@@ -1338,3 +1341,5 @@ extension PianoRollModel: TakesFromController {
 extension PianoRollModel: ZoomsItsWork {}
 
 extension PianoRollModel: DuplicatesItsSelection {}
+
+extension PianoRollModel: DeletesItsSelection {}

@@ -678,6 +678,12 @@ final class SurfaceWiring {
         item.kind == .pianoRoll ? rolls[item.id] : nil
     }
 
+    /// ⌫ on the surface in front: the Piano roll's selection removed. Nil for a surface with no
+    /// selection to remove, and for one the bench has not drawn yet.
+    func deleter(for item: BenchItem) -> (any DeletesItsSelection)? {
+        item.kind == .pianoRoll ? rolls[item.id] : nil
+    }
+
     /// The first bound version that actually holds a groove. A grid opened on a sample (say, from
     /// the ledger) is an empty grid rather than a crash.
     private func boundGroove(for item: BenchItem, app: AppState) -> PartVersion? {

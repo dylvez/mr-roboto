@@ -44,6 +44,15 @@ public struct NoteLaneLayout: Equatable, Sendable {
         CGFloat(max(1, rows)) * minimumRowHeight + kickGap + kickLaneHeight
     }
 
+    /// The right edge of a note, where a drag lengthens it: the trailing third of the note, at most
+    /// eight points, and none at all on a note under twenty points wide. The edge used to be the
+    /// last eight points of every note, which on a long line at the floor — an eighth fourteen
+    /// points wide — was most of the note, so most drags lengthened it and a drag up or down to
+    /// move it did nothing. A short note is moved from anywhere on it, and lengthened zoomed in.
+    public static func resizeHandle(forNoteWidth width: CGFloat) -> CGFloat {
+        width >= 20 ? min(8, width / 3) : 0
+    }
+
     public let rows: Int
     /// One pitch's row: an equal share of the rows' height, never under `minimumRowHeight`.
     public let rowHeight: CGFloat
