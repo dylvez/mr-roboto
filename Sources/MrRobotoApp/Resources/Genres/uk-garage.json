@@ -332,6 +332,15 @@
     },
     {
       "evidence": {
+        "inferred": "the form below puts the first chorus after 32 bars (Intro 16, Verse 16): 56 s at 136 BPM and 60 s at 128; a club mix's further 16 bars of DJ intro, the house convention the form note cites, puts it at 48 bars, 90 s at 128."
+      },
+      "feature": "form.hook.seconds",
+      "high": 90,
+      "low": 56,
+      "unit": "seconds"
+    },
+    {
+      "evidence": {
         "inferred": "Chart singles run 3:37 ('Sweet Like Chocolate') and 4:02 ('Re-Rewind'); club mixes of the same records add DJ intros and outros, the house convention UKG inherits (EDMProd's ~7 min house club structure), so the upper bound sits below a full house club mix."
       },
       "feature": "form.minutes",

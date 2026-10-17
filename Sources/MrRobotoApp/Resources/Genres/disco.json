@@ -351,6 +351,15 @@
     },
     {
       "evidence": {
+        "inferred": "the form below puts the first chorus after 32 bars (Intro 16, Verse 16): 60 s at 126 BPM and 67 s at 115."
+      },
+      "feature": "form.hook.seconds",
+      "high": 67,
+      "low": 60,
+      "unit": "seconds"
+    },
+    {
+      "evidence": {
         "inferred": "Disco was released in two lengths: 'I Feel Love' runs 3:46 on the 7-inch, 5:56 on the album and 8:16 on the 12-inch; Moulton's extended mixes nearly doubled a single's length. Side-long versions (15-17 min) are the outliers."
       },
       "feature": "form.minutes",

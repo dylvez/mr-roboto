@@ -11,7 +11,9 @@ import SongGraph
 /// so nobody mistakes the genre's norm for the bible's research, or the other way round.
 ///
 /// Rules that name a condition rather than a norm ("the kick rings past 400 ms, so the 808 is the
-/// bass") are left alone: that is physics, not style.
+/// bass") are left alone: that is physics, not style. So is a reading that something is missing,
+/// which has no number for a range to move — unless the genre goes without it too: an ambient
+/// piece names no hook, and neither does the form ambient is known by.
 public struct GenreLens: Sendable, Equatable {
     public let profile: GenreProfile
 
@@ -59,6 +61,7 @@ public struct GenreLens: Sendable, Equatable {
     }
 
     public func apply(_ reading: PersonaReading, bible: PersonaBible) -> PersonaReading {
+        guard reading.measured else { return excuse(reading) }
         guard let rule = bible.rules.first(where: { $0.id == reading.rule }),
               rule.threshold?.feature == reading.feature,
               let moved = threshold(for: rule), let range = profile.range(reading.feature) else { return reading }
@@ -73,6 +76,17 @@ public struct GenreLens: Sendable, Equatable {
         case (false, false): out.says = "\(reading.says) \(profile.name) wants \(allowed) too."
         case (true, true): out.genre = nil
         }
+        return out
+    }
+
+    /// A missing hook, in a genre whose own form names none: it stands, and says why. Anything
+    /// else that is missing is still missing.
+    func excuse(_ reading: PersonaReading) -> PersonaReading {
+        guard !reading.holds, reading.feature == .hookArrivalSeconds, profile.formNamesAHook == false else { return reading }
+        var out = reading
+        out.genre = profile.id
+        out.holds = true
+        out.says = "\(reading.says) \(profile.name) names none in its form either, so it stands."
         return out
     }
 

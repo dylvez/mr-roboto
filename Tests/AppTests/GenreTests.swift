@@ -168,6 +168,53 @@ struct GenreTests {
         #expect(hook(90, holds: false).says.contains("up to 75 seconds"))
     }
 
+    @Test("a house drop at 0:49 stands in house, and the same form with no genre is still held to thirty seconds")
+    func houseHookDeadline() throws {
+        var song = Song(title: "MegaMash", tempo: 118)
+        song.sections = [Section(name: "Intro", stitch: [], lengthInBars: 8), Section(name: "Verse", stitch: [], lengthInBars: 8),
+                         Section(name: "Build", stitch: [], lengthInBars: 8), Section(name: "Drop 1", stitch: [], lengthInBars: 16)]
+        let hook = try #require(Peer().read(FormObservation.of(song)).first { $0.rule == "peer.hook-inside-thirty" })
+        #expect(!hook.holds && hook.says.contains("0:49"), "no genre: the pop deadline")
+        let house = try #require(GenreBook.standard.profile(named: "deep house"))
+        let judged = GenreLens(house).apply(hook, bible: Peer.bible)
+        #expect(judged.holds && judged.genre == "house")
+        #expect(judged.says.contains("House") && judged.says.contains("up to 160 seconds"))
+        let pop = try #require(GenreBook.standard.profile(named: "pop"))
+        #expect(GenreLens(pop).apply(hook, bible: Peer.bible).holds, "pop allows fifty")
+        let trap = try #require(GenreBook.standard.profile(named: "trap"))
+        #expect(!GenreLens(trap).apply(hook, bible: Peer.bible).holds, "trap's hook comes inside thirty")
+    }
+
+    @Test("a missing hook is not timed as one: it stands only where the genre's own form names none")
+    func lensOnAMissingHook() throws {
+        var song = Song(title: "Drift", tempo: 70)
+        song.sections = [Section(name: "Intro", stitch: [], lengthInBars: 8), Section(name: "Drift", stitch: [], lengthInBars: 96),
+                         Section(name: "Outro", stitch: [], lengthInBars: 16)]
+        let none = try #require(Peer().read(FormObservation.of(song)).first { $0.rule == "peer.hook-inside-thirty" })
+        #expect(!none.holds && !none.measured && none.says.contains("Nothing is named as a hook"))
+        #expect(GenreLens(GenreFixture.house).apply(none, bible: Peer.bible) == none, "a profile with no form says nothing of it")
+        let house = try #require(GenreBook.standard.profile(named: "house"))
+        #expect(GenreLens(house).apply(none, bible: Peer.bible) == none, "house's form has a drop: the song length is not an arrival")
+        let ambient = try #require(GenreBook.standard.profile(named: "ambient"))
+        let excused = GenreLens(ambient).apply(none, bible: Peer.bible)
+        #expect(excused.holds && excused.genre == "ambient" && excused.says.contains("Ambient names none in its form either"))
+    }
+
+    @Test("every shipped profile whose own form names a hook lets that form's hook arrive in time, at its own tempo")
+    func shippedFormsHookInTime() throws {
+        // Breakbeat's form is its own guess, and salsa's bars are counted at twice the app's tempo;
+        // a form written in two counts its bars in a meter the app writes two to a bar. Synth-pop's
+        // form puts its chorus past its own cited ceiling, a finding (Bench/genres/findings.json).
+        let unread: Set<String> = ["breakbeat", "salsa", "synth-pop"]
+        for profile in GenreBook.standard.profiles where profile.formNamesAHook == true && !unread.contains(profile.id) {
+            guard let form = profile.form, let tempo = profile.tempo, profile.meters.first == "4/4" else { continue }
+            var song = Song(title: profile.name, tempo: tempo.typical ?? (tempo.low + tempo.high) / 2)
+            song.sections = form.sections.map { Section(name: $0.name, stitch: [], lengthInBars: $0.bars) }
+            guard let hook = Peer().read(FormObservation.of(song)).first(where: { $0.rule == "peer.hook-inside-thirty" }) else { continue }
+            #expect(GenreLens(profile).apply(hook, bible: Peer.bible).holds, "\(profile.id): \(hook.says)")
+        }
+    }
+
     @Test("a reading on a feature the genre has no number for, or a condition rule, is left alone")
     func lensLeavesAlone() {
         let lens = GenreLens(GenreFixture.house)

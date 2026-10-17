@@ -186,6 +186,10 @@ public struct GenreProfile: Hashable, Sendable, Codable, Identifiable {
     /// The tempo range, when the profile states one.
     public var tempo: GenreRange? { range(.tempoBPM) }
 
+    /// Whether the form the genre is known by names a hook — a chorus, a drop, a head — as the Peer
+    /// hears one. Nil when the profile gives no form.
+    public var formNamesAHook: Bool? { form.map { $0.sections.contains { FormObservation.isHook($0.name) } } }
+
     public func notes(_ area: String) -> [GenreNote] { notes.filter { $0.area == area } }
 
     /// The ways a song's tempo can be counted against this genre's: as written, in half time and

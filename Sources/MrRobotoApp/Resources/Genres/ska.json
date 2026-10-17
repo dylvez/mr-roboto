@@ -412,6 +412,15 @@
     },
     {
       "evidence": {
+        "inferred": "the form below puts the first chorus after 20 bars (Intro 4, Verse 16): 35 s at 136 BPM and 44 s at 110."
+      },
+      "feature": "form.hook.seconds",
+      "high": 44,
+      "low": 35,
+      "unit": "seconds"
+    },
+    {
+      "evidence": {
         "inferred": "Tommy McCook's '2 1/2 minutes because of radio play' limit, and the durations songbpm lists for first-wave singles: My Boy Lollipop 2:02, Miss Jamaica 2:22, Guns of Navarone 2:31, Madness 2:40, Oh Carolina 2:41, Eastern Standard Time 2:44, Simmer Down 2:48, Al Capone 3:04 (median 2:41); the 6-minute Freedom Sounds and Phoenix City listed there are left out as longer than any radio cut. 2 Tone singles fall inside it (Gangsters 2:47, On My Radio 3:05)"
       },
       "feature": "form.minutes",

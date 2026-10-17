@@ -36,6 +36,23 @@
    }
   },
   {
+   "id": "cumbia-root-fifth",
+   "label": "root-fifth under Cumbia as Cumbia",
+   "genre": "cumbia",
+   "material": {
+    "kind": "bassline",
+    "hands": "root-fifth",
+    "lagMS": 0,
+    "tempo": 95,
+    "feel": "Cumbia",
+    "density": 0.5,
+    "seed": 7
+   },
+   "expects": {
+    "bassist.density": true
+   }
+  },
+  {
    "id": "folk-root-fifth",
    "label": "root-fifth under Folk Strum as Folk / singer-songwriter",
    "genre": "folk",
@@ -87,6 +104,23 @@
    }
   },
   {
+   "id": "klezmer-root-fifth",
+   "label": "root-fifth under Bulgar as Klezmer",
+   "genre": "klezmer",
+   "material": {
+    "kind": "bassline",
+    "hands": "root-fifth",
+    "lagMS": 0,
+    "tempo": 138,
+    "feel": "Bulgar",
+    "density": 0.5,
+    "seed": 7
+   },
+   "expects": {
+    "bassist.downbeat": true
+   }
+  },
+  {
    "id": "salsa-tumbao",
    "label": "tumbao under Son Clave 2-3 as Salsa / son",
    "genre": "salsa",
@@ -96,6 +130,40 @@
     "lagMS": 0,
     "tempo": 190.0,
     "feel": "Son Clave 2-3",
+    "density": 0.5,
+    "seed": 7
+   },
+   "expects": {
+    "bassist.downbeat": true
+   }
+  },
+  {
+   "id": "ska-walking",
+   "label": "walking under Ska as Ska",
+   "genre": "ska",
+   "material": {
+    "kind": "bassline",
+    "hands": "walking",
+    "lagMS": 0,
+    "tempo": 124,
+    "feel": "Ska",
+    "density": 0.5,
+    "seed": 7
+   },
+   "expects": {
+    "bassist.downbeat": true
+   }
+  },
+  {
+   "id": "swing-walking",
+   "label": "walking under Big Band Swing as Big Band Swing",
+   "genre": "swing",
+   "material": {
+    "kind": "bassline",
+    "hands": "walking",
+    "lagMS": 0,
+    "tempo": 170,
+    "feel": "Big Band Swing",
     "density": 0.5,
     "seed": 7
    },

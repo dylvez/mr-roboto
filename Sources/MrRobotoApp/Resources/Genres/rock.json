@@ -350,6 +350,15 @@
     },
     {
       "evidence": {
+        "inferred": "the form below puts the first chorus after 24 bars (Intro 8, Verse 8, Pre-Chorus 8): 38 s at 150 BPM and 64 s at 90."
+      },
+      "feature": "form.hook.seconds",
+      "high": 64,
+      "low": 38,
+      "unit": "seconds"
+    },
+    {
+      "evidence": {
         "inferred": "Durations of the nine reference records on songbpm: 3:28, 3:43, 4:11, 4:18, 4:30, 5:02, 5:02, 5:35, 5:55; range spans the middle seven, typical is the median"
       },
       "feature": "form.minutes",

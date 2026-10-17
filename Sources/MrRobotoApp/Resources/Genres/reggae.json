@@ -343,6 +343,15 @@
     },
     {
       "evidence": {
+        "inferred": "the form below puts the first chorus after 20 bars (Intro 4, Verse 16): 53 s at 90 BPM and 80 s at 60."
+      },
+      "feature": "form.hook.seconds",
+      "high": 80,
+      "low": 53,
+      "unit": "seconds"
+    },
+    {
+      "evidence": {
         "inferred": "durations of the Wailers recordings measured on SongBPM and Wikipedia (One Drop 3:51, Is This Love 3:52, No Woman No Cry 4:11, Stir It Up 5:32; Exodus 7:40 treated as an extended outlier); typical is their median"
       },
       "feature": "form.minutes",

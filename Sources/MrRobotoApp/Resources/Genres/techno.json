@@ -338,6 +338,15 @@
     },
     {
       "evidence": {
+        "inferred": "No section of the form below is named as a hook; the arrangement note has the stab or hook enter only after drums and bass have run for 32-64 bars: 32 bars at 140 BPM is 55 s, 64 bars at 126 is 122 s."
+      },
+      "feature": "form.hook.seconds",
+      "high": 122,
+      "low": 55,
+      "unit": "seconds"
+    },
+    {
+      "evidence": {
         "inferred": "TrackSensei's DJ map is 192 bars at 130 BPM (5.9 min) with 32-64-bar intro and outro; a 64-bar intro and outro on the same map at 133 BPM gives about 8 min."
       },
       "feature": "form.minutes",

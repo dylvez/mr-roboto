@@ -349,6 +349,15 @@
     },
     {
       "evidence": {
+        "inferred": "the form below puts the first chorus after 12 bars (Intro 4, Verse 8): 21 s at 135 BPM and 31 s at 95."
+      },
+      "feature": "form.hook.seconds",
+      "high": 31,
+      "low": 21,
+      "unit": "seconds"
+    },
+    {
+      "evidence": {
         "inferred": "Durations of eight reference singles on songbpm: Respect 2:27, Where Did Our Love Go 2:33, Heat Wave 2:42, My Girl 2:45, I Can't Help Myself 2:45, Stop! 2:53, You Can't Hurry Love 2:55, Grapevine 3:14; typical is the median"
       },
       "feature": "form.minutes",

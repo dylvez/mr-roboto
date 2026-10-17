@@ -368,6 +368,15 @@
     },
     {
       "evidence": {
+        "inferred": "the form below puts the first chorus after 32 bars (Intro 8, Verse 16, Pre-Chorus 8): 66 s at 116 BPM and 78 s at 99."
+      },
+      "feature": "form.hook.seconds",
+      "high": 78,
+      "low": 66,
+      "unit": "seconds"
+    },
+    {
+      "evidence": {
         "inferred": "the 2.5-3.5 minute norm the cited BeatsToRapOn guide gives, widened to the 3:40 of Calm Down and 4:08 of Essence (Wikipedia); typical is the median of Last Last 2:53, Ojuelegba 3:36, Calm Down 3:40 and Essence 4:08 rounded down toward the guide's norm"
       },
       "feature": "form.minutes",

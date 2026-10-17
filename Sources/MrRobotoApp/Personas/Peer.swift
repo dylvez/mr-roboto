@@ -456,8 +456,12 @@ public struct Peer: Persona {
                     ? "The hook comes at \(Peer.clock(hook))."
                     : "The hook comes at \(Peer.clock(hook)). I was gone at 0:30\(observation.cutToBringHook.map { " — cut \($0) and it comes at \(Peer.clock(hook - observation.cutSeconds))" } ?? "")."))
         } else {
-            notes.append(PersonaReading(rule: "peer.hook-inside-thirty", feature: .hookArrivalSeconds, value: observation.seconds,
-                                        holds: false, says: "Nothing is named as a hook. Which section is the one I'd sing back?"))
+            // A hook that is not there has no arrival to time: the value is the form's length, and
+            // no genre's range is to read it as one.
+            var none = PersonaReading(rule: "peer.hook-inside-thirty", feature: .hookArrivalSeconds, value: observation.seconds,
+                                      holds: false, says: "Nothing is named as a hook. Which section is the one I'd sing back?")
+            none.measured = false
+            notes.append(none)
         }
         notes.append(PersonaReading(
             rule: "peer.form-turns", feature: .formTurns, value: Double(observation.turns),
@@ -531,8 +535,16 @@ public struct FormObservation: Hashable, Sendable {
     }
 
     /// Names a listener calls the hook. A jazz tune's head is the part sung back, its solos what
-    /// comes between.
-    static let hookNames = ["hook", "chorus", "refrain", "drop", "head"]
+    /// comes between; a salsa's coro and a samba's refrão are its chorus.
+    static let hookNames = ["hook", "chorus", "refrain", "drop", "head", "coro", "refrão", "refrao"]
+
+    /// Whether a section by this name is where the hook lands. The sections either side of it are
+    /// not, though they carry its name: a pre-chorus is the wait for it, a post-chorus what is left.
+    public static func isHook(_ name: String) -> Bool {
+        let name = name.lowercased()
+        guard !name.hasPrefix("pre"), !name.hasPrefix("post") else { return false }
+        return hookNames.contains { name.contains($0) }
+    }
 
     public static func of(_ song: Song) -> FormObservation {
         let secondsPerBar = Double(song.timeSignature.beatsPerBar) * 60 / max(1, song.tempo)
@@ -543,7 +555,7 @@ public struct FormObservation: Hashable, Sendable {
         var hook: Double?
         var before: Section?
         for section in song.sections {
-            if hookNames.contains(where: { section.name.lowercased().contains($0) }) { hook = elapsed; break }
+            if isHook(section.name) { hook = elapsed; break }
             before = section
             elapsed += Double(section.lengthInBars) * secondsPerBar
         }

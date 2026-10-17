@@ -8,5 +8,7 @@
                               "beatmaker.pocket-is-a-span": "The feel's layers spread 18.8 ms; the profile's number is the 55-80 ms measured in Left and Right, one record's extreme."},
  "disco-prog2": {"harmonist.stays-in-key": "The progression borrows ii and V7 from harmonic minor; the genre's 0.85-1 is over whole songs."},
  "jazz-prog4": {"harmonist.stays-in-key": "III7-VI7-II7-V7 is a chain of secondary dominants, all out of key by design; the genre's 0.4-0.8 is over whole tunes."},
- "pop-prog4": {"harmonist.stays-in-key": "IV7 is a borrowed dominant seventh; the genre's 0.9-1 is over whole songs."}
+ "klezmer-prog4": {"harmonist.stays-in-key": "The bvii is freygish's cadence borrowed into a minor tune, out of key by design; the genre's 0.75-1 is over whole tunes."},
+ "pop-prog4": {"harmonist.stays-in-key": "IV7 is a borrowed dominant seventh; the genre's 0.9-1 is over whole songs."},
+ "synth-pop-form": {"peer.hook-inside-thirty": "The form's 16-bar verse and 8-bar pre-chorus put the chorus 32 bars in, 63 s at 121; the profile's cited range has hooks by 60. The form is long for the research it sits beside."}
 }

@@ -229,6 +229,118 @@
    }
   },
   {
+   "id": "film-score-prog1",
+   "label": "i - bvi as Film Score",
+   "genre": "film-score",
+   "material": {
+    "kind": "numerals",
+    "roman": "i - bvi",
+    "mode": "aeolian",
+    "key": "A aeolian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "film-score-prog2",
+   "label": "i - VI as Film Score",
+   "genre": "film-score",
+   "material": {
+    "kind": "numerals",
+    "roman": "i - VI",
+    "mode": "aeolian",
+    "key": "A aeolian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "film-score-prog3",
+   "label": "I - bVI - IV as Film Score",
+   "genre": "film-score",
+   "material": {
+    "kind": "numerals",
+    "roman": "I - bVI - IV",
+    "mode": "ionian",
+    "key": "C ionian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "film-score-prog4",
+   "label": "I - bV as Film Score",
+   "genre": "film-score",
+   "material": {
+    "kind": "numerals",
+    "roman": "I - bV",
+    "mode": "ionian",
+    "key": "C ionian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "film-score-prog5",
+   "label": "iv - i - III - VII as Film Score",
+   "genre": "film-score",
+   "material": {
+    "kind": "numerals",
+    "roman": "iv - i - III - VII",
+    "mode": "aeolian",
+    "key": "A aeolian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "flamenco-prog1",
+   "label": "iv - bIII - bII - I as Flamenco",
+   "genre": "flamenco",
+   "material": {
+    "kind": "numerals",
+    "roman": "iv - bIII - bII - I",
+    "mode": "phrygian dominant",
+    "key": "C phrygian dominant"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "flamenco-prog2",
+   "label": "i - bVII - bVI - V as Flamenco",
+   "genre": "flamenco",
+   "material": {
+    "kind": "numerals",
+    "roman": "i - bVII - bVI - V",
+    "mode": "harmonic minor",
+    "key": "A harmonic minor"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "flamenco-prog3",
+   "label": "bII - I as Flamenco",
+   "genre": "flamenco",
+   "material": {
+    "kind": "numerals",
+    "roman": "bII - I",
+    "mode": "phrygian dominant",
+    "key": "C phrygian dominant"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
    "id": "house-prog1",
    "label": "i - VImaj7 - VII as House",
    "genre": "house",
@@ -330,6 +442,65 @@
    }
   },
   {
+   "id": "klezmer-prog1",
+   "label": "I7 - vii - I as Klezmer",
+   "genre": "klezmer",
+   "material": {
+    "kind": "numerals",
+    "roman": "I7 - vii - I",
+    "mode": "phrygian dominant",
+    "key": "C phrygian dominant"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "klezmer-prog2",
+   "label": "iv - I7 - bvii - II - iv as Klezmer",
+   "genre": "klezmer",
+   "material": {
+    "kind": "numerals",
+    "roman": "iv - I7 - bvii - II - iv",
+    "mode": "phrygian dominant",
+    "key": "C phrygian dominant"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "klezmer-prog3",
+   "label": "i - II7 - v as Klezmer",
+   "genre": "klezmer",
+   "material": {
+    "kind": "numerals",
+    "roman": "i - II7 - v",
+    "mode": "ukrainian dorian",
+    "key": "C ukrainian dorian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "klezmer-prog4",
+   "label": "i - bvii - i as Klezmer",
+   "genre": "klezmer",
+   "material": {
+    "kind": "numerals",
+    "roman": "i - bvii - i",
+    "mode": "aeolian",
+    "key": "A aeolian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": false
+   },
+   "notes": {
+    "harmonist.stays-in-key": "The bvii is freygish's cadence borrowed into a minor tune, out of key by design; the genre's 0.75-1 is over whole tunes."
+   }
+  },
+  {
    "id": "pop-prog1",
    "label": "I - V - vi - IV as Contemporary pop",
    "genre": "pop",
@@ -386,6 +557,76 @@
    },
    "notes": {
     "harmonist.stays-in-key": "IV7 is a borrowed dominant seventh; the genre's 0.9-1 is over whole songs."
+   }
+  },
+  {
+   "id": "rnb-prog1",
+   "label": "i - V7 as R&B",
+   "genre": "rnb",
+   "material": {
+    "kind": "numerals",
+    "roman": "i - V7",
+    "mode": "harmonic minor",
+    "key": "A harmonic minor"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "rnb-prog2",
+   "label": "VImaj7 - v - i as R&B",
+   "genre": "rnb",
+   "material": {
+    "kind": "numerals",
+    "roman": "VImaj7 - v - i",
+    "mode": "aeolian",
+    "key": "A aeolian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "rnb-prog3",
+   "label": "i - VI - iv - VII as R&B",
+   "genre": "rnb",
+   "material": {
+    "kind": "numerals",
+    "roman": "i - VI - iv - VII",
+    "mode": "aeolian",
+    "key": "A aeolian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "rnb-prog4",
+   "label": "ii9 - V7 - Imaj7 - VI7 as R&B",
+   "genre": "rnb",
+   "material": {
+    "kind": "numerals",
+    "roman": "ii9 - V7 - Imaj7 - VI7",
+    "mode": "ionian",
+    "key": "C ionian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
+   }
+  },
+  {
+   "id": "rnb-prog5",
+   "label": "IVmaj7 - ii9 - iii7 - vi7 - IVmaj7 - iii7 - bIIImaj7 - ii7 as R&B",
+   "genre": "rnb",
+   "material": {
+    "kind": "numerals",
+    "roman": "IVmaj7 - ii9 - iii7 - vi7 - IVmaj7 - iii7 - bIIImaj7 - ii7",
+    "mode": "ionian",
+    "key": "C ionian"
+   },
+   "expects": {
+    "harmonist.stays-in-key": true
    }
   },
   {

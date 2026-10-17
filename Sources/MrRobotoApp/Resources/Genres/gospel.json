@@ -328,6 +328,15 @@
     },
     {
       "evidence": {
+        "inferred": "the form below puts the first chorus after 20 bars (Intro 4, Verse 16): 36 s at 130 BPM and 51 s at 95."
+      },
+      "feature": "form.hook.seconds",
+      "high": 51,
+      "low": 36,
+      "unit": "seconds"
+    },
+    {
+      "evidence": {
         "inferred": "interquartile span and median of the same 17 songbpm.com listings: 5:09, 3:23, 4:59, 4:50, 5:47, 5:03, 6:55, 7:25, 4:11, 5:08, 3:48, 5:40, 5:20, 4:08, 8:43, 4:11, 6:07; the length comes from vamps and choir builds after the last chorus (cited Vamp article)"
       },
       "feature": "form.minutes",

@@ -442,6 +442,15 @@
     },
     {
       "evidence": {
+        "inferred": "the form below puts the first chorus after 20 bars (Intro 4, Verse 16): 43 s at 110 BPM and 60 s at 80."
+      },
+      "feature": "form.hook.seconds",
+      "high": 60,
+      "low": 43,
+      "unit": "seconds"
+    },
+    {
+      "evidence": {
         "inferred": "SongBPM durations of nine dancehall records: Sleng Teng 3:17, Who Am I 3:16, Dem Bow 3:38, Murder She Wrote 4:05, Get Busy 3:30, No Letting Go 3:22, Fever 3:25, Temperature 3:36, So Mi Like It 2:34; median 3:25. Zungguzungguguzungguzeng's 6:27 album cut is left out as an extended mix."
       },
       "feature": "form.minutes",

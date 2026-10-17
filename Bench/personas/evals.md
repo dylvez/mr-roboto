@@ -1,12 +1,12 @@
 # Persona evals
 
-Written by `make evals` on 2026-09-28T21:08:55Z. Goldens run through `GoldenRunner`, disagreements through `DisagreementRunner`, blind sheets through `BlindRunner` (`Bench/personas/blind/`).
+Written by `make evals` on 2026-10-17T17:33:53Z. Goldens run through `GoldenRunner`, disagreements through `DisagreementRunner`, blind sheets through `BlindRunner` (`Bench/personas/blind/`).
 
 | Eval | Passed | Of |
 |---|---:|---:|
 | Goldens | 71 | 71 |
 | Disagreements | 73 | 73 |
-| Blind | 87 | 87 |
+| Blind | 127 | 127 |
 
 ## Beatmaker
 
@@ -32,7 +32,7 @@ Written by `make evals` on 2026-09-28T21:08:55Z. Goldens run through `GoldenRunn
 - ✔ beatmaker ↔ harmonist: whether a chord may change off the grid — defer to the harmonist vs refuse by harmonist.harmonic-rhythm
 - ✔ beatmaker ↔ melodist: whether a tune may sit off the grid — defer to the melodist vs refuse by melodist.it-breathes
 
-### Blind (29/29 items, 49/49 readings)
+### Blind (34/34 items, 54/54 readings)
 
 - ✔ feel-1 (Neo-Soul Pocket) — 5/5
 - ✔ feel-2 (Boom-Bap Pocket) — 3/3
@@ -49,6 +49,7 @@ Written by `make evals` on 2026-09-28T21:08:55Z. Goldens run through `GoldenRunn
 - ✔ boom-bap-Boom-Bap Pocket (Boom-Bap Pocket as Boom-bap hip-hop) — 2/2
 - ✔ country-Country Two-Step (Country Two-Step as Country) — 1/1
 - ✔ country-Train Beat (Train Beat as Country) — 1/1
+- ✔ cumbia-Cumbia (Cumbia as Cumbia) — 1/1
 - ✔ drill-UK Drill (UK Drill as Drill) — 1/1
 - ✔ drill-Trap Rolling Hats (Trap Rolling Hats as Drill) — 1/1
 - ✔ drum-and-bass-Drum & Bass (Drum & Bass as Drum & bass / jungle) — 1/1
@@ -59,6 +60,10 @@ Written by `make evals` on 2026-09-28T21:08:55Z. Goldens run through `GoldenRunn
 - ✔ jazz-Broadway Ride (Broadway Ride as Jazz — small-group swing and post-bop) — 1/1
 - ✔ lo-fi-hip-hop-Lo-Fi Hip-Hop (Lo-Fi Hip-Hop as Lo-fi hip-hop) — 1/1
 - ✔ neo-soul-Neo-Soul Pocket (Neo-Soul Pocket as Neo-soul / contemporary R&B) — 4/4
+- ✔ rnb-New Jack Swing (New Jack Swing as R&B) — 1/1
+- ✔ rnb-Slow Jam (Slow Jam as R&B) — 1/1
+- ✔ swing-Big Band Swing (Big Band Swing as Big Band Swing) — 1/1
+- ✔ swing-Shuffle (Shuffle as Big Band Swing) — 1/1
 - ✔ techno-Four on the Floor (Four on the Floor as Techno) — 1/1
 - ✔ trap-Trap Rolling Hats (Trap Rolling Hats as Trap) — 1/1
 - ✔ trap-Halftime (Halftime as Trap) — 1/1
@@ -110,7 +115,7 @@ Written by `make evals` on 2026-09-28T21:08:55Z. Goldens run through `GoldenRunn
 - ✔ bassist ↔ harmonist: whether the bass may sit on a note the chord does not hold — defer to the harmonist vs agree
 - ✔ bassist ↔ melodist: whether the tune and the bass may move together — defer to the melodist vs refuse by melodist.mostly-steps
 
-### Blind (15/15 items, 28/28 readings)
+### Blind (19/19 items, 32/32 readings)
 
 - ✔ line-1 (Palladino, 40 ms, neo-soul at 92) — 5/5
 - ✔ line-2 (Palladino, 65 ms, the edge of the window) — 2/2
@@ -122,10 +127,14 @@ Written by `make evals` on 2026-09-28T21:08:55Z. Goldens run through `GoldenRunn
 - ✔ line-8 (Palladino ahead of the kick) — 2/2
 - ✔ blues-walking (walking under Shuffle as Blues) — 1/1
 - ✔ bossa-nova-root-fifth (root-fifth under Bossa Nova as Bossa nova) — 1/1
+- ✔ cumbia-root-fifth (root-fifth under Cumbia as Cumbia) — 1/1
 - ✔ folk-root-fifth (root-fifth under Folk Strum as Folk / singer-songwriter) — 1/1
 - ✔ funk-motown (motown under One-Chord Funk as Funk) — 1/1
 - ✔ jazz-walking (walking under Jazz Waltz as Jazz — small-group swing and post-bop) — 1/1
+- ✔ klezmer-root-fifth (root-fifth under Bulgar as Klezmer) — 1/1
 - ✔ salsa-tumbao (tumbao under Son Clave 2-3 as Salsa / son) — 1/1
+- ✔ ska-walking (walking under Ska as Ska) — 1/1
+- ✔ swing-walking (walking under Big Band Swing as Big Band Swing) — 1/1
 - ✔ techno-rolling (rolling under Four on the Floor as Techno) — 1/1
 
 ## Producer
@@ -203,19 +212,33 @@ Written by `make evals` on 2026-09-28T21:08:55Z. Goldens run through `GoldenRunn
 - ✔ peer ↔ harmonist: whether a progression that never lands is a problem — defer to the harmonist vs refuse by harmonist.phrases-land
 - ✔ peer ↔ melodist: whether a tune that repeats has stopped developing — defer to the melodist vs refuse by melodist.a-figure-comes-back
 
-### Blind (11/11 items, 19/19 readings)
+### Blind (25/25 items, 37/37 readings)
 
+- ✔ afrobeats-form (Afrobeats form) — 1/1
+- ✔ ambient-form (Ambient form) — 1/1
+- ✔ arabic-pop-form (Arabic Pop form) — 3/3
 - ✔ boom-bap-form (Boom-bap hip-hop form) — 2/2
 - ✔ country-form (Country form) — 1/1
+- ✔ dancehall-form (Dancehall form) — 1/1
+- ✔ disco-form (Disco form) — 1/1
 - ✔ drum-and-bass-form (Drum & bass / jungle form) — 2/2
 - ✔ dubstep-form (Dubstep form) — 3/3
 - ✔ folk-form (Folk / singer-songwriter form) — 2/2
+- ✔ gospel-form (Gospel form) — 1/1
+- ✔ house-form (House form) — 1/1
+- ✔ klezmer-form (Klezmer form) — 2/2
 - ✔ neo-soul-form (Neo-soul / contemporary R&B form) — 1/1
 - ✔ pop-form (Contemporary pop form) — 1/1
+- ✔ reggae-form (Reggae form) — 1/1
+- ✔ rnb-form (R&B form) — 2/2
+- ✔ rock-form (Rock form) — 1/1
 - ✔ samba-form (Samba form) — 2/2
+- ✔ ska-form (Ska form) — 1/1
+- ✔ soul-form (Soul / Motown form) — 1/1
 - ✔ synth-pop-form (Synth-pop / EDM pop form) — 2/2
 - ✔ trap-form (Trap form) — 1/1
 - ✔ trip-hop-form (Trip-hop form) — 2/2
+- ✔ uk-garage-form (UK garage / 2-step form) — 1/1
 
 ## Lyricist
 
@@ -264,7 +287,7 @@ Written by `make evals` on 2026-09-28T21:08:55Z. Goldens run through `GoldenRunn
 - ✔ harmonist ↔ lyricist: whether the words or the chords decide where a phrase ends — refuse by harmonist.phrases-land vs defer to the harmonist
 - ✔ harmonist ↔ melodist: whether a note outside the chord is a wrong note or the point — defer to the melodist vs refuse by melodist.lands-on-the-chord
 
-### Blind (32/32 items, 32/32 readings)
+### Blind (49/49 items, 49/49 readings)
 
 - ✔ bossa-nova-prog1 (Imaj7 - II7 - ii7 - bII7 as Bossa nova) — 1/1
 - ✔ bossa-nova-prog2 (iii7 - bIII7 - ii7 - bII7 as Bossa nova) — 1/1
@@ -282,6 +305,14 @@ Written by `make evals` on 2026-09-28T21:08:55Z. Goldens run through `GoldenRunn
 - ✔ disco-prog1 (i7 - IV7 as Disco) — 1/1
 - ✔ disco-prog2 (i - iv7 - VII7 - IIImaj7 - VImaj7 - ii - V7 as Disco) — 1/1
 - ✔ disco-prog3 (i7 - VImaj7 - v7 as Disco) — 1/1
+- ✔ film-score-prog1 (i - bvi as Film Score) — 1/1
+- ✔ film-score-prog2 (i - VI as Film Score) — 1/1
+- ✔ film-score-prog3 (I - bVI - IV as Film Score) — 1/1
+- ✔ film-score-prog4 (I - bV as Film Score) — 1/1
+- ✔ film-score-prog5 (iv - i - III - VII as Film Score) — 1/1
+- ✔ flamenco-prog1 (iv - bIII - bII - I as Flamenco) — 1/1
+- ✔ flamenco-prog2 (i - bVII - bVI - V as Flamenco) — 1/1
+- ✔ flamenco-prog3 (bII - I as Flamenco) — 1/1
 - ✔ house-prog1 (i - VImaj7 - VII as House) — 1/1
 - ✔ house-prog2 (v7 - VImaj7 - iv7 - VII7 - i as House) — 1/1
 - ✔ jazz-prog1 (iim7 - V7 - Imaj7 as Jazz — small-group swing and post-bop) — 1/1
@@ -289,10 +320,19 @@ Written by `make evals` on 2026-09-28T21:08:55Z. Goldens run through `GoldenRunn
 - ✔ jazz-prog3 (Imaj7 - VI7 - iim7 - V7 as Jazz — small-group swing and post-bop) — 1/1
 - ✔ jazz-prog4 (III7 - VI7 - II7 - V7 as Jazz — small-group swing and post-bop) — 1/1
 - ✔ jazz-prog5 (im7 - bIIm7 - im7 as Jazz — small-group swing and post-bop) — 1/1
+- ✔ klezmer-prog1 (I7 - vii - I as Klezmer) — 1/1
+- ✔ klezmer-prog2 (iv - I7 - bvii - II - iv as Klezmer) — 1/1
+- ✔ klezmer-prog3 (i - II7 - v as Klezmer) — 1/1
+- ✔ klezmer-prog4 (i - bvii - i as Klezmer) — 1/1
 - ✔ pop-prog1 (I - V - vi - IV as Contemporary pop) — 1/1
 - ✔ pop-prog2 (i - VII - VI - iv as Contemporary pop) — 1/1
 - ✔ pop-prog3 (i - iv - VI - VII as Contemporary pop) — 1/1
 - ✔ pop-prog4 (IV7 - vi - V as Contemporary pop) — 1/1
+- ✔ rnb-prog1 (i - V7 as R&B) — 1/1
+- ✔ rnb-prog2 (VImaj7 - v - i as R&B) — 1/1
+- ✔ rnb-prog3 (i - VI - iv - VII as R&B) — 1/1
+- ✔ rnb-prog4 (ii9 - V7 - Imaj7 - VI7 as R&B) — 1/1
+- ✔ rnb-prog5 (IVmaj7 - ii9 - iii7 - vi7 - IVmaj7 - iii7 - bIIImaj7 - ii7 as R&B) — 1/1
 - ✔ rock-prog1 (I - IV - V - I as Rock) — 1/1
 - ✔ rock-prog2 (I - bVII - IV - I as Rock) — 1/1
 - ✔ rock-prog3 (i - iv - III - VI as Rock) — 1/1

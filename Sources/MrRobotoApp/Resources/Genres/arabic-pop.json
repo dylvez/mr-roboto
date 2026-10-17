@@ -344,6 +344,15 @@
     },
     {
       "evidence": {
+        "inferred": "the form below puts the first chorus after 24 bars (Intro 8, Verse 16): 41 s at 140 BPM and 72 s at 80."
+      },
+      "feature": "form.hook.seconds",
+      "high": 72,
+      "low": 41,
+      "unit": "seconds"
+    },
+    {
+      "evidence": {
         "inferred": "maqamworld calls the taqtuqa the standard 3-4 minute Arabic song; the 21 durations listed on songbpm for Amr Diab, Nancy Ajram and Mohammed Assaf, with Tamally Maak's 4:29 from Wikipedia, run 2:32-5:20, median 3:54, with 10th and 90th percentiles near 3:12 and 4:48"
       },
       "feature": "form.minutes",

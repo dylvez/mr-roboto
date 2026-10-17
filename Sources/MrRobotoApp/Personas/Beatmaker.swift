@@ -1058,6 +1058,9 @@ public struct PersonaReading: Hashable, Sendable, Identifiable {
     /// The genre that re-judged it, when one did (`GenreLens`): the verdict is the genre's, and
     /// `says` gives both numbers.
     public var genre: String?
+    /// False when the reading says something is missing rather than measuring it — no section named
+    /// as a hook, so `value` is not an arrival. A genre's range has no number to move then.
+    public var measured = true
 
     public var id: String { "\(rule)#\(feature)" }
 

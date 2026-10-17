@@ -104,6 +104,19 @@ struct PersonaPeerTests {
         #expect(FormObservation.of(song).hookArrivalSeconds != nil)
     }
 
+    @Test("a pre-chorus is the wait for the hook, not the hook; a salsa's coro and a samba's refrão are")
+    func whereTheHookIs() {
+        #expect(!FormObservation.isHook("Pre-Chorus") && !FormObservation.isHook("Post-Chorus") && !FormObservation.isHook("Pre-Drop"))
+        #expect(FormObservation.isHook("Chorus 2") && FormObservation.isHook("Drop 1") && FormObservation.isHook("Hook"))
+        #expect(FormObservation.isHook("Coro-pregón") && FormObservation.isHook("Refrão principal"))
+        #expect(!FormObservation.isHook("Verse") && !FormObservation.isHook("Build"))
+        var song = Song(title: "Pop", tempo: 120)
+        song.sections = [Section(name: "Intro", stitch: [], lengthInBars: 4), Section(name: "Verse", stitch: [], lengthInBars: 8),
+                         Section(name: "Pre-Chorus", stitch: [], lengthInBars: 4), Section(name: "Chorus", stitch: [], lengthInBars: 8)]
+        #expect(FormObservation.of(song).hookArrivalSeconds == 32, "16 bars at 120, not the 12 before the pre-chorus")
+        #expect(FormObservation.of(song).cutToBringHook == "Pre-Chorus")
+    }
+
     @Test("it refuses a late hook in seconds and a form that never turns, and defers the sound")
     func verdicts() {
         let late = peer.consider(.placeHook(atSeconds: 48))

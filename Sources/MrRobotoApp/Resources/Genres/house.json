@@ -352,6 +352,15 @@
     },
     {
       "evidence": {
+        "inferred": "The drop taken as the hook: the form below puts the first drop after 80 bars (Intro 32, Groove 32, Breakdown 16), 150 s at 128 BPM and 160 s at 120; the form note's shortest club version, 16 bars of DJ intro, lets a vocal house chorus come in at 30 s at 128."
+      },
+      "feature": "form.hook.seconds",
+      "high": 160,
+      "low": 30,
+      "unit": "seconds"
+    },
+    {
+      "evidence": {
         "inferred": "EDMProd gives a ~7 min DJ structure and a ~4 min radio edit; Robin S. 'Show Me Love' runs 4:29 on the album and 7:43 in the StoneBridge Club Mix; the form below (192 bars at 125 BPM) is 6.1 min."
       },
       "feature": "form.minutes",

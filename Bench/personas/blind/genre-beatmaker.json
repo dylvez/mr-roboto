@@ -90,6 +90,18 @@
    }
   },
   {
+   "id": "cumbia-Cumbia",
+   "label": "Cumbia as Cumbia",
+   "genre": "cumbia",
+   "material": {
+    "kind": "feel",
+    "name": "Cumbia"
+   },
+   "expects": {
+    "beatmaker.swing-default": true
+   }
+  },
+  {
    "id": "drill-UK Drill",
    "label": "UK Drill as Drill",
    "genre": "drill",
@@ -227,6 +239,54 @@
    "notes": {
     "beatmaker.snare-direction": "The feel's snare sits 22.5 ms late; the profile's sources put neo-soul's at 10-20. Close, and on the side the house chose.",
     "beatmaker.pocket-is-a-span": "The feel's layers spread 18.8 ms; the profile's number is the 55-80 ms measured in Left and Right, one record's extreme."
+   }
+  },
+  {
+   "id": "rnb-New Jack Swing",
+   "label": "New Jack Swing as R&B",
+   "genre": "rnb",
+   "material": {
+    "kind": "feel",
+    "name": "New Jack Swing"
+   },
+   "expects": {
+    "beatmaker.swing-default": true
+   }
+  },
+  {
+   "id": "rnb-Slow Jam",
+   "label": "Slow Jam as R&B",
+   "genre": "rnb",
+   "material": {
+    "kind": "feel",
+    "name": "Slow Jam"
+   },
+   "expects": {
+    "beatmaker.swing-default": true
+   }
+  },
+  {
+   "id": "swing-Big Band Swing",
+   "label": "Big Band Swing as Big Band Swing",
+   "genre": "swing",
+   "material": {
+    "kind": "feel",
+    "name": "Big Band Swing"
+   },
+   "expects": {
+    "beatmaker.swing-default": true
+   }
+  },
+  {
+   "id": "swing-Shuffle",
+   "label": "Shuffle as Big Band Swing",
+   "genre": "swing",
+   "material": {
+    "kind": "feel",
+    "name": "Shuffle"
+   },
+   "expects": {
+    "beatmaker.swing-default": true
    }
   },
   {
