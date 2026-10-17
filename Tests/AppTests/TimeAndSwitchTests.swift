@@ -140,6 +140,33 @@ struct TimeBaseTests {
         #expect(app.countInTargetBar == nil && !app.isCountingIn)
     }
 
+    @Test("A section played alone is that section only, once, and with Loop on it comes round inside itself")
+    func sectionAlone() async throws {
+        let (app, host, _) = arranged()
+        let intro = try #require(app.song?.sections.first).id
+        await app.playSectionAlone(intro)
+        let once = try #require(await host.began.last)
+        #expect(once.segments.map(\.section) == [intro] && once.lengthInBars == 4 && !once.loops, "the Intro and nothing after it")
+        #expect(app.sectionPlayingAlone == intro && app.playbackStartBar == 0)
+        #expect(app.log.last(where: { $0.source == .you })?.text == "Play Intro alone")
+        await host.report(PlaybackReading(isRunning: false, seconds: 8))
+        await waitFor { !app.transport.isPlaying }
+        #expect(!app.transport.isPlaying && app.sectionPlayingAlone == nil, "it stops at its last bar")
+
+        app.toggleLoop()
+        await host.report(PlaybackReading(isRunning: true, seconds: 0))
+        await app.playSectionAlone(intro)
+        #expect(app.isRunningALoop)
+        // The Intro is 4 bars, 8 s at 120: 10 engine seconds is its own bar 2 again. From the
+        // Intro to the end the loop would be 24 s, and 10 s the Verse.
+        await host.report(PlaybackReading(isRunning: true, seconds: 10))
+        await waitFor { abs(app.playhead - 2) < 0.01 }
+        #expect(abs(app.playhead - 2) < 0.01, "\(app.playhead)")
+        #expect(app.positionText == "2.1" && app.activeSection == intro)
+        await app.stopTransport()
+        #expect(app.sectionPlayingAlone == nil)
+    }
+
     @Test("Looping, the readout comes round with the form instead of counting past the song's end")
     func loopingReadoutComesRound() async {
         let (app, host, verse) = arranged()

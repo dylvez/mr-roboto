@@ -284,6 +284,22 @@ private struct SectionDetail: View {
                         .frame(width: 160)
                 }
                 VStack(alignment: .leading, spacing: 4) {
+                    FormLabel("Hear")
+                    HStack(spacing: 4) {
+                        if model.isPlayingAlone(section.id) {
+                            FormChip("Stop", isOn: true) { disarm(); Task { await model.stop() } }
+                                .help("Stop \(section.name)")
+                        } else {
+                            FormChip("Play", isOn: false) { disarm(); Task { await model.play(section: section.id, alone: true) } }
+                                .help("\(section.name) by itself, round again while Loop is on (⇧⌥Space)")
+                                .accessibilityLabel("Play \(section.name) by itself")
+                        }
+                        FormChip("From here", isOn: false) { disarm(); Task { await model.play(section: section.id, alone: false) } }
+                            .help("The song from \(section.name) to the end (⇧Space)")
+                            .accessibilityLabel("Play the song from \(section.name)")
+                    }
+                }
+                VStack(alignment: .leading, spacing: 4) {
                     FormLabel("Bars")
                     HStack(spacing: 4) {
                         FormChip("−", isOn: false) { disarm(); model.setLength(section.id, bars: section.lengthInBars - 1) }

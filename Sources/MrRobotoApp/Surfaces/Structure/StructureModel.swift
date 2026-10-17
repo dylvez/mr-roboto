@@ -25,6 +25,14 @@ public protocol StructureHosting: AnyObject {
     func arrange(_ sections: [Section]) -> Bool
     /// Play the song from the top, as the space bar does.
     func play() async
+    /// One section by itself, round again while Loop is on; or, not alone, the song from that
+    /// section to its end, as ⇧Space plays it.
+    func play(section: SectionID, alone: Bool) async
+    /// The section playing by itself, while one is; nil when the song plays, or nothing does.
+    var sectionPlayingAlone: SectionID? { get }
+    /// A section picked on the surface: the one the transport's strip lights, so ⇧Space and
+    /// ⇧⌥Space play the section being looked at.
+    func select(section: SectionID)
     func stop() async
     /// A library row dropped on a section: adopt it into the song and stitch it in. `false` when
     /// nothing was stitched, with the host saying why.
@@ -57,6 +65,9 @@ public protocol StructureHosting: AnyObject {
 }
 
 public extension StructureHosting {
+    func play(section: SectionID, alone: Bool) async { await play() }
+    var sectionPlayingAlone: SectionID? { nil }
+    func select(section: SectionID) {}
     func openLyrics() {}
     func development() -> Development? { nil }
     func develop() async {}
@@ -409,7 +420,10 @@ public final class StructureModel {
 
     // MARK: Editing
 
-    public func select(_ id: SectionID?) { selected = id }
+    public func select(_ id: SectionID?) {
+        selected = id
+        if let id { host.select(section: id) }
+    }
 
     // MARK: Keeping as it goes
 
@@ -762,6 +776,16 @@ public final class StructureModel {
         guard keep() else { return }
         await host.play()
     }
+
+    /// Keeps, then plays one section by itself — round again while Loop is on — or, not alone, the
+    /// song from it to the end.
+    public func play(section: SectionID, alone: Bool) async {
+        guard keep() else { return }
+        await host.play(section: section, alone: alone)
+    }
+
+    /// Whether this section is what the transport is playing, by itself.
+    public func isPlayingAlone(_ section: SectionID) -> Bool { host.sectionPlayingAlone == section }
 
     public func stop() async { await host.stop() }
 

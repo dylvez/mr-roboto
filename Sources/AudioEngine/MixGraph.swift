@@ -96,9 +96,12 @@ public final class MixGraph {
     /// grooves, a pad and a lead — and eight was already tight for a groove, a bass, a chop and
     /// four stems. Twenty-four rather than sixteen because a song can now take stems from any
     /// number of records: three records' stems and the parts written over them came to sixteen,
-    /// and the seventeenth played unmixed. An unclaimed slot costs four silent nodes and, since
-    /// the meter tap moved to `strip(for:)`, nothing at all on the render thread.
-    public nonisolated static let slotCount = 24
+    /// and the seventeenth played unmixed. Thirty-two rather than twenty-four because a record cut
+    /// into clips where its voice rests is a part per stem per span: four records' clips and the
+    /// band over them came to twenty-five, and the chorus's voice played unmixed. An unclaimed slot
+    /// costs four silent nodes and, since the meter tap moved to `strip(for:)`, nothing at all on
+    /// the render thread.
+    public nonisolated static let slotCount = 32
 
     public let engine: Engine
     /// The pool, in slot order.

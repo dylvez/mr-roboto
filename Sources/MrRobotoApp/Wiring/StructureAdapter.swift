@@ -16,6 +16,18 @@ final class StructureAdapter: StructureHosting {
         await app.startTransport()
     }
 
+    func play(section: SectionID, alone: Bool) async {
+        if alone {
+            await app.playSectionAlone(section)
+        } else {
+            await app.startTransport(fromSection: section)
+        }
+    }
+
+    var sectionPlayingAlone: SectionID? { app.transport.isPlaying ? app.sectionPlayingAlone : nil }
+
+    func select(section: SectionID) { app.setActiveSection(section) }
+
     func stop() async { await app.stopTransport() }
 
     func receive(_ payload: LibraryDragPayload, into section: SectionID) async -> Bool {

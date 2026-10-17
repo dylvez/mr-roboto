@@ -133,24 +133,10 @@ enum SectionBounce {
                 copy.lengthInBars = bars
                 return (copy, "Song", max(1, bars))
             }
-            guard let segment = plan.segments.first(where: { $0.section == section }) else {
+            // The section as the transport plays it alone (`SongPlayback.only(section:)`), once.
+            guard let segment = plan.segments.first(where: { $0.section == section }),
+                  let moved = plan.looping(false).only(section: section) else {
                 throw Failure.nothingToBounce("the song has no such section")
-            }
-            // The whole plan moved to the section's first bar — takes and the record with it, one
-            // already sounding played from that point of its file — then cut to the section. Only
-            // the section used to move, so a Hook rendered at bar 0 had the Verse's take under it
-            // and its own take outside the render.
-            var moved = plan.looping(false).starting(atBar: segment.startBar)
-            moved.segments = moved.segments.filter { $0.section == section }
-            moved.lengthInBars = segment.lengthInBars
-            let end = TransportClock(tempo: max(1, plan.tempo), timeSignature: plan.timeSignature).seconds(forBar: segment.lengthInBars)
-            // And a stem's windows with it: the one section's worth, and none of the next.
-            moved.tracks = moved.tracks.compactMap { track in
-                guard track.startsAt < end else { return nil }
-                guard let windows = track.windows else { return track }
-                var cut = track
-                cut.windows = windows.compactMap { $0.lowerBound < end ? $0.lowerBound..<min($0.upperBound, end) : nil }
-                return cut.windows?.isEmpty == false ? cut : nil
             }
             return (moved, segment.name, segment.lengthInBars)
         }

@@ -443,6 +443,31 @@ public struct SongPlayback: Equatable, Sendable {
         return copy
     }
 
+    /// The same plan cut to one section: moved to its first bar — takes and the record with it, one
+    /// already sounding played from that point of its file — then ended at its last, a stem's
+    /// windows with it, the one section's worth and none of the next. Its loop flag is the plan's,
+    /// so with Loop on the section comes round. Nil when the plan is not arranged, or has no such
+    /// section.
+    ///
+    /// Only the section used to move, so a Hook rendered at bar 0 had the Verse's take under it and
+    /// its own take outside the render.
+    public func only(section id: SectionID) -> SongPlayback? {
+        guard isArranged, let segment = segments.first(where: { $0.section == id }) else { return nil }
+        var moved = starting(atBar: segment.startBar)
+        moved.startsAtBar = segment.startBar
+        moved.segments = moved.segments.filter { $0.section == id }
+        moved.lengthInBars = segment.lengthInBars
+        let end = TransportClock(tempo: max(1, tempo), timeSignature: timeSignature).seconds(forBar: segment.lengthInBars)
+        moved.tracks = moved.tracks.compactMap { track in
+            guard track.startsAt < end else { return nil }
+            guard let windows = track.windows else { return track }
+            var cut = track
+            cut.windows = windows.compactMap { $0.lowerBound < end ? $0.lowerBound..<min($0.upperBound, end) : nil }
+            return cut.windows?.isEmpty == false ? cut : nil
+        }
+        return moved
+    }
+
     /// The same plan from bar `bar` of the song: everything before it dropped, everything after it
     /// moved up so that the bar is transport zero. Playback always began at bar 1, so to hear the
     /// hook you sat through the intro and the verse, and the Booth recorded from bar 1 whatever
@@ -652,7 +677,7 @@ public struct SongPlayback: Equatable, Sendable {
 
     /// The player nodes the transport's engine has, and a bounce's: one per strip the mix graph
     /// can seat (`MixGraph.slotCount`), so a form never has a part it can mix and not play.
-    public static let playerNodes = 24
+    public static let playerNodes = 32
 
     /// Reads the song graph and says what the transport would play.
     ///

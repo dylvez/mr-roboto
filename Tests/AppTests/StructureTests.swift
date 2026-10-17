@@ -69,6 +69,11 @@ private final class StubStructureHost: StructureHosting {
         return true
     }
     func play() async { played += 1 }
+    var sectionsPlayed: [(section: SectionID, alone: Bool)] = []
+    func play(section: SectionID, alone: Bool) async { sectionsPlayed.append((section, alone)) }
+    var sectionPlayingAlone: SectionID?
+    var selectedSections: [SectionID] = []
+    func select(section: SectionID) { selectedSections.append(section) }
     func stop() async {}
     func receive(_ payload: LibraryDragPayload, into section: SectionID) async -> Bool { false }
     var lyricsOpened = 0
@@ -100,6 +105,27 @@ struct StructureModelTests {
     private func model(_ host: StubStructureHost = StubStructureHost()) -> (StructureModel, FormFixture.Built) {
         let built = FormFixture.build()
         return (StructureModel(host: host, song: built.song), built)
+    }
+
+    @Test("a section plays by itself or from itself to the end, kept first, and picking one lights it in the strip")
+    func playsASection() async throws {
+        let host = StubStructureHost()
+        let (model, _) = model(host)
+        model.autoKeep.delay = nil
+        let intro = model.add(.intro).id
+        let verse = model.add(.verse).id
+        host.selectedSections.removeAll()
+        model.select(verse)
+        #expect(host.selectedSections == [verse], "the strip lights what Structure is looking at")
+        model.setLength(verse, bars: 6)
+        await model.play(section: verse, alone: true)
+        #expect(host.arranged.last?.last?.lengthInBars == 6, "kept before it plays, at its new length")
+        #expect(host.sectionsPlayed.last.map { $0.section == verse && $0.alone } == true)
+        await model.play(section: verse, alone: false)
+        #expect(host.sectionsPlayed.last.map { $0.section == verse && !$0.alone } == true)
+        #expect(!model.isPlayingAlone(verse))
+        host.sectionPlayingAlone = verse
+        #expect(model.isPlayingAlone(verse) && !model.isPlayingAlone(intro))
     }
 
     @Test("the layers are the newest of each part that plays, and a new section is stitched from them")

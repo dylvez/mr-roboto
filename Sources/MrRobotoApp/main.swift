@@ -238,6 +238,12 @@ struct FrameCommands: Commands {
             .keyboardShortcut(.space, modifiers: .shift)
             .disabled(app.song?.sections.isEmpty ?? true)
 
+            Button("Play Section") {
+                Task { await app.playActiveSectionAlone() }
+            }
+            .keyboardShortcut(.space, modifiers: [.shift, .option])
+            .disabled(app.song?.sections.isEmpty ?? true)
+
             Button("Play the Surface in Front") {
                 guard let item = app.bench.active ?? app.bench.items.last,
                       let audition = SurfaceWiring.shared.audition(for: item, app: app) else { return }

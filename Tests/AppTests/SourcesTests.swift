@@ -226,9 +226,9 @@ struct SourcesTests {
         #expect(Sources.levelTarget(in: song, library: app.library) == -16)
     }
 
-    @Test("twenty-four strips and players: three records' stems and the parts over them all play and mix")
+    @Test("thirty-two strips and players: four records cut into clips and the parts over them all play and mix")
     func room() {
-        #expect(MixGraph.slotCount == 24 && SongPlayback.playerNodes == 24)
+        #expect(MixGraph.slotCount == 32 && SongPlayback.playerNodes == 32)
     }
 
     @Test("a fit round-trips, and a version without one writes what it always wrote")

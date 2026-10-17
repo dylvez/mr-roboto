@@ -1106,6 +1106,7 @@ public final class AppState {
         runningLoopSeconds = nil
         runningForm = nil
         runningClock = nil
+        sectionPlayingAlone = nil
         let transportHost = self.transportHost, playbackHost = self.playbackHost
         pendingStop = Task { @MainActor in
             await transportHost.stop()
@@ -1453,8 +1454,10 @@ public final class AppState {
     }
 
     /// From `bar`, after `countIn` bars of click. `click` true keeps the click going for the whole
-    /// of playback (the Booth's Click); nil leaves it to the transport's own toggle.
-    public func startTransport(fromBar bar: Int, countIn: Int, click: Bool?, leavingOut silenced: PartID? = nil) async {
+    /// of playback (the Booth's Click); nil leaves it to the transport's own toggle. `alone` plays
+    /// that one section and nothing after it (`playSectionAlone`).
+    public func startTransport(fromBar bar: Int, countIn: Int, click: Bool?, leavingOut silenced: PartID? = nil,
+                               alone: SectionID? = nil) async {
         guard transport != .playing, transport != .starting else { return }
         await beforeTransportStarts?()
         if let pendingStop {
@@ -1467,7 +1470,7 @@ public final class AppState {
         // A counted-in run is a take: one pass. Looped, the count-in bars came round with every
         // pass and a take sung on the second pass landed past the song's end.
         let base = countIn > 0 ? playback.looping(false) : playback
-        var plan = base.starting(atBar: max(0, bar), countIn: countIn)
+        var plan = alone.flatMap { base.only(section: $0) } ?? base.starting(atBar: max(0, bar), countIn: countIn)
         // The click is the transport's, added to the run it plays and to nothing else. It used to
         // live on the song's plan, which every export and reading renders, so a song exported with
         // Click on had the metronome in the master and in every stem.
@@ -1496,6 +1499,7 @@ public final class AppState {
             runningClock = clock
             countInTargetBar = countIn > 0 ? max(0, bar) : nil
             runningLoopSeconds = plan.loops ? plan.formSeconds : nil
+            sectionPlayingAlone = alone
             transport = .playing
             playhead = playbackOffsetSeconds
             followSection(atSeconds: playhead)
@@ -1503,7 +1507,8 @@ public final class AppState {
             // Named for the bar it plays from, not the count-in bar before it.
             let target = max(0, bar)
             let from = target > 0 ? (song?.sections.first { sectionStartBar($0.id) == target }?.name ?? "bar \(target + 1)") : nil
-            note(.you, from.map { "Play from \($0)" } ?? "Play",
+            let lone = alone.flatMap { song?.section($0)?.name }
+            note(.you, lone.map { "Play \($0) alone" } ?? from.map { "Play from \($0)" } ?? "Play",
                  detail: plan.summary + String(format: " · %.0f bpm · %@",
                                                clock.tempo, clock.timeSignature.description))
             await noteUnmixedParts(in: plan)
@@ -1545,6 +1550,27 @@ public final class AppState {
     /// ⇧Space: from the section that is lit in the strip.
     public func playFromActiveSection() async {
         await startTransport(fromSection: activeSection)
+    }
+
+    /// The section playing by itself (`playSectionAlone`), while it plays; nil for the song.
+    public private(set) var sectionPlayingAlone: SectionID?
+
+    /// Structure's Play on a section, and ⇧⌥Space: that section by itself, from its first bar to
+    /// its last, round again while Loop is on — with its own fill and crash, its levels and its
+    /// stems' windows, as the song plays it there. Hearing one section used to mean playing from
+    /// it to the end of the song, or from the top. A section the song does not hold plays nothing.
+    public func playSectionAlone(_ id: SectionID) async {
+        if transport == .playing || transport == .starting { await stopTransport() }
+        // A section resized a moment ago in Structure is kept first, so it plays at its new length.
+        keepSurfaceWork()
+        guard let bar = sectionStartBar(id) else { return }
+        await startTransport(fromBar: bar, countIn: 0, click: nil, alone: id)
+    }
+
+    /// ⇧⌥Space: the section that is lit in the strip, by itself.
+    public func playActiveSectionAlone() async {
+        guard let id = activeSection ?? song?.sections.first?.id else { return }
+        await playSectionAlone(id)
     }
 
     /// The bar a section starts on, from the sections' lengths laid end to end. Nil when the song
@@ -1638,6 +1664,7 @@ public final class AppState {
         runningLoopSeconds = nil
         runningForm = nil
         runningClock = nil
+        sectionPlayingAlone = nil
         note(.you, "Stop")
     }
 
