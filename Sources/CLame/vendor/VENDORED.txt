@@ -1,0 +1,21 @@
+Vendored source for the CLame target: the LAME MP3 encoder, the library half only.
+
+LAME 3.100 (LGPL 2; COPYING and LICENSE alongside)
+  https://lame.sourceforge.io
+  lame-3.100.tar.gz from https://downloads.sourceforge.net/project/lame/lame/3.100/
+  sha256 ddfe36cab873794038ae2c1210557ad34857a4b6bdc515785d1da9e175b1da1e (the hash Homebrew's
+  lame formula pins). 3.100 (2017-10-13) is the last release.
+
+What is here, unmodified:
+  include/lame.h           the public API (one level up, as the target's public header)
+  libmp3lame/*.c, *.h      the encoder, less mpglib_interface.c
+  libmp3lame/vector/lame_intrin.h   declarations only: fft.c and quantize.c include it whether
+                                    or not the SSE code is built
+
+Not vendored: the frontend (the `lame` program), mpglib/ (the decoder; Core Audio decodes MP3),
+the rest of libmp3lame/vector/ and i386/ (x86 SSE and NASM paths), and the build system. config.h is not
+LAME's: it is written by hand for Apple clang; see the comment at its top.
+
+LAME is LGPL, unlike the rest of this repository (MIT). It is compiled into the app as its own
+target. If the app is ever given to anyone else, the LGPL asks that they can relink it against
+their own LAME: ship CLame as a dynamic library, or offer the object files.

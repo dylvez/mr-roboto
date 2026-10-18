@@ -86,7 +86,7 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     func mixObservation(section: SectionID?) async throws -> MixObservation?
     /// A mix version. Nil, with the reason in the rail, when it cannot be.
     func recordMix(_ mix: Mix, note: String) -> PartVersion?
-    /// M6: "master", "stems", "midi" or "lyrics" written to the song's export folder; the files.
+    /// M6: "master", "mp3", "stems", "midi" or "lyrics" written to the song's export folder; the files.
     func export(_ what: String) async throws -> [URL]
 
     // M7: the record.
@@ -484,6 +484,8 @@ public final class AppStateWorkspace: DirectorWorkspace {
         case "master":
             let result = try await Export.master(app, to: directory)
             return [result.wav, result.report]
+        case "mp3":
+            return [try await Export.masterMP3(app, to: directory)]
         case "stems":
             return try await Export.stems(app, to: directory)
         case "midi":
@@ -491,7 +493,7 @@ public final class AppStateWorkspace: DirectorWorkspace {
         case "lyrics":
             return [try Export.lyrics(app, to: directory)]
         default:
-            throw DirectorToolFailure(tool: "export", reason: "\"\(what)\" is not master, stems, midi or lyrics.")
+            throw DirectorToolFailure(tool: "export", reason: "\"\(what)\" is not master, mp3, stems, midi or lyrics.")
         }
     }
 }

@@ -1,6 +1,7 @@
 import AVFAudio
 import Analysis
 import AudioEngine
+import AudioToolbox
 import Foundation
 import MusicTheory
 import Performance
@@ -131,6 +132,63 @@ struct MasterExportTests {
         let outcome = app.importFromInbox(copy)
         guard case .idea(let id) = outcome else { Issue.record("\(outcome)"); return }
         #expect(app.library.ideas.contains { $0.id == id })
+    }
+
+    @Test("the master as an MP3 is the WAV's print at 320 kbps, tagged from its album with the cover, and the tool writes it too")
+    func masterMP3() async throws {
+        let directory = LibraryFixture.directory("export-mp3")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let app = AppState(library: Library(), song: nil, store: LibraryStore(directoryURL: directory), status: .empty(directory), transportHost: StubTransportHost())
+        var song = self.song()
+        song.title = "Arrivée"
+        var mix = Mix()
+        mix.master = Master(gainDB: 6, ceilingDBTP: -1, targetLUFS: -14)
+        try song.append(PartVersion(partID: PartID(), kind: .mix(mix), author: .user, operation: Operation.mix, note: "master +6.0 dB"))
+        app.open(song)
+        let other = try #require(app.createAlbum(title: "Opener", artist: "Swag Hooks"))
+        let album = try #require(app.createAlbum(title: "Shellac", artist: "Swag Hooks"))
+        #expect(app.addSong(song.id, to: album))
+        let out = directory.appendingPathComponent("out", isDirectory: true)
+
+        let wav = try await Export.master(app, to: out)
+        let mp3 = try await Export.masterMP3(app, to: out)
+        #expect(mp3.lastPathComponent == "Arrivée — master.mp3")
+        let reports = try FileManager.default.contentsOfDirectory(atPath: out.path).filter { $0.hasSuffix(".json") }
+        #expect(reports == ["Arrivée — master.json"], "the WAV's report alone: none written for the MP3")
+        let file = try AVAudioFile(forReading: mp3)
+        #expect(file.fileFormat.sampleRate == 48_000 && file.fileFormat.channelCount == 2)
+        let printed = try AVAudioFile(forReading: wav.wav).length
+        #expect(file.length == printed, "the same print, to the sample")
+        let decoded = try BoothAdapter.planar(mp3)
+        let lufs = MixMeter.integratedLoudness(decoded.planar, sampleRate: decoded.sampleRate)
+        #expect(abs(lufs - wav.summary.integratedLUFS) < 0.2, "\(lufs) vs the WAV's \(wav.summary.integratedLUFS)")
+        let seconds = Double(file.length) / 48_000
+        let kbps = Double(try Data(contentsOf: mp3).count) * 8 / seconds / 1000
+        #expect(kbps > 320 && kbps < 340, "\(kbps) kbps, the stream and its tag and cover")
+
+        var opened: AudioFileID?
+        #expect(AudioFileOpenURL(mp3 as CFURL, .readPermission, kAudioFileMP3Type, &opened) == noErr)
+        var dictionary: Unmanaged<CFDictionary>?
+        var size = UInt32(MemoryLayout<Unmanaged<CFDictionary>?>.size)
+        #expect(AudioFileGetProperty(try #require(opened), kAudioFilePropertyInfoDictionary, &size, &dictionary) == noErr)
+        AudioFileClose(opened!)
+        let info = (dictionary?.takeRetainedValue() as? [String: Any]) ?? [:]
+        #expect(info[kAFInfoDictionary_Title] as? String == "Arrivée")
+        #expect(info[kAFInfoDictionary_Artist] as? String == (song.artist.isEmpty ? "Swag Hooks" : song.artist))
+        #expect(info[kAFInfoDictionary_Album] as? String == "Shellac", "the album it is on, not the first one made")
+        #expect(info[kAFInfoDictionary_TrackNumber] as? String == "1/1")
+        let bytes = try Data(contentsOf: mp3)
+        #expect(bytes.range(of: Data("image/jpeg".utf8)) != nil, "the album's drawn cover rides in the tag")
+        #expect(app.library.album(other)?.songs.isEmpty == true)
+
+        // A second export is a second file, never over the first.
+        let again = try await Export.masterMP3(app, to: out)
+        #expect(again.lastPathComponent == "Arrivée — master 2.mp3")
+
+        // The Director's tool: one file and no loudness, which is the WAV report's to say.
+        app.exportDirectory = out
+        let said = try await ExportTool(workspace: AppStateWorkspace(app)).run(.init(what: "mp3"))
+        #expect(said.files == ["Arrivée — master 3.mp3"] && said.integratedLUFS == nil)
     }
 
     @Test("the export tool writes MIDI through a scratch workspace and names the files")

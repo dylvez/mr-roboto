@@ -1,10 +1,14 @@
+import AudioEngine
 import AVFAudio
 import Foundation
+import ImageIO
 import Performance
 import SongGraph
+import UniformTypeIdentifiers
 
-// M6 X10: the door out. A master (24-bit WAV and a report), the stems (one WAV per strip, through
-// its strip, dry of the master), the written parts as MIDI, and the words as a lyric sheet.
+// M6 X10: the door out. A master (24-bit WAV and a report, or an MP3 to send), the stems (one WAV
+// per strip, through its strip, dry of the master), the written parts as MIDI, and the words as a
+// lyric sheet.
 
 public enum Export {
 
@@ -85,24 +89,7 @@ public enum Export {
     @MainActor
     static func master(of song: Song, plan given: SongPlayback, in app: AppState, to directory: URL,
                        pacing: SectionBounce.Pacing? = nil) async throws -> (wav: URL, report: URL, summary: MasterReport) {
-        var plan = given.looping(false)
-        // A song never mixed goes out on the mix the Master tab reads it on — the album's target
-        // and ceiling — not on none.
-        if plan.mix == nil {
-            var unity = Mix.unity
-            if let album = app.library.albums.first(where: { $0.songs.contains(song.id) }) {
-                unity.master = Master(gainDB: 0, ceilingDBTP: album.targets.truePeakDBTP, targetLUFS: album.targets.integratedLUFS)
-            }
-            plan.mix = unity
-        }
-        guard plan.isPlayable else { throw Failure.nothingToBounce }
-        if plan.missingMedia {
-            app.note(.session, "\(song.title) went out without some of its audio",
-                     detail: "A take or a stem's file is missing from the song's package, so it is not in the master.")
-        }
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let stems = try await SectionBounce.render(plan, section: nil, kitsDirectory: AuditionService.defaultKitsDirectory,
-                                                   onlyTheMix: true, pacing: pacing)
+        let (plan, stems) = try await renderMaster(of: song, plan: given, in: app, to: directory, pacing: pacing)
         let planar = stems.mix
         let wav = unique(directory.appendingPathComponent("\(safe(song.title)) — master.wav"))
         try writeWAV24(planar, sampleRate: stems.sampleRate, to: wav)
@@ -124,6 +111,103 @@ public enum Export {
         try encoder.encode(summary).write(to: report)
         app.note(.session, "Exported the master", detail: String(format: "%.1f LUFS, true peak %.1f dBTP → %@", summary.integratedLUFS, summary.truePeakDBTP, wav.path))
         return (wav, report, summary)
+    }
+
+    /// The same master as an MP3 to send: 320 kbps, tagged with the title and the artist and, for
+    /// a song on an album, the album, its artist, the track's number and the cover. No report
+    /// beside it: that goes with the WAV, the print of record.
+    @MainActor
+    public static func masterMP3(_ app: AppState, to directory: URL) async throws -> URL {
+        app.keepSurfaceWork()
+        guard let song = app.song else { throw Failure.noSong }
+        return try await masterMP3(of: song, plan: app.playback, in: app, to: directory)
+    }
+
+    /// Any song in the library as an MP3, as `master(of:)` renders it.
+    @MainActor
+    static func masterMP3(of song: Song, plan given: SongPlayback, in app: AppState, to directory: URL,
+                          pacing: SectionBounce.Pacing? = nil) async throws -> URL {
+        let (_, stems) = try await renderMaster(of: song, plan: given, in: app, to: directory, pacing: pacing)
+        let mp3 = unique(directory.appendingPathComponent("\(safe(song.title)) — master.mp3"))
+        let tags = mp3Tags(for: song, in: app)
+        // Off the main actor: LAME takes seconds over a whole song, and the window would stop.
+        try await Task.detached(priority: .userInitiated) {
+            try MP3Writer.write(stems.mix, sampleRate: stems.sampleRate, tags: tags, to: mp3)
+        }.value
+        app.note(.session, "Exported the master as MP3",
+                 detail: String(format: "%.1f LUFS, true peak %.1f dBTP before encoding, %d kbps → %@",
+                                MixMeter.integratedLoudness(stems.mix, sampleRate: stems.sampleRate),
+                                MixMeter.truePeakDB(stems.mix, sampleRate: stems.sampleRate), MP3Writer.bitRate, mp3.path))
+        return mp3
+    }
+
+    /// The whole song through the mix, limited at the ceiling: what a master of either kind is
+    /// written from.
+    @MainActor
+    private static func renderMaster(of song: Song, plan given: SongPlayback, in app: AppState, to directory: URL,
+                                     pacing: SectionBounce.Pacing?) async throws -> (plan: SongPlayback, stems: SectionBounce.Stems) {
+        var plan = given.looping(false)
+        // A song never mixed goes out on the mix the Master tab reads it on — the album's target
+        // and ceiling — not on none.
+        if plan.mix == nil {
+            var unity = Mix.unity
+            if let album = app.library.albums.first(where: { $0.songs.contains(song.id) }) {
+                unity.master = Master(gainDB: 0, ceilingDBTP: album.targets.truePeakDBTP, targetLUFS: album.targets.integratedLUFS)
+            }
+            plan.mix = unity
+        }
+        guard plan.isPlayable else { throw Failure.nothingToBounce }
+        if plan.missingMedia {
+            app.note(.session, "\(song.title) went out without some of its audio",
+                     detail: "A take or a stem's file is missing from the song's package, so it is not in the master.")
+        }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let stems = try await SectionBounce.render(plan, section: nil, kitsDirectory: AuditionService.defaultKitsDirectory,
+                                                   onlyTheMix: true, pacing: pacing)
+        return (plan, stems)
+    }
+
+    /// What an MP3's tag says of `song`: the album is the first one it is on, as for the mastering
+    /// targets, and the year is the year it was exported.
+    @MainActor
+    static func mp3Tags(for song: Song, in app: AppState, now: Date = Date()) -> MP3Writer.Tags {
+        var tags = MP3Writer.Tags(title: song.title, artist: song.artist,
+                                  year: Calendar(identifier: .gregorian).component(.year, from: now))
+        if let album = app.library.albums.first(where: { $0.songs.contains(song.id) }),
+           let index = album.songs.firstIndex(of: song.id) {
+            tags.album = album.title
+            tags.albumArtist = album.artist
+            tags.track = index + 1
+            tags.trackCount = album.songs.count
+            tags.cover = coverForTag(of: album, in: app)
+        }
+        // A song's own artist left blank is the album's.
+        if song.artist.trimmingCharacters(in: .whitespaces).isEmpty { tags.artist = tags.albumArtist }
+        return tags
+    }
+
+    /// The album's cover as a JPEG at most 600 pixels across: small enough to ride in every
+    /// track's tag, large enough for a player's artwork. Nil when there is none to read.
+    @MainActor
+    static func coverForTag(of album: Album, in app: AppState) -> Data? {
+        let source: Data?
+        switch album.cover {
+        case .image(let media):
+            source = (try? app.store?.mediaURL(for: media)).flatMap { try? Data(contentsOf: $0) }
+        case .drawn(let design):
+            source = CoverRenderer.png(design, title: album.title, artist: album.artist, pixels: 600)
+        }
+        guard let source, let image = CGImageSourceCreateWithData(source as CFData, nil) else { return nil }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: 600,
+        ]
+        guard let thumbnail = CGImageSourceCreateThumbnailAtIndex(image, 0, options as CFDictionary) else { return nil }
+        let out = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(out, UTType.jpeg.identifier as CFString, 1, nil) else { return nil }
+        CGImageDestinationAddImage(destination, thumbnail, [kCGImageDestinationLossyCompressionQuality: 0.85] as CFDictionary)
+        return CGImageDestinationFinalize(destination) ? out as Data : nil
     }
 
     /// One WAV per strip, each bounced alone through its strip, dry of the master's gain and

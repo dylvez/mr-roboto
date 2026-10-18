@@ -34,14 +34,15 @@ public struct ExportTool: DirectorTool {
     public let name = "export"
     public var purpose: String {
         "Write the song out: master (the whole song through the mix, limited at the ceiling, as a 24-bit WAV beside a JSON "
-        + "report of its loudness, true peak, crest, target and clearances), stems (one WAV per strip, dry of the master), "
+        + "report of its loudness, true peak, crest, target and clearances), mp3 (the same master as a 320 kbps MP3 to send, "
+        + "tagged with the title, the artist and the album with its cover; no report), stems (one WAV per strip, dry of the master), "
         + "or midi (one Standard MIDI File of the written parts: grooves on the drum channel, bass lines, melodies, "
         + "progressions as block chords, sections as markers), or lyrics (the words as a text sheet, stanza labels "
         + "kept). Files land in the song's export folder; say where."
     }
     public var schema: DirectorJSON {
         Schema.object([
-            ("what", Schema.string("What to write.", enum: ["master", "stems", "midi", "lyrics"])),
+            ("what", Schema.string("What to write.", enum: ["master", "mp3", "stems", "midi", "lyrics"])),
         ], required: ["what"])
     }
 

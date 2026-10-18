@@ -23,12 +23,13 @@ final class LibraryBatchWork {
 
     var isRunning: Bool { task != nil }
 
-    /// Exports each song's master in turn. A batch already running is not started twice.
-    func exportMasters(_ songs: [SongID]) {
+    /// Exports each song's master in turn, as a WAV with its report or as an MP3. A batch already
+    /// running is not started twice.
+    func exportMasters(_ songs: [SongID], asMP3: Bool = false) {
         guard task == nil, !songs.isEmpty else { return }
         app.keepSurfaceWork()
         task = Task { [weak self] in
-            await self?.run(songs)
+            await self?.run(songs, asMP3: asMP3)
             self?.task = nil
             self?.line = nil
         }
@@ -41,7 +42,7 @@ final class LibraryBatchWork {
         task?.cancel()
     }
 
-    private func run(_ ids: [SongID]) async {
+    private func run(_ ids: [SongID], asMP3: Bool) async {
         for (number, id) in ids.enumerated() {
             guard !Task.isCancelled else { break }
             guard let song = app.song?.id == id ? app.song : app.library.song(id) else { continue }
@@ -50,9 +51,10 @@ final class LibraryBatchWork {
             let progress = BatchProgress(work: self, head: head)
             do {
                 let plan = SongPreviews.plan(for: song, store: app.store)
-                let made = try await Export.master(of: song, plan: plan, in: app, to: directory(song),
-                                                   pacing: .init(frames: 12_000, progress: progress.report))
-                exported[id] = made.wav
+                let pacing = SectionBounce.Pacing(frames: 12_000, progress: progress.report)
+                exported[id] = asMP3
+                    ? try await Export.masterMP3(of: song, plan: plan, in: app, to: directory(song), pacing: pacing)
+                    : try await Export.master(of: song, plan: plan, in: app, to: directory(song), pacing: pacing).wav
                 failures[id] = nil
             } catch is CancellationError {
                 break
@@ -113,6 +115,12 @@ extension LibraryActions {
                                      kind: .confirm(question: "Export \(count) masters?",
                                                     detail: "Each song is rendered from its own package as File ▸ Export renders it, one at a time, into its own folder in ~/Music/Mr. Roboto/Exports. Nothing already there is replaced.",
                                                     verb: "Export", run: { work.exportMasters(ids) })))
+            own.append(LibraryAction(id: "export-mp3", title: "Export Masters as MP3…",
+                                     help: work.isRunning ? "Exporting already." : "Each song's master as a 320 kbps MP3, tagged, into its folder in ~/Music/Mr. Roboto/Exports.",
+                                     isEnabled: !work.isRunning && app.store != nil, group: 1,
+                                     kind: .confirm(question: "Export \(count) masters as MP3?",
+                                                    detail: "Each song is rendered from its own package as File ▸ Export renders it, one at a time, and written as an MP3 tagged with its title, artist and album into its own folder in ~/Music/Mr. Roboto/Exports. Nothing already there is replaced.",
+                                                    verb: "Export", run: { work.exportMasters(ids, asMP3: true) })))
             own.append(LibraryAction(id: "trash", title: "Move to Trash…", isDestructive: true, group: 2,
                                      kind: .confirm(question: "Move \(count) songs to the Trash?",
                                                     detail: "Their packages go to the Trash, where Finder can put them back. They leave every album they are on.",

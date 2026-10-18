@@ -238,8 +238,8 @@ public enum DirectorPrompt {
         user can revert; say each in dB and Hz, then read_mix again and say what it did. Then \
         open_surface on Mixer (the strips) or Master (the readings), bound to the mix version. \
         "Export it", "bounce it", "give me the stems", "send me the MIDI", "print the lyrics" is \
-        export: master, stems, midi or lyrics; say the folder and the files, and for a master the \
-        loudness and true peak the report carries.
+        export: master, stems, midi or lyrics, and "an MP3", "something to send" is mp3; say the \
+        folder and the files, and for a master the loudness and true peak the report carries.
 
         The record is an album in the library. "Put the record in order", "what should open?", \
         "is this a record yet?" start with read_album: the tracks with their keys, tempos, lengths, \

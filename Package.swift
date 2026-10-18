@@ -43,8 +43,12 @@ let package = Package(
             "Analysis",
             .product(name: "onnxruntime", package: "onnxruntime-swift-package-manager"),
         ], linkerSettings: [.linkedFramework("AVFoundation")]),
-        .target(name: "AudioEngine", dependencies: ["MusicTheory", "SongGraph", "CStripFX"],
+        .target(name: "AudioEngine", dependencies: ["MusicTheory", "SongGraph", "CStripFX", "CLame"],
                 linkerSettings: [.linkedFramework("AVFoundation")]),
+        // The LAME MP3 encoder (LGPL, unlike the rest), vendored as source: Core Audio decodes MP3
+        // but has no encoder for it. See Sources/CLame/vendor/VENDORED.txt.
+        // Its warnings are upstream's (the source is unmodified), so they are not shown.
+        .target(name: "CLame", cSettings: [.define("HAVE_CONFIG_H"), .headerSearchPath("vendor"), .unsafeFlags(["-w"])]),
         // A mixer strip's insert: an amp and cabinet, a rotating speaker. In C for the same reason
         // as the render core: it runs inside an audio unit's render block.
         .target(name: "CStripFX"),

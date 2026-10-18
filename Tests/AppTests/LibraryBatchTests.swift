@@ -150,7 +150,7 @@ struct LibraryBatchTests {
         let work = LibraryBatchWork(app: app)
         func ids(_ items: [LibraryItemID]) -> [String] { LibraryActions.batch(items, in: app, work: work).map(\.id) }
         let songs: [LibraryItemID] = [.song(shelf.nightBus.id), .song(shelf.river.id)]
-        #expect(ids(songs) == ["album", "export", "favourite", "tag", "trash"])
+        #expect(ids(songs) == ["album", "export", "export-mp3", "favourite", "tag", "trash"])
         #expect(ids([.record(shelf.drifter.id), .record(shelf.brass.id)]) == ["separate", "read", "favourite", "tag", "remove"])
         #expect(ids([.idea(shelf.idea.id)]) == ["adopt", "favourite", "tag", "remove"])
         #expect(ids([.album(shelf.album.id)]) == ["favourite", "tag", "delete"])
@@ -163,6 +163,9 @@ struct LibraryBatchTests {
         }
         let export = LibraryActions.batch(songs, in: app, work: work).first { $0.id == "export" }
         #expect(export?.isEnabled == false, "no library folder to export from")
+        let mp3 = LibraryActions.batch(songs, in: app, work: work).first { $0.id == "export-mp3" }
+        #expect(mp3?.isEnabled == false)
+        if case .confirm(let question, _, _, _)? = mp3?.kind { #expect(question == "Export 2 masters as MP3?") } else { Issue.record("an MP3 batch asks first") }
     }
 
     @Test("records removed together, songs added to an album together, each written once")
