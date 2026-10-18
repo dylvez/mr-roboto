@@ -382,6 +382,8 @@ public final class AppStateWorkspace: DirectorWorkspace {
     public func makeMashup(_ request: MashupRequest) async throws -> Song { try await app.makeMashup(request) }
 
     public func addSource(_ request: SourceRequest) async throws -> (version: PartVersion, sentences: [String], flags: [String]) {
+        // Measured first, so the sentences can say whether its bars end where the voice rests.
+        await app.measureRestsIfUnmeasured(request.origin)
         let pick = try app.sourcePick(request)
         let sentences = app.sentences(for: pick, request: request)
         let version = try await app.addSource(request, by: .persona("Director"))

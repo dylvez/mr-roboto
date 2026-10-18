@@ -14,7 +14,7 @@ public final class SourcesModel {
     public let surfaceID: SurfaceID
     /// The record or song the stem comes from.
     public var from: SourceOrigin? { didSet { if from != oldValue { chooseDefaults() } } }
-    public var stem: String?
+    public var stem: String? { didSet { if stem != oldValue { measureRests() } } }
     /// Some bars, looped like a chop, rather than the whole stem along the song.
     public var isClip = false { didSet { if isClip != oldValue { chooseSections() } } }
     /// The record's bars, 1-based and both included, as the surface shows them.
@@ -181,6 +181,34 @@ public final class SourcesModel {
     public func toggleTighten() { tighten = !isTightened }
 
     /// The usual: the voice when there is one, the whole of it, its bar 1 on the song's.
+    /// The chosen record's stems measured for where their lines rest, when it was read before
+    /// that was kept: in the background, the strip and the plan filling in when it lands.
+    private func measureRests() {
+        guard let from, case .record = from else { return }
+        Task { [app] in await app.measureRestsIfUnmeasured(from) }
+    }
+
+    /// The chosen stem's level bar by bar, for the strip: nil for a song's stem or one not measured.
+    public var stemLevels: [Double]? { stem.flatMap { record?.stem(named: $0)?.barLevels } }
+    /// The bars, 1-based, the chosen stem rests after: where a clip can end and turn clean. Nil
+    /// until the record's stems are measured.
+    public var rests: [Int]? { stem.flatMap { record?.stem(named: $0) }.flatMap(RecordStems.rests(of:))?.map { $0 + 1 } }
+    /// Rests near the chosen end, nearest first, to end on instead: the ones inside the clip and
+    /// the next few after it.
+    public var restsNearEnd: [Int] {
+        guard let rests else { return [] }
+        let inside = rests.filter { $0 >= fromBar && $0 < toBar }.suffix(2)
+        let after = rests.filter { $0 > toBar }.prefix(2)
+        return Array(inside) + Array(after)
+    }
+    /// Whether the chosen bars end where the chosen stem rests. Nil until measured.
+    public var endsOnARest: Bool? { rests.map { $0.contains(toBar) } }
+    /// Ends the clip after `bar`, 1-based: a rest picked from the strip.
+    public func endOn(_ bar: Int) {
+        guard bar >= 1 else { return }
+        toBar = max(fromBar, min(bar, max(1, barsInRecord)))
+    }
+
     private func chooseDefaults() {
         let stems = available
         stem = stems.first { $0 == "vocals" } ?? stems.first

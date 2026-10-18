@@ -453,6 +453,10 @@ extension AppState {
             out.append("The song takes its key and tempo: \(pick.material.key?.name ?? "no key"), \(Int((pick.material.tempo ?? song?.tempo ?? 120).rounded())) bpm.")
         }
         if request.tighten == nil, let line = Self.tightenLine(pick) { out.append(line) }
+        // Where some bars of a record's voice end: on a rest, or mid-line.
+        if let bars = request.bars, let id = request.record, let record = library.record(id) {
+            out += ClipSeams.lines(for: bars, of: record, stem: request.stem)
+        }
         return out
     }
 
@@ -494,6 +498,7 @@ extension AppState {
         guard let store, libraryIsWritable else { throw SourceError.noLibrary }
         guard let opened = song else { throw SourceError.noSong }
         await tuneIfUnmeasured(request.origin)
+        await measureRestsIfUnmeasured(request.origin)
         let pick = try sourcePick(request)
         let ownGrid = takesGrid(request)
         progress?(pick.material.label, 0)

@@ -30,6 +30,9 @@ public struct ReadSongTool: DirectorTool {
             /// What the section plays right now: the version each of its lanes resolves to, in
             /// layering order. A section names parts, so this follows them.
             public var versions: [String]
+            /// Clips of a record's voice the section cuts off mid-line, and where the voice rests
+            /// (`ClipSeams`); left out when there are none.
+            public var cuts: [String]?
         }
 
         public struct Version: Encodable, Sendable {
@@ -120,6 +123,7 @@ public struct ReadSongTool: DirectorTool {
 
     public func run(_ input: Input) async throws -> Output {
         let store = await workspace.store
+        let library = await workspace.library
         guard let song = await workspace.song else {
             return Output(isOpen: false, title: nil, artist: nil, tempo: nil, key: nil,
                           timeSignature: nil, lengthInBars: nil, sections: [], versions: [],
@@ -133,8 +137,10 @@ public struct ReadSongTool: DirectorTool {
                       timeSignature: "\(song.timeSignature)",
                       lengthInBars: song.lengthInBars,
                       sections: song.sections.map {
-                          Output.Section(id: $0.id.description, name: $0.name, bars: $0.lengthInBars,
-                                         versions: song.versions(playing: $0).map(\.id.description))
+                          let cuts = ClipSeams.cuts(in: $0, song: song) { library.record($0) }.map(\.sentence)
+                          return Output.Section(id: $0.id.description, name: $0.name, bars: $0.lengthInBars,
+                                                versions: song.versions(playing: $0).map(\.id.description),
+                                                cuts: cuts.isEmpty ? nil : cuts)
                       },
                       versions: song.versions.map { version in
                           Output.Version(id: version.id.description,

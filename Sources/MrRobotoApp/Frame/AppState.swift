@@ -1552,6 +1552,10 @@ public final class AppState {
         await startTransport(fromSection: activeSection)
     }
 
+    /// Records whose stems are being measured for where their lines rest, so a second ask waits
+    /// for the first rather than reading the files again (`measureRestsIfUnmeasured`).
+    @ObservationIgnored var measuringRests: Set<RecordID> = []
+
     /// The section playing by itself (`playSectionAlone`), while it plays; nil for the song.
     public private(set) var sectionPlayingAlone: SectionID?
 

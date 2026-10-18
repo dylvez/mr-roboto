@@ -33,6 +33,9 @@ public protocol StructureHosting: AnyObject {
     /// A section picked on the surface: the one the transport's strip lights, so ⇧Space and
     /// ⇧⌥Space play the section being looked at.
     func select(section: SectionID)
+    /// The clips of a record's voice this section, as it stands on the surface, cuts off mid-line:
+    /// one sentence each, with where the voice rests (`ClipSeams`).
+    func clipCuts(in section: Section) -> [String]
     func stop() async
     /// A library row dropped on a section: adopt it into the song and stitch it in. `false` when
     /// nothing was stitched, with the host saying why.
@@ -68,6 +71,7 @@ public extension StructureHosting {
     func play(section: SectionID, alone: Bool) async { await play() }
     var sectionPlayingAlone: SectionID? { nil }
     func select(section: SectionID) {}
+    func clipCuts(in section: Section) -> [String] { [] }
     func openLyrics() {}
     func development() -> Development? { nil }
     func develop() async {}
@@ -782,6 +786,11 @@ public final class StructureModel {
     public func play(section: SectionID, alone: Bool) async {
         guard keep() else { return }
         await host.play(section: section, alone: alone)
+    }
+
+    /// The clips of a record's voice the section cuts off mid-line, at the length it has here.
+    public func clipCuts(in section: SectionID) -> [String] {
+        sections.first { $0.id == section }.map(host.clipCuts) ?? []
     }
 
     /// Whether this section is what the transport is playing, by itself.

@@ -150,6 +150,9 @@ extension CrateWork {
                 var stem = stem
                 let (planar, rate) = try BoothAdapter.planar(try store.mediaURL(for: stem.media))
                 stem.barLevels = RecordStems.levels(planar, sampleRate: rate, bars: bars)
+                let edges = RecordStems.edges(planar, sampleRate: rate, bars: bars)
+                stem.barHeads = edges.heads
+                stem.barTails = edges.tails
                 return stem
             }
         }.value

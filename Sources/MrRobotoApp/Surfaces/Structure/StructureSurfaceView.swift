@@ -137,6 +137,8 @@ private struct SectionBlock: View {
     private var isSelected: Bool { model.selected == section.id }
     private var width: CGFloat { min(240, max(96, CGFloat(section.lengthInBars) * 8)) }
     private var kinds: [String] { model.kinds(of: section) }
+    /// Whether it cuts a record's voice off mid-line: marked on the block, said on its panel.
+    private var cutsAVoice: Bool { !model.clipCuts(in: section.id).isEmpty }
 
     var body: some View {
         Button { model.select(section.id) } label: {
@@ -147,7 +149,8 @@ private struct SectionBlock: View {
         .modifier(SectionDropTarget(model: model, section: section.id))
         .help(model.silence(of: section)
               ?? "\(section.name) · \(section.lengthInBars) bars · plays \(kinds.joined(separator: ", "))"
-                  + (section.intensity.map { " · intensity \(Int(($0 * 100).rounded()))%" } ?? ""))
+                  + (section.intensity.map { " · intensity \(Int(($0 * 100).rounded()))%" } ?? "")
+                  + (cutsAVoice ? " · cuts a voice off mid-line: select it to see where" : ""))
     }
 
     /// The section's kind in its hue — a bar of it along the top and a wash of it behind — so a
@@ -158,10 +161,16 @@ private struct SectionBlock: View {
         let hue = SectionHue.color(for: section.name)
         let shape = RoundedRectangle(cornerRadius: Design.Metric.corner + 1, style: .continuous)
         return VStack(alignment: .leading, spacing: 3) {
-            Text(section.name)
-                .font(.system(size: 12, weight: .semibold))
-                .lineLimit(1)
-                .foregroundStyle(Design.Palette.ink)
+            HStack(spacing: 4) {
+                Text(section.name)
+                    .font(.system(size: 12, weight: .semibold))
+                    .lineLimit(1)
+                    .foregroundStyle(Design.Palette.ink)
+                if cutsAVoice {
+                    Circle().fill(Design.Palette.warn).frame(width: 6, height: 6)
+                        .accessibilityLabel("cuts a voice off mid-line")
+                }
+            }
             Text("\(section.lengthInBars) bars")
                 .font(Design.Typography.numeric(10))
                 .foregroundStyle(Design.Palette.inkSecondary)
@@ -328,6 +337,18 @@ private struct SectionDetail: View {
                         removeChip
                     }
                 }
+            }
+            let cuts = model.clipCuts(in: section.id)
+            if !cuts.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(cuts, id: \.self) { line in
+                        Text(line)
+                            .font(Design.Typography.ui(12))
+                            .foregroundStyle(Design.Palette.warn)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .help("A clip loops from the top of each section that plays it and stops where the section does. Where the voice is still going there it is cut off: change the section's bars, or choose the clip's bars in Sources so they end where the voice rests.")
             }
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 FormLabel("Intensity")

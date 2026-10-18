@@ -160,6 +160,7 @@ struct SourcesSurfaceView: View {
                     stepper(value: $model.toBar, in: 1...max(1, model.barsInRecord), label: "\(model.toBar)")
                     Text("of \(model.barsInRecord)").font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.inkTertiary)
                 }
+                restsRow
             } else {
                 HStack(spacing: 8) {
                     Text("Its bar 1 on bar").font(Design.Typography.ui(12.5))
@@ -194,6 +195,33 @@ struct SourcesSurfaceView: View {
         .padding(12)
         .frame(maxWidth: .infinity, minHeight: 170, alignment: .topLeading)
         .groupedArea()
+    }
+
+    /// The chosen stem bar by bar, the chosen bars shaded and a mark on each bar line it rests
+    /// across; and the rests near the chosen end, any of which ends the clip there.
+    @ViewBuilder
+    private var restsRow: some View {
+        if let levels = model.stemLevels, !levels.isEmpty {
+            let stem = model.stem ?? "stem"
+            StemPresence(levels: levels, span: (model.fromBar - 1)...(max(model.fromBar, model.toBar) - 1),
+                         rests: (model.rests ?? []).map { $0 - 1 })
+                .frame(height: 22)
+                .frame(maxWidth: .infinity)
+                .help("The \(stem) bar by bar, the chosen bars shaded. A mark stands on each bar line it rests across: end a clip there and its loop turns without cutting the \(stem) off.")
+            if model.rests == nil {
+                Text("Reading where the \(stem) rests…")
+                    .font(Design.Typography.ui(11)).foregroundStyle(Design.Palette.inkTertiary)
+            } else if !model.restsNearEnd.isEmpty {
+                HStack(spacing: 6) {
+                    Text(model.endsOnARest == true ? "Ends on a rest. Rests after" : "Rests after")
+                        .font(Design.Typography.ui(12)).foregroundStyle(Design.Palette.inkSecondary)
+                    ForEach(model.restsNearEnd, id: \.self) { bar in
+                        BoothChip("\(bar)", isOn: bar == model.toBar) { model.endOn(bar) }
+                            .help("End the clip after bar \(bar), where the \(stem) rests.")
+                    }
+                }
+            }
+        }
     }
 
     @ViewBuilder

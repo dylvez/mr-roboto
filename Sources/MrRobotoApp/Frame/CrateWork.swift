@@ -437,9 +437,11 @@ enum RecordStems {
         let measured = MixMeter.integratedLoudness(planar, sampleRate: rate)
         let lufs = measured.isFinite ? (measured * 10).rounded() / 10 : nil
         let relative = lufs.flatMap { stem in recordLUFS.map { ((stem - $0) * 10).rounded() / 10 } }
+        let edges = bars.isEmpty ? nil : self.edges(planar, sampleRate: rate, bars: bars)
         return RecordStem(name: name, media: media, sampleRate: rate, channelCount: planar.count,
                           duration: rate > 0 ? Double(frames) / rate : 0, lufs: lufs, relativeDB: relative,
-                          barLevels: bars.isEmpty ? nil : levels(planar, sampleRate: rate, bars: bars))
+                          barLevels: bars.isEmpty ? nil : levels(planar, sampleRate: rate, bars: bars),
+                          barHeads: edges?.heads, barTails: edges?.tails)
     }
 
     /// The stems a song separated from this record, newest of each name: separated from its take,
@@ -465,15 +467,56 @@ enum RecordStems {
 
     /// RMS of each bar across the channels, dBFS to a tenth, `floorDB` for silence.
     static func levels(_ planar: [[Float]], sampleRate: Double, bars: [SongGraph.TimeRange]) -> [Double] {
+        bars.map { level(planar, sampleRate: sampleRate, from: $0.start, to: $0.end) }
+    }
+
+    /// RMS from `start` to `end` seconds across the channels, dBFS to a tenth, `floorDB` for silence.
+    static func level(_ planar: [[Float]], sampleRate: Double, from start: Double, to end: Double) -> Double {
         let frames = planar.first?.count ?? 0
-        return bars.map { bar in
-            let lower = max(0, min(frames, Int(bar.start * sampleRate))), upper = max(lower, min(frames, Int(bar.end * sampleRate)))
-            guard upper > lower else { return floorDB }
-            var sum = 0.0
-            for lane in planar { for i in lower..<upper { sum += Double(lane[i] * lane[i]) } }
-            let rms = (sum / Double((upper - lower) * max(1, planar.count))).squareRoot()
-            return rms > 0 ? max(floorDB, (20 * log10(rms) * 10).rounded() / 10) : floorDB
-        }
+        let lower = max(0, min(frames, Int(start * sampleRate))), upper = max(lower, min(frames, Int(end * sampleRate)))
+        guard upper > lower else { return floorDB }
+        var sum = 0.0
+        for lane in planar { for i in lower..<upper { sum += Double(lane[i] * lane[i]) } }
+        let rms = (sum / Double((upper - lower) * max(1, planar.count))).squareRoot()
+        return rms > 0 ? max(floorDB, (20 * log10(rms) * 10).rounded() / 10) : floorDB
+    }
+
+    /// How much of a bar's start and end is read for where a line rests: long enough to hear a
+    /// held vowel, short enough to stay inside the bar at any tempo a record plays.
+    static let headSeconds = 0.15, tailSeconds = 0.25
+
+    /// Each bar's level at its start and at its end (`barHeads`, `barTails`).
+    static func edges(_ planar: [[Float]], sampleRate: Double, bars: [SongGraph.TimeRange]) -> (heads: [Double], tails: [Double]) {
+        let heads = bars.map { level(planar, sampleRate: sampleRate, from: $0.start, to: min($0.end, $0.start + headSeconds)) }
+        let tails = bars.map { level(planar, sampleRate: sampleRate, from: max($0.start, $0.end - tailSeconds), to: $0.end) }
+        return (heads, tails)
+    }
+
+    /// How far under a stem's usual bar its edge has to be to count as quiet: a breath between
+    /// lines, not a softer word.
+    static let restBelowDB = 18.0
+
+    /// The level a stem's edge counts as quiet under: `restBelowDB` under its usual bar, the level
+    /// three in four of its sounding bars reach. Nil for a stem that never sounds.
+    static func quietLevel(_ levels: [Double]) -> Double? {
+        let sorted = levels.filter { $0 > floorDB }.sorted()
+        guard !sorted.isEmpty else { return nil }
+        return sorted[Int(Double(sorted.count - 1) * 0.75)] - restBelowDB
+    }
+
+    /// Whether a stem is still sounding as bar `bar` (0-based) ends. Nil until its edges are measured.
+    static func soundsAtEnd(of bar: Int, in stem: RecordStem) -> Bool? {
+        guard let tails = stem.barTails, let quiet = stem.barLevels.flatMap(quietLevel), tails.indices.contains(bar) else { return nil }
+        return tails[bar] >= quiet
+    }
+
+    /// The bars, 0-based, a stem rests after: the end of the bar and the start of the next both
+    /// quiet, so a clip that ends there ends where the line does. The last bar counts when it ends
+    /// quiet. Nil until its edges are measured.
+    static func rests(of stem: RecordStem) -> [Int]? {
+        guard let heads = stem.barHeads, let tails = stem.barTails, heads.count == tails.count,
+              let quiet = stem.barLevels.flatMap(quietLevel) else { return nil }
+        return tails.indices.filter { bar in tails[bar] < quiet && (bar + 1 == heads.count || heads[bar + 1] < quiet) }
     }
 
     /// The whole record's loudness, when its analysis did not read it.
@@ -598,6 +641,34 @@ extension AppState {
 
     /// A record read before tunings were kept is measured the first time something is taken from
     /// it, and the reading kept on its row.
+    /// A record's stems measured for where their lines rest (`RecordStem.barHeads`, `barTails`),
+    /// when it was read before those were kept. Off the main actor; written to the library once,
+    /// however many ask while it runs.
+    func measureRestsIfUnmeasured(_ origin: SourceOrigin) async {
+        guard case .record(let id) = origin, let record = library.record(id), let stems = record.stems,
+              stems.contains(where: { $0.barHeads == nil }), let bars = record.reading?.bars, !bars.isEmpty,
+              let store, !measuringRests.contains(id) else { return }
+        measuringRests.insert(id)
+        defer { measuringRests.remove(id) }
+        let measured = await Task.detached(priority: .userInitiated) { () -> [RecordStem] in
+            stems.map { stem in
+                guard stem.barHeads == nil, let url = try? store.mediaURL(for: stem.media),
+                      let read = try? BoothAdapter.planar(url) else { return stem }
+                var stem = stem
+                let edges = RecordStems.edges(read.0, sampleRate: read.1, bars: bars)
+                stem.barHeads = edges.heads
+                stem.barTails = edges.tails
+                if stem.barLevels == nil { stem.barLevels = RecordStems.levels(read.0, sampleRate: read.1, bars: bars) }
+                return stem
+            }
+        }.value
+        var updated = library
+        // Against the bars it was measured on: a grid corrected meanwhile measures again itself.
+        guard let index = updated.records.firstIndex(where: { $0.id == id }), updated.records[index].reading?.bars == bars else { return }
+        updated.records[index].stems = measured
+        _ = writeLibrary(updated)
+    }
+
     func tuneIfUnmeasured(_ origin: SourceOrigin) async {
         guard case .record(let id) = origin, let record = library.record(id), record.tuning == nil, record.reading != nil,
               let url = try? store?.mediaURL(for: record.media) else { return }

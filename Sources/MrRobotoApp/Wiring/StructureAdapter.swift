@@ -28,6 +28,8 @@ final class StructureAdapter: StructureHosting {
 
     func select(section: SectionID) { app.setActiveSection(section) }
 
+    func clipCuts(in section: Section) -> [String] { app.clipCuts(in: section).map(\.sentence) }
+
     func stop() async { await app.stopTransport() }
 
     func receive(_ payload: LibraryDragPayload, into section: SectionID) async -> Bool {

@@ -41,9 +41,15 @@ struct StemRow: View {
 }
 
 /// A stem's level bar by bar: one tick per bar, taller where it is louder, absent where it rests.
+/// Choosing bars of it, the chosen ones are shaded, and a mark stands on each bar line the stem
+/// rests across (`RecordStems.rests`): where a clip of it can end and turn clean.
 struct StemPresence: View {
     let levels: [Double]
     var strength: Double = 1
+    /// The bars chosen, 0-based, both included.
+    var span: ClosedRange<Int>?
+    /// The bars, 0-based, the stem rests after.
+    var rests: [Int] = []
 
     var body: some View {
         Canvas { context, size in
@@ -53,13 +59,25 @@ struct StemPresence: View {
             }
             let loudest = max(-60, levels.max() ?? -60)
             let width = size.width / CGFloat(levels.count)
+            if let span {
+                let rect = CGRect(x: CGFloat(span.lowerBound) * width, y: 0,
+                                  width: CGFloat(span.count) * width, height: size.height)
+                context.fill(Path(rect), with: .color(Design.Palette.accentSoft))
+            }
+            for bar in rests where bar < levels.count {
+                let x = CGFloat(bar + 1) * width
+                context.fill(Path(CGRect(x: x - 0.5, y: 0, width: 1, height: size.height)), with: .color(Design.Palette.accent.opacity(0.55)))
+            }
             for (index, level) in levels.enumerated() {
                 // The top 36 dB below its loudest bar, so a quiet stem still draws its shape.
                 let share = max(0, min(1, (level - (loudest - 36)) / 36))
                 guard share > 0.02 else { continue }
                 let height = max(1, size.height * CGFloat(share))
                 let rect = CGRect(x: CGFloat(index) * width, y: size.height - height, width: max(0.8, width - 0.4), height: height)
-                context.fill(Path(rect), with: .color(Design.Palette.inkSecondary.opacity(strength)))
+                // The chosen bars in the accent, the rest stepped back, so the span reads at a glance.
+                let ink = span.map { $0.contains(index) ? Design.Palette.accent : Design.Palette.inkSecondary.opacity(0.45) }
+                    ?? Design.Palette.inkSecondary.opacity(strength)
+                context.fill(Path(rect), with: .color(ink))
             }
         }
         .accessibilityHidden(true)

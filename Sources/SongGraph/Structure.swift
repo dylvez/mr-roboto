@@ -690,9 +690,16 @@ public struct RecordStem: Hashable, Codable, Sendable {
     /// Its level in each of the record's analysed bars, dBFS RMS to a tenth: where it plays and
     /// where it rests. Nil when the record had no bars when it was read.
     public var barLevels: [Double]?
+    /// Its level at the start and at the end of each of those bars, dBFS RMS to a tenth: where a
+    /// line is still going as a bar ends, and where the stem rests across a bar line, so a clip
+    /// can end where the voice does. Nil until measured — a record read before these were kept is
+    /// measured the first time its bars are chosen.
+    public var barHeads: [Double]?
+    public var barTails: [Double]?
 
     public init(name: String, media: MediaRef, sampleRate: Double, channelCount: Int, duration: Double,
-                lufs: Double? = nil, relativeDB: Double? = nil, barLevels: [Double]? = nil) {
+                lufs: Double? = nil, relativeDB: Double? = nil, barLevels: [Double]? = nil,
+                barHeads: [Double]? = nil, barTails: [Double]? = nil) {
         self.name = name
         self.media = media
         self.sampleRate = sampleRate
@@ -701,6 +708,8 @@ public struct RecordStem: Hashable, Codable, Sendable {
         self.lufs = lufs
         self.relativeDB = relativeDB
         self.barLevels = barLevels
+        self.barHeads = barHeads
+        self.barTails = barTails
     }
 }
 
