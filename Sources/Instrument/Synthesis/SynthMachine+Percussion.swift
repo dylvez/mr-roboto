@@ -260,11 +260,12 @@ extension SynthMachine {
             // in a band of noise near 2 kHz, brighter and shorter than a drum machine's clap.
             SynthVoiceSpec(
                 kind: .palmas, engine: .burstNoise, machine: machine,
-                controls: SynthControls(level: 0.4),
-                noise: SynthNoise(level: 0.85, bandHz: 2_300, bandQ: 0.9, highPassHz: 900,
-                                  decayShortestSeconds: 0.03, decayMidSeconds: 0.05, decayLongestSeconds: 0.09),
-                burst: SynthBurst(count: 3, intervalSeconds: 0.006, burstDecaySeconds: 0.006,
-                                  tailLevel: 0.35, tailDecaySeconds: 0.03),
+                // As loud as a kit's clap: palmas carry a flamenco groove, they do not decorate it.
+                controls: SynthControls(level: 1.0),
+                noise: SynthNoise(level: 0.9, bandHz: 2_300, bandQ: 0.9, highPassHz: 900,
+                                  decayShortestSeconds: 0.04, decayMidSeconds: 0.07, decayLongestSeconds: 0.12),
+                burst: SynthBurst(count: 3, intervalSeconds: 0.006, burstDecaySeconds: 0.008,
+                                  tailLevel: 0.55, tailDecaySeconds: 0.06),
                 output: SynthOutput(toneDarkHz: 7_000, toneBrightHz: 13_000, highPassHz: 400),
                 velocity: SynthVelocity(rangeDB: 14, brightnessFactor: 1.1),
                 durationSeconds: 0.25, seed: seed + 27),
