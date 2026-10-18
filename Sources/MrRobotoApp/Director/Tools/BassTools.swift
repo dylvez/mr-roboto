@@ -262,7 +262,11 @@ public struct WriteBasslineTool: DirectorTool {
             throw DirectorToolFailure(tool: name, reason: "There is no bass called \"\(input.sound)\".",
                                       suggestion: "One of: \(Self.sounds.map(\.id).joined(separator: ", ")); or empty for \(lineage.name)'s own.")
         }
-        let sound = asked.isEmpty ? lineage.defaultSound : asked
+        // The hands' own sound, on a recording of it when the library has one: a player's finger
+        // bass is a recorded bass guitar, not the plucked-string model standing in for one.
+        let ownRecording = asked.isEmpty ? RecordedSounds.bass(for: lineage.defaultSound) : nil
+        let sound = asked.isEmpty ? (ownRecording?.id ?? lineage.defaultSound) : asked
+        let builtInRecording = asked.isEmpty ? nil : RecordedSounds.bass(for: asked)
 
         // The Bassist first.
         let lens = await workspace.genreLens
@@ -314,7 +318,9 @@ public struct WriteBasslineTool: DirectorTool {
                       noteCount: line.notes.count, note: version.note ?? "",
                       readings: readings.map(\.says), flags: flags.map(\.says), recorded: recorded,
                       detail: recorded
-                          ? "Open the Piano roll on \(version.id.description) to see it over the kicks, or a Compare of "
+                          ? (ownRecording.map { "It plays on \($0.name) (\($0.id)), the recording of \(lineage.name)'s own \(lineage.defaultSound) bass. " } ?? "")
+                              + (builtInRecording.map { "The \(asked) bass is synthesized, and the library has a recording that plays it: \($0.name) (\($0.id)); write it there unless a synthesized sound is the point. " } ?? "")
+                              + "Open the Piano roll on \(version.id.description) to see it over the kicks, or a Compare of "
                               + "several lines with the groove as the reference."
                           : "No song is open, so this was not recorded anywhere.")
     }

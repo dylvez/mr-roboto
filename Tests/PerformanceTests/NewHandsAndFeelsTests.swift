@@ -70,7 +70,7 @@ struct NewHandsAndFeelsTests {
         #expect(swing.groove.stepsPerBar == 12, "on the triplet grid")
         let bulerias = try #require(FeelLibrary.standard.feel(named: "Bulerías"))
         #expect(bulerias.timeSignature == TimeSignature(12, 8))
-        let accents = bulerias.groove.patterns.first { $0.voice == .clap }?.steps.indices.filter { bulerias.groove.patterns.first { $0.voice == .clap }!.steps[$0] == .accent }
+        let accents = bulerias.groove.patterns.first { $0.voice == .palmas }?.steps.indices.filter { bulerias.groove.patterns.first { $0.voice == .palmas }!.steps[$0] == .accent }
         #expect(accents == [2, 5, 7, 9, 11], "the compás' 3, 6, 8, 10 and 12")
     }
 }

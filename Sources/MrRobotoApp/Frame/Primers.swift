@@ -154,7 +154,7 @@ extension Primer {
         case .sources: return "A stem, or some bars, of a record, moved to the song's key, tempo and bars."
         case .library: return "Everything made and brought in, a shelf at a time: search it, hear it, act on it."
         case .mashup: return "Two songs on one grid: one keeps its key and tempo, the other meets it."
-        case .mixer: return "A strip per part — level, pan, sends, EQ, compressor, insert — with meters."
+        case .mixer: return "A strip per part — level, pan, sends, EQ, compressor, effects — with meters."
         case .master: return "The last bounce against the target: loudness, true peak, crest and spectrum."
         case .takes: return "Every take of one part, lane by lane, with the band's flags. Make the comp."
         }

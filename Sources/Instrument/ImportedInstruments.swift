@@ -141,7 +141,13 @@ public enum ImportedInstruments {
                 ranges.withLock { $0[section.id] = low...high }
             }
         }
-        return linked + sections
+        let treated = Treatment.available(among: linked)
+        for treatment in Treatment.all where !treated.contains(where: { $0.id == treatment.id }) { unregister(id: treatment.id) }
+        for spec in treated {
+            register(spec)
+            if let base = spec.basedOn, let range = ranges.withLock({ $0[base] }) { ranges.withLock { $0[spec.id] = range } }
+        }
+        return linked + sections + treated
     }
 
     /// Beside a kit: the levelling it was given (`levelVersion`).
@@ -323,8 +329,9 @@ public enum ImportedInstruments {
     /// Takes an imported instrument out of the app: its folder, copies and all. The pack it came
     /// from is not touched.
     public static func remove(id: String) throws {
-        // A section is its players' recordings, and has no folder of its own to take away.
-        guard let spec = spec(id: id), !spec.isEnsemble, let folder = spec.sampledKit else { return }
+        // A section is its players' recordings, and a treatment its recording's: neither has a
+        // folder of its own to take away.
+        guard let spec = spec(id: id), !spec.isMadeFromRecordings, let folder = spec.sampledKit else { return }
         try FileManager.default.removeItem(at: URL(fileURLWithPath: folder, isDirectory: true))
         unregister(id: id)
     }

@@ -12,12 +12,14 @@ public enum SynthVoiceKind: String, Codable, Sendable, Hashable, CaseIterable {
     case shaker, tambourine, highConga, lowConga, highBongo, lowBongo, claves, woodblock
     case highAgogo, lowAgogo, cabasa, guiro, guiroLong, openTriangle, muteTriangle, vibraslap
     case cajon, cajonSlap, darbuka, darbukaTek, frameDrum, slitDrum
+    case timbaleHigh, timbaleLow, cuicaOpen, cuicaMute, palmas
 
     /// The hand percussion, in the order a kit lists it.
     public static let handPercussion: [SynthVoiceKind] = [
         .shaker, .tambourine, .highConga, .lowConga, .highBongo, .lowBongo, .claves, .woodblock,
         .highAgogo, .lowAgogo, .cabasa, .guiro, .guiroLong, .openTriangle, .muteTriangle, .vibraslap,
         .cajon, .cajonSlap, .darbuka, .darbukaTek, .frameDrum, .slitDrum,
+        .timbaleHigh, .timbaleLow, .cuicaOpen, .cuicaMute, .palmas,
     ]
 
     /// The groove-level voice name this kind answers to.
@@ -57,6 +59,11 @@ public enum SynthVoiceKind: String, Codable, Sendable, Hashable, CaseIterable {
         case .darbukaTek: return .darbukaTek
         case .frameDrum: return .frameDrum
         case .slitDrum: return .slitDrum
+        case .timbaleHigh: return .timbaleHigh
+        case .timbaleLow: return .timbaleLow
+        case .cuicaOpen: return .cuicaOpen
+        case .cuicaMute: return .cuicaMute
+        case .palmas: return .palmas
         }
     }
 
@@ -100,6 +107,12 @@ public enum SynthVoiceKind: String, Codable, Sendable, Hashable, CaseIterable {
         case .darbukaTek: return 91
         case .frameDrum: return 92
         case .slitDrum: return 93
+        case .timbaleHigh: return 65  // High Timbale
+        case .timbaleLow: return 66   // Low Timbale
+        case .cuicaMute: return 78    // Mute Cuica
+        case .cuicaOpen: return 79    // Open Cuica
+        // Nor palmas: above the others.
+        case .palmas: return 94
         }
     }
 
@@ -124,6 +137,10 @@ public enum SynthVoiceKind: String, Codable, Sendable, Hashable, CaseIterable {
         case .darbukaTek: return "darbuka_tek"
         case .frameDrum: return "frame_drum"
         case .slitDrum: return "slit_drum"
+        case .timbaleHigh: return "timbale_high"
+        case .timbaleLow: return "timbale_low"
+        case .cuicaOpen: return "cuica_open"
+        case .cuicaMute: return "cuica_mute"
         default: return rawValue
         }
     }

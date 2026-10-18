@@ -16,6 +16,7 @@ public enum DrumMap {
         (.vibraslap, 58), (.highAgogo, 67), (.lowAgogo, 68), (.cabasa, 69), (.guiro, 73), (.guiroLong, 74),
         (.muteTriangle, 80), (.openTriangle, 81),
         (.cajon, 88), (.cajonSlap, 89), (.darbuka, 90), (.darbukaTek, 91), (.frameDrum, 92), (.slitDrum, 93),
+        (.timbaleHigh, 65), (.timbaleLow, 66), (.cuicaMute, 78), (.cuicaOpen, 79), (.palmas, 94),
         (.perc, 82),
     ]
     public static func note(for voice: DrumVoice) -> Int { notes.first { $0.0 == voice }?.1 ?? 82 }

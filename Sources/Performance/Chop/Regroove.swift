@@ -128,7 +128,8 @@ public struct Regroove: Sendable {
         public static let defaultVoices: [SliceClass: [DrumVoice]] = [
             .kick: [.kick, .lowTom, .cajon, .darbuka, .frameDrum],
             .snare: [.snare, .clap, .rim, .midTom, .highTom, .highConga, .lowConga, .highBongo, .lowBongo,
-                     .claves, .woodblock, .cowbell, .cajonSlap, .darbukaTek, .slitDrum, .highAgogo, .lowAgogo],
+                     .claves, .woodblock, .cowbell, .cajonSlap, .darbukaTek, .slitDrum, .highAgogo, .lowAgogo,
+                     .timbaleHigh, .timbaleLow, .cuicaOpen, .cuicaMute, .palmas],
             .hat: [.closedHat, .openHat, .ride, .crash, .shaker, .tambourine, .perc, .cabasa, .guiro, .guiroLong,
                    .openTriangle, .muteTriangle, .vibraslap],
         ]

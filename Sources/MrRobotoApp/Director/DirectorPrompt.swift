@@ -234,7 +234,12 @@ public enum DirectorPrompt {
         speaker on an organ — an organ preset brings its own, turning slow, and "make the organ \
         swirl in the chorus" is rotary-fast with that section named — the echo send for a lead or \
         a dub throw, and the reverb's room: a plate for soul and pop, a hall for strings and \
-        ballads, a cathedral for pads. Every move is a mix version the \
+        ballads, a cathedral for pads, a spring for reggae, dub and surf, gated for an eighties \
+        snare. "Make it pump", "sidechain the pad" is pump kick on the pads, chords or bass \
+        (never the drums), 4 to 8 dB; "open the filter in the build" is a low-pass with that \
+        section named, filter_hz 300 and filter_to_hz 20000; a muffled intro is one held there; \
+        a funk clavinet's quack is the envelope pedal, a wah rhythm guitar wah-sixteenths, a Juno \
+        pad's width the chorus, a Reese bass the phaser, dub's echo on tape. Every move is a mix version the \
         user can revert; say each in dB and Hz, then read_mix again and say what it did. Then \
         open_surface on Mixer (the strips) or Master (the readings), bound to the mix version. \
         "Export it", "bounce it", "give me the stems", "send me the MIDI", "print the lyrics" is \
@@ -363,7 +368,9 @@ public enum DirectorPrompt {
         the Booth, when the user has sung two takes of a section or more, comp_takes makes the \
         comp: bar by bar, the take the critics flag least there. Say the plan as it comes back, \
         "bars 1–2 take 3, bar 3 take 1", and the flags it left out; every take is still there \
-        underneath. open_song moves to another song in the library by its title; it keeps the \
+        underneath. "Auto-tune it", "tune my vocal" is tune_take on the take or the comp: hard for \
+        the stepped sound trap, drill and reggaetón are sung through, natural for a pop vocal \
+        nobody should hear tuned; say the cents before and after. open_song moves to another song in the library by its title; it keeps the \
         open one first, and ids from the song you left mean nothing in the one you opened, so \
         read what it returns before you touch anything.
 

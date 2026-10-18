@@ -45,8 +45,11 @@ public struct ReadMixTool: DirectorTool {
             /// What it plays through: "rotating speaker, slow (its instrument's own)", "amp, crunch".
             public var insert: String?
             public var echoDB: Double?
+            /// The rest of its chain, in signal order: "a wah, rocked every eighth", "a chorus",
+            /// "a low-pass, open", "pumping 6 dB on the kick". Nil when there is none.
+            public var effects: [String]? = nil
             enum CodingKeys: String, CodingKey {
-                case part, label, pan, muted, soloed, eq, insert
+                case part, label, pan, muted, soloed, eq, insert, effects
                 case gainDB = "gain_db"; case sendDB = "send_db"; case echoDB = "echo_db"
             }
         }
@@ -116,7 +119,7 @@ public struct ReadMixTool: DirectorTool {
 
     public let name = "read_mix"
     public var purpose: String {
-        "Read the mix: every strip's level, pan, EQ, send, echo and insert, its level in any section where it differs, the "
+        "Read the mix: every strip's level, pan, EQ, send, echo, insert and other effects (pedal, modulation, filter, pump), its level and effects in any section where they differ, the "
         + "reverb's space and the echo's time, the master's gain, "
         + "ceiling and target, and the song bounced "
         + "through it — integrated LUFS, true peak, crest, tilt — with every strip bounced apart for the masking pairs and the "
@@ -160,21 +163,26 @@ public struct ReadMixTool: DirectorTool {
             let s = mix.strip(for: strip.part, label: strip.label)
             let insert = mix.insert(for: strip.part, in: nil, instrument: inserts[strip.part])
                 .flatMap { $0.kind == .off ? nil : $0.words + (s.insert == nil ? " (its instrument's own)" : "") }
+            let rest = SetEffectsTool.chainWords(mix, part: strip.part, section: nil, plan: plan)
+                .filter { !$0.hasPrefix("an amp") && !$0.hasPrefix("a rotating speaker") }
             return Output.StripEntry(part: strip.part.description, label: strip.label, gainDB: s.gainDB, pan: s.pan, muted: s.isMuted, soloed: s.isSoloed,
-                                     eq: s.eq.map { ["hz": $0.frequency, "db": $0.gainDB] }, sendDB: s.sendDB, insert: insert, echoDB: s.echoDB)
+                                     eq: s.eq.map { ["hz": $0.frequency, "db": $0.gainDB] }, sendDB: s.sendDB, insert: insert, echoDB: s.echoDB,
+                                     effects: rest.isEmpty ? nil : rest)
         }
         let labels = Dictionary(strips.map { ($0.part, $0.label) }, uniquingKeysWith: { a, _ in a })
         let levels = mix.sectionGains.compactMap { gain -> Output.SectionLevel? in
             guard let name = song.sections.first(where: { $0.id == gain.section })?.name else { return nil }
             return Output.SectionLevel(section: name, strip: labels[gain.part] ?? gain.part.description, gainDB: gain.gainDB)
         }
-        let returns = "reverb \(mix.roomSetting.name.lowercased()); echo every \(mix.echoSettings.timeName), "
+        let returns = "reverb \(mix.roomSetting.name.lowercased()); echo\(mix.echoSettings.isTape ? " on tape" : "") every \(mix.echoSettings.timeName), "
             + String(format: "feedback %.0f%%", mix.echoSettings.feedback * 100)
         let effects = (mix.sectionEffects ?? []).compactMap { effect -> String? in
             guard let name = song.sections.first(where: { $0.id == effect.section })?.name else { return nil }
             var said: [String] = []
             if let fast = effect.fast { said.append("speaker \(fast ? "fast" : "slow")") }
             if let db = effect.echoDB { said.append(String(format: "echo %.0f dB", db)) }
+            if let words = effect.filterWords(mix.strip(for: effect.part)?.filter?.kind ?? .lowPass) { said.append(words) }
+            if let db = effect.pumpDB { said.append(db == 0 ? "no pump" : String(format: "pumping %.0f dB", db)) }
             return "\(labels[effect.part] ?? effect.part.description): \(said.joined(separator: ", ")) in \(name)"
         }
         return Output(mixVersion: plan.mixVersion?.description, strips: entries, sectionLevels: levels, returns: returns, sectionEffects: effects,
@@ -460,10 +468,44 @@ public struct SetEffectsTool: DirectorTool {
         /// 0…0.85, or -1 to keep.
         public var echoFeedback: Double
         public var reason: String
+        /// "keep", "off", or one of `StripPedal.named`. Nil keeps.
+        public var pedal: String?
+        /// "keep", "own", or one of `StripModulation.named`. Nil keeps.
+        public var modulation: String?
+        /// "keep", "off", "low-pass" or "high-pass"; with a section, "own" puts the section back to
+        /// the strip's corner. Nil keeps.
+        public var filter: String?
+        /// The strip's corner; with a section, where the section's filter starts (and stays, with no
+        /// `filterToHz`).
+        public var filterHz: Double?
+        /// With a section: swept to this corner by the section's last beat.
+        public var filterToHz: Double?
+        public var filterResonance: Double?
+        /// "keep", "off", "kick" or "beat"; with a section, "off" is no pump there and "own" as
+        /// everywhere. Nil keeps.
+        public var pump: String?
+        public var pumpDB: Double?
+        /// Not offered to the model — the API's limit on parameters — but read when given.
+        public var pumpReleaseBeats: Double?
+        /// "keep", "tape" or "clean". Nil keeps.
+        public var echoTape: String?
+
+        /// The numbers as asked, -1 (keep) read as nothing asked.
+        var filterCorner: Double? { filterHz.flatMap { $0 > 0 ? $0 : nil } }
+        var filterTarget: Double? { filterToHz.flatMap { $0 > 0 ? $0 : nil } }
+        var resonance: Double? { filterResonance.flatMap { $0 >= 0 ? $0 : nil } }
+        var pumpDepth: Double? { pumpDB.flatMap { $0 > 0 ? $0 : nil } }
+        var pumpRelease: Double? { pumpReleaseBeats.flatMap { $0 > 0 ? $0 : nil } }
         enum CodingKeys: String, CodingKey {
-            case part, insert, echo, section, room, reason
+            case part, insert, echo, section, room, reason, pedal, modulation, filter, pump
             case echoTime = "echo_time"
             case echoFeedback = "echo_feedback"
+            case filterHz = "filter_hz"
+            case filterToHz = "filter_to_hz"
+            case filterResonance = "filter_resonance"
+            case pumpDB = "pump_db"
+            case pumpReleaseBeats = "pump_release_beats"
+            case echoTape = "echo_tape"
         }
     }
 
@@ -482,14 +524,19 @@ public struct SetEffectsTool: DirectorTool {
 
     public let name = "set_effects"
     public var purpose: String {
-        "Put an effect on a strip, or change the two every strip sends to. A strip's insert sits before its EQ: an amp "
-        + "(amp-clean, amp-crunch, amp-lead) for an electric guitar — the cabinet and the drive a guitar is heard through — "
-        + "or a rotating speaker (rotary-slow, rotary-fast) for an organ; off takes it away, own puts back the instrument's "
-        + "own (an organ comes with its speaker turning slow). echo is the strip's send to a tempo-synced echo, in dB. With a "
-        + "section named, the insert sets the speaker's speed there alone (fast in the chorus, as organists switch it) and "
-        + "echo the send there alone (a dub throw). room is the reverb's space: " + Room.allCases.map { "\($0.rawValue) (\($0.about))" }.joined(separator: "; ")
+        "Put effects on a strip, or change the two every strip sends to. A strip's signal meets, in order: a pedal (a wah "
+        + "rocked in time, wah-sixteenths/eighths/quarters; an envelope filter, the funk clavinet's); the insert — an amp "
+        + "(amp-clean, amp-crunch, amp-lead) for an electric guitar, or a rotating speaker (rotary-slow, rotary-fast) for an "
+        + "organ; off takes it away, own puts back the instrument's own; a modulation (chorus — the Juno's, chorus-wide, "
+        + "phaser, flanger — the jet, vibrato); a filter, low-pass or high-pass, at filter_hz; and a pump, the strip ducked on "
+        + "the kick's own steps (kick) or every beat (beat) by pump_db: the sidechain of house, techno, afrobeats and lo-fi, "
+        + "for pads, chords and bass. echo is the strip's send to a tempo-synced echo, in dB. With a section named: the "
+        + "insert sets the speaker's speed there alone, echo the send there alone (a dub throw), filter_hz where the filter "
+        + "sits there and filter_to_hz where it has swept to by the section's end — a build opening, 300 to 20000 — "
+        + "(filter own puts the section back), and pump off or pump_db how hard it pumps there. room is the reverb's space: "
+        + Room.allCases.map { "\($0.rawValue) (\($0.about))" }.joined(separator: "; ")
         + ". echo_time is how far apart the repeats are, in the song's beats: " + Echo.times.map(\.name).joined(separator: ", ")
-        + ". Recorded as a mix version; read the mix after."
+        + "; echo_tape puts the echo on tape (wow, darker repeats that saturate: dub). Recorded as a mix version; read the mix after."
     }
     public var schema: DirectorJSON {
         Schema.object([
@@ -501,7 +548,18 @@ public struct SetEffectsTool: DirectorTool {
             ("echo_time", Schema.string("The echo's time.", enum: ["keep"] + Echo.times.map(\.name))),
             ("echo_feedback", Schema.number("How much of each repeat comes round again, 0 to 0.85; -1 keeps it.", minimum: -1, maximum: 0.85)),
             ("reason", Schema.string("Why, in the music's terms.")),
-        ], required: ["part", "insert", "echo", "section", "room", "echo_time", "echo_feedback", "reason"])
+            ("pedal", Schema.string("The pedal before the insert: keep, off, or one.", enum: ["keep", "off"] + StripPedal.named.map(\.id))),
+            ("modulation", Schema.string("The modulation after the insert: keep, own (the instrument's), or one.",
+                                         enum: ["keep", "own"] + StripModulation.named.map(\.id))),
+            ("filter", Schema.string("The filter; with a section, own puts the section back to the strip's corner.",
+                                     enum: ["keep", "off", "own", "low-pass", "high-pass"])),
+            ("filter_hz", Schema.number("The filter's corner, 20 to 20000 Hz; with a section, where it sits from the section's first beat. -1 keeps.")),
+            ("filter_to_hz", Schema.number("With a section: where the filter has swept to by its last beat, 20 to 20000 Hz. -1 holds it at filter_hz.")),
+            ("pump", Schema.string("The pump; with a section, off is none there and own as everywhere.", enum: ["keep", "off", "own", "kick", "beat"])),
+            ("pump_db", Schema.number("How far the pump ducks, 1 to 24 dB; with a section, there alone. -1 keeps.")),
+            ("echo_tape", Schema.string("The echo on tape or clean.", enum: ["keep", "tape", "clean"])),
+        ], required: ["part", "insert", "echo", "section", "room", "echo_time", "echo_feedback", "reason", "pedal", "modulation",
+                      "filter", "filter_hz", "filter_to_hz", "pump", "pump_db", "echo_tape"])
     }
 
     public func run(_ input: Input) async throws -> Output {
@@ -568,6 +626,7 @@ public struct SetEffectsTool: DirectorTool {
                                               suggestion: "rotary-fast or rotary-slow for \(section.name), own for the strip's speed there; or the insert with section empty.")
                 }
                 if let echoDB { effect.echoDB = echoDB }
+                try sectionMoves(input, strip: strip, section: section, effect: &effect, mix: &mix)
                 mix.setSectionEffect(effect)
             } else {
                 var moved = mix.strip(for: strip.part, label: strip.label)
@@ -582,6 +641,7 @@ public struct SetEffectsTool: DirectorTool {
                     moved.insert = named.insert
                 }
                 if let echoDB { moved.echoDB = echoDB }
+                try stripMoves(input, strip: &moved)
                 mix.set(moved)
             }
         }
@@ -603,6 +663,11 @@ public struct SetEffectsTool: DirectorTool {
             echo.beats = found.beats
         }
         if input.echoFeedback >= 0 { echo.feedback = min(0.85, input.echoFeedback) }
+        switch input.echoTape?.lowercased() {
+        case "tape": echo.tape = true
+        case "clean": echo.tape = nil
+        default: break
+        }
         mix.echo = echo == .standard ? nil : echo
 
         guard mix != before else {
@@ -616,14 +681,132 @@ public struct SetEffectsTool: DirectorTool {
             throw DirectorToolFailure(tool: name, reason: "The move could not be kept.")
         }
         let now = strip.map { strip -> String in
-            let insert = mix.insert(for: strip.part, in: section?.id, instrument: own)
-            let plays = insert?.phrase ?? "nothing"
+            let chain = Self.chainWords(mix, part: strip.part, section: section?.id, plan: plan, markOwn: false)
             let echo = mix.echoDB(for: strip.part, in: section?.id).map { String(format: "echo send %.0f dB", $0) } ?? "no echo"
-            return "\(strip.label)\(section.map { " in \($0.name)" } ?? ""): through \(plays), \(echo)"
+            var said = "\(strip.label)\(section.map { " in \($0.name)" } ?? ""): through \(chain.isEmpty ? "nothing" : chain.joined(separator: ", ")), \(echo)"
+            if let section, let effect = mix.sectionEffect(for: strip.part, in: section.id) {
+                if let words = effect.filterWords(mix.strip(for: strip.part)?.filter?.kind ?? .lowPass) { said += "; the \(words) across it" }
+                if let db = effect.pumpDB { said += db == 0 ? "; no pump there" : String(format: "; pumping %.0f dB there", db) }
+            }
+            if mix.strip(for: strip.part)?.pump?.trigger == .kick, !plan.mixTimeline.sections.contains(where: { !$0.kicks.isEmpty }) {
+                said += ". No groove in the song has a kick for the pump to follow, so it does nothing: pump beat pumps every beat instead"
+            }
+            return said
         }
-        let returns = "reverb \(mix.roomSetting.name.lowercased()); echo every \(mix.echoSettings.timeName) at \(Int(plan.tempo)) BPM, "
+        let returns = "reverb \(mix.roomSetting.name.lowercased()); echo\(mix.echoSettings.isTape ? " on tape" : "") every \(mix.echoSettings.timeName) at \(Int(plan.tempo)) BPM, "
             + String(format: "feedback %.0f%%", mix.echoSettings.feedback * 100)
         return Output(version: version.id.description, note: note, strip: now, returns: returns,
                       detail: "Recorded as \(PartLabel.title(of: version)): \(move).\(now.map { " \($0)." } ?? "") Returns: \(returns).")
     }
+
+    /// A strip's pedal, modulation, filter and pump as the input moves them, everywhere.
+    private func stripMoves(_ input: Input, strip: inout Strip) throws {
+        switch input.pedal?.lowercased() ?? "keep" {
+        case "keep", "": break
+        case "off": strip.pedal = nil
+        case let id:
+            guard let found = StripPedal.named.first(where: { $0.id == id }) else {
+                throw DirectorToolFailure(tool: name, reason: "\"\(id)\" is not a pedal.", suggestion: StripPedal.named.map(\.id).joined(separator: ", ") + ".")
+            }
+            strip.pedal = found.pedal
+        }
+        switch input.modulation?.lowercased() ?? "keep" {
+        case "keep", "": break
+        case "own": strip.modulation = nil
+        case let id:
+            guard let found = StripModulation.named.first(where: { $0.id == id }) else {
+                throw DirectorToolFailure(tool: name, reason: "\"\(id)\" is not a modulation.", suggestion: StripModulation.named.map(\.id).joined(separator: ", ") + ".")
+            }
+            strip.modulation = found.modulation
+        }
+        switch input.filter?.lowercased() ?? "keep" {
+        case "keep", "", "own": break
+        case "off": strip.filter = nil
+        case "low-pass", "high-pass":
+            let kind: StripFilter.Kind = input.filter?.lowercased() == "low-pass" ? .lowPass : .highPass
+            strip.filter = StripFilter(kind: kind, cutoffHz: input.filterCorner ?? (strip.filter?.kind == kind ? strip.filter?.cutoffHz : nil),
+                                       resonance: input.resonance ?? strip.filter?.resonance ?? 0.3)
+        default:
+            throw DirectorToolFailure(tool: name, reason: "\"\(input.filter ?? "")\" is not a filter.", suggestion: "keep, off, low-pass or high-pass.")
+        }
+        if input.filter == nil || input.filter?.lowercased() == "keep", var filter = strip.filter {
+            if let hz = input.filterCorner { filter.cutoffHz = min(20_000, max(20, hz)) }
+            if let resonance = input.resonance { filter.resonance = min(1, max(0, resonance)) }
+            strip.filter = filter
+        }
+        switch input.pump?.lowercased() ?? "keep" {
+        case "keep", "", "own": break
+        case "off": strip.pump = nil
+        case "kick", "beat":
+            let trigger: StripPump.Trigger = input.pump?.lowercased() == "kick" ? .kick : .beat
+            strip.pump = StripPump(trigger: trigger, depthDB: input.pumpDepth ?? strip.pump?.depthDB ?? 6,
+                                   releaseBeats: input.pumpRelease ?? strip.pump?.releaseBeats ?? 0.5)
+        default:
+            throw DirectorToolFailure(tool: name, reason: "\"\(input.pump ?? "")\" is not a pump.", suggestion: "keep, off, kick or beat.")
+        }
+        if input.pump == nil || input.pump?.lowercased() == "keep", var pump = strip.pump {
+            if let db = input.pumpDepth { pump.depthDB = min(24, max(1, db)) }
+            if let beats = input.pumpRelease { pump.releaseBeats = min(2, max(0.125, beats)) }
+            strip.pump = pump
+        }
+    }
+
+    /// What a section does to a strip's filter and pump, as the input moves them. A section that
+    /// moves a filter the strip does not have puts an open one on the strip.
+    private func sectionMoves(_ input: Input, strip: (part: PartID, label: String), section: Section, effect: inout SectionEffect,
+                              mix: inout Mix) throws {
+        if input.pedal.map({ !["keep", ""].contains($0.lowercased()) }) == true
+            || input.modulation.map({ !["keep", ""].contains($0.lowercased()) }) == true {
+            throw DirectorToolFailure(tool: name, reason: "A section moves the filter, the pump, the speaker and the echo, not the pedal or the modulation.",
+                                      suggestion: "Set those with section empty.")
+        }
+        let filter = input.filter?.lowercased() ?? "keep"
+        if filter == "own" || filter == "off" {
+            effect.filterFromHz = nil
+            effect.filterToHz = nil
+        } else if let from = input.filterCorner {
+            var moved = mix.strip(for: strip.part, label: strip.label)
+            if filter == "low-pass" || filter == "high-pass" {
+                let kind: StripFilter.Kind = filter == "low-pass" ? .lowPass : .highPass
+                if moved.filter?.kind != kind { moved.filter = StripFilter(kind: kind, resonance: input.resonance ?? 0.3) }
+            } else if moved.filter == nil {
+                moved.filter = StripFilter(kind: .lowPass, resonance: input.resonance ?? 0.3)
+            }
+            mix.set(moved)
+            effect.filterFromHz = min(20_000, max(20, from))
+            effect.filterToHz = input.filterTarget.map { min(20_000, max(20, $0)) }
+        } else if input.filterTarget != nil {
+            throw DirectorToolFailure(tool: name, reason: "A sweep needs where it starts.", suggestion: "filter_hz with filter_to_hz: 300 and 20000 opens a low-pass across the section.")
+        }
+        switch input.pump?.lowercased() ?? "keep" {
+        case "keep", "": if let db = input.pumpDepth { effect.pumpDB = min(24, max(1, db)) }
+        case "off": effect.pumpDB = 0
+        case "own": effect.pumpDB = nil
+        default:
+            guard mix.strip(for: strip.part)?.pump != nil else {
+                throw DirectorToolFailure(tool: name, reason: "\(strip.label) has no pump for a section to set.",
+                                          suggestion: "Put one on it everywhere first: section empty, pump kick.")
+            }
+            effect.pumpDB = input.pumpDepth.map { min(24, max(1, $0)) }
+        }
+    }
+
+    /// "an amp, crunch", "a chorus", "a low-pass at 800 Hz", "pumping 6 dB on the kick": what a
+    /// strip plays through, in signal order.
+    static func chainWords(_ mix: Mix, part: PartID, section: SectionID?, plan: SongPlayback, markOwn: Bool = true) -> [String] {
+        let strip = mix.strip(for: part)
+        var words: [String] = []
+        let own = markOwn ? " (its instrument's own)" : ""
+        if let pedal = strip?.pedal { words.append("a \(pedal.words)") }
+        if let insert = mix.insert(for: part, in: section, instrument: plan.instrumentInserts[part]), insert.kind != .off {
+            words.append(insert.phrase + (strip?.insert == nil ? own : ""))
+        }
+        if let modulation = mix.modulation(for: part, instrument: plan.instrumentModulations[part]) {
+            words.append("a \(modulation.words)" + (strip?.modulation == nil ? own : ""))
+        }
+        if let filter = strip?.filter { words.append("a \(filter.words)") }
+        if let pump = strip?.pump { words.append(pump.words) }
+        return words
+    }
+
 }

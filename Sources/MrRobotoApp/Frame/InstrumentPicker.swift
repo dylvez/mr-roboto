@@ -37,7 +37,7 @@ struct InstrumentPicker: View {
     /// The imports that can be taken out of the library again: a recording, not one of the
     /// sections built from recordings.
     private var removable: [InstrumentVoiceSpec] {
-        imported.filter { $0.engine == .sampled && !$0.isEnsemble }
+        imported.filter { $0.engine == .sampled && !$0.isMadeFromRecordings }
     }
 
     var body: some View {

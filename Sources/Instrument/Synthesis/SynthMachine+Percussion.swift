@@ -138,6 +138,35 @@ extension SynthMachine {
                 velocity: SynthVelocity(rangeDB: 12, brightnessFactor: 1.05),
                 durationSeconds: Double(ridges) * every + 0.2, seed: seed)
         }
+        func timbale(_ kind: SynthVoiceKind, hz: Double, shell: [Double], seed: UInt64) -> SynthVoiceSpec {
+            SynthVoiceSpec(
+                kind: kind, engine: .ring, machine: machine,
+                controls: SynthControls(level: 0.42),
+                tone: SynthTone(frequencyHz: hz, altLevel: 0.3, tuneSemitones: 7, pitchPeakHz: hz * 1.08, pitchEnvelopeSeconds: 0.015,
+                                decayShortestSeconds: 0.12, decayMidSeconds: 0.24, decayLongestSeconds: 0.45,
+                                attackSeconds: 0.0002, level: 0.7, partialsHz: shell),
+                noise: SynthNoise(level: 0.22, bandHz: 3_600, bandQ: 0.8, highPassHz: 1_200,
+                                  decayShortestSeconds: 0.02, decayMidSeconds: 0.04, decayLongestSeconds: 0.08),
+                click: SynthClick(level: 0.32, decaySeconds: 0.0015, highPassHz: 2_200, noiseFraction: 0.6),
+                output: SynthOutput(toneDarkHz: 8_000, toneBrightHz: 15_000, highPassHz: 180),
+                velocity: SynthVelocity(rangeDB: 16, pitchCents: 25, brightnessFactor: 1.2),
+                durationSeconds: 0.6, seed: seed)
+        }
+        func cuica(_ kind: SynthVoiceKind, from: Double, to: Double, seconds: Double, decay: (Double, Double, Double),
+                   seed: UInt64) -> SynthVoiceSpec {
+            SynthVoiceSpec(
+                kind: kind, engine: .bridgedT, machine: machine,
+                controls: SynthControls(level: 0.4),
+                tone: SynthTone(frequencyHz: to, tuneSemitones: 7, pitchPeakHz: from, pitchEnvelopeSeconds: seconds,
+                                decayShortestSeconds: decay.0, decayMidSeconds: decay.1, decayLongestSeconds: decay.2,
+                                attackSeconds: 0.008, level: 0.85),
+                noise: SynthNoise(level: 0.06, bandHz: 1_800, bandQ: 1.2, highPassHz: 500,
+                                  decayShortestSeconds: 0.03, decayMidSeconds: 0.05, decayLongestSeconds: 0.08,
+                                  attackSeconds: 0.004),
+                output: SynthOutput(toneDarkHz: 4_000, toneBrightHz: 9_000, highPassHz: 150, drive: 0.12),
+                velocity: SynthVelocity(rangeDB: 12, pitchCents: 30, decayFactor: 1.05, brightnessFactor: 1.1),
+                durationSeconds: decay.2 + 0.15, seed: seed)
+        }
         // A struck head or box: a low ring that bends as it settles, skin and the hand on it.
         func head(_ kind: SynthVoiceKind, hz: Double, peak: Double, decay: (Double, Double, Double), slap: Double,
                   skin: Double, skinHz: Double, level: Double, seed: UInt64) -> SynthVoiceSpec {
@@ -219,6 +248,26 @@ extension SynthMachine {
             head(.frameDrum, hz: 84, peak: 104, decay: (0.35, 0.6, 0.95), slap: 0.06, skin: 0.1, skinHz: 800,
                  level: 0.5, seed: seed + 21),
             bell(.slitDrum, hz: 156, partials: [410], decay: (0.2, 0.38, 0.6), level: 0.5, seed: seed + 22),
+            // Timbales: thin heads tuned high on steel shells, struck hard with sticks — a bright
+            // crack, a ringing pitch, and the shell singing under it.
+            timbale(.timbaleHigh, hz: 640, shell: [1_710, 2_890], seed: seed + 23),
+            timbale(.timbaleLow, hz: 470, shell: [1_330, 2_350], seed: seed + 24),
+            // The cuíca: a stick rubbed inside the drum, so its pitch moves as the hand does — the
+            // open stroke rising like a voice, the muted one short and high.
+            cuica(.cuicaOpen, from: 330, to: 610, seconds: 0.11, decay: (0.12, 0.2, 0.32), seed: seed + 25),
+            cuica(.cuicaMute, from: 760, to: 900, seconds: 0.04, decay: (0.04, 0.07, 0.12), seed: seed + 26),
+            // Palmas claras: three fingers into a palm, a few quick slaps a millisecond or two apart
+            // in a band of noise near 2 kHz, brighter and shorter than a drum machine's clap.
+            SynthVoiceSpec(
+                kind: .palmas, engine: .burstNoise, machine: machine,
+                controls: SynthControls(level: 0.4),
+                noise: SynthNoise(level: 0.85, bandHz: 2_300, bandQ: 0.9, highPassHz: 900,
+                                  decayShortestSeconds: 0.03, decayMidSeconds: 0.05, decayLongestSeconds: 0.09),
+                burst: SynthBurst(count: 3, intervalSeconds: 0.006, burstDecaySeconds: 0.006,
+                                  tailLevel: 0.35, tailDecaySeconds: 0.03),
+                output: SynthOutput(toneDarkHz: 7_000, toneBrightHz: 13_000, highPassHz: 400),
+                velocity: SynthVelocity(rangeDB: 14, brightnessFactor: 1.1),
+                durationSeconds: 0.25, seed: seed + 27),
         ]
     }
 

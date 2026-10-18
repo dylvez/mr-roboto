@@ -130,8 +130,8 @@ enum LibraryActions {
                                                             : "Play \(set.name)'s recordings in place of every kit's synthesized hand percussion.",
                                              kind: .run { app.setRecordedPercussion(!set.isOn) }))
             } else {
-                actions.append(LibraryAction(id: "import-percussion", title: "Import VCSL Percussion…",
-                                             help: "File ▸ Import VCSL Percussion…: congas, bongos, shaker, tambourine and claves every kit plays.",
+                actions.append(LibraryAction(id: "import-percussion", title: "Import Hand Percussion…",
+                                             help: "File ▸ Import Hand Percussion…: VCSL's congas, bongos, shaker, tambourine and claves, or a folder with a percussion.json, for every kit to play.",
                                              isEnabled: writable, kind: .run {
                                                  if let url = FilePanels.chooseFolder(message: "The Versilian Community Sample Library folder (its sfz branch). Its congas, bongos, shaker, tambourine and claves are copied into the library and every kit plays them.",
                                                                                       prompt: "Bring In") {

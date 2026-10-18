@@ -419,6 +419,15 @@ public struct DrumVoice: RawRepresentable, Hashable, Codable, Sendable, CustomSt
     public static let darbukaTek = DrumVoice("darbukaTek")
     public static let frameDrum = DrumVoice("frameDrum")
     public static let slitDrum = DrumVoice("slitDrum")
+    /// The timbales' two heads, high and low: the salsa timbalero's fills and the abanico.
+    public static let timbaleHigh = DrumVoice("timbaleHigh")
+    public static let timbaleLow = DrumVoice("timbaleLow")
+    /// The cuíca, a friction drum: its open squeak, which rises, and the short muted one.
+    public static let cuicaOpen = DrumVoice("cuicaOpen")
+    public static let cuicaMute = DrumVoice("cuicaMute")
+    /// Flamenco's palmas: the sharp clap of the fingers into the other palm (palmas claras), a
+    /// hand player's and not the drum machine's clap.
+    public static let palmas = DrumVoice("palmas")
     /// Unnamed percussion: what MIDI import makes of a note it has no voice for, and what feels
     /// wrote before the hand-percussion voices existed. Kits play it on their shaker.
     public static let perc = DrumVoice("perc")

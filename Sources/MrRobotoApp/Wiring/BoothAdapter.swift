@@ -1,3 +1,4 @@
+import Analysis
 import AVFAudio
 import AudioEngine
 import Foundation
@@ -212,6 +213,19 @@ final class BoothAdapter: BoothHosting, TakesHosting {
     }
 
     func stopAudition() { Task { await service.stop() } }
+
+    func tune(_ version: PartVersion, strength: PitchCorrection.Strength) async -> PartVersion? {
+        switch await app.tuneTake(version, strength: strength) {
+        case .tuned(let kept, let result, let key):
+            app.note(.session, "\(PartLabel.title(of: version)) tuned \(strength.rawValue) to \(key.name)",
+                     detail: String(format: "%.0f cents off its notes on average before, %.0f after; the largest move %.2f semitones. The take as sung is a step back.",
+                                    result.centsBefore, result.centsAfter, result.largestShift))
+            return kept
+        case .failed(let why):
+            app.note(.session, "Could not tune \(PartLabel.title(of: version))", detail: why)
+            return nil
+        }
+    }
 
     func audition(_ rendered: Comp.Rendered) async {
         await service.play(planar: rendered.planar, sampleRate: rendered.sampleRate)

@@ -88,6 +88,7 @@ struct FeelVoicesTests {
             .shaker, .tambourine, .highConga, .lowConga, .highBongo, .lowBongo, .claves, .woodblock,
             .highAgogo, .lowAgogo, .cabasa, .guiro, .guiroLong, .openTriangle, .muteTriangle, .vibraslap,
             .cajon, .cajonSlap, .darbuka, .darbukaTek, .frameDrum, .slitDrum,
+            .timbaleHigh, .timbaleLow, .cuicaOpen, .cuicaMute, .palmas,
         ]
         for feel in FeelLibrary.standard.feels {
             for pattern in feel.groove.patterns {
@@ -105,5 +106,26 @@ struct FeelVoicesTests {
             #expect(feel.tempoRange.contains(feel.suggestedTempo), "\(feel.name)")
             #expect(feel.tempoRange.upperBound <= 300, "\(feel.name) asks for more than the clock runs")
         }
+    }
+}
+
+/// A groove with timbales fills on them, as a timbalero does, and leaves the toms alone.
+@Suite("Fills on the timbales")
+struct TimbaleFillTests {
+    @Test("a fill in a groove that has timbales walks the timbales, high to low")
+    func timbaleWalk() {
+        var timbale = [VelocityTier](repeating: .rest, count: 16)
+        timbale[12] = .accent
+        var kick = [VelocityTier](repeating: .rest, count: 16)
+        kick[0] = .accent
+        let groove = Groove(stepsPerBar: 16, bars: 1, patterns: [GroovePattern(voice: .kick, steps: kick),
+                                                                 GroovePattern(voice: .timbaleLow, steps: timbale)])
+        let filled = SectionFill.arranged(groove, bars: 2, beatsPerBar: 4, fillIntoNext: true, crashIn: false)
+        func hits(_ voice: DrumVoice) -> [Int] {
+            filled.patterns.first { $0.voice == voice }?.steps.enumerated().filter { $0.element != .rest }.map(\.offset) ?? []
+        }
+        #expect(!hits(.timbaleHigh).isEmpty && hits(.timbaleHigh).allSatisfy { $0 >= 24 })
+        #expect(hits(.timbaleLow).contains(12) && hits(.timbaleLow).contains { $0 >= 28 })
+        #expect(hits(.highTom).isEmpty && hits(.snare).isEmpty, "the toms are not the fill")
     }
 }

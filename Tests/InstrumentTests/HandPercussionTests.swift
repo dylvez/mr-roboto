@@ -72,7 +72,10 @@ struct HandPercussionTests {
     func vcslCoversThem() {
         let kinds = RecordedPercussion.vcsl.map(\.kind)
         #expect(Set(kinds).count == kinds.count)
-        #expect(Set(kinds) == Set(SynthVoiceKind.handPercussion))
+        // All but the timbales and the cuíca, which VCSL has none of: they come from a folder with a
+        // percussion.json of its own (`RecordedPercussion.Manifest`).
+        let elsewhere: Set<SynthVoiceKind> = [.timbaleHigh, .timbaleLow, .cuicaOpen, .cuicaMute, .palmas]
+        #expect(Set(kinds) == Set(SynthVoiceKind.handPercussion).subtracting(elsewhere))
     }
 
     @Test("the played skins bend down as they settle; the electronic ones carry no skin noise")

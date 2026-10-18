@@ -32,7 +32,9 @@ public enum RecordedSounds {
         "kalimba": ["Kalimba", "Kalimba, Kenya", "Mbira"],
         "steel-drum": ["Steel Drum"],
         "tubular-bells": ["Tubular Bells"],
-        "clean-electric": ["Electric Guitar", "Gretsch Guitar", "Hofner Guitar", "Archtop Guitar, Pickup"],
+        "clean-electric": [Treatment.cleanAmp.id, "Electric Guitar", "Gretsch Guitar", "Hofner Guitar", "Archtop Guitar, Pickup"],
+        "overdrive-guitar": [Treatment.crunch.id],
+        "distorted-guitar": [Treatment.lead.id],
         "muted-guitar": ["Gretsch Guitar Staccato", "Hofner Guitar Staccato"],
         "nylon-guitar": ["Nylon Guitar"],
         "harp": ["Harp", "Concert Harp", "Folk Harp"],
@@ -50,8 +52,53 @@ public enum RecordedSounds {
         "alto-sax": ["Alto Saxophone", "Alto Saxophone, Close"],
         "trumpet": ["Trumpet"],
         "horns": [Ensemble.hornSection.id, Ensemble.hornTrio.id, "French Horn"],
+        // A choir of one vowel for the choir, and for the oohs nearer than a synthesized voice.
+        "choir": ["Choir"],
+        "oohs": ["Choir"],
+        "combo-organ": [Treatment.combo.id, "Transistor Organ"],
         "brass": [Ensemble.hornSection.id, Ensemble.hornTrio.id],
     ]
+
+    /// Built-in bass sound to the recordings that play it, by name. The synth basses — the sub,
+    /// the 808, the acid line — are synths, and have none; nor have slap and fretless yet, which
+    /// no pack in the library records.
+    public static let basses: [String: [String]] = [
+        "finger": ["Jazz Bass", "Roundwound Bass", "Black Bass", "Blue Bass"],
+        "picked": ["Bass VI, Picked", "Roundwound Bass"],
+        "muted": ["Flatwound Bass", "Jazz Bass Staccato", "Black Bass Staccato"],
+        "upright": ["Double Bass Pizzicato", "Double Bass, Late Night", "Contrabass Pizzicato"],
+    ]
+
+    /// Built-in drum machine to the recorded kits that play it, by name: the machines that stand
+    /// for a kit somebody hits with sticks. The drum machines themselves — the 808, the 909, the
+    /// Linn — are what they are.
+    public static let kits: [String: [String]] = [
+        "studio": ["Naked Drums", "Virtuosity Drums", "Muldjord Kit"],
+        "rock": ["Big Rusty Drums", "Muldjord Kit", "Naked Drums"],
+        "funk": ["Naked Drums", "Virtuosity Drums"],
+        "vintage": ["Gogodze Phu", "Naked Drums"],
+        "jazz": ["Swirly Brushes"],
+        "lofi": ["Gogodze Phu"],
+    ]
+
+    /// The recording in the library that plays the built-in bass sound `id`.
+    public static func bass(for id: String, among specs: [InstrumentVoiceSpec] = ImportedInstruments.all) -> InstrumentVoiceSpec? {
+        guard let names = basses[id] else { return nil }
+        let recorded = specs.filter { $0.engine == .sampled && !$0.isMadeFromRecordings }
+        for name in names {
+            if let found = recorded.first(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame }) { return found }
+        }
+        return nil
+    }
+
+    /// The recorded kit in the library that plays the built-in machine `id`.
+    public static func kit(for id: String, among kits: [SynthMachine] = RecordedKits.machines) -> SynthMachine? {
+        guard let names = self.kits[id] else { return nil }
+        for name in names {
+            if let found = kits.first(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame }) { return found }
+        }
+        return nil
+    }
 
     /// The recording in `specs` that plays the built-in `id`, the first of its candidates there.
     /// Nil when the library has none, or the sound is one only a synthesizer makes.
@@ -73,5 +120,5 @@ public enum RecordedSounds {
 
     /// Whether a built-in sound is acoustic, so that a recording of it is what it should be heard
     /// on: everything `candidates` names, whether or not the library has the recording.
-    public static func hasRecordedCounterpart(_ id: String) -> Bool { candidates[id] != nil }
+    public static func hasRecordedCounterpart(_ id: String) -> Bool { candidates[id] != nil || basses[id] != nil || kits[id] != nil }
 }

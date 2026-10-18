@@ -557,6 +557,31 @@ public enum Develop {
                 mix.setSectionEffect(SectionEffect(section: section.id, part: strip, fast: true))
             }
         }
+        // Where the genre's research says its parts pump on the kick — techno's and afrobeats'
+        // bass, lo-fi's loop, boom-bap's sample — they pump, in every section that has a kick to
+        // follow; a pump somebody set or took off stands.
+        let pumped = genre.map { GenreEffects.pumped(in: $0.id) } ?? []
+        if !pumped.isEmpty {
+            func target(_ type: PartType?) -> GenreEffects.Move.Target? {
+                switch type {
+                case .bassline: return .bass
+                case .progression: return .chords
+                case .sample: return .chop
+                default: return nil
+                }
+            }
+            var seen = Set<PartID>()
+            for section in sections {
+                for lane in section.stitch {
+                    let strip = strip(of: lane.part, in: song, written: versions)
+                    guard seen.insert(strip).inserted, let wanted = target(byPart[strip]?.type), pumped.contains(wanted),
+                          mix.strip(for: strip)?.pump == nil, before.strip(for: strip)?.pump == nil else { continue }
+                    var moved = mix.strip(for: strip, label: byPart[strip].map(PartLabel.title(of:)) ?? "")
+                    moved.pump = genre?.id == "lo-fi-hip-hop" ? StripPump(depthDB: 8, releaseBeats: 0.75) : .standard
+                    mix.set(moved)
+                }
+            }
+        }
         // The answering line sits under the tune it answers.
         if let answering, !mix.sectionGains.contains(where: { $0.section == answering.section && $0.part == answering.part }) {
             let base = mix.strip(for: answering.part)?.gainDB ?? 0

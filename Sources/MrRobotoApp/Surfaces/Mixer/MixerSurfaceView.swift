@@ -153,7 +153,7 @@ struct MixerSurfaceView: View {
                 MixLabel("Echo").frame(width: 90, alignment: .leading)
                 if !compact { MixLabel("EQ low · peak · high").frame(width: 230, alignment: .leading) }
                 MixLabel("Comp").frame(width: 60, alignment: .leading)
-                MixLabel("Insert").frame(width: 112, alignment: .leading)
+                MixLabel("Effects").frame(width: 112, alignment: .leading)
                 MixLabel("Meter").fixedSize().frame(maxWidth: .infinity, alignment: .leading)
             }
             ForEach(Array(model.rows.enumerated()), id: \.element.id) { index, row in
@@ -235,7 +235,7 @@ struct MixerSurfaceView: View {
                 model.setCompressor(strip.compressor == nil ? Compressor() : nil, for: row.part)
             }
             .frame(width: 60, alignment: .leading)
-            insertMenu(row)
+            effectsMenu(row)
                 .frame(width: 112, alignment: .leading)
             MeterBar(peak: model.meters[row.part]?.peak ?? 0, rms: model.meters[row.part]?.rms ?? 0)
                 .frame(minWidth: 60, maxWidth: .infinity)
@@ -247,41 +247,136 @@ struct MixerSurfaceView: View {
         .modifier(PartStripe(type: row.type))
     }
 
-    /// The strip's insert: the instrument's own, nothing, an amp or a rotating speaker; and with a
-    /// section picked, the speaker's speed there.
-    private func insertMenu(_ row: MixerModel.Row) -> some View {
+    /// The strip's effects, in the order its signal meets them: a pedal, the insert (the
+    /// instrument's own, nothing, an amp or a rotating speaker), a modulation, a filter, a pump;
+    /// and with a section picked, what that section does to them — the speaker's speed, the filter
+    /// held or swept across its bars, the pump on or off.
+    private func effectsMenu(_ row: MixerModel.Row) -> some View {
         let strip = model.strip(row.part)
         let own = model.instrumentInsert(for: row.part)
+        let ownModulation = model.instrumentModulation(for: row.part)
         let playing = model.insert(for: row.part)
+        let modulation = model.modulation(for: row.part)
         let section = model.levelSection.flatMap { id in model.sections.first { $0.id == id }?.name }
-        let title: String = {
-            guard let playing, playing.kind != .off else { return "None" }
-            return Self.short(playing) + (strip.insert == nil ? " ·" : "")
-        }()
+        let names = Self.effectNames(pedal: strip.pedal, insert: playing, modulation: modulation, filter: strip.filter, pump: strip.pump)
+        let title = names.isEmpty ? "None" : names.count == 1 ? names[0] : "\(names[0]) +\(names.count - 1)"
+        let owns = (strip.insert == nil && own != nil) || (strip.modulation == nil && ownModulation != nil)
         return Menu {
-            if let own {
-                Button("The instrument's own: \(own.words)") { model.setInsert(nil, for: row.part) }
-                Divider()
-            }
-            ForEach(StripInsert.named, id: \.id) { entry in
-                Button(entry.insert.kind == .off ? "None" : entry.insert.words.prefix(1).uppercased() + entry.insert.words.dropFirst()) {
-                    model.setInsert(entry.insert, for: row.part)
+            Section("Insert") {
+                if let own {
+                    Button("The instrument's own: \(own.words)") { model.setInsert(nil, for: row.part) }
+                }
+                ForEach(StripInsert.named, id: \.id) { entry in
+                    Button(entry.insert.kind == .off ? "No insert" : Self.capitalised(entry.insert.words)) {
+                        model.setInsert(entry.insert, for: row.part)
+                    }
                 }
             }
-            if let section, playing?.kind == .rotary {
-                Divider()
-                Button("Fast in \(section)") { model.setFast(true, for: row.part) }
-                Button("Slow in \(section)") { model.setFast(false, for: row.part) }
-                Button("As everywhere in \(section)") { model.setFast(nil, for: row.part) }
+            Section("Pedal, before the insert") {
+                Button("No pedal") { model.setPedal(nil, for: row.part) }
+                ForEach(StripPedal.named, id: \.id) { entry in
+                    Button(Self.capitalised(entry.pedal.words)) { model.setPedal(entry.pedal, for: row.part) }
+                }
+            }
+            Section("Modulation, after it") {
+                if let ownModulation {
+                    Button("The instrument's own: \(ownModulation.words)") { model.setModulation(nil, for: row.part) }
+                }
+                ForEach(StripModulation.named, id: \.id) { entry in
+                    Button(entry.modulation.kind == .off ? "No modulation" : Self.capitalised(entry.modulation.words)) {
+                        model.setModulation(entry.modulation.kind == .off && ownModulation == nil ? nil : entry.modulation, for: row.part)
+                    }
+                }
+            }
+            Section("Filter") {
+                Button("No filter") { model.setFilter(nil, for: row.part) }
+                ForEach(Self.filterChoices, id: \.name) { choice in
+                    Button(choice.name) { model.setFilter(choice.filter, for: row.part) }
+                }
+            }
+            Section("Pump") {
+                Button("No pump") { model.setPump(nil, for: row.part) }
+                Button("On the kick") { model.setPump(.standard, for: row.part) }
+                Button("On the kick, hard") { model.setPump(.heavy, for: row.part) }
+                Button("Every beat") { model.setPump(StripPump(trigger: .beat), for: row.part) }
+            }
+            if let section {
+                Section("In \(section)") {
+                    if playing?.kind == .rotary {
+                        Button("Speaker fast in \(section)") { model.setFast(true, for: row.part) }
+                        Button("Speaker slow in \(section)") { model.setFast(false, for: row.part) }
+                        Button("Speaker as everywhere in \(section)") { model.setFast(nil, for: row.part) }
+                    }
+                    ForEach(Self.filterMoves(strip.filter?.kind ?? .lowPass, section: section), id: \.name) { move in
+                        Button(move.name) { model.setFilterMove(from: move.from, to: move.to, for: row.part) }
+                    }
+                    if model.filterMove(for: row.part) != nil {
+                        Button("Filter as everywhere in \(section)") { model.setFilterMove(from: nil, to: nil, for: row.part) }
+                    }
+                    if strip.pump != nil {
+                        Button("No pump in \(section)") { model.setPumpInSection(0, for: row.part) }
+                        Button("Pump as everywhere in \(section)") { model.setPumpInSection(nil, for: row.part) }
+                    }
+                }
             }
         } label: {
-            Text(title).font(Design.Typography.ui(11)).lineLimit(1)
+            Text(title + (owns ? " ·" : "")).font(Design.Typography.ui(11)).lineLimit(1)
         }
         .menuStyle(.button)
         .fixedSize()
-        .help(playing.map { "\(row.label) plays through \($0.phrase)" + (strip.insert == nil && own != nil ? ", its instrument's own." : ".") }
-              ?? "Put an amp or a rotating speaker on \(row.label)")
-        .accessibilityLabel("\(row.label) insert: \(playing?.words ?? "nothing")")
+        .help(names.isEmpty ? "Put an amp, a speaker, a wah, a chorus, a filter or a pump on \(row.label)"
+              : "\(row.label) plays through: " + Self.effectWords(pedal: strip.pedal, insert: playing, modulation: modulation,
+                                                                   filter: strip.filter, pump: strip.pump).joined(separator: ", ")
+                + (owns ? ". · is what its instrument brings." : "."))
+        .accessibilityLabel("\(row.label) effects: \(names.isEmpty ? "none" : names.joined(separator: ", "))")
+    }
+
+    static func capitalised(_ words: String) -> String { words.prefix(1).uppercased() + words.dropFirst() }
+
+    /// Short names for the chip, in signal order.
+    static func effectNames(pedal: StripPedal?, insert: StripInsert?, modulation: StripModulation?, filter: StripFilter?,
+                            pump: StripPump?) -> [String] {
+        var names: [String] = []
+        if let pedal { names.append(pedal.kind == .envelope ? "Env filter" : "Wah") }
+        if let insert, insert.kind != .off { names.append(short(insert)) }
+        if let modulation { names.append(capitalised(modulation.words)) }
+        if let filter { names.append(filter.kind == .lowPass ? "Low-pass" : "High-pass") }
+        if pump != nil { names.append("Pump") }
+        return names
+    }
+
+    static func effectWords(pedal: StripPedal?, insert: StripInsert?, modulation: StripModulation?, filter: StripFilter?,
+                            pump: StripPump?) -> [String] {
+        var words: [String] = []
+        if let pedal { words.append("a \(pedal.words)") }
+        if let insert, insert.kind != .off { words.append(insert.phrase) }
+        if let modulation { words.append("a \(modulation.words)") }
+        if let filter { words.append("a \(filter.words)") }
+        if let pump { words.append(pump.words) }
+        return words
+    }
+
+    /// The filters the menu offers.
+    static let filterChoices: [(name: String, filter: StripFilter)] = [
+        ("Low-pass, open (for a section to move)", StripFilter(kind: .lowPass)),
+        ("Low-pass at 2 kHz: dull", StripFilter(kind: .lowPass, cutoffHz: 2_000)),
+        ("Low-pass at 600 Hz: muffled, through a wall", StripFilter(kind: .lowPass, cutoffHz: 600)),
+        ("High-pass, open (for a section to move)", StripFilter(kind: .highPass)),
+        ("High-pass at 150 Hz: no rumble", StripFilter(kind: .highPass, cutoffHz: 150)),
+        ("High-pass at 500 Hz: thin, a telephone", StripFilter(kind: .highPass, cutoffHz: 500)),
+    ]
+
+    /// What a section can do to a filter of this kind: open it or close it across its bars, or
+    /// hold it somewhere.
+    static func filterMoves(_ kind: StripFilter.Kind, section: String) -> [(name: String, from: Double?, to: Double?)] {
+        switch kind {
+        case .lowPass:
+            return [("Open the low-pass across \(section)", 300, 20_000), ("Close the low-pass across \(section)", 20_000, 300),
+                    ("Muffled through \(section)", 500, nil)]
+        case .highPass:
+            return [("Thin it out across \(section)", 20, 1_000), ("Fill it back in across \(section)", 1_000, 20),
+                    ("Thin through \(section)", 600, nil)]
+        }
     }
 
     static func short(_ insert: StripInsert) -> String {
@@ -393,12 +488,15 @@ struct MixerSurfaceView: View {
                 ForEach(Echo.times, id: \.name) { time in
                     Button("Every \(time.name)") { model.setEcho(beats: time.beats); model.endGesture() }
                 }
+                Divider()
+                Toggle("On tape: wow, flutter, darker each time", isOn: Binding(get: { echo.isTape },
+                                                                                set: { model.setEcho(tape: $0); model.endGesture() }))
             } label: {
-                Text("Echo: every \(echo.timeName)").font(Design.Typography.ui(11))
+                Text("Echo: every \(echo.timeName)\(echo.isTape ? ", tape" : "")").font(Design.Typography.ui(11))
             }
             .menuStyle(.button)
             .fixedSize()
-            .help("How far apart the echo's repeats are, in the song's beats: they follow the tempo.")
+            .help("How far apart the echo's repeats are, in the song's beats: they follow the tempo. On tape, they wow and flutter, darken and thin each time round, and saturate when the feedback is pushed.")
             fader(value: echo.feedback, range: 0...0.85, format: "feedback %.2f", width: 120, name: "Echo feedback",
                   readout: String(format: "%.0f%% comes round again", echo.feedback * 100)) { model.setEcho(feedback: $0) }
             Spacer(minLength: 0)

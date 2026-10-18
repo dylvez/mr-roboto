@@ -233,6 +233,78 @@ public final class MixerModel {
 
     public func setEcho(_ dB: Double?, for part: PartID) { update(part) { $0.echoDB = dB.map { max(-60, min(0, $0)) } } }
 
+    /// What the part's instrument brings as its modulation when the mix sets none.
+    public func instrumentModulation(for part: PartID) -> StripModulation? { host.playback.instrumentModulations[part] }
+
+    /// The modulation as it plays on the strip.
+    public func modulation(for part: PartID) -> StripModulation? {
+        mix.modulation(for: part, instrument: instrumentModulation(for: part))
+    }
+
+    /// A choice, kept at once; nil goes back to the instrument's own, `.off` takes it away.
+    public func setModulation(_ modulation: StripModulation?, for part: PartID) {
+        update(part) { $0.modulation = modulation }
+        endGesture()
+    }
+
+    public func setPedal(_ pedal: StripPedal?, for part: PartID) {
+        update(part) { $0.pedal = pedal }
+        endGesture()
+    }
+
+    /// Puts a filter on the strip or takes it off. Taking it off takes its section moves with it.
+    public func setFilter(_ filter: StripFilter?, for part: PartID) {
+        update(part) { $0.filter = filter }
+        if filter == nil {
+            for var effect in mix.sectionEffects ?? [] where effect.part == part {
+                effect.filterFromHz = nil
+                effect.filterToHz = nil
+                mix.setSectionEffect(effect)
+            }
+        }
+        endGesture()
+    }
+
+    /// In the section picked, the filter held at `from` or swept from it to `to`; nil, nil puts the
+    /// section back to the strip's own corner. A strip with no filter is given an open low-pass.
+    public func setFilterMove(from: Double?, to: Double?, for part: PartID) {
+        guard let section = levelSection else { return }
+        if from != nil, strip(part).filter == nil { update(part) { $0.filter = StripFilter(kind: .lowPass) } }
+        var effect = mix.sectionEffect(for: part, in: section) ?? SectionEffect(section: section, part: part)
+        effect.filterFromHz = from
+        effect.filterToHz = from == nil ? nil : to
+        mix.setSectionEffect(effect)
+        host.preview(mix)
+        endGesture()
+    }
+
+    /// The section move the strip's filter makes in the section picked.
+    public func filterMove(for part: PartID) -> SectionEffect? {
+        guard let effect = mix.sectionEffect(for: part, in: levelSection), effect.filterFromHz != nil else { return nil }
+        return effect
+    }
+
+    public func setPump(_ pump: StripPump?, for part: PartID) {
+        update(part) { $0.pump = pump }
+        if pump == nil {
+            for var effect in mix.sectionEffects ?? [] where effect.part == part {
+                effect.pumpDB = nil
+                mix.setSectionEffect(effect)
+            }
+        }
+        endGesture()
+    }
+
+    /// In the section picked: the pump off (0), at its own depth (nil), or deeper or lighter.
+    public func setPumpInSection(_ dB: Double?, for part: PartID) {
+        guard let section = levelSection else { return }
+        var effect = mix.sectionEffect(for: part, in: section) ?? SectionEffect(section: section, part: part)
+        effect.pumpDB = dB
+        mix.setSectionEffect(effect)
+        host.preview(mix)
+        endGesture()
+    }
+
     public func setRoom(_ room: Room) {
         guard mix.roomSetting != room else { return }
         mix.room = room == .room ? nil : room
@@ -240,10 +312,11 @@ public final class MixerModel {
         endGesture()
     }
 
-    public func setEcho(beats: Double? = nil, feedback: Double? = nil) {
+    public func setEcho(beats: Double? = nil, feedback: Double? = nil, tape: Bool? = nil) {
         var echo = mix.echoSettings
         if let beats { echo.beats = beats }
         if let feedback { echo.feedback = min(0.9, max(0, feedback)) }
+        if let tape { echo.tape = tape ? true : nil }
         mix.echo = echo == .standard ? nil : echo
         host.preview(mix)
     }
@@ -304,15 +377,32 @@ public final class MixerModel {
                 moves.append(strip.insert.map { "\(name) through \($0.phrase)" } ?? "\(name) on its instrument's own insert")
             }
             if strip.echoDB != before.echoDB { moves.append(strip.echoDB.map { String(format: "%@ echo %+.1f dB", name, $0) } ?? "\(name) echo off") }
+            if strip.pedal != before.pedal { moves.append(strip.pedal.map { "\(name) through a \($0.words)" } ?? "\(name) pedal off") }
+            if strip.modulation != before.modulation {
+                moves.append(strip.modulation.map { $0.kind == .off ? "\(name) modulation off" : "\(name) \($0.words)" }
+                             ?? "\(name) on its instrument's own modulation")
+            }
+            if strip.filter != before.filter { moves.append(strip.filter.map { "\(name) \($0.words)" } ?? "\(name) filter off") }
+            if strip.pump != before.pump { moves.append(strip.pump.map { "\(name) \($0.words)" } ?? "\(name) pump off") }
         }
         if b.roomSetting != a.roomSetting { moves.append("reverb \(b.roomSetting.name.lowercased())") }
         if b.echoSettings != a.echoSettings {
-            moves.append(String(format: "echo every %@, feedback %.0f%%", b.echoSettings.timeName, b.echoSettings.feedback * 100))
+            moves.append(String(format: "echo%@ every %@, feedback %.0f%%", b.echoSettings.isTape ? " on tape" : "",
+                                b.echoSettings.timeName, b.echoSettings.feedback * 100))
         }
         for effect in b.sectionEffects ?? [] where !(a.sectionEffects ?? []).contains(effect) {
             let name = labels[effect.part] ?? "a part", place = sections[effect.section] ?? "a section"
-            if let fast = effect.fast { moves.append("\(name) speaker \(fast ? "fast" : "slow") in \(place)") }
-            if let db = effect.echoDB { moves.append(String(format: "%@ echo %+.1f dB in %@", name, db, place)) }
+            let before = a.sectionEffects?.first { $0.section == effect.section && $0.part == effect.part }
+            if let fast = effect.fast, fast != before?.fast { moves.append("\(name) speaker \(fast ? "fast" : "slow") in \(place)") }
+            if let db = effect.echoDB, db != before?.echoDB { moves.append(String(format: "%@ echo %+.1f dB in %@", name, db, place)) }
+            if effect.filterFromHz != before?.filterFromHz || effect.filterToHz != before?.filterToHz {
+                moves.append(effect.filterWords(b.strip(for: effect.part)?.filter?.kind ?? .lowPass).map { "\(name) \($0) in \(place)" }
+                             ?? "\(name) filter as everywhere in \(place)")
+            }
+            if effect.pumpDB != before?.pumpDB {
+                moves.append(effect.pumpDB.map { $0 == 0 ? "\(name) no pump in \(place)" : String(format: "%@ pumping %.0f dB in %@", name, $0, place) }
+                             ?? "\(name) pump as everywhere in \(place)")
+            }
         }
         if b.master.gainDB != a.master.gainDB { moves.append(String(format: "master %+.1f dB", b.master.gainDB)) }
         if b.master.ceilingDBTP != a.master.ceilingDBTP { moves.append(String(format: "master ceiling %.1f dBTP", b.master.ceilingDBTP)) }

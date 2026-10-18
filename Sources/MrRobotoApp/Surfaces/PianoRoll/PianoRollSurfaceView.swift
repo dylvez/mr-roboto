@@ -214,6 +214,11 @@ struct BassLevers: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(width: Self.summaryWidth, alignment: .leading)
                 }
+                // A played bass that is synthesized, when the library has a recording of one.
+                if let voice, BassVoiceSpec.preset(id: voice.id) != nil, let recording = RecordedSounds.bass(for: voice.id) {
+                    BoothChip("Play it on the \(recording.name)") { model.setSound(recording.id) }
+                        .help("The \(voice.name) bass is synthesized. \(recording.name) is a recording in the library.")
+                }
             }
             VStack(alignment: .leading, spacing: 3) {
                 RollLabel("Line")

@@ -122,6 +122,21 @@ public final class MixGraph {
     /// The echo's return: every strip's echo send into one tempo-synced delay.
     public let echoBus: AVAudioMixerNode
     public let delay: AVAudioUnitDelay
+    /// Ahead of the reverb: the spring or the gated room when the mix picks one, the reverb then
+    /// bypassed; otherwise it passes the sends through.
+    public let roomReturn: AVAudioUnitEffect
+    /// Ahead of the delay: the tape echo when the mix puts the echo on tape, the delay then bypassed.
+    public let echoReturn: AVAudioUnitEffect
+    /// What each part's instrument brings as its modulation when the mix sets none: a Juno its
+    /// chorus, a combo organ its vibrato. Set with `instrumentInserts`.
+    public var instrumentModulations: [PartID: StripModulation] = [:]
+    /// The song as the strips' filters and pumps read it. Set by whoever routes the parts, before
+    /// the transport starts; each strip is told it again when the transport does.
+    public var timeline: MixTimeline? {
+        didSet { if timeline != oldValue { publishTimelines() } }
+    }
+    /// The render sample time of the running transport's zero, and its rate; nil while none runs.
+    private var clock: (origin: Double, sampleRate: Double)?
     /// The song's tempo, which the echo's time is counted in. Set before a mix is applied.
     public var tempo: Double = 120 {
         didSet { if tempo != oldValue { applyEcho(mix.echoSettings) } }
@@ -147,17 +162,21 @@ public final class MixGraph {
         echoBus = AVAudioMixerNode()
         delay = AVAudioUnitDelay()
         delay.wetDryMix = 100
-        for node in [trim, bus, reverb, echoBus, delay] as [AVAudioNode] { av.attach(node) }
+        roomReturn = ReturnUnit.makeNode()
+        echoReturn = ReturnUnit.makeNode()
+        for node in [trim, bus, reverb, echoBus, delay, roomReturn, echoReturn] as [AVAudioNode] { av.attach(node) }
         // Master: main mixer → trim → output. No limiter here — a lookahead limiter has latency,
         // and the transport is sample-exact; the ceiling is `Limiter` over a bounce or an export.
         av.disconnectNodeOutput(engine.mainMixer)
         try av.connectNode(engine.mainMixer, to: trim, format: engine.format)
         try av.connectNode(trim, to: av.outputNode, format: engine.format)
-        // The bus: sends → bus mixer → reverb → main mixer.
-        try av.connectNode(bus, to: reverb, format: engine.format)
+        // The bus: sends → bus mixer → the room's own (a spring, a gated room) → reverb → main mixer.
+        try av.connectNode(bus, to: roomReturn, format: engine.format)
+        try av.connectNode(roomReturn, to: reverb, format: engine.format)
         try av.connectNode(reverb, to: engine.mainMixer, format: engine.format)
-        // The echo: echo sends → echo bus → delay → main mixer.
-        try av.connectNode(echoBus, to: delay, format: engine.format)
+        // The echo: echo sends → echo bus → the tape → delay → main mixer.
+        try av.connectNode(echoBus, to: echoReturn, format: engine.format)
+        try av.connectNode(echoReturn, to: delay, format: engine.format)
         try av.connectNode(delay, to: engine.mainMixer, format: engine.format)
         // The pool.
         for _ in 0..<Self.slotCount {
@@ -287,22 +306,76 @@ public final class MixGraph {
     }
 
     /// Moves to a section: only what a section overrides changes — the gains, the echo sends and
-    /// the rotating speakers' speed.
+    /// the rotating speakers' speed. The filters' moves and the pumps follow the song by
+    /// themselves, from the timeline.
     public func move(to section: SectionID?) {
         guard section != self.section else { return }
         self.section = section
         for (part, strip) in strips {
             strip.out.outputVolume = Self.linear(mix.levelDB(for: part, in: section))
             strip.echo.outputVolume = Self.linear(mix.echoDB(for: part, in: section))
-            strip.insertUnit?.set(mix.insert(for: part, in: section, instrument: instrumentInserts[part]))
+            strip.insertUnit?.set(chain(for: part, in: section))
         }
+    }
+
+    /// Everything on a part's strip as it plays in a section.
+    public func chain(for part: PartID, in section: SectionID?) -> StripChain {
+        let strip = mix.strip(for: part)
+        var filter = strip?.filter
+        // A section that moves a filter the strip does not have moves an open low-pass.
+        if filter == nil, mix.sectionEffects?.contains(where: { $0.part == part && $0.filterFromHz != nil }) == true {
+            filter = StripFilter(kind: .lowPass)
+        }
+        return StripChain(pedal: strip?.pedal,
+                          insert: mix.insert(for: part, in: section, instrument: instrumentInserts[part]),
+                          modulation: mix.modulation(for: part, instrument: instrumentModulations[part]),
+                          filter: filter, pump: strip?.pump)
+    }
+
+    // MARK: The song's clock
+
+    /// The transport has started: every strip is told where its zero fell.
+    public func transportDidStart(originSampleTime: AVAudioFramePosition, sampleRate: Double) {
+        clock = (Double(originSampleTime), sampleRate)
+        publishTimelines()
+    }
+
+    /// The transport has stopped: nothing keeps time until it starts again.
+    public func transportDidStop() {
+        clock = nil
+        publishTimelines()
+    }
+
+    private func publishTimelines() {
+        for (part, strip) in strips { publishTimeline(for: part, on: strip) }
+    }
+
+    private func publishTimeline(for part: PartID, on strip: MixStripNodes) {
+        guard let unit = strip.insertUnit else { return }
+        let clock = self.clock, timeline = self.timeline, mix = self.mix, tempo = self.tempo
+        unit.set(timeline: { pointer in
+            guard let clock, let timeline, tempo > 0 else { return }
+            timeline.write(into: pointer, part: part, mix: mix, originSampleTime: clock.origin,
+                           samplesPerBeat: clock.sampleRate * 60 / tempo)
+        })
     }
 
     /// The reverb's space and the echo's time, feedback and tone.
     private func applyReturns(_ mix: Mix) {
         if mix.roomSetting != appliedRoom {
-            reverb.loadFactoryPreset(Self.preset(mix.roomSetting))
-            reverb.wetDryMix = 100
+            switch mix.roomSetting {
+            case .spring:
+                (roomReturn.auAudioUnit as? ReturnUnit)?.set(.spring(ring: 0.5, toneHz: 4_200))
+                reverb.bypass = true
+            case .gated:
+                (roomReturn.auAudioUnit as? ReturnUnit)?.set(.gated(holdSeconds: 0.28))
+                reverb.bypass = true
+            default:
+                (roomReturn.auAudioUnit as? ReturnUnit)?.set(.off)
+                reverb.loadFactoryPreset(Self.preset(mix.roomSetting))
+                reverb.wetDryMix = 100
+                reverb.bypass = false
+            }
             appliedRoom = mix.roomSetting
         }
         applyEcho(mix.echoSettings)
@@ -311,6 +384,16 @@ public final class MixGraph {
     private var appliedRoom: Room = .room
 
     private func applyEcho(_ echo: Echo) {
+        if echo.isTape {
+            // The tape reaches four and a half seconds: a half note at 30 BPM.
+            var seconds = echo.beats * 60 / max(20, tempo)
+            while seconds > 4.4 { seconds /= 2 }
+            (echoReturn.auAudioUnit as? ReturnUnit)?.set(.tape(seconds: seconds, feedback: echo.feedback, toneHz: echo.toneHz, wow: 0.5))
+            delay.bypass = true
+            return
+        }
+        (echoReturn.auAudioUnit as? ReturnUnit)?.set(.off)
+        delay.bypass = false
         // AVAudioUnitDelay reaches two seconds: a half note under 60 BPM is folded to the beat.
         var seconds = echo.beats * 60 / max(20, tempo)
         while seconds > 2 { seconds /= 2 }
@@ -327,6 +410,8 @@ public final class MixGraph {
         case .chamber: return .mediumChamber
         case .hall: return .largeHall
         case .cathedral: return .cathedral
+        // Played by the return ahead of the reverb, which is bypassed; this is never loaded.
+        case .spring, .gated: return .mediumRoom
         }
     }
 
@@ -335,7 +420,12 @@ public final class MixGraph {
         strip.out.pan = Float(max(-1, min(1, settings.pan)))
         strip.send.outputVolume = Self.linear(settings.sendDB)
         strip.echo.outputVolume = strip.part == nil ? 0 : Self.linear(mix.echoDB(for: settings.part, in: section))
-        strip.insertUnit?.set(strip.part.map { mix.insert(for: $0, in: section, instrument: instrumentInserts[$0]) } ?? nil)
+        if let part = strip.part {
+            strip.insertUnit?.set(chain(for: part, in: section))
+            publishTimeline(for: part, on: strip)
+        } else {
+            strip.insertUnit?.set(StripChain())
+        }
         for (index, band) in settings.eq.prefix(strip.eq.bands.count).enumerated() {
             let unit = strip.eq.bands[index]
             switch band.shape {

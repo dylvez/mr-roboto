@@ -138,18 +138,20 @@ public extension InstrumentVoiceSpec {
         amplitude: Envelope(attack: 0.07, decay: 0.2, sustain: 1, release: 0.25),
         level: 0.7, durationSeconds: 4)
 
-    /// The sixties combo organ: thin, buzzy and bright.
-    static let comboOrgan = InstrumentVoiceSpec(
-        id: "combo-organ", name: "Combo Organ", family: "organ", engine: .subtractive,
-        summary: "The thin, buzzy sixties combo organ.",
-        vibrato: Modulation(rateHz: 6, depth: 8, delaySeconds: 0),
-        oscillators: [
-            Oscillator(waveform: .square, level: 0.8),
-            Oscillator(waveform: .pulse, octave: 1, level: 0.4, pulseWidth: 0.25),
-        ],
-        filterHz: 3_000, filterKeyTrack: 0.5, filterQ: 1,
-        amplitude: Envelope(attack: 0.003, decay: 0.05, sustain: 1, release: 0.05),
-        drive: 0.15, level: 0.65, durationSeconds: 4)
+    /// The sixties combo organ — a Vox Continental, a Farfisa — on the drawbar engine: no
+    /// tonewheels' warmth and no speaker, the upper footages out for its thin, reedy edge, its
+    /// own vibrato, and the small amp it was played through.
+    static let comboOrgan: InstrumentVoiceSpec = {
+        var spec = InstrumentVoiceSpec(
+            id: "combo-organ", name: "Combo Organ", family: "organ", engine: .drawbar,
+            summary: "The sixties transistor organ, a Vox or a Farfisa: thin, reedy and bright, with its vibrato, through a small amp. Ska, garage and sixties pop.",
+            amplitude: Envelope(attack: 0.002, decay: 0, sustain: 1, release: 0.03),
+            drive: 0.1, level: 0.72, durationSeconds: 5.5)
+        spec.drawbars = Drawbars("008866606", click: 0.15)
+        spec.insert = .ampClean
+        spec.modulation = .vibrato
+        return spec
+    }()
 
     // MARK: Mallets and bells
 

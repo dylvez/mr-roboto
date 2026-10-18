@@ -73,8 +73,9 @@ extension Feels {
             line(.highConga, steps: 32, beat: 4, on: both([4, 12]), ghosts: both([0, 2, 8, 10]), accents: both([4])),
             line(.lowConga, steps: 32, beat: 4, on: both([14])),
             line(.kick, steps: 32, beat: 4, on: both([6, 12])),
+            line(.timbaleLow, steps: 32, beat: 4, on: [28], accents: [28]),
         ]),
-        provenance: written("The conga tumbao under a 2-3 clave: heel and tip ghosted, a slap on 2, an open tone on 4 and the low drum on the and of 4, a bell in eighths, and the kick where the bass anticipates.",
+        provenance: written("The conga tumbao under a 2-3 clave: heel and tip ghosted, a slap on 2, an open tone on 4 and the low drum on the and of 4, a bell in eighths, and the kick where the bass anticipates. The timbalero marks 4 of the clave's second bar on the low timbale, and the fills go round the timbales.",
                             lineage: ["salsa", "Fania-era New York"]))
 
     static let chaCha = Feel(
@@ -100,8 +101,10 @@ extension Feels {
             line(.highAgogo, steps: 32, beat: 4, on: [0, 6, 10, 16, 22, 26], accents: [0, 16]),
             line(.lowAgogo, steps: 32, beat: 4, on: [3, 8, 13, 19, 24, 29]),
             line(.kick, steps: 32, beat: 4, on: both([0, 3, 4, 7, 8, 11, 12, 15]), accents: both([4, 12])),
+            line(.cuicaOpen, steps: 32, beat: 4, on: both([3, 11]), accents: both([11])),
+            line(.cuicaMute, steps: 32, beat: 4, on: both([6, 14])),
         ]),
-        provenance: written("The surdo's heartbeat on the kick — a light stroke, then the heavy one on 2 and 4 — under sixteenth shakers, with a simplified tamborim line on the rim and the agogô's two bells answering each other across the bar.",
+        provenance: written("The surdo's heartbeat on the kick — a light stroke, then the heavy one on 2 and 4 — under sixteenth shakers, with a simplified tamborim line on the rim, the agogô's two bells answering each other across the bar, and a simplified cuíca: its open squeak on the last sixteenth of 1 and 3, the muted one on the and of 2 and 4.",
                             lineage: ["Rio samba", "batucada"]))
 
     static let baiao = Feel(

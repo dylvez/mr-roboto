@@ -12,12 +12,12 @@ enum LaneClass: Int, CaseIterable, Sendable {
         switch voice {
         case .kick: self = .kick
         case .snare, .rim, .cajonSlap, .darbukaTek: self = .snare
-        case .clap: self = .clap
+        case .clap, .palmas: self = .clap
         case .closedHat, .shaker, .cabasa, .guiro, .muteTriangle: self = .closedHat
         case .openHat, .guiroLong: self = .openHat
         case .ride, .crash, .openTriangle: self = .cymbal
         case .lowTom, .midTom, .highTom, .highConga, .lowConga, .highBongo, .lowBongo,
-             .cajon, .darbuka, .frameDrum, .slitDrum: self = .toms
+             .cajon, .darbuka, .frameDrum, .slitDrum, .timbaleHigh, .timbaleLow: self = .toms
         default: self = .perc
         }
     }

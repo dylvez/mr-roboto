@@ -154,7 +154,7 @@ extension Feels {
         idioms: [.flamenco, .latin],
         tempoRange: 95...130, suggestedTempo: 112,
         groove: twoBars([
-            line(.clap, steps: 32, beat: 4, on: both([2, 6, 10, 14])),
+            line(.palmas, steps: 32, beat: 4, on: both([2, 6, 10, 14])),
             line(.cajonSlap, steps: 32, beat: 4, on: both([4, 12]), ghosts: both([2, 10, 15])),
             line(.cajon, steps: 32, beat: 4, on: both([0, 6, 8, 14])),
             line(.shaker, steps: 32, beat: 4, on: all(upTo: 32), ghosts: both([1, 3, 5, 7, 9, 11, 13, 15])),
@@ -170,7 +170,7 @@ extension Feels {
         timeSignature: TimeSignature(12, 8),
         groove: Groove(stepsPerBar: 12, bars: 1, swing: 0, patterns: [
             // Palmas on every beat, the accents on 3, 6, 8, 10 and 12.
-            line(.clap, steps: 12, beat: 3, on: all(upTo: 12), accents: [2, 5, 7, 9, 11]),
+            line(.palmas, steps: 12, beat: 3, on: all(upTo: 12), accents: [2, 5, 7, 9, 11]),
             line(.cajonSlap, steps: 12, beat: 3, on: [2, 5, 7, 9, 11]),
             line(.cajon, steps: 12, beat: 3, on: [11, 5]),
         ]),

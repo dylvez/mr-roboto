@@ -76,6 +76,9 @@ public enum Operation {
     /// Takes of one part chosen bar by bar and rendered into one audio version. Its parents are
     /// every take it drew from; its `Audio.comp` is the plan.
     public static let comped = "comped"
+    /// A take or a comp pulled onto the notes of the song's key (`PitchCorrection`): the same part,
+    /// placed where it was, its parent the audio as sung.
+    public static let tuned = "tuned"
     /// An older version made current again: the same music as the version it restores, as a new
     /// version whose parents are the one it replaced and the one it restores, so "back one" twice
     /// knows where it has got to. Nothing is removed; the history only grows.

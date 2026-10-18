@@ -1,3 +1,4 @@
+import Analysis
 import SongGraph
 import SwiftUI
 
@@ -203,6 +204,31 @@ struct TakesLanes: View {
         return String(format: "bar %d · %.1f s%@", meta.startBar + 1, audio.duration, flags > 0 ? " · \(flags) flag\(flags == 1 ? "" : "s")" : "")
     }
 
+    /// Pulls the take onto the song's key, natural, tight or hard; the tuned take joins the lanes.
+    @ViewBuilder
+    private func tuneMenu(_ version: PartVersion, title: String) -> some View {
+        if model.tuning == version.id {
+            ProgressView().controlSize(.mini)
+                .help("Tuning \(title) to the song's key")
+        } else {
+            Menu {
+                ForEach(PitchCorrection.Strength.allCases, id: \.self) { strength in
+                    Button(strength.rawValue.prefix(1).uppercased() + strength.rawValue.dropFirst()) {
+                        Task { await model.tune(version, strength: strength) }
+                    }
+                    .help(strength.words)
+                }
+            } label: {
+                Text("Tune").font(Design.Typography.ui(10.5))
+            }
+            .menuStyle(.button)
+            .fixedSize()
+            .disabled(model.tuning != nil)
+            .help("Tune \(title) to the song's key — natural, tight, or hard for the Auto-Tune sound — as a new take beside it. The take as sung stays.")
+            .accessibilityLabel("Tune \(title)")
+        }
+    }
+
     private func laneRow(title: String, subtitle: String, isComp: Bool, version: PartVersion?) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
@@ -225,6 +251,7 @@ struct TakesLanes: View {
                             .accessibilityLabel(isPlaying ? "Stop \(title)" : "Play \(title)")
                         }
                         Text(title).font(Design.Typography.ui(13, weight: isComp ? .semibold : .medium)).lineLimit(1)
+                        if let version { tuneMenu(version, title: title) }
                     }
                     // Two lines before an ellipsis: the flag count is what a take's line is read for,
                     // and it is last, so one line cut it to "2 fla…".

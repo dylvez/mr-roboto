@@ -160,7 +160,11 @@ struct StripEffectsTests {
     func rotorsEase() {
         let fx = sfx_create(48_000, 2)!
         defer { sfx_destroy(fx) }
-        var params = sfx_params_t(kind: Int32(SFX_ROTARY.rawValue), drive: 0.3, tone: 0.5, fast: 0, growl: 0, level: 1)
+        var params = sfx_params_t()
+        params.kind = Int32(SFX_ROTARY.rawValue)
+        params.drive = 0.3
+        params.tone = 0.5
+        params.level = 1
         sfx_set_params(fx, &params)
         sfx_reset(fx)
         params.fast = 1

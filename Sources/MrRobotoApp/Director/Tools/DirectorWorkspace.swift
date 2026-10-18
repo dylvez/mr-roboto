@@ -1,3 +1,4 @@
+import Analysis
 import MusicTheory
 import AudioEngine
 import Foundation
@@ -152,6 +153,8 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     /// Rendered audio kept in the open song's package, for a version to point at. Nil, with the
     /// reason in the rail, when there is nowhere to keep it.
     func keepAudio(_ planar: [[Float]], sampleRate: Double) -> MediaRef?
+    /// A take or a comp pulled onto the song's key and kept as the part's newest version.
+    func tuneTake(_ version: PartVersion, strength: PitchCorrection.Strength) async -> AppState.TuneOutcome
     /// Opens a song from the library, the open one kept first. Nil when the library does not hold it.
     @discardableResult func openSong(_ id: SongID) -> Song?
 
@@ -222,6 +225,11 @@ extension DirectorWorkspace {
     public var houseBook: HouseBook { HouseBook.of(library, song: song) }
 
     public func keepSaid(_ records: [SaidRecord]) {}
+
+    /// Where there is no song on disk, nothing is tuned.
+    public func tuneTake(_ version: PartVersion, strength: PitchCorrection.Strength) async -> AppState.TuneOutcome {
+        .failed("There is nowhere here to read or keep a take's audio.")
+    }
 
     /// The open song's genre, set or guessed.
     public var genre: GenreBook.Reading? { GenreBook.standard.genre(of: song) }
@@ -460,6 +468,10 @@ public final class AppStateWorkspace: DirectorWorkspace {
     /// first, so it has a package to keep it in.
     public func keepAudio(_ planar: [[Float]], sampleRate: Double) -> MediaRef? {
         app.keepAudio(planar, sampleRate: sampleRate, what: "the comp")
+    }
+
+    public func tuneTake(_ version: PartVersion, strength: PitchCorrection.Strength) async -> AppState.TuneOutcome {
+        await app.tuneTake(version, strength: strength, by: .persona(CreatePartVersionTool.director))
     }
 
     /// Opened as the Director's own move, so the frame does not stop the turn that asked for it.

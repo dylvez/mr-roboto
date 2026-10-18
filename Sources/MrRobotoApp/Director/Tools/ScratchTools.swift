@@ -55,8 +55,12 @@ public struct StartSongTool: DirectorTool {
         guard let song = await workspace.startSong(title: input.title, tempo: input.tempo, key: key, machine: machine.id) else {
             throw DirectorToolFailure(tool: name, reason: "The song could not be started here.", suggestion: "Open the app's library first.")
         }
+        // A machine that stands for a kit somebody hits: the library's recording of one is what it means.
+        let recorded = RecordedSounds.kit(for: machine.id).map {
+            " The \(machine.name) is synthesized, and the library has a recorded kit that plays it: \($0.name) (\($0.id)). Start on that unless a machine is the point."
+        } ?? ""
         return Output(song: song.title, tempo: song.tempo, key: song.key?.name ?? "none", machine: machine.name,
-                      detail: "\(song.title) is open at \(Int(song.tempo.rounded())) bpm\(song.key.map { " in \($0.name)" } ?? ""), on the \(machine.name). Nothing was imported.")
+                      detail: "\(song.title) is open at \(Int(song.tempo.rounded())) bpm\(song.key.map { " in \($0.name)" } ?? ""), on the \(machine.name). Nothing was imported.\(recorded)")
     }
 }
 
@@ -128,7 +132,7 @@ public struct WriteGrooveTool: DirectorTool {
             ("bars", Schema.integer("How many bars. A clave is a two-bar cycle, so Latin feels want an even number.", minimum: 1, maximum: 16)),
             ("swing_percent", Schema.number("Where the off-beat sixteenth lands: 50 straight, 66.7 triplet, 75 the far end; 0 keeps the feel's own.", minimum: 0, maximum: 75)),
             ("rows", Schema.array("Rows that replace or add voices; empty keeps the feel as written.",
-                                  of: Schema.string("voice: pattern. Voices: kick, snare, clap, rim, closedHat, openHat, ride, crash, lowTom, midTom, highTom, cowbell, shaker, tambourine, highConga, lowConga, highBongo, lowBongo, claves, woodblock, highAgogo, lowAgogo, cabasa, guiro (a short stroke), guiroLong (the long scrape), openTriangle, muteTriangle, vibraslap, cajon (its bass tone), cajonSlap, darbuka (the doum), darbukaTek, frameDrum, slitDrum."))),
+                                  of: Schema.string("voice: pattern. Voices: kick, snare, clap, rim, closedHat, openHat, ride, crash, lowTom, midTom, highTom, cowbell, shaker, tambourine, highConga, lowConga, highBongo, lowBongo, claves, woodblock, highAgogo, lowAgogo, cabasa, guiro (a short stroke), guiroLong (the long scrape), openTriangle, muteTriangle, vibraslap, cajon (its bass tone), cajonSlap, darbuka (the doum), darbukaTek, frameDrum, slitDrum, timbaleHigh, timbaleLow, cuicaOpen (the rising squeak), cuicaMute, palmas (flamenco's hand claps)."))),
             ("note", Schema.string("One line for the ledger saying what this beat is, in the user's language.")),
             ("steps_per_bar", Schema.integer("The grid the rows are written on, in steps a bar of the song: 16 is sixteenths in four, "
                                              + "12 triplets in four or sixteenths in three, 8 eighths. 0 takes the feel's own, or 16 with no feel.",
@@ -140,7 +144,8 @@ public struct WriteGrooveTool: DirectorTool {
     static let voices = ["kick", "snare", "clap", "rim", "closedHat", "openHat", "ride", "crash", "lowTom", "midTom", "highTom",
                          "cowbell", "shaker", "tambourine", "highConga", "lowConga", "highBongo", "lowBongo", "claves", "woodblock",
                          "highAgogo", "lowAgogo", "cabasa", "guiro", "guiroLong", "openTriangle", "muteTriangle", "vibraslap",
-                         "cajon", "cajonSlap", "darbuka", "darbukaTek", "frameDrum", "slitDrum", "perc"]
+                         "cajon", "cajonSlap", "darbuka", "darbukaTek", "frameDrum", "slitDrum",
+                         "timbaleHigh", "timbaleLow", "cuicaOpen", "cuicaMute", "palmas", "perc"]
 
     /// One row, read. Throws with the row and what is wrong with it.
     static func parse(_ row: String, steps: Int, tool: String) throws -> GroovePattern {

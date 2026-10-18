@@ -23,7 +23,7 @@ extension AppState {
         recordedPercussion = RecordedPercussion.load(from: directory)
     }
 
-    /// File ▸ Import VCSL Percussion…: the Versilian library's hand percussion (`RecordedPercussion.vcsl`)
+    /// File ▸ Import Hand Percussion…: the Versilian library's hand percussion (`RecordedPercussion.vcsl`), or a folder's own `percussion.json`,
     /// copied into the library and switched on, so every kit plays it in place of its synthesized
     /// voices.
     @discardableResult
@@ -178,7 +178,7 @@ extension AppState {
     /// song's own instrument, as it would for any id it does not know.
     @discardableResult
     public func removeImportedInstrument(id: String) -> Bool {
-        guard let spec = ImportedInstruments.spec(id: id), !spec.isEnsemble else { return false }
+        guard let spec = ImportedInstruments.spec(id: id), !spec.isMadeFromRecordings else { return false }
         do {
             try ImportedInstruments.remove(id: id)
         } catch {

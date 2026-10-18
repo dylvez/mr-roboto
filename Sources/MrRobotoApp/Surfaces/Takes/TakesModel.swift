@@ -1,3 +1,4 @@
+import Analysis
 import AudioEngine
 import Foundation
 import MusicTheory
@@ -27,12 +28,16 @@ public protocol TakesHosting: AnyObject {
     /// Plays rendered audio now: the comp lane, heard before it is made. A host with no audio
     /// does nothing.
     func audition(_ rendered: Comp.Rendered) async
+    /// A take pulled onto the song's key and kept as the part's newest version; nil, with the
+    /// reason in the rail, when it cannot be.
+    func tune(_ version: PartVersion, strength: PitchCorrection.Strength) async -> PartVersion?
 }
 
 public extension TakesHosting {
     var song: Song? { nil }
     func openBooth() {}
     func audition(_ rendered: Comp.Rendered) async {}
+    func tune(_ version: PartVersion, strength: PitchCorrection.Strength) async -> PartVersion? { nil }
 }
 
 /// The Takes surface: lanes of takes against the bars, a comp chosen bar by bar, and the band's
@@ -299,6 +304,19 @@ public final class TakesModel {
             guard !Task.isCancelled, let self else { return }
             self.isHearingComp = false
         }
+    }
+
+    /// The take being tuned now, while it is.
+    public private(set) var tuning: VersionID?
+
+    /// Tunes a take to the song's key and adds the tuned one to the lanes, beside it, to hear and
+    /// comp from.
+    public func tune(_ version: PartVersion, strength: PitchCorrection.Strength) async {
+        guard tuning == nil else { return }
+        tuning = version.id
+        defer { tuning = nil }
+        guard let tuned = await host.tune(version, strength: strength) else { return }
+        update(takes: takes + [tuned], song: host.song)
     }
 
     /// Plays a take and shows it as playing for as long as it lasts.

@@ -234,9 +234,19 @@ public struct InstrumentVoiceSpec: Codable, Sendable, Hashable, Identifiable {
     /// What the instrument brings to its mixer strip when the mix sets nothing there: an organ
     /// its rotating speaker. The Mixer can change it or take it off.
     public var insert: StripInsert?
+    /// The modulation it brings the same way: a combo organ its vibrato.
+    public var modulation: StripModulation?
+
+    /// The recording a treatment plays (`Treatment`), by id: the same kit, heard through its
+    /// insert. Nil for everything else. Found when the library is loaded; never written.
+    public var basedOn: String?
 
     /// Whether this is a section of recorded instruments rather than one instrument.
     public var isEnsemble: Bool { members != nil }
+
+    /// Whether it is made from recordings already in the library — a section, a treatment — and
+    /// so has no folder of its own to remove.
+    public var isMadeFromRecordings: Bool { members != nil || basedOn != nil }
 
     /// Whether its short notes are recordings of short notes — a section's, or an instrument's
     /// staccato beside its held notes — rather than the front of a held note cut off.

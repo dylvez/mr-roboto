@@ -271,11 +271,41 @@ public struct RecordedPercussion: Codable, Hashable, Sendable {
     /// Run again over a set already imported — when this build plays more voices than the one
     /// that imported it — a recording already in `directory` is used as it is, not copied again,
     /// and whether the set is on, and which machines keep their own percussion, stay as they were.
+    /// A folder's own list of which file and key play which voice, `percussion.json` in it: how a
+    /// pack other than VCSL — timbales, a cuíca — says what it holds.
+    public struct Manifest: Codable, Sendable {
+        public struct Entry: Codable, Sendable {
+            public var kind: String
+            public var file: String
+            public var note: Int
+            public var label: String
+        }
+        public var name: String
+        public var entries: [Entry]
+
+        public static let fileName = "percussion.json"
+    }
+
+    /// The entries a folder brings: its manifest's when it has one, else VCSL's.
+    static func entries(at root: URL) -> (name: String, entries: [(kind: SynthVoiceKind, file: String, note: Int, label: String)]) {
+        if let data = try? Data(contentsOf: root.appendingPathComponent(Manifest.fileName)),
+           let manifest = try? JSONDecoder().decode(Manifest.self, from: data) {
+            return (manifest.name, manifest.entries.compactMap { entry in
+                SynthVoiceKind(rawValue: entry.kind).map { ($0, entry.file, entry.note, entry.label) }
+            })
+        }
+        return ("VCSL", vcsl)
+    }
+
+    /// Imports a folder's hand percussion — VCSL's checkout, or any folder with a
+    /// `percussion.json` — into `directory`, beside what is already there, saves the set and puts
+    /// it in use. A voice the folder does not play keeps the recording it had.
     @discardableResult
     public static func importVCSL(from root: URL, into directory: URL) throws -> RecordedPercussion {
+        let (name, entries) = entries(at: root)
         var sources: [String: String] = [:]
         var assignments: [Assignment] = []
-        for entry in vcsl {
+        for entry in entries {
             let file = root.appendingPathComponent(entry.file)
             guard FileManager.default.fileExists(atPath: file.path) else { continue }
             if sources[entry.file] == nil {
@@ -294,11 +324,15 @@ public struct RecordedPercussion: Codable, Hashable, Sendable {
         guard !assignments.isEmpty else {
             throw ImportedInstruments.ImportError.noRegions(file: root.lastPathComponent)
         }
-        var set = RecordedPercussion(name: "VCSL", assignments: assignments)
+        var set = RecordedPercussion(name: name, assignments: assignments)
         if let data = try? Data(contentsOf: directory.appendingPathComponent(fileName)),
            let before = try? JSONDecoder().decode(RecordedPercussion.self, from: data) {
             set.isOn = before.isOn
             set.keepSynthesized = before.keepSynthesized
+            // What the set already played and this folder does not, it still plays.
+            let brought = Set(assignments.map(\.kind))
+            set.assignments = before.assignments.filter { !brought.contains($0.kind) } + assignments
+            if before.name != name, !before.name.contains(name) { set.name = before.name + " and " + name }
         }
         try save(set, to: directory)
         return set

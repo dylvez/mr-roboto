@@ -189,8 +189,10 @@ struct DirectorBassToolTests {
                 .init("sound", .string(sound)),
             ])))
         }
+        // Empty is the player's own sound — finger, for Palladino — on the library's recording of it.
         let own = await write("")
-        #expect(BassToolFixture.json(own)["sound"] as? String == "finger", "empty is the player's own: \(own.content)")
+        #expect(BassToolFixture.json(own)["sound"] as? String == spec.id, "empty is the player's own, recorded: \(own.content)")
+        #expect((BassToolFixture.json(own)["detail"] as? String)?.contains("the recording of Palladino's own finger bass") == true)
         let upright = await write("upright")
         #expect(BassToolFixture.json(upright)["sound"] as? String == "upright")
         let recorded = await write(spec.id)

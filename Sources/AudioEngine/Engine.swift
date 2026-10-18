@@ -295,6 +295,8 @@ public final class Engine {
 
         self.transport = transport
         scheduledThrough = -.infinity
+        // The strips' filters and pumps keep the song's time from the render timeline.
+        mixGraphStorage?.transportDidStart(originSampleTime: transport.originSampleTime, sampleRate: clock.sampleRate)
         for id in sourceOrder { sources[id]?.transportDidStart(transport) }
 
         // Schedule the first look-ahead window BEFORE starting the players. A buffer
@@ -337,6 +339,7 @@ public final class Engine {
         for player in players { player.stop() }
         transport = nil
         scheduledThrough = -.infinity
+        mixGraphStorage?.transportDidStop()
     }
 
     /// Ask every source to schedule events up to `seconds` (transport time). Monotonic:

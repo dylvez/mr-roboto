@@ -22,6 +22,8 @@ public enum SectionFill {
 
     /// The order a fill walks down the kit.
     public static let walk: [DrumVoice] = [.snare, .highTom, .midTom, .lowTom]
+    /// A timbalero's fill, round the timbales high to low: what a groove that has them fills on.
+    public static let timbaleWalk: [DrumVoice] = [.timbaleHigh, .timbaleHigh, .timbaleLow, .timbaleLow]
 
     /// `groove` laid out over `bars` bars, with a fill in the last bar when `fillIntoNext` and a
     /// crash on the first beat when `crashIn`.
@@ -71,6 +73,13 @@ public enum SectionFill {
             let kick = index(of: .kick)
             patterns[kick].steps[start] = .accent
             let per = max(1, stepsPerBeat)
+            let timbales = groove.patterns.contains { ($0.voice == .timbaleHigh || $0.voice == .timbaleLow) && $0.steps.contains { $0 != .rest } }
+            let walk = timbales ? Self.timbaleWalk : Self.walk
+            if timbales {
+                for p in patterns.indices where patterns[p].voice == .timbaleHigh || patterns[p].voice == .timbaleLow {
+                    for step in start..<total { patterns[p].steps[step] = .rest }
+                }
+            }
             for offset in 0..<length {
                 let voice = walk[min(walk.count - 1, offset * walk.count / length)]
                 let tier: VelocityTier

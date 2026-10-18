@@ -50,6 +50,7 @@ public enum GrooveVariation {
         .shaker, .tambourine, .highConga, .lowConga, .highBongo, .lowBongo, .claves, .woodblock, .cowbell, .perc,
         .highAgogo, .lowAgogo, .cabasa, .guiro, .guiroLong, .openTriangle, .muteTriangle, .vibraslap,
         .cajon, .cajonSlap, .darbuka, .darbukaTek, .frameDrum, .slitDrum,
+        .timbaleHigh, .timbaleLow, .cuicaOpen, .cuicaMute, .palmas,
     ]
 
     /// The longest a written-through variation runs. The Grid draws sixteen bars and no more, and

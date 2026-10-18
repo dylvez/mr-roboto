@@ -103,6 +103,10 @@ final class LiveSongPlayer: SongPlaybackHost {
         // The echo counts in the song's beats, and an organ brings its speaker to its strip.
         graph.tempo = plan.tempo
         graph.instrumentInserts = plan.instrumentInserts
+        graph.instrumentModulations = plan.instrumentModulations
+        // The song as the strips' filters and pumps keep time by; the transport says where its
+        // zero falls when it starts.
+        graph.timeline = plan.mixTimeline
         graph.apply(plan.mix ?? .unity, section: plan.segments.first?.section)
         lastMix = plan.mix
 
