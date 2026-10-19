@@ -97,6 +97,7 @@ struct PianoRollSurfaceView: View {
         if model.mode == .melody {
             HStack(alignment: .top, spacing: 18) {
                 InstrumentPicker(selected: model.instrument) { model.setInstrument($0) }
+                tuneMark
                 // The primer and the lane's own caption both say this; Studio says it once.
                 Spacer(minLength: 0)
             }
@@ -105,6 +106,24 @@ struct PianoRollSurfaceView: View {
                 bassLevers
                 if model.leversAreHeld { heldLeversNote }
             }
+        }
+    }
+
+    /// Whether this line is the song's tune: the part the band reads as the tune, and its
+    /// variations where they play. Marked, the band stops choosing among the song's melodies.
+    private var tuneMark: some View {
+        let on = model.isTheSongsTune
+        return VStack(alignment: .leading, spacing: 6) {
+            BoothLabel("Tune")
+            RollChip("The song's tune", isOn: on) { model.markAsTheSongsTune(!on) }
+                .disabled(model.isTaking)
+                .help(on ? "The band reads this as the song's tune — the Melodist, Another way, the line that answers it, the "
+                           + "words set to it — and its variations where they play. Press to take the mark off: the band then "
+                           + "takes the newest line that is not chords."
+                         : "Mark this as the song's tune: the band reads it as the tune — the Melodist, Another way, the line "
+                           + "that answers it, the words — and its variations where they play. Unmarked, the band takes the "
+                           + "newest line that is not chords.")
+                .accessibilityLabel(on ? "The song's tune: marked" : "Mark as the song's tune")
         }
     }
 

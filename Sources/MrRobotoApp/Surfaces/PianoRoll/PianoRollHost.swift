@@ -4,9 +4,10 @@ import SongGraph
 
 /// What the Piano roll needs from whatever is hosting it.
 ///
-/// A note sounded now, an instrument picked, stop, and a version taken. Playing the whole line is
-/// the frame's: the surface's header and ⌥Space play it once through `PartPlayer`, on the bass or,
-/// in melody mode, on its instrument; and the transport plays it under the groove, looping.
+/// A note sounded now, an instrument picked, stop, a version taken, and the song's tune marked.
+/// Playing the whole line is the frame's: the surface's header and ⌥Space play it once through
+/// `PartPlayer`, on the bass or, in melody mode, on its instrument; and the transport plays it
+/// under the groove, looping.
 @MainActor
 public protocol PianoRollHosting: AnyObject {
     /// One note, now, through `sound`'s voice.
@@ -24,10 +25,16 @@ public protocol PianoRollHosting: AnyObject {
     /// The newest version of a part in the song, so a keep builds on it — a restore, or what the
     /// band wrote since — rather than on the version this roll last kept.
     func newest(of part: PartID) -> PartVersion?
+    /// Whether a part is the song's tune: the part marked as it, or a variation of that part.
+    func isTune(_ part: PartID) -> Bool
+    /// Marks a part as the song's tune, or with nil takes the mark off (`AppState.setTune`).
+    func markTune(_ part: PartID?)
 }
 
 extension PianoRollHosting {
     public func newest(of part: PartID) -> PartVersion? { nil }
+    public func isTune(_ part: PartID) -> Bool { false }
+    public func markTune(_ part: PartID?) {}
 }
 
 /// What the Chords surface needs: a chord sounded on touch, and a version taken.

@@ -60,6 +60,11 @@ public struct Development: Equatable, Sendable {
     public var targetLUFS: Double
     /// The genre it was developed in, by name.
     public var genre: String?
+    /// The part developing took for the song's tune — the one its sections play another way and
+    /// a line answers — when nobody had marked one: marked as the tune with the arrangement, so
+    /// the band reads as the tune what developing treated as it. Nil when one was marked already,
+    /// or the song has no tune.
+    public var tune: PartID?
 
     public var bars: Int { sections.reduce(0) { $0 + $1.lengthInBars } }
 
@@ -218,6 +223,10 @@ public enum Develop {
 
         let mains = Set(loop.map(\.partID))
         let byPart = Dictionary(loop.map { ($0.partID, $0) }, uniquingKeysWith: { first, _ in first })
+        // The song's tune (`SongTune`): the melody a line answers where the song arrives for the
+        // last time. Every melody is arranged as a tune is, but only this one is answered: it was
+        // the first melody in the section, and that could be a guitar's chords.
+        let songsTune = SongTune.part(of: song).flatMap { mains.contains($0) ? $0 : nil }
         func roots(of section: Section?) -> [PartID] {
             var seen = Set<PartID>()
             return (section?.stitch ?? []).filter { !isHeld($0, in: song) }
@@ -476,7 +485,7 @@ public enum Develop {
                         said.append("tune")
                     }
                     // And where the song arrives for the last time, a line answers it in its rests.
-                    if varying.seed != nil, index == lastPeak, answering == nil,
+                    if varying.seed != nil, index == lastPeak, answering == nil, part.partID == songsTune,
                        let answers = TuneVariation.answers(to: tune, beatsPerBar: beats) {
                         let note = answerNote(to: part)
                         let existing = loop.first { isAnswer($0) }
@@ -593,8 +602,9 @@ public enum Develop {
             mix.master.fadeOutBars = min(8, max(1, last.bars))
         }
 
+        // What developing treated as the tune is marked as it, unless somebody marked one.
         return Development(form: source, sections: sections, versions: versions, mix: mix == before ? nil : mix,
-                           plays: plays, targetLUFS: target, genre: genre?.name)
+                           plays: plays, targetLUFS: target, genre: genre?.name, tune: song.tune == nil ? songsTune : nil)
     }
 
     // MARK: - The form

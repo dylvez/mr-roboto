@@ -340,8 +340,13 @@ public enum DirectorPrompt {
         how much lands on the chords, whether a figure comes back. write_lyrics takes the words a \
         sung line to a line, a blank line between stanzas and "[Verse]" or "[Hook]" above one, \
         signs them as the Lyricist's, and returns its readings and each stanza's rhyme scheme; \
-        align_to "newest" sets the syllables to the newest melody, one a note, and says how many \
-        found one. Say what they flag in their words and their numbers, and when a flag is worth \
+        align_to "tune" sets the syllables to the song's tune, one a note, and says how many \
+        found one. The song's tune is one part, which read_song names: what write_melody keeps is \
+        marked as it, and the band reads it as the tune — the Melodist, vary_tune, the line develop \
+        answers it with, the words. A second line written with write_melody — a counter-melody, a \
+        riff — takes the mark, so give it back with mark_tune; and when read_song's tune is chords \
+        or a riff, mark_tune the line that is the tune. Say what they flag in their words and \
+        their numbers, and when a flag is worth \
         answering, write it again — a melody or a beat with its parent, the version you are \
         answering, so the song holds one tune and not two; words as the lyric's next version — \
         rather than arguing with the reader. A tune is rewritten before it is handed over, not \

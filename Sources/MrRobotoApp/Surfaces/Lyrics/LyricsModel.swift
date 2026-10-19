@@ -7,14 +7,17 @@ public struct LyricsMelody: Hashable, Sendable, Identifiable {
     public var part: PartID
     public var title: String
     public var melody: Melody
+    /// Whether it is the song's tune (`SongTune`): what words are usually sung to.
+    public var isTune: Bool
 
     public var id: VersionID { version }
 
-    public init(version: VersionID, part: PartID, title: String, melody: Melody) {
+    public init(version: VersionID, part: PartID, title: String, melody: Melody, isTune: Bool = false) {
         self.version = version
         self.part = part
         self.title = title
         self.melody = melody
+        self.isTune = isTune
     }
 }
 
@@ -434,13 +437,13 @@ final class LyricsAdapter: LyricsHosting {
 
     var melodies: [LyricsMelody] {
         guard let song = app.song else { return [] }
-        return song.partIDs.compactMap { part in
-            song.latestVersion(of: part).flatMap(Self.melody(of:))
-        }
+        let tune = SongTune.part(of: song)
+        return song.partIDs.compactMap { song.latestVersion(of: $0).flatMap { Self.melody(of: $0, tune: tune) } }
     }
 
     func melody(_ version: VersionID) -> LyricsMelody? {
-        app.song?.version(version).flatMap(Self.melody(of:))
+        guard let song = app.song else { return nil }
+        return song.version(version).flatMap { Self.melody(of: $0, tune: SongTune.part(of: song)) }
     }
 
     var sectionNames: [String] {
@@ -450,8 +453,9 @@ final class LyricsAdapter: LyricsHosting {
 
     var beatsPerBar: Int { app.song?.timeSignature.beatsPerBar ?? 4 }
 
-    private static func melody(of version: PartVersion) -> LyricsMelody? {
+    private static func melody(of version: PartVersion, tune: PartID?) -> LyricsMelody? {
         guard case .melody(let melody) = version.kind else { return nil }
-        return LyricsMelody(version: version.id, part: version.partID, title: PartLabel.title(of: version), melody: melody)
+        return LyricsMelody(version: version.id, part: version.partID, title: PartLabel.title(of: version), melody: melody,
+                            isTune: version.partID == tune)
     }
 }

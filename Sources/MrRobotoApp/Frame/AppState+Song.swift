@@ -63,6 +63,26 @@ extension AppState {
         return true
     }
 
+    /// Marks a melody part as the song's tune, or with nil takes the mark off: the part the band
+    /// reads as the tune — the Melodist, vary_tune, the line developing answers it with, the
+    /// melody the words are set to — and a variation of it where the variation plays. A variation
+    /// marks the part it varies.
+    @discardableResult
+    public func setTune(_ part: PartID?, by source: SessionEntry.Source = .you) -> Bool {
+        guard var changed = song, changed.markTune(part) else { return false }
+        updateSong { $0 = changed }
+        if let tune = changed.tune.flatMap({ changed.latestVersion(of: $0) }) {
+            note(source, "\(PartLabel.title(of: tune)) is the song's tune",
+                 detail: "The band reads it as the tune, and a variation of it where that plays.")
+        } else {
+            let chosen = SongTune.version(in: changed).map(PartLabel.title(of:))
+            note(source, "No part is marked as the tune",
+                 detail: chosen.map { "The band takes \($0) for it: the newest line of its own that is not chords." }
+                     ?? "No melody here is a line of its own that is not chords, so none is read as the tune.")
+        }
+        return true
+    }
+
     /// Turns the arranged drums' fills into each section, and the crash out of it, on or off.
     @discardableResult
     public func setFills(_ on: Bool, by source: SessionEntry.Source = .you) -> Bool {
@@ -227,6 +247,8 @@ extension AppState {
         copy.cast = original.cast
         copy.houseCalls = original.houseCalls
         copy.gridChosen = original.gridChosen
+        // The same parts, so the same one is the tune.
+        copy.tune = original.tune
         var updated = library
         if let song { updated.upsert(song) }
         updated.upsert(copy)

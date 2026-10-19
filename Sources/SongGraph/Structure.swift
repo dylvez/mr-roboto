@@ -226,6 +226,13 @@ public struct Song: Identifiable, Hashable, Codable, Sendable {
     /// before it round-trips byte for byte.
     public var gridChosen: Bool?
 
+    /// The melody part that is the song's tune, when somebody has said: the line a listener
+    /// follows, which the band reads as the tune wherever it means one. A part and not a version,
+    /// so it stays the tune through its edits, and a variation of it is the tune in the sections
+    /// it plays. Nil leaves the band to take the tune from what the song holds. Optional so a
+    /// song written before it round-trips byte for byte. Set it through `markTune(_:)`.
+    public var tune: PartID?
+
     public init(id: SongID = SongID(), title: String, artist: String = "", key: Key? = nil, tempo: Double = 120,
                 timeSignature: TimeSignature = .fourFour, sections: [Section] = [], versions: [PartVersion] = [],
                 seeds: [Seed] = [], experiments: [Experiment] = [], createdAt: Date = Date()) {
@@ -396,6 +403,30 @@ public struct Song: Identifiable, Hashable, Codable, Sendable {
     public func family(of part: PartID) -> Set<PartID> {
         let root = strip(of: part)
         return Set([root] + variations(of: root))
+    }
+
+    // MARK: The tune
+
+    /// Marks a melody part as the song's tune, or with nil takes the mark off. A variation marks
+    /// the part it varies, so the mark is on the part all of its variations follow. False when
+    /// nothing changed, or the song holds no melody by that id.
+    @discardableResult
+    public mutating func markTune(_ part: PartID?) -> Bool {
+        guard let part else {
+            guard tune != nil else { return false }
+            tune = nil
+            return true
+        }
+        let root = strip(of: part)
+        guard latestVersion(of: root)?.type == .melody, tune != root else { return false }
+        tune = root
+        return true
+    }
+
+    /// Whether a part is the one marked as the song's tune, or a variation of it.
+    public func isTune(_ part: PartID) -> Bool {
+        guard let tune else { return false }
+        return strip(of: part) == tune
     }
 
     public func section(_ id: SectionID) -> Section? { sections.first { $0.id == id } }

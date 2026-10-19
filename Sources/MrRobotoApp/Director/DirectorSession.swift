@@ -429,6 +429,7 @@ public final class DirectorSession {
         case "reharmonize": return "Saying the chords another way…"
         case "vary_tune": return "Playing the tune another way…"
         case "tune_take": return "Tuning the take…"
+        case "mark_tune": return "Marking the song's tune…"
         case "open_surface": return "Opening a surface…"
         case "propose": return "Writing a suggestion…"
         default: return "\(tool)…"

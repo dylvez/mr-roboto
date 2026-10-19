@@ -348,6 +348,32 @@ public final class PianoRollModel {
     /// instrument picked there is the song's rather than the bass line's.
     public var part: PartID? { lastKeptOfThisKind?.partID }
 
+    // MARK: The song's tune
+
+    /// Whether the tune on screen is the song's tune: the part the band reads as the tune — the
+    /// Melodist, Another way, the line that answers it, the words set to it — marked as it, or a
+    /// variation of the part that is. A tune not kept yet is, when it is to be marked at its first
+    /// keep.
+    public var isTheSongsTune: Bool {
+        guard mode == .melody else { return false }
+        guard let part else { return marksTuneWhenKept }
+        return host.isTune(part)
+    }
+
+    /// Marks the tune on screen as the song's tune, or takes the mark off. A variation marks the
+    /// part it varies. Not an edit of the line, so not a step of ⌘Z: like the instrument, it is a
+    /// choice about the part, said at once.
+    public func markAsTheSongsTune(_ on: Bool) {
+        guard mode == .melody, !isTaking else { return }
+        // A tune not kept yet has no part to name: the mark waits for its first keep.
+        guard let part else { marksTuneWhenKept = on; return }
+        guard on != host.isTune(part) else { return }
+        host.markTune(on ? part : nil)
+    }
+
+    /// The song's tune, asked for before the tune on screen was kept.
+    private var marksTuneWhenKept = false
+
     public var register: ClosedRange<Int> {
         // A tune is drawn where a tune sits — C4 to C6 — not in the bass player's two octaves, where
         // every note drawn used to land two octaves low.
@@ -1267,6 +1293,10 @@ public final class PianoRollModel {
         if version.type == .melody, let picked = instrumentForTheTune {
             instrumentForTheTune = nil
             host.setInstrument(picked, for: version.partID)
+        }
+        if version.type == .melody, marksTuneWhenKept {
+            marksTuneWhenKept = false
+            host.markTune(version.partID)
         }
         return version
     }

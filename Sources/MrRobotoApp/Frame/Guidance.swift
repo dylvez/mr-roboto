@@ -345,7 +345,7 @@ public enum Guidance {
                     rationale: "A stanza for each section, labelled [Verse] or [Hook] so the Booth shows the one you "
                         + "are singing. The Lyricist reads them as you type.",
                     action: dockAction(for: .lyrics, in: song)))
-            } else if let words, words.alignedTo == nil, let tune = melodies(in: song).last {
+            } else if let words, words.alignedTo == nil, let tune = SongTune.version(in: song) {
                 out.append(Proposal(
                     title: "Set the words to \(PartLabel.title(of: tune))",
                     rationale: "One syllable a note, from Set to melody on the Lyrics surface; the Lyricist then says "

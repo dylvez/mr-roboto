@@ -294,8 +294,8 @@ extension WorkPath {
         case .sources:
             return SurfaceAction(surface: .sources, title: "Sources")
         case .tune:
-            // An existing tune opens; a new one is started from the Piano roll's own menu.
-            guard let melody = Guidance.melodies(in: song).last else { return nil }
+            // The song's tune opens; a new one is started from the Piano roll's own menu.
+            guard let melody = SongTune.version(in: song) ?? Guidance.melodies(in: song).last else { return nil }
             return SurfaceAction(surface: .pianoRoll, title: PartLabel.title(of: melody), bound: [melody.id])
         case .mix:
             // The Master once the song is arranged and mixed; the Mixer until then.

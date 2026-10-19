@@ -263,11 +263,12 @@ private struct SetToMelodyMenu: View {
         .accessibilityLabel(set.map { "Set to melody: \($0.title)" } ?? "Set to melody: not set")
     }
 
-    /// A melody's name, and — when the words are set to an older version of it — that choosing it
-    /// sets them to what it is now.
+    /// A melody's name, whether it is the song's tune, and — when the words are set to an older
+    /// version of it — that choosing it sets them to what it is now.
     private func title(for choice: LyricsMelody, set: LyricsMelody?) -> String {
-        guard let set, set.part == choice.part, set.version != choice.version else { return choice.title }
-        return "\(choice.title) — newer than the version the words are set to"
+        let tune = choice.isTune ? " — the song's tune" : ""
+        guard let set, set.part == choice.part, set.version != choice.version else { return choice.title + tune }
+        return choice.title + (choice.isTune ? "\(tune), newer" : " — newer") + " than the version the words are set to"
     }
 }
 

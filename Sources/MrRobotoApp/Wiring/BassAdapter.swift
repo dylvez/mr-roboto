@@ -40,6 +40,10 @@ final class BassAdapter: PianoRollHosting {
 
     func setInstrument(_ id: String, for part: PartID?) { app.setInstrument(id, for: part) }
 
+    func isTune(_ part: PartID) -> Bool { app.song?.isTune(part) ?? false }
+
+    func markTune(_ part: PartID?) { app.setTune(part) }
+
     /// Loads an instrument preset, saying so in the rail when it cannot.
     private func prepareInstrument(_ id: String) async -> Bool {
         let spec = InstrumentVoiceSpec.preset(id: id) ?? .rhodes

@@ -8,6 +8,9 @@ public struct BeforeDevelopment: Equatable, Sendable {
     public var sections: [Section]
     /// The newest mix then, or nil when the song had never been mixed.
     public var mix: VersionID?
+    /// The part developing marked as the song's tune, when none was: put back, it is unmarked
+    /// again, unless somebody has marked another since.
+    public var markedTune: PartID?
 }
 
 /// How a development landed, for whoever asked for it to say.
@@ -65,18 +68,24 @@ extension AppState {
                  detail: "Paint a groove, write a bass line or set the chords; then there is a loop to develop.")
             return nil
         }
-        let before = BeforeDevelopment(song: song.id, sections: song.sections, mix: Guidance.mixes(in: song).last?.id)
+        let before = BeforeDevelopment(song: song.id, sections: song.sections, mix: Guidance.mixes(in: song).last?.id,
+                                       markedTune: development.tune)
         guard keep(development.versions, arranged: development.sections) else { return nil }
         if let mix = development.mix {
             _ = MixAdapter(app: self, author: author)
                 .commit(mix, base: Guidance.mixes(in: self.song ?? song).last, note: "Each section's level, for the arrangement")
             refreshSurfaces(of: [.mixer, .master])
         }
+        // What it treated as the tune is the song's tune now, when nobody had said which.
+        if let tune = development.tune { updateSong { $0.markTune(tune) } }
         beforeDevelopment = before
         let seconds = StructureModel.seconds(bars: development.bars, tempo: song.tempo, timeSignature: song.timeSignature)
         var detail = development.plays.map { "\($0.name) \($0.bars)" }.joined(separator: " · ")
         detail += " · \(StructureModel.clock(seconds)), \(development.form.words)."
         if !development.written.isEmpty { detail += " Written: \(development.written.joined(separator: ", "))." }
+        if let tune = development.tune.flatMap({ self.song?.latestVersion(of: $0) }) {
+            detail += " \(PartLabel.title(of: tune)) is marked as the song's tune."
+        }
         if transport.isPlaying { detail += " Heard the next time you press play." }
         note(source, "Developed \(song.title): \(development.shape)", detail: detail)
         return development
@@ -90,6 +99,8 @@ extension AppState {
         keepSurfaceWork()
         beforeDevelopment = nil
         let arranged = arrange(before.sections, by: source)
+        // The tune developing marked is unmarked again; one marked since is somebody's, and stays.
+        if let marked = before.markedTune, self.song?.tune == marked { updateSong { $0.markTune(nil) } }
         let newest = Guidance.mixes(in: song).last
         if let newest, newest.id != before.mix {
             if let mix = before.mix {

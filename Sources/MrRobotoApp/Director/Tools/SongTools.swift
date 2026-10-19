@@ -21,7 +21,16 @@ public struct ReadSongTool: DirectorTool {
         public var lengthInBars: Int?
         public var sections: [Section]
         public var versions: [Version]
+        /// The part the band reads as the song's tune, and whether somebody marked it so —
+        /// mark_tune, write_melody, develop — or the band took the newest line that is not chords.
+        public var tune: Tune?
         public var note: String?
+
+        public struct Tune: Encodable, Sendable {
+            public var part: String
+            public var title: String
+            public var marked: Bool
+        }
 
         public struct Section: Encodable, Sendable {
             public var id: String
@@ -87,7 +96,7 @@ public struct ReadSongTool: DirectorTool {
         }
 
         enum CodingKeys: String, CodingKey {
-            case title, artist, tempo, key, sections, versions, note
+            case title, artist, tempo, key, sections, versions, tune, note
             case isOpen = "is_open"
             case timeSignature = "time_signature"
             case lengthInBars = "length_in_bars"
@@ -158,6 +167,9 @@ public struct ReadSongTool: DirectorTool {
                                          playsOn: ReadSongTool.playsOn(version, in: song),
                                          setAside: song.isAside(version.partID) ? true : nil,
                                          asideBecause: song.aside(version.partID)?.note)
+                      },
+                      tune: SongTune.version(in: song).map {
+                          Output.Tune(part: $0.partID.description, title: PartLabel.title(of: $0), marked: SongTune.marked(in: song) != nil)
                       },
                       note: nil)
     }
@@ -412,5 +424,93 @@ public struct SetAsideTool: DirectorTool {
                       detail: input.back ? (sections.isEmpty ? "Back in the song; no section it played in is still in the form, so stitch_section puts it somewhere."
                                                             : "Back in \(sections.joined(separator: ", ")).")
                                          : "Out of the song and listed under Set aside in Parts; set_aside with back true brings it back.")
+    }
+}
+
+// MARK: - mark_tune
+
+/// Which melody part is the song's tune, said: what the band reads as the tune from then on.
+public struct MarkTuneTool: DirectorTool {
+    public struct Input: Decodable, Sendable {
+        /// A melody's part or version id; empty takes the mark off.
+        public var part: String
+    }
+
+    public struct Output: Encodable, Sendable {
+        /// The part the band reads as the tune now, and its name; empty when there is none.
+        public var part: String
+        public var title: String
+        /// Whether that is the part marked, or the band's own choice with none marked.
+        public var marked: Bool
+        /// What the band read as the tune before, by name; empty when nothing.
+        public var was: String
+        /// The sections that play the tune, itself or a variation of it.
+        public var sections: [String]
+        public var detail: String
+    }
+
+    let workspace: any DirectorWorkspace
+
+    public init(workspace: any DirectorWorkspace) { self.workspace = workspace }
+
+    public let name = "mark_tune"
+    public var purpose: String {
+        "Say which melody part is the song's tune: the line a listener follows and a singer sings. The band reads the "
+        + "part marked as the tune everywhere — the Melodist's readings, vary_tune, the line develop writes to answer "
+        + "it, the melody words are set to — and a variation of it as the tune where the variation plays. write_melody "
+        + "and develop mark what they write; use this when read_song's tune is not the tune — chords or a riff written "
+        + "as a melody, a counter-line written after it — or the user says which line is. Empty takes the mark off: the "
+        + "band then reads the newest line of its own that is not chords."
+    }
+    public var schema: DirectorJSON {
+        Schema.object([
+            ("part", Schema.string("A melody's part or version id from read_song; a variation marks the part it varies. Empty takes the mark off.")),
+        ], required: ["part"])
+    }
+
+    public func run(_ input: Input) async throws -> Output {
+        guard let song = await workspace.song else {
+            throw DirectorToolFailure(tool: name, reason: "No song is open.", suggestion: "Call start_song or open_song first.")
+        }
+        let was = SongTune.version(in: song)
+        let asked = input.part.trimmingCharacters(in: .whitespacesAndNewlines)
+        var part: PartID?
+        if !asked.isEmpty {
+            guard let found = VersionID(uuidString: asked).flatMap(song.version)?.partID ?? PartID(uuidString: asked),
+                  let version = song.latestVersion(of: found) else {
+                throw DirectorToolFailure(tool: name, reason: "This song has no part \(asked).",
+                                          suggestion: "Take a melody's version or part id from read_song.")
+            }
+            guard version.type == .melody else {
+                throw DirectorToolFailure(tool: name, reason: "\(PartLabel.title(of: version)) is a \(version.type.rawValue), not a melody.",
+                                          suggestion: "A tune is a melody part: name one, or leave part empty to take the mark off.")
+            }
+            guard !song.isAside(song.strip(of: found)) else {
+                throw DirectorToolFailure(tool: name, reason: "\(PartLabel.title(of: version)) is set aside, so the band cannot read it as the tune.",
+                                          suggestion: "set_aside with back true brings it back first.")
+            }
+            part = song.strip(of: found)
+        }
+        let moved = await workspace.setTune(part)
+        let after = await workspace.song ?? song
+        let tune = SongTune.version(in: after)
+        let marked = SongTune.marked(in: after) != nil
+        let sections = after.sections.filter { SongTune.lane(in: $0, of: after) != nil }.map(\.name)
+        let title = tune.map(PartLabel.title(of:)) ?? ""
+        var detail: String
+        if let tune, marked {
+            detail = moved ? "\(title) is marked as the song's tune" : "\(title) was the song's tune already"
+            detail += sections.isEmpty ? "; no section plays it yet, so stitch_section puts it in the form."
+                : ", in \(sections.joined(separator: ", ")). The Melodist reads it, vary_tune plays it another way, develop answers it and words are set to it."
+            if moved, let was, song.strip(of: was.partID) != tune.partID { detail += " The band read \(PartLabel.title(of: was)) as the tune before." }
+        } else if tune != nil {
+            detail = (moved ? "The mark is off." : "Nothing was marked.")
+                + " The band reads \(title) as the tune: the newest line of its own that is not chords."
+        } else {
+            detail = (moved ? "The mark is off, and" : "Nothing is marked, and")
+                + " no melody here is a line of its own that is not chords, so the band reads no tune."
+        }
+        return Output(part: tune?.partID.description ?? "", title: title, marked: marked,
+                      was: was.map(PartLabel.title(of:)) ?? "", sections: sections, detail: detail)
     }
 }

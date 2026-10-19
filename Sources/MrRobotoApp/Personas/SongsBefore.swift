@@ -44,7 +44,7 @@ public struct SongsBefore: Hashable, Sendable {
                 if case .progression(let sheet) = version.kind { return Self.loop(of: sheet) }
                 return nil
             } ?? []
-            let opening = Guidance.melodies(in: other).last.flatMap { version -> Opening? in
+            let opening = SongTune.version(in: other).flatMap { version -> Opening? in
                 if case .melody(let tune) = version.kind { return Self.opening(of: tune.notes, key: other.key, beatsPerBar: other.timeSignature.beatsPerBar) }
                 return nil
             }

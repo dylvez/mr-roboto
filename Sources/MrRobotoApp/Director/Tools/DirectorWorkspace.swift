@@ -168,6 +168,10 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     /// guessed. False with no song open or no such genre.
     @discardableResult func setGenre(_ name: String) -> Bool
 
+    /// Marks a melody part as the open song's tune (`Song.markTune`), or with nil takes the mark
+    /// off. False when nothing changed, no song is open, or it holds no melody by that id.
+    @discardableResult func setTune(_ part: PartID?) -> Bool
+
     // Developing: the loop arranged, as one move.
 
     /// Develops the open song in the form given, or the one it would choose, and brings the
@@ -257,6 +261,8 @@ public final class AppStateWorkspace: DirectorWorkspace {
     public func keepSaid(_ records: [SaidRecord]) { app.keepSaid(records) }
 
     public func setGenre(_ name: String) -> Bool { app.setGenre(name, by: .director) }
+
+    @discardableResult public func setTune(_ part: PartID?) -> Bool { app.setTune(part, by: .director) }
 
     public func develop(form: [(name: String, bars: Int)]?) async -> DevelopmentResult? {
         await app.developAndMaster(form: form, by: .director)
@@ -570,18 +576,27 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
         song?.genre = profile.id
         return true
     }
+
+    @discardableResult
+    public func setTune(_ part: PartID?) -> Bool {
+        guard var current = song, current.markTune(part) else { return false }
+        song = current
+        return true
+    }
+
     public let store: LibraryStore?
 
-    /// The form and the mix from before the last development, as the frame keeps them.
-    private var beforeDevelopment: (sections: [Section], mix: Mix?)?
+    /// The form, the mix and the tune marked from before the last development, as the frame keeps them.
+    private var beforeDevelopment: (sections: [Section], mix: Mix?, markedTune: PartID?)?
 
     /// Nothing to render with, so the arrangement is kept and no loudness is read.
     public func develop(form: [(name: String, bars: Int)]?) async -> DevelopmentResult? {
         guard var current = song,
               let development = Develop.plan(for: current, form: form, genre: GenreBook.standard.genre(of: current)?.profile) else { return nil }
-        let before = (current.sections, Guidance.mix(in: current))
+        let before = (current.sections, Guidance.mix(in: current), development.tune)
         guard (try? current.append(contentsOf: development.versions)) != nil else { return nil }
         current.sections = development.sections
+        if let tune = development.tune { current.markTune(tune) }
         song = current
         if let mix = development.mix { _ = recordMix(mix, note: "Each section's level, for the arrangement") }
         beforeDevelopment = before
@@ -624,6 +639,7 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
         guard let before = beforeDevelopment, song != nil else { return false }
         beforeDevelopment = nil
         song?.sections = before.sections
+        if let marked = before.markedTune, song?.tune == marked { song?.markTune(nil) }
         if let current = song, Guidance.mix(in: current) != before.mix { _ = recordMix(before.mix ?? .unity, note: "The mix as it was") }
         return true
     }

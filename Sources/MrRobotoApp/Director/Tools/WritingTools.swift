@@ -88,7 +88,8 @@ public struct WriteMelodyTool: DirectorTool {
         + "with its octave, the beat it starts on (0 is the downbeat of bar 1), and how many beats it lasts. Rests are "
         + "the gaps. Name a parent to rewrite a melody as its next version. A first or second draft that fights the "
         + "chords, or in which nothing comes back, is not kept: what was read comes back, and you write it again. The "
-        + "third draft is kept as it is. A draft after one that was kept is that tune's next version."
+        + "third draft is kept as it is. A draft after one that was kept is that tune's next version. What is kept is "
+        + "marked as the song's tune, the part the band reads as the tune; mark_tune moves the mark."
     }
     public var schema: DirectorJSON {
         Schema.object([
@@ -229,6 +230,10 @@ public struct WriteMelodyTool: DirectorTool {
 
         let recorded = await workspace.record(version)
         var playsOn: String?
+        // What write_melody writes is the song's tune: the part the band reads as the tune from
+        // now on. The part that was marked before, when it was another.
+        let wasTune = SongTune.marked(in: song).flatMap { $0 == song.strip(of: version.partID) ? nil : song.latestVersion(of: $0) }
+        var marked = false
         if recorded {
             await desk?.kept(version.id, draft: draft, by: name)
             for flag in flags { await workspace.speak(Self.author, flag.says, detail: flag.rule) }
@@ -236,12 +241,17 @@ public struct WriteMelodyTool: DirectorTool {
                 await workspace.setInstrument(preset.id, for: version.partID)
                 playsOn = preset.name
             }
+            marked = await workspace.setTune(version.partID)
         }
         var detail = recorded
             ? "\(notes.count) note\(notes.count == 1 ? "" : "s") over \(bars) bar\(bars == 1 ? "" : "s") in \(key.name), signed by the Melodist"
             : "No song would take it, so it was not recorded"
         if recorded {
             detail += parent.map { ", as the next version of \(PartLabel.title(of: $0))." } ?? ", as a new part."
+            if marked {
+                detail += wasTune.map { " It is marked as the song's tune, where \(PartLabel.title(of: $0)) was: if it is a second line and not the tune, mark_tune puts the mark back." }
+                    ?? " It is marked as the song's tune."
+            }
             detail += flags.isEmpty ? " The Melodist has nothing to flag." : " The Melodist flags \(flags.count): its words are in the rail."
             // Said where it is read: the first live run answered a flag with a second tune.
             if !flags.isEmpty, draft < Self.lastDraft {
@@ -331,7 +341,7 @@ public struct WriteLyricsTool: DirectorTool {
         "Write the song's words and record them as a lyric signed by the Lyricist, who reads them back: whether the lines "
         + "share a shape, the rhyme scheme of each stanza, a line longer than a breath, an image this house has worn out. "
         + "A song has one lyric, so new words are the next version of it. align_to sets the syllables to a melody's notes, "
-        + "one a note."
+        + "one a note: the song's tune, unless another is named."
     }
     public var schema: DirectorJSON {
         Schema.object([
@@ -339,7 +349,7 @@ public struct WriteLyricsTool: DirectorTool {
                 "The words, one sung line per line, a blank line between stanzas, and a stanza's section written above it "
                 + "on its own line: \"[Verse]\", \"[Hook]\".")),
             ("align_to", Schema.string(
-                "\"newest\" to set the words to the song's newest melody, a melody version id for another, or empty to leave them unset.")),
+                "\"tune\" to set the words to the song's tune, a melody version id for another, or empty to leave them unset.")),
         ], required: ["text", "align_to"])
     }
 
@@ -407,21 +417,22 @@ public struct WriteLyricsTool: DirectorTool {
         let trimmed = target.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return nil }
         let found: PartVersion
-        if trimmed.lowercased() == "newest" {
-            // Graph order, not timestamps: two versions kept in the same millisecond tie on time.
-            guard let newest = Guidance.melodies(in: song).last else {
-                throw DirectorToolFailure(tool: name, reason: "\(song.title) has no melody to set the words to.",
-                                          suggestion: "Write one with write_melody first, or leave align_to empty.")
+        // "newest" is how a call said it before the song could say which part is its tune: the
+        // words are sung to the tune, not to whatever melody was written last.
+        if ["tune", "newest"].contains(trimmed.lowercased()) {
+            guard let tune = SongTune.version(in: song) else {
+                throw DirectorToolFailure(tool: name, reason: "\(song.title) has no tune to set the words to.",
+                                          suggestion: "Write one with write_melody first, mark_tune the melody that is the tune, or leave align_to empty.")
             }
-            found = newest
+            found = tune
         } else {
             guard let id = VersionID(uuidString: trimmed), let version = song.version(id) else {
                 throw DirectorToolFailure(tool: name, reason: "\"\(trimmed)\" is not a version in this song.",
-                                          suggestion: "Say \"newest\", a melody's id from read_song, or leave align_to empty.")
+                                          suggestion: "Say \"tune\", a melody's id from read_song, or leave align_to empty.")
             }
             guard version.type == .melody else {
                 throw DirectorToolFailure(tool: name, reason: "\(PartLabel.title(of: version)) is a \(version.type.rawValue), not a melody.",
-                                          suggestion: "Words are set to a tune: name a melody, or say \"newest\".")
+                                          suggestion: "Words are set to a tune: name a melody, or say \"tune\".")
             }
             found = version
         }

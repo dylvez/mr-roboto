@@ -12,7 +12,8 @@ import SongGraph
 enum AnotherWay {
 
     /// The lane in a section that plays a part of this kind, the version it plays and the part
-    /// it is a variation of (itself, when it is nobody's).
+    /// it is a variation of (itself, when it is nobody's). The first such lane: for the tune, ask
+    /// `SongTune`, since the first melody in a stitch is as often a guitar's chords.
     static func lane(of type: PartType, in section: Section, of song: Song) -> (lane: Lane, version: PartVersion, root: PartID)? {
         for lane in section.stitch {
             guard let version = song.version(playing: lane), version.type == type, !Develop.isAnswer(version) else { continue }
@@ -195,7 +196,7 @@ public struct ReharmonizeTool: DirectorTool {
         }
         let key = sheet.key
         let was = sheet.symbols()
-        let tune = Guidance.melodies(in: song).last.flatMap { version -> Melody? in
+        let tune = SongTune.version(in: song).flatMap { version -> Melody? in
             if case .melody(let melody) = version.kind { return melody }
             return nil
         }
@@ -455,13 +456,16 @@ public struct VaryTuneTool: DirectorTool {
         let named = input.section.trimmingCharacters(in: .whitespacesAndNewlines)
         let sections = named.isEmpty ? [] : try SectionNaming.resolve(named, in: song, tool: name)
 
-        // The tune in question: the one the first section plays, or the song's own.
-        let inSection = sections.lazy.compactMap { AnotherWay.lane(of: .melody, in: $0, of: song) }.first
-        let root = inSection.flatMap { song.latestVersion(of: $0.root) } ?? Guidance.melodies(in: song).last
+        // The tune in question: the song's (`SongTune`), as the first section that plays it does,
+        // or the song's own. It was the first melody in the stitch, and that was a guitar's chords.
+        let inSection = sections.lazy.compactMap { SongTune.lane(in: $0, of: song) }.first
+        let root = inSection.flatMap { song.latestVersion(of: $0.root) } ?? SongTune.version(in: song)
         guard let root, case .melody(let tune) = root.kind, !tune.notes.isEmpty else {
             throw DirectorToolFailure(tool: name, reason: "\(song.title) has no tune to play another way.",
-                                      suggestion: "write_melody writes one first.")
+                                      suggestion: "write_melody writes one first; mark_tune says which melody is the tune when one is written as chords.")
         }
+        // The tune and its variations: a section plays the tune when it plays one of these.
+        let family = song.family(of: root.partID)
         let title = PartLabel.title(of: root)
         let loop = tune.loopBars(beatsPerBar: beats)
         let key = song.key ?? Guidance.progressions(in: song).last.flatMap { version -> Key? in
@@ -550,7 +554,7 @@ public struct VaryTuneTool: DirectorTool {
             var placed: [String] = []
             for section in sections {
                 guard let index = arranged.firstIndex(where: { $0.id == section.id }),
-                      AnotherWay.lane(of: .melody, in: arranged[index], of: song) != nil else { continue }
+                      arranged[index].stitch.contains(where: { family.contains($0.part) }) else { continue }
                 if !arranged[index].stitch.contains(part: part) { arranged[index].stitch.append(Lane(part: part)) }
                 if !mix.sectionGains.contains(where: { $0.section == section.id && $0.part == part }) {
                     mix.sectionGains.append(SectionGain(section: section.id, part: part,
@@ -604,8 +608,9 @@ public struct VaryTuneTool: DirectorTool {
             let made = AnotherWay.variation(of: root, named: variationName, kind: .melody(varied),
                                             note: "\(Develop.tuneTitle(treatment, twice: twice)) of \(title)", by: author, in: working)
             if let version = made.version { versions.append(version); try? working.append(version) }
-            if let playing = AnotherWay.lane(of: .melody, in: arranged[index], of: working) {
-                arranged[index].stitch = arranged[index].stitch.map { $0.part == playing.lane.part ? Lane(part: made.part) : $0 }
+            // In place of the tune, or a variation of it; never in place of another melody there.
+            if let playing = arranged[index].stitch.first(where: { family.contains($0.part) }) {
+                arranged[index].stitch = arranged[index].stitch.map { $0.part == playing.part ? Lane(part: made.part) : $0 }
             } else {
                 arranged[index].stitch.append(Lane(part: made.part))
             }

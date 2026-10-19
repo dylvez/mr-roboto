@@ -248,8 +248,14 @@ public struct ConveneTool: DirectorTool {
                     notes.append("The Engineer's bounce failed: \(error).")
                 }
             case .melodist:
-                if let version = Self.heard(.melody, in: song, section: section) ?? Guidance.melodies(in: song).last,
+                // The song's tune: what plays it in the section asked about, or the song's own. Not
+                // the newest melody: that was as often a guitar's chords or a riff written after it.
+                let inSection = Self.heard(.melody, in: song, section: section)
+                if let version = inSection ?? SongTune.version(in: song),
                    case .melody(let melody) = version.kind {
+                    if let section, inSection == nil {
+                        notes.append("\(section.name) plays no tune; the Melodist read the song's, \(PartLabel.title(of: version)).")
+                    }
                     let progression = (Self.heard(.progression, in: song, section: section) ?? Guidance.progressions(in: song).last).flatMap { version -> Progression? in
                         if case .progression(let p) = version.kind { return p }
                         return nil
@@ -379,19 +385,17 @@ public struct ConveneTool: DirectorTool {
     }
 
     /// What plays in the section asked about, of one kind: the version each of its lanes plays (its
-    /// pin, or its part's newest), and of several — a lead, piano stabs, a riser — the busiest single
-    /// line, which is the one a listener follows: a melody is weighed by its notes that sound alone
-    /// at their onset, so chords written as a melody do not outvote the tune. Nil with no section named, or none of that
-    /// kind in it; the caller then reads the song's newest, as it always did.
+    /// pin, or its part's newest), and of several — two grooves, a bass and a sub — the busiest. A
+    /// melody is the song's tune (`SongTune`): the part marked as it, or the line a listener
+    /// follows, never chords written as a melody. Nil with no section named, or none of that kind
+    /// in it; the caller then reads the song's own.
     static func heard(_ type: PartType, in song: Song, section: Section?) -> PartVersion? {
         guard let section else { return nil }
+        if type == .melody { return SongTune.lane(in: section, of: song)?.version }
         let playing = section.stitch.compactMap { lane in lane.pin.flatMap { song.version($0) } ?? song.latestVersion(of: lane.part) }
             .filter { $0.type == type }
         func weight(_ version: PartVersion) -> Int {
             switch version.kind {
-            case .melody(let melody):
-                let onsets = Dictionary(grouping: melody.notes, by: { ($0.start * 1000).rounded() })
-                return onsets.values.filter { $0.count == 1 }.count
             case .bassline(let line): return line.notes.count
             case .groove(let groove): return groove.patterns.reduce(0) { $0 + $1.steps.filter { $0 != .rest }.count }
             default: return 0

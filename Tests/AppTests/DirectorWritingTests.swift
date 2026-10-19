@@ -78,7 +78,7 @@ struct DirectorWritingToolboxTests {
     @Test("the prompt tells the Director it writes for the Melodist and the Lyricist, sets the song first, comps after the Booth, and moves between songs")
     func prompt() {
         let prompt = DirectorPrompt.system
-        for phrase in ["write_melody", "on the Melodist's and the Lyricist's behalf", "write_lyrics", "align_to \"newest\"",
+        for phrase in ["write_melody", "on the Melodist's and the Lyricist's behalf", "write_lyrics", "align_to \"tune\"", "mark_tune",
                        "the song is set first", "set_song for the open one", "set_instrument",
                        "After the Booth, when the user has sung two takes", "comp_takes", "open_song"] {
             #expect(prompt.contains(phrase), "\(phrase)")

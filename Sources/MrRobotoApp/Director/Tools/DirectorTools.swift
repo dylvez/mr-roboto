@@ -112,6 +112,8 @@ public enum DirectorTools {
             SetEffectsTool(workspace: workspace).erased(),
             // A take tuned, appended after the fifty-sixth: the Auto-Tune sound, and the careful kind.
             TuneTakeTool(workspace: workspace).erased(),
+            // The song's tune said, appended after the fifty-seventh: which melody the band reads as it.
+            MarkTuneTool(workspace: workspace).erased(),
         ]
         if let stage {
             let pad = pad ?? DirectorStagePad()
@@ -203,6 +205,8 @@ public enum DirectorTools {
         "set_effects",
         // A take tuned to the key, appended.
         "tune_take",
+        // Which melody is the song's tune, appended.
+        "mark_tune",
     ]
 
     /// The two the frame adds. Appended after `names`, never among them: a session with no frame
