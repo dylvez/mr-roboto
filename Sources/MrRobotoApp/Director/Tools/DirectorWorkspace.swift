@@ -780,6 +780,7 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
         if !title.isEmpty { fresh.title = title }
         fresh.tempo = clamped
         fresh.key = key
+        fresh.gridChosen = true
         try? fresh.append(PartVersion(partID: PartID(), kind: .sound(Sound(instrument: machine)), author: .persona("Director"), operation: Operation.written, note: "The drum machine"))
         song = fresh
         return fresh
@@ -820,6 +821,7 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
         let clamped = min(AppState.tempoRange.upperBound, max(AppState.tempoRange.lowerBound, bpm))
         guard abs(clamped - current.tempo) > 0.001 else { return false }
         song?.tempo = clamped
+        song?.gridChosen = true
         return true
     }
 
@@ -827,6 +829,7 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
     public func setKey(_ key: Key?) -> Bool {
         guard let current = song, key != current.key else { return false }
         song?.key = key
+        song?.gridChosen = true
         return true
     }
 
@@ -835,6 +838,7 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
         guard let current = song, signature != current.timeSignature,
               signature.beatsPerBar >= 1, [1, 2, 4, 8, 16].contains(signature.beatUnit) else { return false }
         song?.timeSignature = signature
+        song?.gridChosen = true
         return true
     }
 

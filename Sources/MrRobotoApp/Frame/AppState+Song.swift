@@ -11,7 +11,9 @@ import SongGraph
 /// that was to ask the band for it in a sentence.
 ///
 /// None of these is a version. Like the sections and the cast they are the song's setting, edited
-/// in place, marked unsaved, and saved with the song.
+/// in place, marked unsaved, and saved with the song. A tempo, key or meter set here is chosen
+/// (`Song.gridChosen`): a first record brought into the song is moved onto it rather than giving
+/// the song its own.
 extension AppState {
 
     /// The tempo a song may be set to. Below this nothing is a beat; above it nothing is a bar.
@@ -79,7 +81,10 @@ extension AppState {
         guard let current = song, bpm.isFinite else { return false }
         let clamped = min(Self.tempoRange.upperBound, max(Self.tempoRange.lowerBound, bpm))
         guard abs(clamped - current.tempo) > 0.001 else { return false }
-        updateSong { $0.tempo = clamped }
+        updateSong { song in
+            song.tempo = clamped
+            song.gridChosen = true
+        }
         // Audio follows the tempo, stretched: said once here, since a voice or a record at another
         // speed is the one change to the song that is heard rather than seen.
         let stretched = playback.tracks.contains { $0.stretch != 1 }
@@ -112,7 +117,10 @@ extension AppState {
     @discardableResult
     public func setKey(_ key: Key?, by source: SessionEntry.Source = .you) -> Bool {
         guard let current = song, key != current.key else { return false }
-        updateSong { $0.key = key }
+        updateSong { song in
+            song.key = key
+            song.gridChosen = true
+        }
         note(source, key.map { "Key: \($0.name)" } ?? "Cleared the key")
         return true
     }
@@ -131,7 +139,10 @@ extension AppState {
     public func setTimeSignature(_ signature: TimeSignature, by source: SessionEntry.Source = .you) -> Bool {
         guard let current = song, signature != current.timeSignature,
               signature.beatsPerBar >= 1, [1, 2, 4, 8, 16].contains(signature.beatUnit) else { return false }
-        updateSong { $0.timeSignature = signature }
+        updateSong { song in
+            song.timeSignature = signature
+            song.gridChosen = true
+        }
         note(source, "Meter \(signature.description)",
              detail: transport.isPlaying ? "Takes effect the next time you press play." : nil)
         return true
@@ -154,8 +165,11 @@ extension Song {
     /// and Structure is where you shape it rather than a step you have to remember to take.
     public static let startingForm: [(name: String, bars: Int)] = [("Intro", 4), ("Verse", 16), ("Hook", 8)]
 
+    /// The tempo a new song starts at, until someone chooses one.
+    public static let startingTempo = 120.0
+
     /// A new song from nothing, with the starting form.
-    public static func new(title: String, key: Key? = nil, tempo: Double = 120) -> Song {
+    public static func new(title: String, key: Key? = nil, tempo: Double = Song.startingTempo) -> Song {
         Song(title: title, key: key, tempo: tempo,
              sections: startingForm.map { Section(name: $0.name, stitch: [], lengthInBars: $0.bars) })
     }
@@ -212,6 +226,7 @@ extension AppState {
                         versions: original.versions, seeds: original.seeds, experiments: original.experiments)
         copy.cast = original.cast
         copy.houseCalls = original.houseCalls
+        copy.gridChosen = original.gridChosen
         var updated = library
         if let song { updated.upsert(song) }
         updated.upsert(copy)

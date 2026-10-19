@@ -1,6 +1,7 @@
 import AVFoundation
 import AudioEngine
 import Foundation
+import Instrument
 import MusicTheory
 import Performance
 import SongGraph
@@ -148,6 +149,43 @@ struct SourcesTests {
         let loop = try await app.addSource(SourceRequest(song: a.id, stem: "bass", bars: 0..<2))
         #expect(app.song?.sections.map(\.name) == ["Loop"] && app.song?.sections.first?.lengthInBars == 8)
         #expect(app.song?.sections.first?.stitch.contains(part: loop.partID) == true)
+    }
+
+    @Test("a song started at 124 in E keeps them: the first record is moved onto it, and still gives it its form")
+    func started() async throws {
+        let directory = WiringFixture.temporaryDirectory("sources-started")
+        defer { WiringFixture.remove(directory) }
+        let (app, a, _) = try MashupFixture.app(in: directory)
+        app.autosaveDelay = nil
+        let e = Key(tonic: NoteName(.e))
+        let started = try #require(app.startSong(title: "Started", tempo: 124, key: e, machine: SynthMachine.tr808.id))
+        let request = SourceRequest(song: a.id, stem: "other")
+        #expect(started.isBlank && started.gridChosen == true && !started.takesFirstGrid && !app.takesGrid(request))
+        #expect(!SourcesModel(app: app).takesItsGrid && FitTarget.of(started) != nil, "the surface and the Library fit records to it")
+        let said = app.sentences(for: try app.sourcePick(request), request: request)
+        #expect(said.contains { $0.contains("up 2 semitones to E major") } && !said.contains { $0.hasPrefix("The song takes") }, "\(said)")
+
+        let version = try await app.addSource(request)
+        let song = try #require(app.song)
+        #expect(song.tempo == 124 && song.key == e, "\(song.tempo) bpm in \(song.key?.name ?? "no key")")
+        let fit = try #require(Guidance.audio(of: version)?.fit)
+        #expect(fit.semitones == 2 && abs(fit.ratio - 100.0 / 124) < 1e-9, "Arrival up from D to E, 100 stretched to 124")
+        #expect(song.sections.map(\.name) == ["Verse", "Chorus"] && song.sections.allSatisfy { $0.stitch.contains(part: version.partID) })
+
+        // A new song takes the first record's grid until someone chooses its tempo, key or meter —
+        // even back to where it started, which a song saved before then cannot say.
+        app.open(Song.new(title: "Untouched"))
+        #expect(app.song?.takesFirstGrid == true && app.takesGrid(request))
+        #expect(app.setTempo(96) && app.setTempo(120) && app.song?.tempo == 120 && app.song?.takesFirstGrid == false)
+        var before = Song.new(title: "Saved before", tempo: 124)
+        #expect(before.gridChosen == nil && !before.takesFirstGrid)
+        before.tempo = Song.startingTempo
+        #expect(before.takesFirstGrid)
+
+        // Kept with the song, and written only when chosen: a song from before reads back as it was.
+        let encoded = String(decoding: try JSONEncoder().encode(Song.new(title: "Plain")), as: UTF8.self)
+        #expect(!encoded.contains("gridChosen"))
+        #expect(try JSONDecoder().decode(Song.self, from: JSONEncoder().encode(song)).gridChosen == true)
     }
 
     @Test("a song whose form names nothing plays a source along with its own record, and its first form carries it")
@@ -338,6 +376,30 @@ struct SourcesDirectorTests {
             .init("kind", .string("song")), .init("id", .string(a.id.description)), .init("stem", .string("vocals")),
         ])))
         #expect(wrong.isError && wrong.content.contains("no vocals stem"))
+    }
+
+    @Test("start_song at 124 in E, then adopt: the song keeps its tempo and key, and the stem is moved onto them")
+    func startedThenAdopted() async throws {
+        let directory = WiringFixture.temporaryDirectory("sources-director-started")
+        defer { WiringFixture.remove(directory) }
+        let (app, a, _) = try MashupFixture.app(in: directory)
+        app.autosaveDelay = nil
+        let toolbox = DirectorTools.toolbox(workbench: DirectorWorkbench(engines: DirectorTestEngines.make(bars: 4)),
+                                            workspace: AppStateWorkspace(app))
+        let start = await toolbox.run(ClaudeToolUse(id: "s", name: "start_song", input: .object([
+            .init("title", .string("Mirror")), .init("tempo", .int(124)), .init("key", .string("E major")),
+            .init("machine", .string(SynthMachine.tr808.id)),
+        ])))
+        #expect(!start.isError, "\(start.content)")
+        let adopted = await toolbox.run(ClaudeToolUse(id: "a", name: "adopt", input: .object([
+            .init("kind", .string("song")), .init("id", .string(a.id.description)), .init("stem", .string("other")),
+            .init("bars", .array([])), .init("at_bar", .int(0)), .init("tighten", .string("")),
+        ])))
+        #expect(!adopted.isError, "\(adopted.content)")
+        let song = try #require(app.song)
+        #expect(song.title == "Mirror" && song.tempo == 124 && song.key == Key(tonic: NoteName(.e)), "\(song.tempo) \(song.key?.name ?? "")")
+        #expect(adopted.content.contains("up 2 semitones to E major") && !adopted.content.contains("The song takes"))
+        #expect(song.fittedSources.count == 1 && song.sections.map(\.name) == ["Verse", "Chorus"])
     }
 }
 

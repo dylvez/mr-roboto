@@ -220,6 +220,12 @@ public struct Song: Identifiable, Hashable, Codable, Sendable {
     /// before it round-trips byte for byte.
     public var asides: [Aside]?
 
+    /// Whether someone chose the song's tempo, key or meter — in its settings, or the band starting
+    /// it at one — rather than leaving them as a new song has them. A first record brought into a
+    /// song with nothing in it brings its own only when nobody did. Optional so a song written
+    /// before it round-trips byte for byte.
+    public var gridChosen: Bool?
+
     public init(id: SongID = SongID(), title: String, artist: String = "", key: Key? = nil, tempo: Double = 120,
                 timeSignature: TimeSignature = .fourFour, sections: [Section] = [], versions: [PartVersion] = [],
                 seeds: [Seed] = [], experiments: [Experiment] = [], createdAt: Date = Date()) {

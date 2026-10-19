@@ -177,7 +177,7 @@ struct SourcesSurfaceView: View {
                 Toggle("The song takes its key and tempo", isOn: $model.takesItsGrid)
                     .toggleStyle(.checkbox)
                     .font(Design.Typography.ui(12))
-                    .help("The song has nothing in it yet: it can take this record's key, tempo and form rather than moving the record to its own.")
+                    .help("The song has nothing in it yet, so it takes this record's form. It can take its key and tempo too, rather than moving the record to its own: on unless someone chose the song's.")
             } else if model.choosesSections {
                 BoothLabel("Plays in")
                 FlowRow(spacing: 6) {

@@ -68,6 +68,55 @@ struct SourceFitTests {
         #expect(abs(plan.move.ratio - 1) < 1e-9)
     }
 
+    @Test("tightened, bars that run 4% short of their tempo keep the song's bars: two to each of theirs, every bar line on the song's")
+    func pushing() {
+        // Read at 68 bpm, its bars 4% short of that, doubled into a song at 124: as Bessie Smith's
+        // bars 41–52 run, brought into Mirror Ball, 1923.
+        let bar = 0.96 * 4 * 60 / 68.0
+        let lines = (0...60).map { 0.4 + Double($0) * bar }
+        let record = SourceMaterial(label: "Vocals of Bleeding Hearted Blues", key: Key(tonic: NoteName(.c)), tempo: 68,
+                                    bars: zip(lines, lines.dropFirst()).map { SongGraph.TimeRange(start: $0, end: $1) },
+                                    duration: lines.last! + 2)
+        let song = MergeTarget(key: Key(tonic: NoteName(.d)), tempo: 124)
+        let songBar = 4 * 60 / 124.0
+
+        let tight = SourceFitting.plan(record, into: song, shape: .clip(from: 40, to: 52), tighten: true)
+        #expect(tight.move.tempoFactor == 2 && tight.bars == 24 && tight.held == 0, "\(tight.bars) bars, \(tight.held) held")
+        for step in 0...12 {
+            let landing = tight.output(atSource: lines[40 + step] - tight.region.start)
+            #expect(abs(landing - Double(2 * step) * songBar) < 1e-6, "its bar line \(41 + step) at \(landing) s")
+        }
+        #expect(tight.sentences.first == "Bars 41–52 of Vocals of Bleeding Hearted Blues, fitted to 24 bars of the song.")
+        #expect(tight.sentences.contains("Tightened: each of its bars stretched onto two of the song's, so it keeps time with what is programmed under it."))
+        #expect(tight.flags == ["Bars 41–52 of Vocals of Bleeding Hearted Blues run 4% shorter than its tempo says; tightened, they still fill the 24 bars of the song its tempo gives them."],
+                "\(tight.flags)")
+
+        // Loose, as it always was: fitted by its length to 23 bars, its bar lines a beat and more
+        // off the song's by the middle.
+        let loose = SourceFitting.plan(record, into: song, shape: .clip(from: 40, to: 52))
+        #expect(loose.bars == 23 && loose.anchors == nil && loose.flags.isEmpty)
+        #expect(abs(loose.output(atSource: lines[46] - loose.region.start) - 12 * songBar) > 60 / 124.0)
+
+        // Bars too far from their tempo to be its bars, 12% short: fitted by their length, tightened or not.
+        let short = 0.88 * 4 * 60 / 68.0
+        let far = (0...60).map { 0.4 + Double($0) * short }
+        var misread = record
+        misread.bars = zip(far, far.dropFirst()).map { SongGraph.TimeRange(start: $0, end: $1) }
+        let apart = SourceFitting.plan(misread, into: song, shape: .clip(from: 40, to: 52), tighten: true)
+        #expect(apart.bars == 21 && apart.isTightened, "\(apart.bars)")
+        #expect(apart.sentences.contains("Tightened: its 12 bars stretched evenly over 21 of the song's, so it keeps time with what is programmed under it."))
+
+        // Three bars of a record at twice the song's tempo come to a bar and a half: fitted by their
+        // length too. Four come to two, every two of its bars on one of the song's.
+        let long = 1.02 * 240 / 184.0
+        let fast = SourceMaterial(label: "Breaks", tempo: 184, bars: (0..<8).map { SongGraph.TimeRange(start: Double($0) * long, end: Double($0 + 1) * long) },
+                                  duration: 12)
+        let odd = SourceFitting.plan(fast, into: MergeTarget(tempo: 92), shape: .clip(from: 0, to: 3), tighten: true)
+        #expect(odd.bars == 2 && odd.flags.contains { $0.hasSuffix("they are fitted to 2 bars all the same.") }, "\(odd.bars) \(odd.flags)")
+        let even = SourceFitting.plan(fast, into: MergeTarget(tempo: 92), shape: .clip(from: 0, to: 4), tighten: true)
+        #expect(even.bars == 2 && even.sentences.contains { $0.hasPrefix("Tightened: every two of its bars stretched onto one of the song's") })
+    }
+
     @Test("drums are stretched and never shifted; a nudge by ear moves the rest")
     func drums() {
         var kit = vocal

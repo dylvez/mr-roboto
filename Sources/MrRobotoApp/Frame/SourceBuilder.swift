@@ -57,7 +57,7 @@ public struct SourceRequest: Equatable, Sendable {
     /// for a clip.
     public var sections: [SectionID]?
     /// Whether the song takes the record's key and tempo rather than the record taking the song's.
-    /// Nil: when the song has nothing in it yet.
+    /// Nil: when the song has nothing in it yet and nobody chose its own (`Song.takesFirstGrid`).
     public var takesItsGrid: Bool?
     /// Each of its bars stretched onto one of the song's, rather than one ratio for all. Nil: unless
     /// so many of its bars would be held that its bar lines look misread (`TightenMap.mostHeld`).
@@ -315,8 +315,19 @@ enum Sources {
 }
 
 extension Song {
-    /// Nothing in it but a drum machine's pick: a song a first source can set the key and tempo of.
+    /// Nothing in it but a drum machine's pick: a song a first source gives its form.
     var isBlank: Bool { versions.allSatisfy { $0.type == .sound } }
+
+    /// Blank, and nobody chose its tempo, key or meter: a song the first source gives its own.
+    /// One started at 124 in D major stays there, and the record is moved onto it like any other —
+    /// the first record used to take it to the record's 68 in C.
+    var takesFirstGrid: Bool { isBlank && !hasChosenGrid }
+
+    /// Whether someone chose its tempo, key or meter (`gridChosen`) — or, in a song saved before
+    /// that was kept, set any of them to other than a new song has.
+    var hasChosenGrid: Bool {
+        gridChosen == true || key != nil || tempo != Song.startingTempo || timeSignature != .fourFour
+    }
 
     /// Whether the form says what plays: some section names something.
     var isArranged: Bool { sections.contains { !$0.stitch.isEmpty } }
@@ -344,7 +355,7 @@ extension SourceFitting {
 extension AppState {
 
     /// Whether this request has the song take the record's grid.
-    func takesGrid(_ request: SourceRequest) -> Bool { request.takesItsGrid ?? (song?.isBlank ?? false) }
+    func takesGrid(_ request: SourceRequest) -> Bool { request.takesItsGrid ?? (song?.takesFirstGrid ?? false) }
 
     /// The request resolved to a file, a fit and a plan, against the open song as it is.
     func sourcePick(_ request: SourceRequest) throws -> SourcePick {
@@ -490,8 +501,8 @@ extension AppState {
     /// Pulls the source into the open song: renders it through its fit into the song's package
     /// and records it, then seats it in the sections that play it. A whole stem is an `.audio` stem
     /// laid along the song; bars of the record are a `.sample` that is exactly those bars and loops
-    /// like a chop. Into a blank song, the first source brings its key, its tempo and — a whole
-    /// stem — its sections.
+    /// like a chop. Into a blank song, the first source brings its sections — a whole stem — or a
+    /// loop of its bars, and its key and tempo unless someone chose the song's.
     @discardableResult
     func addSource(_ request: SourceRequest, by author: Author = .user,
                    progress: (@MainActor (String, Double) -> Void)? = nil) async throws -> PartVersion {

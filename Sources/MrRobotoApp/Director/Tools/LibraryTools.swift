@@ -426,11 +426,13 @@ public struct AdoptTool: DirectorTool {
         + "record's stem (from the crate) or a library song's stem in, fitted to the open song: the song's "
         + "key, tempo and bars stand and the record is moved onto them — the whole stem laid along the song "
         + "from at_bar, or bars of the record fitted to whole bars and looped like a chop in the sections "
-        + "with none. Into a song with nothing in it, the first stem brings its key, tempo and form. A record "
+        + "with none. Into a song with nothing in it, the first stem brings its form, and its key and tempo "
+        + "unless the song's were set (start_song, set_song): those stand and the stem is moved onto them. A record "
         + "not yet separated is queued for separation and the call says so; adopt again once it is. kind fitted takes a source the song already holds (a version "
         + "or part id from read_song) and fits it again from the untouched record: other semitones, "
         + "another at_bar, tightened or let loose, or the song's key and tempo as they are now. Tightened, "
-        + "each of the record's bars is stretched onto one of the song's so it keeps time with a programmed "
+        + "each of the record's bars is stretched onto one of the song's — two when its tempo was doubled to "
+        + "meet the song's, so twelve bars of it are twenty-four of the song — and it keeps time with a programmed "
         + "kit; it is unless its bar lines look misread, when tightening to them would lurch."
     }
     public var schema: DirectorJSON {

@@ -238,13 +238,15 @@ enum NextAdvisor {
             kind: "chords", title: "Start from chords",
             rationale: "Type a lead sheet — Dm7 G7 | Cmaj7 — and the bass is written to it.",
             move: .surface(Guidance.dockAction(for: .chords, in: song))), score: 6))
-        // Records waiting in the crate: a song can start as one of them, its key, tempo and form.
+        // Records waiting in the crate: a song can start as one of them, its form, and its key and
+        // tempo unless the song's were chosen.
         let crate = Sources.records(in: app.library)
         if !crate.isEmpty {
             candidates.append(Candidate(option: NextOption(
                 kind: "sources", title: "Start from a record in the crate",
-                rationale: "\(Guidance.count(crate.count, "record")) read and waiting. The first stem brought in gives the song "
-                    + "its key, tempo and form; drums, chords and a bass line are written to it after.",
+                rationale: "\(Guidance.count(crate.count, "record")) read and waiting. The first stem brought in "
+                    + (song.takesFirstGrid ? "gives the song its key, tempo and form" : "is moved to the song's key and tempo and gives it its form")
+                    + "; drums, chords and a bass line are written to it after.",
                 move: .surface(Guidance.dockAction(for: .sources, in: song))), score: 9.5))
         }
         candidates.append(Candidate(option: NextOption(

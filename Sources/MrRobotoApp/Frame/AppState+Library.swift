@@ -678,17 +678,21 @@ extension AppState {
         // The frame's range, as the settings hold a tempo to: a thousand bpm used to be accepted.
         let tempo = requested.isFinite ? min(Self.tempoRange.upperBound, max(Self.tempoRange.lowerBound, requested)) : 120
         // A song that holds only a drum machine is still a blank sketch: changing your mind about
-        // the tempo should not leave a trail of empty songs behind.
+        // the tempo should not leave a trail of empty songs behind. Either way its tempo and key
+        // are chosen, so the first record brought in is moved onto them rather than replacing them.
         if let open = song, open.versions.allSatisfy({ $0.type == .sound }) {
             updateSong { song in
                 if !name.isEmpty { song.title = name }
                 song.tempo = tempo
                 song.key = key
+                song.gridChosen = true
             }
         } else {
             if hasUnsavedChanges { save() }
+            var started = Song.new(title: name.isEmpty ? "Untitled" : name, key: key, tempo: tempo)
+            started.gridChosen = true
             // The band's own move: a switch it made must not cancel the turn that asked for it.
-            open(Song.new(title: name.isEmpty ? "Untitled" : name, key: key, tempo: tempo), by: .director)
+            open(started, by: .director)
         }
         record(PartVersion(partID: PartID(), kind: .sound(Sound(instrument: machine)), author: .persona("Director"),
                            operation: Operation.written, note: "The drum machine for this song"))

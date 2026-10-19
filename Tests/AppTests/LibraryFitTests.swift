@@ -94,10 +94,13 @@ struct LibraryFitTests {
         #expect(index.facts(.record(shelf.drifter.id))?.fit?.verdict == .far, "still stretched 100 to 85: 18%, past 12%")
         #expect(index.facts(.record(shelf.brass.id))?.fit?.semitones == 5)
 
-        // A song not saved yet is still what everything is fitted to, once it holds something.
+        // A song not saved yet is still what everything is fitted to, once it holds something or
+        // someone has set its key and tempo.
+        #expect(LibraryIndex(library: shelf.library, openSong: Song.new(title: "Untitled")).fitTarget == nil,
+                "a blank song nobody set takes the first record's key and tempo: everything goes with it")
         var fresh = Song(title: "Sketch", key: Key(parsing: "A minor"), tempo: 85)
-        #expect(LibraryIndex(library: shelf.library, openSong: fresh).fitTarget == nil,
-                "a blank song takes the first record's key and tempo: everything goes with it")
+        #expect(LibraryIndex(library: shelf.library, openSong: fresh).facts(.record(shelf.brass.id))?.fit?.verdict == .asIs,
+                "a blank song set to A minor at 85 keeps them, and the record is moved onto it")
         try fresh.append(TransportFixture.grooveVersion())
         #expect(LibraryIndex(library: shelf.library, openSong: fresh).facts(.record(shelf.brass.id))?.fit?.verdict == .asIs)
     }

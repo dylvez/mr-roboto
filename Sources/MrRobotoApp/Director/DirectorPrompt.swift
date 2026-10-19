@@ -272,8 +272,9 @@ public enum DirectorPrompt {
         stand while the record is moved onto them. A whole stem is laid along the song from at_bar \
         and plays in every section; some bars are fitted to whole bars and loop like a chop in the \
         sections that have none. Say the sentences it returns and anything flagged. Into a song \
-        with nothing in it, the first stem brings its key, tempo and form: that is how a song made \
-        of records starts. When it lands in the wrong place or key, do not bring it in again: adopt \
+        with nothing in it, the first stem brings its form, and its key and tempo unless start_song \
+        or set_song set the song's — those stand, and the stem is moved onto them: that is how a \
+        song made of records starts. When it lands in the wrong place or key, do not bring it in again: adopt \
         with kind fitted and the source's id fits it again from the untouched record — at_bar a \
         bar later, semitones by ear, or neither to follow the song's key and tempo as they are now. \
         "The beat drifts off the record", "it doesn't sit with the drums" after a while is drift: \

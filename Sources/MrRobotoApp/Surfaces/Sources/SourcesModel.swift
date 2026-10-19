@@ -24,7 +24,7 @@ public final class SourcesModel {
     public var atBar = 1
     public private(set) var semitones: Int?
     public var sections: Set<SectionID> = []
-    /// Whether a blank song takes the record's key and tempo.
+    /// Whether a blank song takes the record's key and tempo: at first, when nobody chose its own.
     public var takesItsGrid = false
     /// Each of its bars onto one of the song's. Nil: unless its bar lines look misread.
     public var tighten: Bool?
@@ -218,7 +218,7 @@ public final class SourcesModel {
         fromBar = 1
         toBar = 2
         atBar = 1
-        takesItsGrid = app.song?.isBlank ?? false
+        takesItsGrid = app.song?.takesFirstGrid ?? false
         chooseSections()
     }
 

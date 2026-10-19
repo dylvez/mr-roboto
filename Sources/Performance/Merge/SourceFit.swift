@@ -146,8 +146,9 @@ public enum SourceFitting {
     /// - Parameters:
     ///   - target: the song's key and tempo. A song with no key leaves the pitch alone.
     ///   - semitones: an override of the key arithmetic, by ear.
-    ///   - tighten: each of the record's bars pinned to one of the song's (`TightenMap`), rather
-    ///     than one ratio for all of it.
+    ///   - tighten: each of the record's bars pinned to the song's bar lines (`TightenMap`) — onto
+    ///     one of its bars, or two when T1 doubled the record's tempo — rather than one ratio for
+    ///     all of it. A clip is then as many of the song's bars as its own bars come to that way.
     public static func plan(_ source: SourceMaterial, into target: MergeTarget, beatsPerBar: Int = 4,
                             shape: SourceShape, semitones: Int? = nil, tighten: Bool = false) -> SourcePlan {
         // Tightened, every bar line is read where the smoothing put it: the region, bar 1 and the
@@ -200,7 +201,7 @@ public enum SourceFitting {
                     guard line > start + 1e-6, line < source.duration, output > 0 else { return nil }
                     return TightenMap.Pin(source: line - start, output: output)
                 }
-                pin(&plan, pins: pins, label: source.label)
+                pin(&plan, pins: pins, label: source.label, laid: laid(move.tempoFactor))
             }
             return plan
 
@@ -208,20 +209,37 @@ public enum SourceFitting {
             let sourceBar = source.tempo.map { Double(max(1, beatsPerBar)) * 60 / max(1, $0) } ?? secondsPerBar / move.ratio
             let region = clipRegion(of: source, from: from, to: to, secondsPerBar: sourceBar)
             let count = max(1, to - from)
-            // As many of the song's bars as the clip comes to at the stretch the tempo asks for —
-            // doubled or halved first, by T1 — then that many exactly.
-            let plain = region.duration * move.ratio / secondsPerBar
-            let bars = max(1, Int(plain.rounded()))
+            // Tightened, each of its bars fills its own `tempoFactor` of the song's, as a whole
+            // stem's do — two when T1 doubled its tempo — however its bars run against its tempo
+            // here. Fitted by their length, Bessie Smith's bars 41–52, 4% short of her 68 bpm, came
+            // to 23 bars of a song at 124 rather than 24, and her changes landed up to a beat and a
+            // half off the band's.
+            let pinned = Double(count) * move.tempoFactor
+            let barForBar = tightens && source.tempo != nil && pinned == pinned.rounded() && region.duration > 0
+                && abs(pinned * secondsPerBar / region.duration / move.ratio - 1) <= TightenMap.limit
+            // Loose, and where bar for bar cannot be — no tempo, an odd number of bars halved, or a
+            // stretch past the limit, which is bars past the record's end or bar lines read wrong —
+            // as many of the song's bars as the clip comes to at the stretch the tempo asks for,
+            // doubled or halved first by T1. Then that many exactly.
+            let bars = barForBar ? Int(pinned) : max(1, Int((region.duration * move.ratio / secondsPerBar).rounded()))
             let exact = region.duration > 0 ? Double(bars) * secondsPerBar / region.duration : move.ratio
+            let span = count == 1 ? "Bar \(from + 1)" : "Bars \(from + 1)–\(from + count)"
             if abs(exact / move.ratio - 1) > unevenBars, source.tempo != nil {
-                flags.append(String(format: "Bars %d–%d of %@ run %.0f%% %@ than its tempo says; they are fitted to %d bar%@ all the same.",
-                                    from + 1, from + count, source.label, abs(exact / move.ratio - 1) * 100,
-                                    exact < move.ratio ? "longer" : "shorter", bars, bars == 1 ? "" : "s"))
+                if barForBar {
+                    let one = count == 1
+                    flags.append(String(format: "%@ of %@ %@ %.0f%% %@ than its tempo says; tightened, %@ the %d bar%@ of the song its tempo gives %@.",
+                                        span, source.label, one ? "runs" : "run", abs(exact / move.ratio - 1) * 100,
+                                        exact < move.ratio ? "longer" : "shorter", one ? "it still fills" : "they still fill",
+                                        bars, bars == 1 ? "" : "s", one ? "it" : "them"))
+                } else {
+                    flags.append(String(format: "Bars %d–%d of %@ run %.0f%% %@ than its tempo says; they are fitted to %d bar%@ all the same.",
+                                        from + 1, from + count, source.label, abs(exact / move.ratio - 1) * 100,
+                                        exact < move.ratio ? "longer" : "shorter", bars, bars == 1 ? "" : "s"))
+                }
             }
             move.ratio = exact
             move.tempo = tempo
             move.sentence = Merge.sentence(for: fragment(source), move: move, target: MergeTarget(key: target.key, tempo: tempo))
-            let span = count == 1 ? "Bar \(from + 1)" : "Bars \(from + 1)–\(from + count)"
             sentences.append("\(span) of \(source.label), fitted to \(bars) bar\(bars == 1 ? "" : "s") of the song.")
             sentences.append(move.sentence)
             if let tuned { sentences.append(tuned.sentence) }
@@ -229,26 +247,38 @@ public enum SourceFitting {
             var plan = SourcePlan(shape: shape, move: move, region: region, offset: 0, bars: bars, cut: region.start,
                                   secondsPerBar: secondsPerBar, sentences: sentences, flags: flags)
             if tightens {
-                // Each of its bars an equal share of the song's bars it fills, its end on theirs.
+                // Each of its bars an equal share of the song's bars it fills — bar for bar, its
+                // `tempoFactor` of them — its end on theirs.
                 let share = Double(bars) * secondsPerBar / Double(count)
                 var pins = (1..<count).map { step in
                     TightenMap.Pin(source: clipRegion(of: source, from: from + step, to: from + step + 1, secondsPerBar: sourceBar).start - region.start,
                                    output: Double(step) * share)
                 }
                 pins.append(TightenMap.Pin(source: region.duration, output: Double(bars) * secondsPerBar))
-                pin(&plan, pins: pins, label: source.label)
+                pin(&plan, pins: pins, label: source.label,
+                    laid: barForBar ? laid(move.tempoFactor) : "its \(count) bar\(count == 1 ? "" : "s") stretched evenly over \(bars) of the song's")
             }
             return plan
         }
     }
 
+    /// How a tightened source's bars are laid on the song's: each onto one, onto two when T1
+    /// doubled its tempo to meet the song's, two onto one when it halved it.
+    private static func laid(_ tempoFactor: Double) -> String {
+        switch tempoFactor {
+        case 2: return "each of its bars stretched onto two of the song's"
+        case 0.5: return "every two of its bars stretched onto one of the song's"
+        default: return "each of its bars stretched onto one of the song's"
+        }
+    }
+
     /// The plan's anchors from its pins, and what it says about them.
-    private static func pin(_ plan: inout SourcePlan, pins: [TightenMap.Pin], label: String) {
+    private static func pin(_ plan: inout SourcePlan, pins: [TightenMap.Pin], label: String, laid: String) {
         guard !pins.isEmpty else { return }
         let (anchors, held) = TightenMap.anchors(pins, ratio: plan.move.ratio)
         plan.anchors = anchors
         plan.held = held
-        plan.sentences.append("Tightened: each of its bars stretched onto one of the song's, so it keeps time with what is programmed under it.")
+        plan.sentences.append("Tightened: \(laid), so it keeps time with what is programmed under it.")
         if held > 0 {
             plan.flags.append("\(held) of \(label)'s \(pins.count) bars are more than \(Int(TightenMap.limit * 100))% off its overall stretch; "
                               + "each is held to that, and the bars after it catch up.")

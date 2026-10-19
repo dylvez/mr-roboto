@@ -68,10 +68,10 @@ public struct FitTarget: Hashable, Sendable {
         beatsPerBar = song.timeSignature.beatsPerBar
     }
 
-    /// What a song fits things to: nothing while it is blank, because Sources gives a blank song
-    /// the first record's key and tempo, and everything goes with it as it is.
+    /// What a song fits things to: nothing while it is blank and nobody chose its key and tempo,
+    /// because Sources gives such a song the first record's, and everything goes with it as it is.
     static func of(_ song: Song?) -> FitTarget? {
-        guard let song, !song.isBlank else { return nil }
+        guard let song, !song.takesFirstGrid else { return nil }
         return FitTarget(song)
     }
 
