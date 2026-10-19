@@ -233,6 +233,11 @@ public struct Song: Identifiable, Hashable, Codable, Sendable {
     /// song written before it round-trips byte for byte. Set it through `markTune(_:)`.
     public var tune: PartID?
 
+    /// What the mix is read against on the Master, when someone picked something: a record in the
+    /// crate or another song in the library. Optional so a song written before round-trips byte for
+    /// byte.
+    public var mixReference: MixReference?
+
     public init(id: SongID = SongID(), title: String, artist: String = "", key: Key? = nil, tempo: Double = 120,
                 timeSignature: TimeSignature = .fourFour, sections: [Section] = [], versions: [PartVersion] = [],
                 seeds: [Seed] = [], experiments: [Experiment] = [], createdAt: Date = Date()) {
@@ -594,6 +599,17 @@ public struct TrackRelease: Hashable, Codable, Sendable {
         self.trimDB = trimDB
         self.releasedAt = releasedAt.graphPrecision
     }
+}
+
+/// What a song's mix is read against: a record in the crate, or another song in the library. The
+/// Master draws its balance beside the song's, and the Engineer says where a band is off it.
+/// One of the two is set; it encodes as `{"record": id}` or `{"song": id}`.
+public struct MixReference: Hashable, Codable, Sendable {
+    public var record: RecordID?
+    public var song: SongID?
+
+    public static func record(_ id: RecordID) -> MixReference { MixReference(record: id, song: nil) }
+    public static func song(_ id: SongID) -> MixReference { MixReference(record: nil, song: id) }
 }
 
 /// A part set aside, and the lanes it had when it was: where bringing it back puts it — the same

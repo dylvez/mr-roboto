@@ -96,22 +96,36 @@ public enum MixMeter {
     /// Integrated loudness in LKFS/LUFS, gated as the standard says. `-.infinity` for silence.
     public static func integratedLoudness(_ planar: [[Float]], sampleRate: Double) -> Double {
         guard let frames = planar.first?.count, frames > 0, sampleRate > 0 else { return -.infinity }
+        return integratedLoudness(running: weightedRunningSums(planar, sampleRate: sampleRate), frames: 0..<frames, sampleRate: sampleRate)
+    }
+
+    /// Each channel K-weighted, squared and summed as it goes: `running[c][i]` is the sum of channel
+    /// `c`'s first `i` weighted squares. A block's mean square is then a difference of two totals
+    /// rather than 0.4 s summed again every 0.1 s, and any stretch of the buffer — a section of a
+    /// whole-song bounce — is read from the same totals without filtering it again, its filters
+    /// carrying on from the bars before it as they do when the song plays.
+    public static func weightedRunningSums(_ planar: [[Float]], sampleRate: Double) -> [[Double]] {
+        guard sampleRate > 0 else { return [] }
         let (shelf, highPass) = kWeighting(sampleRate: sampleRate)
-        let block = Int(0.4 * sampleRate), hop = Int(0.1 * sampleRate)
-        guard block > 0, hop > 0 else { return -.infinity }
-        // Each channel K-weighted and squared, then summed as it goes, so a block's mean square is
-        // a difference of two running totals rather than 0.4 s summed again every 0.1 s.
-        let totals = planar.map { lane -> [Double] in
+        return planar.map { lane -> [Double] in
             let squares = weightedSquares(lane, shelf: shelf, highPass: highPass)
             var running = [Double](repeating: 0, count: squares.count + 1)
             var sum = 0.0
             for i in 0..<squares.count { sum += squares[i]; running[i + 1] = sum }
             return running
         }
+    }
+
+    /// Integrated loudness of the frames `range` of a buffer, from its running sums: 400 ms blocks
+    /// at a 100 ms hop inside the range, gated at −70 and −10 as the standard says. Over the whole
+    /// buffer this is `integratedLoudness(_:sampleRate:)`, number for number. `-.infinity` for silence.
+    public static func integratedLoudness(running totals: [[Double]], frames range: Range<Int>, sampleRate: Double) -> Double {
+        let block = Int(0.4 * sampleRate), hop = Int(0.1 * sampleRate)
+        guard block > 0, hop > 0, !range.isEmpty else { return -.infinity }
         // Mean square per block, summed over channels (weights of 1 for L/R/mono).
         var blocks: [Double] = []
-        var start = 0
-        while start + block <= frames {
+        var start = range.lowerBound
+        while start + block <= range.upperBound {
             var sum = 0.0
             for running in totals where running.count > start + block {
                 sum += (running[start + block] - running[start]) / Double(block)
@@ -121,16 +135,57 @@ public enum MixMeter {
         }
         if blocks.isEmpty {
             var sum = 0.0
-            for running in totals { sum += (running.last ?? 0) / Double(frames) }
+            for running in totals where running.count > range.lowerBound {
+                sum += (running[min(range.upperBound, running.count - 1)] - running[range.lowerBound]) / Double(range.count)
+            }
             blocks = [sum]
         }
-        func lkfs(_ ms: Double) -> Double { ms > 0 ? -0.691 + 10 * log10(ms) : -.infinity }
         let absolute = blocks.filter { lkfs($0) > -70 }
         guard !absolute.isEmpty else { return -.infinity }
         let relativeGate = lkfs(absolute.reduce(0, +) / Double(absolute.count)) - 10
         let gated = absolute.filter { lkfs($0) > relativeGate }
         guard !gated.isEmpty else { return -.infinity }
         return lkfs(gated.reduce(0, +) / Double(gated.count))
+    }
+
+    /// A mean square, summed over channels, as loudness: −0.691 + 10 log₁₀. `-.infinity` for none.
+    static func lkfs(_ meanSquare: Double) -> Double { meanSquare > 0 ? -0.691 + 10 * log10(meanSquare) : -.infinity }
+
+    /// Short-term loudness (EBU R128's 3-second window) across the frames `range`, a value every
+    /// `hopSeconds`, windows wholly inside the range. Empty when the range is shorter than a window.
+    public static func shortTermLoudness(running totals: [[Double]], frames range: Range<Int>, sampleRate: Double,
+                                         hopSeconds: Double = 0.1) -> [Double] {
+        let window = Int(3 * sampleRate), hop = Int(hopSeconds * sampleRate)
+        guard window > 0, hop > 0 else { return [] }
+        var out: [Double] = []
+        var start = range.lowerBound
+        while start + window <= range.upperBound {
+            var sum = 0.0
+            for running in totals where running.count > start + window {
+                sum += (running[start + window] - running[start]) / Double(window)
+            }
+            out.append(lkfs(sum))
+            start += hop
+        }
+        return out
+    }
+
+    /// How far short-term loudness moves, in LU: the 95th percentile less the 10th, after the gates
+    /// EBU Tech 3342 puts on its loudness range — nothing under −70 LUFS, nothing more than 20 LU
+    /// under the gated mean. Nil with fewer than two values left: one window has no spread.
+    public static func loudnessSpread(_ shortTerm: [Double]) -> Double? {
+        let absolute = shortTerm.filter { $0.isFinite && $0 > -70 }
+        guard !absolute.isEmpty else { return nil }
+        let mean = absolute.reduce(0.0) { $0 + pow(10, ($1 + 0.691) / 10) } / Double(absolute.count)
+        let gate = lkfs(mean) - 20
+        let gated = absolute.filter { $0 > gate }.sorted()
+        guard gated.count >= 2 else { return nil }
+        func percentile(_ p: Double) -> Double {
+            let position = p * Double(gated.count - 1)
+            let below = Int(position.rounded(.down)), above = min(gated.count - 1, below + 1)
+            return gated[below] + (gated[above] - gated[below]) * (position - Double(below))
+        }
+        return percentile(0.95) - percentile(0.10)
     }
 
     /// Sample peak in dBFS, over every channel.
@@ -273,7 +328,14 @@ public enum MixMeter {
 
     /// Mean power per bin over the whole buffer, mono-summed.
     public static func powerSpectrum(_ planar: [[Float]], sampleRate: Double) -> [Double] {
-        guard let frames = planar.first?.count, frames > 0 else { return [] }
+        guard let power = powerFrames(planar) else { return [] }
+        return meanPower(power, frames: 0..<power.frameCount)
+    }
+
+    /// The STFT the spectrum readings take, frame by frame: the mono sum, 4096 points at a hop of
+    /// 2048, frame `t` centred on sample `t × hop`. Nil for an empty buffer.
+    public static func powerFrames(_ planar: [[Float]]) -> Spectrogram? {
+        guard let frames = planar.first?.count, frames > 0 else { return nil }
         // The mono sum and the mean over frames in Accelerate, as the STFT between them already is.
         var mono = [Float](repeating: 0, count: frames)
         var share = 1 / Float(planar.count)
@@ -281,17 +343,26 @@ public enum MixMeter {
             let n = vDSP_Length(min(frames, channel.count))
             vDSP_vsma(channel, 1, &share, mono, 1, &mono, 1, n)
         }
-        let nFFT = 4096
-        let stft = STFT(nFFT: nFFT, hop: nFFT / 2)
-        let padded = mono.count < nFFT ? mono + [Float](repeating: 0, count: nFFT - mono.count) : mono
+        let stft = STFT(nFFT: spectrumFFT, hop: spectrumHop)
+        let padded = mono.count < spectrumFFT ? mono + [Float](repeating: 0, count: spectrumFFT - mono.count) : mono
         let power = stft.forward(padded).power()
-        guard power.frameCount > 0 else { return [] }
+        return power.frameCount > 0 ? power : nil
+    }
+
+    /// The spectrum readings' STFT: its length and its hop, in samples.
+    public static let spectrumFFT = 4096
+    public static let spectrumHop = spectrumFFT / 2
+
+    /// Mean power per bin over the STFT frames `frames`.
+    public static func meanPower(_ power: Spectrogram, frames: Range<Int>) -> [Double] {
+        let rows = frames.clamped(to: 0..<power.frameCount)
+        guard !rows.isEmpty else { return [Double](repeating: 0, count: power.binCount) }
         // Frames are rows of `binCount`: each bin's mean is a strided mean down one column.
         var out = [Double](repeating: 0, count: power.binCount)
         power.values.withUnsafeBufferPointer { values in
             for bin in 0..<power.binCount {
                 var mean: Float = 0
-                vDSP_meanv(values.baseAddress! + bin, vDSP_Stride(power.binCount), &mean, vDSP_Length(power.frameCount))
+                vDSP_meanv(values.baseAddress! + rows.lowerBound * power.binCount + bin, vDSP_Stride(power.binCount), &mean, vDSP_Length(rows.count))
                 out[bin] = Double(mean)
             }
         }

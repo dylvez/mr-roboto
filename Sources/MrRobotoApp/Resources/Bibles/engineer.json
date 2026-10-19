@@ -419,6 +419,18 @@
       ],
       "priority" : 4,
       "what" : "Where the top end stops, and whether that was chosen."
+    },
+    {
+      "features" : [
+        "mix.reference.band.gap.db",
+        "mix.band.20-120.db",
+        "mix.band.120-500.db",
+        "mix.band.500-2k.db",
+        "mix.band.2k-6k.db",
+        "mix.band.6k-16k.db"
+      ],
+      "priority" : 5,
+      "what" : "How the balance sits against the reference picked for it, band by band."
     }
   ],
   "name" : "Engineer",
@@ -479,6 +491,18 @@
       },
       "id" : "engineer.oq.move-size",
       "question" : "Is 6 dB the right most a single move can take a fader?"
+    },
+    {
+      "affects" : [
+        "engineer.balance-against-the-reference"
+      ],
+      "alternative" : "A reference is another song with another arrangement, so its balance is a direction rather than a target: the window should be wider in the lowest and the highest bands, where arrangements differ most, or only the bands a genre states should be read at all.",
+      "encoded" : "Three, in every band: the reference was picked to be matched, and a band two octaves wide moved that far is a different balance.",
+      "evidence" : {
+        "inferred" : "the bands' width, and what a reference is picked for"
+      },
+      "id" : "engineer.oq.reference-window",
+      "question" : "Is 3 dB the right distance from a reference, band by band?"
     },
     {
       "affects" : [
@@ -912,6 +936,23 @@
         "value" : 15
       },
       "when" : "the bass's energy at 60–120 Hz is under the drums' by more than 15 dB"
+    },
+    {
+      "engineAction" : "Performance.SectionMeter over the Master's whole-song bounce and over the reference, band by band",
+      "evidence" : {
+        "cited" : [
+          "https://www.izotope.com/en/products/tonal-balance-control.html"
+        ]
+      },
+      "id" : "engineer.balance-against-the-reference",
+      "then" : "say the band, both numbers and the gap, and move what owns the band a step at a time; where the genre states the band's range, the range draws the line",
+      "threshold" : {
+        "comparison" : "atMost",
+        "feature" : "mix.reference.band.gap.db",
+        "unit" : "dB",
+        "value" : 3
+      },
+      "when" : "a band of the whole mix sits more than 3 dB from the same band of the reference picked for it"
     }
   ],
   "vocabulary" : [
@@ -1047,6 +1088,68 @@
       "meaning" : "the integrated loudness the song is delivered at",
       "noticeable" : 1,
       "unit" : "LUFS"
+    },
+    {
+      "engineField" : "Performance.SectionMeter.Reading.bandsDB, the song's whole bounce less the reference's",
+      "evidence" : {
+        "cited" : [
+          "https://www.izotope.com/en/products/tonal-balance-control.html"
+        ]
+      },
+      "feature" : "mix.reference.band.gap.db",
+      "meaning" : "how far one band of the mix's balance sits from the same band of the reference picked for it, each against its own whole, unsigned",
+      "noticeable" : 1,
+      "unit" : "dB"
+    },
+    {
+      "engineField" : "Performance.SectionMeter.Reading.bandsDB over the Master's whole-song bounce",
+      "evidence" : {
+        "inferred" : "the Master's five bands, cut where an engineer names the low end, the body, the middle, the presence and the air"
+      },
+      "feature" : "mix.band.20-120.db",
+      "meaning" : "the whole mix's energy at 20–120 Hz against all of its energy: that band's share of the balance",
+      "noticeable" : 1,
+      "unit" : "dB"
+    },
+    {
+      "engineField" : "Performance.SectionMeter.Reading.bandsDB over the Master's whole-song bounce",
+      "evidence" : {
+        "inferred" : "the Master's five bands, cut where an engineer names the low end, the body, the middle, the presence and the air"
+      },
+      "feature" : "mix.band.120-500.db",
+      "meaning" : "the whole mix's energy at 120–500 Hz against all of its energy: that band's share of the balance",
+      "noticeable" : 1,
+      "unit" : "dB"
+    },
+    {
+      "engineField" : "Performance.SectionMeter.Reading.bandsDB over the Master's whole-song bounce",
+      "evidence" : {
+        "inferred" : "the Master's five bands, cut where an engineer names the low end, the body, the middle, the presence and the air"
+      },
+      "feature" : "mix.band.500-2k.db",
+      "meaning" : "the whole mix's energy at 500–2k Hz against all of its energy: that band's share of the balance",
+      "noticeable" : 1,
+      "unit" : "dB"
+    },
+    {
+      "engineField" : "Performance.SectionMeter.Reading.bandsDB over the Master's whole-song bounce",
+      "evidence" : {
+        "inferred" : "the Master's five bands, cut where an engineer names the low end, the body, the middle, the presence and the air"
+      },
+      "feature" : "mix.band.2k-6k.db",
+      "meaning" : "the whole mix's energy at 2k–6k Hz against all of its energy: that band's share of the balance",
+      "noticeable" : 1,
+      "unit" : "dB"
+    },
+    {
+      "engineField" : "Performance.SectionMeter.Reading.bandsDB over the Master's whole-song bounce",
+      "evidence" : {
+        "inferred" : "the Master's five bands, cut where an engineer names the low end, the body, the middle, the presence and the air"
+      },
+      "feature" : "mix.band.6k-16k.db",
+      "meaning" : "the whole mix's energy at 6k–16k Hz against all of its energy: that band's share of the balance",
+      "noticeable" : 1,
+      "unit" : "dB"
     }
   ],
   "voice" : {

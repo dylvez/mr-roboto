@@ -26,7 +26,9 @@ public struct GenreLens: Sendable, Equatable {
     public static func judges(_ feature: Feature) -> Bool {
         let name = feature.rawValue
         let styles = ["tempo.", "swing.", "pocket.", "ghost.", "humanize.", "form.", "harmony.", "melody.", "lyric.", "bass."]
-        let mix: Set<Feature> = [.integratedLUFS, .crestDB, .tiltDB, .mixBandwidthHz, .lowEndSeparationDB, .masterTargetLUFS]
+        // A band's share of the whole mix is style; how far it sits from a reference someone picked
+        // is not a norm at all.
+        let mix: Set<Feature> = Set([.integratedLUFS, .crestDB, .tiltDB, .mixBandwidthHz, .lowEndSeparationDB, .masterTargetLUFS] + Feature.mixBands)
         return (styles.contains { name.hasPrefix($0) } && !name.hasPrefix("form.album.")) || mix.contains(feature)
     }
 

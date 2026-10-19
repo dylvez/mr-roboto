@@ -266,6 +266,12 @@ public final class AppState {
     @ObservationIgnored public var sectionSettle: TimeInterval = 1
     /// Section states already bounced, for a Compare to play at once.
     @ObservationIgnored var sectionBounces: [UUID: Bounce] = [:]
+    /// The last whole song bounced and read, by the Master or by the Director's tools: what either
+    /// reads again from rather than bouncing again, while the song and the mix sound the same.
+    @ObservationIgnored var wholeSongReading: WholeSongReading?
+    /// References measured this session, each with what it was measured from: a record's file, or a
+    /// song as the library held it.
+    @ObservationIgnored var referenceReadings: [MixReference: ReferenceReading] = [:]
 
     /// The accented row in the parts ledger, and what most surfaces open against.
     public private(set) var selectedVersion: VersionID?

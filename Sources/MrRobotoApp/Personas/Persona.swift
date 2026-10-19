@@ -159,6 +159,8 @@ public struct Feature: RawRepresentable, Hashable, Sendable, Codable, CustomStri
     public static let densitySpread = Feature("form.density.spread")
     /// Length of the form in minutes.
     public static let formMinutes = Feature("form.minutes")
+    /// A hook's integrated loudness over the verse before it, off the bounce, LU.
+    public static let hookLiftLU = Feature("form.hook.lift.lu")
 
     // The Lyricist's: the words.
     /// Mean syllables per sung line.
@@ -230,6 +232,16 @@ public struct Feature: RawRepresentable, Hashable, Sendable, Codable, CustomStri
     public static let lowEndSeparationDB = Feature("mix.lowend.separation.db")
     /// Where the top end stops, Hz.
     public static let mixBandwidthHz = Feature("mix.bandwidth.hz")
+    /// The whole mix's energy in each of `SectionMeter.bands`, dB under the whole: its balance.
+    public static let bandSubDB = Feature("mix.band.20-120.db")
+    public static let bandBodyDB = Feature("mix.band.120-500.db")
+    public static let bandMiddleDB = Feature("mix.band.500-2k.db")
+    public static let bandPresenceDB = Feature("mix.band.2k-6k.db")
+    public static let bandAirDB = Feature("mix.band.6k-16k.db")
+    /// The five, in `SectionMeter.bands` order.
+    public static let mixBands: [Feature] = [.bandSubDB, .bandBodyDB, .bandMiddleDB, .bandPresenceDB, .bandAirDB]
+    /// How far one band of the mix's balance sits from the same band of the reference's, dB, unsigned.
+    public static let referenceBandGapDB = Feature("mix.reference.band.gap.db")
 
     // A take's (M5).
     /// A sung note's distance from the nearest note in the key, cents; + is sharp.

@@ -201,6 +201,18 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     /// bench to open one on.
     @discardableResult
     func openCompare(_ brief: CompareBrief) -> Bool
+
+    /// The whole song bounced once through the mix it plays and read section by section — the
+    /// Master's reading, reused while the song and the mix sound the same. Nil with nothing to
+    /// bounce, or nothing to bounce with.
+    func wholeSong() async throws -> WholeSongReading?
+    /// The reference the open song's mix is read against, measured. Nil with none picked.
+    func mixReference() async throws -> ReferenceReading?
+    /// Picks the reference by title — a record in the crate or another song in the library — or
+    /// none with "none". The choice it landed on, or nil when nothing answers to the title.
+    func setMixReference(named title: String) -> ReferenceChoice?
+    /// What the open song's mix could be read against.
+    var referenceChoices: [ReferenceChoice] { get }
 }
 
 extension DirectorWorkspace {
@@ -240,6 +252,13 @@ extension DirectorWorkspace {
 
     /// The lens the band reads the open song through, when its genre is known.
     public var genreLens: GenreLens? { genre.map { GenreLens($0.profile) } }
+
+    // Where there is nothing to render with and no library to read from, there is no whole-song
+    // reading and nothing to read it against.
+    public func wholeSong() async throws -> WholeSongReading? { nil }
+    public func mixReference() async throws -> ReferenceReading? { nil }
+    public func setMixReference(named title: String) -> ReferenceChoice? { nil }
+    public var referenceChoices: [ReferenceChoice] { [] }
 }
 
 /// `AppState` seen through the six things the Director needs.
@@ -373,6 +392,27 @@ public final class AppStateWorkspace: DirectorWorkspace {
         return try await MixReader.observe(plan: app.playback, mix: nil, section: section, song: app.song,
                                            kitsDirectory: AuditionService.defaultKitsDirectory)
     }
+
+    public func wholeSong() async throws -> WholeSongReading? { try await app.readWholeSong() }
+
+    public func mixReference() async throws -> ReferenceReading? {
+        guard let reference = app.mixReference else { return nil }
+        return try await app.measureReference(reference)
+    }
+
+    public func setMixReference(named title: String) -> ReferenceChoice? {
+        let asked = title.trimmingCharacters(in: .whitespaces)
+        if asked.lowercased() == "none" {
+            app.setMixReference(nil, by: .director)
+            return nil
+        }
+        let choices = app.referenceChoices
+        guard let found = choices.first(where: { $0.title.caseInsensitiveCompare(asked) == .orderedSame })
+                ?? choices.first(where: { $0.title.lowercased().hasPrefix(asked.lowercased()) }) else { return nil }
+        return app.setMixReference(found.reference, by: .director) ? found : nil
+    }
+
+    public var referenceChoices: [ReferenceChoice] { app.referenceChoices }
 
     /// Signed as the Director, and the Mixer moves to it: an open Mixer committing its own older
     /// mix on the next fader move used to undo the Director's cut.

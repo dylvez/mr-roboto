@@ -43,6 +43,7 @@ public struct Engineer: Persona {
     static let voodoo = "https://en.wikipedia.org/wiki/Voodoo_(D%27Angelo_album)"
     static let tapeOp = "https://tapeop.com/interviews/"
     static let crestFactor = "https://en.wikipedia.org/wiki/Crest_factor"
+    static let tonalBalance = "https://www.izotope.com/en/products/tonal-balance-control.html"
 
     // MARK: - Thresholds
 
@@ -63,6 +64,17 @@ public struct Engineer: Persona {
     public static let ceilingCeilingDBTP = -0.5
     /// A delivery target lives inside this window.
     public static let targetWindowLUFS = -20.0 ... -8.0
+    /// A band of the balance further than this from the same band of the reference is said.
+    public static let referenceBandWindowDB = 3.0
+
+    /// The five bands of the balance, defined once each.
+    static let bandVocabulary: [FeatureDefinition] = zip(Feature.mixBands, SectionMeter.bands).map { feature, band in
+        FeatureDefinition(feature, unit: "dB",
+                          meaning: "the whole mix's energy at \(band.name) Hz against all of its energy: that band's share of the balance",
+                          engineField: "Performance.SectionMeter.Reading.bandsDB over the Master's whole-song bounce",
+                          noticeable: 1,
+                          evidence: .inferred("the Master's five bands, cut where an engineer names the low end, the body, the middle, the presence and the air"))
+    }
 
     // MARK: - The bible
 
@@ -98,6 +110,8 @@ public struct Engineer: Persona {
                            features: [.integratedLUFS, .peakDBFS]),
             ListeningPoint(4, "Where the top end stops, and whether that was chosen.",
                            features: [.mixBandwidthHz, .tiltDB]),
+            ListeningPoint(5, "How the balance sits against the reference picked for it, band by band.",
+                           features: [.referenceBandGapDB] + Feature.mixBands),
         ],
 
         vocabulary: [
@@ -145,7 +159,11 @@ public struct Engineer: Persona {
                               meaning: "the integrated loudness the song is delivered at",
                               engineField: "SongGraph.Master.targetLUFS, read against Performance.MixMeter.integratedLoudness",
                               noticeable: 1, evidence: .cited([r128, spotifyLoudness, digido])),
-        ],
+            FeatureDefinition(.referenceBandGapDB, unit: "dB",
+                              meaning: "how far one band of the mix's balance sits from the same band of the reference picked for it, each against its own whole, unsigned",
+                              engineField: "Performance.SectionMeter.Reading.bandsDB, the song's whole bounce less the reference's",
+                              noticeable: 1, evidence: .cited([tonalBalance])),
+        ] + bandVocabulary,
 
         ranges: [
             FeatureRange(.integratedLUFS, lineage: "Bob Katz", -20, -12, typical: -14, evidence: .cited([digido, r128, spotifyLoudness])),
@@ -244,6 +262,12 @@ public struct Engineer: Persona {
                         threshold: .atMost(.lowEndSeparationDB, 15, unit: "dB"),
                         engineAction: "Performance.MixMeter.bandEnergyDB on the bass's bounce",
                         evidence: .cited([voodoo])),
+            PersonaRule("engineer.balance-against-the-reference",
+                        when: "a band of the whole mix sits more than 3 dB from the same band of the reference picked for it",
+                        then: "say the band, both numbers and the gap, and move what owns the band a step at a time; where the genre states the band's range, the range draws the line",
+                        threshold: .atMost(.referenceBandGapDB, referenceBandWindowDB, unit: "dB"),
+                        engineAction: "Performance.SectionMeter over the Master's whole-song bounce and over the reference, band by band",
+                        evidence: .cited([tonalBalance])),
         ],
 
         voice: PersonaVoice(
@@ -444,6 +468,14 @@ public struct Engineer: Persona {
                                     + "forgotten at −20 is one honest move, not two.",
                          affects: ["engineer.small-moves"],
                          evidence: .inferred("this bible's own one-move discipline")),
+            OpenQuestion("engineer.oq.reference-window",
+                         question: "Is 3 dB the right distance from a reference, band by band?",
+                         encoded: "Three, in every band: the reference was picked to be matched, and a band two octaves wide moved that far is a different balance.",
+                         alternative: "A reference is another song with another arrangement, so its balance is a direction rather than a target: "
+                                    + "the window should be wider in the lowest and the highest bands, where arrangements differ most, "
+                                    + "or only the bands a genre states should be read at all.",
+                         affects: ["engineer.balance-against-the-reference"],
+                         evidence: .inferred("the bands' width, and what a reference is picked for")),
             OpenQuestion("engineer.oq.stems",
                          question: "Can masking be read from stems the transport bounces separately, when a real mix has bleed?",
                          encoded: "Yes, for now: the transport's drums and bass are separate sources, so their bounces are exact.",
@@ -505,6 +537,55 @@ public struct Engineer: Persona {
                          observation.chainCornerHz.map { String(format: "; the corner is the chain's, at %.0f kHz", $0 / 1000) } ?? "")
                 : String(format: "Top end stops at %.0f kHz%@. Dark is a decision — say so.", observation.bandwidthHz / 1000,
                          observation.chainCornerHz.map { String(format: " and the chain's corner is %.0f kHz", $0 / 1000) } ?? ", and no chain put it there")))
+        return notes
+    }
+
+    // MARK: - Reading the balance against a reference
+
+    /// The whole mix's balance against a reference's, band by band — each `SectionMeter.Reading
+    /// .bandsDB` of a whole bounce, its bands against its own whole. A band more than
+    /// `referenceBandWindowDB` off is said with both numbers and the gap, the failing ones first and
+    /// the widest of those first; the bands that sit near it are said once, together. Where the
+    /// genre states a band's range, the range draws the line for that band instead — a reference is
+    /// one record, a genre is many — and the reading says both, as `GenreLens` would.
+    public func read(balance song: [Double], against reference: [Double], named name: String,
+                     genre: GenreProfile? = nil) -> [PersonaReading] {
+        let rule = "engineer.balance-against-the-reference"
+        let count = min(song.count, reference.count, SectionMeter.bands.count)
+        guard count > 0 else { return [] }
+        var said: [(gap: Double, reading: PersonaReading)] = []
+        var near: [Int] = []
+        for band in 0..<count {
+            // The gap to the tenth it is said in, so "3.0 dB short" is never a flag.
+            let mine = song[band], theirs = reference[band], gap = ((mine - theirs) * 10).rounded() / 10
+            let within = abs(gap) <= Engineer.referenceBandWindowDB
+            let range = genre?.range(Feature.mixBands[band])
+            if within && range == nil { near.append(band); continue }
+            var says = String(format: "%@ Hz sits %.1f dB under the whole mix, against %.1f in %@", SectionMeter.bands[band].name, -mine, -theirs, name)
+            says += within ? String(format: ", %.1f dB away.", abs(gap))
+                : String(format: " — %.1f dB %@. %@ what owns the band, no more than 6 dB a move.",
+                         abs(gap), gap < 0 ? "short" : "over", gap < 0 ? "Lift" : "Cut")
+            var reading = PersonaReading(rule: rule, feature: Feature.mixBands[band], value: mine, holds: within, says: says)
+            if let range, let genre {
+                let fits = range.contains(mine)
+                reading.holds = fits
+                switch (within, fits) {
+                case (false, true): reading.says += " In \(genre.name) that is normal (\(range.span)), so it stands."
+                case (true, false): reading.says += " But \(genre.name) wants \(range.span)."
+                case (false, false): reading.says += " \(genre.name) wants \(range.span) too."
+                case (true, true): break
+                }
+                if !(within && fits) { reading.genre = genre.id }
+            }
+            said.append((abs(gap), reading))
+        }
+        var notes = said.sorted { ($0.reading.holds ? 1 : 0, -$0.gap) < ($1.reading.holds ? 1 : 0, -$1.gap) }.map(\.reading)
+        if !near.isEmpty {
+            let widest = near.map { abs(song[$0] - reference[$0]) }.max() ?? 0
+            let bands = near.count == count ? "Every band" : SongsBefore.list(near.map { SectionMeter.bands[$0].name }) + " Hz"
+            notes.append(PersonaReading(rule: rule, feature: .referenceBandGapDB, value: widest, holds: true,
+                                        says: String(format: "%@ within %.0f dB of %@'s balance.", bands, Engineer.referenceBandWindowDB, name)))
+        }
         return notes
     }
 }

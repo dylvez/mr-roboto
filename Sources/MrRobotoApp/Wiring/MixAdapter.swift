@@ -21,6 +21,25 @@ public protocol MixHosting: AnyObject {
     /// A section (or the song) bounced through a mix: planar audio at its rate.
     func bounce(mix: Mix, section: SectionID?) async throws -> (planar: [[Float]], sampleRate: Double)
     func note(_ text: String, detail: String?)
+    /// What the song's mix is read against, when someone picked something still in the library.
+    var reference: MixReference? { get }
+    /// Everything it could be read against: the crate's records, the library's other songs.
+    var referenceChoices: [ReferenceChoice] { get }
+    /// Picks the reference, or none. Kept with the song.
+    func setReference(_ reference: MixReference?)
+    /// A reference measured the way the song is: once, then kept.
+    func measureReference(_ reference: MixReference) async throws -> ReferenceReading
+    /// A whole-song reading the Master made, kept where the Director's tools read from.
+    func keep(_ reading: WholeSongReading)
+}
+
+extension MixHosting {
+    // A host with no library behind it has nothing to read against, and nowhere to keep a reading.
+    public var reference: MixReference? { nil }
+    public var referenceChoices: [ReferenceChoice] { [] }
+    public func setReference(_ reference: MixReference?) {}
+    public func measureReference(_ reference: MixReference) async throws -> ReferenceReading { throw ReferenceFailure.missing }
+    public func keep(_ reading: WholeSongReading) {}
 }
 
 @MainActor
@@ -80,4 +99,10 @@ final class MixAdapter: MixHosting {
     }
 
     func note(_ text: String, detail: String?) { app.note(.session, text, detail: detail) }
+
+    var reference: MixReference? { app.mixReference }
+    var referenceChoices: [ReferenceChoice] { app.referenceChoices }
+    func setReference(_ reference: MixReference?) { app.setMixReference(reference, by: author == .user ? .you : .director) }
+    func measureReference(_ reference: MixReference) async throws -> ReferenceReading { try await app.measureReference(reference) }
+    func keep(_ reading: WholeSongReading) { app.keep(reading) }
 }

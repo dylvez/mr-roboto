@@ -17,7 +17,11 @@ public final class MasterModel {
         public var truePeakDBTP: Double
         /// The spectrum in dB, 48 log-spaced bars from 40 Hz to 16 kHz.
         public var spectrumDB: [Double]
+        /// The Engineer's: the delivery numbers, then the balance against the reference when one
+        /// is read.
         public var readings: [PersonaReading]
+        /// The Peer's: whether each hook lifts off the verse before it.
+        public var lifts: [PersonaReading]
         /// What was actually bounced and measured — see `Scope`.
         public var scope: Scope
         /// How long the bounce was, tail included. The honest check on `scope`: a whole-song
@@ -25,8 +29,12 @@ public final class MasterModel {
         public var seconds: Double
         /// The mix the bounce went through. What `isStale` compares the working mix with.
         public var mix: Mix
+        /// The same bounce, read section by section.
+        public var whole: WholeSongReading
         /// The first reading that does not hold: what to change first.
         public var firstToChange: PersonaReading? { readings.first { !$0.holds } }
+        /// Each section of the form, in order, off the bounce.
+        public var sections: [SectionMeter.Reading] { whole.sheet.sections }
     }
 
     /// How much of the song a reading covers: all of it.
@@ -178,27 +186,109 @@ public final class MasterModel {
     /// (`GenreLens`). Nil — the default, and a song nobody has placed — leaves the persona's own.
     public var genre: @MainActor () -> GenreLens? = { nil }
 
-    /// Bounces the whole song through the working mix and reads it.
+    /// Bounces the whole song through the working mix and reads it: the whole, and every section
+    /// off the same bounce. The reading is kept where the Director's tools read from, and judged
+    /// against the reference once that is measured — the reference never holds the numbers up.
     public func read() async {
         guard !isReading else { return }
         let scope = self.scope
         let bounced = mix
+        var heard = host.playback
+        heard.mix = bounced
         readingScope = scope
         isReading = true
         defer { isReading = false; readingScope = nil }
         do {
             // No section: every section in order, or the flat plan. See `Scope`.
             let (planar, rate) = try await host.bounce(mix: bounced, section: nil)
-            let observation = MixObservation.measure(label: host.song?.title ?? "Song", mix: planar, sampleRate: rate)
-            let truePeak = MixMeter.truePeakDB(planar, sampleRate: rate)
-            let spectrum = Self.logSpectrum(MixMeter.powerSpectrum(planar, sampleRate: rate), sampleRate: rate)
-            let seconds = rate > 0 ? Double(planar.first?.count ?? 0) / rate : 0
-            reading = Reading(observation: observation, truePeakDBTP: truePeak, spectrumDB: spectrum,
-                              readings: GenreLens.judge(Engineer().read(observation), by: Engineer.bible, in: genre()), scope: scope, seconds: seconds, mix: bounced)
+            let label = host.song?.title ?? "Song"
+            let plan = heard
+            // Read off the main actor: a whole song's STFT and true peak are a moment's work.
+            let whole = await Task.detached { WholeSongReading.measure(planar, sampleRate: rate, plan: plan, label: label) }.value
+            host.keep(whole)
+            reading = Reading(observation: whole.observation, truePeakDBTP: whole.truePeakDBTP,
+                              spectrumDB: Self.logSpectrum(whole.sheet.spectrum, sampleRate: rate),
+                              readings: Self.engineerReadings(whole, reference: currentReference, genre: genre()),
+                              lifts: whole.liftReadings, scope: scope, seconds: whole.seconds, mix: bounced, whole: whole)
             ownError = nil
         } catch {
             ownError = "The bounce could not be read: \(error)"
         }
+        if let reference = host.reference, currentReference == nil, measuring != reference {
+            Task { await measure(reference) }
+        }
+    }
+
+    /// The Engineer's lines on a whole-song reading: the delivery numbers judged in the genre, then
+    /// the balance against the reference.
+    static func engineerReadings(_ whole: WholeSongReading, reference: ReferenceReading?, genre: GenreLens?) -> [PersonaReading] {
+        GenreLens.judge(Engineer().read(whole.observation), by: Engineer.bible, in: genre) + whole.balanceReadings(against: reference, genre: genre)
+    }
+
+    // MARK: The reference
+
+    /// What the mix is read against: picked from the crate or the library, kept with the song.
+    public var reference: MixReference? { host.reference }
+    public var referenceChoices: [ReferenceChoice] { host.referenceChoices }
+    /// The picked reference, measured. Nil until it is, and with none picked.
+    public private(set) var referenceReading: ReferenceReading?
+    /// The reference being measured now, when one is.
+    public private(set) var measuring: MixReference?
+    public var isMeasuringReference: Bool { measuring != nil }
+    /// Why the reference could not be measured, when it could not.
+    public private(set) var referenceError: String?
+
+    /// The measured reference, when it is still the one picked.
+    private var currentReference: ReferenceReading? {
+        guard let referenceReading, referenceReading.reference == host.reference else { return nil }
+        return referenceReading
+    }
+
+    /// Picks what the mix is read against, or nothing, and measures it in the background: what the
+    /// picker calls.
+    public func setReference(_ reference: MixReference?) {
+        Task { await chooseReference(reference) }
+    }
+
+    /// Picks what the mix is read against, or nothing, and measures it: a record at once, a song
+    /// after one bounce of its own. The reading on screen is judged against it when it lands.
+    public func chooseReference(_ reference: MixReference?) async {
+        host.setReference(reference)
+        referenceError = nil
+        rejudge()
+        if let reference, currentReference == nil, measuring != reference { await measure(reference) }
+    }
+
+    /// Measures a record picked as the reference last time, when it has not been: what a view asks
+    /// for when it appears, a file read and nothing rendered. A song picked as the reference is
+    /// bounced to be measured, so that waits for the next Read, or for being picked.
+    public func loadReference() async {
+        guard let reference = host.reference, reference.record != nil, currentReference == nil, measuring != reference else { return }
+        await measure(reference)
+    }
+
+    private func measure(_ reference: MixReference) async {
+        measuring = reference
+        defer { if measuring == reference { measuring = nil } }
+        do {
+            let measured = try await host.measureReference(reference)
+            // Something else picked meanwhile: this one is kept by the host, not drawn.
+            guard host.reference == reference else { return }
+            referenceReading = measured
+            referenceError = nil
+        } catch {
+            guard host.reference == reference else { return }
+            referenceError = "\(error)"
+        }
+        rejudge()
+    }
+
+    /// The Engineer's lines again, against the reference and the genre as they are now. Nothing is
+    /// bounced: the reading's numbers stand, only what they are judged against moved.
+    private func rejudge() {
+        guard var current = reading else { return }
+        current.readings = Self.engineerReadings(current.whole, reference: currentReference, genre: genre())
+        reading = current
     }
 
     /// 48 log-spaced bars from 40 Hz to 16 kHz, in dB relative to the loudest bar.

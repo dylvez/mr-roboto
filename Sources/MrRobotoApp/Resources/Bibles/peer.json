@@ -336,6 +336,13 @@
       ],
       "priority" : 4,
       "what" : "How long it is, and how many sections that length holds."
+    },
+    {
+      "features" : [
+        "form.hook.lift.lu"
+      ],
+      "priority" : 5,
+      "what" : "Whether the hook lifts off the verse before it, once the song is bounced: louder, or fuller."
     }
   ],
   "name" : "Peer",
@@ -371,15 +378,40 @@
     },
     {
       "affects" : [
-        "peer.something-lifts"
+        "peer.something-lifts",
+        "peer.hook-lifts"
       ],
       "alternative" : "Level: a single layer that doubles in loudness is a bigger lift than two quiet ones, and the rule should read the Engineer's bounce when there is one.",
-      "encoded" : "Layers, because the graph can count them before anything is bounced.",
+      "encoded" : "Layers, because the graph can count them before anything is bounced. Once the song is bounced whole, the hook is also read off the bounce: louder or fuller than the verse before it.",
       "evidence" : {
         "inferred" : "the stitch count is what is available before a bounce exists"
       },
       "id" : "peer.oq.density-as-layers",
       "question" : "Is a lift a count of layers, or a level the Engineer reads?"
+    },
+    {
+      "affects" : [
+        "peer.hook-lifts"
+      ],
+      "alternative" : "Loudness alone: a hook less than a decibel louder sits back whatever comes in, because what comes in has made its room by taking from the rest; the bands then explain the level and never excuse it.",
+      "encoded" : "Yes: something coming in — the hats opening, the bass doubling — is a lift a listener hears before a meter does, so a band up 3 dB with none down as far stands for one.",
+      "evidence" : {
+        "inferred" : "the Engineer's and the Peer's own disagreement about a lift: a level or a layer, and the hook needs one of them"
+      },
+      "id" : "peer.oq.fuller",
+      "question" : "Is a hook that is no louder but brings one band up 3 dB a lift?"
+    },
+    {
+      "affects" : [
+        "peer.hook-lifts"
+      ],
+      "alternative" : "Any rise at all — a limited master squeezes a chorus's lift to half a decibel — or none, in a genre that holds one level for the dance floor and lifts with the arrangement instead; the floor should then be the genre's.",
+      "encoded" : "A decibel: the Engineer's smallest loudness step worth a word, and under it a listener does not hear the hook arrive louder.",
+      "evidence" : {
+        "inferred" : "the Engineer's noticeable step for integrated loudness, read where the Peer listens"
+      },
+      "id" : "peer.oq.lift-floor",
+      "question" : "Is a decibel the least a hook has to rise over the verse before it?"
     },
     {
       "affects" : [
@@ -757,6 +789,23 @@
         "value" : 1
       },
       "when" : "more than one pair of neighbours jumps tempo past a ratio of 0.8–1.25"
+    },
+    {
+      "engineAction" : "Performance.SectionMeter over the whole song's bounce: the hook's loudness and five bands against the verse before it",
+      "evidence" : {
+        "cited" : [
+          "https://en.wikipedia.org/wiki/Song_structure"
+        ]
+      },
+      "id" : "peer.hook-lifts",
+      "then" : "lift it — a decibel or more, or something coming in; a hook that sits back is a verse with another name",
+      "threshold" : {
+        "comparison" : "atLeast",
+        "feature" : "form.hook.lift.lu",
+        "unit" : "LU",
+        "value" : 1
+      },
+      "when" : "a hook or chorus comes in less than a decibel louder than the verse before it, and no fuller"
     }
   ],
   "vocabulary" : [
@@ -845,6 +894,16 @@
       "meaning" : "neighbouring tracks whose tempo ratio leaves 0.8–1.25",
       "noticeable" : 1,
       "unit" : "jumps"
+    },
+    {
+      "engineField" : "Performance.SectionMeter.Reading.integratedLUFS, the hook's less the verse's before it",
+      "evidence" : {
+        "inferred" : "the Engineer's loudness step, read where the Peer listens: the hook against what led to it"
+      },
+      "feature" : "form.hook.lift.lu",
+      "meaning" : "a hook or chorus's integrated loudness over the verse before it, off the whole song's bounce: how far the song lifts where the hook lands",
+      "noticeable" : 1,
+      "unit" : "LU"
     }
   ],
   "voice" : {

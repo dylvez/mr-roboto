@@ -23,6 +23,89 @@ private func findStrip(_ named: String, in strips: [(part: PartID, label: String
     return .none
 }
 
+// MARK: - The whole song, section by section
+
+/// The whole song bounced once through the mix and read section by section, as the Master reads
+/// it: what read_mix and master say beside their own numbers. Every bands_db is the five bands of
+/// `bands_hz`, dB against the whole song's energy, so the rows share one scale; the whole song's
+/// own row and the reference's are their balances.
+public struct WholeSongEntry: Encodable, Sendable {
+    public struct Row: Encodable, Sendable {
+        public var section: String
+        /// Where it starts, "0:30": the Peer's clock.
+        public var at: String
+        public var integratedLUFS: Double?
+        public var crestDB: Double?
+        /// How far its 3-second loudness moves, LU.
+        public var spreadLU: Double?
+        public var bandsDB: [Double]
+        enum CodingKeys: String, CodingKey {
+            case section, at; case integratedLUFS = "integrated_lufs"; case crestDB = "crest_db"; case spreadLU = "spread_lu"; case bandsDB = "bands_db"
+        }
+    }
+    public struct Reference: Encodable, Sendable {
+        public var name: String
+        /// "record" or "song".
+        public var kind: String
+        public var integratedLUFS: Double?
+        public var bandsDB: [Double]
+        enum CodingKeys: String, CodingKey { case name, kind; case integratedLUFS = "integrated_lufs"; case bandsDB = "bands_db" }
+    }
+    public var bandsHz: [String]
+    public var integratedLUFS: Double?
+    public var truePeakDBTP: Double
+    public var crestDB: Double?
+    public var spreadLU: Double?
+    public var bandsDB: [Double]
+    public var sections: [Row]
+    public var reference: Reference?
+    /// The Engineer on the balance against the reference, band by band. Empty with no reference.
+    public var balance: [String]
+    /// The Peer on whether each hook lifts off the verse before it.
+    public var peer: [String]
+    enum CodingKeys: String, CodingKey {
+        case sections, reference, balance, peer
+        case bandsHz = "bands_hz"; case integratedLUFS = "integrated_lufs"; case truePeakDBTP = "true_peak_dbtp"
+        case crestDB = "crest_db"; case spreadLU = "spread_lu"; case bandsDB = "bands_db"
+    }
+
+    init(_ whole: WholeSongReading, reference: ReferenceReading?, genre: GenreLens?) {
+        func r(_ x: Double) -> Double { (x * 10).rounded() / 10 }
+        let song = whole.sheet.whole
+        bandsHz = SectionMeter.bands.map(\.name)
+        integratedLUFS = song.integratedLUFS.map(r)
+        truePeakDBTP = r(whole.truePeakDBTP)
+        crestDB = song.crestDB.map(r)
+        spreadLU = song.spreadLU.map(r)
+        bandsDB = song.bandsDB.map(r)
+        sections = whole.sheet.sections.map {
+            Row(section: $0.name, at: Peer.clock($0.startSeconds), integratedLUFS: $0.integratedLUFS.map(r), crestDB: $0.crestDB.map(r),
+                spreadLU: $0.spreadLU.map(r), bandsDB: $0.bandsDB.map(r))
+        }
+        self.reference = reference.map {
+            Reference(name: $0.name, kind: $0.kind.rawValue, integratedLUFS: $0.sheet.whole.integratedLUFS.map(r), bandsDB: $0.sheet.whole.bandsDB.map(r))
+        }
+        let bands = whole.balanceReadings(against: reference, genre: genre), lifts = whole.liftReadings
+        balance = bands.map(\.says)
+        peer = lifts.map(\.says)
+        flags = (bands + lifts).filter { !$0.holds }.map(\.says)
+    }
+
+    /// The lines that do not hold: the bands off the reference and the hooks that do not lift.
+    /// Said in the detail; not a field of its own, as each is already in `balance` or `peer`.
+    let flags: [String]
+
+    /// "whole song -11.4 LUFS, true peak -1.3 dBTP, 8 sections read off the same bounce against
+    /// Mirror Ball, 1923".
+    var summary: String {
+        var line = (integratedLUFS.map { String(format: "whole song %.1f LUFS", $0) } ?? "whole song silent")
+            + String(format: ", true peak %.1f dBTP", truePeakDBTP)
+        if !sections.isEmpty { line += ", \(sections.count) section\(sections.count == 1 ? "" : "s") read off the same bounce" }
+        if let reference { line += " against \(reference.name)" }
+        return line
+    }
+}
+
 // MARK: - read_mix
 
 /// The strips, the master, the last bounce's readings and the masking pairs.
@@ -30,6 +113,9 @@ public struct ReadMixTool: DirectorTool {
     public struct Input: Decodable, Sendable {
         /// A section by name, or empty for the first (or the whole song when not arranged).
         public var section: String
+        /// What to read the balance against, by title: a record in the crate or another song.
+        /// Empty, or absent, keeps the one picked; "none" clears it.
+        public var reference: String?
     }
 
     public struct Output: Encodable, Sendable {
@@ -102,10 +188,15 @@ public struct ReadMixTool: DirectorTool {
         public var masking: [Pair]
         public var flags: [Flag]
         public var engineer: [String]
+        /// The whole song bounced once and read section by section, against the reference when one
+        /// is picked. Nil for a song with no form and no reference, whose reading above is already
+        /// the whole song.
+        public var wholeSong: WholeSongEntry? = nil
         public var detail: String
         enum CodingKeys: String, CodingKey {
             case strips, master, reading, masking, flags, engineer, detail, returns
             case mixVersion = "mix_version"; case sectionLevels = "section_levels"; case sectionEffects = "section_effects"
+            case wholeSong = "whole_song"
         }
     }
 
@@ -124,17 +215,33 @@ public struct ReadMixTool: DirectorTool {
         + "ceiling and target, and the song bounced "
         + "through it — integrated LUFS, true peak, crest, tilt — with every strip bounced apart for the masking pairs and the "
         + "Engineer's flags. A chop that is quiet at its source is flagged first, and is answered with level_chop, not with "
-        + "the master. Nothing is changed. Read before a move; read again after."
+        + "the master. With a form, whole_song is the whole song bounced once and read section by section — each section's "
+        + "LUFS, crest, short-term spread and five bands against the whole — with the Peer on whether each hook lifts off "
+        + "the verse before it, and the balance beside the reference the user picked (reference names another: a record "
+        + "in the crate or a song in the library), the Engineer flagging any band more than 3 dB off it. Nothing in the "
+        + "mix is changed. Read before a move; read again after."
     }
     public var schema: DirectorJSON {
         Schema.object([
             ("section", Schema.string("A section by name to bounce, or empty for the first.")),
-        ], required: ["section"])
+            ("reference", Schema.string("A record in the crate or a song in the library to read the balance against, by title; empty keeps the one picked; \"none\" clears it.")),
+        ], required: ["section", "reference"])
     }
 
     public func run(_ input: Input) async throws -> Output {
         guard let song = await workspace.song else {
             throw DirectorToolFailure(tool: name, reason: "No song is open.", suggestion: "Open a song first.")
+        }
+        let asked = (input.reference ?? "").trimmingCharacters(in: .whitespaces)
+        if !asked.isEmpty {
+            if asked.lowercased() == "none" {
+                _ = await workspace.setMixReference(named: asked)
+            } else if await workspace.setMixReference(named: asked) == nil {
+                let choices = await workspace.referenceChoices.map(\.title)
+                throw DirectorToolFailure(tool: name, reason: "\"\(asked)\" is neither a record in the crate nor another song in the library.",
+                                          suggestion: choices.isEmpty ? "The library holds nothing to read against."
+                                              : "One of: \(choices.prefix(24).joined(separator: ", ")); or empty to keep the one picked.")
+            }
         }
         let plan = await workspace.playback
         let mix = plan.mix ?? .unity
@@ -157,6 +264,22 @@ public struct ReadMixTool: DirectorTool {
                              pairs.count, pairs.count == 1 ? "" : "s", flags.count, flags.count == 1 ? "" : "s")
         } else {
             detail += "; nothing to bounce, so no reading."
+        }
+        // The whole song, once, section by section: what a form's sections and a reference need.
+        // A song with neither has had its whole bounce read above already.
+        var wholeSong: WholeSongEntry?
+        var reference: ReferenceReading?
+        do { reference = try await workspace.mixReference() } catch { detail += " The reference could not be read: \(error)." }
+        if plan.isArranged || reference != nil {
+            do {
+                if let whole = try await workspace.wholeSong() {
+                    let entry = WholeSongEntry(whole, reference: reference, genre: await workspace.genreLens)
+                    wholeSong = entry
+                    detail += " Read whole: \(entry.summary)" + (entry.flags.isEmpty ? "." : "; \(entry.flags.count) to say: " + entry.flags.joined(separator: " "))
+                }
+            } catch {
+                detail += " The whole song could not be bounced to read it section by section: \(error)."
+            }
         }
         let inserts = plan.instrumentInserts
         let entries = strips.map { strip -> Output.StripEntry in
@@ -187,7 +310,7 @@ public struct ReadMixTool: DirectorTool {
         }
         return Output(mixVersion: plan.mixVersion?.description, strips: entries, sectionLevels: levels, returns: returns, sectionEffects: effects,
                       master: Output.MasterEntry(gainDB: mix.master.gainDB, ceilingDBTP: mix.master.ceilingDBTP, targetLUFS: mix.master.targetLUFS, fadeOutBars: mix.master.fadeOutBars),
-                      reading: reading, masking: pairs, flags: flags, engineer: engineer, detail: detail)
+                      reading: reading, masking: pairs, flags: flags, engineer: engineer, wholeSong: wholeSong, detail: detail)
     }
 }
 
@@ -333,7 +456,11 @@ public struct MasterTool: DirectorTool {
         public var version: String
         public var note: String
         public var verdict: String
+        /// The whole song bounced through the master as it now stands, read section by section, as
+        /// the Master surface reads it. Nil where nothing can be bounced.
+        public var wholeSong: WholeSongEntry? = nil
         public var detail: String
+        enum CodingKeys: String, CodingKey { case version, note, verdict, detail; case wholeSong = "whole_song" }
     }
 
     let workspace: any DirectorWorkspace
@@ -347,7 +474,9 @@ public struct MasterTool: DirectorTool {
         + "The Engineer checks it (ceiling at or under −0.5, target inside −20…−8) and refuses with a counter; a setting that "
         + "passes is a mix version. The ceiling is applied over every bounce and export. The ending too: fade_out_bars fades "
         + "the form's last bars to silence, as the song plays to its end and in the master; 0 stops on the last bar, -1 "
-        + "keeps the ending it has. Read the mix after to see it land."
+        + "keeps the ending it has. The whole song is then bounced through it once, as the Master reads it: whole_song "
+        + "carries its integrated LUFS and true peak — the gap to the target is read from these, not from one section — "
+        + "each section's numbers, the Peer on the hooks and the balance against the reference."
     }
     public var schema: DirectorJSON {
         Schema.object([
@@ -380,8 +509,27 @@ public struct MasterTool: DirectorTool {
         guard let version = await workspace.recordMix(mix, note: note) else {
             throw DirectorToolFailure(tool: name, reason: "The master could not be kept.")
         }
-        return Output(version: version.id.description, note: note, verdict: verdict.spoken,
-                      detail: "Recorded as \(PartLabel.title(of: version)). The ceiling is over every bounce and export; read the mix to see the loudness land.")
+        var detail = "Recorded as \(PartLabel.title(of: version)). The ceiling is over every bounce and export."
+        var wholeSong: WholeSongEntry?
+        // Bounced once through the master as it now stands, as the Master surface reads it. A reading
+        // that cannot be made leaves the setting kept and says so.
+        do {
+            if let whole = try await workspace.wholeSong() {
+                var reference: ReferenceReading?
+                do { reference = try await workspace.mixReference() } catch { detail += " The reference could not be read: \(error)." }
+                let entry = WholeSongEntry(whole, reference: reference, genre: await workspace.genreLens)
+                wholeSong = entry
+                let gap = entry.integratedLUFS.map { mix.master.targetLUFS - $0 }
+                detail += " Read whole: \(entry.summary)"
+                    + (gap.map { abs($0) <= 0.5 ? String(format: ", on the target") : String(format: ", %.1f LU %@ the target", abs($0), $0 > 0 ? "under" : "over") } ?? "")
+                    + (entry.flags.isEmpty ? "." : "; \(entry.flags.count) to say: " + entry.flags.joined(separator: " "))
+            } else {
+                detail += " Read the mix to see the loudness land."
+            }
+        } catch {
+            detail += " The whole song could not be bounced to read it: \(error)."
+        }
+        return Output(version: version.id.description, note: note, verdict: verdict.spoken, wholeSong: wholeSong, detail: detail)
     }
 }
 

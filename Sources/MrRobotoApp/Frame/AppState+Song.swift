@@ -249,6 +249,7 @@ extension AppState {
         copy.gridChosen = original.gridChosen
         // The same parts, so the same one is the tune.
         copy.tune = original.tune
+        copy.mixReference = original.mixReference
         var updated = library
         if let song { updated.upsert(song) }
         updated.upsert(copy)

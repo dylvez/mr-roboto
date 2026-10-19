@@ -1,4 +1,5 @@
 import Foundation
+import Performance
 import SongGraph
 
 /// **Peer** — the outside ear with a different aesthetic.
@@ -38,6 +39,7 @@ public struct Peer: Persona {
     static let boatman = "https://en.wikipedia.org/wiki/The_Boatman%27s_Call"
     static let babyOneMoreTime = "https://en.wikipedia.org/wiki/...Baby_One_More_Time_(song)"
     static let thriller = "https://en.wikipedia.org/wiki/Billie_Jean"
+    static let songStructure = "https://en.wikipedia.org/wiki/Song_structure"
 
     // MARK: - Thresholds
 
@@ -51,6 +53,12 @@ public struct Peer: Persona {
     public static let minimumTurns = 2.0
     /// Sections per minute past which the form churns.
     public static let sectionsPerMinuteCeiling = 4.0
+    /// A hook less than this louder than the verse before it has not got louder: the Engineer's
+    /// smallest loudness step worth a word.
+    public static let hookLiftFloorLU = 1.0
+    /// A band this much fuller than the verse before it, with none as much emptier, is something
+    /// coming in.
+    public static let fullerBandDB = 3.0
 
     // MARK: - The bible
 
@@ -88,6 +96,8 @@ public struct Peer: Persona {
                            features: [.densitySpread]),
             ListeningPoint(4, "How long it is, and how many sections that length holds.",
                            features: [.formMinutes, .sectionCount]),
+            ListeningPoint(5, "Whether the hook lifts off the verse before it, once the song is bounced: louder, or fuller.",
+                           features: [.hookLiftLU]),
         ],
 
         vocabulary: [
@@ -129,6 +139,11 @@ public struct Peer: Persona {
                               meaning: "neighbouring tracks whose tempo ratio leaves 0.8–1.25",
                               engineField: "AlbumObservation.tempoJumps",
                               noticeable: 1, evidence: .inferred("sequencing practice")),
+            FeatureDefinition(.hookLiftLU, unit: "LU",
+                              meaning: "a hook or chorus's integrated loudness over the verse before it, off the whole song's bounce: how far the song lifts where the hook lands",
+                              engineField: "Performance.SectionMeter.Reading.integratedLUFS, the hook's less the verse's before it",
+                              noticeable: 1,
+                              evidence: .inferred("the Engineer's loudness step, read where the Peer listens: the hook against what led to it")),
         ],
 
         ranges: [
@@ -218,6 +233,12 @@ public struct Peer: Persona {
                         threshold: .atMost(.albumTempoJumps, tempoJumpsCeiling, unit: "jumps"),
                         engineAction: "SongGraph.Song.tempo of neighbouring tracks; AlbumObservation.tempoJumps",
                         evidence: .inferred("sequencing practice: the record as one arc")),
+            PersonaRule("peer.hook-lifts",
+                        when: "a hook or chorus comes in less than a decibel louder than the verse before it, and no fuller",
+                        then: "lift it — a decibel or more, or something coming in; a hook that sits back is a verse with another name",
+                        threshold: .atLeast(.hookLiftLU, hookLiftFloorLU, unit: "LU"),
+                        engineAction: "Performance.SectionMeter over the whole song's bounce: the hook's loudness and five bands against the verse before it",
+                        evidence: .cited([songStructure])),
         ],
 
         voice: PersonaVoice(
@@ -389,11 +410,27 @@ public struct Peer: Persona {
                          evidence: .cited([songMachine])),
             OpenQuestion("peer.oq.density-as-layers",
                          question: "Is a lift a count of layers, or a level the Engineer reads?",
-                         encoded: "Layers, because the graph can count them before anything is bounced.",
+                         encoded: "Layers, because the graph can count them before anything is bounced. Once the song is "
+                                + "bounced whole, the hook is also read off the bounce: louder or fuller than the verse before it.",
                          alternative: "Level: a single layer that doubles in loudness is a bigger lift than two quiet ones, "
                                     + "and the rule should read the Engineer's bounce when there is one.",
-                         affects: ["peer.something-lifts"],
+                         affects: ["peer.something-lifts", "peer.hook-lifts"],
                          evidence: .inferred("the stitch count is what is available before a bounce exists")),
+            OpenQuestion("peer.oq.fuller",
+                         question: "Is a hook that is no louder but brings one band up 3 dB a lift?",
+                         encoded: "Yes: something coming in — the hats opening, the bass doubling — is a lift a listener hears "
+                                + "before a meter does, so a band up 3 dB with none down as far stands for one.",
+                         alternative: "Loudness alone: a hook less than a decibel louder sits back whatever comes in, because what "
+                                    + "comes in has made its room by taking from the rest; the bands then explain the level and never excuse it.",
+                         affects: ["peer.hook-lifts"],
+                         evidence: .inferred("the Engineer's and the Peer's own disagreement about a lift: a level or a layer, and the hook needs one of them")),
+            OpenQuestion("peer.oq.lift-floor",
+                         question: "Is a decibel the least a hook has to rise over the verse before it?",
+                         encoded: "A decibel: the Engineer's smallest loudness step worth a word, and under it a listener does not hear the hook arrive louder.",
+                         alternative: "Any rise at all — a limited master squeezes a chorus's lift to half a decibel — or none, in a genre that holds "
+                                    + "one level for the dance floor and lifts with the arrangement instead; the floor should then be the genre's.",
+                         affects: ["peer.hook-lifts"],
+                         evidence: .inferred("the Engineer's noticeable step for integrated loudness, read where the Peer listens")),
             OpenQuestion("peer.oq.whose-aesthetic",
                          question: "A different aesthetic from whom — the house, or the other personas?",
                          encoded: "From the house: the Peer's lineages are songwriters outside the first idiom on purpose.",
@@ -483,6 +520,42 @@ public struct Peer: Persona {
         return notes
     }
 
+    // MARK: - Reading the hook off the bounce
+
+    /// Each hook or chorus against the verse before it, off the whole song's bounce, section by
+    /// section: louder by `hookLiftFloorLU` or more, or fuller — a band up `fullerBandDB` with none
+    /// down as far. A hook that is neither is said, in seconds. A hook with no verse before it is
+    /// not read: there is nothing it lifts off.
+    public func read(lifts sections: [SectionMeter.Reading]) -> [PersonaReading] {
+        var notes: [PersonaReading] = []
+        for (index, hook) in sections.enumerated() where FormObservation.isHook(hook.name) {
+            guard let verse = sections[..<index].last(where: { FormObservation.isVerse($0.name) }),
+                  let hookLUFS = hook.integratedLUFS, let verseLUFS = verse.integratedLUFS else { continue }
+            // To the tenth it is said in, so "1.0 LU over" is never a lift that falls short.
+            let lift = ((hookLUFS - verseLUFS) * 10).rounded() / 10
+            let changes = zip(hook.bandsDB, verse.bandsDB).map { $0 - $1 }
+            let names = SectionMeter.bands.map(\.name)
+            let gains = changes.indices.filter { changes[$0] >= Peer.fullerBandDB }
+            let losses = changes.indices.filter { changes[$0] <= -Peer.fullerBandDB }
+            let louder = lift >= Peer.hookLiftFloorLU, fuller = !gains.isEmpty && losses.isEmpty
+            let at = "The \(hook.name) at \(Peer.clock(hook.startSeconds))"
+            func bands(_ which: [Int]) -> String { SongsBefore.list(which.map { names[$0] }) + " Hz" }
+            let says: String
+            if louder {
+                says = String(format: "%@ lifts %.1f LU over the %@.", at, lift, verse.name)
+            } else if fuller {
+                says = String(format: "%@ is no louder than the %@ (%+.1f LU) but fuller: %@ up %.0f dB.",
+                              at, verse.name, lift, bands(gains), gains.map { changes[$0] }.max() ?? 0)
+            } else {
+                let level = lift <= 0 ? String(format: "%.1f LU under", -lift) : String(format: "only %.1f LU over", lift)
+                let full = gains.isEmpty ? "no fuller" : "no fuller — what comes in at \(bands(gains)) goes out at \(bands(losses))"
+                says = "\(at) comes in \(level) the \(verse.name) before it, and \(full). A hook has to lift: a decibel or more, or something coming in."
+            }
+            notes.append(PersonaReading(rule: "peer.hook-lifts", feature: .hookLiftLU, value: lift, holds: louder || fuller, says: says))
+        }
+        return notes
+    }
+
     static func clock(_ seconds: Double) -> String {
         let total = Int(max(0, seconds).rounded())
         return String(format: "%d:%02d", total / 60, total % 60)
@@ -544,6 +617,16 @@ public struct FormObservation: Hashable, Sendable {
         let name = name.lowercased()
         guard !name.hasPrefix("pre"), !name.hasPrefix("post") else { return false }
         return hookNames.contains { name.contains($0) }
+    }
+
+    /// Names a listener calls a verse, in the languages the genres name theirs in.
+    static let verseNames = ["verse", "verso", "estrofa", "couplet", "strophe"]
+
+    /// Whether a section by this name is a verse: what a hook lifts off. A pre-verse is not one.
+    public static func isVerse(_ name: String) -> Bool {
+        let name = name.lowercased()
+        guard !name.hasPrefix("pre"), !name.hasPrefix("post") else { return false }
+        return verseNames.contains { name.contains($0) }
     }
 
     public static func of(_ song: Song) -> FormObservation {
