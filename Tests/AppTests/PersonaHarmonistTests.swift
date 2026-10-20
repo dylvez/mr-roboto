@@ -69,6 +69,24 @@ struct PersonaHarmonistTests {
         #expect(says.contains("Bb7") && !says.contains("A#"), "\(says)")
     }
 
+    @Test("a minor key's major five is its own dominant, not a borrowing")
+    func theFiveInMinor() {
+        // Máquina's coro: Am | D | G | C | Am | D | B7 | Em. The B7's D sharp is the leading tone,
+        // not a key change.
+        let e = Key(tonic: NoteName(.e), mode: .aeolian)
+        let loop = HarmonyObservation.of(progression([chord(.a, .minor), chord(.d), chord(.g), chord(.c), chord(.a, .minor), chord(.d),
+                                                      chord(.b, .dominantSeventh), chord(.e, .minor)], key: e), label: "coro")
+        #expect(loop.diatonicRatio == 1 && loop.borrowed.isEmpty, "\(loop.diatonicRatio)")
+        #expect(!loop.departures.contains { $0.contains("outside the key") }, "\(loop.departures)")
+        let says = Harmonist().read(loop).first { $0.rule == "harmonist.stays-in-key" }
+        #expect(says?.holds == true && says?.says == "Every chord belongs to E minor.", "\(says?.says ?? "")")
+        // The minor five is the scale's own anyway; the major four in minor is still borrowed.
+        let four = HarmonyObservation.of(progression([chord(.e, .minor), chord(.a)], key: e), label: "four")
+        #expect(four.borrowed.count == 1)
+        // In a major key the five was always the key's.
+        #expect(HarmonyObservation.of(oneSixFourFive, label: "I–vi–IV–V").isMinor == false)
+    }
+
     @Test("the bass is judged at the change: a chord tone agrees, a second does not, and an inversion is fine")
     func bassAgreement() throws {
         let chords = oneSixFourFive

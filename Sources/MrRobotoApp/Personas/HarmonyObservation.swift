@@ -65,10 +65,12 @@ public struct HarmonyObservation: Hashable, Sendable {
 
     /// Whether the key holds every note of a chord. `MusicTheory.Key.romanNumeral(for:)` will
     /// spell a chromatic chord as a flattened degree, so it answers "can this be named in the key"
-    /// rather than "is this in the key", which is the question here.
+    /// rather than "is this in the key", which is the question here. A minor key owns the major
+    /// chord on its fifth as well (`isTheFive`), as the chord lanes draw it: B7 in E minor is its
+    /// dominant, not a borrowing.
     public func owns(_ chord: Chord) -> Bool {
         let scale = Set(key.pitchClasses)
-        return chord.pitchClasses.allSatisfy { scale.contains($0) }
+        return isTheFive(chord) || chord.pitchClasses.allSatisfy { scale.contains($0) }
     }
 
     /// Chords the key owns, over all chords.
@@ -188,9 +190,8 @@ public struct HarmonyObservation: Hashable, Sendable {
     /// bass, each chord as long as the last, four of them or fewer.
     public var departures: [String] {
         var out: [String] = []
-        let outside = borrowed.filter { !isTheFive($0) }
-        if !outside.isEmpty {
-            out.append("\(outside.map { key.symbol(of: $0) }.joined(separator: ", ")) \(outside.count == 1 ? "is" : "are") from outside the key")
+        if !borrowed.isEmpty {
+            out.append("\(borrowed.map { key.symbol(of: $0) }.joined(separator: ", ")) \(borrowed.count == 1 ? "is" : "are") from outside the key")
         }
         if chords.contains(where: { $0.inversion > 0 }) { out.append("the bass is not always the root") }
         let lengths = Set(self.lengths.map { ($0 * 4).rounded() / 4 })

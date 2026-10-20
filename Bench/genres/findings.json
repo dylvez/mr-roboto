@@ -6,7 +6,6 @@
  "jazz-Broadway Ride": {"beatmaker.swing-default": "Broadway Ride is straight; the jazz profile claims it, and jazz swings 60-72."},
  "neo-soul-Neo-Soul Pocket": {"beatmaker.snare-direction": "The feel's snare sits 22.5 ms late; the profile's sources put neo-soul's at 10-20. Close, and on the side the house chose.",
                               "beatmaker.pocket-is-a-span": "The feel's layers spread 18.8 ms; the profile's number is the 55-80 ms measured in Left and Right, one record's extreme."},
- "disco-prog2": {"harmonist.stays-in-key": "The progression borrows ii and V7 from harmonic minor; the genre's 0.85-1 is over whole songs."},
  "jazz-prog4": {"harmonist.stays-in-key": "III7-VI7-II7-V7 is a chain of secondary dominants, all out of key by design; the genre's 0.4-0.8 is over whole tunes."},
  "klezmer-prog4": {"harmonist.stays-in-key": "The bvii is freygish's cadence borrowed into a minor tune, out of key by design; the genre's 0.75-1 is over whole tunes."},
  "pop-prog4": {"harmonist.stays-in-key": "IV7 is a borrowed dominant seventh; the genre's 0.9-1 is over whole songs."},

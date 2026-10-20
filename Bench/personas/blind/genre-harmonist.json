@@ -208,10 +208,7 @@
     "key": "A aeolian"
    },
    "expects": {
-    "harmonist.stays-in-key": false
-   },
-   "notes": {
-    "harmonist.stays-in-key": "The progression borrows ii and V7 from harmonic minor; the genre's 0.85-1 is over whole songs."
+    "harmonist.stays-in-key": true
    }
   },
   {
