@@ -185,6 +185,27 @@ struct GenreTests {
         #expect(!GenreLens(trap).apply(hook, bible: Peer.bible).holds, "trap's hook comes inside thirty")
     }
 
+    @Test("a reading is judged at the precision the genre states its line in, which is the precision it is said in")
+    func lensJudgesWhatItSays() throws {
+        let cumbia = try #require(GenreBook.standard.profile(named: "cumbia"))
+        func busy(_ perBar: Double) -> PersonaReading {
+            GenreLens(cumbia).apply(PersonaReading(rule: "melodist.not-too-busy", feature: .notesPerBar, value: perBar, holds: perBar <= Melodist.notesPerBarCeiling,
+                                                   says: String(format: "%.1f notes a bar.", perBar)), bible: Melodist.bible)
+        }
+        // Cumbia wants up to 7.1: 7.14 is said "7.1" and is inside it; 7.16 is "7.2" and is not.
+        #expect(busy(7.14).holds, "\(busy(7.14).says)")
+        #expect(!busy(7.16).holds && busy(7.16).says == "7.2 notes a bar. But Cumbia wants up to 7.1 notes per bar.", "\(busy(7.16).says)")
+        let disco = try #require(GenreBook.standard.profile(named: "disco"))
+        func loud(_ lufs: Double) -> Bool {
+            let observation = MixObservation(label: "Song", integratedLUFS: lufs, peakDBFS: -1.3, crestDB: 12, tiltDB: -3, bandwidthHz: 14_000)
+            let reading = Engineer().read(observation).first { $0.rule == "engineer.delivery-loudness" }!
+            return GenreLens(disco).apply(reading, bible: Engineer.bible).holds
+        }
+        // Disco delivers at −10.4 to −8: −10.43 is "−10.4", −7.96 is "−8.0".
+        #expect(loud(-10.43) && !loud(-10.46) && loud(-7.96) && !loud(-7.94))
+        #expect(GenreLens.decimals(-10.4) == 1 && GenreLens.decimals(54) == 0 && GenreLens.decimals(0.52) == 2 && GenreLens.decimals(1.0 / 3) == 3)
+    }
+
     @Test("a missing hook is not timed as one: it stands only where the genre's own form names none")
     func lensOnAMissingHook() throws {
         var song = Song(title: "Drift", tempo: 70)

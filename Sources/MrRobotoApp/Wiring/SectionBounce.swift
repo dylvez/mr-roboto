@@ -20,12 +20,19 @@ enum SectionBounce {
         var bass: [[Float]]
         /// The high cut of the section's chain, when it has one.
         var chainCornerHz: Double?
+        /// The lowest corner a strip's low-pass reaches in it, when one closes.
+        var filterCornerHz: Double?
+        /// True when it is one section of a form, not the whole song.
+        var isSection = false
 
         var observation: MixObservation {
-            MixObservation.measure(label: label, mix: mix, sampleRate: sampleRate,
-                                   drums: drums.first?.isEmpty == false ? drums : nil,
-                                   bass: bass.first?.isEmpty == false ? bass : nil,
-                                   chainCornerHz: chainCornerHz)
+            var observation = MixObservation.measure(label: label, mix: mix, sampleRate: sampleRate,
+                                                     drums: drums.first?.isEmpty == false ? drums : nil,
+                                                     bass: bass.first?.isEmpty == false ? bass : nil,
+                                                     chainCornerHz: chainCornerHz)
+            observation.filterCornerHz = filterCornerHz
+            observation.section = isSection ? label : nil
+            return observation
         }
     }
 
@@ -71,7 +78,8 @@ enum SectionBounce {
         let frames = AVAudioFramePosition((seconds * sampleRate).rounded())
 
         var stems = Stems(label: label, sampleRate: sampleRate, mix: [], drums: [], bass: [],
-                          chainCornerHz: corner(of: base))
+                          chainCornerHz: corner(of: base), filterCornerHz: filterCorner(of: base, section: section),
+                          isSection: section != nil)
         stems.mix = try await renderOne(base, part: .mix, clock: clock, frames: frames, kitsDirectory: kitsDirectory, sampleRate: sampleRate,
                                         pacing: pacing)
         // A song never mixed has the default master, ceiling and all: it used to go out with no
@@ -173,6 +181,26 @@ enum SectionBounce {
             return cut > 0 ? cut : nil
         }
         return cuts.min()
+    }
+
+    /// The lowest corner a low-pass filter reaches on a strip sounding in `section` (or anywhere,
+    /// for the whole song): the section's own corner, held or swept to, else the strip's where it
+    /// is closed. A whole song counts only the strips' own: one section's sweep does not darken
+    /// it. Nil when no low-pass closes, or the plan has no mix.
+    static func filterCorner(of plan: SongPlayback, section: SectionID?) -> Double? {
+        guard let mix = plan.mix else { return nil }
+        let sounding = section.flatMap { id in plan.segments.first { $0.section == id } }
+            .map { Set($0.voices.compactMap(\.part)) } ?? Set(plan.parts)
+        var corners: [Double] = []
+        for strip in mix.strips where sounding.contains(strip.part) && !strip.isMuted {
+            guard let filter = strip.filter, filter.kind == .lowPass else { continue }
+            if let effect = mix.sectionEffect(for: strip.part, in: section), let from = effect.filterFromHz {
+                corners += [from, effect.filterToHz ?? from]
+            } else {
+                corners.append(filter.cutoffHz)
+            }
+        }
+        return corners.filter { $0 < 19_000 }.min()
     }
 
     // MARK: - One render

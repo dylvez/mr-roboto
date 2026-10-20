@@ -29,11 +29,17 @@ public struct HarmonyObservation: Hashable, Sendable {
     public var alternatives: [String] = []
     /// What the library's other songs did. Nil reads the progression alone.
     public var before: SongsBefore?
+    /// Whether it comes round again where it is read: a section longer than the progression plays
+    /// it twice or more, so its last chord moves to its first — a V at the end goes home on the repeat.
+    public var loops = false
+    /// Whether another section follows where it is read: a section that ends on the five hands
+    /// over to the next one, a half cadence, which for a turnaround or a build is the landing.
+    public var leadsOn = false
 
     public static func == (a: HarmonyObservation, b: HarmonyObservation) -> Bool {
         a.label == b.label && a.key == b.key && a.beatsPerBar == b.beatsPerBar && a.chords == b.chords
             && a.starts == b.starts && a.beats == b.beats && a.bassAgreements == b.bassAgreements
-            && a.bassChanges == b.bassChanges
+            && a.bassChanges == b.bassChanges && a.loops == b.loops && a.leadsOn == b.leadsOn
     }
 
     public func hash(into hasher: inout Hasher) {
@@ -118,7 +124,9 @@ public struct HarmonyObservation: Hashable, Sendable {
     /// bar is not a movement: counted as one, a twelve-bar blues — four bars of I — read as weak
     /// root motion for standing still.
     public var rootMotionFifths: Double {
-        let moves = zip(chords, chords.dropFirst()).map { $0.root.distance(to: $1.root) }.filter { $0 != 0 }
+        // A loop's seam is a move heard every time round: the last chord to the first.
+        let seam = loops && chords.count > 1 ? [(chords[chords.count - 1], chords[0])] : []
+        let moves = (Array(zip(chords, chords.dropFirst())) + seam).map { $0.root.distance(to: $1.root) }.filter { $0 != 0 }
         guard !moves.isEmpty else { return 0 }
         return Double(moves.filter { $0 == 5 || $0 == 7 }.count) / Double(moves.count)
     }
@@ -136,18 +144,30 @@ public struct HarmonyObservation: Hashable, Sendable {
         return out
     }
 
-    /// Phrase endings that land: on the tonic, or approached by a fourth or a fifth.
+    /// Phrase endings that land: on the tonic, or approached by a fourth or a fifth. The last one
+    /// lands too when it goes home by a fourth or a fifth on the repeat of a loop, or ends on the
+    /// five where another section follows.
     public var cadenceRatio: Double {
         let endings = phraseEndings
         guard !endings.isEmpty else { return 0 }
         let landed = endings.filter { index in
             let chord = chords[index]
             if chord.root == key.tonic.pitchClass { return true }
+            if index == chords.count - 1 {
+                if loops, let first = chords.first, first.root == key.tonic.pitchClass,
+                   [5, 7].contains(chord.root.distance(to: first.root)) { return true }
+                if leadsOn, isDominant(chord) { return true }
+            }
             guard index > 0 else { return false }
             let motion = chords[index - 1].root.distance(to: chord.root)
             return motion == 5 || motion == 7
         }
         return Double(landed.count) / Double(endings.count)
+    }
+
+    /// The major chord on the key's fifth, a seventh or not: the half cadence's chord.
+    func isDominant(_ chord: Chord) -> Bool {
+        key.tonic.pitchClass.distance(to: chord.root) == 7 && chord.quality.third == 4
     }
 
     /// Chord changes the bass agrees with, over the changes it played under. 1 when there is no

@@ -35,6 +35,10 @@ enum MixReader {
                                                           onlyTheMix: true, mastered: false)
             solos.append((strip.part, strip.label, rendered.mix))
         }
-        return MixObservation.measure(label: song?.title ?? stems.label, mix: stems.mix, sampleRate: stems.sampleRate, strips: solos)
+        var observation = MixObservation.measure(label: song?.title ?? stems.label, mix: stems.mix, sampleRate: stems.sampleRate, strips: solos)
+        observation.chainCornerHz = stems.chainCornerHz
+        observation.filterCornerHz = stems.filterCornerHz
+        observation.section = stems.isSection ? stems.label : nil
+        return observation
     }
 }

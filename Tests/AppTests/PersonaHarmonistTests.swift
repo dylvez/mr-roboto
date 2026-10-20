@@ -69,6 +69,35 @@ struct PersonaHarmonistTests {
         #expect(says.contains("Bb7") && !says.contains("A#"), "\(says)")
     }
 
+    @Test("a loop's five goes home on the repeat, and a section ending on the five hands over to the next")
+    func loopsAndHandOvers() {
+        // Máquina's loop: Em | Em | G7 | C B7, round twice in an eight-bar verse.
+        let e = Key(tonic: NoteName(.e), mode: .aeolian)
+        let bars = [chord(.e, .minor), chord(.e, .minor), chord(.g, .dominantSeventh)].map { ProgressionBar(chords: [ChordSpan($0, beats: 4)]) }
+            + [ProgressionBar(chords: [ChordSpan(chord(.c), beats: 2), ChordSpan(chord(.b, .dominantSeventh), beats: 2)])]
+        var verse = HarmonyObservation.of(Progression(key: e, bars: bars), label: "loop")
+        #expect(verse.cadenceRatio < Harmonist.cadenceFloor, "read alone, the loop stops on V7")
+        let before = verse.rootMotionFifths
+        verse.loops = true
+        #expect(verse.cadenceRatio == 1, "B7 → Em on the repeat lands")
+        #expect(verse.rootMotionFifths > before, "the seam's B → E is a fifth heard every time round")
+        #expect(Harmonist().read(verse).first { $0.rule == "harmonist.phrases-land" }?.holds == true)
+        // A loop that does not go home on its seam still does not land.
+        var away = HarmonyObservation.of(progression([chord(.d), chord(.g), chord(.a), chord(.b, .minor)]), label: "away")
+        away.loops = true
+        #expect(away.cadenceRatio < Harmonist.cadenceFloor)
+
+        // A turn of two bars, the four to A7 by step, into the next section.
+        var turn = HarmonyObservation.of(progression([chord(.g), chord(.a, .dominantSeventh)]), label: "turn")
+        #expect(turn.cadenceRatio < Harmonist.cadenceFloor)
+        turn.leadsOn = true
+        #expect(turn.cadenceRatio == 1, "a half cadence where the next section takes over")
+        // Ending on anything but the five is no hand-over: the turn to the four does not land.
+        var four = HarmonyObservation.of(progression([chord(.d), chord(.e, .minor)]), label: "four")
+        four.leadsOn = true
+        #expect(four.cadenceRatio < Harmonist.cadenceFloor)
+    }
+
     @Test("a minor key's major five is its own dominant, not a borrowing")
     func theFiveInMinor() {
         // Máquina's coro: Am | D | G | C | Am | D | B7 | Em. The B7's D sharp is the leading tone,

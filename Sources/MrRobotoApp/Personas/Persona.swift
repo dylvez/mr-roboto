@@ -222,6 +222,8 @@ public struct Feature: RawRepresentable, Hashable, Sendable, Codable, CustomStri
     // The Engineer's: the bounce.
     /// Integrated loudness, LUFS (BS.1770).
     public static let integratedLUFS = Feature("mix.lufs.integrated")
+    /// One section's integrated loudness, LUFS: said, not judged as a delivery.
+    public static let sectionLUFS = Feature("mix.lufs.section")
     /// Sample peak, dBFS.
     public static let peakDBFS = Feature("mix.peak.dbfs")
     /// Peak over RMS, dB.

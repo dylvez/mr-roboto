@@ -119,6 +119,11 @@ public struct Engineer: Persona {
                               meaning: "integrated loudness as ITU-R BS.1770 defines it: K-weighted, gated at −70 and −10",
                               engineField: "Performance.MixMeter.integratedLoudness over the section's bounce",
                               noticeable: 1, evidence: .cited([bs1770, r128])),
+            FeatureDefinition(.sectionLUFS, unit: "LUFS",
+                              meaning: "one section's integrated loudness: where it sits in the song, not a delivery — an intro or a break "
+                                     + "sits under the song by design, and the delivery is the whole song's",
+                              engineField: "Performance.MixMeter.integratedLoudness over one section's bounce",
+                              noticeable: 1, evidence: .cited([bs1770, r128])),
             FeatureDefinition(.peakDBFS, unit: "dBFS",
                               meaning: "the sample peak of the bounce — not oversampled, so up to half a dB under the true peak",
                               engineField: "Performance.MixMeter.samplePeakDB",
@@ -497,13 +502,16 @@ public struct Engineer: Persona {
     public func read(_ observation: MixObservation) -> [PersonaReading] {
         var notes: [PersonaReading] = []
         if let separation = observation.lowEndSeparationDB, let owner = observation.lowEndOwner {
+            // Judged in the whole decibels it is said in: a 5.6 dB gap is "6 dB" and owned, never
+            // "within 6 dB … move the other down 0 dB".
+            let said = separation.rounded()
             notes.append(PersonaReading(
                 rule: "engineer.who-owns-eighty", feature: .lowEndSeparationDB, value: separation,
-                holds: separation >= Engineer.lowEndSeparationFloorDB,
-                says: separation >= Engineer.lowEndSeparationFloorDB
-                    ? String(format: "The %@ owns 60–120 Hz by %.0f dB.", owner, separation)
+                holds: said >= Engineer.lowEndSeparationFloorDB,
+                says: said >= Engineer.lowEndSeparationFloorDB
+                    ? String(format: "The %@ owns 60–120 Hz by %.0f dB.", owner, said)
                     : String(format: "Kick and bass within %.0f dB at 60–120 Hz. The %@ owns it here — move the other down %.0f dB or up an octave.",
-                             separation, owner, Engineer.lowEndSeparationFloorDB - separation)))
+                             said, owner, Engineer.lowEndSeparationFloorDB - said)))
         }
         if let crest = observation.drumsCrestDB {
             notes.append(PersonaReading(
@@ -514,29 +522,49 @@ public struct Engineer: Persona {
                     : String(format: "Drums crest at %.0f dB. That is squashed; the ghosts are gone.", crest)))
         }
         let lufs = observation.integratedLUFS
-        let inWindow = lufs.isFinite && abs(lufs - Engineer.deliveryLUFS) <= Engineer.deliveryWindowLU
-        notes.append(PersonaReading(
-            rule: "engineer.delivery-loudness", feature: .integratedLUFS, value: lufs,
-            holds: inWindow,
-            says: !lufs.isFinite ? "Nothing to read: the bounce is silent."
-                : inWindow ? String(format: "%.1f LUFS, peak %.1f dBFS. Delivery is fine.", lufs, observation.peakDBFS)
-                : String(format: "%.1f LUFS, peak %.1f dBFS. %.0f LU %@ −14; %@.", lufs, observation.peakDBFS,
-                         abs(lufs - Engineer.deliveryLUFS), lufs > Engineer.deliveryLUFS ? "hot against" : "under",
-                         lufs > Engineer.deliveryLUFS ? "bring it down and the crest comes back" : "the platforms turn it up, at the cost of the noise floor")))
+        if let section = observation.section {
+            // One section is not a delivery: an intro or a break sits under the song by design, and
+            // neither −14 nor a genre's delivery range is a line for it. Its level is said, under a
+            // feature of its own so no genre judges it; the delivery is the whole song's.
+            notes.append(PersonaReading(
+                rule: "engineer.delivery-loudness", feature: .sectionLUFS, value: lufs, holds: true,
+                says: !lufs.isFinite ? "Nothing to read: the bounce is silent."
+                    : String(format: "The %@ plays at %.1f LUFS, peak %.1f dBFS. Delivery is the whole song's, read in the Master.",
+                             section, lufs, observation.peakDBFS)))
+        } else {
+            let inWindow = lufs.isFinite && abs(lufs - Engineer.deliveryLUFS) <= Engineer.deliveryWindowLU
+            notes.append(PersonaReading(
+                rule: "engineer.delivery-loudness", feature: .integratedLUFS, value: lufs,
+                holds: inWindow,
+                says: !lufs.isFinite ? "Nothing to read: the bounce is silent."
+                    : inWindow ? String(format: "%.1f LUFS, peak %.1f dBFS. Delivery is fine.", lufs, observation.peakDBFS)
+                    : String(format: "%.1f LUFS, peak %.1f dBFS. %.0f LU %@ −14; %@.", lufs, observation.peakDBFS,
+                             abs(lufs - Engineer.deliveryLUFS), lufs > Engineer.deliveryLUFS ? "hot against" : "under",
+                             lufs > Engineer.deliveryLUFS ? "bring it down and the crest comes back" : "the platforms turn it up, at the cost of the noise floor")))
+        }
         notes.append(PersonaReading(
             rule: "engineer.peak-ceiling", feature: .peakDBFS, value: observation.peakDBFS,
             holds: observation.peakDBFS <= Engineer.deliveryPeakDBFS,
             says: observation.peakDBFS <= Engineer.deliveryPeakDBFS
                 ? String(format: "Peak %.1f dBFS, under the ceiling.", observation.peakDBFS)
                 : String(format: "Peak %.1f dBFS, over −1; the true peak sits higher still.", observation.peakDBFS)))
+        // Dark is fine when it was decided: a chain or a filter closed under the floor put it there
+        // ("chosen is fine, accidental is not", as the Sampler and the Engineer settled it).
+        let bright = observation.bandwidthHz >= Engineer.bandwidthFloorHz
+        let filtered = observation.filterCornerHz.map { $0 < Engineer.bandwidthFloorHz && $0 <= (observation.chainCornerHz ?? .infinity) } ?? false
+        let decided = filtered || (observation.chainCornerHz.map { $0 < Engineer.bandwidthFloorHz } ?? false)
         notes.append(PersonaReading(
             rule: "engineer.a-corner-is-a-choice", feature: .mixBandwidthHz, value: observation.bandwidthHz,
-            holds: observation.bandwidthHz >= Engineer.bandwidthFloorHz,
-            says: observation.bandwidthHz >= Engineer.bandwidthFloorHz
+            holds: bright || decided,
+            says: bright
                 ? String(format: "Top end stops at %.0f kHz%@.", observation.bandwidthHz / 1000,
                          observation.chainCornerHz.map { String(format: "; the corner is the chain's, at %.0f kHz", $0 / 1000) } ?? "")
+                : decided
+                ? String(format: "Top end stops at %.0f kHz, %@: dark, and decided.", observation.bandwidthHz / 1000,
+                         filtered ? "behind a filter at \(StripFilter.hz(observation.filterCornerHz ?? 0))"
+                             : String(format: "under the chain's corner at %.0f kHz", (observation.chainCornerHz ?? 0) / 1000))
                 : String(format: "Top end stops at %.0f kHz%@. Dark is a decision — say so.", observation.bandwidthHz / 1000,
-                         observation.chainCornerHz.map { String(format: " and the chain's corner is %.0f kHz", $0 / 1000) } ?? ", and no chain put it there")))
+                         observation.chainCornerHz.map { String(format: " and the chain's corner is %.0f kHz", $0 / 1000) } ?? ", and no chain or filter put it there")))
         return notes
     }
 
@@ -609,6 +637,11 @@ public struct MixObservation: Hashable, Sendable {
     public var lowEndOwner: String?
     /// The corner of the chain on the groove, when there is one.
     public var chainCornerHz: Double?
+    /// The lowest corner a low-pass filter on a strip sounding in the bounce reaches, held or
+    /// swept to, when one closes at all.
+    public var filterCornerHz: Double?
+    /// The section's name, when the bounce is one section of a form rather than the whole song.
+    public var section: String?
     /// M6: the true peak of the mix, dBTP, when measured.
     public var truePeakDBTP: Double?
     /// M6: every strip's energy in the five bands, when the strips were bounced apart.

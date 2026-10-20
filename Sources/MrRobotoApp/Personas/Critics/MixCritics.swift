@@ -153,10 +153,13 @@ public struct HotMasterCritic: MixCritic {
     public var id: CriticID { .hotMaster }
     public var name: String { "Off the target" }
     public var persona: PersonaID { .engineer }
-    public var checks: String { "the bounce's integrated loudness against the master's target, within 2 LU" }
+    public var checks: String { "the whole song's integrated loudness against the master's target, within 2 LU" }
 
     public func review(_ input: MixReview) -> [Finding] {
         let lufs = input.observation.integratedLUFS
+        // One section is not the master's loudness: an intro under the target is the arrangement,
+        // and moving the master by it moves every other section too.
+        guard input.observation.section == nil else { return [] }
         guard lufs.isFinite, abs(lufs - input.master.targetLUFS) > input.windowLU else { return [] }
         let gap = input.master.targetLUFS - lufs
         // Under the target with a chop quiet at its source: that is the cause, and the master is

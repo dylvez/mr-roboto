@@ -57,6 +57,25 @@ public struct GenreLens: Sendable, Equatable {
         }
     }
 
+    /// A value to the precision the genre states its line in: −10.43 LUFS against a range from
+    /// −10.4 is −10.4, and inside it; 7.14 notes a bar against "up to 7.1" is 7.1. Every reading
+    /// says its number to that precision, and a line judged finer than it is said read "7.1 notes a
+    /// bar. But Cumbia wants up to 7.1".
+    static func said(_ value: Double, as threshold: Threshold) -> Double {
+        let places = max(decimals(threshold.value), threshold.upper.map(decimals) ?? 0)
+        let scale = pow(10, Double(places))
+        return (value * scale).rounded() / scale
+    }
+
+    /// How many decimals a number is stated to: −10.4 to one, 54 to none, 0.52 to two; three at most.
+    static func decimals(_ x: Double) -> Int {
+        for places in 0..<3 {
+            let scaled = x * pow(10, Double(places))
+            if abs(scaled - scaled.rounded()) < 1e-6 { return places }
+        }
+        return 3
+    }
+
     /// Every reading, each re-judged where the genre has a say.
     public func apply(_ readings: [PersonaReading], bible: PersonaBible) -> [PersonaReading] {
         readings.map { apply($0, bible: bible) }
@@ -67,7 +86,7 @@ public struct GenreLens: Sendable, Equatable {
         guard let rule = bible.rules.first(where: { $0.id == reading.rule }),
               rule.threshold?.feature == reading.feature,
               let moved = threshold(for: rule), let range = profile.range(reading.feature) else { return reading }
-        let holds = moved.holds(for: reading.value)
+        let holds = moved.holds(for: Self.said(reading.value, as: moved))
         var out = reading
         out.genre = profile.id
         out.holds = holds

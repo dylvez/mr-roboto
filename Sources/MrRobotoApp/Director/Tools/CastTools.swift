@@ -279,6 +279,12 @@ public struct ConveneTool: DirectorTool {
                     var observation = HarmonyObservation.of(progression, label: PartLabel.title(of: version), bassline: line,
                                                             beatsPerBar: song.timeSignature.beatsPerBar)
                     observation.before = SongsBefore.of(await workspace.library, besides: song.id)
+                    // Where it is heard: a section longer than the progression plays it round again,
+                    // and a section with another after it hands over to that one.
+                    if let section {
+                        observation.loops = Double(section.lengthInBars) > observation.bars + 1e-9
+                        observation.leadsOn = song.sections.last?.id != section.id
+                    }
                     readings += (await workspace.houseBook).settle(Harmonist().read(observation), by: Harmonist.bible).map { (id, $0) }
                 } else {
                     notes.append("No chords yet for the Harmonist to read.")

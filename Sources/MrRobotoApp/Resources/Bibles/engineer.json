@@ -970,6 +970,19 @@
       "unit" : "LUFS"
     },
     {
+      "engineField" : "Performance.MixMeter.integratedLoudness over one section's bounce",
+      "evidence" : {
+        "cited" : [
+          "https://www.itu.int/rec/R-REC-BS.1770",
+          "https://tech.ebu.ch/publications/r128"
+        ]
+      },
+      "feature" : "mix.lufs.section",
+      "meaning" : "one section's integrated loudness: where it sits in the song, not a delivery — an intro or a break sits under the song by design, and the delivery is the whole song's",
+      "noticeable" : 1,
+      "unit" : "LUFS"
+    },
+    {
       "engineField" : "Performance.MixMeter.samplePeakDB",
       "evidence" : {
         "cited" : [
