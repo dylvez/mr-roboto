@@ -130,10 +130,12 @@ public struct SetProgressionTool: DirectorTool {
             let recorded = await workspace.record(version)
             var was: String?
             if let existing, case .progression(let before) = existing.kind { was = before.symbols() }
+            let now = await workspace.song
             output = Output(version: version.id.description, part: version.partID.description, key: "\(key)", chords: progression.symbols(),
                             numerals: [], bars: progression.bars.count, recorded: recorded, flags: [],
                             detail: was.map { "\(progression.symbols()) replaces \($0) in every section that played it; the old chords stay in the ledger. "
-                                + "For chords of one section's own, name the section." } ?? "\(progression.symbols()) are the song's chords.")
+                                + "For chords of one section's own, name the section." }
+                                ?? "\(progression.symbols()) are the song's chords." + (now.map { FormReach.sentence(for: version.partID, a: "chords", in: $0) } ?? ""))
         }
         var observation = HarmonyObservation.of(progression, label: "\(progression.symbols()) in \(key)", beatsPerBar: beatsPerBar)
         observation.before = SongsBefore.of(await workspace.library, besides: await workspace.song?.id)
@@ -144,104 +146,62 @@ public struct SetProgressionTool: DirectorTool {
         return output
     }
 
-    /// The chords as the named sections' own: in each, a variation of the song's chord part plays
-    /// them in place of what it played, each other player of chords there follows on its own
-    /// variation, and the bass there is moved to follow, its rhythm kept. A section already playing
-    /// chords of its own that no other section plays has them rewritten: their next version.
+    /// The chords as the named sections' own (`SectionWriting`): in each, they play in place of
+    /// the chords it played, each other player of chords there follows on its own part, and the
+    /// bass there is moved to follow, its rhythm kept.
     func own(_ progression: Progression, key: Key, in sections: [Section], of song: Song, root: PartVersion?) async throws -> Output {
         let author: Author = .persona(acting)
         let bassAuthor: Author = .persona(WriteBasslineTool.author)
         let beats = song.timeSignature.beatsPerBar
         let symbols = progression.symbols()
-        var working = song
-        var arranged = song.sections
-        var versions: [PartVersion] = []
+        var writing = SectionWriting(song)
         var placed: [String] = []
         var replaced: [String] = []
         var bassSays = ReharmonizeTool.noBass
         var first: PartVersion?
 
-        /// What plays a part here and nowhere else: a section's own, to be rewritten in place.
-        func onlyIn(_ section: SectionID, _ part: PartID) -> Bool {
-            !arranged.contains { $0.id != section && $0.stitch.contains { $0.part == part } }
-        }
-        /// The chords (or the line) written for this section: the next version of its own part —
-        /// one placed there and played nowhere else — or a new variation of the part it varies,
-        /// named for the section. One developing wrote is not taken over: developing again would
-        /// write over it.
-        func write(_ kind: PartKind, over lane: (lane: Lane, version: PartVersion, root: PartID)?, root: PartVersion?, in section: Section,
-                   note: String, by who: Author, suffix: String = "") -> PartID? {
-            if let lane, lane.lane.part != lane.root, onlyIn(section.id, lane.lane.part), Develop.isHeld(lane.lane, in: working),
-               let mine = working.latestVersion(of: lane.lane.part) {
-                let version = mine.deriving(kind, by: who, operation: Operation.written, note: note)
-                versions.append(version); try? working.append(version)
-                return version.partID
-            }
-            guard let root else { return nil }
-            let made = AnotherWay.variation(of: root, named: section.name.lowercased() + suffix, kind: kind, note: note, by: who, in: working)
-            if let version = made.version { versions.append(version); try? working.append(version) }
-            return made.part
-        }
-
         for section in sections {
-            guard let index = arranged.firstIndex(where: { $0.id == section.id }) else { continue }
-            let chords = AnotherWay.lane(of: .progression, in: arranged[index], of: working)
-            var own = progression
+            guard let index = writing.index(of: section) else { continue }
+            let own = section.name.lowercased()
+            let chords = writing.played(.progression, in: index)
+            var mine = progression
             // The same player as the chords it replaces there, until play_chords says otherwise.
-            if let chords, case .progression(let before) = chords.version.kind {
-                own.playing = before.playing
+            var from: Progression?
+            if case .progression(let before)? = chords?.version.kind {
+                from = before
                 replaced.append(before.symbols())
-            } else if let root, case .progression(let before) = root.kind {
-                own.playing = before.playing
+            } else if case .progression(let before)? = root?.kind {
+                from = before
             }
-            let note = "\(symbols) in \(key), the \(section.name.lowercased())'s own" + (own.playing.map { ": \($0.sentence.lowercased())" } ?? "")
-            let chordRoot = chords.flatMap { working.latestVersion(of: $0.root) } ?? root
-            let part: PartID
-            if let written = write(.progression(own), over: chords, root: chordRoot, in: section, note: note, by: author) {
-                part = written
-            } else {
-                // A song with no chords at all: a part of its own, playing only here.
-                let version = PartVersion(partID: PartID(), kind: .progression(own), author: author, operation: Operation.written, note: note)
-                versions.append(version); try? working.append(version)
-                part = version.partID
-            }
-            if first == nil { first = working.latestVersion(of: part) }
-            if let chords {
-                arranged[index].stitch = arranged[index].stitch.map { $0.part == chords.lane.part ? Lane(part: part) : $0 }
-            } else {
-                arranged[index].stitch.append(Lane(part: part))
-            }
+            mine.playing = from?.playing
+            let note = "\(symbols) in \(key), the \(own)'s own" + (mine.playing.map { ": \($0.sentence.lowercased())" } ?? "")
+            let part = writing.place(.progression(mine), in: index, over: chords,
+                                     root: chords.flatMap { writing.latest($0.root) } ?? root,
+                                     named: own, note: note, by: author)
+            if first == nil { first = writing.latest(part) }
             // Whoever else plays chords there follows, each its own way: a guitar left on the old
             // sheet under the keys' new one is two harmonies at once.
-            for lane in arranged[index].stitch where lane.part != part {
-                guard let version = working.version(playing: lane), case .progression(let theirs) = version.kind,
-                      let theirRoot = working.latestVersion(of: working.variation(of: lane.part)?.of ?? lane.part) else { continue }
+            for lane in writing.arranged[index].stitch where lane.part != part {
+                guard let version = writing.working.version(playing: lane), case .progression(let theirs) = version.kind else { continue }
+                let them = writing.played(.progression, in: index, strip: writing.working.strip(of: lane.part))
                 var followed = progression
                 followed.playing = theirs.playing
-                let them = (lane: lane, version: version, root: working.variation(of: lane.part)?.of ?? lane.part)
-                guard let also = write(.progression(followed), over: them, root: theirRoot, in: section,
-                                       note: "\(PartLabel.title(of: theirRoot)): \(symbols), the \(section.name.lowercased())'s own", by: author) else { continue }
-                arranged[index].stitch = arranged[index].stitch.map { $0.part == lane.part ? Lane(part: also) : $0 }
+                writing.place(.progression(followed), in: index, over: them, root: them.flatMap { writing.latest($0.root) },
+                              named: own, note: "\(PartLabel.title(of: version)): \(symbols), the \(own)'s own", by: author)
             }
             // The bass there, moved onto these chords from the ones it was written to.
-            let from: Progression? = {
-                if case .progression(let before)? = chords?.version.kind { return before }
-                if case .progression(let before)? = root?.kind { return before }
-                return nil
-            }()
-            if let bass = AnotherWay.lane(of: .bassline, in: arranged[index], of: working), case .bassline(let line) = bass.version.kind {
+            if let bass = writing.played(.bassline, in: index), case .bassline(let line) = bass.version.kind {
                 if bassSays == ReharmonizeTool.noBass { bassSays = ReharmonizeTool.bassFits }
-                if let from, let followed = Develop.refit(line, from: from, to: progression, beatsPerBar: beats),
-                   let under = write(.bassline(followed), over: bass, root: working.latestVersion(of: bass.root), in: section,
-                                     note: "Follows \(symbols), the \(section.name.lowercased())'s own chords", by: bassAuthor, suffix: "-bass") {
-                    arranged[index].stitch = arranged[index].stitch.map { $0.part == bass.lane.part ? Lane(part: under) : $0 }
+                if let from, let followed = Develop.refit(line, from: from, to: progression, beatsPerBar: beats) {
+                    writing.place(.bassline(followed), in: index, over: bass, root: writing.latest(bass.root), named: own,
+                                  note: "Follows \(symbols), the \(own)'s own chords", by: bassAuthor)
                     bassSays = ReharmonizeTool.bassMoved
                 }
             }
             placed.append(section.name)
         }
-        let where_ = placed.joined(separator: ", ")
-        guard !placed.isEmpty, await workspace.keep(versions, arranged: arranged, mix: nil, saying: "\(where_): \(symbols)",
+        let where_ = SectionWriting.list(placed)
+        guard !placed.isEmpty, await workspace.keep(writing.versions, arranged: writing.arranged, mix: nil, saying: "\(where_): \(symbols)",
                                                      detail: "Chords of its own; the rest of the song keeps its") else {
             throw DirectorToolFailure(tool: name, reason: "The song would not take it.")
         }
@@ -249,7 +209,7 @@ public struct SetProgressionTool: DirectorTool {
         let rest = song.sections.count > placed.count ? " The rest of the song keeps its chords." : ""
         return Output(version: first?.id.description ?? "", part: first?.partID.description ?? "", key: "\(key)", chords: symbols,
                       numerals: [], bars: progression.bars.count, recorded: true, flags: [], sections: placed, bass: bassSays,
-                      detail: "\(where_) plays \(symbols) as its own chords" + (was.isEmpty ? "" : " in place of \(was)") + "." + rest
+                      detail: "\(symbols) plays in \(where_) as its own chords" + (was.isEmpty ? "" : " in place of \(was)") + "." + rest
                           + ReharmonizeTool.sentence(bassSays) + " compare_section plays it against how it stood.")
     }
 }
@@ -293,19 +253,22 @@ public struct WriteBasslineTool: DirectorTool {
         public var seed: Int
         /// The bass it is played on; empty is the hands' own.
         public var sound: String
+        /// A section's id or name for a line of its own there, under its chords; empty for a new part.
+        public var section: String
 
         enum CodingKeys: String, CodingKey {
-            case groove, hands, density, seed, sound
+            case groove, hands, density, seed, sound, section
             case lagMS = "lag_ms"
         }
 
-        public init(groove: String, hands: String, lagMS: Double, density: Double, seed: Int, sound: String = "") {
+        public init(groove: String, hands: String, lagMS: Double, density: Double, seed: Int, sound: String = "", section: String = "") {
             self.groove = groove
             self.hands = hands
             self.lagMS = lagMS
             self.density = density
             self.seed = seed
             self.sound = sound
+            self.section = section
         }
 
         public init(from decoder: any Decoder) throws {
@@ -317,6 +280,7 @@ public struct WriteBasslineTool: DirectorTool {
             seed = try values.decode(Int.self, forKey: .seed)
             // Absent in every call written before the tool took one.
             sound = try values.decodeIfPresent(String.self, forKey: .sound) ?? ""
+            section = try values.decodeIfPresent(String.self, forKey: .section) ?? ""
         }
     }
 
@@ -337,10 +301,12 @@ public struct WriteBasslineTool: DirectorTool {
         /// The readings that did not hold.
         public var flags: [String]
         public var recorded: Bool
+        /// The sections that play it as their own bass line; empty when it is a part of its own.
+        public var sections: [String] = []
         public var detail: String
 
         enum CodingKeys: String, CodingKey {
-            case version, part, groove, hands, seed, sound, chords, note, readings, flags, recorded, detail
+            case version, part, groove, hands, seed, sound, chords, note, readings, flags, recorded, sections, detail
             case lagMS = "lag_ms"
             case noteCount = "note_count"
         }
@@ -355,8 +321,10 @@ public struct WriteBasslineTool: DirectorTool {
 
     public let name = "write_bassline"
     public var purpose: String {
-        "Write a bass line under a groove and record it as a version of a new bass part, signed by "
-        + "the Bassist. Say whose hands — the genre's profile (read_genre) names the ones that fit: "
+        "Write a bass line under a groove and record it, signed by the Bassist: with section empty, as a new bass part, "
+        + "which plays only where no section has a bass line — the answer says where it plays; with a section named, as "
+        + "that section's own line, written under the chords that section plays and in place of the line it played, the "
+        + "rest of the song keeping its — \"a busier bass in the hook\", the bass under an intro's own chords. Say whose hands — the genre's profile (read_genre) names the ones that fit: "
         + BassLineage.allCases.map { "\($0.rawValue) (\($0.about))" }.joined(separator: "; ")
         + ". The Bassist refuses when nothing is straight, when pushed ahead of the kick, and when a played bass "
         + "would sit under a kick that rings past 400 ms; its reason comes back as the error. Each player has a "
@@ -379,7 +347,9 @@ public struct WriteBasslineTool: DirectorTool {
             ("sound", Schema.string("The bass it plays on; empty for the player's own. "
                                     + Self.sounds.map { "\($0.id) (\($0.name))" }.joined(separator: ", ") + ".",
                                     enum: [""] + Self.sounds.map(\.id))),
-        ], required: ["groove", "hands", "lag_ms", "density", "seed", "sound"])
+            ("section", Schema.string("Empty for a new bass part. A section's id or name — \"hook\", \"intro\" — for a line of its own "
+                                      + "there, under its chords; of several with one name, all of them.")),
+        ], required: ["groove", "hands", "lag_ms", "density", "seed", "sound", "section"])
     }
 
     public func run(_ input: Input) async throws -> Output {
@@ -437,11 +407,24 @@ public struct WriteBasslineTool: DirectorTool {
         }
 
         let seed = input.seed == 0 ? Int(GrooveFeel.freshSeed()) : input.seed
-        let request = BassRequest(key: key, chords: chords, groove: groove, tempo: tempo, timeSignature: signature,
-                                  lineage: lineage, lagMS: lag, density: min(1, max(0, input.density)),
-                                  sound: sound, seed: UInt64(truncatingIfNeeded: seed),
-                                  bars: Self.bars(under: chords, over: groove, in: signature))
-        let line = BassWriter.write(request)
+        /// The line under a sheet: the song's, or a section's own.
+        func written(under chords: [ChordSpan]) -> (line: Bassline, request: BassRequest) {
+            let request = BassRequest(key: key, chords: chords, groove: groove, tempo: tempo, timeSignature: signature,
+                                      lineage: lineage, lagMS: lag, density: min(1, max(0, input.density)),
+                                      sound: sound, seed: UInt64(truncatingIfNeeded: seed),
+                                      bars: Self.bars(under: chords, over: groove, in: signature))
+            return (BassWriter.write(request), request)
+        }
+        // With a section, the chords it plays: its own where it has them.
+        let named = input.section.trimmingCharacters(in: .whitespacesAndNewlines)
+        let sections = named.isEmpty ? [] : try song.map { try SectionNaming.resolve(named, in: $0, tool: name) } ?? []
+        var sheet = chordVersion
+        if let song, let first = sections.first, let own = AnotherWay.lane(of: .progression, in: first, of: song)?.version,
+           case .progression(let p) = own.kind {
+            sheet = own
+            chords = p.spans
+        }
+        let (line, request) = written(under: chords)
         // Read against the groove as the line hears it, so a bar is a bar of the line.
         let observation = BassObservation(label: "\(lineage.name) line", bassline: line, groove: request.lineGroove,
                                           chords: chords, tempo: tempo, timeSignature: signature,
@@ -453,11 +436,41 @@ public struct WriteBasslineTool: DirectorTool {
         if lag != 0 { noteParts.append(String(format: "%+.0f ms behind the kick", lag)) }
         noteParts.append(String(format: "%.0f bpm", tempo))
         noteParts.append(BassVoiceSpec.resolve(id: sound)?.name ?? sound)
-        noteParts.append(chords.isEmpty ? "to the key's I–IV–V–I" : "over \(chordVersion.map { PartLabel.title(of: $0) } ?? "the progression")")
-        let version = PartVersion(partID: PartID(), kind: .bassline(line), author: .persona(Self.author),
+        noteParts.append(chords.isEmpty ? "to the key's I–IV–V–I" : "over \(sheet.map { PartLabel.title(of: $0) } ?? "the progression")")
+        var version = PartVersion(partID: PartID(), kind: .bassline(line), author: .persona(Self.author),
                                   parents: [grooveVersion.id], operation: Operation.written,
                                   note: noteParts.joined(separator: ", "))
-        let recorded = await workspace.record(version)
+        var placed: [String] = []
+        let recorded: Bool
+        var whereItPlays = ""
+        if let song, !sections.isEmpty {
+            // Each section's own line, under the chords it plays, in place of the line it played.
+            var writing = SectionWriting(song)
+            var first: PartVersion?
+            for section in sections {
+                guard let index = writing.index(of: section) else { continue }
+                let own = section.name.lowercased()
+                var under = chords
+                if let mine = writing.played(.progression, in: index), case .progression(let p) = mine.version.kind { under = p.spans }
+                let bass = writing.played(.bassline, in: index)
+                let part = writing.place(.bassline(under == chords ? line : written(under: under).line), in: index, over: bass,
+                                         root: bass.flatMap { writing.latest($0.root) } ?? Guidance.basslines(in: song).last,
+                                         named: own, note: "\(version.note ?? ""), the \(own)'s own", by: .persona(Self.author))
+                if first == nil { first = writing.latest(part) }
+                placed.append(section.name)
+            }
+            let list = SectionWriting.list(placed)
+            let kept = await workspace.keep(writing.versions, arranged: writing.arranged, mix: nil,
+                                            saying: "\(list): a bass line of its own", detail: version.note)
+            recorded = first != nil && kept
+            if let first { version = first }
+            whereItPlays = recorded ? "It plays in \(list) as its own bass line" + (song.sections.count > placed.count ? "; the rest of the song keeps its. " : ". ") : ""
+        } else {
+            recorded = await workspace.record(version)
+            if recorded, let now = await workspace.song {
+                whereItPlays = FormReach.sentence(for: version.partID, a: "a bass line", in: now).trimmingCharacters(in: .whitespaces) + " "
+            }
+        }
         if recorded, !flags.isEmpty {
             await workspace.note("The Bassist: " + flags.map(\.says).joined(separator: " "), detail: version.note)
         }
@@ -466,9 +479,9 @@ public struct WriteBasslineTool: DirectorTool {
                       chords: chords.isEmpty ? "none stated: the key's I–IV–V–I in \(key)"
                                              : chords.map { $0.chord.symbol(in: key) }.joined(separator: " "),
                       noteCount: line.notes.count, note: version.note ?? "",
-                      readings: readings.map(\.says), flags: flags.map(\.says), recorded: recorded,
+                      readings: readings.map(\.says), flags: flags.map(\.says), recorded: recorded, sections: placed,
                       detail: recorded
-                          ? (ownRecording.map { "It plays on \($0.name) (\($0.id)), the recording of \(lineage.name)'s own \(lineage.defaultSound) bass. " } ?? "")
+                          ? (whereItPlays == " " ? "" : whereItPlays) + (ownRecording.map { "It plays on \($0.name) (\($0.id)), the recording of \(lineage.name)'s own \(lineage.defaultSound) bass. " } ?? "")
                               + (builtInRecording.map { "The \(asked) bass is synthesized, and the library has a recording that plays it: \($0.name) (\($0.id)); write it there unless a synthesized sound is the point. " } ?? "")
                               + "Open the Piano roll on \(version.id.description) to see it over the kicks, or a Compare of "
                               + "several lines with the groove as the reference."

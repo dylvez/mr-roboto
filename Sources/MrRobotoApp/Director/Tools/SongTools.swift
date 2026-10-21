@@ -339,7 +339,15 @@ public struct CreatePartVersionTool: DirectorTool {
                       recorded: recorded,
                       reference: reference ? true : nil,
                       detail: !recorded ? "No song is open, so this was not recorded anywhere."
-                          : reference ? "Set aside as reference: in no section, and not playing. set_aside with back true brings it into the song." : nil)
+                          : reference ? "Set aside as reference: in no section, and not playing. set_aside with back true brings it into the song."
+                          : await whereItPlays(version))
+    }
+
+    /// Where the part just made plays, or why nowhere: said, so it is never unheard in silence.
+    private func whereItPlays(_ version: PartVersion) async -> String? {
+        guard let song = await workspace.song else { return nil }
+        let said = FormReach.sentence(for: version.partID, a: version.type == .groove ? "a groove" : "a chop", in: song)
+        return said.isEmpty ? nil : said.trimmingCharacters(in: .whitespaces)
     }
 
     private func resolveParent(_ id: String?) async throws -> PartVersion? {

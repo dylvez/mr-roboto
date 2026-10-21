@@ -26,9 +26,9 @@ enum AnotherWay {
     /// part under a name no other variation of the root has. One developing wrote is not reused,
     /// though it play the same: developing may write it again, and this one is to stay.
     static func variation(of root: PartVersion, named name: String, kind: PartKind, note: String, by author: Author,
-                          in song: Song) -> (part: PartID, version: PartVersion?) {
+                          in song: Song, reusing: Bool = true) -> (part: PartID, version: PartVersion?) {
         let existing = song.variations(of: root.partID)
-        if let same = existing.first(where: { part in
+        if reusing, let same = existing.first(where: { part in
             song.latestVersion(of: part)?.kind == kind && song.versions.first { $0.partID == part }?.operation == Operation.placed
         }) { return (same, nil) }
         let taken = Set(existing.compactMap { song.variation(of: $0)?.name })

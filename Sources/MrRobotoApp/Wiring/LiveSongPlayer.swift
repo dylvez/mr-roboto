@@ -99,7 +99,7 @@ final class LiveSongPlayer: SongPlaybackHost {
         // song closed or a form rewritten leaves its kits resident for the life of the app, and a
         // pitched kit is nineteen roots of rendered audio. The surfaces' own samplers — the ones
         // with no part — are never retired; they belong to the app, not to a plan.
-        await service.retire(partsOtherThan: Set(plan.parts))
+        await service.retire(keeping: Self.samplerKeys(of: plan))
         // The echo counts in the song's beats, and an organ brings its speaker to its strip.
         graph.tempo = plan.tempo
         graph.instrumentInserts = plan.instrumentInserts
@@ -425,7 +425,7 @@ final class LiveSongPlayer: SongPlaybackHost {
             return .groove(player)
         case .bassline(let line):
             let spec = BassVoiceSpec.resolve(id: voice.sound) ?? .finger
-            let key = AuditionService.SamplerKey(.bass, part: voice.part)
+            let key = AuditionService.SamplerKey(.bass, part: voice.part, sound: spec.id)
             let sampler = try await service.playbackBassSampler(voice: spec, for: voice.part)
             try Self.route(sampler.node, part: voice.part, on: graph)
             let player = BasslinePlayer(sampler: sampler, bassline: line, timeline: timeline)
@@ -434,17 +434,36 @@ final class LiveSongPlayer: SongPlaybackHost {
         case .progression(let progression):
             let player = KeysPlayer(sampler: try await keysSampler(voice, engine: engine, graph: graph),
                                     progression: progression, timeline: timeline)
-            player.drivesSampler = drives(AuditionService.SamplerKey(.instrument, part: voice.part))
+            player.drivesSampler = drives(Self.instrumentKey(voice))
             return .keys(player)
         case .melody(let melody):
             let player = KeysPlayer(sampler: try await keysSampler(voice, engine: engine, graph: graph),
                                     melody: melody, timeline: timeline)
-            player.drivesSampler = drives(AuditionService.SamplerKey(.instrument, part: voice.part))
+            player.drivesSampler = drives(Self.instrumentKey(voice))
             return .keys(player)
         case .chop:
             // A chop is audio through a chain, not a sampler: it goes on a player node, below.
             return nil
         }
+    }
+
+    /// The sampler a pitched voice plays on: its strip's, holding its own instrument.
+    nonisolated static func instrumentKey(_ voice: SongPlayback.Voice) -> AuditionService.SamplerKey {
+        AuditionService.SamplerKey(.instrument, part: voice.part, sound: (InstrumentVoiceSpec.preset(id: voice.sound) ?? .rhodes).id)
+    }
+
+    /// Every lane sampler a plan plays on, by part and sound: what is kept when the plan begins.
+    nonisolated static func samplerKeys(of plan: SongPlayback) -> Set<AuditionService.SamplerKey> {
+        var keys = Set<AuditionService.SamplerKey>()
+        for voice in plan.voices + plan.segments.flatMap(\.voices) {
+            switch voice.play {
+            case .groove: keys.insert(AuditionService.SamplerKey(.drums, part: voice.part))
+            case .bassline: keys.insert(AuditionService.SamplerKey(.bass, part: voice.part, sound: (BassVoiceSpec.resolve(id: voice.sound) ?? .finger).id))
+            case .progression, .melody: keys.insert(instrumentKey(voice))
+            case .chop: break
+            }
+        }
+        return keys
     }
 
     private func keysSampler(_ voice: SongPlayback.Voice, engine: Engine, graph: MixGraph) async throws -> VoiceSampler {

@@ -64,6 +64,8 @@ public struct DegradePartTool: DirectorTool {
         public var version: String
         public var preset: String
         public var mix: Double
+        /// A section's id or name for the dust there alone. Nil or empty is everywhere the part plays.
+        public var section: String?
     }
 
     public struct Output: Encodable, Sendable {
@@ -83,6 +85,8 @@ public struct DegradePartTool: DirectorTool {
         public var recorded: Bool
         /// What the chain check said and let through, each with its reason.
         public var findings: [String]
+        /// The sections that play it dusty; empty when it is everywhere the part plays.
+        public var sections: [String] = []
         public var detail: String?
     }
 
@@ -107,7 +111,9 @@ public struct DegradePartTool: DirectorTool {
         "Make a chop or a groove dustier by writing a new version of that same part that plays "
         + "through a named machine at a mix. Nothing is printed: the version you name becomes the "
         + "parent and still plays clean. Name a dry version to dirty it; naming a dusty one stacks a "
-        + "second machine over the first, and the chain check refuses a second quantiser."
+        + "second machine over the first, and the chain check refuses a second quantiser. With section empty it is "
+        + "dusty wherever the part plays; with a section named — \"the intro on the radio\" — there alone, what that "
+        + "section plays of the part dirtied, the rest of the song as it was."
     }
     public var schema: DirectorJSON {
         Schema.object([
@@ -122,7 +128,9 @@ public struct DegradePartTool: DirectorTool {
             ("mix", Schema.number(
                 "How much of the machine against the dry part, above 0: 0.6 is \"at 60%\", 1 is the "
                 + "machine alone.", maximum: 1)),
-        ], required: ["version", "preset", "mix"])
+            ("section", Schema.string("Empty for everywhere the part plays. A section's id or name — \"intro\", \"Verse 2\" — for the "
+                                      + "dust there alone; of several with one name, all of them.")),
+        ], required: ["version", "preset", "mix", "section"])
     }
 
     public func run(_ input: Input) async throws -> Output {
@@ -159,9 +167,37 @@ public struct DegradePartTool: DirectorTool {
                                           + DegradePartTool.fixes(refusal, named: bound, dry: dry))
         }
 
-        let recorded = await workspace.record(version)
+        var kept = version
+        var placed: [String] = []
+        let recorded: Bool
+        let sectionNamed = (input.section ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if !sectionNamed.isEmpty, let song = await workspace.song {
+            // What each section named plays of the part, dirtied there alone.
+            var writing = SectionWriting(song)
+            var first: PartVersion?
+            let strip = song.strip(of: bound.partID)
+            for section in try SectionNaming.resolve(sectionNamed, in: song, tool: name) {
+                guard let index = writing.index(of: section), let there = writing.played(bound.type, in: index, strip: strip),
+                      let dusty = Dust.version(dirtying: there.version, through: there.version.kind.degradation + [Dust.pass(preset, mix: input.mix)],
+                                               by: author) else { continue }
+                let own = section.name.lowercased()
+                let part = writing.place(dusty.kind, in: index, over: there, root: writing.latest(there.root), named: own,
+                                         note: "\(dusty.note ?? DegradePartTool.describe(passes)), the \(own)'s", by: author)
+                if first == nil { first = writing.latest(part) }
+                placed.append(section.name)
+            }
+            guard let first else {
+                throw DirectorToolFailure(tool: name, reason: "\(sectionNamed) does not play \(PartLabel.title(of: bound)).",
+                                          suggestion: "Name a section that plays it, or leave section empty for everywhere it plays.")
+            }
+            recorded = await workspace.keep(writing.versions, arranged: writing.arranged, mix: nil,
+                                            saying: "\(SectionWriting.list(placed)): \(DegradePartTool.describe(passes))", detail: nil)
+            kept = first
+        } else {
+            recorded = await workspace.record(version)
+        }
         let chain = DegradePartTool.describe(passes)
-        let note = version.note ?? chain
+        let note = kept.note ?? chain
         // The version's own ledger line is written by the record itself; what the rail needs from
         // here is what the chain check said, with its reason.
         if recorded {
@@ -170,11 +206,11 @@ public struct DegradePartTool: DirectorTool {
                                      detail: "\(finding.why) \(finding.measurement.description)")
             }
         }
-        return Output(version: version.id.description,
+        return Output(version: kept.id.description,
                       parent: bound.id.description,
                       dry: dry.id.description,
-                      part: version.partID.description,
-                      type: version.type.rawValue,
+                      part: kept.partID.description,
+                      type: kept.type.rawValue,
                       operation: Operation.degrade,
                       author: author.description,
                       chain: chain,
@@ -184,8 +220,10 @@ public struct DegradePartTool: DirectorTool {
                           DegradePartTool.reason($0) + " "
                               + DegradePartTool.fixes($0, named: bound, dry: dry)
                       },
+                      sections: placed,
                       detail: recorded
-                          ? "Open \(version.id.description) on its own surface — the Grid for a groove, the Chop lane "
+                          ? (placed.isEmpty ? "" : "In \(SectionWriting.list(placed)) it plays through \(chain); the rest of the song as it was. ")
+                              + "Open \(kept.id.description) on its own surface — the Grid for a groove, the Chop lane "
                               + "for a chop — to hear it against the dry version: Dry beside its Dust menu is a true "
                               + "bypass. Its chain is already on it, so it needs no dust lever."
                           : "No song is open, so this was not recorded anywhere.")

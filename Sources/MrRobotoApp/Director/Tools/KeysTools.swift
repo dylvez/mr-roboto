@@ -17,6 +17,8 @@ public struct PlayChordsTool: DirectorTool {
         public var pattern: String
         public var voicing: String
         public var seed: Int
+        /// A section's id or name for its chords played this way there alone. Nil or empty is everywhere.
+        public var section: String?
     }
 
     public struct Output: Encodable, Sendable {
@@ -35,10 +37,12 @@ public struct PlayChordsTool: DirectorTool {
         public var movement: Double
         public var notes: Int
         public var recorded: Bool
+        /// The sections that play their chords this way; empty when it is everywhere.
+        public var sections: [String] = []
         public var detail: String
 
         enum CodingKeys: String, CodingKey {
-            case version, part, chords, pattern, voicing, seed, instrument, movement, notes, recorded, detail
+            case version, part, chords, pattern, voicing, seed, instrument, movement, notes, recorded, sections, detail
             case topLine = "top_line"
         }
     }
@@ -58,7 +62,9 @@ public struct PlayChordsTool: DirectorTool {
         + KeysPattern.allCases.map { "\($0.rawValue) (\($0.about))" }.joined(separator: "; ")
         + ". Voicings: " + KeysVoicing.allCases.map { "\($0.rawValue) (\($0.about))" }.joined(separator: "; ")
         + ". Use it when the user asks for stabs, a comp, an arpeggio, a strum, voice-leading, smoother chords, or chords that "
-        + "move less; and after set_progression when the genre has a way of playing its chords."
+        + "move less; and after set_progression when the genre has a way of playing its chords. With section empty the "
+        + "chords are played this way wherever they play; with a section named — \"stabs in the hook, held in the verse\" — "
+        + "only there, the chords that section plays kept and played this way, the rest of the song as it was."
     }
     public var schema: DirectorJSON {
         Schema.object([
@@ -66,7 +72,9 @@ public struct PlayChordsTool: DirectorTool {
             ("pattern", Schema.string("The rhythm the chords are struck in.", enum: KeysPattern.allCases.map(\.rawValue))),
             ("voicing", Schema.string("Where the notes of each chord sit.", enum: KeysVoicing.allCases.map(\.rawValue))),
             ("seed", Schema.integer("0 for a hand nobody chose; the seed a result gave, to play it the same way again.", minimum: 0)),
-        ], required: ["progression", "pattern", "voicing", "seed"])
+            ("section", Schema.string("Empty for everywhere the chords play. A section's id or name — \"hook\", \"Verse 2\" — for its "
+                                      + "chords played this way there alone; of several with one name, all of them.")),
+        ], required: ["progression", "pattern", "voicing", "seed", "section"])
     }
 
     public func run(_ input: Input) async throws -> Output {
@@ -104,21 +112,53 @@ public struct PlayChordsTool: DirectorTool {
         let playing = ChordPlaying(pattern, voicing, seed: pattern == .held ? 0 : seed)
         progression.playing = playing.isPlain ? nil : playing
 
-        // Built on the part's newest version, so what is heard wherever the chords play is this.
-        let newest = song.latestVersion(of: version.partID) ?? version
-        let spelled = progression.symbols()
-        let note = "\(spelled) in \(progression.key): \(playing.sentence.lowercased())"
-        let kept = newest.deriving(.progression(progression), by: .persona(acting), operation: Operation.written, note: note)
-        let recorded = await workspace.record(kept)
+        var spelled = progression.symbols()
+        var kept: PartVersion
+        var placed: [String] = []
+        let recorded: Bool
+        let sectionNamed = (input.section ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if !sectionNamed.isEmpty {
+            // In each section named, the chords it plays — its own where it has them — played this way, there alone.
+            var writing = SectionWriting(song)
+            var first: PartVersion?
+            let strip = named.isEmpty ? nil : song.strip(of: version.partID)
+            for section in try SectionNaming.resolve(sectionNamed, in: song, tool: name) {
+                guard let index = writing.index(of: section),
+                      let there = writing.played(.progression, in: index, strip: strip) ?? writing.played(.progression, in: index),
+                      case .progression(var theirs) = there.version.kind else { continue }
+                theirs.playing = progression.playing
+                let own = section.name.lowercased()
+                let part = writing.place(.progression(theirs), in: index, over: there, root: writing.latest(there.root), named: own,
+                                         note: "\(theirs.symbols()) in \(theirs.key), the \(own)'s: \(playing.sentence.lowercased())",
+                                         by: .persona(acting))
+                if first == nil { first = writing.latest(part); spelled = theirs.symbols(); progression = theirs }
+                placed.append(section.name)
+            }
+            guard let first else {
+                throw DirectorToolFailure(tool: name, reason: "\(sectionNamed) plays no chords.",
+                                          suggestion: "set_progression with the section gives it chords of its own; or name a section that has some.")
+            }
+            recorded = await workspace.keep(writing.versions, arranged: writing.arranged, mix: nil,
+                                            saying: "\(SectionWriting.list(placed)): \(playing.sentence.lowercased())", detail: nil)
+            kept = first
+        } else {
+            // Built on the part's newest version, so what is heard wherever the chords play is this.
+            let newest = song.latestVersion(of: version.partID) ?? version
+            let note = "\(spelled) in \(progression.key): \(playing.sentence.lowercased())"
+            kept = newest.deriving(.progression(progression), by: .persona(acting), operation: Operation.written, note: note)
+            recorded = await workspace.record(kept)
+        }
 
-        let instrumentID = SongPlayback.instrumentID(for: version.partID, in: song)
+        let instrumentID = SongPlayback.instrumentID(for: kept.partID, in: await workspace.song ?? song)
         let spec = InstrumentVoiceSpec.preset(id: instrumentID)
         let top = Voicing.topLine(of: progression, as: voicing).map { progression.key.name(of: Pitch(midi: $0)) }
         let movement = (Voicing.movement(of: progression, as: voicing) * 100).rounded() / 100
         let notes = Voicing.notes(for: progression).count
         var detail = recorded
             ? "\(spelled), \(playing.sentence.lowercased()), on the \(spec?.name ?? instrumentID): \(notes) notes a pass, the top line \(top.joined(separator: " ")), "
-                + String(format: "the voices moving %.1f semitones a change. It plays wherever the chords play.", movement)
+                + String(format: "the voices moving %.1f semitones a change. ", movement)
+                + (placed.isEmpty ? "It plays wherever the chords play."
+                                  : "In \(SectionWriting.list(placed)) the chords are played this way; the rest of the song as it was.")
             : "No song would take it, so it was not recorded."
         if recorded, let spec, !pattern.suits(spec) {
             detail += " \(pattern.name) is short notes and the \(spec.name) swells into a note, so little of it will be heard: "
@@ -130,6 +170,6 @@ public struct PlayChordsTool: DirectorTool {
         }
         return Output(version: kept.id.description, part: kept.partID.description, chords: spelled, pattern: pattern.rawValue,
                       voicing: voicing.rawValue, seed: Int(clamping: playing.seed), instrument: spec?.name ?? instrumentID,
-                      topLine: top, movement: movement, notes: notes, recorded: recorded, detail: detail)
+                      topLine: top, movement: movement, notes: notes, recorded: recorded, sections: placed, detail: detail)
     }
 }

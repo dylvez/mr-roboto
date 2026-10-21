@@ -144,6 +144,9 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     /// The pitched instrument a part plays on, or the song's when `part` is nil. False when the
     /// preset is unknown, no song is open, or it already plays on that preset.
     @discardableResult func setInstrument(_ id: String, for part: PartID?) -> Bool
+    /// A part on an instrument of its own: a section's own chords or tune, which would otherwise
+    /// play on the instrument of the part they vary.
+    @discardableResult func setOwnInstrument(_ id: String, for part: PartID) -> Bool
     /// A groove made from a chop, put on the chop's slices and in its place in the form, as the
     /// Chop lane's Make the groove does. The names of the sections it took over.
     @discardableResult func playGroove(_ groove: PartID, onChop chop: PartID) -> [String]
@@ -499,6 +502,9 @@ public final class AppStateWorkspace: DirectorWorkspace {
     @discardableResult public func setTimeSignature(_ signature: TimeSignature) -> Bool { app.setTimeSignature(signature, by: .director) }
     @discardableResult public func setInstrument(_ id: String, for part: PartID?) -> Bool {
         app.setInstrument(id, for: part, by: .persona("Director"))
+    }
+    @discardableResult public func setOwnInstrument(_ id: String, for part: PartID) -> Bool {
+        app.setInstrument(id, for: part, by: .persona("Director"), own: true)
     }
     public func levelChop(_ chop: PartID, asRecorded: Bool) -> Double? {
         app.keepSurfaceWork()
@@ -919,11 +925,24 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
         return swapped.took
     }
 
-    /// As the frame does it: a `.sound` part, one pick a version of the last.
+    /// As the frame does it: a `.sound` part, one pick a version of the last; a pick on a
+    /// variation is the part's it varies.
     @discardableResult
     public func setInstrument(_ id: String, for part: PartID?) -> Bool {
-        guard let spec = InstrumentVoiceSpec.preset(id: id), let current = song,
-              SongPlayback.instrumentID(for: part, in: current) != spec.id else { return false }
+        guard let current = song else { return false }
+        return pick(id, for: part.map(current.strip(of:)), own: false)
+    }
+
+    @discardableResult
+    public func setOwnInstrument(_ id: String, for part: PartID) -> Bool { pick(id, for: part, own: true) }
+
+    private func pick(_ id: String, for part: PartID?, own: Bool) -> Bool {
+        guard let spec = InstrumentVoiceSpec.preset(id: id), let current = song else { return false }
+        if own, let part {
+            guard AppState.ownInstrument(of: part, in: current) != spec.id else { return false }
+        } else {
+            guard SongPlayback.instrumentID(for: part, in: current) != spec.id else { return false }
+        }
         let kind = PartKind.sound(Sound(instrument: spec.id, forPart: part))
         if let previous = current.versions.last(where: { version in
             if case .sound(let sound) = version.kind, sound.forPart == part { return InstrumentVoiceSpec.preset(id: sound.instrument) != nil }

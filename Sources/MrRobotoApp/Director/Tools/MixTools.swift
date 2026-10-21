@@ -362,7 +362,8 @@ public struct SetMixTool: DirectorTool {
             ("band_hz", Schema.number("The peak band's frequency in Hz; 0 for no EQ move.", minimum: 0, maximum: 20_000)),
             ("band_db", Schema.number("The EQ change in dB at that band; 0 for none. A cut is negative.", minimum: -18, maximum: 18)),
             ("reason", Schema.string("The reading that asked for the move, in dB and Hz.")),
-            ("section", Schema.string("A section by name to move the strip's level in that section only; empty for every section.")),
+            ("section", Schema.string("A section's id or name to move the strip's level there only — a name is every section called that, "
+                                      + "\"hook\" every hook; empty for every section.")),
         ], required: ["part", "gain_db", "band_hz", "band_db", "reason", "section"])
     }
 
@@ -384,18 +385,19 @@ public struct SetMixTool: DirectorTool {
                                       suggestion: "One of: \(strips.map(\.label).joined(separator: ", ")). Read the mix first.")
         }
         let named = (input.section ?? "").trimmingCharacters(in: .whitespaces)
-        var section: Section?
+        // Every section of the name — "the chorus" is every hook — or one by its id. Only the
+        // first of them used to move, so the last chorus could not be reached at all.
+        var sections: [Section] = []
         if !named.isEmpty {
-            guard let found = song.sections.first(where: { $0.name.caseInsensitiveCompare(named) == .orderedSame }) else {
+            guard !song.sections.isEmpty else {
                 throw DirectorToolFailure(tool: name, reason: "\"\(named)\" is not a section of this song.",
-                                          suggestion: song.sections.isEmpty ? "The song has no form yet: leave section empty to move the strip everywhere."
-                                              : "One of: \(song.sections.map(\.name).joined(separator: ", ")), or empty for every section.")
+                                          suggestion: "The song has no form yet: leave section empty to move the strip everywhere.")
             }
+            sections = try SectionNaming.resolve(named, in: song, tool: name)
             if input.bandDB != 0 {
                 throw DirectorToolFailure(tool: name, reason: "EQ is the strip's in every section; a section takes only a level.",
-                                          suggestion: "Move the band with section empty, or the level in \(found.name) with band_db 0.")
+                                          suggestion: "Move the band with section empty, or the level in \(named) with band_db 0.")
             }
-            section = found
         }
         let asked = PersonaProposal.moveStrip(part: strip.label, gainDB: input.gainDB, bandHz: input.bandHz, bandDB: input.bandDB)
         let verdict = GenreLens.judge(engineer.consider(asked), on: asked, by: Engineer.bible, in: await workspace.genreLens)
@@ -404,14 +406,16 @@ public struct SetMixTool: DirectorTool {
         }
         var mix = plan.mix ?? .unity
         let before = mix
-        if let section {
+        if !sections.isEmpty {
             // From the level it has there, as the Mixer's fader in that section starts from it; a
             // move that lands on the strip's own level is no section level at all.
             let own = mix.strip(for: strip.part)?.gainDB ?? 0
-            let level = max(-60, min(12, mix.gainDB(for: strip.part, in: section.id) + input.gainDB))
-            mix.sectionGains.removeAll { $0.section == section.id && $0.part == strip.part }
-            if input.gainDB != 0, abs(level - own) > 0.05 {
-                mix.sectionGains.append(SectionGain(section: section.id, part: strip.part, gainDB: level))
+            for section in sections {
+                let level = max(-60, min(12, mix.gainDB(for: strip.part, in: section.id) + input.gainDB))
+                mix.sectionGains.removeAll { $0.section == section.id && $0.part == strip.part }
+                if input.gainDB != 0, abs(level - own) > 0.05 {
+                    mix.sectionGains.append(SectionGain(section: section.id, part: strip.part, gainDB: level))
+                }
             }
         } else {
             var moved = mix.strip(for: strip.part, label: strip.label)
@@ -691,7 +695,8 @@ public struct SetEffectsTool: DirectorTool {
             ("part", Schema.string("The strip's label as read_mix printed it, or its part id; empty to set only the returns.")),
             ("insert", Schema.string("What the strip plays through.", enum: ["keep", "own"] + StripInsert.named.map(\.id))),
             ("echo", Schema.string("The strip's echo send: keep, off, or dB from -60 to 0, like \"-12\".")),
-            ("section", Schema.string("A section by name, to set the speaker's speed and the echo send there alone; empty for every section.")),
+            ("section", Schema.string("A section's id or name, to set the speaker's speed and the echo send there alone — a name is every "
+                                      + "section called that; empty for every section.")),
             ("room", Schema.string("The reverb's space.", enum: ["keep"] + Room.allCases.map(\.rawValue))),
             ("echo_time", Schema.string("The echo's time.", enum: ["keep"] + Echo.times.map(\.name))),
             ("echo_feedback", Schema.number("How much of each repeat comes round again, 0 to 0.85; -1 keeps it.", minimum: -1, maximum: 0.85)),
@@ -732,15 +737,16 @@ public struct SetEffectsTool: DirectorTool {
             }
         }
         let sectionName = input.section.trimmingCharacters(in: .whitespaces)
-        var section: Section?
+        // Every section of the name, or one by its id: "the chorus" is every hook.
+        var sections: [Section] = []
         if !sectionName.isEmpty {
-            guard let found = song.sections.first(where: { $0.name.caseInsensitiveCompare(sectionName) == .orderedSame }) else {
+            guard !song.sections.isEmpty else {
                 throw DirectorToolFailure(tool: name, reason: "\"\(sectionName)\" is not a section of this song.",
-                                          suggestion: song.sections.isEmpty ? "The song has no form yet: leave section empty."
-                                              : "One of: \(song.sections.map(\.name).joined(separator: ", ")), or empty.")
+                                          suggestion: "The song has no form yet: leave section empty.")
             }
-            section = found
+            sections = try SectionNaming.resolve(sectionName, in: song, tool: name)
         }
+        let section = sections.first
         let own = strip.flatMap { plan.instrumentInserts[$0.part] }
 
         // The strip.
@@ -757,25 +763,27 @@ public struct SetEffectsTool: DirectorTool {
                 }
                 echoDB = .some(max(-60, min(0, db)))
             }
-            if let section {
-                var effect = mix.sectionEffects?.first { $0.section == section.id && $0.part == strip.part }
-                    ?? SectionEffect(section: section.id, part: strip.part)
-                switch insert {
-                case "keep": break
-                case "rotary-fast", "rotary-slow":
-                    guard mix.insert(for: strip.part, in: nil, instrument: own)?.kind == .rotary else {
-                        throw DirectorToolFailure(tool: name, reason: "\(strip.label) has no rotating speaker for a section to speed up.",
-                                                  suggestion: "Put one on it everywhere first: section empty, insert rotary-slow.")
+            if !sections.isEmpty {
+                for section in sections {
+                    var effect = mix.sectionEffects?.first { $0.section == section.id && $0.part == strip.part }
+                        ?? SectionEffect(section: section.id, part: strip.part)
+                    switch insert {
+                    case "keep": break
+                    case "rotary-fast", "rotary-slow":
+                        guard mix.insert(for: strip.part, in: nil, instrument: own)?.kind == .rotary else {
+                            throw DirectorToolFailure(tool: name, reason: "\(strip.label) has no rotating speaker for a section to speed up.",
+                                                      suggestion: "Put one on it everywhere first: section empty, insert rotary-slow.")
+                        }
+                        effect.fast = insert == "rotary-fast"
+                    case "own": effect.fast = nil
+                    default:
+                        throw DirectorToolFailure(tool: name, reason: "A section sets the speaker's speed, not what the strip plays through.",
+                                                  suggestion: "rotary-fast or rotary-slow for \(section.name), own for the strip's speed there; or the insert with section empty.")
                     }
-                    effect.fast = insert == "rotary-fast"
-                case "own": effect.fast = nil
-                default:
-                    throw DirectorToolFailure(tool: name, reason: "A section sets the speaker's speed, not what the strip plays through.",
-                                              suggestion: "rotary-fast or rotary-slow for \(section.name), own for the strip's speed there; or the insert with section empty.")
+                    if let echoDB { effect.echoDB = echoDB }
+                    try sectionMoves(input, strip: strip, section: section, effect: &effect, mix: &mix)
+                    mix.setSectionEffect(effect)
                 }
-                if let echoDB { effect.echoDB = echoDB }
-                try sectionMoves(input, strip: strip, section: section, effect: &effect, mix: &mix)
-                mix.setSectionEffect(effect)
             } else {
                 var moved = mix.strip(for: strip.part, label: strip.label)
                 switch insert {
@@ -831,7 +839,7 @@ public struct SetEffectsTool: DirectorTool {
         let now = strip.map { strip -> String in
             let chain = Self.chainWords(mix, part: strip.part, section: section?.id, plan: plan, markOwn: false)
             let echo = mix.echoDB(for: strip.part, in: section?.id).map { String(format: "echo send %.0f dB", $0) } ?? "no echo"
-            var said = "\(strip.label)\(section.map { " in \($0.name)" } ?? ""): through \(chain.isEmpty ? "nothing" : chain.joined(separator: ", ")), \(echo)"
+            var said = "\(strip.label)\(sections.isEmpty ? "" : " in " + SectionWriting.list(sections.map(\.name))): through \(chain.isEmpty ? "nothing" : chain.joined(separator: ", ")), \(echo)"
             if let section, let effect = mix.sectionEffect(for: strip.part, in: section.id) {
                 if let words = effect.filterWords(mix.strip(for: strip.part)?.filter?.kind ?? .lowPass) { said += "; the \(words) across it" }
                 if let db = effect.pumpDB { said += db == 0 ? "; no pump there" : String(format: "; pumping %.0f dB there", db) }

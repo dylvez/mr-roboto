@@ -28,14 +28,17 @@ public struct WriteMelodyTool: DirectorTool {
         /// Which writing of the tune this is, 1 to 3. Nil — a caller from before drafts — is the
         /// last, which is kept as it is.
         public var draft: Int?
+        /// A section's id or name for a tune of its own there. Nil or empty is the song's.
+        public var section: String?
 
-        public init(notes: String, bars: Int, instrument: String, parent: String, note: String, draft: Int? = nil) {
+        public init(notes: String, bars: Int, instrument: String, parent: String, note: String, draft: Int? = nil, section: String? = nil) {
             self.notes = notes
             self.bars = bars
             self.instrument = instrument
             self.parent = parent
             self.note = note
             self.draft = draft
+            self.section = section
         }
     }
 
@@ -57,10 +60,12 @@ public struct WriteMelodyTool: DirectorTool {
         /// The readings that did not hold.
         public var flags: [String]
         public var recorded: Bool
+        /// The sections that play it as their own tune; empty when it is the song's.
+        public var sections: [String] = []
         public var detail: String
 
         enum CodingKeys: String, CodingKey {
-            case version, part, bars, range, key, chords, instrument, readings, flags, recorded, detail
+            case version, part, bars, range, key, chords, instrument, readings, flags, recorded, sections, detail
             case noteCount = "note_count"
         }
     }
@@ -89,7 +94,10 @@ public struct WriteMelodyTool: DirectorTool {
         + "the gaps. Name a parent to rewrite a melody as its next version. A first or second draft that fights the "
         + "chords, or in which nothing comes back, is not kept: what was read comes back, and you write it again. The "
         + "third draft is kept as it is. A draft after one that was kept is that tune's next version. What is kept is "
-        + "marked as the song's tune, the part the band reads as the tune; mark_tune moves the mark."
+        + "marked as the song's tune, the part the band reads as the tune; mark_tune moves the mark. Name a section for a "
+        + "tune of that section's own — \"a melody for the bridge\" — in place of the tune it played there, read over its "
+        + "chords, its instrument its own, the song's tune and its mark staying as they were. A new tune with neither a "
+        + "parent nor a section plays only where no section has one, and the answer says where it plays."
     }
     public var schema: DirectorJSON {
         Schema.object([
@@ -104,7 +112,9 @@ public struct WriteMelodyTool: DirectorTool {
             ("note", Schema.string("A few words naming the tune for the ledger, in the user's language; empty names it by its range.")),
             ("draft", Schema.integer("Which writing of this tune this is: 1 the first time, 2 and 3 when you write the same tune "
                                      + "again after the Melodist flagged the one before. Another tune starts at 1.", minimum: 1, maximum: 3)),
-        ], required: ["notes", "bars", "instrument", "parent", "note", "draft"])
+            ("section", Schema.string("Empty for the song's tune. A section's id or name — \"bridge\", \"Hook 3\" — for a tune of its own "
+                                      + "there, in place of the one it played; of several with one name, all of them.")),
+        ], required: ["notes", "bars", "instrument", "parent", "note", "draft", "section"])
     }
 
     /// What every refusal of a note shows, so the next call is written right.
@@ -189,7 +199,11 @@ public struct WriteMelodyTool: DirectorTool {
 
         let melody = Melody(notes: notes, lengthInBars: input.bars > 0 ? input.bars : nil)
         let key = song.key ?? Guidance.analysis(in: song)?.dominantKey ?? Key.cMajor
-        let progression = Guidance.progressions(in: song).last.flatMap { version -> Progression? in
+        let sectionNamed = (input.section ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let sections = sectionNamed.isEmpty ? [] : try SectionNaming.resolve(sectionNamed, in: song, tool: name)
+        // Read over the chords it is heard over: a section's own, where it has them.
+        let sheet = sections.first.flatMap { AnotherWay.lane(of: .progression, in: $0, of: song)?.version } ?? Guidance.progressions(in: song).last
+        let progression = sheet.flatMap { version -> Progression? in
             if case .progression(let p) = version.kind { return p }
             return nil
         }
@@ -228,26 +242,65 @@ public struct WriteMelodyTool: DirectorTool {
                               + ". Nothing of this draft is in the song, and the user is not told of it.")
         }
 
-        let recorded = await workspace.record(version)
+        var kept = version
+        var placed: [String] = []
+        let recorded: Bool
+        if !sections.isEmpty {
+            // Each section's own tune, in place of what played the tune there.
+            var writing = SectionWriting(song)
+            var first: PartVersion?
+            let strip = parent.map { song.strip(of: $0.partID) }
+            for section in sections {
+                guard let index = writing.index(of: section) else { continue }
+                let own = section.name.lowercased()
+                let tune: SectionWriting.Played? = strip.flatMap { writing.played(.melody, in: index, strip: $0) }
+                    ?? SongTune.lane(in: writing.arranged[index], of: writing.working).map { ($0.lane, $0.version, $0.root) }
+                let root = tune.flatMap { writing.latest($0.root) } ?? parent.map { song.latestVersion(of: $0.partID) ?? $0 } ?? SongTune.version(in: song)
+                let part = writing.place(.melody(melody), in: index, over: tune, root: root, named: own,
+                                         note: "\(note), the \(own)'s own", by: author, reusing: preset == nil)
+                if first == nil { first = writing.latest(part) }
+                placed.append(section.name)
+            }
+            let keptThere = await workspace.keep(writing.versions, arranged: writing.arranged, mix: nil,
+                                                 saying: "\(SectionWriting.list(placed)): a tune of its own", detail: note)
+            recorded = first != nil && keptThere
+            if let first { kept = first }
+        } else {
+            recorded = await workspace.record(version)
+        }
         var playsOn: String?
         // What write_melody writes is the song's tune: the part the band reads as the tune from
-        // now on. The part that was marked before, when it was another.
+        // now on. The part that was marked before, when it was another. A section's own tune is
+        // the tune there, and the mark stays where it was.
         let wasTune = SongTune.marked(in: song).flatMap { $0 == song.strip(of: version.partID) ? nil : song.latestVersion(of: $0) }
         var marked = false
         if recorded {
-            await desk?.kept(version.id, draft: draft, by: name)
+            await desk?.kept(kept.id, draft: draft, by: name)
             for flag in flags { await workspace.speak(Self.author, flag.says, detail: flag.rule) }
             if let preset {
-                await workspace.setInstrument(preset.id, for: version.partID)
+                if placed.isEmpty {
+                    await workspace.setInstrument(preset.id, for: kept.partID)
+                } else if let now = await workspace.song {
+                    for part in Set(now.sections.filter { section in placed.contains(section.name) }.flatMap { $0.stitch.map(\.part) })
+                    where now.strip(of: part) == now.strip(of: kept.partID) && now.latestVersion(of: part)?.type == .melody {
+                        await workspace.setOwnInstrument(preset.id, for: part)
+                    }
+                }
                 playsOn = preset.name
             }
-            marked = await workspace.setTune(version.partID)
+            if placed.isEmpty { marked = await workspace.setTune(kept.partID) }
         }
         var detail = recorded
             ? "\(notes.count) note\(notes.count == 1 ? "" : "s") over \(bars) bar\(bars == 1 ? "" : "s") in \(key.name), signed by the Melodist"
             : "No song would take it, so it was not recorded"
         if recorded {
-            detail += parent.map { ", as the next version of \(PartLabel.title(of: $0))." } ?? ", as a new part."
+            if !placed.isEmpty {
+                detail += ", as a tune of its own in \(SectionWriting.list(placed)), in place of the one played there"
+                    + (song.sections.count > placed.count ? "; the rest of the song keeps its, and the song's tune is as it was." : ".")
+            } else {
+                detail += parent.map { ", as the next version of \(PartLabel.title(of: $0))." } ?? ", as a new part."
+                if parent == nil, let now = await workspace.song { detail += FormReach.sentence(for: kept.partID, a: "a tune", in: now) }
+            }
             if marked {
                 detail += wasTune.map { " It is marked as the song's tune, where \(PartLabel.title(of: $0)) was: if it is a second line and not the tune, mark_tune puts the mark back." }
                     ?? " It is marked as the song's tune."
@@ -255,17 +308,17 @@ public struct WriteMelodyTool: DirectorTool {
             detail += flags.isEmpty ? " The Melodist has nothing to flag." : " The Melodist flags \(flags.count): its words are in the rail."
             // Said where it is read: the first live run answered a flag with a second tune.
             if !flags.isEmpty, draft < Self.lastDraft {
-                detail += " To answer a flag, write it again with parent \(version.id.description) and draft \(draft + 1): "
+                detail += " To answer a flag, write it again with parent \(kept.id.description) and draft \(draft + 1): "
                     + "that is this tune's next version. With no parent it would be a second tune in the song."
             }
-            detail += " Open the Piano roll on \(version.id.description) to see it and play it."
+            detail += " Open the Piano roll on \(kept.id.description) to see it and play it."
             if let preset { detail += SetInstrumentTool.recordingNote(for: preset) }
         } else {
             detail += "."
         }
-        return Output(version: version.id.description, part: version.partID.description, noteCount: notes.count, bars: bars,
+        return Output(version: kept.id.description, part: kept.partID.description, noteCount: notes.count, bars: bars,
                       range: range, key: key.name, chords: chords, instrument: playsOn,
-                      readings: readings.map(\.says), flags: flags.map(\.says), recorded: recorded, detail: detail)
+                      readings: readings.map(\.says), flags: flags.map(\.says), recorded: recorded, sections: placed, detail: detail)
     }
 
     private func resolveParent(_ id: String, in song: Song) throws -> PartVersion? {
@@ -714,6 +767,8 @@ public struct SetInstrumentTool: DirectorTool {
     public struct Input: Decodable, Sendable {
         public var instrument: String
         public var part: String
+        /// A section's id or name for the instrument there alone. Nil or empty is everywhere.
+        public var section: String?
     }
 
     public struct Output: Encodable, Sendable {
@@ -725,6 +780,8 @@ public struct SetInstrumentTool: DirectorTool {
         /// Every pitched part that now plays on it.
         public var plays: [String]
         public var changed: Bool
+        /// The sections that play on it alone; empty when it is everywhere.
+        public var sections: [String] = []
         public var detail: String
     }
 
@@ -735,14 +792,18 @@ public struct SetInstrumentTool: DirectorTool {
     public let name = "set_instrument"
     public var purpose: String {
         "Put a part on an instrument — the chords on a pad, the tune on a lead — or set the song's own, which every chord "
-        + "and melody part that names none plays on. Recorded as a sound version, so it can be gone back to. Bass lines and "
-        + "grooves have their own sounds and are not set here."
+        + "and melody part that names none plays on. Recorded as a sound version, so it can be gone back to. With a section "
+        + "named — \"strings on the intro's chords\", \"a pad in the bridge\" — the part plays on it there alone, on its own "
+        + "sampler on the same strip, the rest of the song on what it had; with a section and no part, every chord and melody "
+        + "part that section plays. Bass lines and grooves have their own sounds and are not set here."
     }
     public var schema: DirectorJSON {
         Schema.object([
             ("instrument", Schema.string("The preset.", enum: InstrumentVoiceSpec.available.map(\.id))),
             ("part", Schema.string("A melody or progression, by version or part id from read_song; empty sets the song's own.")),
-        ], required: ["instrument", "part"])
+            ("section", Schema.string("Empty for everywhere. A section's id or name — \"intro\", \"Hook 2\" — for the instrument there "
+                                      + "alone; of several with one name, all of them.")),
+        ], required: ["instrument", "part", "section"])
     }
 
     public func run(_ input: Input) async throws -> Output {
@@ -754,6 +815,10 @@ public struct SetInstrumentTool: DirectorTool {
                                       suggestion: "One of: " + InstrumentVoiceSpec.available.map { "\($0.id) (\($0.name))" }.joined(separator: ", ") + ".")
         }
         let part = try resolvePart(input.part, in: song)
+        let sectionNamed = (input.section ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if !sectionNamed.isEmpty {
+            return try await inSections(spec, part: part, named: sectionNamed, of: song)
+        }
         let target = part.flatMap { id in song.versions.last { $0.partID == id } }.map(PartLabel.title(of:)) ?? "the song"
         let changed = await workspace.setInstrument(spec.id, for: part)
         let now = await workspace.song ?? song
@@ -769,6 +834,61 @@ public struct SetInstrumentTool: DirectorTool {
         detail += Self.recordingNote(for: spec)
         return Output(instrument: spec.id, name: spec.name, family: spec.family, target: target, plays: plays,
                       changed: changed, detail: detail)
+    }
+
+    /// The instrument in the sections named alone: each chord or melody part there — the one named,
+    /// or every one the section plays — on a part of the section's own, which takes the pick. A
+    /// part that plays only there takes it as it is; one the song plays elsewhere is played there by
+    /// a variation of it, never shared, so the pick cannot reach another section.
+    private func inSections(_ spec: InstrumentVoiceSpec, part: PartID?, named: String, of song: Song) async throws -> Output {
+        var writing = SectionWriting(song)
+        var targets: [PartID] = []
+        var placed: [String] = []
+        let strip = part.map { song.strip(of: $0) }
+        for section in try SectionNaming.resolve(named, in: song, tool: name) {
+            guard let index = writing.index(of: section) else { continue }
+            let own = section.name.lowercased()
+            var played: [SectionWriting.Played] = []
+            for type in [PartType.progression, .melody] {
+                if let strip {
+                    if let found = writing.played(type, in: index, strip: strip) { played.append(found) }
+                } else {
+                    for lane in writing.arranged[index].stitch {
+                        if let found = writing.played(type, in: index, strip: writing.working.strip(of: lane.part)),
+                           !played.contains(where: { $0.lane.part == found.lane.part }) { played.append(found) }
+                    }
+                }
+            }
+            for there in played {
+                if writing.onlyIn(index, there.lane.part) {
+                    targets.append(there.lane.part)
+                } else {
+                    targets.append(writing.place(there.version.kind, in: index, over: there, root: writing.latest(there.root), named: own,
+                                                 note: "\(PartLabel.title(of: there.version)), the \(own)'s own, on the \(spec.name)",
+                                                 by: .persona("Director"), reusing: false))
+                }
+            }
+            if !played.isEmpty { placed.append(section.name) }
+        }
+        guard !targets.isEmpty else {
+            throw DirectorToolFailure(tool: name, reason: "\(named) plays no chords or melody\(part == nil ? "" : " of that part").",
+                                      suggestion: "Name a section that plays it, or leave section empty for everywhere.")
+        }
+        if !writing.versions.isEmpty {
+            guard await workspace.keep(writing.versions, arranged: writing.arranged, mix: nil,
+                                       saying: "\(SectionWriting.list(placed)): parts of its own for the \(spec.name)", detail: nil) else {
+                throw DirectorToolFailure(tool: name, reason: "The song would not take it.")
+            }
+        }
+        var changed = false
+        for target in targets where await workspace.setOwnInstrument(spec.id, for: target) { changed = true }
+        let now = await workspace.song ?? song
+        let names = targets.compactMap { now.latestVersion(of: $0) }.map(PartLabel.title(of:))
+        let list = SectionWriting.list(placed)
+        return Output(instrument: spec.id, name: spec.name, family: spec.family, target: names.joined(separator: ", "), plays: names,
+                      changed: changed, sections: placed,
+                      detail: "In \(list), \(SectionWriting.list(names)) play\(names.count == 1 ? "s" : "") on the \(spec.name)"
+                          + (song.sections.count > placed.count ? "; the rest of the song plays on what it had." : ".") + Self.recordingNote(for: spec))
     }
 
     /// What a synthesized preset with a recording of its instrument in the library says about it:

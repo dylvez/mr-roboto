@@ -305,7 +305,7 @@ struct DirectorAnotherWayTests {
         // And developing again leaves it where it was put.
         _ = try #require(rig.app.develop())
         #expect(chords(rig.app, in: try #require(rig.app.song?.sections.first { $0.id == verse.id })) == "Gm7 | Eb | F | Gm7")
-        #expect(DirectorPrompt.system.contains("it can hold one a section"))
+        #expect(DirectorPrompt.system.contains("each section can have its own chords"))
 
         // A song with no chords yet: a part of their own, in the section named and nowhere else.
         var bare = Song(title: "Bare", key: AnotherWayFixture.key, tempo: 100)

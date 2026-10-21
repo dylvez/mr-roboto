@@ -77,9 +77,11 @@ public struct WriteGrooveTool: DirectorTool {
         public var steps_per_bar: Int?
         /// The groove version this rewrites. Nil or empty is a new beat.
         public var parent: String?
+        /// A section's id or name for drums of its own there. Nil or empty is the song's.
+        public var section: String?
 
         public init(feel: String, bars: Int, swing_percent: Double, rows: [String], note: String, steps_per_bar: Int? = nil,
-                    parent: String? = nil) {
+                    parent: String? = nil, section: String? = nil) {
             self.feel = feel
             self.bars = bars
             self.swing_percent = swing_percent
@@ -87,6 +89,7 @@ public struct WriteGrooveTool: DirectorTool {
             self.note = note
             self.steps_per_bar = steps_per_bar
             self.parent = parent
+            self.section = section
         }
     }
 
@@ -100,9 +103,11 @@ public struct WriteGrooveTool: DirectorTool {
         public var rows: [String]
         public var flags: [String]
         public var played: Bool
+        /// The sections that play it as their own drums; empty when it is the song's.
+        public var sections: [String] = []
         public var detail: String
         enum CodingKeys: String, CodingKey {
-            case version, bars, hits, rows, flags, played, detail
+            case version, bars, hits, rows, flags, played, sections, detail
             case swingPercent = "swing_percent"
             case stepsPerBar = "steps_per_bar"
         }
@@ -123,8 +128,10 @@ public struct WriteGrooveTool: DirectorTool {
         + "shorter than the groove repeats. A feel is written on its own grid, whatever that is: brushes in eighths, a shuffle in "
         + "triplets, twelve-eight. A feel in another meter than the song's — a waltz in a song in four — is laid across the song's "
         + "bars, turning over inside them, and the result says where they meet. Name a parent to rewrite a beat as its next "
-        + "version: a beat written again to answer the Beatmaker is the same beat, not another. This is the way to make a beat "
-        + "when the user names no record; regroove_chop is only for a sample they chose."
+        + "version — wherever it plays: a beat written again to answer the Beatmaker is the same beat, not another. Name a "
+        + "section for drums of that section's own — \"a different beat in the hook\" — in place of what it played there, the "
+        + "rest of the song keeping its. A new beat with neither plays only where no section has drums, and the answer says "
+        + "where it plays. This is the way to make a beat when the user names no record; regroove_chop is only for a sample they chose."
     }
     public var schema: DirectorJSON {
         Schema.object([
@@ -138,7 +145,9 @@ public struct WriteGrooveTool: DirectorTool {
                                              + "12 triplets in four or sixteenths in three, 8 eighths. 0 takes the feel's own, or 16 with no feel.",
                                              minimum: 0, maximum: 48)),
             ("parent", Schema.string("A groove version id this rewrites, so it becomes that part's next version; empty for a new beat.")),
-        ], required: ["feel", "bars", "swing_percent", "rows", "note", "steps_per_bar", "parent"])
+            ("section", Schema.string("Empty for the song's drums. A section's id or name — \"hook\", \"Verse 2\" — for drums of its own "
+                                      + "there, in place of what it played; of several with one name, all of them.")),
+        ], required: ["feel", "bars", "swing_percent", "rows", "note", "steps_per_bar", "parent", "section"])
     }
 
     static let voices = ["kick", "snare", "clap", "rim", "closedHat", "openHat", "ride", "crash", "lowTom", "midTom", "highTom",
@@ -237,10 +246,42 @@ public struct WriteGrooveTool: DirectorTool {
             answered = found
         }
         let author: Author = .persona("Beatmaker")
-        let version = answered.map { $0.deriving(.groove(groove), by: author, operation: Operation.written, note: input.note) }
-            ?? PartVersion(partID: PartID(), kind: .groove(groove), author: author, operation: Operation.written, note: input.note)
-        guard await workspace.record(version) else {
-            throw DirectorToolFailure(tool: name, reason: "The groove could not be recorded into the song.")
+        let version: PartVersion
+        var placed: [String] = []
+        let whereItPlays: String
+        let sectionNamed = (input.section ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if !sectionNamed.isEmpty {
+            // The section's own drums, in place of what it played there.
+            var writing = SectionWriting(song)
+            var first: PartVersion?
+            let strip = answered.map { song.strip(of: $0.partID) }
+            for section in try SectionNaming.resolve(sectionNamed, in: song, tool: name) {
+                guard let index = writing.index(of: section) else { continue }
+                let own = section.name.lowercased()
+                let drums = writing.played(.groove, in: index, strip: strip) ?? writing.played(.groove, in: index)
+                let root = drums.flatMap { writing.latest($0.root) }
+                    ?? answered.map { song.latestVersion(of: $0.partID) ?? $0 } ?? Guidance.grooves(in: song).last
+                let part = writing.place(.groove(groove), in: index, over: drums, root: root, named: own,
+                                         note: "\(input.note), the \(own)'s own", by: author)
+                if first == nil { first = writing.latest(part) }
+                placed.append(section.name)
+            }
+            let list = SectionWriting.list(placed)
+            guard let first, await workspace.keep(writing.versions, arranged: writing.arranged, mix: nil,
+                                                  saying: "\(list): drums of its own", detail: input.note) else {
+                throw DirectorToolFailure(tool: name, reason: "The groove could not be kept in \(sectionNamed).")
+            }
+            version = first
+            whereItPlays = "It plays in \(list) as its own drums" + (song.sections.count > placed.count ? "; the rest of the song keeps its." : ".")
+        } else {
+            version = answered.map { $0.deriving(.groove(groove), by: author, operation: Operation.written, note: input.note) }
+                ?? PartVersion(partID: PartID(), kind: .groove(groove), author: author, operation: Operation.written, note: input.note)
+            guard await workspace.record(version) else {
+                throw DirectorToolFailure(tool: name, reason: "The groove could not be recorded into the song.")
+            }
+            let now = await workspace.song ?? song
+            whereItPlays = answered.map { "It plays wherever \(PartLabel.title(of: $0)) played." }
+                ?? FormReach.sentence(for: version.partID, a: "a groove", in: now).trimmingCharacters(in: .whitespaces)
         }
         // The Beatmaker reads what was written, in its own numbers, in the rail.
         let observation = GrooveObservation(label: PartLabel.title(of: version), groove: groove,
@@ -253,10 +294,11 @@ public struct WriteGrooveTool: DirectorTool {
         let hits = patterns.reduce(0) { $0 + $1.steps.filter { $0 != .rest }.count }
         let percent = (Swing(factor: swing).percent * 10).rounded() / 10
         return Output(version: version.id.description, bars: bars, stepsPerBar: stepsPerBar, swingPercent: percent, hits: hits,
-                      rows: patterns.map(Self.text), flags: flags.map(\.says), played: played,
+                      rows: patterns.map(Self.text), flags: flags.map(\.says), played: played, sections: placed,
                       detail: "\(bars) bar\(bars == 1 ? "" : "s") \(source), \(stepsPerBar) steps a bar, \(hits) hits, swing \(percent)%, on the song's drum machine at \(Int(song.tempo.rounded())) bpm. "
                           + (meets.map { $0 + " " } ?? "")
-                          + (answered.map { "It is the next version of \(PartLabel.title(of: $0)). " } ?? "")
+                          + (answered.map { placed.isEmpty ? "It is the next version of \(PartLabel.title(of: $0)). " : "" } ?? "")
+                          + (whereItPlays.isEmpty ? "" : whereItPlays + " ")
                           + (flags.isEmpty ? "" : "To answer a flag, write it again with parent \(version.id.description): that is this beat's "
                                 + "next version. With no parent it would be a second beat in the song. ")
                           + (played ? "It is playing." : "It is recorded; it did not play here.") + " Nothing was sampled.")

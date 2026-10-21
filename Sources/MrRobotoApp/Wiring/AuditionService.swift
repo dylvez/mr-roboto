@@ -67,10 +67,16 @@ public final class AuditionService {
         public enum Family: String, Sendable { case drums, bass, instrument }
         public var family: Family
         public var part: PartID?
+        /// The kit a lane sampler holds, for a bass or an instrument: a strip whose sections play
+        /// it on different sounds — the intro's chords on strings, the verse's on the Rhodes — has
+        /// a sampler for each, both on its strip. One per strip used to swap its kit to whichever
+        /// section was placed last, and that one played the whole song.
+        public var sound: String?
 
-        public init(_ family: Family, part: PartID? = nil) {
+        public init(_ family: Family, part: PartID? = nil, sound: String? = nil) {
             self.family = family
             self.part = part
+            self.sound = part == nil ? nil : sound
         }
     }
 
@@ -382,7 +388,7 @@ public final class AuditionService {
     @discardableResult
     public func prepare(bass voice: BassVoiceSpec, for part: PartID?) async throws -> VoiceSampler {
         let engine = try await liveEngine()
-        let key = SamplerKey(.bass, part: part)
+        let key = SamplerKey(.bass, part: part, sound: voice.id)
         if let entry = samplers[key], entry.kitID == voice.id { return entry.sampler }
         return try install(bassKit(voice, on: engine), id: voice.id, for: key, on: engine)
     }
@@ -397,7 +403,7 @@ public final class AuditionService {
     @discardableResult
     public func prepare(instrument spec: InstrumentVoiceSpec, for part: PartID?) async throws -> VoiceSampler {
         let engine = try await liveEngine()
-        let key = SamplerKey(.instrument, part: part)
+        let key = SamplerKey(.instrument, part: part, sound: spec.id)
         if let entry = samplers[key], entry.kitID == spec.id { return entry.sampler }
         return try install(instrumentKit(spec, on: engine), id: spec.id, for: key, on: engine)
     }
@@ -615,8 +621,18 @@ public final class AuditionService {
     /// the one window where no render block is reading these zones. Detach before unprepare, as
     /// everywhere else.
     public func retire(partsOtherThan parts: Set<PartID>) async {
+        await retire { key in key.part.map { !parts.contains($0) } ?? false }
+    }
+
+    /// Lets go of every lane sampler the plan does not name by part and sound: a part gone from
+    /// the song, and a sound a strip no longer plays — the Rhodes after the chords went to strings.
+    public func retire(keeping keys: Set<SamplerKey>) async {
+        await retire { key in key.part != nil && !keys.contains(key) }
+    }
+
+    private func retire(where gone: (SamplerKey) -> Bool) async {
         for (key, entry) in samplers {
-            guard let part = key.part, !parts.contains(part) else { continue }
+            guard gone(key) else { continue }
             entry.sampler.allNotesOff()
             if entry.attached, let node = entry.sampler.node { engine?.avEngine.detach(node) }
             entry.sampler.unprepare()

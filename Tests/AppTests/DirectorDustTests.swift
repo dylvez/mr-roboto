@@ -85,7 +85,7 @@ struct DirectorDustToolTests {
             Issue.record("degrade_part has no properties")
             return
         }
-        #expect(properties.keys.sorted() == ["mix", "preset", "version"])
+        #expect(properties.keys.sorted() == ["mix", "preset", "section", "version"])
         let result = try await tool(built).erased().invoke(arguments: .object([
             .init("version", .string(built.dry.id.description)),
             .init("preset", .string("mpc60")),
@@ -375,7 +375,7 @@ struct DirectorDustToolboxTests {
         #expect(!degrade.definition.strict, "strict mode was refused at this size")
         #expect(schema["additionalProperties"]?.boolValue == false)
         let required = (schema["required"]?.arrayValue ?? []).compactMap(\.stringValue)
-        #expect(required == ["version", "preset", "mix"], "every parameter required: zero optional")
+        #expect(required == ["version", "preset", "mix", "section"], "every parameter required: zero optional")
         guard case .object(let properties)? = schema["properties"] else {
             Issue.record("no properties")
             return

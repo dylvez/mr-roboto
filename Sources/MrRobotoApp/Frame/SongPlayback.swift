@@ -1023,11 +1023,11 @@ public struct SongPlayback: Equatable, Sendable {
         case .progression(let progression) where !progression.chords.isEmpty:
             return .progression(progression, version: version.id, part: part,
                                 name: PartLabel.title(of: version),
-                                sound: instrumentID(for: part, in: song))
+                                sound: instrumentID(for: version.partID, in: song))
         case .melody(let melody) where !melody.notes.isEmpty:
             return .melody(melody, version: version.id, part: part,
                            name: PartLabel.title(of: version),
-                           sound: instrumentID(for: part, in: song))
+                           sound: instrumentID(for: version.partID, in: song))
         case .sample(let sample) where !sample.slices.isEmpty:
             if let chop = chopTrack(version, sample, in: song, mediaURL: mediaURL) { return .chop(chop) }
             missingMedia = true
@@ -1136,11 +1136,15 @@ public struct SongPlayback: Equatable, Sendable {
     /// registry answers.
     private static func sound(in song: Song, for part: PartID?,
                               recognisedBy known: (String) -> Bool) -> String? {
-        // A variation's sound is the sound of the part it varies.
-        let part = part.map(song.strip(of:))
-        for version in song.versions.reversed() {
-            guard case .sound(let sound) = version.kind, sound.forPart == part else { continue }
-            if known(sound.instrument) { return sound.instrument }
+        // A part's own pick first; a variation with none plays on the sound of the part it varies.
+        // A section's own chords or tune can be on an instrument of their own — the intro's on
+        // strings, the verse's on the Rhodes — on the same strip.
+        let candidates: [PartID?] = part.map { own in own == song.strip(of: own) ? [own] : [own, song.strip(of: own)] } ?? [nil]
+        for candidate in candidates {
+            for version in song.versions.reversed() {
+                guard case .sound(let sound) = version.kind, sound.forPart == candidate else { continue }
+                if known(sound.instrument) { return sound.instrument }
+            }
         }
         return nil
     }

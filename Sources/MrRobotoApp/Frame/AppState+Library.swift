@@ -852,13 +852,27 @@ extension AppState {
         return drums.partID
     }
 
+    /// The instrument a part was put on itself — not the one it plays on through the part it varies.
+    static func ownInstrument(of part: PartID, in song: Song) -> String? {
+        for version in song.versions.reversed() {
+            guard case .sound(let sound) = version.kind, sound.forPart == part, InstrumentVoiceSpec.preset(id: sound.instrument) != nil else { continue }
+            return sound.instrument
+        }
+        return nil
+    }
+
     @discardableResult
-    public func setInstrument(_ id: String, for part: PartID? = nil, by author: Author = .user) -> Bool {
+    public func setInstrument(_ id: String, for part: PartID? = nil, by author: Author = .user, own: Bool = false) -> Bool {
         guard let spec = InstrumentVoiceSpec.preset(id: id), let song else { return false }
         // A variation plays on the instrument of the part it varies, so a pick made on one is
-        // that part's pick.
-        let part = part.map(song.strip(of:))
-        guard SongPlayback.instrumentID(for: part, in: song) != spec.id else { return false }
+        // that part's pick — unless it is the variation's own: a section's chords or tune on an
+        // instrument of their own, the rest of the song on the part's.
+        let part = own ? part : part.map(song.strip(of:))
+        if own, let part {
+            guard Self.ownInstrument(of: part, in: song) != spec.id else { return false }
+        } else {
+            guard SongPlayback.instrumentID(for: part, in: song) != spec.id else { return false }
+        }
         let name = part.flatMap { id in song.versions.last { $0.partID == id } }.map(PartLabel.title(of:))
         let note = name.map { "\(spec.name) for \($0)" } ?? "\(spec.name) for the chords and the tune"
         // One pick is one part: the next choice is a version of it, not a part of its own. The
