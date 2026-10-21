@@ -263,6 +263,62 @@ struct DirectorAnotherWayTests {
         #expect(chords(rig.app, in: try #require(rig.app.song?.sections.first { $0.id == last.id })) == "Dm7 | Bbmaj7 | G7 | A7")
     }
 
+    @Test("set_progression with a section: chords of its own there, the bass under them; named again, rewritten; with none, the song's replaced and said so")
+    func ownChords() async throws {
+        let (rig, loop) = try rig(developed: true)
+        defer { rig.clean() }
+        let before = try #require(rig.app.song)
+        let verse = try #require(before.sections.first { section in
+            section.name == "Verse" && AnotherWay.lane(of: .bassline, in: section, of: before) != nil
+        })
+        let result = await WritingFixture.run(rig.box, "set_progression", #"{"chords":"Gm7 | Cm7 | F | Gm7","key":"D minor","section":"\#(verse.id)"}"#)
+        #expect(!result.isError, "\(result.content)")
+        let out = WritingFixture.json(result)
+        #expect(out["sections"] as? [String] == ["Verse"] && out["bass"] as? String == "moved to follow", "\(out)")
+        #expect((out["detail"] as? String)?.contains("as its own chords in place of Dm7 | Bbmaj7 | Gm7 | A7") == true, "\(out["detail"] ?? "")")
+        var song = try #require(rig.app.song)
+        var section = try #require(song.sections.first { $0.id == verse.id })
+        #expect(chords(rig.app, in: section) == "Gm7 | Cm7 | F | Gm7")
+        let lane = try #require(AnotherWay.lane(of: .progression, in: section, of: song))
+        #expect(song.variation(of: lane.lane.part) == Variation(of: loop.chords.partID, name: "verse") && Develop.isHeld(lane.lane, in: song))
+        let bass = try #require(AnotherWay.lane(of: .bassline, in: section, of: song))
+        #expect(song.variation(of: bass.lane.part)?.of == loop.bass.partID, "the bass there is its own, written to these chords")
+        // The song's chords, and every other section, are as they were.
+        #expect(chords(rig.app) == "Dm7 | Bbmaj7 | Gm7 | A7")
+        for other in song.sections where other.id != verse.id {
+            #expect(other.stitch == before.sections.first { $0.id == other.id }?.stitch, "\(other.name)")
+        }
+
+        // Named again, the verse's own chords are rewritten: the same part, its next version.
+        let again = await WritingFixture.run(rig.box, "set_progression", #"{"chords":"Gm7 | Eb | F | Gm7","key":"D minor","section":"\#(verse.id)"}"#)
+        #expect(!again.isError, "\(again.content)")
+        song = try #require(rig.app.song)
+        section = try #require(song.sections.first { $0.id == verse.id })
+        let rewritten = try #require(AnotherWay.lane(of: .progression, in: section, of: song))
+        #expect(rewritten.lane.part == lane.lane.part && chords(rig.app, in: section) == "Gm7 | Eb | F | Gm7")
+
+        // With no section, the song's chords are replaced, and the answer says where; the verse keeps its own.
+        let whole = WritingFixture.json(await WritingFixture.run(rig.box, "set_progression", #"{"chords":"Dm7 | Gm7 | A7 | Dm7","key":"D minor","section":""}"#))
+        #expect((whole["detail"] as? String)?.hasPrefix("Dm7 | Gm7 | A7 | Dm7 replaces Dm7 | Bbmaj7 | Gm7 | A7 in every section") == true, "\(whole["detail"] ?? "")")
+        #expect(chords(rig.app) == "Dm7 | Gm7 | A7 | Dm7")
+        #expect(chords(rig.app, in: try #require(rig.app.song?.sections.first { $0.id == verse.id })) == "Gm7 | Eb | F | Gm7")
+        // And developing again leaves it where it was put.
+        _ = try #require(rig.app.develop())
+        #expect(chords(rig.app, in: try #require(rig.app.song?.sections.first { $0.id == verse.id })) == "Gm7 | Eb | F | Gm7")
+        #expect(DirectorPrompt.system.contains("it can hold one a section"))
+
+        // A song with no chords yet: a part of their own, in the section named and nowhere else.
+        var bare = Song(title: "Bare", key: AnotherWayFixture.key, tempo: 100)
+        bare.sections = [SongGraph.Section(name: "Intro", stitch: [], lengthInBars: 4), SongGraph.Section(name: "Verse", stitch: [], lengthInBars: 8)]
+        let empty = WritingFixture.rig(bare)
+        defer { empty.clean() }
+        let first = await WritingFixture.run(empty.box, "set_progression", #"{"chords":"Dm | Bb","key":"D minor","section":"intro"}"#)
+        #expect(!first.isError, "\(first.content)")
+        let kept = try #require(empty.app.song)
+        #expect(kept.sections[0].stitch.count == 1 && kept.sections[1].stitch.isEmpty)
+        #expect(WritingFixture.json(first)["bass"] as? String == "no bass line")
+    }
+
     @Test("every player on the song's chords follows a move, in the song and in one section, each played its own way")
     func everyPlayerFollows() async throws {
         let (rig, loop) = try rig()
