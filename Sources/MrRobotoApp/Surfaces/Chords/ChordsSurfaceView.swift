@@ -41,15 +41,18 @@ extension ChordsSurfaceView {
                 Text(model.title).font(Design.Typography.prose(16, weight: .medium))
                 if let midi {
                     TakeButton(midi: midi, target: model,
-                               help: "Record from the controller: play a chord, and when your hand comes off the keys it is "
-                                   + "written as the next bar, named and spelled in the key — the lowest key is its bass. "
-                                   + "Nothing needs to play. Press again to stop; ⌘Z takes a chord back.",
+                               help: "Record: each chord played is written as the next bar, named and spelled in the key. "
+                                   + "Strike it on the chord keys below, from the computer's keys, or on a controller in "
+                                   + "Chords; a controller in any other mode plays chords whole, written when your hand "
+                                   + "comes off the keys, the lowest key its bass. Nothing needs to play. Press again to "
+                                   + "stop; ⌘Z takes a chord back.",
                                line: model.isTaking ? model.takeLine : nil)
                 }
                 Spacer()
                 KeyField(model: model)
             }
             ChordsControls(model: model)
+            ChordPad(model: model, midi: midi)
             if let progression = model.progression {
                 // How each chord is voiced, for the notes drawn beside it, and the span of all of
                 // them, so a voice that climbs is seen to climb from one bar to the next.

@@ -28,7 +28,7 @@ struct TransportBar: View {
         .background(Design.Palette.raised)
     }
 
-    /// Inputs I5: the controller on the kit, the bass, the keys, or nothing, and which it is.
+    /// Inputs I5: the controller on the kit, the bass, the keys, the chords, or nothing, and which it is.
     private var midi: some View {
         let control = SurfaceWiring.shared.midi(for: app)
         return VStack(alignment: .leading, spacing: 4) {
@@ -63,10 +63,13 @@ struct TransportBar: View {
                     .lineLimit(1)
             }
         }
-        // The label and four chips side by side: Off, Kit, Bass and Keys.
-        .frame(width: 210, alignment: .leading)
-        .help("A MIDI controller plays the song's kit, its bass or its keys now. Play in, or the Booth recording, keeps what you play as a groove, a bass line or a melody. To record into what is on screen, press Record MIDI on the Grid, the Piano roll or the Chords.")
+        // The label and five chips side by side: Off, Kit, Bass, Keys and Chords.
+        .frame(width: Self.midiWidth, alignment: .leading)
+        .help("A MIDI controller plays the song's kit, its bass, its keys or its chords now — in Chords each key from middle C up is a chord, and the octave below holds the buttons that change it. Play in, or the Booth recording, keeps what you play as a groove, a bass line, a melody or a progression. To record into what is on screen, press Record MIDI on the Grid, the Piano roll or the Chords.")
     }
+
+    /// What the controller's block takes: its label and the five chips.
+    static let midiWidth: CGFloat = 256
 
     private func midiLine(_ control: MIDIControl) -> String {
         if let error = control.lastError { return error }

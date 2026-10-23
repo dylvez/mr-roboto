@@ -1,10 +1,12 @@
 import AudioEngine
 import Foundation
 import Instrument
+import MusicTheory
+import Performance
 import SongGraph
 
-// Inputs I5/I6: the controller on the kit, the bass or the keys, played now, and captured while the
-// Booth records.
+// Inputs I5/I6: the controller on the kit, the bass, the keys or the chords, played now, and
+// captured while the Booth records.
 
 /// The controller in the app: which instrument it plays, the sources here, and the notes it put
 /// down while a take ran.
@@ -16,7 +18,11 @@ public final class MIDIControl {
         /// Keys plays the song's pitched instrument — the Rhodes until one is chosen — and a take
         /// played on it lands as a melody. Before it, a controller could put down a beat and a
         /// bass line but not the tune, which had to be drawn a note at a time.
-        case off, kit, bass, keys
+        ///
+        /// Chords plays a whole chord on each key from middle C up, the octave below holding the
+        /// buttons that say what is built on it (`ChordKeys`), and a take played on it lands as a
+        /// progression.
+        case off, kit, bass, keys, chords
 
         public var title: String {
             switch self {
@@ -24,6 +30,7 @@ public final class MIDIControl {
             case .kit: return "Kit"
             case .bass: return "Bass"
             case .keys: return "Keys"
+            case .chords: return "Chords"
             }
         }
 
@@ -34,9 +41,14 @@ public final class MIDIControl {
             case .kit: return "groove"
             case .bass: return "bass line"
             case .keys: return "melody"
+            case .chords: return "progression"
             }
         }
     }
+
+    /// The chord keys' hands: the buttons held and the chord struck last, which the Chords sheet's
+    /// pad shows and plays from too.
+    public let chordKeys = ChordKeyboard()
 
     public var mode: Mode = .off {
         didSet {
@@ -79,6 +91,8 @@ public final class MIDIControl {
     private var starting: [Int: Int] = [:]
     private var letGo: Set<Int> = []
     private var captured: [MIDIEvent] = []
+    /// Chords struck on chord keys while a take ran, with when, and what struck them.
+    private var capturedChords: [StruckChord] = []
     private var captureClock: TransportClock?
     private var captureSection: SectionID?
     private var captureStartedAt: Double?
@@ -119,6 +133,12 @@ public final class MIDIControl {
             control(controller, value: value)
             return
         }
+        // Chords: a key is a chord, or a button held, wherever Record is — on the Chords sheet it
+        // writes the chord as the next bar; anywhere else it plays.
+        if mode == .chords, takeSurface == nil || takeTarget is any TakesChords {
+            chordKey(event, into: takeTarget as? any TakesChords)
+            return
+        }
         if takeSurface != nil {
             take(event)
             return
@@ -156,15 +176,19 @@ public final class MIDIControl {
                 started(note, handles)
             }
         case (_, .noteOff(let note)):
-            // Let go on whatever it was held on: Record pressed between the key going down and
-            // coming up must not leave it ringing.
-            if let handles = held.removeValue(forKey: note) {
-                release(handles)
-            } else if starting[note, default: 0] > 0 {
-                letGo.insert(note)
-            }
+            letGo(of: note)
         default:
             break
+        }
+    }
+
+    /// A key let go, on whatever it was held on: Record pressed between the key going down and
+    /// coming up must not leave it ringing.
+    private func letGo(of key: Int) {
+        if let handles = held.removeValue(forKey: key) {
+            release(handles)
+        } else if starting[key, default: 0] > 0 {
+            letGo.insert(key)
         }
     }
 
@@ -213,7 +237,23 @@ public final class MIDIControl {
             return .bass(sound.flatMap(BassVoiceSpec.resolve(id:))?.id ?? BassVoiceSpec.finger.id)
         case .keys:
             return .keys(app.song.map { SongPlayback.instrumentID(in: $0) } ?? InstrumentVoiceSpec.rhodes.id)
+        case .chords:
+            return .keys(songChordContext().instrument)
         }
+    }
+
+    /// What a chord key plays in away from the Chords sheet: the song's key, and its chords' own
+    /// voicing and instrument — the newest progression's, so a chord played over the song sounds
+    /// as its chords do. With no song, C major, close, on the Rhodes.
+    func songChordContext() -> ChordContext {
+        guard let song = app.song else {
+            return ChordContext(key: Key(tonic: NoteName(.c)), voicing: .close, instrument: InstrumentVoiceSpec.rhodes.id)
+        }
+        let chords = Guidance.progressions(in: song).last
+        var voicing = KeysVoicing.close
+        if case .progression(let progression)? = chords?.kind { voicing = progression.playing?.keysVoicing ?? .close }
+        return ChordContext(key: song.key ?? Key(tonic: NoteName(.c)), voicing: voicing,
+                            instrument: SongPlayback.instrumentID(for: chords?.partID, in: song))
     }
 
     /// Loads the sound, when it is not what is loaded already.
@@ -246,6 +286,7 @@ public final class MIDIControl {
     public func beginCapture(section: SectionID?, clock: TransportClock, startedAt: Double) {
         guard mode != .off, clock.startHostTime != nil else { return }
         captured = []
+        capturedChords = []
         captureClock = clock
         captureSection = section
         captureStartedAt = startedAt
@@ -253,21 +294,27 @@ public final class MIDIControl {
     }
 
     /// Stops, and what was played becomes a version: a groove in Kit, a bass line in Bass, a melody
-    /// in Keys. Nil when nothing was played.
+    /// in Keys, a progression in Chords. Nil when nothing was played.
     @discardableResult
     public func endCapture(endedAt: Double? = nil) -> PartVersion? {
         guard isCapturing, let clock = captureClock else { return nil }
         isCapturing = false
         let events = captured
+        let chords = capturedChords
         captured = []
-        guard let song = app.song, !events.isEmpty else { return nil }
+        capturedChords = []
+        guard let song = app.song else { return nil }
+        let section = captureSection.flatMap { id in song.sections.first { $0.id == id } }
+        let sectionStart = section.map { clock.seconds(forBar: Self.startBar(of: $0.id, in: song)) } ?? 0
+        if mode == .chords {
+            return keep(chords, in: song, clock: clock, section: section, sectionStart: sectionStart, endedAt: endedAt)
+        }
+        guard !events.isEmpty else { return nil }
         let timed = events.compactMap { event -> (kind: MIDIEvent.Kind, seconds: Double)? in
             clock.seconds(forHostTime: event.hostTime).map { (event.kind, $0) }
         }
         let notes = MIDICapture.notes(from: timed)
         let source = events.first?.source ?? "the controller"
-        let section = captureSection.flatMap { id in song.sections.first { $0.id == id } }
-        let sectionStart = section.map { clock.seconds(forBar: Self.startBar(of: $0.id, in: song)) } ?? 0
         let kind: PartKind
         let what: String
         switch mode {
@@ -288,13 +335,89 @@ public final class MIDIControl {
             guard let tune = MIDICapture.melody(notes, clock: clock, sectionStart: sectionStart, end: endedAt, bars: section?.lengthInBars) else { return nil }
             kind = .melody(tune)
             what = "melody"
-        case .off:
+        case .off, .chords:
             return nil
         }
         let version = PartVersion(partID: PartID(), kind: kind, author: .user, operation: Operation.played,
                                   note: "Played on \(source)\(section.map { " into \($0.name)" } ?? "") — \(notes.count) notes as a \(what)")
         guard app.record(version) else { return nil }
         return version
+    }
+
+    /// Chords struck in time, kept as a progression: each from the beat it was struck nearest to,
+    /// to the next, a section long, played the way the song's chords already are.
+    private func keep(_ chords: [StruckChord], in song: Song, clock: TransportClock, section: Section?,
+                      sectionStart: Double, endedAt: Double?) -> PartVersion? {
+        let timed = chords.compactMap { struck in clock.seconds(forHostTime: struck.start).map { (chord: struck.chord, seconds: $0) } }
+        guard var progression = MIDICapture.progression(timed, clock: clock, sectionStart: sectionStart, end: endedAt,
+                                                        bars: section?.lengthInBars, key: songChordContext().key) else { return nil }
+        // Heard while it was played as the song's chords are voiced: kept so, and struck as they are.
+        if case .progression(let before)? = Guidance.progressions(in: song).last?.kind { progression.playing = before.playing }
+        let source = chords.first?.source ?? "the controller"
+        let version = PartVersion(partID: PartID(), kind: .progression(progression), author: .user, operation: Operation.played,
+                                  note: "Played on \(source)\(section.map { " into \($0.name)" } ?? "") — \(timed.count) chords as a progression")
+        guard app.record(version) else { return nil }
+        return version
+    }
+
+    // MARK: Chord keys
+
+    /// A chord struck while a take ran.
+    struct StruckChord {
+        var chord: Chord
+        var start: UInt64
+        var source: String
+    }
+
+    /// A controller's key in Chords: below the split a button held or let go; from it up, a chord.
+    private func chordKey(_ event: MIDIEvent, into sheet: (any TakesChords)?) {
+        switch event.kind {
+        case .noteOn(let note, let velocity):
+            if note < ChordKeys.split {
+                chordKeys.controllerKey(note, isDown: true)
+            } else {
+                chordDown(PitchClass(wrapping: note), key: note, velocity: velocity, hostTime: event.hostTime,
+                          source: event.source, sheet: sheet)
+            }
+        case .noteOff(let note):
+            if note < ChordKeys.split {
+                chordKeys.controllerKey(note, isDown: false)
+            } else {
+                chordUp(key: note)
+            }
+        case .controlChange:
+            break
+        }
+    }
+
+    /// A chord key down: the chord its root plays with the buttons held, voiced and held on the
+    /// instrument until the key comes up; written as the next bar when `sheet` has Record on, and
+    /// kept while a take runs. `key` is whoever holds it — a controller's note, a pad's key — and
+    /// `sheet` the Chords sheet it is played in, whose key, voicing and instrument it plays in.
+    public func chordDown(_ root: PitchClass, key: Int, velocity: Int = Voicing.velocity,
+                          hostTime: UInt64 = mach_absolute_time(), source: String, sheet: (any TakesChords)?) {
+        let context = sheet?.chordContext ?? songChordContext()
+        let struck = chordKeys.strike(root, id: key, in: context)
+        let hits = struck.voiced.map { VoiceSampler.Hit(note: $0, velocity: velocity, at: 0) }
+        lastHit = hits.first
+        starting[key, default: 0] += 1
+        let voice = Voice.keys(context.instrument)
+        Task {
+            await load(voice)
+            started(key, await service.playInstrument(hits))
+        }
+        if let sheet, takeTarget === sheet as AnyObject {
+            sheet.takeChord(struck.played)
+            takeNotes += 1
+        } else if isCapturing {
+            capturedChords.append(StruckChord(chord: struck.played.chord, start: hostTime, source: source))
+        }
+    }
+
+    /// A chord key up: its chord let go.
+    public func chordUp(key: Int) {
+        chordKeys.release(id: key)
+        letGo(of: key)
     }
 
     // MARK: Play in, with no microphone
@@ -363,6 +486,7 @@ public final class MIDIControl {
         held = [:]
         letGo.formUnion(starting.keys)
         release(handles)
+        chordKeys.releaseAll()
     }
 
     // MARK: Record, on a surface (I8)
@@ -398,7 +522,8 @@ public final class MIDIControl {
     /// click, and the take ends at the section's last bar or at Stop. On a lead sheet nothing
     /// plays: each chord is written as the hand comes off it, until Record is pressed again.
     /// Either way the controller sounds the surface's own kit, bass or instrument, whatever the
-    /// footer's mode says, and is connected if the mode had left it off.
+    /// footer's mode says, and is connected if the mode had left it off. A lead sheet takes
+    /// chords from its own pad and the computer's keys too, so it records with no controller.
     public func record(into target: any TakesFromController) async {
         if let current = takeSurface {
             await stopRecording()
@@ -410,7 +535,7 @@ public final class MIDIControl {
         }
         lastError = nil
         connectIfNeeded()
-        guard input != nil else { return }
+        guard input != nil || target is any TakesChords else { return }
         guard target.takesInTime else {
             beginTake(into: target, clock: nil, sectionStart: 0, bars: nil, punchOut: nil)
             return

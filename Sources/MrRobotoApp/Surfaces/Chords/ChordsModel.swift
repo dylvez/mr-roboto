@@ -433,12 +433,16 @@ public final class ChordsModel {
             takeLine = "\(names) is not a chord I can name."
             return
         }
-        let symbol = symbol(of: chord)
+        append(chord)
+        takeLine = "\(names) → \(symbol(of: chord))"
+    }
+
+    /// A chord written into the line as the next bar, as its own step of ⌘Z.
+    private func append(_ chord: Chord) {
         let line = text.trimmingCharacters(in: .whitespaces)
         lastEdit = nil
-        text = line.isEmpty ? symbol : line + " | " + symbol
+        text = line.isEmpty ? symbol(of: chord) : line + " | " + symbol(of: chord)
         lastEdit = nil
-        takeLine = "\(names) → \(symbol)"
     }
 
     // MARK: Versions
@@ -499,6 +503,22 @@ extension ChordsModel: KeepsAsItGoes {
         if hasUnkeptChanges { return .pending }
         if let kept = versions.last ?? base { return .kept(title: PartLabel.title(of: kept)) }
         return .untouched
+    }
+}
+
+extension ChordsModel: TakesChords {
+    /// A chord key on the sheet plays in the sheet's key, voiced as its chords are, on their
+    /// instrument: a chord struck is heard as the sheet will play it.
+    public var chordContext: ChordContext { ChordContext(key: key, voicing: voicing, instrument: instrument) }
+
+    /// A chord struck on a chord key while Record is on: the next bar, as a chord played whole is.
+    /// Buttons held that the chord could not take are said, so a hand holding maj7 on a
+    /// diminished chord knows why it was not heard.
+    public func takeChord(_ played: ChordKeys.Played) {
+        guard isTaking else { return }
+        append(played.chord)
+        let unused = played.unused.map(\.name).joined(separator: ", ")
+        takeLine = symbol(of: played.chord) + (unused.isEmpty ? "" : " — \(unused) did not go on it")
     }
 }
 

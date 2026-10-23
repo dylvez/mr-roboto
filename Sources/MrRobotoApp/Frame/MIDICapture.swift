@@ -113,6 +113,49 @@ public enum MIDICapture {
         return Melody(notes: events, lengthInBars: bars)
     }
 
+    /// Chords struck in time on chord keys, as a lead sheet: each from the beat it was struck
+    /// nearest to and held to the next, the first from the section's first beat, one pass as long
+    /// as the section — or, with no section, to the end of the bar the take ended in. Of two struck
+    /// nearest the same beat the later is the one meant, and a chord struck again is one chord. A
+    /// chord across a bar line is written in both bars, as a lead sheet writes it.
+    ///
+    /// Snapped to the beat, unlike a tune: a chord pushed an eighth early is a playing, which the
+    /// sheet's Played row says, and not a chord change a half-beat before the bar.
+    public static func progression(_ struck: [(chord: Chord, seconds: Double)], clock: TransportClock, sectionStart: Double,
+                                   end: Double?, bars: Int?, key: Key) -> Progression? {
+        let beatsPerBar = clock.timeSignature.beatsPerBar
+        var onBeat: [Int: Chord] = [:]
+        for (chord, seconds) in struck.sorted(by: { $0.seconds < $1.seconds }) {
+            let beat = Int(clock.beat(forSeconds: seconds - sectionStart).rounded())
+            guard beat >= 0, bars.map({ beat < $0 * beatsPerBar }) ?? true else { continue }
+            onBeat[beat] = chord
+        }
+        let changes = onBeat.sorted { $0.key < $1.key }
+        guard let first = changes.first, let last = changes.last else { return nil }
+        let length: Int
+        if let bars {
+            length = bars * beatsPerBar
+        } else {
+            let ended = end.map { Int(ceil(clock.beat(forSeconds: $0 - sectionStart) - 1e-6)) } ?? 0
+            length = Int(ceil(Double(max(last.key + 1, ended)) / Double(beatsPerBar))) * beatsPerBar
+        }
+        var out: [ProgressionBar] = []
+        for barStart in stride(from: 0, to: length, by: beatsPerBar) {
+            let barEnd = barStart + beatsPerBar
+            var spans: [ChordSpan] = []
+            var current = changes.last { $0.key <= barStart }?.value ?? first.value
+            var from = barStart
+            for (beat, chord) in changes where beat > barStart && beat < barEnd && chord != current {
+                spans.append(ChordSpan(current, beats: Double(beat - from)))
+                current = chord
+                from = beat
+            }
+            spans.append(ChordSpan(current, beats: Double(barEnd - from)))
+            out.append(ProgressionBar(chords: spans))
+        }
+        return Progression(key: key, bars: out)
+    }
+
     /// Played notes as note events in beats from the section's first bar. A note let go of has
     /// the length it was held; one still held at the end runs to the end of the take.
     static func noteEvents(_ notes: [PlayedNote], clock: TransportClock, sectionStart: Double, end: Double?) -> [NoteEvent] {
