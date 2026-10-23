@@ -250,10 +250,10 @@ public final class MIDIControl {
             return ChordContext(key: Key(tonic: NoteName(.c)), voicing: .close, instrument: InstrumentVoiceSpec.rhodes.id)
         }
         let chords = Guidance.progressions(in: song).last
-        var voicing = KeysVoicing.close
-        if case .progression(let progression)? = chords?.kind { voicing = progression.playing?.keysVoicing ?? .close }
-        return ChordContext(key: song.key ?? Key(tonic: NoteName(.c)), voicing: voicing,
-                            instrument: SongPlayback.instrumentID(for: chords?.partID, in: song))
+        var playing = ChordPlaying()
+        if case .progression(let progression)? = chords?.kind { playing = progression.playing ?? ChordPlaying() }
+        return ChordContext(key: song.key ?? Key(tonic: NoteName(.c)), voicing: playing.keysVoicing,
+                            instrument: SongPlayback.instrumentID(for: chords?.partID, in: song), roll: playing.keysRoll)
     }
 
     /// Loads the sound, when it is not what is loaded already.
@@ -348,7 +348,9 @@ public final class MIDIControl {
     /// to the next, a section long, played the way the song's chords already are.
     private func keep(_ chords: [StruckChord], in song: Song, clock: TransportClock, section: Section?,
                       sectionStart: Double, endedAt: Double?) -> PartVersion? {
-        let timed = chords.compactMap { struck in clock.seconds(forHostTime: struck.start).map { (chord: struck.chord, seconds: $0) } }
+        let timed = chords.compactMap { struck in
+            clock.seconds(forHostTime: struck.start).map { (chord: struck.chord, lift: struck.lift, seconds: $0) }
+        }
         guard var progression = MIDICapture.progression(timed, clock: clock, sectionStart: sectionStart, end: endedAt,
                                                         bars: section?.lengthInBars, key: songChordContext().key) else { return nil }
         // Heard while it was played as the song's chords are voiced: kept so, and struck as they are.
@@ -365,15 +367,19 @@ public final class MIDIControl {
     /// A chord struck while a take ran.
     struct StruckChord {
         var chord: Chord
+        var lift: Int
         var start: UInt64
         var source: String
     }
 
-    /// A controller's key in Chords: below the split a button held or let go; from it up, a chord.
+    /// A controller's key in Chords: below the split a button held or let go, or the dial turned —
+    /// the C there turns it down, the C♯ up; from the split up, a chord.
     private func chordKey(_ event: MIDIEvent, into sheet: (any TakesChords)?) {
         switch event.kind {
         case .noteOn(let note, let velocity):
-            if note < ChordKeys.split {
+            if note < ChordKeys.split, let steps = ChordKeys.turn(forNote: note) {
+                chordKeys.turn(steps)
+            } else if note < ChordKeys.split {
                 chordKeys.controllerKey(note, isDown: true)
             } else {
                 chordDown(PitchClass(wrapping: note), key: note, velocity: velocity, hostTime: event.hostTime,
@@ -398,7 +404,11 @@ public final class MIDIControl {
                           hostTime: UInt64 = mach_absolute_time(), source: String, sheet: (any TakesChords)?) {
         let context = sheet?.chordContext ?? songChordContext()
         let struck = chordKeys.strike(root, id: key, in: context)
-        let hits = struck.voiced.map { VoiceSampler.Hit(note: $0, velocity: velocity, at: 0) }
+        // Strummed or run as the chords are, each note a moment after the last at the song's tempo.
+        let secondsPerBeat = 60 / (app.song?.tempo ?? 120)
+        let hits = Voicing.rolled(struck.voiced, roll: context.roll, opens: true, upstroke: false).map {
+            VoiceSampler.Hit(note: $0.pitch, velocity: velocity, at: $0.offset * secondsPerBeat)
+        }
         lastHit = hits.first
         starting[key, default: 0] += 1
         let voice = Voice.keys(context.instrument)
@@ -407,10 +417,10 @@ public final class MIDIControl {
             started(key, await service.playInstrument(hits))
         }
         if let sheet, takeTarget === sheet as AnyObject {
-            sheet.takeChord(struck.played)
+            sheet.takeChord(struck.played, lift: struck.lift)
             takeNotes += 1
         } else if isCapturing {
-            capturedChords.append(StruckChord(chord: struck.played.chord, start: hostTime, source: source))
+            capturedChords.append(StruckChord(chord: struck.played.chord, lift: struck.lift, start: hostTime, source: source))
         }
     }
 

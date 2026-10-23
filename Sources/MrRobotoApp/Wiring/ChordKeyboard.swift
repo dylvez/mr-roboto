@@ -14,11 +14,14 @@ public struct ChordContext: Equatable, Sendable {
     public var key: Key
     public var voicing: KeysVoicing
     public var instrument: String
+    /// How each chord struck leaves the hand: strummed or poured as a harp when the chords are.
+    public var roll: KeysRoll
 
-    public init(key: Key, voicing: KeysVoicing, instrument: String) {
+    public init(key: Key, voicing: KeysVoicing, instrument: String, roll: KeysRoll = .together) {
         self.key = key
         self.voicing = voicing
         self.instrument = instrument
+        self.roll = roll
     }
 }
 
@@ -27,8 +30,8 @@ public struct ChordContext: Equatable, Sendable {
 public protocol TakesChords: AnyObject {
     /// What its chord keys play in.
     var chordContext: ChordContext { get }
-    /// A chord struck while Record is on it, written as the next bar.
-    func takeChord(_ played: ChordKeys.Played)
+    /// A chord struck while Record is on it, written as the next bar, turned `lift` steps.
+    func takeChord(_ played: ChordKeys.Played, lift: Int)
 }
 
 /// The hands on the chord keys: the buttons held, wherever they are held from, the roots down, and
@@ -49,14 +52,27 @@ public final class ChordKeyboard {
     public private(set) var down: [Int: PitchClass] = [:]
     /// The chord struck last and the notes it sounded on.
     public private(set) var last: Struck?
+    /// The dial: how far each chord struck is turned from where its voicing puts it, in
+    /// inversions, as the Orchid's voicing dial turns the chord under the hand. A chord written
+    /// while Record is on keeps the turn it was struck with.
+    public private(set) var lift = 0
+    /// How far the dial goes either way: a chord of four notes turned four steps is the same chord
+    /// an octave away, so twice that is as far as a turn means anything.
+    public static let lifts = -8...8
 
     public struct Struck: Equatable, Sendable {
         public var played: ChordKeys.Played
         public var voiced: [Int]
         public var key: Key
+        public var lift = 0
     }
 
     public init() {}
+
+    /// The dial turned by `steps`.
+    public func turn(_ steps: Int) {
+        lift = min(Self.lifts.upperBound, max(Self.lifts.lowerBound, lift + steps))
+    }
 
     /// Every button held, from all three.
     public var held: Set<ChordButton> { Set(onController.values).union(onKeys).union(latched) }
@@ -90,12 +106,13 @@ public final class ChordKeyboard {
     }
 
     /// A root struck, by `id`: the chord it plays, and the notes it is voiced on — as the sheet
-    /// voices its chords, and from the chord before when they are voice-led.
+    /// voices its chords, from the chord before when they are voice-led, turned by the dial.
     func strike(_ root: PitchClass, id: Int, in context: ChordContext) -> Struck {
         let played = chord(for: root, in: context)
         let before = last.map { [$0.played.chord] } ?? []
-        let voiced = Voicing.voicings(of: before + [played.chord], as: context.voicing).last ?? []
-        let struck = Struck(played: played, voiced: voiced, key: context.key)
+        let lifts = (last.map { [$0.lift] } ?? []) + [lift]
+        let voiced = Voicing.voicings(of: before + [played.chord], as: context.voicing, lifts: lifts).last ?? []
+        let struck = Struck(played: played, voiced: voiced, key: context.key, lift: lift)
         down[id] = root
         last = struck
         return struck

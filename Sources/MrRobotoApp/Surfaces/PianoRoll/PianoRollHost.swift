@@ -63,6 +63,10 @@ public protocol ChordsHosting: AnyObject {
     /// The family of the instrument `part` plays on: keys, pad, strings. A short pattern on an
     /// instrument that swells into its notes is mostly silence, and the sheet says so.
     func instrumentFamily(for part: PartID?) -> String
+    /// What `part`'s strip does to its sound now, for a sound saved from the sheet to carry.
+    func stripSound(for part: PartID?) -> StripSound
+    /// Puts a saved sound's strip on `part`'s, as the mix's next version. False when it could not.
+    func setStripSound(_ sound: StripSound, for part: PartID?) -> Bool
 }
 
 extension ChordsHosting {
@@ -74,4 +78,6 @@ extension ChordsHosting {
     }
     public func audition(_ progression: Progression, for part: PartID?) async {}
     public func instrumentFamily(for part: PartID?) -> String { "keys" }
+    public func stripSound(for part: PartID?) -> StripSound { StripSound() }
+    public func setStripSound(_ sound: StripSound, for part: PartID?) -> Bool { false }
 }

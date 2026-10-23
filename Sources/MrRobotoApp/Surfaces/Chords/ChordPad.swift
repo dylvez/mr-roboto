@@ -30,6 +30,7 @@ struct ChordPad: View {
     private static let pointer = 1000
     private static let computer = 2000
 
+    static let dialKeys: [Character: Int] = ["z": -1, "x": 1]
     static let buttonKeys: [Character: ChordButton] = [
         "q": .diminished, "w": .minor, "e": .major, "r": .suspended,
         "a": .sixth, "s": .seventh, "d": .majorSeventh, "f": .ninth,
@@ -43,7 +44,7 @@ struct ChordPad: View {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 SmallLabel("Chord keys", color: Design.Palette.inkTertiary)
                 Text(hasKeys
-                     ? "Keys live: Q W E R and A S D F hold the buttons, G to ' play C to B, Y U O P [ the black keys."
+                     ? "Keys live: Q W E R and A S D F hold the buttons, G to ' play C to B, Y U O P [ the black keys, Z and X turn the dial."
                      : "Hold a button and play a key. Click the pad to play it from the computer's keys.")
                     .font(Design.Typography.ui(11.5))
                     .foregroundStyle(hasKeys ? Design.Palette.inkSecondary : Design.Palette.inkTertiary)
@@ -51,9 +52,9 @@ struct ChordPad: View {
                     .truncationMode(.tail)
             }
             ViewThatFits(in: .horizontal) {
-                HStack(alignment: .top, spacing: 14) { display; buttons; keys }
+                HStack(alignment: .top, spacing: 14) { display; buttons; dial; keys }
                 VStack(alignment: .leading, spacing: 10) {
-                    HStack(alignment: .top, spacing: 14) { display; buttons }
+                    HStack(alignment: .top, spacing: 14) { display; buttons; dial }
                     keys
                 }
             }
@@ -72,8 +73,37 @@ struct ChordPad: View {
         .help("One key a chord. With nothing held a key plays its chord in \(model.key.name); a button held changes it: "
               + "dim, min, maj and sus say what kind of chord it is, 6, 7, maj7 and 9 add a note. A controller in Chords "
               + "plays a chord on every key from middle C up and holds the buttons on the octave below, each on the note "
-              + "it adds to a C chord: E♭ min, E maj, F sus, G♭ dim, A 6, B♭ 7, B maj7, D 9. With Record on, each chord "
-              + "struck is written as the next bar.")
+              + "it adds to a C chord: E♭ min, E maj, F sus, G♭ dim, A 6, B♭ 7, B maj7, D 9 — and the C and C♯ there turn "
+              + "the dial. The dial turns every chord struck up or down an inversion a step. With Record on, each chord "
+              + "struck is written as the next bar, turned as it was played.")
+    }
+
+    // MARK: The dial
+
+    /// The voicing dial: up and down an inversion a step, for every chord struck from here on,
+    /// and the turn it stands at.
+    private var dial: some View {
+        let lift = keyboard.lift
+        return VStack(spacing: 2) {
+            DialStep(symbol: "chevron.up", letter: "X", enabled: lift < ChordKeyboard.lifts.upperBound) { turnDial(1) }
+                .help("Turn the dial up: every chord struck an inversion higher. X on the computer's keys, C♯ below middle C.")
+            Text(lift == 0 ? "0" : String(format: "%+d", lift))
+                .font(Design.Typography.numeric(13, weight: .semibold))
+                .foregroundStyle(lift == 0 ? Design.Palette.inkSecondary : Design.Palette.accent)
+                .frame(height: 16)
+                .onTapGesture(count: 2) { turnDial(-lift) }
+                .help("The dial's turn. Double-click to set it back to where the voicing puts each chord.")
+            DialStep(symbol: "chevron.down", letter: "Z", enabled: lift > ChordKeyboard.lifts.lowerBound) { turnDial(-1) }
+                .help("Turn the dial down: every chord struck an inversion lower. Z on the computer's keys, C below middle C.")
+        }
+        .frame(width: 46, height: 88)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Voicing dial, turned \(lift)")
+    }
+
+    private func turnDial(_ steps: Int) {
+        hasKeys = true
+        keyboard.turn(steps)
     }
 
     // MARK: The display
@@ -223,6 +253,10 @@ struct ChordPad: View {
             if press.phase != .repeat { keyboard.key(button, isDown: press.phase == .down) }
             return .handled
         }
+        if let steps = Self.dialKeys[character] {
+            if press.phase != .up { keyboard.turn(steps) }
+            return .handled
+        }
         guard let pitchClass = Self.rootKeys[character] else { return .ignored }
         let id = Self.computer + pitchClass
         switch press.phase {
@@ -244,6 +278,33 @@ struct ChordPad: View {
         keyboard.letGoOfKeys()
         for id in keysDown { lift(id) }
         keysDown = []
+    }
+}
+
+/// A step of the dial: its arrow, and the computer key that turns it.
+private struct DialStep: View {
+    let symbol: String
+    let letter: String
+    let enabled: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 3) {
+                Image(systemName: symbol)
+                    .font(.system(size: 10, weight: .bold))
+                Text(letter)
+                    .font(Design.Typography.numeric(9))
+                    .foregroundStyle(Design.Palette.inkTertiary)
+            }
+            .foregroundStyle(enabled ? Design.Palette.ink : Design.Palette.inkTertiary)
+            .frame(width: 46, height: 32)
+            .background(Design.Palette.panel, in: RoundedRectangle(cornerRadius: 4, style: .continuous))
+            .overlay { RoundedRectangle(cornerRadius: 4, style: .continuous).strokeBorder(Design.Palette.line, lineWidth: 1) }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
     }
 }
 

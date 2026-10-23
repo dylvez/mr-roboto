@@ -47,7 +47,7 @@ public final class ChordsModel {
         didSet {
             parse()
             guard !isApplyingState, oldValue != text else { return }
-            willEdit(ChordsState(text: oldValue, key: key, playing: playing), kind: "text")
+            willEdit(ChordsState(text: oldValue, key: key, playing: playing, lifts: lifts), kind: "text")
             didEdit()
         }
     }
@@ -76,6 +76,94 @@ public final class ChordsModel {
         guard voicing != self.voicing else { return }
         willEdit(state, kind: "voicing")
         playing.voicing = voicing.rawValue
+        parse()
+        didEdit()
+        hear()
+    }
+
+    // MARK: Sounds, saved
+
+    /// Where sounds are kept between songs. A test hands it a suite of its own.
+    public var shelf = ChordSoundShelf()
+    /// Bumped when the shelf changes, so a view listing it reads it again.
+    public private(set) var shelfChanges = 0
+
+    /// The sounds to choose from: the starters, then the saved.
+    public var sounds: [ChordSound] { _ = shelfChanges; return shelf.sounds }
+
+    /// The sheet's sound as it stands, by `name`: its instrument, the way it is played, its strip.
+    public func currentSound(named name: String) -> ChordSound {
+        ChordSound(name: name, instrument: instrument, playing: playing, strip: host.stripSound(for: part))
+    }
+
+    /// The kept sound the sheet is playing now, when it is one: the instrument, the playing and the
+    /// strip all as that sound has them.
+    public var soundInUse: ChordSound? {
+        let now = currentSound(named: "")
+        return sounds.first { $0.instrument == now.instrument && $0.playing == now.playing && $0.strip == now.strip }
+    }
+
+    /// A kept sound put on these chords: the way it is played as one step of ⌘Z on the sheet, and
+    /// the instrument and the strip on the chords' part, as picking either is. Chords that are not
+    /// a part yet are kept first, so the sound has a part to be on.
+    public func use(_ sound: ChordSound) {
+        guard progression != nil, problem == nil else { return }
+        willEdit(state, kind: "sound")
+        let seed = playing.seed
+        playing = sound.playing
+        playing.seed = seed
+        if (playing.keysPattern != .held || playing.isSloppy), playing.seed == 0 { playing.seed = GrooveFeel.freshSeed() }
+        parse()
+        didEdit()
+        if part == nil { _ = commit() } else { keepNow() }
+        host.setInstrument(sound.instrument, for: part)
+        _ = host.setStripSound(sound.strip, for: part)
+        lastError = nil
+        hear()
+    }
+
+    /// Keeps the sheet's sound under `name`, in place of one kept under it before.
+    public func saveSound(named name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        shelf.save(currentSound(named: trimmed))
+        shelfChanges += 1
+    }
+
+    /// Forgets a saved sound.
+    public func forgetSound(named name: String) {
+        shelf.remove(named: name)
+        shelfChanges += 1
+    }
+
+    /// A name for the sheet's sound as it stands: its instrument and how it is played.
+    public var suggestedSoundName: String {
+        let name = InstrumentVoiceSpec.preset(id: instrument)?.name ?? instrument
+        return "\(name), \(playing.keysPattern.name.lowercased())"
+    }
+
+    // MARK: How a strike leaves the hand
+
+    public var roll: KeysRoll { playing.keysRoll }
+    public var isSloppy: Bool { playing.isSloppy }
+
+    /// How each strike's notes leave the hand: together, strummed, or run as a harp.
+    public func setRoll(_ roll: KeysRoll) {
+        guard roll != self.roll else { return }
+        willEdit(state, kind: "roll")
+        playing.roll = roll == .together ? nil : roll.rawValue
+        parse()
+        didEdit()
+        hear()
+    }
+
+    /// Whether each strike lands a little off the grid, as a loose hand does: the Orchid's Slop.
+    public func setSlop(_ on: Bool) {
+        guard on != isSloppy else { return }
+        willEdit(state, kind: "slop")
+        playing.slop = on ? true : nil
+        // A hand of its own the first time it is loose: the slop is the seed's.
+        if on, playing.seed == 0 { playing.seed = GrooveFeel.freshSeed() }
         parse()
         didEdit()
         hear()
@@ -144,6 +232,7 @@ public final class ChordsModel {
         var text: String
         var key: Key
         var playing = ChordPlaying()
+        var lifts: [Int] = []
     }
 
     private var history = EditHistory<ChordsState>()
@@ -153,11 +242,12 @@ public final class ChordsModel {
     public let autoKeep = AutoKeep()
 
     private var state: ChordsState {
-        get { ChordsState(text: text, key: key, playing: playing) }
+        get { ChordsState(text: text, key: key, playing: playing, lifts: lifts) }
         set {
             isApplyingState = true
             key = newValue.key
             playing = newValue.playing
+            lifts = newValue.lifts
             text = newValue.text
             isApplyingState = false
             keyProblem = nil
@@ -220,6 +310,7 @@ public final class ChordsModel {
             base = progression
             self.key = stored.key
             playing = stored.playing ?? ChordPlaying()
+            lifts = stored.spans.map { $0.lift ?? 0 }
             text = stored.symbols()
             opened = (text, stored)
         } else {
@@ -237,6 +328,8 @@ public final class ChordsModel {
     /// Reads `text` as the key's I–IV–V–I when it is empty, so an open surface is never blank.
     private func parse() {
         defer {
+            // Each chord turned as the sheet turned it, by its place on the line.
+            progression = progression.map(turned)
             // Played the way the sheet says, whatever the line. Held and close is said as nothing,
             // so chords nobody has chosen a playing for are the chords they were.
             progression?.playing = playing.isPlain ? nil : playing
@@ -378,6 +471,105 @@ public final class ChordsModel {
         Task { [host] in await host.audition(pitches: pitches, duration: 0.9, for: part) }
     }
 
+    // MARK: The dial, and the bass under a chord
+
+    /// How far each chord on the line is turned from where its voicing puts it, by its place on the
+    /// line: the Orchid's voicing dial, a chord at a time. Kept beside the line rather than in it,
+    /// since a lead sheet has no way to write a turn; a place with none, or past the end, is none.
+    public private(set) var lifts: [Int] = []
+
+    /// How far the chord at `index` is turned.
+    public func lift(ofChordAt index: Int) -> Int { index < lifts.count ? lifts[index] : 0 }
+
+    /// The chord a click on its card chose, by its place on the line, for the dial and the bass
+    /// under the bars to act on. Nil, or a place the line no longer has, is none.
+    public private(set) var selectedChord: Int?
+
+    /// The chord at `index` chosen, and heard as it is voiced and turned.
+    public func select(chordAt index: Int) {
+        selectedChord = index
+        hear(chordAt: index)
+    }
+
+    /// The chosen chord and its place, while the line still has it.
+    public var selected: (index: Int, span: ChordSpan)? {
+        guard let index = selectedChord, let spans = progression?.spans, index < spans.count else { return nil }
+        return (index, spans[index])
+    }
+
+    /// The progression with each chord carrying its turn.
+    private func turned(_ progression: Progression) -> Progression {
+        var out = progression
+        var index = 0
+        for bar in out.bars.indices {
+            for chord in out.bars[bar].chords.indices {
+                let lift = lift(ofChordAt: index)
+                out.bars[bar].chords[chord].lift = lift == 0 ? nil : lift
+                index += 1
+            }
+        }
+        return out
+    }
+
+    /// The chord at `index` turned `steps` further, heard at once as it is voiced now: up, its
+    /// lowest note goes an octave up; down, its highest an octave down. One step of ⌘Z a pause,
+    /// as typing is.
+    public func turn(chordAt index: Int, by steps: Int) {
+        guard let progression, problem == nil, index >= 0, index < progression.chords.count else { return }
+        willEdit(state, kind: "lift-\(index)")
+        setLift(lift(ofChordAt: index) + steps, at: index)
+        parse()
+        didEdit()
+        hear(chordAt: index)
+    }
+
+    private func setLift(_ value: Int, at index: Int) {
+        if lifts.count <= index { lifts += Array(repeating: 0, count: index + 1 - lifts.count) }
+        lifts[index] = min(ChordKeyboard.lifts.upperBound, max(ChordKeyboard.lifts.lowerBound, value))
+        while lifts.last == 0 { lifts.removeLast() }
+    }
+
+    /// The notes the chord at `index` is played on, as the sheet voices it now.
+    public func voiced(chordAt index: Int) -> [Int] {
+        guard let progression else { return [] }
+        let voiced = Voicing.voicings(of: progression.spans, as: voicing)
+        return index < voiced.count ? voiced[index] : []
+    }
+
+    /// Sounds the chord at `index` as it is voiced and turned.
+    public func hear(chordAt index: Int) {
+        let pitches = voiced(chordAt: index)
+        guard !pitches.isEmpty else { return }
+        let part = self.part
+        Task { [host] in await host.audition(pitches: pitches, duration: 0.9, for: part) }
+    }
+
+    /// The bass under the chord at `index`: one of its own notes, written into the line as the
+    /// chord over it — C/E — which is what the bass player reads. Its root is the chord as it was.
+    public func setBass(_ bass: PitchClass, forChordAt index: Int) {
+        guard let progression, problem == nil, index >= 0, index < progression.chords.count else { return }
+        let chord = progression.chords[index]
+        guard let inversion = chord.pitchClasses.firstIndex(of: bass), inversion != chord.inversion else { return }
+        // The line as it is typed, or the suggestion as a line when nothing is: either way one
+        // symbol a chord and one bar a stretch between bars, so the chord's place is its symbol's.
+        var bars = (isDefault ? progression.symbols() : text)
+            .split(separator: "|", omittingEmptySubsequences: true)
+            .map { $0.split(whereSeparator: { $0 == " " || $0 == "," }).map(String.init) }
+            .filter { !$0.isEmpty }
+        var place = index
+        for bar in bars.indices {
+            guard place >= bars[bar].count else {
+                bars[bar][place] = symbol(of: chord.inverted(inversion))
+                break
+            }
+            place -= bars[bar].count
+        }
+        lastEdit = nil
+        text = bars.map { $0.joined(separator: " ") }.joined(separator: " | ")
+        lastEdit = nil
+        hear(chordAt: index)
+    }
+
     // MARK: Played in from the controller
 
     /// Whether Record is on: each chord played on the controller is written into the line as the
@@ -509,16 +701,24 @@ extension ChordsModel: KeepsAsItGoes {
 extension ChordsModel: TakesChords {
     /// A chord key on the sheet plays in the sheet's key, voiced as its chords are, on their
     /// instrument: a chord struck is heard as the sheet will play it.
-    public var chordContext: ChordContext { ChordContext(key: key, voicing: voicing, instrument: instrument) }
+    public var chordContext: ChordContext {
+        ChordContext(key: key, voicing: voicing, instrument: instrument, roll: playing.keysRoll)
+    }
 
-    /// A chord struck on a chord key while Record is on: the next bar, as a chord played whole is.
-    /// Buttons held that the chord could not take are said, so a hand holding maj7 on a
-    /// diminished chord knows why it was not heard.
-    public func takeChord(_ played: ChordKeys.Played) {
+    /// A chord struck on a chord key while Record is on: the next bar, as a chord played whole is,
+    /// turned as the dial turned it. Buttons held that the chord could not take are said, so a
+    /// hand holding maj7 on a diminished chord knows why it was not heard.
+    public func takeChord(_ played: ChordKeys.Played, lift: Int) {
         guard isTaking else { return }
+        let before = isDefault ? 0 : progression?.chords.count ?? 0
         append(played.chord)
+        // The turn goes on after the line, so ⌘Z takes the chord and its turn back together.
+        lifts = Array(lifts.prefix(before))
+        if lift != 0 { setLift(lift, at: before) }
+        parse()
         let unused = played.unused.map(\.name).joined(separator: ", ")
-        takeLine = symbol(of: played.chord) + (unused.isEmpty ? "" : " — \(unused) did not go on it")
+        takeLine = symbol(of: played.chord) + (lift == 0 ? "" : ", turned \(lift > 0 ? "up" : "down") \(abs(lift))")
+            + (unused.isEmpty ? "" : " — \(unused) did not go on it")
     }
 }
 

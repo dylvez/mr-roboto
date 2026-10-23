@@ -49,6 +49,7 @@ extension ChordsSurfaceView {
                                line: model.isTaking ? model.takeLine : nil)
                 }
                 Spacer()
+                SoundShelfMenu(model: model)
                 KeyField(model: model)
             }
             ChordsControls(model: model)
@@ -56,7 +57,7 @@ extension ChordsSurfaceView {
             if let progression = model.progression {
                 // How each chord is voiced, for the notes drawn beside it, and the span of all of
                 // them, so a voice that climbs is seen to climb from one bar to the next.
-                let voiced = Voicing.voicings(of: progression.bars.flatMap(\.chords).map(\.chord), as: model.voicing)
+                let voiced = Voicing.voicings(of: progression.spans, as: model.voicing)
                 let notes = voiced.flatMap { $0 }
                 let range = notes.min().flatMap { low in notes.max().map { low...$0 } }
                 VStack(alignment: .leading, spacing: 6) {
@@ -75,7 +76,7 @@ extension ChordsSurfaceView {
                         HStack(spacing: 8) {
                             ForEach(Array(progression.bars.enumerated()), id: \.offset) { index, bar in
                                 let first = progression.bars.prefix(index).reduce(0) { $0 + $1.chords.count }
-                                BarCard(index: index, bar: bar, model: model,
+                                BarCard(index: index, first: first, bar: bar, model: model,
                                         voiced: Array(voiced.dropFirst(first).prefix(bar.chords.count)), range: range)
                             }
                         }
@@ -83,6 +84,7 @@ extension ChordsSurfaceView {
                     }
                     .opacity(model.barsAreStale ? 0.4 : 1)
                     .accessibilityHint(model.barsAreStale ? "Stale: the last line that read" : "")
+                    if !model.barsAreStale { ChordTurner(model: model) }
                 }
                 HarmonistReadings(model: model)
                     .opacity(model.barsAreStale ? 0.4 : 1)
@@ -174,18 +176,53 @@ private struct PlayingPicker: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             row("Played") {
-                ForEach(KeysPattern.allCases) { pattern in
-                    FormChip(pattern.name, isOn: model.pattern == pattern) { model.setPattern(pattern) }
+                // One Arpeggio among the strikes, lit for any way of breaking the chord; the ways
+                // are a row of their own under it while one is chosen.
+                ForEach(KeysPattern.row) { pattern in
+                    let isOn = pattern == .arpeggio ? model.pattern.isBroken : model.pattern == pattern
+                    FormChip(pattern.name, isOn: isOn) { if !(pattern == .arpeggio && isOn) { model.setPattern(pattern) } }
                         .help(pattern.about.prefix(1).uppercased() + pattern.about.dropFirst())
                         .accessibilityLabel("Played \(pattern.name)")
                 }
             }
+            if model.pattern.isBroken {
+                row("Broken") {
+                    ForEach(KeysPattern.broken) { pattern in
+                        FormChip(pattern.brokenName, isOn: model.pattern == pattern) { model.setPattern(pattern) }
+                            .help(pattern.about.prefix(1).uppercased() + pattern.about.dropFirst())
+                            .accessibilityLabel("Broken \(pattern.brokenName)")
+                    }
+                }
+            }
+            // Where the notes sit, and how a strike lets go of them: the hand's two decisions, on
+            // one row while it fits, so the bars stay as high on the sheet as they were.
             row("Voiced") {
                 ForEach(KeysVoicing.allCases) { voicing in
                     FormChip(voicing.name, isOn: model.voicing == voicing) { model.setVoicing(voicing) }
                         .help(voicing.about.prefix(1).uppercased() + voicing.about.dropFirst())
                         .accessibilityLabel("Voiced \(voicing.name)")
                 }
+                // A chip's height, the label centred in it: the row sets its items at their tops,
+                // and a label alone sat above the chips' words.
+                ZStack(alignment: .leading) {
+                    FormChip("Struck", isOn: false) {}.hidden().frame(width: 0)
+                    Text("Struck")
+                        .font(Design.Typography.label)
+                        .foregroundStyle(Design.Palette.inkTertiary)
+                }
+                .padding(.leading, 10)
+                .padding(.trailing, 4)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Struck")
+                ForEach(KeysRoll.allCases) { roll in
+                    FormChip(roll.name, isOn: model.roll == roll) { model.setRoll(roll) }
+                        .help(roll.about.prefix(1).uppercased() + roll.about.dropFirst())
+                        .accessibilityLabel("Struck \(roll.name)")
+                }
+                FormChip("Slop", isOn: model.isSloppy) { model.setSlop(!model.isSloppy) }
+                    .help("Each strike a little off the grid, differently each time, as a loose hand plays: from a thirtieth of a beat early to a twentieth late")
+                    .accessibilityLabel(model.isSloppy ? "Slop, on" : "Slop, off")
+                    .padding(.leading, 6)
             }
             if !model.topLine.isEmpty, !model.barsAreStale {
                 Text(String(format: "On top: %@. Voiced %@, the hand travels %.1f semitones a change.",
@@ -248,6 +285,88 @@ private struct HarmonistReadings: View {
     }
 }
 
+/// The kept sounds, a press away: the one the chords are playing named on the chip; choosing one
+/// puts its instrument, the way it is played and its strip on the chords; and the chords' own
+/// sound saved under a name, for the next song.
+private struct SoundShelfMenu: View {
+    let model: ChordsModel
+    @State private var naming = false
+    @State private var name = ""
+
+    var body: some View {
+        let inUse = model.soundInUse
+        let saved = Set(model.shelf.saved.map(\.name))
+        let sounds = model.sounds
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            SmallLabel("Sound", color: Design.Palette.inkTertiary)
+            ChipMenu(inUse?.name ?? "Your own") {
+                Section("Starters") {
+                    ForEach(sounds.filter { !saved.contains($0.name) }) { sound in
+                        MenuChoice(sound.name, isOn: inUse?.name == sound.name, help: sound.summary) { model.use(sound) }
+                    }
+                }
+                if !saved.isEmpty {
+                    Section("Saved") {
+                        ForEach(sounds.filter { saved.contains($0.name) }) { sound in
+                            MenuChoice(sound.name, isOn: inUse?.name == sound.name, help: sound.summary) { model.use(sound) }
+                        }
+                    }
+                }
+                Divider()
+                Button("Save This Sound…") {
+                    name = inUse?.name ?? model.suggestedSoundName
+                    naming = true
+                }
+                if !saved.isEmpty {
+                    Menu("Forget") {
+                        ForEach(saved.sorted(), id: \.self) { kept in Button(kept) { model.forgetSound(named: kept) } }
+                    }
+                }
+            }
+            .help("A sound kept by name across songs: the instrument, the way the chords are played and what their strip does — "
+                  + "the amp or rotating speaker, the chorus or phaser, the room and the echo. Choose one to put it on these chords; "
+                  + "Save This Sound keeps theirs for the next song.")
+            .popover(isPresented: $naming, arrowEdge: .bottom) { saving }
+        }
+    }
+
+    /// Naming the chords' sound before it is kept, with what will be kept said under the name.
+    private var saving: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Keep these chords' sound")
+                .font(Design.Typography.ui(13, weight: .semibold))
+            Text(model.currentSound(named: name).summary)
+                .font(Design.Typography.ui(11.5))
+                .foregroundStyle(Design.Palette.inkSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            TextField("Name", text: $name)
+                .textFieldStyle(.roundedBorder)
+                .onSubmit(save)
+            if model.shelf.saved.contains(where: { $0.name == name.trimmingCharacters(in: .whitespaces) }) {
+                Text("A sound is kept under this name: saving replaces it.")
+                    .font(Design.Typography.ui(11))
+                    .foregroundStyle(Design.Palette.warn)
+            }
+            HStack {
+                Spacer()
+                Button("Cancel") { naming = false }
+                    .keyboardShortcut(.cancelAction)
+                Button("Save", action: save)
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+        }
+        .padding(14)
+        .frame(width: 320)
+    }
+
+    private func save() {
+        guard !name.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        model.saveSound(named: name)
+        naming = false
+    }
+}
+
 /// The key, as a line you type: "D major", "F# minor", "E dorian". Read on Return or when the
 /// field loses focus, not on every keystroke — "F" alone is F major, and a field that re-spelled
 /// itself to "F major" while you were still typing "F# minor" would be fighting you.
@@ -296,6 +415,8 @@ private struct KeyField: View {
 
 private struct BarCard: View {
     let index: Int
+    /// The place on the line of the bar's first chord.
+    let first: Int
     let bar: ProgressionBar
     let model: ChordsModel
     /// Each chord's notes as voiced.
@@ -310,9 +431,12 @@ private struct BarCard: View {
                 .foregroundStyle(Design.Palette.inkTertiary)
             HStack(alignment: .bottom, spacing: 12) {
                 ForEach(Array(bar.chords.enumerated()), id: \.offset) { position, span in
-                    Button { model.audition(span.chord) } label: {
+                    // A click hears the chord as it is voiced and turned, and chooses it for the
+                    // dial and the bass under the bars.
+                    Button { model.select(chordAt: first + position) } label: {
                         ChordFace(span: span, model: model,
-                                  voiced: position < voiced.count ? voiced[position] : [], range: range)
+                                  voiced: position < voiced.count ? voiced[position] : [], range: range,
+                                  isSelected: model.selected?.index == first + position)
                     }
                     .buttonStyle(.plain)
                 }
@@ -333,6 +457,7 @@ private struct ChordFace: View {
     let model: ChordsModel
     let voiced: [Int]
     let range: ClosedRange<Int>?
+    var isSelected = false
 
     var body: some View {
         let hue = HarmonyHue.color(for: span.chord, in: model.key, .ink)
@@ -354,16 +479,76 @@ private struct ChordFace: View {
                             .help("Not all of its notes are in \(model.key.name): borrowed from outside the key")
                     }
                 }
-                Text(String(format: "%g beats", span.beats))
-                    .font(Design.Typography.numeric(9.5))
-                    .foregroundStyle(Design.Palette.inkTertiary)
+                HStack(spacing: 5) {
+                    Text(String(format: "%g beats", span.beats))
+                        .font(Design.Typography.numeric(9.5))
+                        .foregroundStyle(Design.Palette.inkTertiary)
+                    // A chord the dial turned says how far, so a line of them reads as it plays.
+                    if let lift = span.lift {
+                        Text(lift > 0 ? "↑\(lift)" : "↓\(-lift)")
+                            .font(Design.Typography.numeric(9.5, weight: .semibold))
+                            .foregroundStyle(Design.Palette.accent)
+                            .help("Turned \(lift > 0 ? "up" : "down") \(abs(lift)) from where it is voiced")
+                    }
+                }
             }
             if let tick, let range, !voiced.isEmpty {
                 VoicedNotes(notes: voiced, range: range, hue: tick)
                     .help("Voiced \(model.voicing.name.lowercased()): " + voiced.map { model.key.name(of: Pitch(midi: $0)) }.joined(separator: " · "))
             }
         }
+        .padding(4)
+        .overlay {
+            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                .strokeBorder(isSelected ? Design.Palette.accent : .clear, lineWidth: 1.5)
+        }
         .contentShape(Rectangle())
+    }
+}
+
+/// The chosen chord, turned: the dial, up or down an inversion a step, and the note under it —
+/// the root, or any of its own notes, written as the chord over it. A click on a chord's card
+/// chooses it; with none chosen, the row says how.
+private struct ChordTurner: View {
+    let model: ChordsModel
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            SmallLabel("Turn", color: Design.Palette.inkTertiary)
+            if let (index, span) = model.selected {
+                let lift = span.lift ?? 0
+                Text("\(model.symbol(of: span.chord)), chord \(index + 1)")
+                    .font(Design.Typography.ui(12.5, weight: .semibold))
+                    .foregroundStyle(Design.Palette.ink)
+                HStack(spacing: 4) {
+                    FormChip("Down", isOn: false) { model.turn(chordAt: index, by: -1) }
+                        .help("Turn it down an inversion: its highest note an octave down")
+                        .disabled(lift <= ChordKeyboard.lifts.lowerBound)
+                    Text(lift == 0 ? "as voiced" : lift > 0 ? "up \(lift)" : "down \(-lift)")
+                        .font(Design.Typography.numeric(11.5))
+                        .foregroundStyle(lift == 0 ? Design.Palette.inkSecondary : Design.Palette.accent)
+                        .frame(minWidth: 60)
+                    FormChip("Up", isOn: false) { model.turn(chordAt: index, by: 1) }
+                        .help("Turn it up an inversion: its lowest note an octave up")
+                        .disabled(lift >= ChordKeyboard.lifts.upperBound)
+                }
+                SmallLabel("Bass", color: Design.Palette.inkTertiary)
+                    .padding(.leading, 6)
+                // Its notes as the key spells the chord, in the order it stacks them.
+                let names = model.key.spell(span.chord)
+                HStack(spacing: 4) {
+                    ForEach(Array(span.chord.pitchClasses.enumerated()), id: \.offset) { place, note in
+                        let name = place < names.count ? names[place].description : model.key.spell(note).description
+                        FormChip(name, isOn: span.chord.inversion == place) { model.setBass(note, forChordAt: index) }
+                            .help(place == 0 ? "The root under it" : "\(name) under it: written as the chord over it, and the bass plays it")
+                    }
+                }
+            } else {
+                Text("Click a chord to turn it up or down an inversion, or to put another of its notes under it.")
+                    .font(Design.Typography.ui(11.5))
+                    .foregroundStyle(Design.Palette.inkTertiary)
+            }
+        }
     }
 }
 

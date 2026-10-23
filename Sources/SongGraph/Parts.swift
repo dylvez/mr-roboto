@@ -29,10 +29,16 @@ public struct ChordSpan: Hashable, Codable, Sendable {
     public var chord: Chord
     /// Duration in beats.
     public var beats: Double
+    /// How far this one chord is turned from where its voicing puts it, the Orchid's dial: each
+    /// step up moves its lowest note an octave up — the next inversion — and each step down its
+    /// highest an octave down. Nil, as every chord written before it is, is where the voicing puts
+    /// it; synthesized coding omits it then, so older documents round-trip byte for byte.
+    public var lift: Int?
 
-    public init(chord: Chord, beats: Double) {
+    public init(chord: Chord, beats: Double, lift: Int? = nil) {
         self.chord = chord
         self.beats = beats
+        self.lift = lift == 0 ? nil : lift
     }
 
     public init(_ chord: Chord, beats: Double) { self.init(chord: chord, beats: beats) }
@@ -64,19 +70,28 @@ public struct ChordPlaying: Hashable, Codable, Sendable {
     public var voicing: String
     /// What the striking varies on. The same seed is the same performance.
     public var seed: UInt64
+    /// How a strike's notes leave the hand, by a `Performance.KeysRoll`'s id: "strum", "harp".
+    /// Nil is all at once, as every progression played before it could be anything else.
+    public var roll: String?
+    /// Whether each strike lands a little off the grid, differently each time, as a hand does:
+    /// the Orchid's Slop. Nil is on the grid.
+    public var slop: Bool?
 
-    public init(pattern: String = ChordPlaying.held, voicing: String = ChordPlaying.close, seed: UInt64 = 0) {
+    public init(pattern: String = ChordPlaying.held, voicing: String = ChordPlaying.close, seed: UInt64 = 0,
+                roll: String? = nil, slop: Bool? = nil) {
         self.pattern = pattern
         self.voicing = voicing
         self.seed = seed
+        self.roll = roll
+        self.slop = slop
     }
 
     public static let held = "held"
     public static let close = "close"
 
-    /// Held, in close position: what every progression played as before it could be played any
-    /// other way, and what one with no playing still does.
-    public var isPlain: Bool { pattern == Self.held && voicing == Self.close }
+    /// Held, in close position, all at once and on the grid: what every progression played as
+    /// before it could be played any other way, and what one with no playing still does.
+    public var isPlain: Bool { pattern == Self.held && voicing == Self.close && roll == nil && slop != true }
 }
 
 /// A chord progression: bars of chords with durations, in a key.

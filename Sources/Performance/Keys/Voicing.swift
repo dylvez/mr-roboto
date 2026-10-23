@@ -47,8 +47,9 @@ public enum Voicing {
         var beat = 0.0
         for span in progression.bars.flatMap(\.chords) {
             let duration = max(0.01, span.beats * hold)
-            for pitch in span.chord.pitches(octave: octave) {
-                out.append(NoteEvent(pitch: pitch, start: beat, duration: duration, velocity: velocity))
+            // Turned by its lift, when the sheet turned it: still close, a different inversion.
+            for pitch in lifted(span.chord.pitches(octave: octave).map(\.midi), by: span.lift ?? 0) {
+                out.append(NoteEvent(pitch: Pitch(midi: pitch), start: beat, duration: duration, velocity: velocity))
             }
             beat += span.beats
         }

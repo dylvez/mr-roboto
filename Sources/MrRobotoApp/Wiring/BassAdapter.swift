@@ -159,6 +159,28 @@ final class ChordsAdapter: ChordsHosting {
         InstrumentVoiceSpec.preset(id: instrument(for: part))?.family ?? "keys"
     }
 
+    func stripSound(for part: PartID?) -> StripSound {
+        guard let part, let song = app.song else { return StripSound() }
+        return StripSound(Guidance.mix(in: song)?.strip(for: part))
+    }
+
+    /// The strip's sound as the mix's next version, said in the ledger as a move of the mix: the
+    /// level, the pan and the EQ stay as the song has them.
+    func setStripSound(_ sound: StripSound, for part: PartID?) -> Bool {
+        guard let part, let song = app.song else { return false }
+        let base = Guidance.mixes(in: song).last
+        let before = Guidance.mix(in: song) ?? Mix()
+        let label = song.versions.last { $0.partID == part }.map(PartLabel.title(of:)) ?? "Chords"
+        var mix = before
+        var strip = mix.strip(for: part, label: label)
+        sound.apply(to: &strip)
+        mix.set(strip)
+        guard mix != before else { return true }
+        let committed = MixAdapter(app: app).commit(mix, base: base, note: "\(label): \(sound.words), from a saved sound")
+        if committed != nil { app.refreshSurfaces(of: [.mixer, .master]) }
+        return committed != nil
+    }
+
     func commit(_ version: PartVersion) -> Bool {
         guard app.record(version) else { return false }
         if let surface { app.surfaceKept(version, on: surface) }

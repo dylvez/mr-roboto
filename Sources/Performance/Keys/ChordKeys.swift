@@ -91,6 +91,17 @@ public enum ChordKeys {
         }
     }
 
+    /// The turn of the voicing dial a controller's key gives below the split: the C there down a
+    /// step, the C♯ up one. Two of the four notes no button sits on.
+    public static func turn(forNote note: Int) -> Int? {
+        guard note < split else { return nil }
+        switch PitchClass(wrapping: note).rawValue {
+        case 0: return -1
+        case 1: return 1
+        default: return nil
+        }
+    }
+
     /// The button a controller's key holds, when it is below the split and is one of the eight.
     public static func button(forNote note: Int) -> ChordButton? {
         guard note < split else { return nil }

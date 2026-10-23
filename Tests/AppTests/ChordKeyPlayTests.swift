@@ -130,7 +130,7 @@ struct ChordKeyPlayTests {
         let c = Chord(.c, .major), f = Chord(.f, .major), g = Chord(.g, .dominantSeventh)
         func at(_ beat: Double) -> Double { clock.seconds(forBeat: beat) }
         // C a hair late, and again on three; G and then F nearest beat six, and G on beat ten.
-        let struck: [(chord: Chord, seconds: Double)] = [(c, at(0.4)), (c, at(2)), (g, at(5.6)), (f, at(6.4)), (g, at(10))]
+        let struck: [(chord: Chord, lift: Int, seconds: Double)] = [(c, 0, at(0.4)), (c, 0, at(2)), (g, 0, at(5.6)), (f, 0, at(6.4)), (g, 0, at(10))]
         let progression = try #require(MIDICapture.progression(struck, clock: clock, sectionStart: 0, end: at(11), bars: nil, key: key))
         #expect(progression.bars.count == 3, "to the end of the bar the take ended in")
         #expect(progression.bars[0].chords.map(\.chord) == [c] && progression.bars[0].beats == 4, "struck again, one chord")
@@ -138,12 +138,17 @@ struct ChordKeyPlayTests {
                 "of two nearest beat six, the later")
         #expect(progression.bars[2].chords.map(\.chord) == [f, g] && progression.bars[2].chords.map(\.beats) == [2, 2],
                 "F held over the bar line")
+        #expect(progression.spans.allSatisfy { $0.lift == nil }, "nothing turned")
         // A section's length wins, and what is struck past it is not kept.
-        let held = try #require(MIDICapture.progression(struck + [(f, at(20))], clock: clock, sectionStart: 0, end: nil, bars: 2, key: key))
+        let held = try #require(MIDICapture.progression(struck + [(f, 0, at(20))], clock: clock, sectionStart: 0, end: nil, bars: 2, key: key))
         #expect(held.bars.count == 2)
         // Struck in the count-in, more than half a beat early: nothing to keep.
-        #expect(MIDICapture.progression([(c, -at(1))], clock: clock, sectionStart: 0, end: nil, bars: 4, key: key) == nil)
+        #expect(MIDICapture.progression([(c, 0, -at(1))], clock: clock, sectionStart: 0, end: nil, bars: 4, key: key) == nil)
         #expect(MIDICapture.progression([], clock: clock, sectionStart: 0, end: nil, bars: 4, key: key) == nil)
+        // The same chord struck again turned another way is a change, and keeps its turn.
+        let turned = try #require(MIDICapture.progression([(c, 0, at(0)), (c, 1, at(2))], clock: clock, sectionStart: 0,
+                                                          end: nil, bars: 1, key: key))
+        #expect(turned.bars[0].chords.map(\.lift) == [nil, 1] && turned.bars[0].chords.map(\.beats) == [2, 2])
     }
 
     // MARK: The sheet

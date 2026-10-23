@@ -120,15 +120,17 @@ public enum MIDICapture {
     /// chord across a bar line is written in both bars, as a lead sheet writes it.
     ///
     /// Snapped to the beat, unlike a tune: a chord pushed an eighth early is a playing, which the
-    /// sheet's Played row says, and not a chord change a half-beat before the bar.
-    public static func progression(_ struck: [(chord: Chord, seconds: Double)], clock: TransportClock, sectionStart: Double,
-                                   end: Double?, bars: Int?, key: Key) -> Progression? {
+    /// sheet's Played row says, and not a chord change a half-beat before the bar. Each keeps the
+    /// turn of the dial it was struck with, and the same chord turned another way is a change.
+    public static func progression(_ struck: [(chord: Chord, lift: Int, seconds: Double)], clock: TransportClock,
+                                   sectionStart: Double, end: Double?, bars: Int?, key: Key) -> Progression? {
         let beatsPerBar = clock.timeSignature.beatsPerBar
-        var onBeat: [Int: Chord] = [:]
-        for (chord, seconds) in struck.sorted(by: { $0.seconds < $1.seconds }) {
+        struct Turned: Equatable { var chord: Chord; var lift: Int }
+        var onBeat: [Int: Turned] = [:]
+        for (chord, lift, seconds) in struck.sorted(by: { $0.seconds < $1.seconds }) {
             let beat = Int(clock.beat(forSeconds: seconds - sectionStart).rounded())
             guard beat >= 0, bars.map({ beat < $0 * beatsPerBar }) ?? true else { continue }
-            onBeat[beat] = chord
+            onBeat[beat] = Turned(chord: chord, lift: lift)
         }
         let changes = onBeat.sorted { $0.key < $1.key }
         guard let first = changes.first, let last = changes.last else { return nil }
@@ -145,12 +147,12 @@ public enum MIDICapture {
             var spans: [ChordSpan] = []
             var current = changes.last { $0.key <= barStart }?.value ?? first.value
             var from = barStart
-            for (beat, chord) in changes where beat > barStart && beat < barEnd && chord != current {
-                spans.append(ChordSpan(current, beats: Double(beat - from)))
-                current = chord
+            for (beat, turned) in changes where beat > barStart && beat < barEnd && turned != current {
+                spans.append(ChordSpan(chord: current.chord, beats: Double(beat - from), lift: current.lift))
+                current = turned
                 from = beat
             }
-            spans.append(ChordSpan(current, beats: Double(barEnd - from)))
+            spans.append(ChordSpan(chord: current.chord, beats: Double(barEnd - from), lift: current.lift))
             out.append(ProgressionBar(chords: spans))
         }
         return Progression(key: key, bars: out)

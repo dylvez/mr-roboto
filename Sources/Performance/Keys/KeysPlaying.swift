@@ -65,6 +65,14 @@ public enum KeysPattern: String, CaseIterable, Codable, Sendable, Identifiable {
     case boomChick = "boom-chick"
     /// The two-bar bossa figure.
     case bossa
+    /// The chord broken upward, a note every half-beat, from the bottom again at the top.
+    case arpeggioUp = "arpeggio-up"
+    /// The chord and the chord an octave above it broken upward, a note every quarter-beat.
+    case arpeggioWide = "arpeggio-two-octaves"
+    /// Every beat the chord's notes once each, upward, as many to a beat as it has: a triad in
+    /// triplets, a seventh in sixteenths. The Orchid's arpeggiator, whose time changes as a note
+    /// is added to the chord.
+    case rolling
 
     public var id: String { rawValue }
 
@@ -80,6 +88,27 @@ public enum KeysPattern: String, CaseIterable, Codable, Sendable, Identifiable {
         case .eighths: return "Eighths"
         case .boomChick: return "Boom-chick"
         case .bossa: return "Bossa"
+        case .arpeggioUp: return "Arpeggio up"
+        case .arpeggioWide: return "Arpeggio, two octaves"
+        case .rolling: return "Rolling"
+        }
+    }
+
+    /// The patterns that break the chord into single notes, and what each is called beside the
+    /// others: the Played row shows one Arpeggio among the strikes, and these under it.
+    public static let broken: [KeysPattern] = [.arpeggio, .arpeggioUp, .arpeggioWide, .rolling]
+    /// The Played row: every pattern but the ways of breaking a chord past the first.
+    public static let row: [KeysPattern] = allCases.filter { !broken.dropFirst().contains($0) }
+    public var isBroken: Bool { Self.broken.contains(self) }
+
+    /// What it is called among the ways of breaking a chord.
+    public var brokenName: String {
+        switch self {
+        case .arpeggio: return "Up and down"
+        case .arpeggioUp: return "Up"
+        case .arpeggioWide: return "Two octaves"
+        case .rolling: return "Rolling"
+        default: return name
         }
     }
 
@@ -96,6 +125,9 @@ public enum KeysPattern: String, CaseIterable, Codable, Sendable, Identifiable {
         case .eighths: return "a chord on every half-beat, the beats accented (pop, rock, synth-pop)"
         case .boomChick: return "the low note on one and three and the chord on two and four; in three, a waltz (country, folk)"
         case .bossa: return "the two-bar bossa figure: one, the and of two, four, then two and the and of three (bossa nova, samba)"
+        case .arpeggioUp: return "the chord broken upward, a note every half-beat, from the bottom again at the top (a ballad, synth-pop)"
+        case .arpeggioWide: return "the chord and the chord an octave up broken upward, a note every quarter-beat (trance, a build, a harp-like bed)"
+        case .rolling: return "every beat the chord's notes once each, upward, as many to a beat as it has: triplets for a triad, sixteenths for a seventh (an Orchid-style arpeggiator)"
         }
     }
 
@@ -132,17 +164,63 @@ public enum KeysPattern: String, CaseIterable, Codable, Sendable, Identifiable {
     }
 }
 
+/// How the notes of one strike are let go of the hand: all at once, strummed low to high (high to
+/// low on an off-beat, the upstroke), or poured up two octaves as a harp is.
+public enum KeysRoll: String, CaseIterable, Codable, Sendable, Identifiable {
+    case together, strum, harp
+
+    public var id: String { rawValue }
+
+    public var name: String {
+        switch self {
+        case .together: return "Together"
+        case .strum: return "Strum"
+        case .harp: return "Harp"
+        }
+    }
+
+    public var about: String {
+        switch self {
+        case .together: return "every note of a strike at once, as a hand on the keys plays it"
+        case .strum: return "a strike spread low to high as a guitar's downstroke, high to low on an off-beat"
+        case .harp: return "a change poured up two octaves, a note at a time, as a harp's glissando; the strikes after it strummed"
+        }
+    }
+
+    /// Beats between one note of a strum and the next: a twenty-fourth of a beat, about 20 ms at
+    /// 120 — heard as one strike spread, not as a figure.
+    static let strumStep = 1.0 / 24
+    /// Beats between one note of a harp's run and the next.
+    static let harpStep = 1.0 / 12
+}
+
 extension ChordPlaying {
-    public init(_ pattern: KeysPattern, _ voicing: KeysVoicing = .close, seed: UInt64 = 0) {
+    public init(_ pattern: KeysPattern, _ voicing: KeysVoicing = .close, seed: UInt64 = 0,
+                roll: KeysRoll = .together, slop: Bool = false) {
         self.init(pattern: pattern.rawValue, voicing: voicing.rawValue, seed: seed)
+        self.roll = roll == .together ? nil : roll.rawValue
+        self.slop = slop ? true : nil
     }
 
     /// The pattern, or held for a name nobody knows: a document from a later build still plays.
     public var keysPattern: KeysPattern { KeysPattern(rawValue: pattern) ?? .held }
     public var keysVoicing: KeysVoicing { KeysVoicing(rawValue: voicing) ?? .close }
+    /// How a strike's notes leave the hand: together for a name nobody knows, or none said.
+    public var keysRoll: KeysRoll { roll.flatMap(KeysRoll.init(rawValue:)) ?? .together }
+    public var isSloppy: Bool { slop == true }
 
-    /// "Stabs, voice-led".
-    public var sentence: String { "\(keysPattern.name), \(keysVoicing.name.lowercased())" }
+    /// "Stabs, voice-led", and how the hand lets go when it is not all at once: "Stabs, voice-led,
+    /// strummed, loose".
+    public var sentence: String {
+        var words = ["\(keysPattern.name), \(keysVoicing.name.lowercased())"]
+        switch keysRoll {
+        case .together: break
+        case .strum: words.append("strummed")
+        case .harp: words.append("harped")
+        }
+        if isSloppy { words.append("loose") }
+        return words.joined(separator: ", ")
+    }
 }
 
 // MARK: - Voicing
@@ -159,23 +237,33 @@ extension Voicing {
     /// Where the low note of a spread voicing sits: F2 to E3.
     static let lowRange = 41...52
 
-    /// The pitches each chord is played on, low to high, in the order the chords come.
-    public static func voicings(of chords: [Chord], as style: KeysVoicing, octave: Int = rootOctave) -> [[Int]] {
+    /// The pitches each chord is played on, low to high, in the order the chords come — each one
+    /// turned by its lift when it has one (`lifts`, by the chord's place; missing is none).
+    ///
+    /// A lift turns its own chord and no other: the next is led from where the voicing put the
+    /// one before, not from where it was turned to. So one chord lifted stands out of the line,
+    /// and every chord lifted alike is the whole line an inversion up — not a climb, each chord
+    /// one more inversion above the last.
+    public static func voicings(of chords: [Chord], as style: KeysVoicing, octave: Int = rootOctave,
+                                lifts: [Int] = []) -> [[Int]] {
         var out: [[Int]] = []
         var previous: [Int]?
-        for chord in chords {
+        for (index, chord) in chords.enumerated() {
+            let lift = index < lifts.count ? lifts[index] : 0
             let voiced: [Int]
             switch style {
             case .close:
-                voiced = chord.pitches(octave: octave).map(\.midi)
+                voiced = lifted(chord.pitches(octave: octave).map(\.midi), by: lift)
             case .led:
-                voiced = nearest(tones(of: chord, keepingRoot: true, atMost: 5), to: previous, in: ledRange, home: ledHome,
-                                 root: chord.root.rawValue)
-                previous = voiced
+                let placed = nearest(tones(of: chord, keepingRoot: true, atMost: 5), to: previous, in: ledRange, home: ledHome,
+                                     root: chord.root.rawValue)
+                previous = placed
+                voiced = lifted(placed, by: lift)
             case .rootless:
                 let upper = tones(of: chord, keepingRoot: !hasUpperStructure(chord), atMost: 4)
-                voiced = nearest(upper, to: previous, in: upperRange, home: upperHome, root: chord.root.rawValue)
-                previous = voiced
+                let placed = nearest(upper, to: previous, in: upperRange, home: upperHome, root: chord.root.rawValue)
+                previous = placed
+                voiced = lifted(placed, by: lift)
             case .spread:
                 let root = lowRange.first { ($0 % 12 + 12) % 12 == chord.root.rawValue } ?? 48
                 var low = [root]
@@ -186,11 +274,33 @@ extension Voicing {
                 let above = nearest(upper, to: previous, in: max(upperRange.lowerBound, (low.last ?? root) + 2)...upperRange.upperBound,
                                     home: upperHome, root: chord.root.rawValue)
                 previous = above
-                voiced = low + above
+                // Turned, a spread keeps its feet: the hand above them is what moves.
+                voiced = low + lifted(above, by: lift)
             }
             out.append(voiced)
         }
         return out
+    }
+
+    /// The chords of these spans, voiced, each turned by its own lift.
+    public static func voicings(of spans: [ChordSpan], as style: KeysVoicing, octave: Int = rootOctave) -> [[Int]] {
+        voicings(of: spans.map(\.chord), as: style, octave: octave, lifts: spans.map { $0.lift ?? 0 })
+    }
+
+    /// A voiced chord turned `steps` inversions: up, its lowest note an octave up, as many times;
+    /// down, its highest an octave down. A hand turning the Orchid's dial, one note at a time, so
+    /// a chord of four notes turned four steps is the same chord an octave higher.
+    public static func lifted(_ pitches: [Int], by steps: Int) -> [Int] {
+        guard steps != 0, !pitches.isEmpty else { return pitches }
+        var turned = pitches.sorted()
+        for _ in 0..<abs(steps) {
+            if steps > 0 {
+                turned.append(turned.removeFirst() + 12)
+            } else {
+                turned.insert(turned.removeLast() - 12, at: 0)
+            }
+        }
+        return turned
     }
 
     /// Whether a chord has enough above its root to be played without it: a third and a seventh,
@@ -297,7 +407,7 @@ extension Voicing {
     static func strikes(of pattern: KeysPattern, beats: Int) -> (bars: Int, strikes: [Strike]) {
         let each = (0..<max(1, beats)).map(Double.init)
         switch pattern {
-        case .held, .arpeggio:
+        case .held, .arpeggio, .arpeggioUp, .arpeggioWide, .rolling:
             return (1, [])
         case .quarters:
             return (1, each.map { Strike(beat: $0, length: 0.8, accent: $0 == 0 ? 4 : Int($0) * 2 == beats ? 2 : -4) })
@@ -345,23 +455,52 @@ extension Voicing {
                              velocity: Int = velocity, hold: Double = hold) -> [NoteEvent] {
         let spans = progression.bars.flatMap(\.chords).filter { $0.beats > 0 }
         guard !spans.isEmpty else { return [] }
-        let voiced = voicings(of: spans.map(\.chord), as: playing.keysVoicing, octave: octave)
+        let voiced = voicings(of: spans, as: playing.keysVoicing, octave: octave)
         var starts: [Double] = []
         var beat = 0.0
         for span in spans { starts.append(beat); beat += span.beats }
         let total = beat
         let pattern = playing.keysPattern
         var jitter = Jitter(seed: playing.seed)
-        func struck(_ pitches: [Int], at start: Double, for length: Double, accent: Int) -> [NoteEvent] {
+        let roll = playing.keysRoll
+        var strikeIndex: UInt64 = 0
+        // One strike: its notes let go of the hand as the roll says — a single note is a single
+        // note — and the whole of it off the grid when the hand is loose. Each note held to where
+        // the strike would have been let go, so a strum does not ring past the chord.
+        func struck(_ pitches: [Int], at start: Double, for length: Double, accent: Int, opens: Bool = false) -> [NoteEvent] {
             let hard = max(1, min(127, velocity + accent + jitter.next()))
-            return pitches.map { NoteEvent(pitch: Pitch(midi: $0), start: start, duration: max(0.05, length), velocity: hard) }
+            strikeIndex &+= 1
+            let at = playing.isSloppy ? max(0, start + slop(seed: playing.seed, strike: strikeIndex)) : start
+            let laid = rolled(pitches, roll: pitches.count > 1 ? roll : .together, opens: opens,
+                              upstroke: start.truncatingRemainder(dividingBy: 1) >= 0.25)
+            return laid.map { note in
+                NoteEvent(pitch: Pitch(midi: note.pitch), start: at + note.offset,
+                          duration: max(0.05, length - note.offset), velocity: hard)
+            }
         }
 
         var out: [NoteEvent] = []
         switch pattern {
         case .held:
             for (index, span) in spans.enumerated() {
-                out += struck(voiced[index], at: starts[index], for: max(0.01, span.beats * hold), accent: 0)
+                out += struck(voiced[index], at: starts[index], for: max(0.01, span.beats * hold), accent: 0, opens: true)
+            }
+        case .arpeggioUp, .arpeggioWide, .rolling:
+            // Upward, from the bottom again at the top: a note every half-beat; the chord and its
+            // octave a note every quarter-beat; or the chord's notes once a beat each, as many to
+            // the beat as it has. Begun again on every change, each ringing into the next.
+            for (index, span) in spans.enumerated() {
+                let pitches = voiced[index].sorted()
+                guard !pitches.isEmpty else { continue }
+                let run = pattern == .arpeggioWide ? pitches + pitches.map { $0 + 12 } : pitches
+                let step = pattern == .arpeggioUp ? 0.5 : pattern == .arpeggioWide ? 0.25 : 1 / Double(pitches.count)
+                var count = 0
+                while Double(count) * step < span.beats - 1e-9 {
+                    let at = Double(count) * step
+                    let accent = count == 0 ? 4 : count % run.count == 0 ? -2 : -6
+                    out += struck([run[count % run.count]], at: starts[index] + at, for: min(step * 1.9, span.beats - at), accent: accent)
+                    count += 1
+                }
             }
         case .arpeggio:
             // A note every half-beat from the bottom of the chord to the top and back, begun again
@@ -385,6 +524,8 @@ extension Voicing {
             let figure = strikes(of: pattern, beats: beats)
             let cycle = Double(figure.bars * beats)
             var from = 0.0
+            // The chord the last strike played: the first strike of each chord is where a harp runs.
+            var lastStruck: Int?
             while from < total - 1e-9 {
                 for strike in figure.strikes {
                     let at = from + strike.beat
@@ -408,7 +549,8 @@ extension Voicing {
                         let fifth = spans[index].chord.intervals.contains(7) ? root + 7 : root
                         chosen = [fifth - 12 >= lowRange.lowerBound ? fifth - 12 : fifth]
                     }
-                    out += struck(chosen, at: at, for: length, accent: strike.accent)
+                    out += struck(chosen, at: at, for: length, accent: strike.accent, opens: lastStruck != index)
+                    lastStruck = index
                 }
                 from += cycle
             }
@@ -416,14 +558,41 @@ extension Voicing {
         return out.sorted { $0.start != $1.start ? $0.start < $1.start : $0.pitch.midi < $1.pitch.midi }
     }
 
+    /// The notes of one strike and how long after it each leaves the hand, in beats. Together, all
+    /// at once, as they came. Strummed, low to high a twenty-fourth of a beat apart, or high to low
+    /// on an off-beat — the upstroke. A harp, on a strike that opens a chord, runs the chord and the
+    /// chord an octave up from the bottom a twelfth of a beat apart, and strums the strikes after.
+    public static func rolled(_ pitches: [Int], roll: KeysRoll, opens: Bool, upstroke: Bool) -> [(pitch: Int, offset: Double)] {
+        let sorted = pitches.sorted()
+        switch roll {
+        case .together:
+            return pitches.map { ($0, 0) }
+        case .strum:
+            let order = upstroke ? Array(sorted.reversed()) : sorted
+            return order.enumerated().map { ($1, Double($0) * KeysRoll.strumStep) }
+        case .harp:
+            guard opens else { return rolled(pitches, roll: .strum, opens: false, upstroke: upstroke) }
+            let run = sorted + sorted.map { $0 + 12 }.filter { $0 <= 96 }
+            return run.enumerated().map { ($1, Double($0) * KeysRoll.harpStep) }
+        }
+    }
+
+    /// How far a loose hand lands a strike from the grid, in beats: from a thirtieth of a beat
+    /// early to a twentieth late, leaning late as a relaxed hand does, a different distance each
+    /// strike and the same every time for one seed.
+    static func slop(seed: UInt64, strike: UInt64) -> Double {
+        let unit = Double(SeededRandom.value(seed: seed ^ 0x5_1097, strike) >> 11) / Double(UInt64(1) << 53)
+        return -1.0 / 30 + unit * (1.0 / 30 + 1.0 / 20)
+    }
+
     /// The top note of each chord as it is voiced: the line a listener hears the chords as.
     public static func topLine(of progression: Progression, as style: KeysVoicing) -> [Int] {
-        voicings(of: progression.bars.flatMap(\.chords).map(\.chord), as: style).compactMap(\.last)
+        voicings(of: progression.spans, as: style).compactMap(\.last)
     }
 
     /// How far the voices move from chord to chord, in semitones a voice a change, as voiced.
     public static func movement(of progression: Progression, as style: KeysVoicing) -> Double {
-        let voiced = voicings(of: progression.bars.flatMap(\.chords).map(\.chord), as: style)
+        let voiced = voicings(of: progression.spans, as: style)
         var moved = 0.0, counted = 0
         for (before, after) in zip(voiced, voiced.dropFirst()) {
             let a = before.sorted(by: >), b = after.sorted(by: >)

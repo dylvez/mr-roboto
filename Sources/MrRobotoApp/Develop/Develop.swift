@@ -808,13 +808,15 @@ public enum Develop {
     static func chordsTreatment(for role: SectionRole, playing: ChordPlaying?, lifted: KeysPattern?,
                                 instrument: InstrumentVoiceSpec?) -> ChordPlaying? {
         let written = playing ?? ChordPlaying()
+        // The hand stays the hand: a strum or a harp, and a loose one, whatever the rhythm becomes.
         switch role {
         case .intro, .breakdown, .outro:
             guard written.keysPattern != .held else { return nil }
-            return ChordPlaying(.held, written.keysVoicing)
+            return ChordPlaying(.held, written.keysVoicing, seed: written.isSloppy ? written.seed : 0,
+                                roll: written.keysRoll, slop: written.isSloppy)
         case .hook, .drop:
             guard written.keysPattern == .held, let lifted, lifted.suits(instrument ?? .rhodes) else { return nil }
-            return ChordPlaying(lifted, written.keysVoicing, seed: 0x4B45_5953)
+            return ChordPlaying(lifted, written.keysVoicing, seed: 0x4B45_5953, roll: written.keysRoll, slop: written.isSloppy)
         default:
             return nil
         }

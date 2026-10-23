@@ -19,6 +19,10 @@ public struct PlayChordsTool: DirectorTool {
         public var seed: Int
         /// A section's id or name for its chords played this way there alone. Nil or empty is everywhere.
         public var section: String?
+        /// How each strike leaves the hand: "together", "strum", "harp". Nil is together.
+        public var roll: String?
+        /// Each strike a little off the grid, as a loose hand plays. Nil is on the grid.
+        public var slop: Bool?
     }
 
     public struct Output: Encodable, Sendable {
@@ -61,7 +65,9 @@ public struct PlayChordsTool: DirectorTool {
         + "states which chords; this is the player's half, kept on the progression as its next version. Patterns: "
         + KeysPattern.allCases.map { "\($0.rawValue) (\($0.about))" }.joined(separator: "; ")
         + ". Voicings: " + KeysVoicing.allCases.map { "\($0.rawValue) (\($0.about))" }.joined(separator: "; ")
-        + ". Use it when the user asks for stabs, a comp, an arpeggio, a strum, voice-leading, smoother chords, or chords that "
+        + ". Rolls: " + KeysRoll.allCases.map { "\($0.rawValue) (\($0.about))" }.joined(separator: "; ")
+        + ". Slop lands each strike a little off the grid, as a loose hand plays."
+        + " Use it when the user asks for stabs, a comp, an arpeggio, a strum, voice-leading, smoother chords, or chords that "
         + "move less; and after set_progression when the genre has a way of playing its chords. With section empty the "
         + "chords are played this way wherever they play; with a section named — \"stabs in the hook, held in the verse\" — "
         + "only there, the chords that section plays kept and played this way, the rest of the song as it was."
@@ -74,7 +80,10 @@ public struct PlayChordsTool: DirectorTool {
             ("seed", Schema.integer("0 for a hand nobody chose; the seed a result gave, to play it the same way again.", minimum: 0)),
             ("section", Schema.string("Empty for everywhere the chords play. A section's id or name — \"hook\", \"Verse 2\" — for its "
                                       + "chords played this way there alone; of several with one name, all of them.")),
-        ], required: ["progression", "pattern", "voicing", "seed", "section"])
+            ("roll", Schema.string("How each strike's notes leave the hand: together unless asked for a strum or a harp.",
+                                   enum: KeysRoll.allCases.map(\.rawValue))),
+            ("slop", Schema.boolean("True for each strike a little off the grid, as a loose hand plays; false on the grid.")),
+        ], required: ["progression", "pattern", "voicing", "seed", "section", "roll", "slop"])
     }
 
     public func run(_ input: Input) async throws -> Output {
@@ -108,8 +117,10 @@ public struct PlayChordsTool: DirectorTool {
             throw DirectorToolFailure(tool: name, reason: "\(PartLabel.title(of: version)) is a \(version.type.rawValue), not chords.",
                                       suggestion: "Name a progression, or leave it empty for the song's newest.")
         }
+        let roll = input.roll.flatMap { KeysRoll(rawValue: $0.trimmingCharacters(in: .whitespaces).lowercased()) } ?? .together
+        let slop = input.slop ?? false
         let seed: UInt64 = input.seed > 0 ? UInt64(input.seed) : GrooveFeel.freshSeed()
-        let playing = ChordPlaying(pattern, voicing, seed: pattern == .held ? 0 : seed)
+        let playing = ChordPlaying(pattern, voicing, seed: pattern == .held && !slop ? 0 : seed, roll: roll, slop: slop)
         progression.playing = playing.isPlain ? nil : playing
 
         var spelled = progression.symbols()

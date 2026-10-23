@@ -101,6 +101,31 @@ struct ChordsPlayingSurfaceTests {
         #expect(model.patternCaution == nil)
     }
 
+    @Test("strummed or harped, loose or not, is kept with the chords, heard at once, and stepped back through")
+    func rollAndSlop() async throws {
+        let host = PlayingHost()
+        let model = model(host)
+        model.setRoll(.strum)
+        #expect(model.progression?.playing == ChordPlaying(.held, .close, roll: .strum))
+        #expect(model.chordContext.roll == .strum, "a chord key on the sheet strums as its chords do")
+        model.setSlop(true)
+        let playing = try #require(model.progression?.playing)
+        #expect(playing.isSloppy && playing.seed != 0, "a hand of its own the first time it is loose")
+        #expect(model.keepNow())
+        guard case .progression(let kept) = try #require(host.kept.last).kind else { Issue.record("not chords"); return }
+        #expect(kept.playing == playing)
+        #expect(host.kept.last?.note?.hasSuffix(": held, close, strummed, loose") == true, "\(host.kept.last?.note ?? "")")
+        for _ in 0..<20 where host.heard.isEmpty { await Task.yield() }
+        #expect(host.heard.last?.playing?.keysRoll == .strum)
+        model.undo()
+        #expect(!model.isSloppy && model.roll == .strum)
+        model.undo()
+        #expect(model.roll == .together && model.progression?.playing == nil, "together and on the grid is nothing said")
+        // A way of breaking the chord is a pattern like any other.
+        model.setPattern(.rolling)
+        #expect(model.pattern == .rolling && model.pattern.isBroken)
+    }
+
     @Test("chords kept with a playing open as they were played")
     func opens() {
         var sheet = try! Progression.parse("Am7 | Fmaj7", key: Key(parsing: "A minor")!).get()
@@ -162,6 +187,25 @@ struct PlayChordsToolTests {
         let seed = try #require(out["seed"] as? Int)
         let again = await WritingFixture.run(rig.box, "play_chords", #"{"progression":"","pattern":"arpeggio","voicing":"led","seed":\#(seed)}"#)
         #expect(WritingFixture.json(again)["seed"] as? Int == seed)
+    }
+
+    @Test("a strum, a harp and a loose hand are the band's to ask for too, and a call without them is together and on the grid")
+    func rollsForTheBand() async throws {
+        let rig = await rig()
+        defer { rig.clean() }
+        let strummed = await WritingFixture.run(rig.box, "play_chords",
+                                                #"{"progression":"","pattern":"eighths","voicing":"close","seed":5,"section":"","roll":"strum","slop":true}"#)
+        #expect(!strummed.isError, "\(strummed.content)")
+        #expect(sheet(rig)?.playing == ChordPlaying(.eighths, .close, seed: 5, roll: .strum, slop: true))
+        let rolling = await WritingFixture.run(rig.box, "play_chords",
+                                               #"{"progression":"","pattern":"rolling","voicing":"led","seed":5,"section":"","roll":"together","slop":false}"#)
+        #expect(!rolling.isError, "\(rolling.content)")
+        #expect(sheet(rig)?.playing == ChordPlaying(.rolling, .led, seed: 5))
+        _ = await WritingFixture.run(rig.box, "play_chords", #"{"progression":"","pattern":"held","voicing":"close","seed":0}"#)
+        #expect(sheet(rig)?.playing == nil, "held and close, together, on the grid: plain")
+        let schema = PlayChordsTool(workspace: AppStateWorkspace(rig.app)).schema
+        let required = schema["required"]?.arrayValue?.compactMap(\.stringValue) ?? []
+        #expect(required.contains("roll") && required.contains("slop"), "required, so the toolbox's optional count stands")
     }
 
     @Test("new chords keep the player they had")
