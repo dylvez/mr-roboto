@@ -50,7 +50,7 @@ final class BoothAdapter: BoothHosting, TakesHosting {
         // was started from a section, the recorder is handed a transport whose zero is the song's
         // top, so the take's alignment is a song time and lands on the bar it was sung on.
         let offset = app.playbackStartBar != 0 ? app.clock.seconds(forBar: app.playbackStartBar) : 0
-        return try await Self.recorder(on: engine, uid: device?.uid, channel: choice.channel(on: device),
+        return try await Self.recorder(on: engine, device: device?.id, channel: choice.channel(on: device),
                                        deviceName: device?.name ?? "Input", songOffset: offset)
     }
 
@@ -62,14 +62,15 @@ final class BoothAdapter: BoothHosting, TakesHosting {
     }
 
     @AudioActor
-    private static func recorder(on engine: Engine, uid: String?, channel: Int?, deviceName: String,
+    private static func recorder(on engine: Engine, device: AudioDeviceID?, channel: Int?, deviceName: String,
                                  songOffset: Double = 0) throws -> Recorder {
         guard let transport = engine.transport else { throw RecorderError.notRecording }
-        // The chosen device on the input node; a device that cannot be set leaves the default, and the take says which.
-        var name = deviceName
-        do { try engine.setInputDevice(uid: uid) } catch { name = "Input" }
-        return Recorder(source: InputNodeSource(engine: engine.avEngine, channel: channel, deviceName: name),
-                        transport: Self.shifted(transport, by: songOffset))
+        // The chosen device, listened to on an engine of its own; a device that cannot be opened
+        // leaves the default, and the take says which.
+        let latency = engine.avEngine.outputNode.presentationLatency
+        let source = try (try? InputNodeSource(device: device, channel: channel, deviceName: deviceName, outputLatency: latency))
+            ?? InputNodeSource(deviceName: "Input", outputLatency: latency)
+        return Recorder(source: source, transport: Self.shifted(transport, by: songOffset))
     }
 
     /// The same transport with its zero `seconds` earlier, so a time read against it is a song

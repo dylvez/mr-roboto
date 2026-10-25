@@ -1,4 +1,5 @@
 import AVFAudio
+import CoreAudio
 import Foundation
 
 // M5 R2: the input side of the engine.
@@ -27,9 +28,13 @@ public protocol RecordingSource: AnyObject {
     func end()
 }
 
-/// The engine's input node, tapped — the whole device, or one of its channels as mono.
+/// A device's input on an engine of its own, tapped — the whole device, or one of its channels as mono.
+///
+/// Not the playback engine's input node: on the Mac that node is the output's audio unit too, and
+/// a device with no outputs set on it silenced the song (see `AudioDevices.point`). This engine only
+/// listens, so any device will do, and its buffers carry host times the song's clock reads.
 public final class InputNodeSource: RecordingSource {
-    private let engine: AVAudioEngine
+    private let engine = AVAudioEngine()
     private let tapFormat: AVAudioFormat
     public let format: AVAudioFormat
     public let name: String
@@ -38,24 +43,29 @@ public final class InputNodeSource: RecordingSource {
     public let channel: Int?
 
     /// - Parameters:
-    ///   - engine: whose input node.
+    ///   - device: the device listened to; nil is the system's default input.
     ///   - channel: one channel, 0-based, delivered as mono; nil keeps the device's format.
     ///   - deviceName: what the take's record says, e.g. "Scarlett 2i2".
-    public init(engine: AVAudioEngine, channel: Int? = nil, deviceName: String = "Input") {
-        self.engine = engine
+    ///   - outputLatency: the playback engine's output delay — the song reaches the singer that late.
+    public init(device: AudioDeviceID? = nil, channel: Int? = nil, deviceName: String = "Input", outputLatency: Double = 0) throws {
+        guard let id = device ?? AudioDevices.defaultInputID() else { throw RecorderError.noInput }
+        try AudioDevices.point(engine, at: id)
         let input = engine.inputNode
-        let tap = input.outputFormat(forBus: 0)
+        // The device's own rate and channels. The node's output side keeps the format of the
+        // device it had before, and a tap at another rate is never called.
+        let hardware = input.inputFormat(forBus: 0)
+        guard hardware.sampleRate > 0, hardware.channelCount > 0,
+              let tap = AVAudioFormat(standardFormatWithSampleRate: hardware.sampleRate, channels: hardware.channelCount) else { throw RecorderError.noInput }
         tapFormat = tap
         var picked: Int?
         if let channel, tap.channelCount > 1, channel < Int(tap.channelCount) { picked = channel }
         self.channel = picked
         format = picked == nil ? tap : (AVAudioFormat(standardFormatWithSampleRate: tap.sampleRate, channels: 1) ?? tap)
         name = picked.map { "\(deviceName), input \($0 + 1)" } ?? deviceName
-        latencySeconds = input.presentationLatency + engine.outputNode.presentationLatency
+        latencySeconds = input.presentationLatency + outputLatency
     }
 
     public func begin(_ sink: @escaping @Sendable (AVAudioPCMBuffer, AVAudioTime) -> Void) throws {
-        guard tapFormat.sampleRate > 0, tapFormat.channelCount > 0 else { throw RecorderError.noInput }
         let channel = self.channel
         let mono = format
         engine.inputNode.installTap(onBus: 0, bufferSize: 1_024, format: tapFormat) { buffer, time in
@@ -65,10 +75,18 @@ public final class InputNodeSource: RecordingSource {
                 sink(buffer, time)
             }
         }
+        engine.prepare()
+        do {
+            try engine.start()
+        } catch {
+            engine.inputNode.removeTap(onBus: 0)
+            throw RecorderError.inputUnavailable("\(error)")
+        }
     }
 
     public func end() {
         engine.inputNode.removeTap(onBus: 0)
+        engine.stop()
     }
 }
 
@@ -136,10 +154,12 @@ public enum RecorderError: Error, CustomStringConvertible {
     case alreadyRecording
     case notRecording
     case unwritable(String)
+    case inputUnavailable(String)
 
     public var description: String {
         switch self {
         case .noInput: return "There is no input to record from."
+        case .inputUnavailable(let why): return "The input could not be opened: \(why)"
         case .alreadyRecording: return "Already recording."
         case .notRecording: return "Nothing is being recorded."
         case .unwritable(let why): return "The take could not be written: \(why)"

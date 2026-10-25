@@ -158,9 +158,9 @@ public final class LiveTransportHost: TransportHost {
         // song. Running out is not silent but it is fatal to the part: `LiveSongPlayer` throws
         // rather than dropping it.
         let engine = try await Engine(playerCount: SongPlayback.playerNodes)
-        // The remembered input device, before the engine runs: the input node's device is best set while it is stopped.
-        let uid = InputSettings().choice.deviceUID
-        if uid != nil { try? await engine.setInputDevice(uid: uid) }
+        // No input device is set here: the Booth listens on an engine of its own. The remembered
+        // one, set on this engine's input, took its output away — a USB mic has no outputs — and
+        // the song could not start again until the app was quit.
         built = engine
         return engine
     }

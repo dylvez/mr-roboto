@@ -74,14 +74,16 @@ public enum AudioDevices {
     }
 }
 
-extension Engine {
-    /// Points the input node at a device by UID. Takes effect for the next tap; the engine is
-    /// best stopped when it changes. Nil goes back to the system default.
-    public func setInputDevice(uid: String?) throws {
-        guard let unit = avEngine.inputNode.audioUnit else { throw EngineError.formatMismatch("the input node has no audio unit") }
-        var id: AudioDeviceID = uid.flatMap { AudioDevices.input(uid: $0)?.id } ?? AudioDevices.defaultInputID() ?? 0
-        guard id != 0 else { throw RecorderError.noInput }
+extension AudioDevices {
+    /// Points a listening engine's input node at a device, before the engine starts.
+    ///
+    /// Only an engine that never touches its output node. On the Mac the input and output nodes are
+    /// one audio unit, so a device with no outputs — a USB mic, the MacBook's own microphone — set
+    /// on the playback engine took its output with it, and every play after failed with -10875.
+    static func point(_ engine: AVAudioEngine, at id: AudioDeviceID) throws {
+        guard let unit = engine.inputNode.audioUnit else { throw RecorderError.inputUnavailable("the input node has no audio unit") }
+        var id = id
         let status = AudioUnitSetProperty(unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &id, UInt32(MemoryLayout<AudioDeviceID>.size))
-        guard status == noErr else { throw EngineError.formatMismatch("could not set the input device (\(status))") }
+        guard status == noErr else { throw RecorderError.inputUnavailable("the device could not be set (\(status))") }
     }
 }

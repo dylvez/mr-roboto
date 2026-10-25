@@ -1,4 +1,5 @@
 import AVFAudio
+import CoreAudio
 import Foundation
 import Testing
 
@@ -69,6 +70,62 @@ struct InputDevicesTests {
         let right = try #require(ChannelPick.mono(buffer, channel: 1, format: mono))
         #expect(right.floatChannelData![0][10] == 0)
         #expect(ChannelPick.mono(buffer, channel: 2, format: mono) == nil)
+    }
+
+    /// Whether this Mac has a default output to play through and an input to listen to.
+    private static var hasDevices: Bool {
+        var address = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDefaultOutputDevice, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
+        var id: AudioDeviceID = 0
+        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        let output = AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &id) == noErr && id != 0
+        return output && !AudioDevices.inputs().isEmpty
+    }
+
+    /// What a source delivered, from the tap's thread.
+    private final class Heard: @unchecked Sendable {
+        private let lock = NSLock()
+        private var buffers = 0
+        private var untimed = 0
+        private var formats: Set<String> = []
+        func add(_ buffer: AVAudioPCMBuffer, _ time: AVAudioTime) {
+            lock.withLock {
+                buffers += 1
+                if !time.isHostTimeValid { untimed += 1 }
+                formats.insert("\(buffer.format.sampleRate)/\(buffer.format.channelCount)")
+            }
+        }
+        var read: (buffers: Int, untimed: Int, formats: Set<String>) { lock.withLock { (buffers, untimed, formats) } }
+    }
+
+    // A USB mic and the MacBook's own microphone have no outputs. Set on the playback engine's
+    // input node — one audio unit with its output on the Mac — either left the song unable to
+    // start again: -10875, IsFormatSampleRateAndChannelCountValid(outputHWFormat).
+    @Test("a take on any input here leaves the song playing and able to start again",
+          .enabled(if: InputDevicesTests.hasDevices))
+    @AudioActor
+    func listeningLeavesPlayback() async throws {
+        let engine = try Engine(playerCount: 1)
+        try engine.start()
+        for device in AudioDevices.inputs() {
+            let source = try InputNodeSource(device: device.id, deviceName: device.name,
+                                             outputLatency: engine.avEngine.outputNode.presentationLatency)
+            #expect(source.format.sampleRate > 0 && Int(source.format.channelCount) == device.inputChannels, "\(device.name): \(source.format)")
+            let heard = Heard()
+            try source.begin { buffer, time in heard.add(buffer, time) }
+            try await Task.sleep(for: .milliseconds(400))
+            source.end()
+            let read = heard.read
+            #expect(read.buffers > 0, "\(device.name): nothing came in")
+            #expect(read.untimed == 0, "\(device.name): buffers with no host time")
+            #expect(read.formats == ["\(source.format.sampleRate)/\(source.format.channelCount)"], "\(device.name): \(read.formats)")
+            #expect(engine.isRunning, "\(device.name) stopped the song")
+        }
+        // A second Play.
+        engine.stop()
+        try engine.start()
+        #expect(engine.isRunning)
+        #expect(engine.avEngine.outputNode.outputFormat(forBus: 0).sampleRate > 0)
+        engine.stop()
     }
 
     @Test("the devices CoreAudio reports: every one has inputs, at most one is the default, a bogus UID is nobody")
