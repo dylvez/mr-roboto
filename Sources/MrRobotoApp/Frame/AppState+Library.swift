@@ -15,45 +15,15 @@ public enum LibraryDrop: Sendable, Equatable {
     case section(SectionID)
 }
 
-/// M3's library: ideas kept, samples saved, records flipped again, albums sequenced, and library
-/// rows adopted into the open song.
+/// M3's library: samples saved, records flipped again, albums sequenced, and library rows adopted
+/// into the open song. A part kept as an idea is a package of its own now
+/// (`AppState+IdeasFromElsewhere.swift`).
 ///
 /// Two rules hold throughout. A library-level change writes `library.json` alone
-/// (`LibraryStore.saveDocument`), never the song packages, so keeping an idea cannot write a stale
+/// (`LibraryStore.saveDocument`), never the song packages, so saving a sample cannot write a stale
 /// copy of the song you have open. And adopting copies media *into* the song's package, so a song
 /// still opens with the idea or the sample gone from the library.
 extension AppState {
-
-    // MARK: Ideas
-
-    /// Copies a version of the open song into the library as an idea: the same music under a fresh
-    /// id with no parents, and its media in the library's `ideas/`, so it outlives the song.
-    @discardableResult
-    public func keepAsIdea(_ id: VersionID) -> VersionID? {
-        guard let song, let version = song.version(id) else {
-            note(.session, "Nothing to keep", detail: "That version is not in the open song.")
-            return nil
-        }
-        guard let store else {
-            note(.session, "Nowhere to keep an idea", detail: "This session has no library directory.")
-            return nil
-        }
-        do {
-            try copyMedia(of: version, from: song.id, into: .idea, store: store)
-        } catch {
-            note(.session, "Could not copy the idea's audio into the library", detail: "\(error)")
-            return nil
-        }
-        var provenance = "\(PartLabel.title(of: version)) from \(song.title)"
-        if let text = version.note, !text.isEmpty { provenance += " — \(text)" }
-        let idea = PartVersion(partID: PartID(), kind: version.kind, author: version.author,
-                               operation: version.operation, note: provenance)
-        var updated = library
-        updated.ideas.append(idea)
-        guard writeLibrary(updated) else { return nil }
-        note(.you, "Kept \(PartLabel.title(of: version)) as an idea", detail: provenance)
-        return idea.id
-    }
 
     // MARK: Samples
 
@@ -111,6 +81,9 @@ extension AppState {
             openAlbum(AlbumID(rawValue: payload.id))
             return nil
         case .idea:
+            if let idea = library.ideaSongs.first(where: { $0.id.rawValue == payload.id }) {
+                return adopt(idea: idea, into: song, joiningForm: joiningForm)
+            }
             guard let idea = library.ideas.first(where: { $0.id.rawValue == payload.id }) else {
                 note(.session, "That idea is not in the library any more")
                 return nil
@@ -294,16 +267,24 @@ extension AppState {
     public func libraryAudio(id: String) throws -> (url: URL, media: MediaRef)? {
         guard let store else { return nil }
         let media: MediaRef?
+        var package: SongID?
         if let record = library.records.first(where: { $0.id.description.caseInsensitiveCompare(id) == .orderedSame }) {
             media = record.media
         } else if let idea = library.ideas.first(where: { $0.id.description.caseInsensitiveCompare(id) == .orderedSame }),
                   case .audio(let audio) = idea.kind {
             media = audio.media
+        } else if let idea = library.ideaSongs.first(where: { $0.id.description.caseInsensitiveCompare(id) == .orderedSame }) {
+            // An idea of its own: the audio it holds — its capture, or its newest take.
+            media = idea.seeds.lazy.compactMap { seed -> MediaRef? in
+                if case .hummedTake(let media) = seed.kind { return media }
+                return nil
+            }.first ?? idea.versions.last { $0.type == .audio }.flatMap { Guidance.audio(of: $0)?.media }
+            package = idea.id
         } else {
             media = nil
         }
         guard let media else { return nil }
-        return (try store.mediaURL(for: media), media)
+        return (try store.mediaURL(for: media, song: package), media)
     }
 
     /// The name on the sleeve. An album used to carry the artist it was created with for good.
@@ -649,15 +630,46 @@ extension AppState {
         }
     }
 
+    /// Brings an idea's parts into the open song as they are, each a new part with its media copied
+    /// in and no key or tempo moved: the band's adopt of an idea. The first one's version comes back.
+    private func adopt(idea: Song, into song: Song, joiningForm: Bool) -> VersionID? {
+        let parts = idea.partIDs.filter { !idea.isAside($0) }.compactMap { idea.latestVersion(of: $0) }.filter(Self.keepsAsIdea)
+        guard !parts.isEmpty else {
+            note(.session, "\(idea.title) has nothing in it to bring in")
+            return nil
+        }
+        // Its audio is in its own package, which a song not saved yet cannot reach.
+        if store != nil, (try? store?.songStore(for: song.id)) == nil { save() }
+        var first: VersionID?
+        for part in parts {
+            var kind = part.kind
+            if case .audio(var audio) = kind {
+                // The idea's one section means nothing here: what was sung is placed from bar 1.
+                audio.take?.section = nil
+                audio.take?.sectionStartBar = nil
+                audio.comp?.section = nil
+                audio.comp?.sectionStartBar = nil
+                kind = .audio(audio)
+            }
+            let version = PartVersion(partID: PartID(), kind: kind, author: part.author, operation: Operation.adopted,
+                                      note: "from idea: \(idea.title)")
+            guard copyMediaIntoPackage(of: version, song: song, from: idea.id), record(version, joiningForm: joiningForm) else { break }
+            first = first ?? version.id
+        }
+        return first
+    }
+
     /// Copies a library item's media into the open song's package, so the song keeps playing with
     /// the library gone. False, with the reason in the rail, when the media cannot be found.
-    private func copyMediaIntoPackage(of version: PartVersion, song: Song) -> Bool {
+    /// - Parameter source: the idea or song whose package holds it, when the library's own folders
+    ///   do not.
+    private func copyMediaIntoPackage(of version: PartVersion, song: Song, from source: SongID? = nil) -> Bool {
         guard !version.mediaReferences.isEmpty else { return true }
         guard let store else { return true }
         do {
             let package = try store.songStore(for: song.id)
             for media in version.mediaReferences where !package.hasMedia(media) {
-                let url = try store.mediaURL(for: media)
+                let url = try store.mediaURL(for: media, song: source)
                 try package.addMedia(copying: url)
             }
             return true

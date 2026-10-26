@@ -272,6 +272,8 @@ public final class CrateWork {
         }
         if let grid = record.grid { reading.append("still read through its correction, \(grid.description)") }
         app.note(.session, "\(record.title) is read", detail: reading.joined(separator: " · "))
+        // A capture from the phone is an idea too, waiting for this to know its tempo.
+        app.readCaptures()
     }
 
     /// Its stems into `records/`, each read for how much of the record it is and where it plays.

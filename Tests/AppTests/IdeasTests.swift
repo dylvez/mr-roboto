@@ -1,4 +1,7 @@
+import AudioEngine
 import Foundation
+import Instrument
+import Analysis
 import MusicTheory
 import SongGraph
 import Testing
@@ -374,5 +377,205 @@ struct IdeaMakingTests {
         #expect(sing?.rationale.contains("the idea grows to hold the take") == true)
         let words = proposals.first { $0.title == "Write the words" }
         #expect(words?.rationale.contains("[Verse]") == false)
+    }
+}
+
+@Suite("Ideas: from elsewhere", .serialized) @MainActor
+struct IdeasFromElsewhereTests {
+
+    /// Six seconds of tone where `name` puts it.
+    private static func tone(_ name: String, in directory: URL, seconds: Double = 6) throws -> URL {
+        let file = directory.appendingPathComponent(name)
+        try BoothAdapter.write([(0..<Int(seconds * 48_000)).map { Float(0.3 * sin(Double($0) * 0.05)) }], sampleRate: 48_000, to: file)
+        return file
+    }
+
+    /// A hum as the crate reads it: 100 bpm in D major, its first downbeat 0.9 s in, after a pickup.
+    private static func pickupReport(path: String, duration: Double) -> AnalysisReport {
+        var report = ImportKeepFixture.report(path: path, duration: duration, bpm: 100)
+        let beats = Array(stride(from: 0.3, to: duration, by: 0.6))
+        report.beats = BeatTrackingResult(beats: beats, downbeats: beats.enumerated().filter { ($0.offset - 1) % 4 == 0 }.map(\.element), bpm: 100)
+        return report
+    }
+
+    @Test("a part kept as an idea is an idea of its own: the song's grid, the longest section it plays in, its machine; the song untouched")
+    func keepPart() throws {
+        let (app, directory, song) = try IdeasFixture.app("keep")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        app.openSong(song.id)
+        let groove = try #require(app.song?.versions.first { $0.type == .groove })
+        #expect(app.setMachine(SynthMachine.tr909.id, for: groove.partID))
+        app.save()
+        let before = try #require(app.song)
+
+        let id = try #require(app.keepAsIdea(groove.id))
+        #expect(app.song == before && !app.hasUnsavedChanges, "the song stays open as it was")
+        let idea = try #require(app.library.song(id))
+        #expect(idea.isIdea && app.library.ideaSongs.map(\.id) == [id] && app.library.songs.map(\.id) == [song.id])
+        #expect(idea.title == "\(PartLabel.title(of: groove)) from Arrival")
+        #expect(idea.tempo == 113 && idea.key == song.key && idea.timeSignature == song.timeSignature && idea.gridChosen == true)
+        #expect(idea.sections.count == 1 && idea.sections[0].lengthInBars == 8, "as long as the verse it plays in")
+        let kept = try #require(idea.versions.first { $0.type == .groove })
+        #expect(kept.kind == groove.kind && kept.partID != groove.partID && kept.parents.isEmpty)
+        #expect(idea.sections[0].stitch.contains(part: kept.partID))
+        #expect(SongPlayback.machineID(for: kept.partID, in: idea) == SynthMachine.tr909.id, "on the machine it played on")
+        let loaded = try LibraryStore(directoryURL: directory).load()
+        #expect(loaded.ideaSongs.map(\.id) == [id] && loaded.songs.map(\.id) == [song.id], "a package of its own on disk")
+        #expect(app.log.last?.text == "Kept \(PartLabel.title(of: groove)) as an idea")
+
+        // A sound is a setting of its song, not an idea.
+        let sound = try #require(app.song?.versions.last { $0.type == .sound })
+        #expect(app.keepAsIdea(sound.id) == nil)
+        #expect(app.library.ideaSongs.count == 1)
+    }
+
+    @Test("a take sung to the hook, kept as an idea, begins on the idea's first bar, its audio in the idea's own package")
+    func keepTake() throws {
+        let (app, directory, song) = try IdeasFixture.app("keep-take")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        app.openSong(song.id)
+        var sections = try #require(app.song?.sections)
+        sections.append(Section(name: "Hook", stitch: [], lengthInBars: 4))
+        app.arrange(sections)
+        app.save()
+        let hook = sections[1].id
+        let media = try #require(app.store).songStore(for: song.id).addMedia(copying: try Self.tone("take.wav", in: directory))
+        // Sung to the hook, which starts on bar 9, after a bar's count-in.
+        let clock = TransportClock(tempo: 113, timeSignature: .fourFour)
+        let take = Take(section: hook, startBar: 8, input: "Mic", pass: 1, sectionStartBar: 8, tempo: 113, meter: .fourFour)
+        let sung = PartVersion(partID: PartID(), kind: .audio(Audio(media: media, role: .take, sampleRate: 48_000, channelCount: 1, duration: 6,
+                                                                   alignmentOffset: clock.seconds(forBar: 7), take: take)),
+                               author: .user, operation: Operation.recorded, note: "Take 1, Hook")
+        #expect(app.record(sung))
+        app.save()
+
+        let id = try #require(app.keepAsIdea(sung.id))
+        let idea = try #require(app.library.song(id))
+        #expect(idea.sections[0].lengthInBars == 4, "as long as the hook it was sung to")
+        let kept = try #require(Guidance.takes(in: idea).first)
+        let placed = TakePlacement.placement(of: try #require(Guidance.audio(of: kept)), in: idea, clock: clock)
+        #expect(abs(placed.take ?? -1) < 1e-9, "the take begins on the idea's first bar")
+        #expect(abs(placed.audio + clock.seconds(forBar: 1)) < 1e-9, "its count-in the bar before")
+        #expect(try app.store!.songStore(for: id).hasMedia(media), "its audio in the idea's own package")
+        app.openSong(id)
+        #expect(app.playback.tracks.contains { $0.version == kept.id && $0.startsAt == 0 })
+    }
+
+    @Test("a capture comes in as an idea waiting for its reading, and takes the crate's: tempo, key, first downbeat on a bar line, the bars that hold it")
+    func captureRead() async throws {
+        let (app, directory, _) = try IdeasFixture.app("capture")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = try Self.tone(CaptureName(section: "Beat", stamp: "20261026-120000").fileName(extension: "wav"), in: directory)
+        app.crate.host = StubImportHost(library: try #require(app.store), report: Self.pickupReport(path: file.path, duration: 6))
+        guard case .idea(let id) = app.importFromInbox(file) else { Issue.record("not an idea"); return }
+        let waiting = try #require(app.library.song(id))
+        #expect(waiting.isIdea && waiting.title == "Beat from the phone" && app.library.ideas.isEmpty)
+        #expect(waiting.captureAwaitingReading != nil && waiting.tempo == Song.startingTempo)
+        #expect(waiting.sections[0].lengthInBars == 3, "six seconds at the starting tempo, until it is read")
+        #expect(LibraryIndex(library: app.library, openSong: nil, sounds: LibrarySounds()).facts(.ideaSong(id))?.tempo == nil,
+                "the shelf shows no tempo it has not read")
+
+        await app.crate.waitUntilIdle()
+        let read = try #require(app.library.song(id))
+        let reading = try #require(app.library.records.first?.reading)
+        #expect(read.captureAwaitingReading == nil && read.gridChosen == true)
+        #expect(read.tempo == ((reading.dominantTempo ?? 0) * 10).rounded() / 10 && abs(read.tempo - 100) < 1)
+        #expect(read.key == reading.dominantKey)
+        #expect(read.versions.contains { $0.type == .analysis })
+        // Placed with its first downbeat on a bar line: the pickup in the bar before.
+        let placed = try #require(read.versions.last { $0.type == .audio })
+        let offset = try #require(Guidance.audio(of: placed)?.alignmentOffset)
+        let bar = 4 * 60 / read.tempo
+        let first = reading.bars.first?.start ?? reading.downbeats.first ?? 0
+        let downbeat = (first + offset) / bar
+        #expect(offset > 0 && abs(downbeat - 1) < 1e-6, "on bar 2: \(downbeat)")
+        #expect(PartLabel.title(of: placed) == "Beat from the phone")
+        #expect(read.sections[0].lengthInBars == Int(((offset + 6) / bar - 0.02).rounded(.up)))
+        #expect(try app.store!.songStore(for: id).load().tempo == read.tempo, "written into its package")
+        #expect(app.log.contains { $0.text.hasPrefix("Beat from the phone is read: ") })
+        #expect(try app.libraryAudio(id: id.description)?.media == Guidance.audio(of: placed)?.media)
+
+        app.openSong(id)
+        #expect(!app.wantsSongSettings, "read, it asks for nothing")
+        #expect(app.playback.tracks.contains { abs($0.startsAt - offset) < 1e-6 })
+    }
+
+    @Test("a capture opened before it is read asks for a tempo and has the crate read it; a tempo set by hand stands over the reading")
+    func captureOpenedEarly() async throws {
+        let (app, directory, _) = try IdeasFixture.app("capture-early")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = try Self.tone(CaptureName(section: "Beat", stamp: "20261026-120100").fileName(extension: "wav"), in: directory)
+        app.crate.host = StubImportHost(library: try #require(app.store), report: Self.pickupReport(path: file.path, duration: 6))
+        guard case .idea(let id) = app.importFromInbox(file) else { Issue.record("not an idea"); return }
+        app.openSong(id)
+        #expect(app.wantsSongSettings, "its settings open for a tempo")
+        #expect(app.log.contains { $0.text == "Beat from the phone has no tempo of its own yet" })
+        #expect(app.crate.finished.isEmpty && app.crate.waiting.isEmpty, "the crate already on it is not asked twice")
+        #expect(app.setTempo(90))
+        #expect(app.song?.captureAwaitingReading == nil)
+        await app.crate.waitUntilIdle()
+        #expect(app.library.records.first?.reading != nil, "the crate reads it all the same")
+        #expect(app.song?.tempo == 90, "the tempo set by hand stands")
+        #expect(app.song?.versions.contains { $0.type == .analysis } == false)
+    }
+
+    @Test("a bare idea opened becomes an idea of its own, once: its audio copied in, a capture read from the crate at once, a written part as long as it is")
+    func bareIdeas() throws {
+        let (app, directory, _) = try IdeasFixture.app("bare")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = try #require(app.store)
+        let record = try LibraryFixture.record("Beat from the phone", in: directory, store: store)
+        try store.addMedia(copying: store.mediaURL(for: record.media), kind: .idea)
+        let info = try AudioFileInfo.read(store.mediaURL(for: record.media))
+        let capture = PartVersion(partID: PartID(), kind: .audio(Audio(media: record.media, role: .take, sampleRate: info.sampleRate,
+                                                                       channelCount: info.channelCount, duration: info.duration)),
+                                  author: .user, operation: Operation.recorded,
+                                  note: "Beat from the phone: capture roboto-capture----Beat--1--x.m4a, from the inbox")
+        let groove = TransportFixture.grooveVersion()
+        var library = app.library
+        library.records = [record]
+        library.ideas = [capture, groove]
+        #expect(app.writeLibrary(library))
+        #expect(LibraryActions.primary(for: .idea(capture.id), in: app)?.id == "open", "a double-click opens it")
+
+        let id = try #require(app.openBareIdea(capture.id))
+        let idea = try #require(app.song)
+        #expect(idea.id == id && idea.isIdea && idea.title == "Beat from the phone")
+        #expect(app.library.ideas.map(\.id) == [groove.id] && app.library.ideaSongs.map(\.id) == [id])
+        #expect(LibraryIndex(library: app.library, openSong: app.song, sounds: LibrarySounds()).items(on: .ideas).count == 2,
+                "listed once, beside the other bare idea")
+        #expect(try store.songStore(for: id).hasMedia(record.media))
+        let tempo = ((record.reading?.dominantTempo ?? 0) * 10).rounded() / 10
+        #expect(idea.captureAwaitingReading == nil && idea.tempo == tempo, "read at once from what the crate has")
+        #expect(!app.wantsSongSettings)
+        #expect(app.log.contains { $0.text == "Beat from the phone is an idea of its own now" })
+
+        let written = try #require(app.openBareIdea(groove.id))
+        let grooveIdea = try #require(app.song)
+        #expect(grooveIdea.id == written && app.library.ideas.isEmpty && app.library.ideaSongs.count == 2)
+        #expect(grooveIdea.tempo == Song.startingTempo && grooveIdea.captureAwaitingReading == nil)
+        #expect(grooveIdea.sections[0].lengthInBars == grooveIdea.bars(holding: grooveIdea.versions[0]))
+        let later = try LibraryStore(directoryURL: directory).load()
+        #expect(later.ideas.isEmpty && later.ideaSongs.count == 2, "each listed once in a fresh session")
+    }
+
+    @Test("the band lists an idea of its own with its grid, and brings it into a song as it is")
+    func band() async throws {
+        let (app, directory, song) = try IdeasFixture.app("band")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        app.openSong(song.id)
+        let groove = try #require(app.song?.versions.first { $0.type == .groove })
+        let id = try #require(app.keepAsIdea(groove.id))
+        let listed = try await ReadLibraryTool(workspace: AppStateWorkspace(app)).run(.init(shelf: "ideas"))
+        let row = try #require(listed.ideas.first { $0.id == id.description })
+        #expect(row.title == "\(PartLabel.title(of: groove)) from Arrival" && row.type == "groove")
+        #expect(row.tempo == 113 && row.bars == 8 && row.key == song.key.map { "\($0)" })
+
+        app.open(Song.new(title: "Second", tempo: 90))
+        let input = try JSONDecoder().decode(AdoptTool.Input.self, from: Data(#"{"kind":"idea","id":"\#(id.description)","stem":"","bars":[]}"#.utf8))
+        let adopted = try await AdoptTool(workspace: AppStateWorkspace(app)).run(input)
+        let version = try #require(app.song?.versions.first { $0.id.description == adopted.version })
+        #expect(version.kind == groove.kind && version.operation == Operation.adopted)
+        #expect(app.song?.versions.count == 1)
     }
 }

@@ -13,8 +13,8 @@ extension AppState {
         case take(VersionID)
         /// A take on a song in the library that is not open, saved into its package.
         case takeInLibrary(SongID, VersionID)
-        /// An idea in the library.
-        case idea(VersionID)
+        /// An idea of its own on the Ideas shelf.
+        case idea(SongID)
         case failed(String)
     }
 
@@ -118,27 +118,31 @@ extension AppState {
         }
     }
 
+    /// An idea of its own (`AppState.captureIdea`), opened later as a song is. Its tempo, key and
+    /// bars wait for the crate, which reads it as a record is read.
     private func ideaFromInbox(_ url: URL, info: AudioFileInfo, name: CaptureName, store: LibraryStore) -> InboxOutcome {
-        let media: MediaRef
-        do { media = try store.addMedia(copying: url, kind: .idea) } catch { return .failed("Could not copy the capture into the library: \(error)") }
-        let audio = Audio(media: media, role: .take, sampleRate: info.sampleRate, channelCount: info.channelCount, duration: info.duration)
+        let data: Data
+        do { data = try Data(contentsOf: url) } catch { return .failed("\(url.lastPathComponent) could not be read: \(error)") }
+        let media = MediaRef(hash: ContentHash(of: data), fileExtension: url.pathExtension)
         // Its name is what the phone was told it was for — "Beat" — and the rest is provenance:
         // the note's first clause is the title the shelf and the band read (`PartLabel`).
         let called = "\(name.section ?? "Idea") from the phone"
         var provenance = "\(called): capture \(url.lastPathComponent), from the inbox"
         if let title = name.song { provenance += " — for \(title), which the library does not hold" }
-        let idea = PartVersion(partID: PartID(), kind: .audio(audio), author: .user, operation: Operation.recorded, note: provenance)
-        var updated = library
-        updated.ideas.append(idea)
-        guard writeLibrary(updated) else { return .failed("The library would not take the idea.") }
+        let idea = Self.captureIdea(title: called, media: media, sampleRate: info.sampleRate, channelCount: info.channelCount,
+                                    duration: info.duration, note: provenance)
+        guard keepIdeaPackage(idea, mediaFrom: nil, files: [media: url]) else { return .failed("The library would not take the idea.") }
         // And read as a record is read — tempo, key, bars — in the crate, where the band's tools can
-        // chop it and lay it along a song. The idea keeps its shelf; the reading has the same audio,
-        // so each finds the other by it. The band asked for a file path to a hum it could already see.
-        if let kept = try? store.mediaURL(for: media) {
+        // chop it and lay it along a song, and the idea takes its grid from the reading. The two
+        // have the same audio, so each finds the other by it. The band asked for a file path to a
+        // hum it could already see.
+        if let kept = try? store.mediaURL(for: media, song: idea.id) {
             crate.enqueue(CrateJob(kind: .bring, file: kept, title: called, separating: false))
         }
         note(.session, "\(url.lastPathComponent) came in as an idea",
-             detail: "\(called). It is read next in the crate, for its tempo and key, so the band can build on it.")
+             detail: "\(called), on the Ideas shelf to open. It is read next in the crate, and the idea takes its tempo, key and bars from that.")
+        // The same audio may have been read already.
+        readCaptures()
         return .idea(idea.id)
     }
 

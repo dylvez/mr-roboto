@@ -144,7 +144,8 @@ struct LibraryActionTests {
         let (app, shelf) = LibraryBrowserFixture.app()
         #expect(ids(LibraryActions.actions(for: .song(shelf.nightBus.id), in: app)) == ["open", "rename", "duplicate", "album", "finder", "favourite", "tag", "trash"])
         #expect(ids(LibraryActions.actions(for: .album(shelf.album.id), in: app)) == ["open", "rename", "favourite", "tag", "delete"])
-        #expect(ids(LibraryActions.actions(for: .idea(shelf.idea.id), in: app)) == ["adopt", "favourite", "tag", "remove"])
+        #expect(ids(LibraryActions.actions(for: .idea(shelf.idea.id), in: app)) == ["open", "adopt", "favourite", "tag", "remove"],
+                "a bare idea opens by becoming an idea of its own")
         #expect(ids(LibraryActions.actions(for: .sample(shelf.chop.id), in: app)) == ["adopt", "favourite", "tag", "remove"])
         #expect(ids(LibraryActions.actions(for: .record(shelf.drifter.id), in: app))
                 == ["start", "add", "adopt", "separate", "read", "grid", "rename", "favourite", "tag", "remove"])
@@ -164,10 +165,10 @@ struct LibraryActionTests {
         #expect(action("album", .song(shelf.nightBus.id))?.isEnabled == false, "it is on the only album")
         #expect(action("album", .song(shelf.river.id))?.isEnabled == true)
         #expect(LibraryActions.primary(for: .record(shelf.drifter.id), in: app)?.id == "start")
-        #expect(LibraryActions.primary(for: .idea(shelf.idea.id), in: app) == nil)
+        #expect(LibraryActions.primary(for: .idea(shelf.idea.id), in: app) == nil, "no library to make it an idea in, no song to adopt it into")
 
         let (open, other) = LibraryBrowserFixture.app(open: { $0.cafe })
-        #expect(LibraryActions.actions(for: .idea(other.idea.id), in: open).first?.isEnabled == true)
+        #expect(LibraryActions.actions(for: .idea(other.idea.id), in: open).first { $0.id == "adopt" }?.isEnabled == true)
         #expect(LibraryActions.primary(for: .record(other.drifter.id), in: open)?.id == "add")
         #expect(LibraryActions.primary(for: .song(other.river.id), in: open)?.id == "open")
     }

@@ -382,11 +382,18 @@ public struct LibraryIndex: Sendable {
         }
         let records = Self.unique(uses.map(\.record))
         if song.isIdea {
-            // What an idea is, is what it holds: "Take 2, Chords".
+            // What an idea is, is what it holds: "Take 2, Chords". Not its reading or its sounds.
             let parts = song.partIDs.filter { !song.isAside($0) }.compactMap { song.latestVersion(of: $0) }
+                .filter(AppState.keepsAsIdea)
             facts.isIdeaSong = true
             facts.kind = parts.first?.type
             facts.note = parts.isEmpty ? "Nothing in it yet" : parts.map(PartLabel.title(of:)).joined(separator: ", ")
+            // A capture not read yet has the starting tempo only as a stand-in.
+            if song.captureAwaitingReading != nil {
+                facts.tempo = nil
+                facts.seconds = nil
+                facts.note = (facts.note ?? "") + " · its tempo still to be read"
+            }
         }
         facts.searchText = Self.searchText(facts, extra: [])
         return SongReading(facts: facts, records: records, uses: uses, holds: Self.unique(holds))

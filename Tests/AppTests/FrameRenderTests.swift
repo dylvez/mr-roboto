@@ -353,6 +353,27 @@ struct FrameRenderTests {
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-idea-booth")
     }
 
+    @Test("ideas from elsewhere: a part kept from a song, a capture waiting for its reading, and a bare idea chosen, with Open")
+    func ideasFromElsewhere() throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        let (app, directory, song) = try IdeasFixture.app("render-elsewhere")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        app.openSong(song.id)
+        let groove = try #require(app.song?.versions.first { $0.type == .groove })
+        #expect(app.keepAsIdea(groove.id) != nil)
+        let file = directory.appendingPathComponent(CaptureName(section: "Beat", stamp: "20261026-120000").fileName(extension: "wav"))
+        try BoothAdapter.write([(0..<288_000).map { Float(0.3 * sin(Double($0) * 0.05)) }], sampleRate: 48_000, to: file)
+        guard case .idea = app.importFromInbox(file) else { Issue.record("not an idea"); return }
+        let bare = try LibraryFixture.bareIdea(groove.id, app: app)
+        let model = LibraryBrowserModel(app: app, memory: .inMemory())
+        model.choose(.ideas)
+        model.select(.idea(bare))
+        let library = LibrarySurfaceView(model: model).background(Design.Palette.panel)
+        try write(library, size: CGSize(width: 1240, height: 720), name: "library-ideas-elsewhere")
+        try writeDark(library, size: CGSize(width: 1240, height: 720), name: "library-ideas-elsewhere-dark")
+    }
+
     @Test("the Merge surface on a chop and a bass line in different keys")
     func merge() throws {
         FontRegistration.registerBundledFonts()

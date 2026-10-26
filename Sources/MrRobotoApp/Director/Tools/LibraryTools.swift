@@ -155,8 +155,9 @@ public struct ReadLibraryTool: DirectorTool {
 
     public let name = "read_library"
     public var purpose: String {
-        "Read the library: ideas (parts kept with no song; an audio idea is a capture from the phone, with its seconds "
-        + "and — once the crate has read it — its tempo, key, bars and read_as, the record it was read as), "
+        "Read the library: ideas (a few bars with no song around them, each with its tempo, key, bars and what it holds; "
+        + "an audio idea is a capture from the phone, with its seconds and read_as, the record the crate read it as, "
+        + "and its tempo and bars once that reading is done), "
         + "records (the crate: each record read for its key, "
         + "tempo and bars, and its stems kept with it, each with how much of the record it is and the bar it "
         + "comes in at), samples (chops saved with their slices and chain), albums and songs — each with its "
@@ -261,7 +262,21 @@ public struct ReadLibraryTool: DirectorTool {
             guard let id, let record = library.record(id) else { return nil }
             return record.artist.isEmpty ? record.title : "\(record.artist) – \(record.title)"
         }
-        let ideas = search.pick(library.ideas, on: .ideas, index: index, id: \.id.rawValue).map { idea -> Output.Idea in
+        // Ideas of their own — parts kept out of songs, captures from the phone — after the bare
+        // ones kept before ideas could be opened, so the newest come last.
+        let packages = search.pick(library.ideaSongs, on: .ideas, index: index, id: \.id.rawValue).map { idea -> Output.Idea in
+            let parts = idea.partIDs.filter { !idea.isAside($0) }.compactMap { idea.latestVersion(of: $0) }.filter(AppState.keepsAsIdea)
+            let audio = parts.lazy.compactMap { Guidance.audio(of: $0) }.first
+            let waiting = idea.captureAwaitingReading != nil
+            return Output.Idea(id: idea.id.description, title: idea.title, type: parts.first?.type.rawValue ?? "idea",
+                               key: idea.key.map { "\($0)" },
+                               note: parts.isEmpty ? "Nothing in it yet" : parts.map(PartLabel.title(of:)).joined(separator: ", "),
+                               seconds: audio.map { ($0.duration * 10).rounded() / 10 },
+                               tempo: waiting ? nil : (idea.tempo * 10).rounded() / 10,
+                               bars: waiting ? nil : idea.sections.first?.lengthInBars,
+                               readAs: audio.flatMap { library.record(forMedia: $0.media) }?.id.description, fit: nil)
+        }
+        let bare = search.pick(library.ideas, on: .ideas, index: index, id: \.id.rawValue).map { idea -> Output.Idea in
             var key = ReadSongTool.key(of: idea).map { "\($0)" }
             var seconds: Double?, tempo: Double?, bars: Int?, readAs: String?
             // An audio idea is read in the crate under the same audio: its tempo and key are there.
@@ -280,6 +295,7 @@ public struct ReadLibraryTool: DirectorTool {
                                key: key, note: idea.note, seconds: seconds, tempo: tempo, bars: bars, readAs: readAs,
                                fit: Self.fitLine(index.facts(.idea(idea.id))?.fit, into: index.fitTarget))
         }
+        let ideas = bare + packages
         var records: [Output.RecordEntry] = []
         for record in search.pick(library.records, on: .records, index: index, id: \.id.rawValue) {
             var key: Key?, tempo: Double?, bars: Int?

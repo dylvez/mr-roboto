@@ -758,6 +758,7 @@ public final class AppState {
         restoreRail(for: song)
         note(source, "Opened \(song.title)", detail: provenanceSummary(of: song))
         if let opening = Guidance.opening(song) { perform(opening) }
+        if song.captureAwaitingReading != nil { captureOpened() }
     }
 
     /// Closes the open song: saved if it needs it, the bench cleared, nothing in the frame. File ▸

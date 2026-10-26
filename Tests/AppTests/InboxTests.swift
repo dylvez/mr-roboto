@@ -7,6 +7,7 @@ import Testing
 @testable import MrRobotoApp
 
 // M5 R11: a file in the inbox becomes an idea, or a take when its name says which song and section.
+// An idea is one of its own (ideas-first Phase 3): a package on the Ideas shelf, opened as a song is.
 
 @Suite("Inbox: what lands becomes an idea or a take", .serialized) @MainActor
 struct InboxTests {
@@ -43,10 +44,12 @@ struct InboxTests {
         #expect(taken.isEmpty, "the first scan only notes the size")
         watcher.scan()
         #expect(taken.count == 1)
-        #expect(app.library.ideas.count == 1)
-        #expect(Guidance.audio(of: app.library.ideas[0])?.duration == 1)
+        #expect(app.library.ideaSongs.count == 1 && app.library.ideas.isEmpty, "an idea of its own, not a bare part")
+        #expect(Guidance.audio(of: app.library.ideaSongs[0].versions[0])?.duration == 1)
         #expect(FileManager.default.fileExists(atPath: inbox.appendingPathComponent("Done/voice memo.wav").path))
-        #expect(store.hasMedia(Guidance.audio(of: app.library.ideas[0])!.media))
+        #expect(try store.songStore(for: app.library.ideaSongs[0].id).hasMedia(Guidance.audio(of: app.library.ideaSongs[0].versions[0])!.media),
+                "its audio in its own package")
+        #expect(app.song?.title == "Arrival", "the open song stays open")
 
         // A capture named for Arrival's hook is a take on the open song, at the hook's bar.
         let name = CaptureName(song: "Arrival", section: "Hook", pass: nil, stamp: "20260919-211205").fileName(extension: "wav")
@@ -66,7 +69,7 @@ struct InboxTests {
         // A name for a song the library does not hold is an idea that says so.
         try wav(seconds: 1, at: inbox.appendingPathComponent(CaptureName(song: "Nowhere", section: "Verse", stamp: "x").fileName(extension: "wav")))
         watcher.scan(); watcher.scan()
-        #expect(app.library.ideas.count == 2 && app.library.ideas[1].note?.contains("does not hold") == true)
+        #expect(app.library.ideaSongs.count == 2 && app.library.ideaSongs[1].versions[0].note?.contains("does not hold") == true)
         #expect(app.log.contains { $0.text.contains("came in as Take 1") })
 
         // An idea is named for what the phone was told it was for, not "Record"; and it is read in
@@ -74,11 +77,13 @@ struct InboxTests {
         // Longer than the memo: the same audio would be one record in the crate, not two.
         try wav(seconds: 1.5, at: inbox.appendingPathComponent(CaptureName(section: "Beat", stamp: "20261010-133529").fileName(extension: "wav")))
         watcher.scan(); watcher.scan()
-        #expect(app.library.ideas.count == 3)
-        #expect(PartLabel.title(of: app.library.ideas[0]) == "Idea from the phone", "a memo with no name")
-        #expect(PartLabel.title(of: app.library.ideas[2]) == "Beat from the phone")
+        #expect(app.library.ideaSongs.count == 3)
+        #expect(app.library.ideaSongs[0].title == "Idea from the phone", "a memo with no name")
+        #expect(app.library.ideaSongs[2].title == "Beat from the phone")
+        #expect(PartLabel.title(of: app.library.ideaSongs[2].versions[0]) == "Beat from the phone")
+        #expect(app.library.ideaSongs[2].captureAwaitingReading != nil, "its tempo waits for the crate")
         await app.crate.waitUntilIdle()
-        let beat = try #require(Guidance.audio(of: app.library.ideas[2]))
+        let beat = try #require(Guidance.audio(of: app.library.ideaSongs[2].versions[0]))
         let read = try #require(app.library.record(forMedia: beat.media), "the crate holds the same audio as a record")
         #expect(read.title == "Beat from the phone")
         let listed = try await ReadLibraryTool(workspace: AppStateWorkspace(app)).run(.init(shelf: "ideas"))

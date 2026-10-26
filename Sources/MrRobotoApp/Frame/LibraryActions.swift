@@ -287,6 +287,9 @@ enum LibraryActions {
         guard let idea = app.library.ideas.first(where: { $0.id == id }) else { return [] }
         let title = PartLabel.title(of: idea)
         return [
+            LibraryAction(id: "open", title: "Open",
+                          help: "Kept before ideas could be opened: opening makes it an idea of its own, with a tempo, a key and bars, worked on as a song is.",
+                          isEnabled: app.store != nil, kind: .run { _ = app.openBareIdea(id) }),
             adopt(LibraryDragPayload(kind: .idea, id: id.rawValue, title: title), app),
             LibraryAction(id: "remove", title: "Remove from Library…", isDestructive: true, group: 2,
                           kind: .confirm(question: "Remove the idea “\(title)” from the library?",

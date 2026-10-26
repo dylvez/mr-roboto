@@ -1,3 +1,4 @@
+import AudioEngine
 import Foundation
 import MusicTheory
 import SongGraph
@@ -42,7 +43,16 @@ extension Song {
         case .groove(let groove): return groove.bars
         case .audio(let audio):
             guard tempo > 0, audio.duration > 0 else { return nil }
-            let end = (audio.alignmentOffset ?? 0) + audio.duration
+            // Where it plays now: a take or a comp from the section it was sung to, at the tempo
+            // it was sung at; anything else as the record plays, at its reading's tempo.
+            let end: Double
+            if audio.take != nil || audio.comp != nil {
+                let clock = TransportClock(tempo: tempo, timeSignature: timeSignature)
+                end = TakePlacement.alignment(of: audio, in: self, clock: clock) + TakePlacement.duration(of: audio, in: self)
+            } else {
+                let stretch = SongPlayback.recordStretch(of: version, in: self)
+                end = ((audio.alignmentOffset ?? 0) + audio.duration) * stretch
+            }
             let barSeconds = Double(beatsPerBar) * 60 / tempo
             // A take stopped a hair into the next bar has not sung it.
             return max(1, Int((end / barSeconds - 0.02).rounded(.up)))

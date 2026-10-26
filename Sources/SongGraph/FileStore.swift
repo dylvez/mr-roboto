@@ -399,6 +399,15 @@ public struct LibraryStore: Sendable {
     /// must not write every other package from a copy older than what the frame has saved since.
     @discardableResult
     public func saveSong(_ song: Song) throws -> SongStore {
+        let store = try savePackage(song)
+        try saveDocument(exists ? try loadDocumentOnly() : Library())
+        return store
+    }
+
+    /// One song into its package, as `saveSong` writes it, and `library.json` left alone: for a
+    /// caller that writes the document itself straight after, with its own change in it.
+    @discardableResult
+    public func savePackage(_ song: Song) throws -> SongStore {
         let store: SongStore
         if let found = try? songStore(for: song.id) {
             store = found
@@ -407,7 +416,6 @@ public struct LibraryStore: Sendable {
             store = SongStore(packageURL: directoryURL.appendingPathComponent(freeName(for: song, taken: &taken)))
         }
         try store.save(song)
-        try saveDocument(exists ? try loadDocumentOnly() : Library())
         return store
     }
 

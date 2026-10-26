@@ -139,8 +139,9 @@ struct PartsLedger: View {
                         .help("Out of every section and out of what plays, without deleting it. It waits under Set aside.")
                 }
                 Divider()
-                Button("Keep as idea") { app.keepAsIdea(version.id) }
-                    .disabled(app.store == nil)
+                Button("Keep as Idea") { app.keepAsIdea(version.id) }
+                    .disabled(app.store == nil || !AppState.keepsAsIdea(version))
+                    .help("An idea of its own on the Ideas shelf: this part at the song's tempo and key, to open and work on with no song around it.")
                 if version.type == .sample {
                     Button("Save to Samples") { app.saveToSamples(version.id) }
                         .disabled(app.store == nil)

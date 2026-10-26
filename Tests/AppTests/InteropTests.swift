@@ -131,7 +131,7 @@ struct MasterExportTests {
         try FileManager.default.copyItem(at: result.wav, to: copy)
         let outcome = app.importFromInbox(copy)
         guard case .idea(let id) = outcome else { Issue.record("\(outcome)"); return }
-        #expect(app.library.ideas.contains { $0.id == id })
+        #expect(app.library.ideaSongs.contains { $0.id == id })
     }
 
     @Test("the master as an MP3 is the WAV's print at 320 kbps, tagged from its album with the cover, and the tool writes it too")

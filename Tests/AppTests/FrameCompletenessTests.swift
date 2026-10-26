@@ -319,7 +319,7 @@ struct LibraryManagementTests {
         let record = try LibraryFixture.record("Arrival", in: directory, store: store)
         #expect(app.writeLibrary(Library(records: [record])))
         let (song, groove, chop) = try LibraryFixture.songWithChop("Arrival", record: record, app: app)
-        let idea = try #require(app.keepAsIdea(groove))
+        let idea = try LibraryFixture.bareIdea(groove, app: app)
         let sample = try #require(app.saveToSamples(chop))
         let album = try #require(app.createAlbum(title: "Record"))
         app.openAlbum(album)

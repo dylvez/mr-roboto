@@ -346,9 +346,10 @@ public enum DirectorPrompt {
         regroove_chop when they ask for a beat out of a sample. Then a bass line and chords are \
         write_bassline and set_progression, which need no record either. \
         A capture from the phone with no song named — the rail says it "came in as an idea" — is an \
-        audio idea on the ideas shelf, titled for what the user called it ("Beat from the phone"), \
-        and its audio is read in the crate as a record is: read_library lists it with its seconds \
-        and, once read, its tempo, key, bars and read_as, the record it was read as. "This idea", \
+        audio idea on the ideas shelf, an idea of its own titled for what the user called it ("Beat \
+        from the phone"), and its audio is read in the crate as a record is, the idea taking its \
+        tempo, key and bars from that: read_library lists it with its seconds and read_as, the \
+        record it was read as, and once read its tempo, key and bars. "This idea", \
         "my hum", "what I just sent" is the newest of them: read_library, never a file path. A beat \
         from it: start_song at its tempo when no song is open or the open one is at another, adopt \
         it (kind idea, bars empty) so the user's own voice plays along the song, then the rhythm \

@@ -66,13 +66,30 @@ enum LibraryFixture {
         return (song, groove.id, chop.id)
     }
 
+    /// An idea as the library kept one before ideas could be opened: a bare part on the Ideas
+    /// shelf, a copy of a version of the open song, its media in `ideas/`.
+    static func bareIdea(_ id: VersionID, app: AppState) throws -> VersionID {
+        let song = try #require(app.song)
+        let version = try #require(song.version(id))
+        let store = try #require(app.store)
+        for media in version.mediaReferences {
+            try store.addMedia(copying: store.mediaURL(for: media, song: song.id), kind: .idea)
+        }
+        let idea = PartVersion(partID: PartID(), kind: version.kind, author: version.author, operation: version.operation,
+                               note: "\(PartLabel.title(of: version)) from \(song.title)")
+        var library = app.library
+        library.ideas.append(idea)
+        #expect(app.writeLibrary(library))
+        return idea.id
+    }
+
     static func directory(_ label: String) -> URL { GuidanceFixture.temporaryDirectory("library-\(label)") }
 }
 
 @Suite("Library: ideas", .serialized) @MainActor
 struct LibraryIdeaTests {
 
-    @Test("a groove kept as an idea from one song is adopted into another and plays; the origin is untouched")
+    @Test("a groove kept as an idea from one song is an idea of its own, adopted into another and plays; the origin is untouched")
     func keepAndAdopt() throws {
         let directory = LibraryFixture.directory("ideas")
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -82,17 +99,17 @@ struct LibraryIdeaTests {
         let (origin, groove, _) = try LibraryFixture.songWithChop("Arrival", record: record, app: app)
 
         let idea = try #require(app.keepAsIdea(groove))
-        #expect(app.library.ideas.count == 1)
-        #expect(app.library.ideas[0].id == idea)
-        #expect(app.library.ideas[0].note?.contains("from Arrival") == true)
-        #expect(app.library.ideas[0].kind == origin.version(groove)?.kind)
+        #expect(app.library.ideaSongs.map(\.id) == [idea] && app.library.ideas.isEmpty)
+        let kept = try #require(app.library.song(idea))
+        #expect(kept.title.hasSuffix("from Arrival"))
+        #expect(kept.versions.contains { $0.kind == origin.version(groove)?.kind })
         #expect(app.song?.versions.count == origin.versions.count, "keeping versions nothing in the song")
         #expect(!app.hasUnsavedChanges, "a library write does not dirty the song")
 
         // A fresh session sees it, and the song it came from is exactly as it was on disk.
         let later = LibraryFixture.app(directory)
         later.reloadLibrary()
-        #expect(later.library.ideas.count == 1)
+        #expect(later.library.ideaSongs.count == 1)
         #expect(later.library.song(origin.id)?.versions.count == origin.versions.count)
 
         // Adopted into another song: a new version of a new part, operation adopted, and it plays.
@@ -314,7 +331,7 @@ struct LibraryDropTests {
         let record = try LibraryFixture.record("Arrival", in: directory, store: store)
         #expect(app.writeLibrary(Library(records: [record])))
         let (first, groove, chop) = try LibraryFixture.songWithChop("First", record: record, app: app)
-        let idea = try #require(app.keepAsIdea(groove))
+        let idea = try LibraryFixture.bareIdea(groove, app: app)
         let sample = try #require(app.saveToSamples(chop))
         // A dry chop too, which is adopted but never stitched.
         let dry = PartVersion(partID: PartID(), kind: .sample(Sample(media: record.media, slices: [], detectedTempo: 92)),
