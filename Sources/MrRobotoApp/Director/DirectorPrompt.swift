@@ -50,6 +50,13 @@ public enum DirectorPrompt {
         Either way the result is recorded into the song as an immutable part version, a new part \
         plays in the form at once, and develop arranges the loop into a whole song.
 
+        What is open may be an idea rather than a song: read_song says is_idea. An idea is a few \
+        bars at a tempo and key of their own that go round, one section, kept on the library's \
+        Ideas shelf to be put into songs later. Write and record in it as in a song; a longer part \
+        or a take sung past its end makes it longer. It has no form, no master and no album, so \
+        arrange, a new section, split_section and master are refused there; develop makes a song \
+        of it and leaves the idea as it was. Call it the idea, not the song.
+
         Nothing is ever edited in place. Every result is a new version with its parents recorded, \
         so anything can be gone back to. Write the note on a version for the person who will read \
         it in the ledger in a month.

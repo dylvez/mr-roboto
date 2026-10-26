@@ -15,7 +15,8 @@ struct BoothSurfaceView: View {
         VStack(alignment: .leading, spacing: 10) {
             header
             recordRow
-            sectionRow
+            // An idea is one section: there is nothing to pick.
+            if !model.isIdea { sectionRow }
             settingsRow
             // The panes take what the controls leave, and each scrolls inside itself: at the
             // bench's minimum that is about two hundred points, and a lyric or an evening's takes
@@ -127,6 +128,7 @@ struct BoothSurfaceView: View {
     private var recordHelp: String {
         if model.isPlaying { return "Starts a take now, over the song as it plays. Press R." }
         let counted = model.countInBars == 0 ? "" : " after \(model.countInBars) bar\(model.countInBars == 1 ? "" : "s") of click"
+        if model.isIdea { return "Starts the idea and the take with it\(counted). Sing as long as you like: the idea goes round under you and grows to hold the take. Press R." }
         return "Starts the song at the section and the take with it\(counted). Press R."
     }
 
@@ -168,18 +170,21 @@ struct BoothSurfaceView: View {
                 .font(Design.Typography.ui(12))
                 .frame(height: Design.Metric.chipHeight)
                 .help("Keeps the click going through the whole take, not just the count-in.")
-            Toggle("Punch out", isOn: $model.punchesOut)
-                .toggleStyle(.checkbox)
-                .tint(Design.Palette.accent)
-                .font(Design.Typography.ui(12))
-                .frame(height: Design.Metric.chipHeight)
-                .help("Stops the take by itself on the section's last bar.")
-            Toggle("Keep going", isOn: $model.keepsGoing)
-                .toggleStyle(.checkbox)
-                .tint(Design.Palette.accent)
-                .font(Design.Typography.ui(12))
-                .frame(height: Design.Metric.chipHeight)
-                .help("At the section's end the take is kept and the song starts again from the section, counted in: every pass is a take, to comp from. Stop ends it.")
+            // In an idea a take runs until Stop and the idea grows to it: no end to punch out at.
+            if !model.isIdea {
+                Toggle("Punch out", isOn: $model.punchesOut)
+                    .toggleStyle(.checkbox)
+                    .tint(Design.Palette.accent)
+                    .font(Design.Typography.ui(12))
+                    .frame(height: Design.Metric.chipHeight)
+                    .help("Stops the take by itself on the section's last bar.")
+                Toggle("Keep going", isOn: $model.keepsGoing)
+                    .toggleStyle(.checkbox)
+                    .tint(Design.Palette.accent)
+                    .font(Design.Typography.ui(12))
+                    .frame(height: Design.Metric.chipHeight)
+                    .help("At the section's end the take is kept and the song starts again from the section, counted in: every pass is a take, to comp from. Stop ends it.")
+            }
             inputPicker
                 .frame(height: Design.Metric.chipHeight)
             if model.input.isFallingBack(in: model.inputs) {
@@ -278,7 +283,7 @@ struct BoothSurfaceView: View {
                 .groupedArea()
             } else {
                 EmptyNote(title: "No words yet.",
-                          detail: "Words are written on the Lyrics surface (⌘9). The song's newest lyric shows here while you sing.")
+                          detail: "Words are written on the Lyrics surface (⌘9). The \(model.isIdea ? "idea's" : "song's") newest lyric shows here while you sing.")
                 Spacer(minLength: 0)
             }
         }
@@ -319,11 +324,13 @@ struct BoothSurfaceView: View {
     }
 
     private var sectionName: String {
+        if model.isIdea { return "The idea's" }
         guard let id = model.section, let section = model.sections.first(where: { $0.id == id }) else { return "Whole-song" }
         return section.name
     }
 
     private var sectionPhrase: String {
+        if model.isIdea { return "the idea" }
         guard let id = model.section, let section = model.sections.first(where: { $0.id == id }) else { return "the whole song" }
         return "the \(section.name)"
     }

@@ -91,8 +91,10 @@ enum CommandPalette {
                            shortcut: "⇧⌘,", detail: "Title, tempo, key, meter and the brief",
                            keywords: "rename tempo key meter bpm", isEnabled: hasSong,
                            run: { app.wantsSongSettings = true }),
-            PaletteCommand(id: "song.develop", title: "Develop the Song", shelf: .song, symbol: "wand.and.stars",
-                           shortcut: "⇧⌘D", detail: "The loop arranged into sections, each played its own way",
+            PaletteCommand(id: "song.develop", title: app.song?.isIdea == true ? "Develop into a Song" : "Develop the Song",
+                           shelf: .song, symbol: "wand.and.stars", shortcut: "⇧⌘D",
+                           detail: app.song?.isIdea == true ? "A song made of the idea, its loop arranged into sections; the idea stays as it was"
+                                                            : "The loop arranged into sections, each played its own way",
                            keywords: "arrange form structure",
                            isEnabled: app.canDevelop && !app.isDeveloping && !app.isMastering,
                            run: { Task { await app.developAndMaster() } }),

@@ -191,6 +191,7 @@ public struct ArrangeTool: DirectorTool {
         guard let song = await workspace.song else {
             throw DirectorToolFailure(tool: name, reason: "No song is open to arrange.")
         }
+        if song.isIdea { throw DirectorToolFailure.inAnIdea(name, has: "no form to arrange") }
         let parsed = try Self.parse(input.form, tool: name)
         let stitch = FormTools.defaultStitch(in: song)
         guard !stitch.isEmpty || song.sections.contains(where: { !$0.stitch.isEmpty }) else {
@@ -345,6 +346,8 @@ public struct StitchSectionTool: DirectorTool {
         let trimmed = input.name.trimmingCharacters(in: .whitespacesAndNewlines)
         let standing = input.section.trimmingCharacters(in: .whitespacesAndNewlines)
         if !standing.isEmpty { return try await restitch(standing, named: trimmed, input: input, in: song) }
+        // Its one section can be stitched again, by id; another cannot be added.
+        if song.isIdea { throw DirectorToolFailure.inAnIdea(name, has: "no second section to add") }
         guard !trimmed.isEmpty else {
             throw DirectorToolFailure(tool: name, reason: "A section with no name is a block nobody can point at.")
         }
@@ -437,6 +440,7 @@ public struct SplitSectionTool: DirectorTool {
         guard let song = await workspace.song else {
             throw DirectorToolFailure(tool: name, reason: "No song is open.")
         }
+        if song.isIdea { throw DirectorToolFailure.inAnIdea(name, has: "no form to cut a section of") }
         let asked = input.section.trimmingCharacters(in: .whitespacesAndNewlines)
         let named = song.sections.filter { $0.name.caseInsensitiveCompare(asked) == .orderedSame }
         guard let section = song.sections.first(where: { $0.id.description == asked }) ?? (named.count == 1 ? named.first : nil) else {

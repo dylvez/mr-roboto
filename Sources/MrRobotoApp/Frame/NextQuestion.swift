@@ -65,11 +65,12 @@ public enum NextMove: Equatable, Sendable {
     /// band costs a request, and sending is yours.
     case askBand(String)
 
-    /// Whether the move means anything with an idea open: an idea is not developed into a form,
-    /// put on an album or mastered, and it has no form for Structure to arrange.
+    /// Whether the move means anything with an idea open: an idea is not put on an album or
+    /// mastered, and it has no form for Structure to arrange or to put back. Developing one makes a
+    /// song of it.
     var worksInIdeas: Bool {
         switch self {
-        case .develop, .putBackDevelopment, .addToAlbum, .exportMaster: return false
+        case .putBackDevelopment, .addToAlbum, .exportMaster: return false
         case .surface(let action): return action.surface.worksInIdeas
         default: return true
         }
@@ -362,11 +363,14 @@ enum NextAdvisor {
             let parts = Develop.loop(of: song).count
             if parts >= 2 {
                 let seconds = StructureModel.seconds(bars: development.bars, tempo: song.tempo, timeSignature: song.timeSignature)
+                let rationale = song.isIdea
+                    ? "\(Guidance.count(parts, "part")) go round in the idea. A song made of it would be \(development.shape), "
+                        + "\(StructureModel.clock(seconds)), in \(development.form.words); the idea stays as it was."
+                    : "Every section plays the same \(Guidance.count(parts, "part")). This is \(development.shape), "
+                        + "\(StructureModel.clock(seconds)), in \(development.form.words), each section playing the loop its own way."
                 candidates.append(Candidate(option: NextOption(
-                    kind: "develop", title: "Develop it into a song",
-                    rationale: "Every section plays the same \(Guidance.count(parts, "part")). This is \(development.shape), "
-                        + "\(StructureModel.clock(seconds)), in \(development.form.words), each section playing the loop its own way.",
-                    move: .develop), score: parts >= 3 ? 7 : 4.5))
+                    kind: "develop", title: song.isIdea ? "Make a song of it" : "Develop it into a song",
+                    rationale: rationale, move: .develop), score: parts >= 3 ? 7 : 4.5))
             }
         }
         if !fromTheBand, app.canPutBackDevelopment, !app.isDeveloping, !app.isMastering {

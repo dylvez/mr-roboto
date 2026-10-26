@@ -110,6 +110,15 @@ public struct AnyDirectorTool: Sendable {
 /// A tool failure is not an app failure: it goes back to the model as a `tool_result` with
 /// `is_error`, and the model tries something else. So the message is written for a reader, not
 /// for a log.
+extension DirectorToolFailure {
+    /// A tool about a song's form or its master, asked while an idea is open: one section that goes
+    /// round, with nothing of the kind. Developing it makes a song that has.
+    static func inAnIdea(_ tool: String, has what: String) -> DirectorToolFailure {
+        DirectorToolFailure(tool: tool, reason: "This is an idea, not a song: one section that goes round, with \(what).",
+                            suggestion: "develop makes a song of it, with a form and a master of its own; the idea stays as it was.")
+    }
+}
+
 public struct DirectorToolFailure: Error, Equatable, Sendable, CustomStringConvertible {
     public var tool: String
     public var reason: String

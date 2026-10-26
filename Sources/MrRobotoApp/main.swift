@@ -95,9 +95,12 @@ struct FrameCommands: Commands {
                 .disabled(app.song == nil)
             // The loop arranged into a song: what the Structure surface's chip and the band's
             // question offer, from anywhere.
-            Button(app.isMastering ? "Reading the Master…" : "Develop the Song") { Task { await app.developAndMaster() } }
+            // In an idea, a song is made of it and that is developed; the idea stays as it was.
+            Button(app.isMastering ? "Reading the Master…" : (app.song?.isIdea == true ? "Develop into a Song" : "Develop the Song")) {
+                Task { await app.developAndMaster() }
+            }
                 .keyboardShortcut("d", modifiers: [.command, .shift])
-                .disabled(!app.canDevelop || app.isDeveloping || app.isMastering || app.song?.isIdea == true)
+                .disabled(!app.canDevelop || app.isDeveloping || app.isMastering)
             Button("Put the Song Back as It Was") { app.putBackDevelopment() }
                 .disabled(!app.canPutBackDevelopment || app.isDeveloping || app.isMastering)
             Divider()

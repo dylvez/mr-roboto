@@ -24,6 +24,8 @@ public struct ReadSongTool: DirectorTool {
         /// The part the band reads as the song's tune, and whether somebody marked it so —
         /// mark_tune, write_melody, develop — or the band took the newest line that is not chords.
         public var tune: Tune?
+        /// True when what is open is an idea, not a song (`Song.idea`); left out for a song.
+        public var isIdea: Bool?
         public var note: String?
 
         public struct Tune: Encodable, Sendable {
@@ -98,6 +100,7 @@ public struct ReadSongTool: DirectorTool {
         enum CodingKeys: String, CodingKey {
             case title, artist, tempo, key, sections, versions, tune, note
             case isOpen = "is_open"
+            case isIdea = "is_idea"
             case timeSignature = "time_signature"
             case lengthInBars = "length_in_bars"
         }
@@ -171,7 +174,17 @@ public struct ReadSongTool: DirectorTool {
                       tune: SongTune.version(in: song).map {
                           Output.Tune(part: $0.partID.description, title: PartLabel.title(of: $0), marked: SongTune.marked(in: song) != nil)
                       },
-                      note: nil)
+                      isIdea: song.isIdea ? true : nil,
+                      note: song.isIdea ? Self.ideaNote(song) : nil)
+    }
+
+    /// What an idea is, said where the band reads the song.
+    static func ideaNote(_ idea: Song) -> String {
+        let bars = idea.sections.first?.lengthInBars ?? 0
+        return "This is an idea, not a song: \(Guidance.count(bars, "bar")) at \(Int(idea.tempo.rounded())) bpm that go round, "
+            + "kept on the library's Ideas shelf to be put into songs later. Write and record in it as in a song; "
+            + "a part longer than the idea, or a take sung past its end, makes it longer. It has no form to arrange, "
+            + "no master and no album: develop makes a song of it, with all of those, and leaves the idea as it was."
     }
 }
 

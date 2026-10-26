@@ -63,6 +63,17 @@ extension AppState {
             note(.session, "No song open; nothing to develop")
             return nil
         }
+        // An idea is not developed in place: a song is made of it, and that is developed. The idea
+        // keeps its one section and stays on its shelf.
+        if song.isIdea {
+            guard canDevelop else {
+                note(.session, "Nothing in \(song.title) plays yet",
+                     detail: "Paint a groove, write a bass line or set the chords; then there is a loop to make a song of.")
+                return nil
+            }
+            guard songFromIdea(song.id) != nil, self.song?.isIdea == false else { return nil }
+            return develop(form: form, by: source, author: author)
+        }
         guard let development = development(form: form, by: author) else {
             note(.session, "Nothing in \(song.title) plays yet",
                  detail: "Paint a groove, write a bass line or set the chords; then there is a loop to develop.")

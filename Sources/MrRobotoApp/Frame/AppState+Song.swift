@@ -226,7 +226,21 @@ extension AppState {
     /// A copy of a song under a new id: the same versions, sections, seeds and cast, its media
     /// copied into the new package, and the copy opened. The original is untouched.
     @discardableResult
-    public func duplicateSong(_ id: SongID) -> SongID? {
+    public func duplicateSong(_ id: SongID) -> SongID? { copySong(id, asSong: false) }
+
+    /// A song made of an idea: the idea's parts, its tempo, key and meter and its one section, in a
+    /// package of its own and opened — no longer an idea, so it can be developed, arranged and
+    /// mastered. The idea is left as it was, on its shelf.
+    @discardableResult
+    public func songFromIdea(_ id: SongID) -> SongID? {
+        guard (song?.id == id ? song : library.song(id))?.isIdea == true else { return nil }
+        return copySong(id, asSong: true)
+    }
+
+    /// Copies a song or an idea into a new package and opens the copy. `asSong` makes an idea's copy
+    /// a song under the idea's own title, with a song's fills; otherwise it is "<title> copy", as
+    /// it was.
+    private func copySong(_ id: SongID, asSong: Bool) -> SongID? {
         guard libraryIsWritable else {
             note(.session, "The library could not be read, so nothing is added to it")
             return nil
@@ -241,7 +255,7 @@ extension AppState {
             note(.session, "That song is not in the library")
             return nil
         }
-        var copy = Song(title: "\(original.title) copy", artist: original.artist, key: original.key,
+        var copy = Song(title: asSong ? original.title : "\(original.title) copy", artist: original.artist, key: original.key,
                         tempo: original.tempo, timeSignature: original.timeSignature, sections: original.sections,
                         versions: original.versions, seeds: original.seeds, experiments: original.experiments)
         copy.cast = original.cast
@@ -250,9 +264,17 @@ extension AppState {
         // The same parts, so the same one is the tune.
         copy.tune = original.tune
         copy.mixReference = original.mixReference
-        // A copy of an idea is an idea.
-        copy.idea = original.idea
-        copy.fills = original.fills
+        // A copy of an idea is an idea, unless it is being made a song.
+        copy.idea = asSong ? nil : original.idea
+        copy.fills = asSong ? nil : original.fills
+        if asSong {
+            // The genre the idea was given decides the form developing lays over it.
+            copy.genre = original.genre
+            // A new song's form with the idea's parts in every section, as a song made from nothing
+            // has, rather than the idea's one section — which developing would keep as the form.
+            let lanes = original.sections.first?.stitch ?? []
+            copy.sections = Song.startingForm.map { Section(name: $0.name, stitch: lanes, lengthInBars: $0.bars) }
+        }
         var updated = library
         if let song { updated.upsert(song) }
         updated.upsert(copy)
@@ -270,7 +292,11 @@ extension AppState {
         }
         hasUnsavedChanges = false
         reloadLibrary()
-        note(.you, "Duplicated \(original.title) as \(copy.title)")
+        if asSong {
+            note(.you, "Made a song of the idea \(original.title)", detail: "The idea stays on its shelf as it was.")
+        } else {
+            note(.you, "Duplicated \(original.title) as \(copy.title)")
+        }
         open(copy)
         return copy.id
     }
@@ -493,10 +519,12 @@ extension AppState {
             guard !sections.isEmpty else {
                 return .silent("In no section, so the form never plays it", fix: .addToEverySection(part))
             }
-            if sections.count == song.sections.count { return .plays("in every section") }
+            if sections.count == song.sections.count { return .plays(song.isIdea ? "in the idea" : "in every section") }
             return .plays("in " + Self.listed(sections))
         }
-        if plan.parts.contains(part) { return .plays("in the song") }
+        if plan.parts.contains(part) { return .plays(song.isIdea ? "in the idea" : "in the song") }
+        // There is no Structure in an idea to put it in a section from: its one section takes it.
+        if song.isIdea { return .silent("Not in the idea, so it never plays", fix: .addToEverySection(part)) }
         return .silent("The song plays its newest \(kind) until it is arranged; put this one in a section to hear it",
                        fix: .openStructure)
     }

@@ -27,6 +27,8 @@ extension SurfaceWiring {
 
     /// Which version of a surface's primer to show, when a surface has modes.
     func primerVariant(for item: BenchItem, app: AppState) -> String? {
+        // In an idea the Booth has no section to pick and the take runs on.
+        if item.kind == .booth, app.song?.isIdea == true { return "idea" }
         guard item.kind == .pianoRoll else { return nil }
         return pianoRollModel(for: item, app: app).mode == .melody ? "melody" : nil
     }
@@ -37,8 +39,9 @@ extension SurfaceWiring {
         let id = "surface:\(item.id)"
         let clock = app.clock
         let bound = app.bound(for: item.id).compactMap { app.version($0) }
-        func song(_ label: String = "the song") -> SurfaceAudition? {
+        func song(_ label: String? = nil) -> SurfaceAudition? {
             guard app.song != nil else { return nil }
+            let label = label ?? (app.song?.isIdea == true ? "the idea" : "the song")
             return SurfaceAudition(id: id, label: label) { await $0.playSong(id: id, label: app.song?.title ?? "The song") }
         }
         func version(_ version: PartVersion?, _ label: String) -> SurfaceAudition? {

@@ -342,8 +342,10 @@ public enum Guidance {
             if takes.isEmpty, words?.lines.contains(where: { !$0.syllables.isEmpty }) != true {
                 out.append(Proposal(
                     title: "Write the words",
-                    rationale: "A stanza for each section, labelled [Verse] or [Hook] so the Booth shows the one you "
-                        + "are singing. The Lyricist reads them as you type.",
+                    rationale: song.isIdea
+                        ? "Words for the idea, shown in the Booth while you sing them. The Lyricist reads them as you type."
+                        : "A stanza for each section, labelled [Verse] or [Hook] so the Booth shows the one you "
+                            + "are singing. The Lyricist reads them as you type.",
                     action: dockAction(for: .lyrics, in: song)))
             } else if let words, words.alignedTo == nil, let tune = SongTune.version(in: song) {
                 out.append(Proposal(
@@ -355,8 +357,11 @@ public enum Guidance {
             if takes.isEmpty {
                 out.append(Proposal(
                     title: "Sing over \(song.title)",
-                    rationale: "The Booth plays the song under you and lands the take on the bar you sang it on; "
-                        + "every take stays, and the band reads them in Takes.",
+                    rationale: song.isIdea
+                        ? "The Booth plays the idea round under you after a bar of click and keeps going until you stop; "
+                            + "the idea grows to hold the take, every take stays, and the band reads them in Takes."
+                        : "The Booth plays the song under you and lands the take on the bar you sang it on; "
+                            + "every take stays, and the band reads them in Takes.",
                     action: SurfaceAction(surface: .booth, title: song.title)))
             } else if comps(in: song).isEmpty, let newest = takes.last {
                 let part = takes.filter { $0.partID == newest.partID }

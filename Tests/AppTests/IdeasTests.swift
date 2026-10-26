@@ -181,12 +181,198 @@ struct IdeasTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         let launch = NextAdvisor.question(for: app)
         #expect(launch.options.contains { $0.move == .newIdea }, "\(launch.options.map(\.title))")
-        #expect(NextMove.newIdea.worksInIdeas && !NextMove.develop.worksInIdeas && !NextMove.exportMaster.worksInIdeas)
+        #expect(NextMove.newIdea.worksInIdeas && NextMove.develop.worksInIdeas && !NextMove.exportMaster.worksInIdeas)
+        #expect(!NextMove.putBackDevelopment.worksInIdeas)
         #expect(!NextMove.surface(SurfaceAction(surface: .structure, title: "Structure")).worksInIdeas)
 
         _ = try IdeasFixture.savedIdea(in: app)
         for option in NextAdvisor.question(for: app).options {
             #expect(option.move.worksInIdeas, "\(option.title)")
         }
+    }
+}
+
+// Ideas first, Phase 2: making things in an idea — it grows to hold a longer part or a take sung
+// past its end, a take runs on with the idea going round under it, the band knows where it is, and
+// developing one makes a song of it.
+
+@Suite("Ideas: making things in one") @MainActor
+struct IdeaMakingTests {
+
+    private func melody(toBeat end: Double) -> PartVersion {
+        TransportFixture.melodyVersion(Melody(notes: [NoteEvent(pitch: Pitch(midi: 72), start: 0, duration: 1),
+                                                      NoteEvent(pitch: Pitch(midi: 74), start: end - 1, duration: 1)]))
+    }
+
+    private func take(at offset: Double, seconds: Double) -> PartVersion {
+        let audio = Audio(media: MediaRef(hash: ContentHash(hex: String(repeating: "a", count: 64))!, fileExtension: "wav"),
+                          role: .take, sampleRate: 48_000, channelCount: 1, duration: seconds, alignmentOffset: offset)
+        return PartVersion(partID: PartID(), kind: .audio(audio), author: .user, operation: Operation.recorded)
+    }
+
+    @Test("how many bars a part fills: a written part's own length, a groove's bars, a recording's last second")
+    func barsHolding() {
+        let song = Song(title: "Clock", tempo: 120)  // two seconds a bar
+        #expect(song.bars(holding: TransportFixture.progressionVersion()) == 4)
+        #expect(song.bars(holding: melody(toBeat: 30)) == 8)
+        #expect(song.bars(holding: TransportFixture.grooveVersion(TransportFixture.groove(bars: 2))) == 2)
+        #expect(song.bars(holding: take(at: 1, seconds: 9)) == 5)
+        #expect(song.bars(holding: take(at: 0, seconds: 8.01)) == 4, "a hair into the next bar is not a bar sung")
+        let words = PartVersion(partID: PartID(), kind: .lyric(Lyric(lines: [])), author: .user, operation: Operation.written)
+        #expect(song.bars(holding: words) == nil)
+    }
+
+    @Test("an idea grows to hold a longer line or a take sung past its end, never shrinks, and a song's form is left alone")
+    func grows() throws {
+        let (app, directory, song) = try IdeasFixture.app("grows")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        app.newIdea()
+        app.setTempo(120)
+        #expect(app.record(TransportFixture.progressionVersion()))
+        #expect(app.ideaBars == 4)
+        #expect(app.record(melody(toBeat: 30)))
+        #expect(app.ideaBars == 8)
+        #expect(app.log.contains { $0.text == "The idea grew to 8 bars" })
+        #expect(app.record(TransportFixture.grooveVersion(TransportFixture.groove(bars: 2))))
+        #expect(app.ideaBars == 8, "never shorter")
+        #expect(app.record(take(at: 0.1, seconds: 19.5)))
+        #expect(app.ideaBars == 10)
+        #expect(app.song?.sections.count == 1)
+
+        app.openSong(song.id)
+        #expect(app.record(melody(toBeat: 64)))
+        #expect(app.song?.sections.map(\.lengthInBars) == [8], "a song's sections are its form")
+    }
+
+    @Test("a counted-in run in an idea plays it as a long section, the click going on past its last bar; a plain play loops it")
+    func runway() async throws {
+        let (app, directory, _) = try IdeasFixture.app("runway")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let host = StubPlaybackHost()
+        app.attach(playback: host)
+        app.newIdea()
+        #expect(app.ideaTakePlan()?.lengthInBars == 64, "an empty idea still has a click to sing to")
+        app.record(TransportFixture.grooveVersion())
+        #expect(AppState.ideaRunwayBars(for: 4) == 64 && AppState.ideaRunwayBars(for: 40) == 80 && AppState.ideaRunwayBars(for: 200) == 256)
+
+        await app.startTransport(fromBar: 0, countIn: 1, click: true)
+        let take = try #require(await host.began.last)
+        #expect(take.countInBars == 1 && take.lengthInBars == 65 && !take.loops)
+        #expect(take.segments.first?.lengthInBars == 64 && take.segments.first?.startBar == 1)
+        await app.stopTransport()
+
+        await app.startTransport(fromBar: 0)
+        let played = try #require(await host.began.last)
+        #expect(played.loops && played.lengthInBars == 4, "the idea goes round at its own length")
+        await app.stopTransport()
+    }
+
+    @Test("on the offline engine the idea's parts go on past its last bar on the take's run")
+    func runwaySounds() async throws {
+        let (app, directory, _) = try IdeasFixture.app("runway-sounds")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        app.newIdea()
+        app.setTempo(180)
+        app.record(TransportFixture.grooveVersion())
+        var plan = try #require(app.ideaTakePlan())
+        // Eight bars of the run are enough to hear past the idea's fourth.
+        plan.segments[0].lengthInBars = 8
+        plan.lengthInBars = 8
+        let stems = try await SectionBounce.render(plan, kitsDirectory: directory.appendingPathComponent("kits"), onlyTheMix: true)
+        let samples = stems.mix.first ?? []
+        let barFrames = Int(stems.sampleRate * 4 * 60 / 180)
+        #expect(samples.count >= 8 * barFrames - barFrames / 4)
+        let past = samples[(5 * barFrames)..<min(samples.count, 7 * barFrames)]
+        #expect(past.contains { abs($0) > 0.001 }, "bars 6 and 7 sound")
+    }
+
+    @Test("the Booth in an idea: counted in, clicked, no punch-out and no passes; in a song, as it was left")
+    func booth() throws {
+        var idea = Song.newIdea(title: "Hum")
+        try idea.append(TransportFixture.grooveVersion())
+        let model = BoothModel(host: StubBoothHost(song: idea))
+        #expect(model.isIdea)
+        #expect(model.countInBars >= 1 && model.click && !model.punchesOut && !model.keepsGoing)
+        let song = BoothModel(host: StubBoothHost(song: Song(title: "Arrival", sections: [Section(name: "Verse", stitch: [], lengthInBars: 8)])))
+        #expect(!song.isIdea && song.punchesOut)
+    }
+
+    @Test("developing an idea makes a song of it, developed and open, and leaves the idea as it was on its shelf")
+    func develop() throws {
+        let (app, directory, _) = try IdeasFixture.app("develop")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let id = try IdeasFixture.savedIdea(in: app)
+        app.record(TransportFixture.progressionVersion())
+        app.save()
+        let before = try #require(app.library.song(id))
+        #expect(app.canDevelop)
+        let development = app.develop()
+        #expect(development != nil)
+        let made = try #require(app.song)
+        #expect(made.id != id && !made.isIdea && made.title == "Hum")
+        #expect(made.sections.count > 1, "a form of its own")
+        #expect(app.library.songs.contains { $0.id == made.id })
+        let idea = try #require(app.library.song(id))
+        #expect(idea.isIdea && idea.sections == before.sections && idea.versions == before.versions)
+        #expect(app.log.contains { $0.text == "Made a song of the idea Hum" })
+    }
+
+    @Test("an idea has no form to arrange: one section stays one, by hand or by the band")
+    func noForm() throws {
+        let (app, directory, _) = try IdeasFixture.app("no-form")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        _ = try IdeasFixture.savedIdea(in: app)
+        let one = try #require(app.song?.sections.first)
+        #expect(!app.arrange([one, Section(name: "Hook", stitch: one.stitch, lengthInBars: 4)]))
+        #expect(app.song?.sections.count == 1)
+        var longer = one
+        longer.lengthInBars = 6
+        #expect(app.arrange([longer]), "its one section can still change")
+    }
+
+    @Test("the band reads an idea as one, is refused the form and the master there, and may stitch its one section")
+    func band() async throws {
+        let (app, directory, _) = try IdeasFixture.app("band")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        _ = try IdeasFixture.savedIdea(in: app)
+        let toolbox = DirectorTools.toolbox(workbench: DirectorWorkbench(engines: DirectorTestEngines.make(bars: 4)),
+                                            workspace: AppStateWorkspace(app))
+        func run(_ name: String, _ input: [(String, DirectorJSON)]) async -> ClaudeToolResult {
+            await toolbox.run(ClaudeToolUse(id: name, name: name,
+                                            input: .object(DirectorJSONObject(input.map { DirectorJSONObject.Member($0.0, $0.1) }))))
+        }
+        let read = await run("read_song", [])
+        let song = try #require(try JSONSerialization.jsonObject(with: Data(read.content.utf8)) as? [String: Any])
+        #expect(song["is_idea"] as? Bool == true)
+        #expect((song["note"] as? String)?.contains("This is an idea, not a song") == true)
+
+        let section = try #require(app.song?.sections.first)
+        let refused = [
+            await run("arrange", [("form", .string("Verse 8, Hook 8"))]),
+            await run("split_section", [("section", .string(section.id.description)), ("after_bar", .int(2))]),
+            await run("stitch_section", [("name", .string("Hook")), ("bars", .int(4)), ("versions", .array([])),
+                                         ("position", .int(1)), ("section", .string(""))]),
+            await run("master", [("target_lufs", .double(-14)), ("ceiling_dbtp", .double(-1)), ("gain_db", .double(0)),
+                                 ("reason", .string("loud enough"))]),
+        ]
+        for result in refused {
+            #expect(result.isError && result.content.contains("This is an idea"), "\(result.content)")
+        }
+        #expect(app.song?.sections.count == 1)
+        #expect(DirectorPrompt.system.contains("read_song says is_idea"))
+    }
+
+    @Test("in an idea the band's suggestions and a part's line say the idea, not the song")
+    func wording() throws {
+        let (app, directory, _) = try IdeasFixture.app("wording")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        _ = try IdeasFixture.savedIdea(in: app)
+        let groove = try #require(app.song?.versions.last)
+        #expect(app.audibility(of: groove.partID) == .plays("in the idea"))
+        let proposals = Guidance.proposals(for: try #require(app.song))
+        let sing = proposals.first { $0.title.hasPrefix("Sing over") }
+        #expect(sing?.rationale.contains("the idea grows to hold the take") == true)
+        let words = proposals.first { $0.title == "Write the words" }
+        #expect(words?.rationale.contains("[Verse]") == false)
     }
 }

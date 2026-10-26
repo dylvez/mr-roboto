@@ -86,6 +86,11 @@ public enum Primer {
             return ("Check",
                     "One finding from a critic about one part. Critics flag and never fix: the fix is "
                         + "offered, and taking it is yours.")
+        case .booth where variant == "idea":
+            return ("Booth",
+                    "Press Record: after the count-in the idea goes round under you, with its words in view, for as long as "
+                        + "you sing, and the idea grows to hold the take. The take lands on the bar you sang it on, latency taken "
+                        + "out. Every take stays, lane by lane below, where the band flags bars and you make the comp.")
         case .booth:
             return ("Booth",
                     "Pick a section and a count-in, press Record: the song plays from that section under you, with that "
@@ -150,6 +155,7 @@ extension Primer {
         case .merge: return "Two fragments moved to one key and one tempo, then stitched as a section."
         case .compare: return "The band's candidates, each judged against the thing it has to beat."
         case .check: return "One finding from a critic about one part. Flagged, never fixed for you."
+        case .booth where variant == "idea": return "Press Record and sing over the idea for as long as you like; it grows to hold the take."
         case .booth: return "Pick a section and a count-in, press Record; every take stays."
         case .sources: return "A stem, or some bars, of a record, moved to the song's key, tempo and bars."
         case .library: return "Everything made and brought in, a shelf at a time: search it, hear it, act on it."

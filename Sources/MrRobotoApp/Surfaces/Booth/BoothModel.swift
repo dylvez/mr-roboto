@@ -149,9 +149,15 @@ public final class BoothModel {
         self.section = host.song?.sections.first?.id
         self.takes = host.song.map(Guidance.takes(in:)) ?? []
         self.input = host.input
-        self.countInBars = Self.bounded((defaults.object(forKey: Self.countInKey) as? Int) ?? 1)
-        self.click = defaults.bool(forKey: Self.clickKey)
-        self.keepsGoing = defaults.bool(forKey: Self.keepGoingKey)
+        let remembered = Self.bounded((defaults.object(forKey: Self.countInKey) as? Int) ?? 1)
+        // An idea is sung over a click from its first bar and runs on until Stop, growing to hold
+        // the take: counted in, clicked, no punch-out and no passes. Not remembered — these are the
+        // idea's, and the song's settings stay as they were left.
+        let idea = host.song?.isIdea == true
+        self.countInBars = idea ? max(1, remembered) : remembered
+        self.click = idea || defaults.bool(forKey: Self.clickKey)
+        self.keepsGoing = !idea && defaults.bool(forKey: Self.keepGoingKey)
+        self.punchesOut = !idea
         showLanes()
     }
 
@@ -169,6 +175,8 @@ public final class BoothModel {
     public var inputLine: String { input.describe(in: inputs) }
 
     public var song: Song? { host.song }
+    /// Whether the Booth is in an idea: one section, a take that runs on, the idea growing to it.
+    public var isIdea: Bool { host.song?.isIdea == true }
     public var clock: TransportClock { host.clock }
     public var sections: [Section] { host.song?.sections ?? [] }
     public var isPlaying: Bool { host.isPlaying }

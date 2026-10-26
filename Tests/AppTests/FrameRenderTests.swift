@@ -349,6 +349,8 @@ struct FrameRenderTests {
         try writeDark(settings, size: CGSize(width: 360, height: 560), name: "idea-settings-dark")
         app.perform(Guidance.dockAction(for: .grid, in: app.song))
         try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-idea")
+        app.perform(Guidance.dockAction(for: .booth, in: app.song))
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-idea-booth")
     }
 
     @Test("the Merge surface on a chop and a bass line in different keys")

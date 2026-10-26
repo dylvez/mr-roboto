@@ -995,10 +995,12 @@ public final class AppState {
             note(SessionEntry.Source(version.author), "\(version.operation.capitalized) → \(version.type.rawValue)\(versionNumber(of: version.id).map { " v\($0)" } ?? "")",
                  detail: provenanceLine(for: version))
             if let reading { noteLevelled(version, reading: reading) }
-            if joined > 0 {
+            if joined > 0, !current.isIdea {
                 note(.session, "\(PartLabel.title(of: version)) plays in the song",
                      detail: "Added to \(count(joined, "section")). Open Structure to take it out of one.")
             }
+            // A take sung past an idea's end, or a line written longer than it: the idea grows.
+            growIdea(toHold: version)
             return true
         } catch {
             note(.session, "Could not record that version", detail: "\(error)")
@@ -1013,6 +1015,11 @@ public final class AppState {
     func keep(_ versions: [PartVersion], arranged sections: [Section]) -> Bool {
         guard var current = song else {
             note(.session, "No song open; nothing to arrange")
+            return false
+        }
+        // An idea is one section that goes round; a form of several is a song's.
+        if current.isIdea, sections.count != 1 {
+            note(.session, "An idea has no form to arrange", detail: "It is one section. Develop makes a song of it, with a form of its own.")
             return false
         }
         do {
@@ -1055,6 +1062,11 @@ public final class AppState {
     public func arrange(_ sections: [Section], by source: SessionEntry.Source = .you) -> Bool {
         guard var current = song else {
             note(.session, "No song open; nothing to arrange")
+            return false
+        }
+        // An idea is one section that goes round; a form of several is a song's.
+        if current.isIdea, sections.count != 1 {
+            note(.session, "An idea has no form to arrange", detail: "It is one section. Develop makes a song of it, with a form of its own.")
             return false
         }
         let cleaned = sections.map { section -> Section in
@@ -1490,7 +1502,8 @@ public final class AppState {
         refreshPlayback()
         // A counted-in run is a take: one pass. Looped, the count-in bars came round with every
         // pass and a take sung on the second pass landed past the song's end.
-        let base = countIn > 0 ? playback.looping(false) : playback
+        // In an idea a take runs on past the idea's last bar, the idea going round under it.
+        let base = countIn > 0 ? (ideaTakePlan() ?? playback).looping(false) : playback
         var plan = alone.flatMap { base.only(section: $0) } ?? base.starting(atBar: max(0, bar), countIn: countIn)
         // The click is the transport's, added to the run it plays and to nothing else. It used to
         // live on the song's plan, which every export and reading renders, so a song exported with

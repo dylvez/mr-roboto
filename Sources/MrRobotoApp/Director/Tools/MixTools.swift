@@ -493,9 +493,10 @@ public struct MasterTool: DirectorTool {
     }
 
     public func run(_ input: Input) async throws -> Output {
-        guard await workspace.song != nil else {
+        guard let song = await workspace.song else {
             throw DirectorToolFailure(tool: name, reason: "No song is open.")
         }
+        if song.isIdea { throw DirectorToolFailure.inAnIdea(name, has: "no master: its levels are set on the strips") }
         let master = PersonaProposal.setMaster(targetLUFS: input.targetLUFS, ceilingDBTP: input.ceilingDBTP)
         let verdict = GenreLens.judge(engineer.consider(master), on: master, by: Engineer.bible, in: await workspace.genreLens)
         if case .refuse(let rule, let because, let counter) = verdict {
