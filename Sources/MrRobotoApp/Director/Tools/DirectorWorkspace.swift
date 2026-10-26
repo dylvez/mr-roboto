@@ -800,7 +800,7 @@ public final class DirectorScratchWorkspace: DirectorWorkspace {
 
     public func observe(album: Album) -> AlbumObservation {
         var songs = library.songs
-        if let song, !songs.contains(where: { $0.id == song.id }) { songs.append(song) }
+        if let song, !song.isIdea, !songs.contains(where: { $0.id == song.id }) { songs.append(song) }
         return AlbumObservation.of(album, songs: songs)
     }
 

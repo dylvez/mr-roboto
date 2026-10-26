@@ -77,6 +77,9 @@ struct FrameCommands: Commands {
                 app.wantsSongSettings = true
             }
             .keyboardShortcut("n", modifiers: .command)
+            // An idea: a few bars at a grid of their own, with no song around them, put into songs later.
+            Button("New Idea") { app.newIdea() }
+                .keyboardShortcut("n", modifiers: [.command, .option])
             // A song made of records: a blank song, and Sources open on it. The first stem brought
             // in sets its key, its tempo and its form.
             Button("New Song from Records…") {
@@ -84,17 +87,17 @@ struct FrameCommands: Commands {
                 app.openSurface(.sources, title: "Sources")
             }
             .disabled(app.store == nil)
-            Button("Song Settings…") { app.wantsSongSettings = true }
+            Button(app.song?.isIdea == true ? "Idea Settings…" : "Song Settings…") { app.wantsSongSettings = true }
                 .keyboardShortcut(",", modifiers: [.command, .shift])
                 .disabled(app.song == nil)
-            Button("Close Song") { app.closeSong() }
+            Button(app.song?.isIdea == true ? "Close Idea" : "Close Song") { app.closeSong() }
                 .keyboardShortcut("w", modifiers: [.command, .shift])
                 .disabled(app.song == nil)
             // The loop arranged into a song: what the Structure surface's chip and the band's
             // question offer, from anywhere.
             Button(app.isMastering ? "Reading the Master…" : "Develop the Song") { Task { await app.developAndMaster() } }
                 .keyboardShortcut("d", modifiers: [.command, .shift])
-                .disabled(!app.canDevelop || app.isDeveloping || app.isMastering)
+                .disabled(!app.canDevelop || app.isDeveloping || app.isMastering || app.song?.isIdea == true)
             Button("Put the Song Back as It Was") { app.putBackDevelopment() }
                 .disabled(!app.canPutBackDevelopment || app.isDeveloping || app.isMastering)
             Divider()
@@ -185,7 +188,7 @@ struct FrameCommands: Commands {
                 .disabled(app.song == nil)
             Button("Master…") { app.perform(Guidance.dockAction(for: .master, in: app.song)) }
                 .keyboardShortcut("m", modifiers: [.command, .option])
-                .disabled(app.song == nil)
+                .disabled(app.song == nil || app.song?.isIdea == true)
         }
 
         // Undo and Redo reach the surface in front, which steps back through its own edits. A text
@@ -336,6 +339,7 @@ struct FrameCommands: Commands {
                     app.perform(Guidance.dockAction(for: kind, in: app.song))
                 }
                 .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: .command)
+                .disabled(app.song?.isIdea == true && !kind.worksInIdeas)
             }
             Divider()
             // The path's next step, from anywhere: what the rail's What next and the dock's Next
@@ -416,6 +420,10 @@ extension MrRobotoApp {
 
     static func untitledName(_ date: Date = Date()) -> String {
         "Untitled, \(date.formatted(.dateTime.month(.abbreviated).day()))"
+    }
+
+    static func untitledIdeaName(_ date: Date = Date()) -> String {
+        "Idea, \(date.formatted(.dateTime.month(.abbreviated).day()))"
     }
 
     /// Asks where, then exports there with the header saying so; the rail says what happened, and

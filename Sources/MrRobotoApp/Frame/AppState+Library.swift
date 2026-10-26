@@ -365,7 +365,7 @@ extension AppState {
     /// The album, read: its tracks from the library (the open song as it is now).
     public func observe(album: Album) -> AlbumObservation {
         var songs = library.songs
-        if let song, let index = songs.firstIndex(where: { $0.id == song.id }) { songs[index] = song } else if let song { songs.append(song) }
+        if let song, let index = songs.firstIndex(where: { $0.id == song.id }) { songs[index] = song } else if let song, !song.isIdea { songs.append(song) }
         return AlbumObservation.of(album, songs: songs)
     }
 
@@ -374,6 +374,10 @@ extension AppState {
     public func addSong(_ songID: SongID, to albumID: AlbumID) -> Bool {
         guard library.song(songID) != nil || song?.id == songID else {
             note(.session, "That song is not in the library")
+            return false
+        }
+        if (library.song(songID) ?? song)?.isIdea == true {
+            note(.session, "An idea is not a track", detail: "Put it in a song, and put the song on the album.")
             return false
         }
         // The open song, never saved, is saved as it joins: an album of songs the library does not

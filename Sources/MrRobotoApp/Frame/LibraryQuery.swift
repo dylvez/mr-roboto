@@ -21,7 +21,7 @@ public enum LibraryColumn: String, CaseIterable, Codable, Sendable {
         switch shelf {
         case .songs: [.title, .key, .tempo, .length, .genre, .records, .changed, .loudness]
         case .records: [.title, .artist, .key, .tempo, .bars, .tuning, .stems, .songs]
-        case .ideas: [.title, .kind, .key, .note]
+        case .ideas: [.title, .kind, .key, .tempo, .bars, .note]
         case .samples: [.title, .root, .tempo, .slices, .note, .source]
         case .albums: [.title, .songs, .length]
         case .instruments: [.title, .family, .range, .pack, .note]

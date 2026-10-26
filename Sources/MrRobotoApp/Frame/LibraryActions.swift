@@ -44,7 +44,9 @@ enum LibraryActions {
         switch item.shelf {
         case .songs: own = song(SongID(rawValue: item.id), app)
         case .records: own = record(RecordID(rawValue: item.id), app)
-        case .ideas: own = idea(VersionID(rawValue: item.id), app)
+        case .ideas:
+            let songID = SongID(rawValue: item.id)
+            own = app.library.ideaSongs.contains { $0.id == songID } ? ideaSong(songID, app) : idea(VersionID(rawValue: item.id), app)
         case .samples: own = sample(SampleID(rawValue: item.id), app)
         case .albums: own = album(AlbumID(rawValue: item.id), app)
         case .instruments: own = instrument(item, app)
@@ -90,7 +92,8 @@ enum LibraryActions {
         switch item.shelf {
         case .songs, .albums: preferred = ["open"]
         case .records: preferred = ["add", "start"]
-        case .ideas, .samples: preferred = ["adopt"]
+        case .ideas: preferred = ["open", "adopt"]
+        case .samples: preferred = ["adopt"]
         case .instruments, .kits: preferred = ["use"]
         }
         return preferred.lazy.compactMap { id in all.first { $0.id == id && $0.isEnabled } }.first
@@ -140,7 +143,11 @@ enum LibraryActions {
                                              }))
             }
             return actions
-        case .ideas, .samples:
+        case .ideas:
+            return [LibraryAction(id: "new-idea", title: "New Idea",
+                                  help: "File ▸ New Idea (⌥⌘N): a few bars at a tempo and key of their own, with no song around them.",
+                                  kind: .run { app.newIdea() })]
+        case .samples:
             return []
         }
     }
@@ -231,6 +238,28 @@ enum LibraryActions {
             LibraryAction(id: "trash", title: "Move to Trash…", isDestructive: true, group: 2,
                           kind: .confirm(question: "Move “\(song.title)” to the Trash?",
                                          detail: "The song's package goes to the Trash, where Finder can put it back. It leaves every album it is on.",
+                                         verb: "Move to Trash", run: { _ = app.deleteSong(id) })),
+        ]
+    }
+
+    // MARK: Ideas you open
+
+    /// An idea that is a package of its own: opened, renamed, copied and thrown away as a song is,
+    /// and never put on an album.
+    private static func ideaSong(_ id: SongID, _ app: AppState) -> [LibraryAction] {
+        guard let idea = app.library.song(id) else { return [] }
+        return [
+            LibraryAction(id: "open", title: "Open", help: "Open \(idea.title) to work on it.", kind: .run { app.openSong(id) }),
+            LibraryAction(id: "rename", title: "Rename…", group: 1,
+                          kind: .rename(current: (app.song?.id == id ? app.song?.title : nil) ?? idea.title,
+                                        message: "A new name for the idea. Its package on disk keeps its file name.",
+                                        run: { _ = app.renameSong(id, to: $0) })),
+            LibraryAction(id: "duplicate", title: "Duplicate", help: "A copy of the idea, with its own package.", group: 1,
+                          kind: .run { _ = app.duplicateSong(id) }),
+            LibraryAction(id: "finder", title: "Show in Finder", group: 1, kind: .run { app.revealInFinder(song: id) }),
+            LibraryAction(id: "trash", title: "Move to Trash…", isDestructive: true, group: 2,
+                          kind: .confirm(question: "Move the idea “\(idea.title)” to the Trash?",
+                                         detail: "Its package goes to the Trash, where Finder can put it back.",
                                          verb: "Move to Trash", run: { _ = app.deleteSong(id) })),
         ]
     }

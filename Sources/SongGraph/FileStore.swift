@@ -369,9 +369,10 @@ public struct LibraryStore: Sendable {
             take(store)
         }
         for store in try songStores() { take(store) }
-        var library = Library(songs: songs, albums: document.albums, ideas: document.ideas,
+        // An idea is a package like a song, listed in `library.json` like one; it is kept apart here.
+        var library = Library(songs: songs.filter { !$0.isIdea }, albums: document.albums, ideas: document.ideas,
                               records: document.records, samples: document.samples, voice: document.voice)
-        library.songs = songs
+        library.ideaSongs = songs.filter(\.isIdea)
         library.houseCalls = document.houseCalls
         library.said = document.said
         library.marks = document.marks
@@ -420,7 +421,7 @@ public struct LibraryStore: Sendable {
         return name
     }
 
-    /// Writes every song into its package and `library.json` alongside. A song keeps the package it already has,
+    /// Writes every song and idea into its package and `library.json` alongside. A song keeps the package it already has,
     /// even after a rename; a new song gets `<Title>.roboto`, suffixed if that name is taken.
     public func save(_ library: Library) throws {
         try FileCoordination.write(directoryURL, options: Files.exists(directoryURL) ? [.forMerging] : []) { url in
@@ -440,7 +441,7 @@ public struct LibraryStore: Sendable {
         // used to be written into "Demo.roboto" — the same folder on a Mac — over the song in it.
         var taken = Set(stores.map { SongStore.diskKey($0.packageURL.lastPathComponent) })
         var entries: [Document.SongEntry] = []
-        for song in library.songs {
+        for song in library.songs + library.ideaSongs {
             let store: SongStore
             if let found = existing[song.id] {
                 store = found

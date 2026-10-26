@@ -41,6 +41,8 @@ public struct LibraryItemID: Hashable, Codable, Sendable, CustomStringConvertibl
     public static func song(_ id: SongID) -> Self { Self(.songs, id.rawValue) }
     public static func record(_ id: RecordID) -> Self { Self(.records, id.rawValue) }
     public static func idea(_ id: VersionID) -> Self { Self(.ideas, id.rawValue) }
+    /// An idea you open — a package flagged `Song.idea` — on the Ideas shelf beside the bare ones.
+    public static func ideaSong(_ id: SongID) -> Self { Self(.ideas, id.rawValue) }
     public static func sample(_ id: SampleID) -> Self { Self(.samples, id.rawValue) }
     public static func album(_ id: AlbumID) -> Self { Self(.albums, id.rawValue) }
     /// An instrument or a kit, by its own id: a UUID made from that, the same at every launch.
@@ -92,8 +94,11 @@ public struct LibraryFacts: Hashable, Sendable, Identifiable {
     public var tuning: Double?
     /// A record's grid correction, as said ("halved"). Nil when it is read as the tracker read it.
     public var grid: String?
-    /// An idea's kind of part.
+    /// An idea's kind of part: an idea you open says its first part's.
     public var kind: PartType?
+    /// Whether an item on the Ideas shelf is an idea you open — a package of its own — rather than
+    /// a bare part.
+    public var isIdeaSong = false
     /// An idea's note, or what made it; a sample's chain.
     public var note: String?
     /// A sample's root.
@@ -168,6 +173,8 @@ public struct LibraryIndex: Sendable {
     private var lookups = Lookups()
     /// The library's marks, put back on a song read again.
     private var marks: [LibraryMark] = []
+    /// The ideas you open, by id: their items share the Ideas shelf with the bare ideas.
+    private var ideaSongIDs: Set<SongID> = []
     private let genres: GenreBook
 
     /// The open song's key, tempo and meter, which every record, idea and sample is fitted to.
@@ -206,9 +213,18 @@ public struct LibraryIndex: Sendable {
             for item in reading.holds { holders[item, default: []].append(song.id) }
             songFacts.append(reading.facts)
         }
+        // An idea you open is read as a song is and shelved with the ideas. What it takes from the
+        // crate is not counted: a record's "used in" is songs.
+        var ideaSongFacts: [LibraryFacts] = []
+        for stored in library.ideaSongs {
+            let idea = openSong?.id == stored.id ? openSong! : stored
+            ideaSongIDs.insert(idea.id)
+            ideaSongFacts.append(read(idea).facts)
+        }
 
         var all = songFacts
         all += library.records.map(Self.facts(of:))
+        all += ideaSongFacts
         all += library.ideas.map(ideaFacts)
         all += library.samples.map(sampleFacts)
         all += library.albums.map(albumFacts)
@@ -265,14 +281,15 @@ public struct LibraryIndex: Sendable {
     public mutating func refresh(_ song: Song) {
         // What everything is fitted to follows the open song, saved or not.
         if FitTarget.of(song) != fitTarget { fit(to: FitTarget.of(song)) }
+        if song.isIdea {
+            guard ideaSongIDs.contains(song.id), let index = position[.ideaSong(song.id)] else { return }
+            items[index] = marked(read(song).facts)
+            count(&items[index])
+            return
+        }
         guard let old = readings[song.id] else { return }
         var new = read(song)
-        if let mark = marks.first(where: { $0.kind == .song && $0.id == song.id.rawValue }) {
-            new.facts.favourite = mark.isFavourite
-            new.facts.markedTags = mark.tags ?? []
-            new.facts.tags = new.facts.markedTags
-            if !new.facts.markedTags.isEmpty { new.facts.searchText += " · " + Self.fold(new.facts.markedTags.joined(separator: " · ")) }
-        }
+        new.facts = marked(new.facts)
         readings[song.id] = new
         if let index = position[.song(song.id)] { items[index] = new.facts }
 
@@ -307,11 +324,25 @@ public struct LibraryIndex: Sendable {
         var holds: [LibraryItemID]
     }
 
+    /// The facts with the item's favourite and tags on them, as the library marks it.
+    private func marked(_ facts: LibraryFacts) -> LibraryFacts {
+        var facts = facts
+        guard let mark = marks.first(where: { $0.kind == facts.id.markKind && $0.id == facts.id.id }) else { return facts }
+        facts.favourite = mark.isFavourite
+        facts.markedTags = mark.tags ?? []
+        facts.tags = facts.markedTags
+        if !facts.markedTags.isEmpty { facts.searchText += " · " + Self.fold(facts.markedTags.joined(separator: " · ")) }
+        return facts
+    }
+
+    /// Whether an item on the Ideas shelf is an idea you open, rather than a bare one.
+    public func isIdeaSong(_ id: LibraryItemID) -> Bool { id.shelf == .ideas && ideaSongIDs.contains(SongID(rawValue: id.id)) }
+
     /// Every tag on a shelf, in the order the shelf first has them.
     public func tags(on shelf: LibraryShelf) -> [String] { Self.unique(items(on: shelf).flatMap(\.tags)) }
 
     private func read(_ song: Song) -> SongReading {
-        var facts = LibraryFacts(id: .song(song.id), title: song.title, changed: song.createdAt)
+        var facts = LibraryFacts(id: song.isIdea ? .ideaSong(song.id) : .song(song.id), title: song.title, changed: song.createdAt)
         facts.artist = song.artist
         facts.key = song.key
         facts.tempo = song.tempo
@@ -350,6 +381,13 @@ public struct LibraryIndex: Sendable {
             uses.append(RecordUse(song: song.id, record: record, part: nil, title: "", stem: nil))
         }
         let records = Self.unique(uses.map(\.record))
+        if song.isIdea {
+            // What an idea is, is what it holds: "Take 2, Chords".
+            let parts = song.partIDs.filter { !song.isAside($0) }.compactMap { song.latestVersion(of: $0) }
+            facts.isIdeaSong = true
+            facts.kind = parts.first?.type
+            facts.note = parts.isEmpty ? "Nothing in it yet" : parts.map(PartLabel.title(of:)).joined(separator: ", ")
+        }
         facts.searchText = Self.searchText(facts, extra: [])
         return SongReading(facts: facts, records: records, uses: uses, holds: Self.unique(holds))
     }

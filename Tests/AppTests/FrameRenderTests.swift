@@ -328,6 +328,29 @@ struct FrameRenderTests {
         try writeDark(view, size: CGSize(width: 1240, height: 720), name: "library-kits-dark")
     }
 
+    @Test("an idea: the Ideas shelf with one chosen, its settings, and the frame with it open")
+    func ideas() throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        let (app, directory, _) = try IdeasFixture.app("render")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let id = try IdeasFixture.savedIdea(in: app, title: "Morning hum")
+        app.setKey(Key(parsing: "A minor"))
+        app.setIdeaBars(8)
+        app.save()
+        let model = LibraryBrowserModel(app: app, memory: .inMemory())
+        model.choose(.ideas)
+        model.select(.ideaSong(id))
+        let library = LibrarySurfaceView(model: model).background(Design.Palette.panel)
+        try write(library, size: CGSize(width: 1240, height: 720), name: "library-ideas")
+        try writeDark(library, size: CGSize(width: 1240, height: 720), name: "library-ideas-dark")
+        let settings = SongSettingsPopover(app: app)
+        try write(settings, size: CGSize(width: 360, height: 560), name: "idea-settings")
+        try writeDark(settings, size: CGSize(width: 360, height: 560), name: "idea-settings-dark")
+        app.perform(Guidance.dockAction(for: .grid, in: app.song))
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-idea")
+    }
+
     @Test("the Merge surface on a chop and a bass line in different keys")
     func merge() throws {
         FontRegistration.registerBundledFonts()

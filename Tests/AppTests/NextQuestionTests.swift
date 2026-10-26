@@ -16,13 +16,13 @@ struct NextQuestionTests {
         TransportFixture.song([groove], sections: [])
     }
 
-    @Test("with no song open the Director asks where to start: a new song or a record, and a song you were in first")
+    @Test("with no song open the Director asks where to start: a new song, an idea or a record, and a song you were in first")
     func atLaunch() throws {
         let (app, directory, defaults) = CompletenessFixture.app("next-launch")
         defer { try? FileManager.default.removeItem(at: directory) }
         let empty = app.nextQuestion
         #expect(empty.asker == .director && empty.stage == "launch")
-        #expect(empty.options.map(\.kind) == ["newSong", "importRecord"])
+        #expect(empty.options.map(\.kind) == ["newSong", "newIdea", "importRecord"])
         #expect(empty.question == "How do you want to start?" && empty.observation == "The library is empty.")
 
         let song = beat()

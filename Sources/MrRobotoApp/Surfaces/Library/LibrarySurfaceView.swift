@@ -654,7 +654,7 @@ struct LibrarySurfaceView: View {
         switch shelf {
         case .songs: "File ▸ New Song starts one from nothing; a record's Start a Song from It starts one from the crate."
         case .records: "File ▸ Import Records… brings records in; each is read for its bars and key, and separated, in the background."
-        case .ideas: "Audio dropped into the Mr. Roboto Inbox folder arrives here, and a part kept as an idea from a song's ledger."
+        case .ideas: "File ▸ New Idea starts one: a few bars at a tempo and key of their own, with no song around them. Audio dropped into the Mr. Roboto Inbox folder arrives here too, and a part kept as an idea from a song's ledger."
         case .samples: "A chop saved from the Chop lane arrives here, ready to adopt into any song."
         case .albums: "An album is songs in order, delivered together. Make one and add songs to it."
         case .instruments: "File ▸ Import Instrument… brings in an SFZ pack's samples, listed in its family beside the ones built in."
@@ -745,7 +745,8 @@ struct LibrarySurfaceView: View {
         switch facts.id.shelf {
         case .songs: kind = .song
         case .records: kind = .record
-        case .ideas: kind = .idea
+        // An idea you open is dragged as a song is: dropped, it opens.
+        case .ideas: kind = facts.isIdeaSong ? .song : .idea
         case .samples: kind = .sample
         case .albums: kind = .album
         case .instruments, .kits: return nil

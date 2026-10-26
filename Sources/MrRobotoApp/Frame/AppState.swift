@@ -466,6 +466,8 @@ public final class AppState {
     /// Whether playback should loop. The frame owns the flag; the sources honour it, through
     /// `SongPlayback.loops`.
     public private(set) var isLooping = false
+    /// The loop as it was set for songs, while an idea has it on.
+    @ObservationIgnored private var loopOutsideIdeas: Bool?
     /// Whether the transport clicks while it plays. The frame owns the flag, as it does the loop.
     public private(set) var isClicking = false
 
@@ -860,7 +862,20 @@ public final class AppState {
         selectedVersion = song.versions.last?.id
         activeSection = song.sections.first?.id
         hasUnsavedChanges = false
+        loopFor(song)
         refreshPlayback()
+    }
+
+    /// An idea goes round: the loop comes on with one, and goes back to how it was set for songs
+    /// when a song opens after it.
+    private func loopFor(_ song: Song) {
+        if song.isIdea {
+            if loopOutsideIdeas == nil { loopOutsideIdeas = isLooping }
+            isLooping = true
+        } else if let was = loopOutsideIdeas {
+            isLooping = was
+            loopOutsideIdeas = nil
+        }
     }
 
     private func provenanceSummary(of song: Song) -> String {

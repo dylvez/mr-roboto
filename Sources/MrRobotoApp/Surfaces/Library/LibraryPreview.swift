@@ -94,7 +94,9 @@ final class LibraryPreview {
         case .records: return app.library.record(RecordID(rawValue: item.id)) != nil
         case .songs: return song(SongID(rawValue: item.id)).map { !$0.versions.isEmpty } ?? false
         case .samples: return app.library.sample(SampleID(rawValue: item.id)) != nil
-        case .ideas: return idea(VersionID(rawValue: item.id)).map(PartPlayer.canPlay) ?? false
+        case .ideas:
+            if let idea = song(SongID(rawValue: item.id)) { return !idea.versions.isEmpty }
+            return idea(VersionID(rawValue: item.id)).map(PartPlayer.canPlay) ?? false
         case .albums: return false
         case .instruments, .kits: return app.libraryIndex.facts(item)?.code != nil
         }
@@ -188,6 +190,11 @@ final class LibraryPreview {
             let version = PartVersion(partID: PartID(), kind: .sample(entry.sample), author: .user, operation: Operation.adopted)
             await playAlone(version, item: item, label: entry.name, tempo: entry.sample.detectedTempo, host: host)
         case .ideas:
+            // An idea you open plays as a song does.
+            if song(SongID(rawValue: item.id)) != nil {
+                await playSong(SongID(rawValue: item.id), item: item, host: host)
+                return
+            }
             guard let idea = idea(VersionID(rawValue: item.id)) else { return }
             await playAlone(idea, item: item, label: PartLabel.title(of: idea), tempo: nil, host: host)
         case .albums:
@@ -271,7 +278,8 @@ final class LibraryPreview {
         return task
     }
 
-    private func playSong(_ id: SongID, host: LibraryListeningHost) async {
+    /// - Parameter item: the row it is played from: an idea's is on the Ideas shelf.
+    private func playSong(_ id: SongID, item: LibraryItemID? = nil, host: LibraryListeningHost) async {
         guard let song = song(id) else { return }
         let task = makingTask?.song == id ? makingTask!.task : startMaking(song)
         state = .preparing(making?.song == id ? "Making a preview of \(song.title)…" : "Reading \(song.title)…")
@@ -285,7 +293,7 @@ final class LibraryPreview {
             let url = try await task.value
             let (planar, rate) = try await Task.detached { try BoothAdapter.planar(url) }.value
             let length = Double(planar.first?.count ?? 0) / rate
-            let soundID = Self.id(.song(id))
+            let soundID = Self.id(item ?? .song(id))
             await host.play(planar: planar, sampleRate: rate, loops: false, id: soundID, label: song.title, seconds: length)
             state = .sounding(Sounding(id: soundID, from: 0, length: length, loops: false, started: Date()))
         } catch {

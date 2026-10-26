@@ -5,7 +5,8 @@ import SongGraph
 // Mashup: two library songs on one grid, planned in sentences and made as a new song.
 
 private func findSong(_ named: String, in library: Library, open: Song?) -> Song? {
-    let songs = (open.map { [$0] } ?? []) + library.songs
+    // An idea open in the frame is not a song a mashup is made of.
+    let songs = (open.map { [$0] } ?? []).filter { !$0.isIdea } + library.songs
     return songs.first { $0.title.caseInsensitiveCompare(named) == .orderedSame } ?? songs.first { $0.id.description == named }
 }
 

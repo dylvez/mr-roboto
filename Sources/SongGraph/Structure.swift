@@ -238,6 +238,16 @@ public struct Song: Identifiable, Hashable, Codable, Sendable {
     /// byte.
     public var mixReference: MixReference?
 
+    /// Whether this is an idea rather than a song: a few bars at a tempo and key of their own, with
+    /// the parts made in it, kept on the library's Ideas shelf and put into songs later. It opens in
+    /// the frame as a song does — one section, looped — and the library keeps it out of every list
+    /// of songs (`Library.ideaSongs`). Nil is a song: optional so every song written before
+    /// round-trips byte for byte.
+    public var idea: Bool?
+
+    /// True for an idea.
+    public var isIdea: Bool { idea == true }
+
     public init(id: SongID = SongID(), title: String, artist: String = "", key: Key? = nil, tempo: Double = 120,
                 timeSignature: TimeSignature = .fourFour, sections: [Section] = [], versions: [PartVersion] = [],
                 seeds: [Seed] = [], experiments: [Experiment] = [], createdAt: Date = Date()) {
@@ -828,8 +838,15 @@ public struct LibraryMark: Hashable, Codable, Sendable {
 /// The library: songs, albums, ideas (part versions belonging to no song), imported records and samples.
 public struct Library: Hashable, Codable, Sendable {
     public let schemaVersion: Int
+    /// The songs, and only the songs: an idea is a package too, but it is kept in `ideaSongs`, so
+    /// nothing that lists songs — albums, mashups, the band's reading of earlier songs — meets one.
     public var songs: [Song]
+    /// The ideas you open: packages flagged `Song.idea`, each a few bars at a grid of its own.
+    /// `song(_:)` finds them by id as it finds a song.
+    public var ideaSongs: [Song] = []
     public var albums: [Album]
+    /// Bare ideas: a part version kept with no song and no grid around it — a phone capture, or a
+    /// part kept out of a song before ideas could be opened.
     public var ideas: [PartVersion]
     public var records: [Record]
     public var samples: [LibrarySample]
@@ -856,14 +873,64 @@ public struct Library: Hashable, Codable, Sendable {
         self.voice = voice
     }
 
-    public func song(_ id: SongID) -> Song? { songs.first { $0.id == id } }
+    private enum CodingKeys: String, CodingKey {
+        case schemaVersion, songs, ideaSongs, albums, ideas, records, samples, voice, houseCalls, said, marks
+    }
+
+    /// `ideaSongs` may be missing: a library encoded before ideas could be opened.
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        schemaVersion = try c.decode(Int.self, forKey: .schemaVersion)
+        songs = try c.decode([Song].self, forKey: .songs)
+        ideaSongs = try c.decodeIfPresent([Song].self, forKey: .ideaSongs) ?? []
+        albums = try c.decode([Album].self, forKey: .albums)
+        ideas = try c.decode([PartVersion].self, forKey: .ideas)
+        records = try c.decode([Record].self, forKey: .records)
+        samples = try c.decode([LibrarySample].self, forKey: .samples)
+        voice = try c.decodeIfPresent([VoiceLyric].self, forKey: .voice)
+        houseCalls = try c.decodeIfPresent([HouseCallRecord].self, forKey: .houseCalls)
+        said = try c.decodeIfPresent([SaidRecord].self, forKey: .said)
+        marks = try c.decodeIfPresent([LibraryMark].self, forKey: .marks)
+    }
+
+    /// `ideaSongs` is left out when there are none, so a library with no ideas encodes as before.
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(schemaVersion, forKey: .schemaVersion)
+        try c.encode(songs, forKey: .songs)
+        if !ideaSongs.isEmpty { try c.encode(ideaSongs, forKey: .ideaSongs) }
+        try c.encode(albums, forKey: .albums)
+        try c.encode(ideas, forKey: .ideas)
+        try c.encode(records, forKey: .records)
+        try c.encode(samples, forKey: .samples)
+        try c.encodeIfPresent(voice, forKey: .voice)
+        try c.encodeIfPresent(houseCalls, forKey: .houseCalls)
+        try c.encodeIfPresent(said, forKey: .said)
+        try c.encodeIfPresent(marks, forKey: .marks)
+    }
+
+    /// A song or an idea, by id.
+    public func song(_ id: SongID) -> Song? { songs.first { $0.id == id } ?? ideaSongs.first { $0.id == id } }
     public func album(_ id: AlbumID) -> Album? { albums.first { $0.id == id } }
     public func record(_ id: RecordID) -> Record? { records.first { $0.id == id } }
     public func sample(_ id: SampleID) -> LibrarySample? { samples.first { $0.id == id } }
 
-    /// Replaces the song with the same id, or appends it.
+    /// Replaces the song or idea with the same id, or appends it — to `ideaSongs` when it is an
+    /// idea, to `songs` when it is not, and out of the other list.
     public mutating func upsert(_ song: Song) {
-        if let index = songs.firstIndex(where: { $0.id == song.id }) { songs[index] = song } else { songs.append(song) }
+        if song.isIdea {
+            songs.removeAll { $0.id == song.id }
+            if let index = ideaSongs.firstIndex(where: { $0.id == song.id }) { ideaSongs[index] = song } else { ideaSongs.append(song) }
+        } else {
+            ideaSongs.removeAll { $0.id == song.id }
+            if let index = songs.firstIndex(where: { $0.id == song.id }) { songs[index] = song } else { songs.append(song) }
+        }
+    }
+
+    /// Takes a song or an idea out, by id.
+    public mutating func removeSong(_ id: SongID) {
+        songs.removeAll { $0.id == id }
+        ideaSongs.removeAll { $0.id == id }
     }
 
     /// Replaces the album with the same id, or appends it.

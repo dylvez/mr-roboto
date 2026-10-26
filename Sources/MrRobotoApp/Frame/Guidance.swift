@@ -492,6 +492,8 @@ public enum Guidance {
         var kinds = [SurfaceKind.library] + SurfaceKind.gateA + [.lyrics, .booth]
         if let song, !takes(in: song).isEmpty { kinds.append(.takes) }
         kinds.append(.mixer)
+        // An idea is one section: there is no form for Structure to arrange.
+        if song?.isIdea == true { kinds.removeAll { !$0.worksInIdeas } }
         return kinds
     }
 
@@ -969,6 +971,7 @@ extension AppState {
     /// somewhere else — a persona, a restored session — is held to the same standard.
     public func canPerform(_ action: SurfaceAction) -> Bool {
         for id in action.bound where version(id) == nil { return false }
+        if song?.isIdea == true, !action.surface.worksInIdeas { return false }
         // An answer surface with nothing in it is not an answer. Every other surface in the catalog
         // is legitimate empty — the drop target, an empty grid — but a Compare with nothing to
         // compare and a Check with nothing to check are panels whose only content is the reason

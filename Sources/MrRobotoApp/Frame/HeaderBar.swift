@@ -113,17 +113,25 @@ struct WindowChrome: ViewModifier {
     let app: AppState
     @State private var isShowingHistory = false
 
+    private var isIdea: Bool { app.song?.isIdea == true }
+
+    /// Under the title: "Idea" when an idea is open, so it is never taken for a song, and "Edited"
+    /// while it is unsaved.
+    static func subtitle(isIdea: Bool, edited: Bool) -> String {
+        [isIdea ? "Idea" : nil, edited ? "Edited" : nil].compactMap { $0 }.joined(separator: " · ")
+    }
+
     func body(content: Content) -> some View {
         content
             .navigationTitle(app.song?.title ?? "Mr. Roboto")
-            .navigationSubtitle(app.hasUnsavedChanges ? "Edited" : "")
+            .navigationSubtitle(Self.subtitle(isIdea: app.song?.isIdea == true, edited: app.hasUnsavedChanges))
             .toolbarTitleMenu {
-                Button("Song Settings…") { app.wantsSongSettings = true }
+                Button(isIdea ? "Idea Settings…" : "Song Settings…") { app.wantsSongSettings = true }
                     .disabled(app.song == nil)
                 Button("History") { isShowingHistory = true }
                     .disabled(app.song == nil)
                 Divider()
-                Button("Close Song") { app.closeSong() }
+                Button(isIdea ? "Close Idea" : "Close Song") { app.closeSong() }
                     .disabled(app.song == nil)
             }
             .toolbar {

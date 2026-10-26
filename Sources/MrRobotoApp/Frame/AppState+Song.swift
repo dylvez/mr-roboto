@@ -250,6 +250,9 @@ extension AppState {
         // The same parts, so the same one is the tune.
         copy.tune = original.tune
         copy.mixReference = original.mixReference
+        // A copy of an idea is an idea.
+        copy.idea = original.idea
+        copy.fills = original.fills
         var updated = library
         if let song { updated.upsert(song) }
         updated.upsert(copy)
@@ -299,7 +302,7 @@ extension AppState {
         }
         if song?.id == id { closeSong(saving: false) }
         var updated = library
-        updated.songs.removeAll { $0.id == id }
+        updated.removeSong(id)
         for index in updated.albums.indices {
             updated.albums[index].songs.removeAll { $0 == id }
             updated.albums[index].gaps[id] = nil

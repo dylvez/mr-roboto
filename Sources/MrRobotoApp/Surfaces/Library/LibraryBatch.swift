@@ -147,12 +147,22 @@ extension LibraryActions {
                                                     detail: "Their audio and their stems stay in the library folder, so songs made from them still play. Only the rows go.",
                                                     verb: "Remove", run: { for id in ids { _ = app.removeRecord(id) } })))
         case .ideas:
+            // Bare ideas are adopted and removed; ideas you open go to the Trash as songs do.
             let ideas = items.compactMap { item in app.library.ideas.first { $0.id.rawValue == item.id } }
-            own.append(adoptAll(ideas.map { LibraryDragPayload(kind: .idea, id: $0.id.rawValue, title: PartLabel.title(of: $0)) }, app))
-            own.append(LibraryAction(id: "remove", title: "Remove from Library…", isDestructive: true, group: 2,
-                                     kind: .confirm(question: "Remove \(count) ideas from the library?",
-                                                    detail: "Songs that adopted them copied their audio and keep playing.",
-                                                    verb: "Remove", run: { for idea in ideas { _ = app.removeIdea(idea.id) } })))
+            let packages = items.map { SongID(rawValue: $0.id) }.filter { id in app.library.ideaSongs.contains { $0.id == id } }
+            if !ideas.isEmpty {
+                own.append(adoptAll(ideas.map { LibraryDragPayload(kind: .idea, id: $0.id.rawValue, title: PartLabel.title(of: $0)) }, app))
+                own.append(LibraryAction(id: "remove", title: "Remove from Library…", isDestructive: true, group: 2,
+                                         kind: .confirm(question: "Remove \(Guidance.count(ideas.count, "idea")) from the library?",
+                                                        detail: "Songs that adopted them copied their audio and keep playing.",
+                                                        verb: "Remove", run: { for idea in ideas { _ = app.removeIdea(idea.id) } })))
+            }
+            if !packages.isEmpty {
+                own.append(LibraryAction(id: "trash", title: "Move to Trash…", isDestructive: true, group: 2,
+                                         kind: .confirm(question: "Move \(Guidance.count(packages.count, "idea")) to the Trash?",
+                                                        detail: "Their packages go to the Trash, where Finder can put them back.",
+                                                        verb: "Move to Trash", run: { for id in packages { _ = app.deleteSong(id) } })))
+            }
         case .samples:
             let entries = items.compactMap { app.library.sample(SampleID(rawValue: $0.id)) }
             own.append(adoptAll(entries.map { LibraryDragPayload(kind: .sample, id: $0.id.rawValue, title: $0.name) }, app))

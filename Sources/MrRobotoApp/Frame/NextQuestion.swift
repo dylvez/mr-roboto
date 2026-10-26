@@ -43,6 +43,8 @@ public enum NextMove: Equatable, Sendable {
     case surface(SurfaceAction)
     case openSong(SongID)
     case newSong
+    /// File ▸ New Idea: a few bars with no song around them.
+    case newIdea
     /// A new song, and Sources open on it: File ▸ New Song from Records.
     case songFromRecords
     case importRecord
@@ -63,11 +65,22 @@ public enum NextMove: Equatable, Sendable {
     /// band costs a request, and sending is yours.
     case askBand(String)
 
+    /// Whether the move means anything with an idea open: an idea is not developed into a form,
+    /// put on an album or mastered, and it has no form for Structure to arrange.
+    var worksInIdeas: Bool {
+        switch self {
+        case .develop, .putBackDevelopment, .addToAlbum, .exportMaster: return false
+        case .surface(let action): return action.surface.worksInIdeas
+        default: return true
+        }
+    }
+
     var identity: String {
         switch self {
         case .surface(let action): return action.identity
         case .openSong(let id): return "open|\(id.rawValue)"
         case .newSong: return "new"
+        case .newIdea: return "newIdea"
         case .songFromRecords: return "fromRecords"
         case .importRecord: return "import"
         case .mashup: return "mashup"
@@ -180,6 +193,12 @@ enum NextAdvisor {
         candidates.append(Candidate(option: NextOption(
             kind: "newSong", title: "Start a new song",
             rationale: "A title, a tempo and a key first: every writer in the band reads them.", move: .newSong), score: 8))
+        let ideas = app.library.ideaSongs.count
+        candidates.append(Candidate(option: NextOption(
+            kind: "newIdea", title: "Start an idea",
+            rationale: "A few bars at a tempo and key of their own, sung, played or written with no song around them"
+                + (ideas > 0 ? "; \(Guidance.count(ideas, "idea")) on the shelf already." : ", to put into songs later."),
+            move: .newIdea), score: 7.8))
         let crate = Sources.records(in: app.library)
         if !crate.isEmpty {
             let names = crate.prefix(2).map(\.title).joined(separator: " and ")
@@ -410,7 +429,9 @@ enum NextAdvisor {
     static func rank(_ candidates: [Candidate], at stage: String, app: AppState) -> [NextOption] {
         var seen: Set<String> = []
         var ranked: [(option: NextOption, score: Double)] = []
+        let inIdea = app.song?.isIdea == true
         for candidate in candidates where !app.nextDismissed.contains("\(stage)|\(candidate.option.kind)") {
+            if inIdea, !candidate.option.move.worksInIdeas { continue }
             guard seen.insert(candidate.option.id).inserted else { continue }
             let weight = app.nextPreferences.weight(of: candidate.option.kind, at: stage)
             var option = candidate.option
@@ -679,6 +700,8 @@ extension AppState {
         case .newSong:
             open(Song.new(title: MrRobotoApp.untitledName()))
             wantsSongSettings = true
+        case .newIdea:
+            newIdea()
         case .songFromRecords:
             open(Song.new(title: MrRobotoApp.untitledName()))
             openSurface(.sources, title: "Sources")

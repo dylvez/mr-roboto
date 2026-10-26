@@ -3,7 +3,8 @@ import SongGraph
 import SwiftUI
 
 /// The song's own settings — title, artist, brief, tempo, key, meter — in a popover off the header's
-/// title and off the transport's key and tempo, which is where you look for them.
+/// title and off the transport's key and tempo, which is where you look for them. An idea's are the
+/// same less the artist and the fills, with how many bars it is.
 ///
 /// Edits land as you make them, not on a button: the tempo readout and the key in the transport
 /// follow the field, so what you typed and what the clock will run at cannot disagree. Bad input
@@ -16,6 +17,7 @@ struct SongSettingsPopover: View {
     @State private var tempoText = ""
     @State private var keyText = ""
     @State private var meterText = ""
+    @State private var barsText = ""
     @FocusState private var focus: Field?
     /// The settings as they were when the popover opened, for Put back.
     @State private var opened: Settings?
@@ -23,7 +25,9 @@ struct SongSettingsPopover: View {
     /// Applies the tapped tempo once the tapping stops, so the rail gets one line, not one a tap.
     @State private var tapSettles: Task<Void, Never>?
 
-    private enum Field: Hashable { case title, artist, brief, tempo, key, meter }
+    private enum Field: Hashable { case title, artist, brief, tempo, key, meter, bars }
+
+    private var isIdea: Bool { app.song?.isIdea == true }
 
     /// The settings, together, so a change to any of them can be put back as one.
     struct Settings: Equatable {
@@ -35,6 +39,8 @@ struct SongSettingsPopover: View {
         var meter: TimeSignature
         var fills: Bool
         var genre: String?
+        /// An idea's length in bars; nil for a song.
+        var bars: Int?
 
         init(_ song: Song) {
             title = song.title
@@ -45,6 +51,7 @@ struct SongSettingsPopover: View {
             meter = song.timeSignature
             fills = song.playsFills
             genre = song.genre
+            bars = song.isIdea ? song.sections.first?.lengthInBars : nil
         }
 
         /// "92 bpm, D minor, 4/4": what Put back would return to, the parts that differ from now.
@@ -58,17 +65,20 @@ struct SongSettingsPopover: View {
             if meter != now.meter { parts.append(meter.description) }
             if fills != now.fills { parts.append(fills ? "fills" : "no fills") }
             if genre != now.genre { parts.append(genre.flatMap { GenreBook.standard.profile(named: $0)?.name } ?? "genre guessed") }
+            if let bars, bars != now.bars { parts.append("\(bars) bar\(bars == 1 ? "" : "s")") }
             return parts.joined(separator: ", ")
         }
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            SmallLabel("Song")
-            field("Title", text: $title, focus: .title, prompt: "What the song is called") { app.setTitle(title) }
-            field("Artist", text: $artist, focus: .artist, prompt: "Who it is by") { app.setArtist(artist) }
+            SmallLabel(isIdea ? "Idea" : "Song")
+            field("Title", text: $title, focus: .title, prompt: isIdea ? "What the idea is called" : "What the song is called") { app.setTitle(title) }
+            if !isIdea {
+                field("Artist", text: $artist, focus: .artist, prompt: "Who it is by") { app.setArtist(artist) }
+            }
             VStack(alignment: .leading, spacing: 4) {
-                field("Brief", text: $brief, focus: .brief, prompt: "What the song is about, in a sentence", lines: 1...3) { applyBrief() }
+                field("Brief", text: $brief, focus: .brief, prompt: isIdea ? "What the idea is, in a sentence" : "What the song is about, in a sentence", lines: 1...3) { applyBrief() }
                 problem(briefProblem)
             }
             .help("The Producer holds every part to the brief, and says so until there is one")
@@ -85,19 +95,30 @@ struct SongSettingsPopover: View {
                     field("Meter", text: $meterText, focus: .meter, prompt: "4/4", width: 70) { applyMeter() }
                     problem(meterProblem)
                 }
+                if isIdea {
+                    VStack(alignment: .leading, spacing: 4) {
+                        field("Bars", text: $barsText, focus: .bars, prompt: "4", width: 60) { applyBars() }
+                        problem(barsProblem)
+                    }
+                    .help("How long the idea is. It goes round at that length; a take sung past it makes it longer.")
+                }
             }
             VStack(alignment: .leading, spacing: 4) {
                 field("Key", text: $keyText, focus: .key, prompt: "D major, F# minor, E phrygian dominant, or blank") { applyKey() }
                 problem(keyProblem)
             }
             GenrePicker(app: app)
-            Toggle(isOn: Binding(get: { app.song?.playsFills ?? true }, set: { app.setFills($0) })) {
-                Text("Fills into each section")
-                    .font(Design.Typography.ui(12.5, weight: .regular))
+            if !isIdea {
+                Toggle(isOn: Binding(get: { app.song?.playsFills ?? true }, set: { app.setFills($0) })) {
+                    Text("Fills into each section")
+                        .font(Design.Typography.ui(12.5, weight: .regular))
+                }
+                .toggleStyle(.checkbox)
+                .help("The drums play a fill in a section's last bar and a crash on the next one's first beat")
             }
-            .toggleStyle(.checkbox)
-            .help("The drums play a fill in a section's last bar and a crash on the next one's first beat")
-            Text("The tempo and the meter are the clock every part plays to; the key is what the writers and the band read the song in. Nothing already written moves. A change while the song plays lands on the next press of play.")
+            Text(isIdea
+                 ? "The tempo and the meter are the clock every part of the idea plays to; the key is what the writers and the band read it in. Nothing already written moves. A song it goes into later is fitted to these."
+                 : "The tempo and the meter are the clock every part plays to; the key is what the writers and the band read the song in. Nothing already written moves. A change while the song plays lands on the next press of play.")
                 .font(Design.Typography.ui(11.5, weight: .regular))
                 .foregroundStyle(Design.Palette.inkSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -132,6 +153,7 @@ struct SongSettingsPopover: View {
         tempoText = Self.tempoText(song.tempo)
         keyText = song.key?.name ?? ""
         meterText = song.timeSignature.description
+        barsText = song.isIdea ? (song.sections.first?.lengthInBars).map(String.init) ?? "" : ""
         focus = .title
     }
 
@@ -160,6 +182,7 @@ struct SongSettingsPopover: View {
         app.setTimeSignature(settings.meter)
         app.setFills(settings.fills)
         app.setGenre(settings.genre)
+        if let bars = settings.bars { app.setIdeaBars(bars) }
         load()
     }
 
@@ -180,6 +203,11 @@ struct SongSettingsPopover: View {
 
     private func applyKey() {
         if app.setKey(parsing: keyText), let song = app.song { keyText = song.key?.name ?? "" }
+    }
+
+    private func applyBars() {
+        guard let bars = Int(barsText.trimmingCharacters(in: .whitespaces)), AppState.ideaBarsRange.contains(bars) else { return }
+        if app.setIdeaBars(bars), let length = app.ideaBars { barsText = String(length) }
     }
 
     private func applyMeter() {
@@ -211,6 +239,15 @@ struct SongSettingsPopover: View {
         let text = keyText.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty, Key(parsing: text) == nil else { return nil }
         return "Not a key I know. Try “D major”, “F# minor” or “Eb”."
+    }
+
+    private var barsProblem: String? {
+        let text = barsText.trimmingCharacters(in: .whitespaces)
+        guard !text.isEmpty else { return nil }
+        guard let bars = Int(text), AppState.ideaBarsRange.contains(bars) else {
+            return "A whole number of bars, \(AppState.ideaBarsRange.lowerBound) to \(AppState.ideaBarsRange.upperBound)."
+        }
+        return nil
     }
 
     private var meterProblem: String? {

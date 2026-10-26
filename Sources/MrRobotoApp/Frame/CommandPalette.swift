@@ -102,6 +102,10 @@ enum CommandPalette {
                                app.open(Song.new(title: MrRobotoApp.untitledName()))
                                app.wantsSongSettings = true
                            }),
+            PaletteCommand(id: "song.new-idea", title: "New Idea", shelf: .song, symbol: "lightbulb",
+                           shortcut: "⌥⌘N", detail: "A few bars at a tempo and key of their own, with no song around them",
+                           keywords: "sketch part loop idea start",
+                           run: { app.newIdea() }),
             PaletteCommand(id: "song.import", title: "Import Records…", shelf: .song, symbol: "square.and.arrow.down.on.square",
                            shortcut: "⌘I", keywords: "crate audio file record", isEnabled: app.store != nil,
                            run: { MrRobotoApp.importRecords(app) }),
@@ -115,6 +119,13 @@ enum CommandPalette {
             commands.append(PaletteCommand(id: "songs.\(song.id.rawValue.uuidString)", title: song.title, shelf: .songs,
                                            symbol: "music.note", detail: facts, keywords: "open song \(song.artist)",
                                            run: { app.openSong(song.id) }))
+        }
+        // Ideas sit with the songs, said as ideas: what you open, by name.
+        for idea in app.library.ideaSongs where idea.id != app.song?.id {
+            let facts = ["Idea", idea.key?.name, "\(Int(idea.tempo.rounded())) bpm"].compactMap { $0 }.joined(separator: " · ")
+            commands.append(PaletteCommand(id: "songs.\(idea.id.rawValue.uuidString)", title: idea.title, shelf: .songs,
+                                           symbol: "lightbulb", detail: facts, keywords: "open idea",
+                                           run: { app.openSong(idea.id) }))
         }
 
         for scheme in Design.Scheme.allCases {

@@ -27,7 +27,7 @@ struct AlbumSurfaceView: View {
     /// song if it is not saved yet — `addSong` takes either.
     static func addable(to album: Album, from library: Library, open: Song?) -> [Song] {
         var songs = library.songs
-        if let open, !songs.contains(where: { $0.id == open.id }) { songs.append(open) }
+        if let open, !open.isIdea, !songs.contains(where: { $0.id == open.id }) { songs.append(open) }
         return songs.filter { !album.songs.contains($0.id) }
     }
 

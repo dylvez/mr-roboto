@@ -52,7 +52,7 @@ public final class MashupModel {
     /// Songs that know their bars and key: the ones a mashup can be made of.
     public var candidates: [Song] {
         var songs = app.library.songs
-        if let open = app.song {
+        if let open = app.song, !open.isIdea {
             if let index = songs.firstIndex(where: { $0.id == open.id }) { songs[index] = open } else { songs.append(open) }
         }
         return songs.filter { Mashups.source(for: $0) != nil }
