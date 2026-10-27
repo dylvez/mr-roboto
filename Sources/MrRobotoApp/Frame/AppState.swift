@@ -313,6 +313,10 @@ public final class AppState {
     /// open over the frame while this is set (`askToPlace`).
     public var placingIdea: IdeaPlacingRequest?
 
+    /// File ▸ New Song from Ideas…, or Make a Song from These: the sheet that lays ideas out as a
+    /// song, open over the frame while this is set (`askToMakeSong`).
+    public var makingSongFromIdeas: SongFromIdeasRequest?
+
     /// ⇧⌘P: the command palette is over the frame.
     public var isShowingPalette = false
 

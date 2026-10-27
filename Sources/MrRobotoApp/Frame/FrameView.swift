@@ -219,6 +219,8 @@ struct FrameView: View {
                 }
             }
             .frame(maxHeight: .infinity)
+            // A song made of ideas: on a view of its own, so it never contends with the sheet below.
+            .sheet(item: $app.makingSongFromIdeas) { request in SongFromIdeasSheet(app: app, request: request) }
             // A region folding or opening slides its width on the same spring as the bench.
             .animation(!reduceMotion ? .snappy(duration: 0.25) : nil,
                        value: app.regions.collapsed)

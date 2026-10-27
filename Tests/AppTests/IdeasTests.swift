@@ -584,7 +584,7 @@ struct IdeasFromElsewhereTests {
 struct IdeaPlacingTests {
 
     /// An idea of its own in the library, holding `versions`, its media copied from `files`.
-    private static func idea(_ title: String, key: String?, tempo: Double, bars: Int, versions: [PartVersion],
+    static func idea(_ title: String, key: String?, tempo: Double, bars: Int, versions: [PartVersion],
                              files: [MediaRef: URL] = [:], in app: AppState) throws -> Song {
         var idea = Song.newIdea(title: title, key: key.flatMap { Key(parsing: $0) }, tempo: tempo, bars: bars)
         idea.gridChosen = true
@@ -597,7 +597,7 @@ struct IdeaPlacingTests {
     }
 
     /// Mono audio at 48 kHz, written where `name` says, and its media reference.
-    private static func audio(_ lane: [Float], named name: String, in directory: URL) throws -> (url: URL, media: MediaRef) {
+    static func audio(_ lane: [Float], named name: String, in directory: URL) throws -> (url: URL, media: MediaRef) {
         let url = directory.appendingPathComponent(name)
         try BoothAdapter.write([lane], sampleRate: 48_000, to: url)
         return (url, MediaRef(hash: ContentHash(of: try Data(contentsOf: url)), fileExtension: "wav"))
@@ -801,5 +801,92 @@ struct IdeaPlacingTests {
         #expect(app.receive(payload, at: .ledger))
         #expect(app.placingIdea?.spot == .end)
         #expect(app.song?.versions.count == song.versions.count, "asked, not done")
+    }
+}
+
+@Suite("Ideas: a song made of them", .serialized) @MainActor
+struct SongFromIdeasTests {
+
+    /// A sung idea: two bars of a 220 Hz tone, taken at its tempo, and in its key.
+    private static func sung(_ title: String, key: String, tempo: Double, in app: AppState, directory: URL) throws -> Song {
+        let bar = 4 * 60 / tempo
+        let frames = Int(2 * bar * 48_000)
+        let (url, media) = try IdeaPlacingTests.audio((0..<frames).map { Float(0.3 * sin(2 * .pi * 220 * Double($0) / 48_000)) },
+                                                      named: "\(title).wav", in: directory)
+        let section = SectionID()
+        var take = Take(section: section, startBar: 0, input: "Mic", pass: 1, sectionStartBar: 0, tempo: tempo, meter: .fourFour)
+        take.section = section
+        let version = PartVersion(partID: PartID(), kind: .audio(Audio(media: media, role: .take, sampleRate: 48_000, channelCount: 1,
+                                                                      duration: Double(frames) / 48_000, alignmentOffset: 0, take: take)),
+                                  author: .user, operation: Operation.recorded, note: "Take 1")
+        var idea = Song.newIdea(title: title, key: Key(parsing: key), tempo: tempo, bars: 2)
+        idea.sections[0] = Section(id: section, name: Song.ideaSectionName, stitch: [], lengthInBars: 2)
+        idea.gridChosen = true
+        try idea.append(version)
+        #expect(app.keepIdeaPackage(idea, mediaFrom: nil, files: [media: url]))
+        return idea
+    }
+
+    @Test("the song takes the grid of the idea that would lose most by moving: the sung one, not the written one, whose chords move at no cost")
+    func grid() throws {
+        let (app, directory, _) = try IdeasFixture.app("from-grid")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let chords = try IdeaPlacingTests.idea("Changes", key: "C major", tempo: 120, bars: 4,
+                                               versions: [TransportFixture.progressionVersion()], in: app)
+        let hum = try Self.sung("Hum", key: "A minor", tempo: 92, in: app, directory: directory)
+        let grids = SongFromIdeas.grids(for: [chords, hum])
+        #expect(grids.first?.idea == hum.id, "taking the chords' grid would stretch the voice; taking the voice's moves the chords for nothing")
+        #expect(grids.first?.cost == 0 && (grids.last?.cost ?? 0) > 0)
+        #expect(grids.first?.sentences == ["Changes: the changes stays in C major."], "\(grids.first?.sentences ?? [])")
+        #expect(SongFromIdeas.line(grids[0]) == "92 bpm in A minor")
+        // All written: the first one's, in the order given.
+        let tune = try IdeaPlacingTests.idea("Tune", key: "D major", tempo: 100, bars: 4, versions: [TransportFixture.melodyVersion()], in: app)
+        #expect(SongFromIdeas.grids(for: [tune, chords]).first?.idea == tune.id)
+    }
+
+    @Test("a song is made of the ideas: a section for each row, named after it and as long as it, two in a row playing together, at the chosen grid, opened on Structure; the ideas left as they were")
+    func make() async throws {
+        let (app, directory, song) = try IdeasFixture.app("from-make")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let hum = try Self.sung("Hum", key: "A minor", tempo: 92, in: app, directory: directory)
+        let chords = try IdeaPlacingTests.idea("Changes", key: "C major", tempo: 120, bars: 4,
+                                               versions: [TransportFixture.progressionVersion()], in: app)
+        let groove = try IdeaPlacingTests.idea("Beat", key: nil, tempo: 120, bars: 2, versions: [TransportFixture.grooveVersion()], in: app)
+        app.openSong(song.id)
+
+        let id = try await app.makeSong(from: [[chords.id, groove.id], [hum.id]], title: "From Ideas")
+        let made = try #require(app.song)
+        #expect(made.id == id && made.title == "From Ideas" && !made.isIdea && made.gridChosen == true)
+        #expect(made.tempo == 92 && made.key == Key(parsing: "A minor"), "the sung idea's grid")
+        #expect(made.sections.map(\.name) == ["Changes", "Hum"] && made.sections.map(\.lengthInBars) == [4, 2])
+        let first = made.sections[0]
+        let types = first.stitch.compactMap { made.latestVersion(of: $0.part)?.type }
+        #expect(Set(types) == [.progression, .groove], "the chords and the beat play together in the first section: \(types)")
+        guard case .progression(let moved)? = made.versions.first(where: { $0.type == .progression })?.kind else { Issue.record("no chords"); return }
+        #expect(moved.key == Key(parsing: "C major"), "C major is A minor's relative: nothing moves")
+        let take = try #require(Guidance.takes(in: made).first.flatMap(Guidance.audio(of:)))
+        #expect(take.take?.section == made.sections[1].id)
+        #expect(made.seeds.filter { if case .idea = $0.kind { return true }; return false }.count == 3)
+        #expect(app.bench.items.last?.kind == .structure, "opened on Structure")
+        #expect(app.library.songs.contains { $0.id == id } && !app.library.ideaSongs.contains { $0.id == id })
+        #expect(app.library.song(hum.id)?.versions.count == hum.versions.count, "the ideas as they were")
+        #expect(app.library.song(song.id) != nil, "the song open before is kept")
+        #expect(app.log.contains { $0.text == "Made From Ideas from 3 ideas" })
+        #expect(try LibraryStore(directoryURL: directory).load().songs.contains { $0.id == id }, "saved")
+    }
+
+    @Test("Make a Song from These is offered for ideas chosen on the shelf, and opens the sheet with them in order")
+    func entries() throws {
+        let (app, directory, _) = try IdeasFixture.app("from-entries")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let a = try IdeaPlacingTests.idea("A", key: "C major", tempo: 100, bars: 4, versions: [TransportFixture.progressionVersion()], in: app)
+        let b = try IdeaPlacingTests.idea("B", key: "C major", tempo: 100, bars: 4, versions: [TransportFixture.melodyVersion()], in: app)
+        let actions = LibraryActions.batch([.ideaSong(b.id), .ideaSong(a.id)], in: app, work: LibraryBatchWork(app: app))
+        let make = try #require(actions.first { $0.id == "make-song" })
+        guard case .run(let run) = make.kind else { Issue.record("not a run"); return }
+        run()
+        #expect(app.makingSongFromIdeas?.ideas == [b.id, a.id])
+        app.askToMakeSong()
+        #expect(app.makingSongFromIdeas?.ideas == [])
     }
 }

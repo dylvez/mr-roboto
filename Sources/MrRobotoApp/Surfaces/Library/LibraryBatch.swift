@@ -158,6 +158,9 @@ extension LibraryActions {
                                                         verb: "Remove", run: { for idea in ideas { _ = app.removeIdea(idea.id) } })))
             }
             if !packages.isEmpty {
+                own.append(LibraryAction(id: "make-song", title: "Make a Song from These…",
+                                         help: "A new song with a section for each, in the order chosen, at the tempo and key of the one that moves least.",
+                                         kind: .run { app.askToMakeSong(from: packages) }))
                 own.append(LibraryAction(id: "trash", title: "Move to Trash…", isDestructive: true, group: 2,
                                          kind: .confirm(question: "Move \(Guidance.count(packages.count, "idea")) to the Trash?",
                                                         detail: "Their packages go to the Trash, where Finder can put them back.",

@@ -80,6 +80,9 @@ struct FrameCommands: Commands {
             // An idea: a few bars at a grid of their own, with no song around them, put into songs later.
             Button("New Idea") { app.newIdea() }
                 .keyboardShortcut("n", modifiers: [.command, .option])
+            // Ideas laid end to end as a song's sections, at the grid of the one that moves least.
+            Button("New Song from Ideas…") { app.askToMakeSong() }
+                .disabled(app.store == nil || app.library.ideaSongs.isEmpty)
             // A song made of records: a blank song, and Sources open on it. The first stem brought
             // in sets its key, its tempo and its form.
             Button("New Song from Records…") {

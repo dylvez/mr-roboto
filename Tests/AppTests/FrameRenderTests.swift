@@ -406,6 +406,29 @@ struct FrameRenderTests {
         try writeDark(sheet, size: CGSize(width: 500, height: 720), name: "place-idea-dark")
     }
 
+    @Test("New Song from Ideas…: three ideas, two of them in one section, the sung one's grid taken")
+    func songFromIdeas() throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        let (app, directory, _) = try IdeasFixture.app("render-from")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = directory.appendingPathComponent("hum.wav")
+        try BoothAdapter.write([(0..<Int(5.3 * 48_000)).map { Float(0.3 * sin(Double($0) * 0.05)) }], sampleRate: 48_000, to: file)
+        let media = MediaRef(hash: ContentHash(of: try Data(contentsOf: file)), fileExtension: "wav")
+        var hum = Song.newIdea(title: "Hum", key: Key(parsing: "A minor"), tempo: 92, bars: 2)
+        hum.gridChosen = true
+        try hum.append(PartVersion(partID: PartID(), kind: .audio(Audio(media: media, role: .take, sampleRate: 48_000, channelCount: 1, duration: 5.3,
+                                                                        take: Take(section: hum.sections[0].id, startBar: 0, pass: 1, sectionStartBar: 0, tempo: 92))),
+                                   author: .user, operation: Operation.recorded, note: "Take 1"))
+        #expect(app.keepIdeaPackage(hum, mediaFrom: nil, files: [media: file]))
+        let chords = try IdeaPlacingTests.idea("Changes", key: "C major", tempo: 120, bars: 4,
+                                               versions: [TransportFixture.progressionVersion()], in: app)
+        let beat = try IdeaPlacingTests.idea("Beat", key: nil, tempo: 120, bars: 2, versions: [TransportFixture.grooveVersion()], in: app)
+        let sheet = SongFromIdeasSheet(app: app, request: SongFromIdeasRequest(ideas: [chords.id, beat.id, hum.id]))
+        try write(sheet, size: CGSize(width: 540, height: 600), name: "song-from-ideas")
+        try writeDark(sheet, size: CGSize(width: 540, height: 600), name: "song-from-ideas-dark")
+    }
+
     @Test("the Merge surface on a chop and a bass line in different keys")
     func merge() throws {
         FontRegistration.registerBundledFonts()
