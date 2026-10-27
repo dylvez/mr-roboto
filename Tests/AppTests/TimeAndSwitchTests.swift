@@ -140,6 +140,23 @@ struct TimeBaseTests {
         #expect(app.countInTargetBar == nil && !app.isCountingIn)
     }
 
+    @Test("A song the system stops under the transport — the output changed — stops in the frame too, and the rail says why")
+    func interrupted() async throws {
+        let (app, host, _) = arranged()
+        await app.startTransport()
+        #expect(app.transport.isPlaying)
+        await host.report(PlaybackReading(isRunning: false, seconds: 3, interrupted: true))
+        await waitFor { !app.transport.isPlaying }
+        #expect(!app.transport.isPlaying, "not counting on in silence")
+        #expect(app.log.contains { $0.text == "The song stopped: the sound output changed under it" })
+        // A song that plays to its end is not said to have been stopped.
+        await host.report(PlaybackReading(isRunning: true, seconds: 0))
+        await app.startTransport()
+        await host.report(PlaybackReading(isRunning: false, seconds: 8))
+        await waitFor { !app.transport.isPlaying }
+        #expect(app.log.filter { $0.text.hasPrefix("The song stopped") }.count == 1)
+    }
+
     @Test("A section played alone is that section only, once, and with Loop on it comes round inside itself")
     func sectionAlone() async throws {
         let (app, host, _) = arranged()

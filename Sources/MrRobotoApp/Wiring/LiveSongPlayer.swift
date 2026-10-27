@@ -587,6 +587,8 @@ final class LiveSongPlayer: SongPlaybackHost {
         guard let engine, engine.isTransportRunning else { return .stopped }
         // Negative during the realtime lead time, when transport zero is still in the future.
         let seconds = max(0, engine.transportSeconds ?? 0)
+        // Stopped by the system — the output changed — while the transport thinks it plays.
+        guard engine.isRunning else { return PlaybackReading(isRunning: false, seconds: seconds, interrupted: true) }
         let hits = bouncedHits
             + sectionGrooves.reduce(0) { $0 + $1.scheduledHitCount }
             + sectionBasses.reduce(0) { $0 + $1.scheduledHitCount }

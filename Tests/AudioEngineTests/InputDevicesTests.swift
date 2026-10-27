@@ -81,6 +81,15 @@ struct InputDevicesTests {
         return output && !AudioDevices.inputs().isEmpty
     }
 
+    /// Configuration changes posted for an engine, from whichever thread posts them.
+    private final class Changes: @unchecked Sendable {
+        private let lock = NSLock()
+        private var count = 0
+        func add() { lock.withLock { count += 1 } }
+        /// How many came since the last take, and starts counting again.
+        func take() -> Int { lock.withLock { defer { count = 0 }; return count } }
+    }
+
     /// What a source delivered, from the tap's thread.
     private final class Heard: @unchecked Sendable {
         private let lock = NSLock()
@@ -105,6 +114,13 @@ struct InputDevicesTests {
     @AudioActor
     func listeningLeavesPlayback() async throws {
         let engine = try Engine(playerCount: 1)
+        // The system may stop the engine when the route changes — with Bluetooth headphones
+        // connected, a microphone opening does — and says so. That is the system's, and the frame
+        // says it when it happens; a stop with nothing said would be this app's.
+        let changes = Changes()
+        let watch = NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine.avEngine,
+                                                           queue: nil) { _ in changes.add() }
+        defer { NotificationCenter.default.removeObserver(watch) }
         try engine.start()
         for device in AudioDevices.inputs() {
             let source = try InputNodeSource(device: device.id, deviceName: device.name,
@@ -112,13 +128,20 @@ struct InputDevicesTests {
             #expect(source.format.sampleRate > 0 && Int(source.format.channelCount) == device.inputChannels, "\(device.name): \(source.format)")
             let heard = Heard()
             try source.begin { buffer, time in heard.add(buffer, time) }
-            try await Task.sleep(for: .milliseconds(400))
+            // A Bluetooth headset switching to its microphone, or a phone's over Continuity, can
+            // take a second or more to deliver anything.
+            for _ in 0..<30 where heard.read.buffers < 3 { try await Task.sleep(for: .milliseconds(100)) }
             source.end()
             let read = heard.read
             #expect(read.buffers > 0, "\(device.name): nothing came in")
             #expect(read.untimed == 0, "\(device.name): buffers with no host time")
             #expect(read.formats == ["\(source.format.sampleRate)/\(source.format.channelCount)"], "\(device.name): \(read.formats)")
-            #expect(engine.isRunning, "\(device.name) stopped the song")
+            if !engine.isRunning {
+                #expect(changes.take() > 0, "\(device.name) stopped the song, and nothing said the output changed")
+                try engine.start()
+            }
+            #expect(engine.isRunning, "\(device.name) left the song unable to start again")
+            _ = changes.take()
         }
         // A second Play.
         engine.stop()
@@ -126,6 +149,28 @@ struct InputDevicesTests {
         #expect(engine.isRunning)
         #expect(engine.avEngine.outputNode.outputFormat(forBus: 0).sampleRate > 0)
         engine.stop()
+    }
+
+    /// An input that will not open: a headset gone to another rate since it was chosen.
+    private final class Refusing: RecordingSource {
+        let format = AVAudioFormat(standardFormatWithSampleRate: 48_000, channels: 1)!
+        let latencySeconds = 0.0
+        let name = "Gone"
+        func begin(_ sink: @escaping @Sendable (AVAudioPCMBuffer, AVAudioTime) -> Void) throws {
+            throw RecorderError.inputUnavailable("it runs at 24000 Hz now")
+        }
+        func end() {}
+    }
+
+    @Test("an input that will not open is an error, not a take: the recorder is not recording and leaves no file")
+    func refused() throws {
+        let recorder = Recorder(source: Refusing(), transport: nil)
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("refused-\(UUID().uuidString).wav")
+        defer { try? FileManager.default.removeItem(at: url) }
+        #expect(throws: RecorderError.self) { try recorder.start(to: url) }
+        #expect(!recorder.isRecording)
+        #expect(!FileManager.default.fileExists(atPath: url.path))
+        #expect(throws: RecorderError.self) { try recorder.stop() }
     }
 
     @Test("the devices CoreAudio reports: every one has inputs, at most one is the default, a bogus UID is nobody")

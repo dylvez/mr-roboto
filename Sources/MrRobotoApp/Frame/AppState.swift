@@ -1741,6 +1741,10 @@ public final class AppState {
                     await host.fade(fade)
                 }
                 if !reading.isRunning {
+                    if reading.interrupted {
+                        self.note(.session, "The song stopped: the sound output changed under it",
+                                  detail: "The system stopped the sound: with Bluetooth headphones such as AirPods connected, opening a microphone can switch the output. Press play to go on.")
+                    }
                     await self.stopTransport()
                     return
                 }

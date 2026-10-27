@@ -1192,11 +1192,16 @@ public struct PlaybackReading: Equatable, Sendable {
     /// Hits the groove player has handed to the sampler since the transport started. The cheapest
     /// honest proof that something is actually being scheduled, and what the tests assert on.
     public var scheduledHits: Int
+    /// The engine stopped under the transport rather than reaching the end: the system changed the
+    /// sound output while it played — with Bluetooth headphones connected, a microphone opening
+    /// can — and the song used to go on counting in silence.
+    public var interrupted: Bool
 
-    public init(isRunning: Bool, seconds: Double, scheduledHits: Int = 0) {
+    public init(isRunning: Bool, seconds: Double, scheduledHits: Int = 0, interrupted: Bool = false) {
         self.isRunning = isRunning
         self.seconds = seconds
         self.scheduledHits = scheduledHits
+        self.interrupted = interrupted
     }
 
     public static let stopped = PlaybackReading(isRunning: false, seconds: 0)

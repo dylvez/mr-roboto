@@ -51,8 +51,12 @@ public final class InputNodeSource: RecordingSource {
         guard let id = device ?? AudioDevices.defaultInputID() else { throw RecorderError.noInput }
         try AudioDevices.point(engine, at: id)
         let input = engine.inputNode
-        // The device's own rate and channels. The node's output side keeps the format of the
-        // device it had before, and a tap at another rate is never called.
+        // The device's own rate and channels, read once the engine is prepared: until then the
+        // node reports the format it had before. AirPods say 48 kHz there and run their microphone
+        // at 24, and a tap asked for at 48 threw "format mismatch" and took the app down. The
+        // node's output side keeps the old device's format even then, and a tap at another rate
+        // is never called.
+        engine.prepare()
         let hardware = input.inputFormat(forBus: 0)
         guard hardware.sampleRate > 0, hardware.channelCount > 0,
               let tap = AVAudioFormat(standardFormatWithSampleRate: hardware.sampleRate, channels: hardware.channelCount) else { throw RecorderError.noInput }
@@ -68,6 +72,14 @@ public final class InputNodeSource: RecordingSource {
     public func begin(_ sink: @escaping @Sendable (AVAudioPCMBuffer, AVAudioTime) -> Void) throws {
         let channel = self.channel
         let mono = format
+        // A device that has changed its rate or channels since it was chosen — a headset switched
+        // to its microphone's rate, another plugged in under the same name — is refused rather
+        // than tapped: a tap at a format the node no longer has is an exception, not an error.
+        engine.prepare()
+        let now = engine.inputNode.inputFormat(forBus: 0)
+        guard now.sampleRate == tapFormat.sampleRate, now.channelCount == tapFormat.channelCount else {
+            throw RecorderError.inputUnavailable("it runs at \(Int(now.sampleRate)) Hz with \(now.channelCount) channel\(now.channelCount == 1 ? "" : "s") now, not the \(Int(tapFormat.sampleRate)) Hz it was chosen at; choose it again")
+        }
         engine.inputNode.installTap(onBus: 0, bufferSize: 1_024, format: tapFormat) { buffer, time in
             if let channel, let picked = ChannelPick.mono(buffer, channel: channel, format: mono) {
                 sink(picked, time)
@@ -246,8 +258,18 @@ public final class Recorder: @unchecked Sendable {
             writeError = nil
             lastPeak = 0
         }
-        try source.begin { [weak self] buffer, time in
-            self?.take(buffer, at: time)
+        do {
+            try source.begin { [weak self] buffer, time in
+                self?.take(buffer, at: time)
+            }
+        } catch {
+            // Nothing is coming: not recording, and the empty file is not a take.
+            lock.withLock {
+                self.file = nil
+                self.url = nil
+            }
+            try? FileManager.default.removeItem(at: url)
+            throw error
         }
     }
 
