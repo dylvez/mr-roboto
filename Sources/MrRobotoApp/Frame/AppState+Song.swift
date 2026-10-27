@@ -169,7 +169,7 @@ extension AppState {
     }
 
     /// "4/4", "7/8". Nil for anything that is not two numbers over a slash.
-    public static func timeSignature(parsing text: String) -> TimeSignature? {
+    nonisolated public static func timeSignature(parsing text: String) -> TimeSignature? {
         let parts = text.split(separator: "/").map { $0.trimmingCharacters(in: .whitespaces) }
         guard parts.count == 2, let beats = Int(parts[0]), let unit = Int(parts[1]),
               beats >= 1, beats <= 32, [1, 2, 4, 8, 16].contains(unit) else { return nil }

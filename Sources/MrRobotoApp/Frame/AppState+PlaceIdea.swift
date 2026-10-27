@@ -415,8 +415,11 @@ extension AppState {
     /// by the keys, audio rendered into the song's package on the section's bars, each a new part
     /// seeded from the idea, the section stitched — a new one made, at the end — and the words
     /// labelled for it. Returns the new versions.
+    /// - Parameter replacing: whether its chords, bass line or groove take the place of the
+    ///   section's own of that kind there; false plays them together — an organ's bubble over a
+    ///   guitar's skank.
     @discardableResult
-    public func place(_ placement: IdeaPlacement, parts: Set<PartID>? = nil, words: Bool = true,
+    public func place(_ placement: IdeaPlacement, parts: Set<PartID>? = nil, words: Bool = true, replacing: Bool = true,
                       by author: Author = .user) async throws -> [PartVersion] {
         guard let store, libraryIsWritable else { throw IdeaPlacingError.noLibrary }
         guard let opened = song else { throw IdeaPlacingError.noSong }
@@ -480,7 +483,9 @@ extension AppState {
             default:
                 kind = piece.version.kind
             }
-            let named = piece.title.localizedCaseInsensitiveContains(idea.title) ? piece.title : "\(piece.title) of \(idea.title)"
+            // Chords are called by their symbols, which have just moved: by the idea instead.
+            let named = piece.version.type == .progression ? "Chords of \(idea.title)"
+                : piece.title.localizedCaseInsensitiveContains(idea.title) ? piece.title : "\(piece.title) of \(idea.title)"
             let version = PartVersion(partID: PartID(), kind: kind, author: author,
                                       operation: piece.version.type == .audio ? Operation.fitted : Operation.adopted,
                                       note: "\(named): \(piece.sentence)", origin: seed.id)
@@ -498,7 +503,7 @@ extension AppState {
         if case .end = placement.spot { sections.append(section) }
         guard let index = sections.firstIndex(where: { $0.id == section.id }), let current = song else { throw IdeaPlacingError.sectionGone }
         for version in placed where version.type != .audio && StructureModel.plays(version) {
-            if IdeaPlacing.replacesItsKind(version.type) {
+            if replacing, IdeaPlacing.replacesItsKind(version.type) {
                 sections[index].stitch.removeAll { lane in
                     lane.part != version.partID && !placed.contains { $0.partID == lane.part }
                         && current.latestVersion(of: lane.part)?.type == version.type

@@ -114,6 +114,10 @@ public enum DirectorTools {
             TuneTakeTool(workspace: workspace).erased(),
             // The song's tune said, appended after the fifty-seventh: which melody the band reads as it.
             MarkTuneTool(workspace: workspace).erased(),
+            // Ideas, appended after the fifty-eighth: one started, one put into a song, a song made of several.
+            NewIdeaTool(workspace: workspace).erased(),
+            PlaceIdeaTool(workspace: workspace).erased(),
+            SongFromIdeasTool(workspace: workspace).erased(),
         ]
         if let stage {
             let pad = pad ?? DirectorStagePad()
@@ -207,6 +211,10 @@ public enum DirectorTools {
         "tune_take",
         // Which melody is the song's tune, appended.
         "mark_tune",
+        // Appended: an idea started, one put into a song, a song made of several.
+        "new_idea",
+        "place_idea",
+        "song_from_ideas",
     ]
 
     /// The two the frame adds. Appended after `names`, never among them: a session with no frame

@@ -12,6 +12,8 @@ struct PlaceIdeaSheet: View {
     /// The parts taken out of what comes; everything placeable comes unless taken out.
     @State private var leftOut: Set<PartID> = []
     @State private var bringsWords = true
+    /// Whether its chords, bass line or groove take the place of the section's own.
+    @State private var replacing = true
     @State private var isWorking = false
     @State private var problem: String?
 
@@ -29,7 +31,12 @@ struct PlaceIdeaSheet: View {
                 header(placement, song: song)
                 whereRow(placement, song: song)
                 parts(placement)
-                if let words = placement.words { wordsRow(words) }
+                if placement.pieces.contains(where: { !$0.replaces.isEmpty && comes($0) }) {
+                FormChip("In place of the section's own", isOn: replacing) { replacing.toggle() }
+                    .disabled(isWorking)
+                    .help("On: its chords, bass line or groove take the place of the section's own there. Off: they play together.")
+            }
+            if let words = placement.words { wordsRow(words) }
                 said(placement)
                 buttons(placement)
             } else {
@@ -99,7 +106,7 @@ struct PlaceIdeaSheet: View {
                         if leftOut.contains(piece.id) { leftOut.remove(piece.id) } else { leftOut.insert(piece.id) }
                     }
                     .disabled(piece.isRefused || isWorking)
-                    Text(piece.sentence + (piece.replaces.isEmpty ? "" : " In the \(placement.sectionName), in place of \(SectionWriting.list(piece.replaces))."))
+                    Text(piece.sentence + sectionWords(piece, in: placement))
                         .font(Design.Typography.prose(12.5))
                         .foregroundStyle(Design.Palette.inkSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -163,6 +170,13 @@ struct PlaceIdeaSheet: View {
         }
     }
 
+    /// " In the Hook, in place of Chords of Riddim." — or "with" it, when they play together.
+    private func sectionWords(_ piece: IdeaPiece, in placement: IdeaPlacement) -> String {
+        guard !piece.replaces.isEmpty else { return "" }
+        let named = SectionWriting.list(piece.replaces)
+        return replacing ? " In the \(placement.sectionName), in place of \(named)." : " In the \(placement.sectionName), with \(named)."
+    }
+
     private func comes(_ piece: IdeaPiece) -> Bool { !piece.isRefused && !leftOut.contains(piece.id) }
 
     private func chosen(_ placement: IdeaPlacement) -> [IdeaPiece] { placement.pieces.filter(comes) }
@@ -172,7 +186,7 @@ struct PlaceIdeaSheet: View {
         defer { isWorking = false }
         problem = nil
         do {
-            try await app.place(placement, parts: Set(chosen(placement).map(\.id)), words: bringsWords)
+            try await app.place(placement, parts: Set(chosen(placement).map(\.id)), words: bringsWords, replacing: replacing)
             dismiss()
         } catch {
             problem = "\(error)"

@@ -657,7 +657,7 @@ struct IdeaPlacingTests {
         let seed = try #require(now.seeds.last)
         #expect(seed.kind == .idea(idea.id) && placed.allSatisfy { $0.origin == seed.id }, "each part says the idea it came from")
         #expect(SongPlayback.instrumentID(for: movedChords.partID, in: now) == "vibraphone")
-        #expect(PartLabel.title(of: movedChords) == "\(PartLabel.title(of: chords)) of Hum")
+        #expect(PartLabel.title(of: movedChords) == "Chords of Hum", "named by the idea, not by the symbols it moved from")
         #expect(app.library.song(idea.id)?.versions.count == idea.versions.count, "the idea as it was")
         #expect(app.log.contains { $0.text == "Put Hum in the Hook" })
     }
@@ -888,5 +888,94 @@ struct SongFromIdeasTests {
         #expect(app.makingSongFromIdeas?.ideas == [b.id, a.id])
         app.askToMakeSong()
         #expect(app.makingSongFromIdeas?.ideas == [])
+    }
+}
+
+@Suite("Ideas: the band's three tools", .serialized) @MainActor
+struct IdeaToolsTests {
+
+    private func run(_ app: AppState, _ tool: String, _ input: [String: Any]) async -> (result: [String: Any], failed: Bool, text: String) {
+        let box = WritingFixture.toolbox(AppStateWorkspace(app))
+        let data = try! JSONSerialization.data(withJSONObject: input, options: [.sortedKeys])
+        let result = await WritingFixture.run(box, tool, String(decoding: data, as: UTF8.self))
+        return (WritingFixture.json(result), result.isError, result.content)
+    }
+
+    @Test("new_idea opens an idea at the grid asked for, the open song saved, no settings left open for a person")
+    func newIdea() async throws {
+        let (app, directory, song) = try IdeasFixture.app("tool-new")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        app.openSong(song.id)
+        let made = await run(app, "new_idea", ["title": "Hum", "tempo": 92, "key": "A minor", "meter": "6/8", "bars": 8])
+        #expect(!made.failed, "\(made.text)")
+        let idea = try #require(app.song)
+        #expect(idea.isIdea && idea.title == "Hum" && idea.tempo == 92 && idea.key == Key(parsing: "A minor"))
+        #expect(idea.timeSignature == TimeSignature(beatsPerBar: 6, beatUnit: 8) && idea.sections.first?.lengthInBars == 8)
+        #expect(made.result["idea"] as? String == idea.id.description && !app.wantsSongSettings)
+        let bad = await run(app, "new_idea", ["title": "", "tempo": 0, "key": "H major", "meter": "", "bars": 4])
+        #expect(bad.failed && bad.text.contains("not a key"))
+    }
+
+    @Test("place_idea puts an idea in a section by name, or a new one, and says what moved; it refuses what it cannot find")
+    func place() async throws {
+        let (app, directory, song) = try IdeasFixture.app("tool-place")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let idea = try IdeaPlacingTests.idea("Changes", key: "C major", tempo: 92, bars: 4,
+                                             versions: [TransportFixture.progressionVersion(), TransportFixture.melodyVersion()], in: app)
+        app.openSong(song.id)
+        let placed = await run(app, "place_idea", ["idea": "changes", "section": "Verse", "parts": [String](), "words": true, "replace": true])
+        #expect(!placed.failed, "\(placed.text)")
+        #expect(placed.result["section"] as? String == "Verse")
+        let sentences = placed.result["sentences"] as? [String] ?? []
+        #expect(sentences.contains { $0.contains("up 2 semitones to D major") }, "\(sentences)")
+        #expect((placed.result["versions"] as? [String])?.count == 2)
+
+        let one = await run(app, "place_idea", ["idea": idea.id.description, "section": "", "parts": ["the tune"], "words": false, "replace": true])
+        #expect(!one.failed, "\(one.text)")
+        #expect(app.song?.sections.map(\.name) == ["Verse", "Changes"], "a new section after the last")
+        #expect((one.result["versions"] as? [String])?.count == 1, "only the part asked for")
+
+        let none = await run(app, "place_idea", ["idea": "Nowhere", "section": "", "parts": [String](), "words": false, "replace": true])
+        #expect(none.failed && none.text.contains("Changes"), "the ideas there are")
+        let wrong = await run(app, "place_idea", ["idea": "Changes", "section": "Bridge", "parts": [String](), "words": false, "replace": true])
+        #expect(wrong.failed && wrong.text.contains("Verse"))
+
+        // With replace false, chords join the section's own rather than taking their place.
+        let verse = try #require(app.song?.sections.first)
+        let before = verse.stitch.count
+        let layered = await run(app, "place_idea", ["idea": "Changes", "section": "Verse", "parts": ["the changes"], "words": false, "replace": false])
+        #expect(!layered.failed, "\(layered.text)")
+        #expect(app.song?.sections.first?.stitch.count == before + 1, "played together, nothing taken out")
+        #expect((layered.result["sentences"] as? [String] ?? []).contains { $0.contains("In the Verse, with ") }, "\(layered.result)")
+    }
+
+    @Test("song_from_ideas makes a song of ideas, two joined with + in one section, at the grid of the one that moves the rest least")
+    func songFromIdeas() async throws {
+        let (app, directory, _) = try IdeasFixture.app("tool-song")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        _ = try IdeaPlacingTests.idea("Changes", key: "C major", tempo: 92, bars: 4, versions: [TransportFixture.progressionVersion()], in: app)
+        _ = try IdeaPlacingTests.idea("Beat", key: nil, tempo: 120, bars: 2, versions: [TransportFixture.grooveVersion()], in: app)
+        _ = try IdeaPlacingTests.idea("Tune", key: "C major", tempo: 92, bars: 4, versions: [TransportFixture.melodyVersion()], in: app)
+        let made = await run(app, "song_from_ideas", ["sections": ["Changes + Beat", "Tune"], "grid": "", "title": "Assembled"])
+        #expect(!made.failed, "\(made.text)")
+        let song = try #require(app.song)
+        #expect(song.title == "Assembled" && !song.isIdea && song.tempo == 92 && song.key == Key(parsing: "C major"))
+        #expect(made.result["sections"] as? [String] == ["Changes 4", "Tune 4"])
+        let bad = await run(app, "song_from_ideas", ["sections": ["Tune"], "grid": "Beat", "title": ""])
+        #expect(bad.failed && bad.text.contains("one of the ideas named"))
+    }
+
+    @Test("with nothing open and two ideas on the shelf, the band offers to make a song of them; taking it opens the sheet")
+    func option() throws {
+        let (app, directory, _) = try IdeasFixture.app("tool-option")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let a = try IdeaPlacingTests.idea("A", key: "C major", tempo: 92, bars: 4, versions: [TransportFixture.progressionVersion()], in: app)
+        #expect(!app.nextQuestion.options.contains { $0.kind == "songFromIdeas" }, "one idea is not a song")
+        let b = try IdeaPlacingTests.idea("B", key: "C major", tempo: 92, bars: 4, versions: [TransportFixture.melodyVersion()], in: app)
+        let question = app.nextQuestion
+        let option = try #require(question.options.first { $0.kind == "songFromIdeas" })
+        #expect(option.title == "Make a song from your ideas")
+        app.take(option, from: question)
+        #expect(app.makingSongFromIdeas?.ideas == [a.id, b.id])
     }
 }

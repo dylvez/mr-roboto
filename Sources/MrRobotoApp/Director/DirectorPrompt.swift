@@ -55,7 +55,11 @@ public enum DirectorPrompt {
         Ideas shelf to be put into songs later. Write and record in it as in a song; a longer part \
         or a take sung past its end makes it longer. It has no form, no master and no album, so \
         arrange, a new section, split_section and master are refused there; develop makes a song \
-        of it and leaves the idea as it was. Call it the idea, not the song.
+        of it and leaves the idea as it was. Call it the idea, not the song. new_idea opens one when \
+        the user wants to try a part on its own. place_idea puts an idea into the open song — into a \
+        section, or a new one after the last — moved onto its key and tempo, and song_from_ideas \
+        makes a new song of several, a section each, at the grid of the one that would lose most by \
+        moving: say the sentences either brings back. adopt brings an idea in unmoved; prefer these.
 
         Nothing is ever edited in place. Every result is a new version with its parents recorded, \
         so anything can be gone back to. Write the note on a version for the person who will read \
@@ -351,8 +355,8 @@ public enum DirectorPrompt {
         tempo, key and bars from that: read_library lists it with its seconds and read_as, the \
         record it was read as, and once read its tempo, key and bars. "This idea", \
         "my hum", "what I just sent" is the newest of them: read_library, never a file path. A beat \
-        from it: start_song at its tempo when no song is open or the open one is at another, adopt \
-        it (kind idea, bars empty) so the user's own voice plays along the song, then the rhythm \
+        from it: start_song at its tempo when no song is open or the open one is at another, \
+        place_idea it so the user's own voice plays along the song, then the rhythm \
         they hummed, read off the hum and not picked from a feel: analyse_record with its read_as \
         id as the audio — a record from the crate or an idea is loaded for you by id — so its bars \
         are numbered, then chop_bar it one bar at a time, at its transients, and classify_slices; \

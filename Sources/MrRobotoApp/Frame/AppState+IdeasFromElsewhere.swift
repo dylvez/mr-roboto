@@ -300,7 +300,7 @@ extension AppState {
 
     /// "8 bars at 92 bpm in A minor", with the meter when it is not 4/4; "its tempo still to be
     /// read" for a capture waiting for its reading.
-    static func ideaLine(_ idea: Song) -> String {
+    nonisolated static func ideaLine(_ idea: Song) -> String {
         let bars = Guidance.count(idea.sections.first?.lengthInBars ?? 0, "bar")
         guard idea.captureAwaitingReading == nil else { return "\(bars), its tempo still to be read" }
         let tempo = idea.tempo.rounded() == idea.tempo ? "\(Int(idea.tempo))" : String(format: "%.1f", idea.tempo)

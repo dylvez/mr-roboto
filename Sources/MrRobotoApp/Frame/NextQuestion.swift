@@ -45,6 +45,8 @@ public enum NextMove: Equatable, Sendable {
     case newSong
     /// File ▸ New Idea: a few bars with no song around them.
     case newIdea
+    /// File ▸ New Song from Ideas…: the ideas on the shelf laid out as a song.
+    case songFromIdeas
     /// A new song, and Sources open on it: File ▸ New Song from Records.
     case songFromRecords
     case importRecord
@@ -82,6 +84,7 @@ public enum NextMove: Equatable, Sendable {
         case .openSong(let id): return "open|\(id.rawValue)"
         case .newSong: return "new"
         case .newIdea: return "newIdea"
+        case .songFromIdeas: return "fromIdeas"
         case .songFromRecords: return "fromRecords"
         case .importRecord: return "import"
         case .mashup: return "mashup"
@@ -200,6 +203,14 @@ enum NextAdvisor {
             rationale: "A few bars at a tempo and key of their own, sung, played or written with no song around them"
                 + (ideas > 0 ? "; \(Guidance.count(ideas, "idea")) on the shelf already." : ", to put into songs later."),
             move: .newIdea), score: 7.8))
+        if ideas >= 2 {
+            let names = app.library.ideaSongs.prefix(3).map(\.title).joined(separator: ", ")
+            candidates.append(Candidate(option: NextOption(
+                kind: "songFromIdeas", title: "Make a song from your ideas",
+                rationale: "\(Guidance.count(ideas, "idea")) on the shelf (\(names)\(ideas > 3 ? "…" : "")): a section each, at the tempo and key "
+                    + "of the one that would lose most by moving.",
+                move: .songFromIdeas), score: 7.9))
+        }
         let crate = Sources.records(in: app.library)
         if !crate.isEmpty {
             let names = crate.prefix(2).map(\.title).joined(separator: " and ")
@@ -706,6 +717,8 @@ extension AppState {
             wantsSongSettings = true
         case .newIdea:
             newIdea()
+        case .songFromIdeas:
+            askToMakeSong(from: library.ideaSongs.map(\.id))
         case .songFromRecords:
             open(Song.new(title: MrRobotoApp.untitledName()))
             openSurface(.sources, title: "Sources")

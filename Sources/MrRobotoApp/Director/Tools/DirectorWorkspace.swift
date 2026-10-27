@@ -127,6 +127,18 @@ public protocol DirectorWorkspace: AnyObject, Sendable {
     func refitSource(_ part: PartID, semitones: Int?, atBar: Int?, tighten: Bool?) async throws -> PartVersion
     /// A song from an idea: an empty open song set up in place, or a new one opened. Nil when there is nowhere to.
     func startSong(title: String, tempo: Double, key: Key?, machine: String) -> Song?
+
+    // Ideas: a few bars with no song around them, put into songs (ideas-first).
+
+    /// A new idea of its own, opened, the open song saved first. Nil where there is no library.
+    func newIdea(title: String, tempo: Double, key: Key?, meter: TimeSignature, bars: Int) -> Song?
+    /// What putting an idea in the open song at `spot` would do. Nil with no song open, no such
+    /// idea, or a section the song does not have.
+    func ideaPlacement(_ idea: SongID, at spot: IdeaSpot) -> IdeaPlacement?
+    /// Puts an idea's chosen parts in the open song as the placement says.
+    func place(_ placement: IdeaPlacement, parts: Set<PartID>?, words: Bool, replacing: Bool) async throws -> [PartVersion]
+    /// A new song of ideas, a section a row, at the grid of the idea named, opened.
+    func makeSong(from rows: [[SongID]], grid: SongID?, title: String) async throws -> SongID
     /// Plays a version for the user, now. False when this workspace has nothing to play through.
     func hear(_ version: PartVersion) async -> Bool
 
@@ -222,6 +234,19 @@ extension DirectorWorkspace {
     /// What the crate is doing to a record, or why it last failed. Nil when nothing, and where
     /// there is no crate.
     public func crateStatus(of record: RecordID) -> String? { nil }
+
+    /// Where there is no library, there is no idea to open, put in or build from.
+    public func newIdea(title: String, tempo: Double, key: Key?, meter: TimeSignature, bars: Int) -> Song? { nil }
+    public func ideaPlacement(_ idea: SongID, at spot: IdeaSpot) -> IdeaPlacement? {
+        guard let song, let found = library.ideaSongs.first(where: { $0.id == idea }), found.id != song.id else { return nil }
+        return IdeaPlacing.plan(found, into: song, at: spot)
+    }
+    public func place(_ placement: IdeaPlacement, parts: Set<PartID>?, words: Bool, replacing: Bool) async throws -> [PartVersion] {
+        throw IdeaPlacingError.noLibrary
+    }
+    public func makeSong(from rows: [[SongID]], grid: SongID?, title: String) async throws -> SongID {
+        throw IdeaPlacingError.noLibrary
+    }
 
     /// Where there is no frame, there is no Library to open.
     public func showLibrary(_ query: LibraryQuery) -> Bool { false }
@@ -484,6 +509,30 @@ public final class AppStateWorkspace: DirectorWorkspace {
 
     public func startSong(title: String, tempo: Double, key: Key?, machine: String) -> Song? {
         app.startSong(title: title, tempo: tempo, key: key, machine: machine)
+    }
+
+    public func newIdea(title: String, tempo: Double, key: Key?, meter: TimeSignature, bars: Int) -> Song? {
+        guard app.store != nil else { return nil }
+        app.newIdea(by: .director)
+        // The band says what it is: the settings it would open for a person stay shut.
+        app.wantsSongSettings = false
+        let name = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !name.isEmpty { app.setTitle(name, by: .director) }
+        app.setTempo(tempo, by: .director)
+        app.setKey(key, by: .director)
+        app.setTimeSignature(meter, by: .director)
+        app.setIdeaBars(bars, by: .director)
+        return app.song
+    }
+
+    public func ideaPlacement(_ idea: SongID, at spot: IdeaSpot) -> IdeaPlacement? { app.ideaPlacement(idea, at: spot) }
+
+    public func place(_ placement: IdeaPlacement, parts: Set<PartID>?, words: Bool, replacing: Bool) async throws -> [PartVersion] {
+        try await app.place(placement, parts: parts, words: words, replacing: replacing, by: .persona("Director"))
+    }
+
+    public func makeSong(from rows: [[SongID]], grid: SongID?, title: String) async throws -> SongID {
+        try await app.makeSong(from: rows, grid: grid, title: title, by: .director)
     }
 
     public func hear(_ version: PartVersion) async -> Bool {

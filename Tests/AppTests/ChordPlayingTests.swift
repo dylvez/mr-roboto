@@ -239,7 +239,7 @@ struct PlayChordsToolTests {
 
     @Test("the tool is the forty-seventh, has a sentence in the rail, and the prompt says when to reach for it")
     func told() throws {
-        #expect(DirectorTools.names[46] == "play_chords" && DirectorTools.names.count == 58)
+        #expect(DirectorTools.names[46] == "play_chords" && DirectorTools.names.count == 61)
         #expect(DirectorSession.activity(for: "play_chords") == "Playing the chords…")
         #expect(DirectorPrompt.system.contains("play_chords"))
     }
