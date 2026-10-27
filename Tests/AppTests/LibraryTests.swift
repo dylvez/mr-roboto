@@ -123,11 +123,10 @@ struct LibraryIdeaTests {
         #expect(later.playback.groove != nil)
         #expect(later.library.song(origin.id)?.versions.count == origin.versions.count)
 
-        // Dropped on the bench it opens in the Grid.
+        // Dropped on the bench it asks where in the song it goes, and is not put anywhere yet.
         later.open(Song(title: "Third"))
         #expect(later.receive(LibraryDragPayload(kind: .idea, id: idea.rawValue, title: "Groove"), at: .bench))
-        #expect(later.bench.items.last?.kind == .grid)
-        #expect(later.bound(for: later.bench.items.last!.id).count == 1)
+        #expect(later.placingIdea?.idea == idea && later.song?.versions.isEmpty == true)
     }
 
     @Test("with no song open there is nothing to adopt into, and the rail says so")

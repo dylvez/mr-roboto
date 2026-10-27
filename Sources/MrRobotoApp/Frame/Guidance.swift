@@ -125,7 +125,11 @@ enum PartLabel {
             switch audio.role {
             case .take:
                 if audio.comp != nil { return "Comp" }
-                if let take = audio.take { return "Take \(take.pass)" }
+                // An idea's take or comp put into a song is called what the idea calls it.
+                if let take = audio.take {
+                    if version.operation == Operation.fitted, let name = note(of: version) { return name }
+                    return "Take \(take.pass)"
+                }
                 // A capture from the phone with no song named, or it placed on its reading in an
                 // idea: its note begins with what the phone was told it was for. Every one of them
                 // used to be "Record".

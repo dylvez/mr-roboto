@@ -112,7 +112,7 @@ struct IdeasTests {
         #expect(app.canPerform(SurfaceAction(surface: .grid, title: "New groove")))
     }
 
-    @Test("the Ideas shelf lists an idea with its key, tempo, bars and parts; Open is what a double-click does, and a drag opens it")
+    @Test("the Ideas shelf lists an idea with its key, tempo, bars and parts; Open is what a double-click does, and a drag carries it as an idea")
     func shelf() throws {
         let (app, directory, song) = try IdeasFixture.app("shelf")
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -140,7 +140,7 @@ struct IdeasTests {
         #expect(!actions.contains("album") && !actions.contains("adopt"))
         #expect(LibraryActions.primary(for: .ideaSong(id), in: app)?.id == "open")
         #expect(LibraryActions.shelf(.ideas, in: app).map(\.id) == ["new-idea"])
-        #expect(LibrarySurfaceView.payload(for: facts)?.kind == .song)
+        #expect(LibrarySurfaceView.payload(for: facts)?.kind == .idea, "dropped on a song it goes in it; with none open, it opens")
     }
 
     @Test("an idea is never a track, nor one of the songs before")
@@ -577,5 +577,229 @@ struct IdeasFromElsewhereTests {
         let version = try #require(app.song?.versions.first { $0.id.description == adopted.version })
         #expect(version.kind == groove.kind && version.operation == Operation.adopted)
         #expect(app.song?.versions.count == 1)
+    }
+}
+
+@Suite("Ideas: put in a song", .serialized) @MainActor
+struct IdeaPlacingTests {
+
+    /// An idea of its own in the library, holding `versions`, its media copied from `files`.
+    private static func idea(_ title: String, key: String?, tempo: Double, bars: Int, versions: [PartVersion],
+                             files: [MediaRef: URL] = [:], in app: AppState) throws -> Song {
+        var idea = Song.newIdea(title: title, key: key.flatMap { Key(parsing: $0) }, tempo: tempo, bars: bars)
+        idea.gridChosen = true
+        for version in versions {
+            try idea.append(version)
+            _ = AppState.joinForm(with: version, in: &idea)
+        }
+        #expect(app.keepIdeaPackage(idea, mediaFrom: nil, files: files))
+        return idea
+    }
+
+    /// Mono audio at 48 kHz, written where `name` says, and its media reference.
+    private static func audio(_ lane: [Float], named name: String, in directory: URL) throws -> (url: URL, media: MediaRef) {
+        let url = directory.appendingPathComponent(name)
+        try BoothAdapter.write([lane], sampleRate: 48_000, to: url)
+        return (url, MediaRef(hash: ContentHash(of: try Data(contentsOf: url)), fileExtension: "wav"))
+    }
+
+    /// The frequency of a tone, by its zero crossings.
+    private static func frequency(_ lane: ArraySlice<Float>, sampleRate: Double) -> Double {
+        let samples = Array(lane)
+        let crossings = zip(samples, samples.dropFirst()).filter { $0 < 0 && $1 >= 0 }.count
+        return Double(crossings) / (Double(samples.count) / sampleRate)
+    }
+
+    @Test("an idea's chords and tune move by the keys, at no cost, into the section chosen in place of its chords; their instrument comes; the idea stays as it was")
+    func written() async throws {
+        let (app, directory, song) = try IdeasFixture.app("place-written")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        app.openSong(song.id)
+        let own = TransportFixture.progressionVersion()
+        #expect(app.record(own))
+        var sections = try #require(app.song?.sections)
+        sections.append(Section(name: "Hook", stitch: sections[0].stitch, lengthInBars: 4))
+        #expect(app.arrange(sections))
+        app.save()
+        let hook = sections[1].id
+
+        let chords = TransportFixture.progressionVersion()
+        let tune = TransportFixture.melodyVersion()
+        let vibes = PartVersion(partID: PartID(), kind: .sound(Sound(instrument: "vibraphone", forPart: chords.partID)),
+                                author: .user, operation: Operation.written)
+        let idea = try Self.idea("Hum", key: "C major", tempo: 92, bars: 4, versions: [chords, tune, vibes], in: app)
+
+        let shelved = try #require(app.libraryIndex.facts(.ideaSong(idea.id))?.fit, "the Library's Fit column has it")
+        #expect(shelved.verdict == .near && shelved.semitones == 2 && shelved.cost == 0, "written: moved at no cost")
+        let plan = try #require(app.ideaPlacement(idea.id, at: .section(hook)))
+        #expect(plan.pieces.map(\.version.type) == [.progression, .melody], "the sound comes with the chords, not as a part")
+        let piece = try #require(plan.pieces.first)
+        #expect(piece.move.semitones == 2 && piece.verdict == .near)
+        #expect(piece.sentence.contains("up 2 semitones to D major") && piece.sentence.contains("at no cost"), "\(piece.sentence)")
+        #expect(piece.replaces == [PartLabel.title(of: own)])
+        #expect(plan.sectionBars == 4 && plan.ideaBars == 4 && plan.startBar == 8 && plan.sentences.isEmpty)
+
+        let placed = try await app.place(plan)
+        let now = try #require(app.song)
+        #expect(placed.count == 2)
+        let movedChords = try #require(placed.first { $0.type == .progression })
+        let movedTune = try #require(placed.first { $0.type == .melody })
+        guard case .progression(let progression) = movedChords.kind, case .melody(let melody) = movedTune.kind else {
+            Issue.record("not chords and a tune"); return
+        }
+        #expect(progression.key == Key(parsing: "D major"))
+        #expect(progression.bars[0].chords[0].chord == Chord(.c, .majorSeventh).transposed(by: 2))
+        #expect(melody.notes.map(\.pitch.midi) == [74, 76])
+        #expect(now.sections[1].stitch.contains(part: movedChords.partID) && now.sections[1].stitch.contains(part: movedTune.partID))
+        #expect(!now.sections[1].stitch.contains(part: own.partID), "in place of the Hook's own chords")
+        #expect(now.sections[0].stitch.contains(part: own.partID) && !now.sections[0].stitch.contains(part: movedChords.partID),
+                "the Verse as it was")
+        let seed = try #require(now.seeds.last)
+        #expect(seed.kind == .idea(idea.id) && placed.allSatisfy { $0.origin == seed.id }, "each part says the idea it came from")
+        #expect(SongPlayback.instrumentID(for: movedChords.partID, in: now) == "vibraphone")
+        #expect(PartLabel.title(of: movedChords) == "\(PartLabel.title(of: chords)) of Hum")
+        #expect(app.library.song(idea.id)?.versions.count == idea.versions.count, "the idea as it was")
+        #expect(app.log.contains { $0.text == "Put Hum in the Hook" })
+    }
+
+    @Test("a take sung at 92 in A minor comes into a song at 100 in D major shifted and stretched onto its section's first bar, without its count-in, going round to fill the section; its audio the song's own")
+    func take() async throws {
+        let (app, directory, song) = try IdeasFixture.app("place-take")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        app.openSong(song.id)
+        #expect(app.setTempo(100))
+        app.save()
+        // Three bars at 92: a silent bar of count-in, then two bars of a 220 Hz tone.
+        let bar92 = 4 * 60 / 92.0
+        let frames = Int(3 * bar92 * 48_000)
+        let lane = (0..<frames).map { i -> Float in i < Int(bar92 * 48_000) ? 0 : Float(0.3 * sin(2 * .pi * 220 * Double(i) / 48_000)) }
+        let (url, media) = try Self.audio(lane, named: "hum.wav", in: directory)
+        var hum = Song.newIdea(title: "Hum", bars: 2)
+        let take = Take(section: hum.sections[0].id, startBar: 0, input: "Mic", pass: 1, sectionStartBar: 0, tempo: 92, meter: .fourFour)
+        let sung = PartVersion(partID: PartID(), kind: .audio(Audio(media: media, role: .take, sampleRate: 48_000, channelCount: 1,
+                                                                   duration: Double(frames) / 48_000, alignmentOffset: -bar92, take: take)),
+                               author: .user, operation: Operation.recorded, note: "Take 1")
+        let idea = try Self.idea("Hum", key: "A minor", tempo: 92, bars: 2, versions: [sung], files: [media: url], in: app)
+        hum = idea
+
+        let plan = try #require(app.ideaPlacement(hum.id, at: .end))
+        let piece = try #require(plan.pieces.first)
+        #expect(piece.move.semitones == 2 && abs(piece.move.ratio - 0.92) < 1e-9)
+        #expect(piece.sentence == "Take 1 up 2 semitones to B minor, stretched ×0.92 from 92 to 100.")
+        #expect(plan.ideaBars == 2 && plan.sectionBars == 2 && plan.startBar == 8)
+        #expect(plan.sentences == ["A new section of 2 bars after the Verse, called Hum."])
+
+        let placed = try await app.place(plan)
+        let now = try #require(app.song)
+        #expect(now.sections.map(\.name) == ["Verse", "Hum"] && now.sections[1].lengthInBars == 2)
+        let version = try #require(placed.first)
+        let audio = try #require(Guidance.audio(of: version))
+        #expect(audio.take?.section == now.sections[1].id && audio.take?.tempo == 100)
+        let clock = TransportClock(tempo: 100, timeSignature: .fourFour)
+        let at = TakePlacement.placement(of: audio, in: now, clock: clock)
+        #expect(abs((at.take ?? 0) - clock.seconds(forBar: 8)) < 1e-9, "on the new section's first bar")
+        #expect(abs(audio.duration - 4.8) < 0.01, "exactly two bars at 100")
+        #expect(PartLabel.title(of: version) == "Take 1 of Hum")
+        let rendered = try BoothAdapter.planar(try app.store!.songStore(for: song.id).mediaURL(for: audio.media))
+        #expect(rendered.planar[0].prefix(Int(0.3 * rendered.sampleRate)).contains { abs($0) > 0.1 },
+                "it starts singing: the count-in's silence is left out")
+        let middle = rendered.planar[0][Int(1.5 * rendered.sampleRate)..<Int(3.5 * rendered.sampleRate)]
+        let heard = Self.frequency(middle, sampleRate: rendered.sampleRate)
+        #expect(abs(heard - 220 * pow(2, 2 / 12)) < 4, "two semitones up: \(heard) Hz")
+
+        // Into the eight-bar Verse it goes round four times.
+        let verse = try #require(app.ideaPlacement(hum.id, at: .section(now.sections[0].id)))
+        #expect(verse.sentences == ["The idea is 2 bars and the Verse 8: it goes round four times there."])
+        let again = try await app.place(verse)
+        #expect(abs((Guidance.audio(of: again[0])?.duration ?? 0) - 19.2) < 0.01)
+    }
+
+    @Test("a capture comes with its pickup, silent before it; a move past four semitones is flagged; drums are never shifted")
+    func capture() async throws {
+        let (app, directory, song) = try IdeasFixture.app("place-capture")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        app.openSong(song.id)
+        #expect(app.setTempo(100))
+        #expect(app.setKey(parsing: "G# major"))
+        app.save()
+        // A capture read at 100 in D major, placed with its first downbeat on bar 2 after a pickup.
+        let (url, media) = try Self.audio((0..<Int(4.8 * 48_000)).map { Float(0.3 * sin(2 * .pi * 220 * Double($0) / 48_000)) },
+                                          named: "beat.wav", in: directory)
+        var beat = AppState.captureIdea(title: "Beat from the phone", media: media, sampleRate: 48_000, channelCount: 1, duration: 4.8, note: nil)
+        var reading = GuidanceFixture.analysis()
+        reading.tempo = [TempoRange(start: 0, end: 4.8, bpm: 100)]
+        reading.bars = [SongGraph.TimeRange(start: 0.9, end: 3.3)]
+        var drumReading = reading
+        reading.instruments = []
+        #expect(AppState.read(&beat, reading) != nil)
+        let offset = try #require(Guidance.audio(of: beat.versions.last { $0.type == .audio }!)?.alignmentOffset)
+        #expect(abs(offset - 1.5) < 1e-9)
+        #expect(app.keepIdeaPackage(beat, mediaFrom: nil, files: [media: url]))
+
+        let plan = try #require(app.ideaPlacement(beat.id, at: .end))
+        let piece = try #require(plan.pieces.first)
+        #expect(piece.move.semitones == -6 && piece.verdict == .far)
+        #expect(piece.flags.contains { $0.contains("past 4, the timbre will tell") }, "\(piece.flags)")
+        let placed = try await app.place(plan)
+        let audio = try #require(Guidance.audio(of: placed[0]))
+        let rendered = try BoothAdapter.planar(try app.store!.songStore(for: song.id).mediaURL(for: audio.media))
+        let rate = rendered.sampleRate
+        #expect(!rendered.planar[0].prefix(Int(0.8 * rate)).contains { abs($0) > 0.02 }, "silence before the pickup")
+        #expect(rendered.planar[0][Int(2 * rate)..<Int(2.5 * rate)].contains { abs($0) > 0.1 }, "then the capture")
+
+        // Read as drums most of the way through, it is stretched with its pitch left alone.
+        drumReading.instruments = [SongGraph.InstrumentActivity(instrument: .drums, ranges: [SongGraph.TimeRange(start: 0, end: drumReading.duration)])]
+        var drums = AppState.captureIdea(title: "Drums from the phone", media: media, sampleRate: 48_000, channelCount: 1, duration: 4.8, note: nil)
+        #expect(AppState.read(&drums, drumReading) != nil)
+        let open = try #require(app.song)
+        let drumPiece = try #require(IdeaPlacing.plan(drums, into: open, at: .end)?.pieces.first)
+        #expect(drumPiece.move.semitones == 0 && drumPiece.sentence.hasSuffix("its pitch left alone: it is drums."), "\(drumPiece.sentence)")
+    }
+
+    @Test("an idea's words become the new section's stanza; a section with words of its own keeps them")
+    func words() async throws {
+        let (app, directory, song) = try IdeasFixture.app("place-words")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        app.openSong(song.id)
+        let lyric = PartVersion(partID: PartID(), kind: .lyric(Lyricist.lyric(from: "la la la\nsing it again")), author: .user,
+                                operation: Operation.written)
+        let idea = try Self.idea("Hum", key: "D major", tempo: 113, bars: 4, versions: [TransportFixture.melodyVersion(), lyric], in: app)
+
+        let plan = try #require(app.ideaPlacement(idea.id, at: .end))
+        #expect(plan.words?.comes == true && plan.words?.sentence == "The idea's words become the Hum's.")
+        try await app.place(plan)
+        let now = try #require(app.song)
+        guard case .lyric(let words)? = now.versions.last(where: { $0.type == .lyric })?.kind else { Issue.record("no words"); return }
+        let stanza = try #require(words.stanza(forSectionAt: 1, in: now.sections))
+        #expect(stanza.label.name == "Hum" && words.lines[stanza.lines].map(\.text) == ["la la la", "sing it again"])
+
+        let again = try #require(app.ideaPlacement(idea.id, at: .section(now.sections[1].id)))
+        #expect(again.words?.comes == false && again.words?.sentence.contains("has words of its own") == true)
+        try await app.place(again)
+        #expect(app.song?.versions.filter { $0.type == .lyric }.count == 1, "its words left as they were")
+    }
+
+    @Test("Add to This Song… is on an idea's row with a song open; a drop on a section, past the last or on the bench asks where; with no song open the idea opens")
+    func entries() throws {
+        let (app, directory, song) = try IdeasFixture.app("place-entries")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let idea = try Self.idea("Hum", key: "D major", tempo: 113, bars: 4, versions: [TransportFixture.melodyVersion()], in: app)
+        func place() -> LibraryAction? { LibraryActions.actions(for: .ideaSong(idea.id), in: app).first { $0.id == "place" } }
+        #expect(place()?.isEnabled == false, "no song to put it in")
+        let payload = LibraryDragPayload(kind: .idea, id: idea.id.rawValue, title: idea.title)
+        #expect(app.receive(payload, at: .bench))
+        #expect(app.song?.id == idea.id && app.placingIdea == nil, "with no song open, it opens")
+        #expect(place()?.isEnabled == false, "not into itself")
+
+        app.openSong(song.id)
+        #expect(place()?.isEnabled == true)
+        let verse = try #require(app.song?.sections.first?.id)
+        #expect(app.receive(payload, at: .section(verse)))
+        #expect(app.placingIdea?.idea == idea.id && app.placingIdea?.spot == .section(verse))
+        #expect(app.receive(payload, at: .afterLastSection))
+        #expect(app.placingIdea?.spot == .end)
+        #expect(app.receive(payload, at: .ledger))
+        #expect(app.placingIdea?.spot == .end)
+        #expect(app.song?.versions.count == song.versions.count, "asked, not done")
     }
 }

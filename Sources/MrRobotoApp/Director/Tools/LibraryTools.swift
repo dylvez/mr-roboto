@@ -274,7 +274,8 @@ public struct ReadLibraryTool: DirectorTool {
                                seconds: audio.map { ($0.duration * 10).rounded() / 10 },
                                tempo: waiting ? nil : (idea.tempo * 10).rounded() / 10,
                                bars: waiting ? nil : idea.sections.first?.lengthInBars,
-                               readAs: audio.flatMap { library.record(forMedia: $0.media) }?.id.description, fit: nil)
+                               readAs: audio.flatMap { library.record(forMedia: $0.media) }?.id.description,
+                               fit: Self.fitLine(index.facts(.ideaSong(idea.id))?.fit, into: index.fitTarget))
         }
         let bare = search.pick(library.ideas, on: .ideas, index: index, id: \.id.rawValue).map { idea -> Output.Idea in
             var key = ReadSongTool.key(of: idea).map { "\($0)" }

@@ -487,7 +487,9 @@ public struct LibraryIndex: Sendable {
             }
             switch id.shelf {
             case .records: items[index].fit = lookups.records[RecordID(rawValue: id.id)].flatMap { LibraryFitting.fit($0, into: target) }
-            case .ideas: items[index].fit = lookups.ideas[VersionID(rawValue: id.id)].flatMap { LibraryFitting.fit($0, into: target) }
+            case .ideas:
+                items[index].fit = lookups.ideaSongs[SongID(rawValue: id.id)].flatMap { LibraryFitting.fit($0, into: target) }
+                    ?? lookups.ideas[VersionID(rawValue: id.id)].flatMap { LibraryFitting.fit($0, into: target) }
             case .samples: items[index].fit = lookups.samples[SampleID(rawValue: id.id)].flatMap { LibraryFitting.fit($0, into: target) }
             case .songs, .albums, .instruments, .kits: items[index].fit = nil
             }
@@ -605,6 +607,8 @@ private struct Lookups: Sendable {
     var records: [RecordID: Record] = [:]
     var albums: [AlbumID: Album] = [:]
     var ideas: [VersionID: PartVersion] = [:]
+    /// Ideas of their own, by id: what their Fit is worked out from.
+    var ideaSongs: [SongID: Song] = [:]
     var samples: [SampleID: LibrarySample] = [:]
     /// A record's mix and each of its stems, by medium: the stem's name, or nil for the mix.
     var media: [MediaRef: (record: RecordID, stem: String?)] = [:]
@@ -634,6 +638,7 @@ private struct Lookups: Sendable {
             samplesByMedia[entry.media, default: []].append(entry.id)
             samples[entry.id] = entry
         }
+        for idea in library.ideaSongs { ideaSongs[idea.id] = idea }
         for idea in library.ideas {
             ideas[idea.id] = idea
             if let medium = idea.mediaReferences.first {

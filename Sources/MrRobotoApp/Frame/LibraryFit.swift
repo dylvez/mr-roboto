@@ -120,7 +120,29 @@ enum LibraryFitting {
         return fit
     }
 
-    private static func made(_ move: MergeMove, sentences: [String], flags: [String], known: Bool) -> LibraryFit {
+    /// An idea of its own, as putting it in a song of that grid would move it (`IdeaPlacing`): its
+    /// written parts by arithmetic, at no cost, its audio as a merge stretches and shifts audio. Its
+    /// verdict and cost are those of its part moved farthest.
+    static func fit(_ idea: Song, into target: FitTarget) -> LibraryFit? {
+        let song = Song(title: target.title, key: target.key, tempo: target.tempo,
+                        timeSignature: TimeSignature(beatsPerBar: target.beatsPerBar), sections: [])
+        guard let plan = IdeaPlacing.plan(idea, into: song, at: .end), !plan.pieces.isEmpty else { return nil }
+        func fit(of piece: IdeaPiece) -> LibraryFit {
+            var fit = made(piece.move, sentences: [piece.sentence], flags: piece.flags, known: true)
+            if piece.version.type != .audio {
+                fit.verdict = piece.verdict
+                fit.cost = 0
+            }
+            return fit
+        }
+        let fits = plan.pieces.map(fit(of:))
+        guard var farthest = fits.max(by: { ($0.verdict, $0.cost) < ($1.verdict, $1.cost) }) else { return nil }
+        farthest.sentences = plan.pieces.map(\.sentence)
+        farthest.flags = plan.pieces.flatMap(\.flags)
+        return farthest
+    }
+
+    static func made(_ move: MergeMove, sentences: [String], flags: [String], known: Bool) -> LibraryFit {
         let stretch = abs(move.ratio - 1)
         let distance = abs(move.semitones)
         let verdict: LibraryFit.Verdict

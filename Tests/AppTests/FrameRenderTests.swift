@@ -374,6 +374,38 @@ struct FrameRenderTests {
         try writeDark(library, size: CGSize(width: 1240, height: 720), name: "library-ideas-elsewhere-dark")
     }
 
+    @Test("Add to This Song…: an idea's chords, take and words going into a song's Hook, one of them flagged")
+    func placeIdea() throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        let (app, directory, song) = try IdeasFixture.app("render-place")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        app.openSong(song.id)
+        #expect(app.record(TransportFixture.progressionVersion()))
+        var sections = try #require(app.song?.sections)
+        sections.append(Section(name: "Hook", stitch: sections[0].stitch, lengthInBars: 8))
+        #expect(app.arrange(sections))
+        app.save()
+        let file = directory.appendingPathComponent("hum.wav")
+        try BoothAdapter.write([(0..<Int(5.3 * 48_000)).map { Float(0.3 * sin(Double($0) * 0.05)) }], sampleRate: 48_000, to: file)
+        let media = MediaRef(hash: ContentHash(of: try Data(contentsOf: file)), fileExtension: "wav")
+        var idea = Song.newIdea(title: "Hum", key: Key(parsing: "A minor"), tempo: 92, bars: 2)
+        idea.gridChosen = true
+        let take = Take(section: idea.sections[0].id, startBar: 0, input: "Mic", pass: 1, sectionStartBar: 0, tempo: 92, meter: .fourFour)
+        for version in [TransportFixture.progressionVersion(),
+                        PartVersion(partID: PartID(), kind: .audio(Audio(media: media, role: .take, sampleRate: 48_000, channelCount: 1,
+                                                                        duration: 5.3, take: take)),
+                                    author: .user, operation: Operation.recorded, note: "Take 1"),
+                        PartVersion(partID: PartID(), kind: .lyric(Lyricist.lyric(from: "la la la")), author: .user, operation: Operation.written)] {
+            try idea.append(version)
+            _ = AppState.joinForm(with: version, in: &idea)
+        }
+        #expect(app.keepIdeaPackage(idea, mediaFrom: nil, files: [media: file]))
+        let sheet = PlaceIdeaSheet(app: app, request: IdeaPlacingRequest(idea: idea.id, spot: .section(sections[1].id)))
+        try write(sheet, size: CGSize(width: 500, height: 720), name: "place-idea")
+        try writeDark(sheet, size: CGSize(width: 500, height: 720), name: "place-idea-dark")
+    }
+
     @Test("the Merge surface on a chop and a bass line in different keys")
     func merge() throws {
         FontRegistration.registerBundledFonts()

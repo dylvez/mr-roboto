@@ -745,8 +745,9 @@ struct LibrarySurfaceView: View {
         switch facts.id.shelf {
         case .songs: kind = .song
         case .records: kind = .record
-        // An idea you open is dragged as a song is: dropped, it opens.
-        case .ideas: kind = facts.isIdeaSong ? .song : .idea
+        // An idea of its own is put in the song it is dropped on (`AppState.askToPlace`), and
+        // opened when no song is.
+        case .ideas: kind = .idea
         case .samples: kind = .sample
         case .albums: kind = .album
         case .instruments, .kits: return nil

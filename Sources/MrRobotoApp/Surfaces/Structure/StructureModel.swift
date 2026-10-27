@@ -41,6 +41,10 @@ public protocol StructureHosting: AnyObject {
     /// nothing was stitched, with the host saying why.
     @discardableResult
     func receive(_ payload: LibraryDragPayload, into section: SectionID) async -> Bool
+    /// A library row dropped past the last section: an idea, to go in a new section of its own
+    /// there. `false` for anything else.
+    @discardableResult
+    func receiveAfterLastSection(_ payload: LibraryDragPayload) async -> Bool
     /// Opens the Lyrics surface, where a stanza is labelled for a section. A host with no frame
     /// does nothing.
     func openLyrics()
@@ -68,6 +72,7 @@ public protocol StructureHosting: AnyObject {
 }
 
 public extension StructureHosting {
+    func receiveAfterLastSection(_ payload: LibraryDragPayload) async -> Bool { false }
     func play(section: SectionID, alone: Bool) async { await play() }
     var sectionPlayingAlone: SectionID? { nil }
     func select(section: SectionID) {}
@@ -272,6 +277,12 @@ public final class StructureModel {
         // The host stitches into the *kept* form, so unkept edits are kept first rather than lost.
         if isDirty { guard keep() else { return false } }
         return await host.receive(payload, into: section)
+    }
+
+    /// A library row dropped past the last section.
+    public func receiveAfterLastSection(_ payload: LibraryDragPayload) async -> Bool {
+        if isDirty { guard keep() else { return false } }
+        return await host.receiveAfterLastSection(payload)
     }
 
     // MARK: The words

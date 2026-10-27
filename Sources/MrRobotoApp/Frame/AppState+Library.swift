@@ -13,6 +13,8 @@ public enum LibraryDrop: Sendable, Equatable {
     case ledger
     /// Structure: adopt, then stitch into this section.
     case section(SectionID)
+    /// Structure, past the last section: an idea goes in a new section of its own there.
+    case afterLastSection
 }
 
 /// M3's library: samples saved, records flipped again, albums sequenced, and library rows adopted
@@ -168,9 +170,22 @@ extension AppState {
             if case .section(let id) = drop { section = id }
             askForSource(AskedSource(origin: .record(RecordID(rawValue: payload.id)), stem: payload.stem, section: section))
             return song != nil
-        case .idea, .sample, .record:
+        case .idea:
+            // An idea of its own is put in the song through the sheet that says how it moves:
+            // in the section it was dropped on, after the last, or wherever is chosen there.
+            if library.ideaSongs.contains(where: { $0.id.rawValue == payload.id }) {
+                let spot: IdeaSpot? = switch drop {
+                case .section(let id): .section(id)
+                case .afterLastSection: .end
+                case .bench, .ledger: nil
+                }
+                askToPlace(SongID(rawValue: payload.id), at: spot)
+                return true
+            }
+        case .sample, .record:
             break
         }
+        if case .afterLastSection = drop { return false }
         // A drop aimed at a section places the part itself, below; anywhere else, adopting a part
         // puts it in the song the way making one does.
         let aimed = if case .section = drop { true } else { false }
@@ -188,6 +203,8 @@ extension AppState {
                 perform(primary.action)
             }
             return true
+        case .afterLastSection:
+            return false
         case .section(let sectionID):
             var sections = song.sections
             guard let index = sections.firstIndex(where: { $0.id == sectionID }) else { return true }

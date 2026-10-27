@@ -36,6 +36,10 @@ final class StructureAdapter: StructureHosting {
         app.receive(payload, at: .section(section))
     }
 
+    func receiveAfterLastSection(_ payload: LibraryDragPayload) async -> Bool {
+        app.receive(payload, at: .afterLastSection)
+    }
+
     func openLyrics() { app.perform(Guidance.dockAction(for: .lyrics, in: app.song)) }
 
     func development() -> Development? { app.development() }

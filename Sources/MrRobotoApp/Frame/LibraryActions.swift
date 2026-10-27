@@ -250,6 +250,11 @@ enum LibraryActions {
         guard let idea = app.library.song(id) else { return [] }
         return [
             LibraryAction(id: "open", title: "Open", help: "Open \(idea.title) to work on it.", kind: .run { app.openSong(id) }),
+            LibraryAction(id: "place", title: "Add to This Song…",
+                          help: app.song.map { song in
+                              song.id == id ? "This is the idea that is open." : "Into a section of \(song.title), or a new one after its last, moved onto its key and tempo."
+                          } ?? "Open a song to put it in.",
+                          isEnabled: app.song.map { $0.id != id } ?? false, kind: .run { app.askToPlace(id) }),
             LibraryAction(id: "rename", title: "Rename…", group: 1,
                           kind: .rename(current: (app.song?.id == id ? app.song?.title : nil) ?? idea.title,
                                         message: "A new name for the idea. Its package on disk keeps its file name.",

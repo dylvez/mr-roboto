@@ -309,6 +309,10 @@ public final class AppState {
     /// unasked. The header takes it, so it fires once.
     public var wantsSongSettings = false
 
+    /// Add to This Song…, or an idea dropped on a section: the sheet that puts it in the song,
+    /// open over the frame while this is set (`askToPlace`).
+    public var placingIdea: IdeaPlacingRequest?
+
     /// ⇧⌘P: the command palette is over the frame.
     public var isShowingPalette = false
 

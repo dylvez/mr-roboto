@@ -227,6 +227,8 @@ struct FrameView: View {
         }
         .background(Design.Palette.paper)
         .foregroundStyle(Design.Palette.ink)
+        // Add to This Song…: an idea put in the open song, said before it is done.
+        .sheet(item: $app.placingIdea) { request in PlaceIdeaSheet(app: app, request: request) }
         .overlay {
             // The palette floats over the frame, a third of the way down, the rest of the window
             // dimmed behind it; a click outside it puts it away.

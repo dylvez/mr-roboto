@@ -58,8 +58,8 @@ struct StructureSurfaceView: View {
                     .dropDestination(for: String.self) { ids, _ in
                         drop(ids, before: nil)
                     }
-                    .help("Drop a section here to put it last.")
-                    .accessibilityLabel("End of the form: drop a section here to put it last")
+                    .help("Drop a section here to put it last, or an idea from the Library for a section of its own.")
+                    .accessibilityLabel("End of the form: drop a section here to put it last, or an idea for a new section")
             }
             // Wrapping: six chips and the two below them are wider than a narrow bench.
             FlowRow(spacing: 4) {
@@ -106,6 +106,11 @@ struct StructureSurfaceView: View {
     }
 
     private func drop(_ ids: [String], before target: SectionID?) -> Bool {
+        // A library row is carried as text too: past the last section, an idea goes in a new one.
+        if target == nil, let raw = ids.first, let payload = LibraryDragPayload(raw) {
+            Task { await model.receiveAfterLastSection(payload) }
+            return payload.kind == .idea
+        }
         guard let raw = ids.first, let uuid = UUID(uuidString: raw) else { return false }
         model.move(SectionID(rawValue: uuid), before: target)
         return true

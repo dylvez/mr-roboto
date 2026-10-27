@@ -195,6 +195,8 @@ public enum SeedKind: Hashable, Sendable {
     case hummedTake(MediaRef)
     case brief(String)
     case importedRecord(RecordID)
+    /// An idea of the library's put into the song: what its parts came from.
+    case idea(SongID)
 
     public var mediaReferences: [MediaRef] {
         if case .hummedTake(let media) = self { return [media] }
@@ -203,8 +205,8 @@ public enum SeedKind: Hashable, Sendable {
 }
 
 extension SeedKind: Codable {
-    private enum CodingKeys: String, CodingKey { case type, media, text, record }
-    private enum Kind: String, Codable { case hummedTake, brief, importedRecord }
+    private enum CodingKeys: String, CodingKey { case type, media, text, record, idea }
+    private enum Kind: String, Codable { case hummedTake, brief, importedRecord, idea }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -212,6 +214,7 @@ extension SeedKind: Codable {
         case .hummedTake: self = .hummedTake(try container.decode(MediaRef.self, forKey: .media))
         case .brief: self = .brief(try container.decode(String.self, forKey: .text))
         case .importedRecord: self = .importedRecord(try container.decode(RecordID.self, forKey: .record))
+        case .idea: self = .idea(try container.decode(SongID.self, forKey: .idea))
         }
     }
 
@@ -227,6 +230,9 @@ extension SeedKind: Codable {
         case .importedRecord(let record):
             try container.encode(Kind.importedRecord, forKey: .type)
             try container.encode(record, forKey: .record)
+        case .idea(let idea):
+            try container.encode(Kind.idea, forKey: .type)
+            try container.encode(idea, forKey: .idea)
         }
     }
 }
