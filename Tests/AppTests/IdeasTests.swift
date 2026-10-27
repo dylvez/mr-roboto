@@ -659,6 +659,9 @@ struct IdeaPlacingTests {
         #expect(SongPlayback.instrumentID(for: movedChords.partID, in: now) == "vibraphone")
         #expect(PartLabel.title(of: movedChords) == "Chords of Hum", "named by the idea, not by the symbols it moved from")
         #expect(app.library.song(idea.id)?.versions.count == idea.versions.count, "the idea as it was")
+        let index = LibraryIndex(library: app.library, openSong: now, sounds: LibrarySounds())
+        #expect(index.songs(holding: .ideaSong(idea.id)) == [now.id] && index.facts(.ideaSong(idea.id))?.songs == 1,
+                "the shelf says which song holds it")
         #expect(app.log.contains { $0.text == "Put Hum in the Hook" })
     }
 

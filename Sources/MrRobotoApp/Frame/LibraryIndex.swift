@@ -375,6 +375,11 @@ public struct LibraryIndex: Sendable {
             }
             holds += lookups.held(by: version)
         }
+        // An idea of its own put into a song leaves a seed naming it: the song holds that idea.
+        for seed in song.seeds {
+            if case .idea(let idea) = seed.kind, lookups.ideaSongs[idea] != nil { holds.append(.ideaSong(idea)) }
+        }
+        holds = Self.unique(holds)
         for seed in song.seeds {
             guard case .importedRecord(let record) = seed.kind, lookups.records[record] != nil,
                   !uses.contains(where: { $0.record == record }) else { continue }
