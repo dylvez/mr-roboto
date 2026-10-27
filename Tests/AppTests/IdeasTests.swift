@@ -979,3 +979,84 @@ struct IdeaToolsTests {
         #expect(app.makingSongFromIdeas?.ideas == [a.id, b.id])
     }
 }
+
+@Suite("Ideas: one heard under another", .serialized) @MainActor
+struct IdeaGuideTests {
+
+    @Test("an idea heard with another plays the other's chords under it, moved onto its key, never as its own part, and leaves it behind in a song")
+    func guide() async throws {
+        let (app, directory, song) = try IdeasFixture.app("guide")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let chords = try IdeaPlacingTests.idea("Changes", key: "C major", tempo: 120, bars: 4,
+                                               versions: [TransportFixture.progressionVersion()], in: app)
+        app.newIdea()
+        app.setTitle("Hum")
+        app.setKey(Key(parsing: "D major"))
+        #expect(app.record(TransportFixture.melodyVersion()))
+        #expect(app.guideChoices.map(\.id) == [chords.id])
+        #expect(app.hearWith(chords.id))
+        let idea = try #require(app.song)
+        #expect(idea.guide == chords.id && idea.versions.allSatisfy { $0.type != .progression }, "heard, not kept")
+        let heard = try #require(app.playback.segments.flatMap(\.voices).compactMap(\.progression).first, "the guide's chords play under it")
+        #expect(heard.key == Key(parsing: "D major") && heard.bars[0].chords[0].chord == Chord(.c, .majorSeventh).transposed(by: 2))
+        #expect(app.log.contains { $0.text == "Hearing Changes under Hum" })
+        #expect(app.ideaTakePlan()?.segments.flatMap(\.voices).contains { $0.progression != nil } == true, "the Booth sings over it too")
+        let read = try await ReadSongTool(workspace: AppStateWorkspace(app)).run(.init())
+        #expect(read.note?.contains("Changes is heard under it") == true)
+        app.save()
+        #expect(try LibraryStore(directoryURL: directory).load().ideaSongs.first { $0.id == idea.id }?.guide == chords.id, "kept with the idea")
+
+        // Into a song, the guide stays behind.
+        app.openSong(song.id)
+        #expect(!app.hearWith(chords.id), "a song is not heard with an idea")
+        let plan = try #require(app.ideaPlacement(idea.id, at: .end))
+        #expect(plan.pieces.map(\.version.type) == [.melody])
+        try await app.place(plan)
+        #expect(app.song?.versions.contains { $0.type == .progression } == false)
+        #expect(app.song?.guide == nil)
+
+        // Nothing under it again.
+        app.openSong(idea.id)
+        #expect(app.hearWith(nil))
+        #expect(app.playback.segments.flatMap(\.voices).compactMap(\.progression).isEmpty)
+    }
+
+    @Test("a guide's audio is rendered onto the idea and played from its cache, never saved into the idea")
+    func guideAudio() async throws {
+        let (app, directory, _) = try IdeasFixture.app("guide-audio")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let frames = Int(2 * (4 * 60 / 100.0) * 48_000)
+        let (url, media) = try IdeaPlacingTests.audio((0..<frames).map { Float(0.3 * sin(2 * .pi * 220 * Double($0) / 48_000)) },
+                                                      named: "hum.wav", in: directory)
+        var sung = Song.newIdea(title: "Hum", key: Key(parsing: "A minor"), tempo: 100, bars: 2)
+        sung.gridChosen = true
+        try sung.append(PartVersion(partID: PartID(), kind: .audio(Audio(media: media, role: .take, sampleRate: 48_000, channelCount: 1,
+                                                                         duration: Double(frames) / 48_000,
+                                                                         take: Take(section: sung.sections[0].id, startBar: 0, pass: 1,
+                                                                                    sectionStartBar: 0, tempo: 100))),
+                                    author: .user, operation: Operation.recorded, note: "Take 1"))
+        #expect(app.keepIdeaPackage(sung, mediaFrom: nil, files: [media: url]))
+        app.newIdea()
+        app.setTempo(92)
+        app.setKey(Key(parsing: "A minor"))
+        #expect(app.record(TransportFixture.progressionVersion()))
+        #expect(app.hearWith(sung.id))
+        await app.guidesSettled()
+        let track = try #require(app.playback.tracks.first { app.guideMedia.values.contains($0.url) }, "the hum rendered under it")
+        #expect(track.startsAt == 0)
+        app.save()
+        let idea = try #require(app.song)
+        #expect(idea.versions.allSatisfy { $0.type != .audio }, "the guide's audio is not the idea's")
+        #expect(try app.store!.songStore(for: idea.id).storedMedia().isEmpty, "nothing written into the idea's package")
+    }
+
+    @Test("a song written before ideas could be heard together reads and writes back without a guide")
+    func roundTrip() throws {
+        var idea = Song.newIdea(title: "Hum")
+        let plain = try SongGraphCodec.encode(idea)
+        #expect(!String(decoding: plain, as: UTF8.self).contains("\"guide\""))
+        idea.guide = SongID()
+        let back = try SongGraphCodec.decode(Song.self, from: try SongGraphCodec.encode(idea))
+        #expect(back.guide == idea.guide)
+    }
+}

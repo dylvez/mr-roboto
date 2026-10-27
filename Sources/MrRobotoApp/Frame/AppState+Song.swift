@@ -267,6 +267,8 @@ extension AppState {
         // A copy of an idea is an idea, unless it is being made a song.
         copy.idea = asSong ? nil : original.idea
         copy.fills = asSong ? nil : original.fills
+        // What an idea is heard with stays with the idea: a song does not take a guide along.
+        copy.guide = asSong ? nil : original.guide
         if asSong {
             // The genre the idea was given decides the form developing lays over it.
             copy.genre = original.genre

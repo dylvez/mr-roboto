@@ -429,6 +429,26 @@ struct FrameRenderTests {
         try writeDark(sheet, size: CGSize(width: 540, height: 600), name: "song-from-ideas-dark")
     }
 
+    @Test("an idea heard with another: the ledger's Heard with, the guide's chords faded")
+    func ideaGuide() throws {
+        FontRegistration.registerBundledFonts()
+        SurfaceRegistry.registerSurfaces()
+        let (app, directory, _) = try IdeasFixture.app("render-guide")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let chords = try IdeaPlacingTests.idea("Late Rhodes", key: "A minor", tempo: 98, bars: 4,
+                                               versions: [TransportFixture.progressionVersion()], in: app)
+        app.newIdea()
+        app.wantsSongSettings = false
+        app.setTitle("Night Line")
+        app.setKey(Key(parsing: "C minor"))
+        #expect(app.record(TransportFixture.melodyVersion()))
+        #expect(app.hearWith(chords.id))
+        app.regions.setCollapsed(false, for: .ledger)
+        app.perform(Guidance.dockAction(for: .pianoRoll, in: app.song))
+        try write(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-idea-guide")
+        try writeDark(FrameView(app: app), size: CGSize(width: 1440, height: 900), name: "frame-idea-guide-dark")
+    }
+
     @Test("the Merge surface on a chop and a bass line in different keys")
     func merge() throws {
         FontRegistration.registerBundledFonts()

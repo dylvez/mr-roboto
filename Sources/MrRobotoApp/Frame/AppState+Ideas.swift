@@ -140,11 +140,12 @@ extension AppState {
     /// to its end rather than cut off at the idea's last bar. The take that lands grows the idea
     /// (`growIdea(toHold:)`). Nil when no idea is open.
     func ideaTakePlan() -> SongPlayback? {
-        guard var long = song, long.isIdea, let bars = long.sections.first?.lengthInBars else { return nil }
+        guard let song, song.isIdea, let bars = song.sections.first?.lengthInBars else { return nil }
+        // With what it is heard with under it: that is what the take is sung over.
+        var long = heard(song)
         long.sections[0].lengthInBars = Self.ideaRunwayBars(for: bars)
-        return SongPlayback.plan(for: long) { [store, song] ref in
-            guard let store else { return nil }
-            return try? store.mediaURL(for: ref, song: song?.id)
+        return SongPlayback.plan(for: long) { [unowned self] ref in
+            self.playbackMediaURL(ref)
         }
     }
 }

@@ -26,6 +26,13 @@ struct PartsLedger: View {
 
             Hairline()
 
+            // An idea can be heard with another under it: chosen here, its parts faded, kept in view
+            // above the parts rather than scrolled away with them.
+            if app.song?.isIdea == true, !app.guideChoices.isEmpty {
+                GuideStrip(app: app)
+                Hairline()
+            }
+
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     if app.song == nil {
@@ -341,5 +348,45 @@ private struct VersionChipFace: ViewModifier {
         content
             .background(isSelected ? Design.Palette.accentSoft : Design.Palette.fill,
                         in: RoundedRectangle(cornerRadius: Design.Metric.corner, style: .continuous))
+    }
+}
+
+/// In an idea: which other idea is heard under it, and that one's parts, faded — heard, never the
+/// idea's own, and left behind when the idea goes into a song.
+struct GuideStrip: View {
+    let app: AppState
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                SmallLabel("Heard with")
+                ChipMenu(app.guideIdea?.title ?? "Nothing") {
+                    MenuChoice("Nothing", isOn: app.guideIdea == nil) { app.hearWith(nil) }
+                    ForEach(app.guideChoices) { idea in
+                        MenuChoice(idea.title, isOn: app.guideIdea?.id == idea.id, help: AppState.ideaLine(idea)) { app.hearWith(idea.id) }
+                    }
+                }
+                .help("Another idea played under this one, moved onto its tempo and key: to sing or play over, never one of its parts.")
+                Spacer(minLength: 0)
+            }
+            if let plan = app.guidePlacement {
+                ForEach(plan.placeable) { piece in
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(piece.title)
+                            .font(Design.Typography.ui(12, weight: .medium))
+                        Text(piece.sentence)
+                            .font(Design.Typography.prose(11.5))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .foregroundStyle(Design.Palette.inkTertiary)
+                }
+                Text("Heard, not kept: it stays behind when this idea goes into a song.")
+                    .font(Design.Typography.prose(11))
+                    .foregroundStyle(Design.Palette.inkTertiary)
+            }
+        }
+        .padding(.horizontal, Design.Metric.inset)
+        .padding(.vertical, 10)
+        .opacity(app.guideIdea == nil ? 1 : 0.85)
     }
 }

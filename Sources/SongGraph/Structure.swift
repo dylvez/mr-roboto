@@ -248,6 +248,11 @@ public struct Song: Identifiable, Hashable, Codable, Sendable {
     /// True for an idea.
     public var isIdea: Bool { idea == true }
 
+    /// Another idea heard under this one, fitted to its tempo and key, as a guide to sing or play
+    /// over: never one of its parts, and left behind when this idea goes into a song. Nil when
+    /// none is: optional so every song round-trips byte for byte.
+    public var guide: SongID?
+
     public init(id: SongID = SongID(), title: String, artist: String = "", key: Key? = nil, tempo: Double = 120,
                 timeSignature: TimeSignature = .fourFour, sections: [Section] = [], versions: [PartVersion] = [],
                 seeds: [Seed] = [], experiments: [Experiment] = [], createdAt: Date = Date()) {

@@ -317,6 +317,12 @@ public final class AppState {
     /// song, open over the frame while this is set (`askToMakeSong`).
     public var makingSongFromIdeas: SongFromIdeasRequest?
 
+    /// The audio of ideas heard under the open idea, rendered onto it (`heard(_:)`): a cache by
+    /// fit, and the files by medium for the transport. Never saved.
+    @ObservationIgnored var guideRenders: [String: GuideRender] = [:]
+    @ObservationIgnored var guideMedia: [MediaRef: URL] = [:]
+    @ObservationIgnored var guidesRendering: Set<String> = []
+
     /// ⇧⌘P: the command palette is over the frame.
     public var isShowingPalette = false
 
@@ -1415,9 +1421,9 @@ public final class AppState {
     /// Re-reads what the song has that can be played. Cheap, but it resolves media on disk, so it
     /// is called when the song changes rather than from a view body.
     public func refreshPlayback() {
-        playback = SongPlayback.plan(for: song) { [store, song] ref in
-            guard let store else { return nil }
-            return try? store.mediaURL(for: ref, song: song?.id)
+        // An idea heard with another plays that one under it (`heard(_:)`).
+        playback = SongPlayback.plan(for: song.map(heard)) { [unowned self] ref in
+            self.playbackMediaURL(ref)
         }.looping(isLooping)
     }
 

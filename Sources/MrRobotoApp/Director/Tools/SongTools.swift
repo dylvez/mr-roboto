@@ -175,16 +175,18 @@ public struct ReadSongTool: DirectorTool {
                           Output.Tune(part: $0.partID.description, title: PartLabel.title(of: $0), marked: SongTune.marked(in: song) != nil)
                       },
                       isIdea: song.isIdea ? true : nil,
-                      note: song.isIdea ? Self.ideaNote(song) : nil)
+                      note: song.isIdea ? Self.ideaNote(song, guide: library.ideaSongs.first { $0.id == song.guide && $0.id != song.id }?.title) : nil)
     }
 
     /// What an idea is, said where the band reads the song.
-    static func ideaNote(_ idea: Song) -> String {
+    static func ideaNote(_ idea: Song, guide: String? = nil) -> String {
         let bars = idea.sections.first?.lengthInBars ?? 0
         return "This is an idea, not a song: \(Guidance.count(bars, "bar")) at \(Int(idea.tempo.rounded())) bpm that go round, "
             + "kept on the library's Ideas shelf to be put into songs later. Write and record in it as in a song; "
             + "a part longer than the idea, or a take sung past its end, makes it longer. It has no form to arrange, "
             + "no master and no album: develop makes a song of it, with all of those, and leaves the idea as it was."
+            + (guide.map { " The idea \($0) is heard under it as a guide, moved onto its key and tempo: not one of its parts, "
+                + "and it does not go with it into a song." } ?? "")
     }
 }
 
