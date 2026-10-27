@@ -262,7 +262,9 @@ public struct SongFromIdeasTool: DirectorTool {
             }
             grid = found.id
         }
-        let ideas = rows.flatMap { $0 }.compactMap { id in library.ideaSongs.first { $0.id == id } }
+        // The idea open now is read as it stands: the library has it as it was last saved.
+        let open = await workspace.song
+        let ideas = rows.flatMap { $0 }.compactMap { id in open?.id == id ? open : library.ideaSongs.first { $0.id == id } }
         let grids = SongFromIdeas.grids(for: ideas)
         let taken = grids.first { $0.idea == grid } ?? grids.first
         let id: SongID

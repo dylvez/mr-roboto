@@ -69,8 +69,12 @@ enum SongFromIdeas {
 
 extension AppState {
 
-    /// The ideas a song can be made from: every idea of its own on the shelf, as the shelf has them.
-    public var ideasToMakeSongsFrom: [Song] { library.ideaSongs }
+    /// The ideas a song can be made from: every idea of its own on the shelf, the one open as it
+    /// stands now rather than as it was last saved.
+    public var ideasToMakeSongsFrom: [Song] {
+        guard let song, song.isIdea else { return library.ideaSongs }
+        return library.ideaSongs.map { $0.id == song.id ? song : $0 }
+    }
 
     /// Opens the sheet that makes a song from ideas, starting with these.
     public func askToMakeSong(from ideas: [SongID] = []) {
@@ -91,8 +95,9 @@ extension AppState {
                          by source: SessionEntry.Source = .you) async throws -> SongID {
         guard let store, libraryIsWritable else { throw IdeaPlacingError.noLibrary }
         _ = store
-        let rows = rows.map { row in row.filter { id in library.ideaSongs.contains { $0.id == id } } }.filter { !$0.isEmpty }
-        let ideas = rows.flatMap { $0 }.compactMap { id in library.ideaSongs.first { $0.id == id } }
+        let shelf = ideasToMakeSongsFrom
+        let rows = rows.map { row in row.filter { id in shelf.contains { $0.id == id } } }.filter { !$0.isEmpty }
+        let ideas = rows.flatMap { $0 }.compactMap { id in shelf.first { $0.id == id } }
         guard !ideas.isEmpty else { throw IdeaPlacingError.nothingChosen }
         let grids = SongFromIdeas.grids(for: ideas)
         guard let chosen = grids.first(where: { $0.idea == grid }) ?? grids.first,

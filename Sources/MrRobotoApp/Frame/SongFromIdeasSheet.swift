@@ -22,7 +22,7 @@ struct SongFromIdeasSheet: View {
         _rows = State(initialValue: request.ideas.map { [$0] })
     }
 
-    private func idea(_ id: SongID) -> Song? { app.library.ideaSongs.first { $0.id == id } }
+    private func idea(_ id: SongID) -> Song? { app.ideasToMakeSongsFrom.first { $0.id == id } }
     private var chosen: [Song] { rows.flatMap { $0 }.compactMap(idea) }
     private var grids: [IdeasGrid] { SongFromIdeas.grids(for: chosen) }
     private var taken: IdeasGrid? { grids.first { $0.idea == grid } ?? grids.first }

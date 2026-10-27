@@ -965,6 +965,23 @@ struct IdeaToolsTests {
         #expect(bad.failed && bad.text.contains("one of the ideas named"))
     }
 
+    @Test("song_from_ideas reads the idea still open as it stands, not as it was last saved, and says what moving does to it")
+    func openIdea() async throws {
+        let (app, directory, _) = try IdeasFixture.app("tool-open")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        _ = try IdeaPlacingTests.idea("Changes", key: "C major", tempo: 92, bars: 4, versions: [TransportFixture.progressionVersion()], in: app)
+        let started = await run(app, "new_idea", ["title": "Riff", "tempo": 92, "key": "D major", "meter": "", "bars": 4])
+        #expect(!started.failed, "\(started.text)")
+        #expect(app.record(TransportFixture.melodyVersion()))
+        #expect(app.library.ideaSongs.first { $0.title == "Riff" }?.versions.isEmpty == true, "the shelf has it as it was saved: empty")
+        #expect(app.ideasToMakeSongsFrom.first { $0.title == "Riff" }?.versions.count == 1, "the sheet reads it as it stands")
+        let made = await run(app, "song_from_ideas", ["sections": ["Changes", "Riff"], "grid": "Changes", "title": "Stood"])
+        #expect(!made.failed, "\(made.text)")
+        let sentences = made.result["sentences"] as? [String] ?? []
+        #expect(sentences.contains { $0.hasPrefix("Riff: ") }, "\(sentences)")
+        #expect(app.song?.sections.map(\.name) == ["Changes", "Riff"])
+    }
+
     @Test("with nothing open and two ideas on the shelf, the band offers to make a song of them; taking it opens the sheet")
     func option() throws {
         let (app, directory, _) = try IdeasFixture.app("tool-option")
