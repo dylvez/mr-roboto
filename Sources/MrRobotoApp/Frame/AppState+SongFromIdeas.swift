@@ -116,7 +116,9 @@ extension AppState {
             for id in row {
                 guard let plan = ideaPlacement(id, at: section.map { .section($0) } ?? .end) else { continue }
                 if plan.placeable.isEmpty, plan.words?.comes != true { continue }
-                try await place(plan, by: author)
+                // Ideas sharing a section play together: the second's chords join the first's
+                // rather than taking their place, as they would in a section that had its own.
+                try await place(plan, replacing: section == nil, by: author)
                 if section == nil { section = song?.sections.last?.id }
             }
         }

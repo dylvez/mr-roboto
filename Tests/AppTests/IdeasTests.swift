@@ -959,11 +959,15 @@ struct IdeaToolsTests {
         _ = try IdeaPlacingTests.idea("Changes", key: "C major", tempo: 92, bars: 4, versions: [TransportFixture.progressionVersion()], in: app)
         _ = try IdeaPlacingTests.idea("Beat", key: nil, tempo: 120, bars: 2, versions: [TransportFixture.grooveVersion()], in: app)
         _ = try IdeaPlacingTests.idea("Tune", key: "C major", tempo: 92, bars: 4, versions: [TransportFixture.melodyVersion()], in: app)
-        let made = await run(app, "song_from_ideas", ["sections": ["Changes + Beat", "Tune"], "grid": "", "title": "Assembled"])
+        _ = try IdeaPlacingTests.idea("Pad", key: "C major", tempo: 92, bars: 4, versions: [TransportFixture.progressionVersion()], in: app)
+        let made = await run(app, "song_from_ideas", ["sections": ["Changes + Beat + Pad", "Tune"], "grid": "", "title": "Assembled"])
         #expect(!made.failed, "\(made.text)")
         let song = try #require(app.song)
         #expect(song.title == "Assembled" && !song.isIdea && song.tempo == 92 && song.key == Key(parsing: "C major"))
         #expect(made.result["sections"] as? [String] == ["Changes 4", "Tune 4"])
+        let first = try #require(song.sections.first)
+        let chords = first.stitch.filter { song.latestVersion(of: $0.part)?.type == .progression }
+        #expect(chords.count == 2, "two ideas of chords sharing a section both play; neither takes the other's place")
         let bad = await run(app, "song_from_ideas", ["sections": ["Tune"], "grid": "Beat", "title": ""])
         #expect(bad.failed && bad.text.contains("one of the ideas named"))
     }
