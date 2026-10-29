@@ -118,6 +118,8 @@ public enum DirectorTools {
             NewIdeaTool(workspace: workspace).erased(),
             PlaceIdeaTool(workspace: workspace).erased(),
             SongFromIdeasTool(workspace: workspace).erased(),
+            // A section's edges, appended after the sixty-first: how it comes in and how its drums leave it.
+            SetTransitionTool(workspace: workspace).erased(),
         ]
         if let stage {
             let pad = pad ?? DirectorStagePad()
@@ -215,6 +217,8 @@ public enum DirectorTools {
         "new_idea",
         "place_idea",
         "song_from_ideas",
+        // Appended: a section's way in and way out.
+        "set_transition",
     ]
 
     /// The two the frame adds. Appended after `names`, never among them: a session with no frame

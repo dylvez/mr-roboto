@@ -157,6 +157,8 @@ public struct Feature: RawRepresentable, Hashable, Sendable, Codable, CustomStri
     public static let formTurns = Feature("form.turns")
     /// Layers in the densest section minus the sparsest.
     public static let densitySpread = Feature("form.density.spread")
+    /// Distinct fills the form's edges play: the drums' way out of each section.
+    public static let fillShapes = Feature("form.fills.shapes")
     /// Length of the form in minutes.
     public static let formMinutes = Feature("form.minutes")
     /// A hook's integrated loudness over the verse before it, off the bounce, LU.

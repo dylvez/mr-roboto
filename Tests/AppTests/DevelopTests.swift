@@ -72,6 +72,33 @@ struct DevelopTests {
         try #require(development.plays.first { $0.name == name })
     }
 
+    @Test("developing chooses a fill for every edge of the form, by the feel and the edge, says so, and a build keeps its roll")
+    func fillsChosen() throws {
+        let loop = try DevelopFixture.loop(genre: "breakbeat")
+        let breakbeat = try #require(GenreBook.standard.profile(named: "breakbeat"))
+        let development = try #require(Develop.plan(for: loop.song, genre: breakbeat))
+        let sections = development.sections
+        #expect(development.fills.count == sections.count - 1, "\(development.fills)")
+        for (index, section) in sections.enumerated() where index < sections.count - 1 {
+            #expect(section.transitionOut != nil, "\(section.name) has no way out")
+        }
+        let build = try #require(sections.first { $0.name == "Build" })
+        #expect(build.transitionOut?.kind == .riser, "a build keeps its roll")
+        let beforeDrop = try #require(sections.first { SectionRole.named($0.name) == .breakdown })
+        #expect(beforeDrop.transitionOut?.fill(beatsPerBar: 4)?.shape == .dropOut || beforeDrop.transitionOut?.kind == .riser || SectionRole.named(sections[sections.firstIndex { $0.id == beforeDrop.id }! + 1].name) != .breakdown)
+        #expect(development.fills.contains { $0.contains("→") })
+        // The same song again chooses the same fills; the drop's way in is still its crash.
+        let again = try #require(Develop.plan(for: loop.song, genre: breakbeat))
+        #expect(again.sections.map(\.transitionOut) == sections.map(\.transitionOut))
+        // A kit family under the standard loop: a verse into a hook gets a kit fill of half a bar or a bar.
+        let plain = try #require(Develop.plan(for: try DevelopFixture.loop().song))
+        let edges = zip(plain.sections, plain.sections.dropFirst())
+        let intoHook = try #require(edges.first { SectionRole.named($0.0.name) == .verse && SectionRole.named($0.1.name) == .hook }?.0)
+        let fill = try #require(intoHook.transitionOut?.fill(beatsPerBar: 4))
+        #expect([FillShape.snareRoll, .tomWalkDown, .kickSnare].contains(fill.shape) && [FillSize.halfBar, .bar].contains(fill.size), "\(fill.name)")
+        #expect(FillChoosing.sentence(plain.sections, beatsPerBar: 4).contains(" into "))
+    }
+
     /// The name of the variation a section's lane of this kind plays, or "" for the part itself.
     private func variation(_ type: PartType, in section: Section, of song: Song) -> String? {
         for lane in section.stitch {
@@ -648,10 +675,11 @@ struct DevelopAppTests {
         #expect(development.sections[2].stitch == loop.song.sections[2].stitch)
         #expect(development.plays[2].parts == ["groove, as it was set", "chords, as it was set"])
         #expect(development.mix?.sectionGains.contains { $0.section == loop.song.sections[2].id } != true, "and levelled by nobody")
-        // What it plays is the version held there: no kick but the two a drummer marks a section's
-        // edges with, under the crash it opens on and at the head of the fill it leaves by.
+        // What it plays is the version held there: no kick but what a drummer marks a section's
+        // edges with — under the crash it opens on, and in the fill it leaves by (the last half bar).
         let kick = app.playback.segments[2].groove?.patterns.first { $0.voice == .kick }?.steps ?? []
-        #expect(kick.indices.filter { kick[$0] != .rest } == [0, 120])
+        let kicks = kick.indices.filter { kick[$0] != .rest }
+        #expect(kicks.filter { $0 < 120 } == [0] && !kicks.filter { $0 >= 120 }.isEmpty, "\(kicks)")
         #expect(app.playback.segments[2].groove?.patterns.contains { $0.voice == .closedHat } == false)
         // The rest is developed round it.
         #expect(development.plays[0].parts == ["drums, thinned", "chords"])

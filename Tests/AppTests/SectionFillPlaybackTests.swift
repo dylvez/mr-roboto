@@ -50,6 +50,31 @@ struct SectionFillPlaybackTests {
         #expect(hits(hook, .lowTom).isEmpty, "the last section fills into nothing")
     }
 
+    @Test("a section's stored way out is what plays: a shape at its size, a cut, or the usual fill when it names none")
+    func storedShape() throws {
+        var song = song(fills: nil)
+        song.sections[0].transitionOut = Transition.fill(Fill(shape: .snareRoll, size: .bar), beatsPerBar: 4)
+        var plan = SongPlayback.plan(for: song, mediaURL: resolver)
+        var verse = try groove(plan.segments[0])
+        #expect(hits(verse, .lowTom).isEmpty && hits(verse, .highTom).isEmpty, "a snare roll has no toms")
+        #expect(hits(verse, .snare).filter { $0 >= 48 }.count == 12, "\(hits(verse, .snare))")
+        #expect(hits(verse, .closedHat).allSatisfy { $0 < 48 }, "the hats rest through the bar")
+        #expect(hits(try groove(plan.segments[1]), .crash) == [0])
+
+        song.sections[0].transitionOut = Transition(kind: .cut)
+        plan = SongPlayback.plan(for: song, mediaURL: resolver)
+        verse = try groove(plan.segments[0])
+        #expect(hits(verse, .lowTom).isEmpty && verse == Guidance.grooves(in: song).last.flatMap { if case .groove(let g) = $0.kind { return g } else { return nil } },
+                "cut: the groove runs to the bar line as written")
+
+        song.sections[0].transitionOut = Transition(kind: .fill)
+        plan = SongPlayback.plan(for: song, mediaURL: resolver)
+        #expect(hits(try groove(plan.segments[0]), .lowTom).contains { $0 >= 4 * 16 - 8 }, "a fill with no shape is the usual one")
+        #expect(SongPlayback.fill(out: Section(name: "Verse", stitch: [], lengthInBars: 4), beatsPerBar: 4) == .usual)
+        #expect(SongPlayback.fill(out: song.sections[0], beatsPerBar: 4) == .usual)
+        #expect(SongPlayback.fills(out: song.sections[0]) && !SongPlayback.fills(out: Section(name: "V", stitch: [], lengthInBars: 4, transitionOut: Transition(kind: .riser))))
+    }
+
     @Test("with fills off the sections play the groove as written")
     func off() throws {
         let song = song(fills: false)

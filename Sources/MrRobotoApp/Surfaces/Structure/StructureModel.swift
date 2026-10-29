@@ -1,5 +1,6 @@
 import Foundation
 import MusicTheory
+import Performance
 import SongGraph
 
 /// The Structure surface's entry in the catalog: the form, surface #14, bound to nothing — it
@@ -192,6 +193,10 @@ public final class StructureModel {
 
     public private(set) var sections: [Section]
     public private(set) var committed: [Section]
+    /// What kind of player is at the kit, for the fills chosen: the song's main groove's feel.
+    public private(set) var fillFamily: FillFamily = .kit
+    /// The song's own seed, so choosing fills for it twice chooses the same.
+    private var fillSeed: UInt64 = 0
     public private(set) var selected: SectionID?
     public private(set) var layers: [Layer]
     public private(set) var lastError: String?
@@ -219,6 +224,10 @@ public final class StructureModel {
         sections = current.map { Self.normalised($0) }
         committed = current
         selected = current.first?.id
+        if let song {
+            fillFamily = FillChoosing.family(of: song)
+            fillSeed = Develop.seed(for: song)
+        }
     }
 
     /// Follows the song: a part adopted or a section stitched from outside this surface — a drop, the
@@ -235,6 +244,8 @@ public final class StructureModel {
         if let song {
             tempo = song.tempo
             timeSignature = song.timeSignature
+            fillFamily = FillChoosing.family(of: song)
+            fillSeed = Develop.seed(for: song)
         }
         let current = song?.sections ?? []
         guard current != committed else { return }
@@ -663,6 +674,37 @@ public final class StructureModel {
     public func rename(_ id: SectionID, to name: String) {
         edit("rename \(id)") { update(id) { $0.name = name } }
     }
+
+    // MARK: The edges
+
+    /// How a section comes in: on a crash, or cut to.
+    public func setWayIn(_ id: SectionID, cut: Bool) {
+        edit("way in \(id)") { update(id) { $0.transitionIn = cut ? Transition(kind: .cut) : nil } }
+    }
+
+    /// How a section leaves: nil for the usual fill, or a way out of its own.
+    public func setWayOut(_ id: SectionID, _ way: Transition?) {
+        edit("way out \(id)") { update(id) { $0.transitionOut = way } }
+    }
+
+    /// A fill of a shape, at a size — the shape's own when none is said.
+    public func setFill(_ id: SectionID, shape: FillShape, size: FillSize? = nil) {
+        setWayOut(id, Transition.fill(Fill(shape: shape, size: size), beatsPerBar: timeSignature.beatsPerBar))
+    }
+
+    /// Every section's way out chosen for it: by the feel's family, what each edge goes into and
+    /// the song's own seed. A build keeps its roll.
+    public func chooseFills() {
+        edit("choose fills") {
+            sections = FillChoosing.chosen(sections, family: fillFamily, seed: fillSeed, beatsPerBar: timeSignature.beatsPerBar)
+        }
+    }
+
+    public func wayIn(of section: Section) -> String { FillChoosing.wayIn(of: section) }
+    public func wayOut(of section: Section) -> String { FillChoosing.wayOut(of: section, beatsPerBar: timeSignature.beatsPerBar) }
+
+    /// The fill a section leaves on, when its way out is a fill of a named shape.
+    public func fill(of section: Section) -> Fill? { section.transitionOut?.fill(beatsPerBar: timeSignature.beatsPerBar) }
 
     public func setLength(_ id: SectionID, bars: Int) {
         edit("length \(id)") { update(id) { $0.lengthInBars = max(1, min(128, bars)) } }

@@ -56,6 +56,8 @@ public struct Development: Equatable, Sendable {
     /// The mix with each section's levels and the master's target, when either moves.
     public var mix: Mix?
     public var plays: [Plays]
+    /// The way out of each edge of the form, as chosen: "Verse → Hook: a snare roll, half a bar".
+    public var fills: [String] = []
     /// The loudness the master is brought to once everything is in.
     public var targetLUFS: Double
     /// The genre it was developed in, by name.
@@ -534,6 +536,13 @@ public enum Develop {
                                            intensity: section.intensity ?? intensity, parts: said))
         }
 
+        // The way out of each section: a build keeps its roll, and the rest get a fill chosen by
+        // the feel's family, what the edge goes into and the song's own seed — so the way into a
+        // hook is not the way into a verse, and this song's fills are not the last song's.
+        let beatsPerBar = song.timeSignature.beatsPerBar
+        sections = FillChoosing.chosen(sections, family: FillChoosing.family(of: song), seed: Self.seed(for: song), beatsPerBar: beatsPerBar)
+        let fills = FillChoosing.edges(sections, beatsPerBar: beatsPerBar)
+
         // MARK: The mix
 
         let before = Guidance.mix(in: song) ?? .unity
@@ -604,7 +613,7 @@ public enum Develop {
 
         // What developing treated as the tune is marked as it, unless somebody marked one.
         return Development(form: source, sections: sections, versions: versions, mix: mix == before ? nil : mix,
-                           plays: plays, targetLUFS: target, genre: genre?.name, tune: song.tune == nil ? songsTune : nil)
+                           plays: plays, fills: fills, targetLUFS: target, genre: genre?.name, tune: song.tune == nil ? songsTune : nil)
     }
 
     // MARK: - The form

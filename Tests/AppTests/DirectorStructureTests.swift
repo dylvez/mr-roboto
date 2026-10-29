@@ -110,6 +110,53 @@ struct DirectorFormToolTests {
         #expect(rig.app.song?.sections[1].stitch.contains(part: rig.bassPart) == true)
     }
 
+    @Test("set_transition sets a section's way in and way out, chooses every edge's by the rule, and read_song says them")
+    func setTransition() async throws {
+        let rig = try FormToolFixture.rig()
+        defer { rig.clean() }
+        _ = await rig.toolbox.run(ClaudeToolUse(id: "a", name: "arrange", input: .object([
+            .init("form", .string("verse 8 | hook 8 | break 4 | hook 8 | outro 4")),
+        ])))
+        func run(_ input: [(String, DirectorJSON)]) async -> ClaudeToolResult {
+            await rig.toolbox.run(ClaudeToolUse(id: "t", name: "set_transition", input: .object(DirectorJSONObject(input.map { DirectorJSONObject.Member($0.0, $0.1) }))))
+        }
+        func json(_ result: ClaudeToolResult) -> [String: Any] {
+            (try? JSONSerialization.jsonObject(with: Data(result.content.utf8))) as? [String: Any] ?? [:]
+        }
+        let roll = await run([("section", .string("verse")), ("way_in", .string("")), ("way_out", .string("snare-roll")), ("size", .string("bar")), ("reason", .string("the hook wants a run-up"))])
+        #expect(!roll.isError, "\(roll.content)")
+        let edges = json(roll)["sections"] as? [[String: Any]] ?? []
+        #expect(edges.count == 1 && edges[0]["way_out"] as? String == "a snare roll, a bar" && edges[0]["way_in"] as? String == "a crash", "\(edges)")
+        #expect((json(roll)["detail"] as? String ?? "").contains("the usual fill becomes a snare roll, a bar") && (json(roll)["detail"] as? String ?? "").contains("Because the hook"))
+        let verse = try #require(rig.app.song?.sections[0])
+        #expect(verse.transitionOut?.shape == "snare-roll" && verse.transitionOut?.beats == 4)
+
+        let cut = await run([("section", .string("hook")), ("way_in", .string("cut")), ("way_out", .string("")), ("size", .string("")), ("reason", .string(""))])
+        #expect(!cut.isError && rig.app.song?.sections[1].transitionIn?.kind == .cut && rig.app.song?.sections[3].transitionIn?.kind == .cut)
+        #expect(rig.app.song?.sections[1].transitionOut == nil, "the hooks' way out was left as it was")
+
+        let read = await rig.toolbox.run(ClaudeToolUse(id: "r", name: "read_song", input: .object([])))
+        let readSections = json(read)["sections"] as? [[String: Any]] ?? []
+        #expect(readSections.first?["way_out"] as? String == "a snare roll, a bar" && readSections.first?["way_in"] == nil)
+        #expect(readSections[1]["way_in"] as? String == "cut" && readSections[1]["way_out"] as? String == "the usual fill")
+        #expect(readSections.last?["way_out"] == nil && readSections.last?["way_in"] as? String != nil)
+
+        let chosen = await run([("section", .string("")), ("way_in", .string("")), ("way_out", .string("choose")), ("size", .string("")), ("reason", .string("every edge the same"))])
+        #expect(!chosen.isError, "\(chosen.content)")
+        let sections = try #require(rig.app.song?.sections)
+        for section in sections.dropLast() { #expect(section.transitionOut != nil, "\(section.name)") }
+        #expect(sections[1].transitionOut?.fill(beatsPerBar: 4)?.shape == .dropOut, "into the break, the kit out")
+        #expect((json(chosen)["sections"] as? [[String: Any]])?.count == 5)
+        #expect((json(chosen)["detail"] as? String ?? "").contains("The Beatmaker:"), "the form's fills read back")
+
+        let bad = await run([("section", .string("verse")), ("way_in", .string("")), ("way_out", .string("tambourine")), ("size", .string("")), ("reason", .string(""))])
+        #expect(bad.isError && bad.content.contains("not a way out"))
+        let nothing = await run([("section", .string("verse")), ("way_in", .string("")), ("way_out", .string("")), ("size", .string("")), ("reason", .string(""))])
+        #expect(nothing.isError)
+
+        #expect(DirectorPrompt.system.contains("set_transition") && DirectorSession.activity(for: "set_transition") == "Setting the way out…")
+    }
+
     @Test("a section arranged again is the same section: the mix's level there, its intensity and its way in still hold")
     func arrangedAgainIsTheSameSection() async throws {
         let rig = try FormToolFixture.rig()

@@ -16,12 +16,33 @@ public enum TransitionKind: String, Codable, Sendable, Hashable, CaseIterable {
 /// A transition into or out of a section.
 public struct Transition: Hashable, Codable, Sendable {
     public var kind: TransitionKind
-    /// Length in beats.
+    /// Length in beats. For a fill, its size; 0 is the shape's own.
     public var beats: Double
+    /// For a fill, which one: a `Performance.FillShape` by its raw value. Nil is the fill every
+    /// song had before fills were chosen, and is omitted on disk, so a song written before reads
+    /// as it did.
+    public var shape: String?
 
-    public init(kind: TransitionKind, beats: Double = 0) {
+    public init(kind: TransitionKind, beats: Double = 0, shape: String? = nil) {
         self.kind = kind
         self.beats = beats
+        self.shape = shape
+    }
+
+    private enum CodingKeys: String, CodingKey { case kind, beats, shape }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        kind = try c.decode(TransitionKind.self, forKey: .kind)
+        beats = try c.decodeIfPresent(Double.self, forKey: .beats) ?? 0
+        shape = try c.decodeIfPresent(String.self, forKey: .shape)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(kind, forKey: .kind)
+        try c.encode(beats, forKey: .beats)
+        try c.encodeIfPresent(shape, forKey: .shape)
     }
 }
 

@@ -319,6 +319,13 @@
       ],
       "priority" : 6,
       "what" : "Whether the subdivision can carry swing at all."
+    },
+    {
+      "features" : [
+        "form.fills.shapes"
+      ],
+      "priority" : 7,
+      "what" : "Whether the fills into the sections differ, or one comes round at every edge."
     }
   ],
   "name" : "Beatmaker",
@@ -959,6 +966,21 @@
       "when" : "a neo-soul or boom-bap pocket is asked for"
     },
     {
+      "engineAction" : "MrRobotoApp.FillChoosing.chosen over SongGraph.Song.sections, by Performance.SectionFill.choose",
+      "evidence" : {
+        "inferred" : "the one fill every song had, at every edge, heard across a library"
+      },
+      "id" : "beatmaker.fills-vary",
+      "then" : "say so, and offer to choose fills — by the feel's family, what each edge goes into and the song's seed — so the way into a hook is not the way into a verse",
+      "threshold" : {
+        "comparison" : "atLeast",
+        "feature" : "form.fills.shapes",
+        "unit" : "shapes",
+        "value" : 2
+      },
+      "when" : "a form of four or more filled edges plays the same fill at every one"
+    },
+    {
       "engineAction" : "Performance.VelocityMap.ghost against .normal",
       "evidence" : {
         "inferred" : "the range spanned by the three shipped VelocityMaps; the literature publishes no velocity figures for any of these practitioners"
@@ -1047,6 +1069,16 @@
       "meaning" : "how much of the groove is played under the normal tier",
       "noticeable" : 0.05,
       "unit" : "fraction of sounding steps"
+    },
+    {
+      "engineField" : "SongGraph.Section.transitionOut.shape over the form, as Performance.FillShape",
+      "evidence" : {
+        "inferred" : "a count of the form's own edges: nothing outside it bears on it"
+      },
+      "feature" : "form.fills.shapes",
+      "meaning" : "distinct fills a form's edges play — the drums' way out of each section into the next",
+      "noticeable" : 1,
+      "unit" : "shapes"
     },
     {
       "engineField" : "20·log10(VelocityMap.normal / VelocityMap.ghost)",

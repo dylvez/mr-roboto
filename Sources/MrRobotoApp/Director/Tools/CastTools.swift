@@ -294,7 +294,12 @@ public struct ConveneTool: DirectorTool {
                    case .groove(let groove) = version.kind {
                     let observation = GrooveObservation(label: PartLabel.title(of: version), groove: groove,
                                                         options: .stored(groove), tempo: song.tempo, timeSignature: song.timeSignature)
-                    readings += Beatmaker(houseCalls: book.calls).read(observation).map { (id, $0) }
+                    let beatmaker = Beatmaker(houseCalls: book.calls)
+                    readings += beatmaker.read(observation).map { (id, $0) }
+                    // The form's fills, read whole: one fill at every edge is heard across a library.
+                    if section == nil, let fills = beatmaker.readFills(of: song.sections, beatsPerBar: song.timeSignature.beatsPerBar) {
+                        readings.append((id, fills))
+                    }
                 }
             case .bassist:
                 if let line = Self.heard(.bassline, in: song, section: section) ?? Guidance.basslines(in: song).last,

@@ -1,3 +1,4 @@
+import Performance
 import SongGraph
 import SwiftUI
 
@@ -370,6 +371,7 @@ private struct SectionDetail: View {
                         .help("Hear \(section.name) as it is against how it stood before it last changed, each through the mix. Taking the earlier one puts it back.")
                 }
             }
+            edgesRow
             if section.lengthInBars > 1 { splitRow }
             VStack(alignment: .leading, spacing: 8) {
                 FormLabel("Plays")
@@ -478,6 +480,54 @@ private struct SectionDetail: View {
 
     /// Cut the section in two. How "the drums from bar 3" is said: an intro of two bars without
     /// them, and the rest with.
+    /// How the section comes in and how it leaves: a crash or a cut in; the usual fill, a fill of
+    /// a named shape at a size, a cut or a build's roll out; and every section's fill chosen at once.
+    private var edgesRow: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            FormLabel("Way in")
+            ChipMenu(model.wayIn(of: section)) {
+                MenuChoice("A crash", isOn: section.transitionIn?.kind != .cut,
+                           help: "\(section.name) opens on a crash, with the kick under it.") { disarm(); model.setWayIn(section.id, cut: false) }
+                MenuChoice("Cut", isOn: section.transitionIn?.kind == .cut,
+                           help: "\(section.name) is cut to: no crash on its one.") { disarm(); model.setWayIn(section.id, cut: true) }
+            }
+            .help("How \(section.name) comes in.")
+            FormLabel("Way out")
+            ChipMenu(model.wayOut(of: section)) {
+                MenuChoice("The usual fill", isOn: section.transitionOut == nil,
+                           help: Fill.usual.name + ": " + FillShape.tomWalkDown.about) { disarm(); model.setWayOut(section.id, nil) }
+                ForEach(FillShape.allCases.filter { $0 != .none }, id: \.self) { shape in
+                    MenuChoice(Self.label(shape.name), isOn: model.fill(of: section)?.shape == shape, help: shape.about) {
+                        disarm(); model.setFill(section.id, shape: shape, size: model.fill(of: section).flatMap { shape.sizes.contains($0.size) ? $0.size : nil })
+                    }
+                }
+                MenuChoice("No fill", isOn: model.fill(of: section)?.shape == FillShape.none, help: FillShape.none.about) {
+                    disarm(); model.setFill(section.id, shape: .none)
+                }
+                MenuChoice("Cut", isOn: section.transitionOut?.kind == .cut,
+                           help: "The groove runs to the bar line and the next section is cut to.") { disarm(); model.setWayOut(section.id, Transition(kind: .cut)) }
+                MenuChoice("A build's roll", isOn: section.transitionOut?.kind == .riser,
+                           help: "The section's own roll runs to the bar line; no fill is put over it.") { disarm(); model.setWayOut(section.id, Transition(kind: .riser)) }
+            }
+            .help("How the drums leave \(section.name) for the next section.")
+            if let fill = model.fill(of: section), fill.shape.sizes.count > 1 {
+                ChipMenu(fill.size.name) {
+                    ForEach(fill.shape.sizes, id: \.self) { size in
+                        MenuChoice(Self.label(size.name), isOn: fill.size == size, help: "\(Self.label(fill.shape.name)), \(size.name).") {
+                            disarm(); model.setFill(section.id, shape: fill.shape, size: size)
+                        }
+                    }
+                }
+                .help("How long the fill is.")
+            }
+            FormChip("Choose fills", isOn: false) { disarm(); model.chooseFills() }
+                .help("Every section's way out chosen for it — by the feel's family (\(model.fillFamily.name)), what each edge goes into and the song's own seed — so the way into a hook is not the way into a verse, and this song's fills are not another song's. A build keeps its roll.")
+        }
+    }
+
+    /// "a snare roll" as a menu says it: "A snare roll".
+    private static func label(_ name: String) -> String { name.prefix(1).uppercased() + name.dropFirst() }
+
     private var splitRow: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             FormLabel("Split")

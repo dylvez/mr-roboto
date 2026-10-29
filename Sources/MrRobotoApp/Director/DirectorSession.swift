@@ -387,6 +387,7 @@ public final class DirectorSession {
         case "audition": return "Listening back…"
         case "level_chop": return "Levelling the chop…"
         case "split_section": return "Splitting a section…"
+        case "set_transition": return "Setting the way out…"
         case "fix_grid": return "Correcting the record's grid…"
         case "set_aside": return "Setting it aside…"
         case "set_effects": return "Setting the effects…"

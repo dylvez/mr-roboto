@@ -44,6 +44,17 @@ public struct ReadSongTool: DirectorTool {
             /// Clips of a record's voice the section cuts off mid-line, and where the voice rests
             /// (`ClipSeams`); left out when there are none.
             public var cuts: [String]?
+            /// How the section comes in — "a crash", "cut" — left out for the first.
+            public var wayIn: String?
+            /// How its drums leave for the next — "the usual fill", "a snare roll, half a bar",
+            /// "cut", "a build's roll to the bar line" — left out for the last. set_transition changes it.
+            public var wayOut: String?
+
+            enum CodingKeys: String, CodingKey {
+                case id, name, bars, versions, cuts
+                case wayIn = "way_in"
+                case wayOut = "way_out"
+            }
         }
 
         public struct Version: Encodable, Sendable {
@@ -148,11 +159,14 @@ public struct ReadSongTool: DirectorTool {
                       key: song.key.map { "\($0)" },
                       timeSignature: "\(song.timeSignature)",
                       lengthInBars: song.lengthInBars,
-                      sections: song.sections.map {
-                          let cuts = ClipSeams.cuts(in: $0, song: song) { library.record($0) }.map(\.sentence)
-                          return Output.Section(id: $0.id.description, name: $0.name, bars: $0.lengthInBars,
-                                                versions: song.versions(playing: $0).map(\.id.description),
-                                                cuts: cuts.isEmpty ? nil : cuts)
+                      sections: song.sections.enumerated().map { index, section in
+                          let cuts = ClipSeams.cuts(in: section, song: song) { library.record($0) }.map(\.sentence)
+                          return Output.Section(id: section.id.description, name: section.name, bars: section.lengthInBars,
+                                                versions: song.versions(playing: section).map(\.id.description),
+                                                cuts: cuts.isEmpty ? nil : cuts,
+                                                wayIn: index > 0 ? FillChoosing.wayIn(of: section) : nil,
+                                                wayOut: index < song.sections.count - 1
+                                                    ? FillChoosing.wayOut(of: section, beatsPerBar: song.timeSignature.beatsPerBar) : nil)
                       },
                       versions: song.versions.map { version in
                           Output.Version(id: version.id.description,

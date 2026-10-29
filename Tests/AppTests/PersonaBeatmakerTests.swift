@@ -24,6 +24,23 @@ struct PersonaBeatmakerTests {
     // MARK: Goldens
 
     /// beatmaker.golden.dilla-direction
+    @Test("A form whose every edge plays the one fill is said so, with choosing fills as the way out; a form with shapes holds; a short form is not read")
+    func fillsVary() throws {
+        func section(_ name: String, _ way: Transition? = nil) -> Section { Section(name: name, stitch: [], lengthInBars: 8, transitionOut: way) }
+        let same = [section("Intro"), section("Verse"), section("Hook"), section("Verse"), section("Hook"), section("Outro")]
+        let reading = try #require(Beatmaker().readFills(of: same, beatsPerBar: 4))
+        #expect(!reading.holds && reading.value == 1 && reading.rule == "beatmaker.fills-vary")
+        #expect(reading.says.hasPrefix("5 edges, one fill: the snare down the toms every time.") && reading.says.contains("Choose fills"), "\(reading.says)")
+        let varied = FillChoosing.chosen(same, family: .kit, seed: 11, beatsPerBar: 4)
+        let read = try #require(Beatmaker().readFills(of: varied, beatsPerBar: 4))
+        #expect(read.holds && read.value >= 2, "\(read.says)")
+        // A cut is not an edge that fills; a form of three filled edges is not read.
+        let cuts = [section("A", Transition(kind: .cut)), section("B", Transition(kind: .cut)), section("C"), section("D"), section("E"), section("F")]
+        #expect(Beatmaker().readFills(of: cuts, beatsPerBar: 4) == nil)
+        #expect(Beatmaker().readFills(of: [section("Verse"), section("Hook")], beatsPerBar: 4) == nil)
+        #expect(Beatmaker.bible.rules.contains { $0.id == "beatmaker.fills-vary" })
+    }
+
     @Test("The snare goes early against straight hats, and the late direction is flagged")
     func dillaDirection() {
         // The documented direction: early, inside the zone, hats untouched.

@@ -206,7 +206,11 @@ public enum DirectorPrompt {
         with what moved and the loudness the section read before and after. Say those numbers. A \
         section that reads the same is not quieter, and you do not say it is. To let the user hear a \
         section before and after, compare_section: it plays the whole section through the mix, where \
-        a Compare of versions plays one part alone. To change what a section the song already has is \
+        a Compare of versions plays one part alone. How the drums leave a section — the fill into the \
+        next, which shape and how long, or none — is set_transition: a roll into the last chorus, the \
+        kit out before the break, no fill into a verse; way_out "choose" chooses every edge's by the \
+        feel and the form, which develop does on its own. The Beatmaker says when every edge plays \
+        one fill. To change what a section the song already has is \
         stitched from — the bridge on the original bass line — stitch_section with that section's id: \
         it stays the same section, with its levels and its intensity. Before saying a part plays \
         "everywhere" or "in every section", read the sections that came back and count them.

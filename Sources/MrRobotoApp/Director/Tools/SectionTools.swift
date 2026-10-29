@@ -196,3 +196,163 @@ public struct CompareSectionTool: DirectorTool {
                                   suggestion: "Change it — set_intensity, or a part it plays written again — and compare then.")
     }
 }
+
+// MARK: - set_transition
+
+/// Sets how a section comes in and how its drums leave it: the way in (a crash, or cut to) and the
+/// way out (the usual fill, a fill of a named shape at a size, no fill, a cut, a build's roll), or
+/// every section's way out chosen by the rule the Structure surface's Choose fills uses.
+public struct SetTransitionTool: DirectorTool {
+
+    public struct Input: Decodable, Sendable {
+        /// A section's id or name; empty for every section of the form.
+        public var section: String
+        /// "" to leave it; "crash"; "cut".
+        public var wayIn: String
+        /// "" to leave it; "choose"; "usual"; "none"; "cut"; "riser"; or a fill shape by name.
+        public var wayOut: String
+        /// "" for the shape's own size; "beat", "half-bar", "bar", "two-bars".
+        public var size: String
+        public var reason: String
+
+        enum CodingKeys: String, CodingKey {
+            case section, size, reason
+            case wayIn = "way_in"
+            case wayOut = "way_out"
+        }
+
+        public init(section: String, wayIn: String = "", wayOut: String = "", size: String = "", reason: String = "") {
+            self.section = section
+            self.wayIn = wayIn
+            self.wayOut = wayOut
+            self.size = size
+            self.reason = reason
+        }
+    }
+
+    public struct Edge: Encodable, Sendable {
+        public var id: String
+        public var name: String
+        public var wayIn: String
+        public var wayOut: String
+
+        enum CodingKeys: String, CodingKey {
+            case id, name
+            case wayIn = "way_in"
+            case wayOut = "way_out"
+        }
+    }
+
+    public struct Output: Encodable, Sendable {
+        public var sections: [Edge]
+        public var recorded: Bool
+        /// What the Beatmaker says of the form's fills now, when the form has enough edges to say.
+        public var reading: String?
+        public var detail: String
+    }
+
+    let workspace: any DirectorWorkspace
+
+    public init(workspace: any DirectorWorkspace) { self.workspace = workspace }
+
+    public let name = "set_transition"
+    public var purpose: String {
+        "Set how a section comes in and how its drums leave it. The way in is a crash on its one or a cut. The way out "
+        + "is the fill into the next section: the usual one (the snare down the toms, half a bar), a fill of a named "
+        + "shape — " + FillShape.allCases.filter { $0 != .none }.map { "\($0.rawValue) (\($0.name))" }.joined(separator: ", ")
+        + " — at a size (a beat, half a bar, a bar, two bars; a whole bar only into a hook or a drop), no fill, a cut, "
+        + "or a build's roll run to the bar line. way_out \"choose\" chooses every named section's fill by the feel's "
+        + "family, what the edge goes into and the song's seed — the same rule develop uses — with section empty for "
+        + "the whole form. Use it when the Beatmaker says every edge plays one fill, when a fill is wanted somewhere "
+        + "(\"a roll into the last chorus\", \"the kit out before the break\") or not (\"no fill into the verse\"). "
+        + "read_song says each section's way out; compare_section plays a section before and after."
+    }
+    public var schema: DirectorJSON {
+        Schema.object([
+            ("section", Schema.string("A section's id from read_song, or a name — \"Hook\", \"chorus\" — for every section of that name; empty for every section of the form.")),
+            ("way_in", Schema.string("How the section comes in: empty to leave it as it is.", enum: ["", "crash", "cut"])),
+            ("way_out", Schema.string("How its drums leave it: empty to leave it as it is; choose for the rule; usual for the fill every song has; none for no fill; cut; riser for a build's roll; or a shape.",
+                                      enum: ["", "choose", "usual", "none", "cut", "riser"] + FillShape.allCases.filter { $0 != .none }.map(\.rawValue))),
+            ("size", Schema.string("How long the fill is: empty for the shape's own.", enum: [""] + FillSize.allCases.map(\.rawValue))),
+            ("reason", Schema.string("Why, in a few words: what was heard or asked for.")),
+        ], required: ["section", "way_in", "way_out", "size", "reason"])
+    }
+
+    public func run(_ input: Input) async throws -> Output {
+        guard let song = await workspace.song else {
+            throw DirectorToolFailure(tool: name, reason: "No song is open.", suggestion: "Call start_song or open_song first.")
+        }
+        if song.isIdea { throw DirectorToolFailure.inAnIdea(name, has: "no next section to fill into") }
+        guard song.sections.count >= 2 else {
+            throw DirectorToolFailure(tool: name, reason: "\(song.title) has \(song.sections.count == 1 ? "one section" : "no sections"), so there is no edge to set.",
+                                      suggestion: "arrange or develop the song first.")
+        }
+        let named = input.section.trimmingCharacters(in: .whitespacesAndNewlines)
+        let chosen = named.isEmpty ? song.sections : try SectionNaming.resolve(named, in: song, tool: name)
+        let ids = Set(chosen.map(\.id))
+        let beatsPerBar = song.timeSignature.beatsPerBar
+        let wayIn = input.wayIn.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let wayOut = input.wayOut.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let size = input.size.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard ["", "crash", "cut"].contains(wayIn) else {
+            throw DirectorToolFailure(tool: name, reason: "\"\(input.wayIn)\" is not a way in.", suggestion: "crash or cut, or empty to leave it.")
+        }
+        let fillSize = size.isEmpty ? nil : FillSize.named(size)
+        guard size.isEmpty || fillSize != nil else {
+            throw DirectorToolFailure(tool: name, reason: "\"\(input.size)\" is not a size.", suggestion: FillSize.allCases.map(\.rawValue).joined(separator: ", ") + ", or empty.")
+        }
+        var sections = song.sections
+        var was: [SectionID: String] = [:]
+        for section in sections where ids.contains(section.id) {
+            was[section.id] = FillChoosing.wayOut(of: section, beatsPerBar: beatsPerBar)
+        }
+        if wayOut == "choose" {
+            let all = FillChoosing.chosen(sections, family: FillChoosing.family(of: song), seed: Develop.seed(for: song), beatsPerBar: beatsPerBar)
+            for index in sections.indices where ids.contains(sections[index].id) { sections[index].transitionOut = all[index].transitionOut }
+        } else if !wayOut.isEmpty {
+            let way: Transition?
+            switch wayOut {
+            case "usual", "the usual fill", "fill": way = nil
+            case "cut": way = Transition(kind: .cut)
+            case "riser", "roll", "build's roll", "a build's roll": way = Transition(kind: .riser)
+            default:
+                guard let shape = FillShape.named(wayOut) else {
+                    throw DirectorToolFailure(tool: name, reason: "\"\(input.wayOut)\" is not a way out.",
+                                              suggestion: "choose, usual, none, cut, riser, or a shape: " + FillShape.allCases.map(\.rawValue).joined(separator: ", ") + ".")
+                }
+                way = Transition.fill(Fill(shape: shape, size: fillSize), beatsPerBar: beatsPerBar)
+            }
+            for index in sections.indices where ids.contains(sections[index].id) { sections[index].transitionOut = way }
+        } else if let fillSize {
+            // A size alone: the fill the section has, at that size.
+            for index in sections.indices where ids.contains(sections[index].id) {
+                let shape = sections[index].transitionOut?.fill(beatsPerBar: beatsPerBar)?.shape ?? Fill.usual.shape
+                sections[index].transitionOut = Transition.fill(Fill(shape: shape, size: fillSize), beatsPerBar: beatsPerBar)
+            }
+        }
+        if !wayIn.isEmpty {
+            for index in sections.indices where ids.contains(sections[index].id) {
+                sections[index].transitionIn = wayIn == "cut" ? Transition(kind: .cut) : nil
+            }
+        }
+        guard wayIn.isEmpty == false || wayOut.isEmpty == false || fillSize != nil else {
+            throw DirectorToolFailure(tool: name, reason: "Nothing to set: the way in, the way out and the size are all empty.")
+        }
+        let recorded = await workspace.arrange(sections)
+        let now = await workspace.song ?? song
+        let edges = now.sections.filter { ids.contains($0.id) }.map { section in
+            Edge(id: section.id.description, name: section.name, wayIn: FillChoosing.wayIn(of: section),
+                 wayOut: FillChoosing.wayOut(of: section, beatsPerBar: beatsPerBar))
+        }
+        var sentences = edges.map { edge -> String in
+            let before = was[SectionID(rawValue: UUID(uuidString: edge.id) ?? UUID())] ?? ""
+            return before == edge.wayOut ? "\(edge.name): \(edge.wayOut), in on \(edge.wayIn)."
+                                        : "\(edge.name): \(before) becomes \(edge.wayOut), in on \(edge.wayIn)."
+        }
+        let reading = Beatmaker().readFills(of: now.sections, beatsPerBar: beatsPerBar)
+        if let reading { sentences.append("The Beatmaker: \(reading.says)") }
+        if !input.reason.isEmpty { sentences.append("Because \(input.reason).") }
+        return Output(sections: edges, recorded: recorded, reading: reading?.says,
+                      detail: sentences.joined(separator: " ") + " A section's last bar plays it; compare_section plays the section before and after.")
+    }
+}

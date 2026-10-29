@@ -191,6 +191,8 @@ public struct Beatmaker: Persona {
                            features: [.humanizeTimingMS]),
             ListeningPoint(6, "Whether the subdivision can carry swing at all.",
                            features: [.subdivision, .tempoBPM]),
+            ListeningPoint(7, "Whether the fills into the sections differ, or one comes round at every edge.",
+                           features: [.fillShapes]),
         ],
 
         // MARK: Feature vocabulary
@@ -229,6 +231,11 @@ public struct Beatmaker: Persona {
                               noticeable: 0.05,
                               evidence: .inferred("counted off this app's own shipped feels; no published "
                                                 + "figure for ghost density exists in this literature")),
+            FeatureDefinition(.fillShapes, unit: "shapes",
+                              meaning: "distinct fills a form's edges play — the drums' way out of each section into the next",
+                              engineField: "SongGraph.Section.transitionOut.shape over the form, as Performance.FillShape",
+                              noticeable: 1,
+                              evidence: .inferred("a count of the form's own edges: nothing outside it bears on it")),
             FeatureDefinition(.ghostDepthDB, unit: "dB under the normal tier",
                               meaning: "how far a ghost note sits under a normal hit",
                               engineField: "20·log10(VelocityMap.normal / VelocityMap.ghost)",
@@ -387,6 +394,13 @@ public struct Beatmaker: Persona {
                         engineAction: "SongGraph.VelocityTier.ghost steps in the GroovePattern",
                         evidence: .inferred("counted off this app's own Feels.neoSoulPocket and "
                                           + "Feels.boomBapPocket; no published figure exists")),
+
+            PersonaRule("beatmaker.fills-vary",
+                        when: "a form of four or more filled edges plays the same fill at every one",
+                        then: "say so, and offer to choose fills — by the feel's family, what each edge goes into and the song's seed — so the way into a hook is not the way into a verse",
+                        threshold: .atLeast(.fillShapes, fillShapesFloor, unit: "shapes"),
+                        engineAction: "MrRobotoApp.FillChoosing.chosen over SongGraph.Song.sections, by Performance.SectionFill.choose",
+                        evidence: .inferred("the one fill every song had, at every edge, heard across a library")),
 
             PersonaRule("beatmaker.ghost-depth",
                         when: "setting how far a ghost sits under a normal hit",
@@ -952,6 +966,28 @@ public struct Beatmaker: Persona {
     ///
     /// Every note is a rule firing, so the list is the persona's reading rather than a commentary:
     /// nothing appears here that is not one of `bible.rules`.
+    /// Distinct fills a form's edges should play before the Beatmaker is quiet about them.
+    public static let fillShapesFloor = 2.0
+    /// Filled edges a form needs before its fills are read at all.
+    public static let edgesWorthReading = 4
+
+    /// What the Beatmaker says of a form's fills: how many edges fill, and whether they are all
+    /// one fill. Nil for a form with too few filled edges to say anything about.
+    public func readFills(of sections: [Section], beatsPerBar: Int) -> PersonaReading? {
+        let fills = sections.dropLast().compactMap { section -> Fill? in
+            guard let way = section.transitionOut else { return .usual }
+            guard way.kind == .fill else { return nil }
+            return way.fill(beatsPerBar: beatsPerBar) ?? .usual
+        }.filter { $0.shape != .none }
+        guard fills.count >= Self.edgesWorthReading else { return nil }
+        let shapes = fills.reduce(into: [FillShape]()) { if !$0.contains($1.shape) { $0.append($1.shape) } }
+        let says = shapes.count == 1
+            ? "\(fills.count) edges, one fill: \(shapes[0].name) every time. Choose fills, in Structure or by set_transition, gives each edge its own."
+            : "\(fills.count) edges fill, \(shapes.count) shapes among them: \(shapes.map(\.name).joined(separator: ", "))."
+        return PersonaReading(rule: "beatmaker.fills-vary", feature: .fillShapes, value: Double(shapes.count),
+                              holds: Double(shapes.count) >= Self.fillShapesFloor, says: says)
+    }
+
     public func read(_ observation: GrooveObservation) -> [PersonaReading] {
         var notes: [PersonaReading] = []
 

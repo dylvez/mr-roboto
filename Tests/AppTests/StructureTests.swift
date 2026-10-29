@@ -82,6 +82,34 @@ private final class StubStructureHost: StructureHosting {
 
 @Suite("Structure: each section says what it sings") @MainActor
 struct StructureWordsTests {
+    @Test("the way in and the way out are the section's own, and Choose fills writes one into every edge but a build's")
+    func edges() throws {
+        var song = Song.new(title: "Glass", tempo: 88)
+        song.sections.append(Section(name: "Build", stitch: [], lengthInBars: 4, transitionOut: Transition(kind: .riser)))
+        song.sections.append(Section(name: "Drop", stitch: [], lengthInBars: 8))
+        let host = StubStructureHost()
+        let model = StructureModel(host: host, song: song)
+        let intro = song.sections[0], verse = song.sections[1], hook = song.sections[2]
+        #expect(model.wayIn(of: hook) == "a crash" && model.wayOut(of: verse) == "the usual fill" && model.fill(of: verse) == nil)
+        model.setWayIn(hook.id, cut: true)
+        model.setFill(verse.id, shape: .snareRoll, size: .bar)
+        model.setWayOut(intro.id, Transition(kind: .cut))
+        let now = { (id: SectionID) in model.sections.first { $0.id == id }! }
+        #expect(now(hook.id).transitionIn?.kind == .cut && model.wayIn(of: now(hook.id)) == "cut")
+        #expect(model.fill(of: now(verse.id)) == Fill(shape: .snareRoll, size: .bar) && model.wayOut(of: now(verse.id)) == "a snare roll, a bar")
+        #expect(model.wayOut(of: now(intro.id)) == "cut")
+        model.setFill(verse.id, shape: .snareRoll, size: nil)
+        #expect(model.fill(of: now(verse.id))?.size == .halfBar, "no size is the shape's own")
+        #expect(model.isDirty)
+        model.chooseFills()
+        let chosen = model.sections
+        for section in chosen.dropLast() { #expect(section.transitionOut != nil, "\(section.name)") }
+        #expect(chosen.first { $0.name == "Build" }?.transitionOut?.kind == .riser)
+        #expect(chosen.first { $0.name == "Verse" }?.transitionOut?.fill(beatsPerBar: 4) != nil)
+        #expect(model.fillFamily == .kit)
+        #expect(model.keep() && host.arranged.last?.first { $0.name == "Verse" }?.transitionOut != nil)
+    }
+
     @Test("a section shows its labelled stanza, one with none says so and opens Lyrics, and a song with no words shows nothing")
     func words() throws {
         var song = Song.new(title: "Glass", tempo: 88)

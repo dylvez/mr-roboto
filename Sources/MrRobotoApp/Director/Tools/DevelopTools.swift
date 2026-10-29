@@ -39,6 +39,8 @@ public struct DevelopTool: DirectorTool {
         /// The variations written, by name. Each is a part of its own that plays through the
         /// strip and the instrument of the part it came from.
         public var written: [String]
+        /// The way out of each edge of the form, as chosen: "Verse → Hook: a snare roll, half a bar".
+        public var fills: [String] = []
         public var genre: String?
         public var targetLUFS: Double?
         /// The whole song bounced through its mix once everything was in. Nil when this
@@ -50,7 +52,7 @@ public struct DevelopTool: DirectorTool {
         public var detail: String
 
         enum CodingKeys: String, CodingKey {
-            case form, sections, bars, seconds, written, genre, recorded, detail
+            case form, sections, bars, seconds, written, fills, genre, recorded, detail
             case targetLUFS = "target_lufs"
             case integratedLUFS = "integrated_lufs"
             case truePeakDBTP = "true_peak_dbtp"
@@ -119,6 +121,9 @@ public struct DevelopTool: DirectorTool {
         var detail = "\(development.shape), \(StructureModel.clock(seconds)), in \(development.form.words). "
         detail += development.written.isEmpty ? "Nothing new was written: the song already held every variation it plays. "
                                               : "\(development.written.count) variations written. "
+        if let now = await workspace.song, now.sections.count >= 2 {
+            detail += "Fills chosen: \(FillChoosing.sentence(now.sections, beatsPerBar: now.timeSignature.beatsPerBar)); set_transition changes one. "
+        }
         if let loudness = result.loudness {
             detail += String(format: "Bounced through the mix it reads %.1f LUFS, true peak %.1f dBTP, with the master at %+.1f dB. ",
                              loudness.integratedLUFS, loudness.truePeakDBTP, loudness.masterGainDB)
@@ -133,7 +138,7 @@ public struct DevelopTool: DirectorTool {
                       sections: development.plays.map { DevelopedSection(name: $0.name, bars: $0.bars, role: $0.role.rawValue,
                                                                          intensity: $0.intensity, plays: $0.parts) },
                       bars: development.bars, seconds: (seconds * 10).rounded() / 10, written: development.written,
-                      genre: development.genre, targetLUFS: development.targetLUFS,
+                      fills: development.fills, genre: development.genre, targetLUFS: development.targetLUFS,
                       integratedLUFS: result.loudness.map { ($0.integratedLUFS * 10).rounded() / 10 },
                       truePeakDBTP: result.loudness.map { ($0.truePeakDBTP * 10).rounded() / 10 },
                       masterGainDB: result.loudness.map { ($0.masterGainDB * 10).rounded() / 10 },

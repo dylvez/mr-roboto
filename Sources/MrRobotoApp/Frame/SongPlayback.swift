@@ -974,9 +974,10 @@ public struct SongPlayback: Equatable, Sendable {
                 // how it leaves or enters is taken at its word: a build runs its roll to the bar
                 // line, and a fill down the toms over the last of it would be the roll stopping.
                 if song.playsFills, voice.kit == nil, case .groove(let groove) = voice.play {
+                    let beatsPerBar = song.timeSignature.beatsPerBar
                     voice.play = .groove(SectionFill.arranged(
-                        groove, bars: section.lengthInBars, beatsPerBar: song.timeSignature.beatsPerBar,
-                        fillIntoNext: index < song.sections.count - 1 && fills(out: section),
+                        groove, bars: section.lengthInBars, beatsPerBar: beatsPerBar,
+                        fill: index < song.sections.count - 1 ? fill(out: section, beatsPerBar: beatsPerBar) : nil,
                         crashIn: index > 0 && crashes(into: section)))
                 }
                 voices.append(voice)
@@ -989,9 +990,17 @@ public struct SongPlayback: Equatable, Sendable {
         return out
     }
 
+    /// The fill a section's drums play into the next: the usual one unless it says another way out
+    /// — a fill of a named shape, or no fill at all (a cut, a build's roll, a fade).
+    static func fill(out section: Section, beatsPerBar: Int) -> Fill? {
+        guard let way = section.transitionOut else { return .usual }
+        guard way.kind == .fill else { return nil }
+        return way.fill(beatsPerBar: beatsPerBar) ?? .usual
+    }
+
     /// Whether a section's drums fill into the next: yes, unless it says it leaves another way.
     static func fills(out section: Section) -> Bool {
-        section.transitionOut.map { $0.kind == .fill } ?? true
+        fill(out: section, beatsPerBar: 4).map { $0.shape != .none } ?? false
     }
 
     /// Whether a section opens on a crash: yes, unless it says it is cut to.
