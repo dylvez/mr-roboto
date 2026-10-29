@@ -81,6 +81,9 @@ public struct Bassist: Persona {
     public static let eightOhEightDecaySeconds: Double = 0.4
     /// R14: a verse near 90 bpm.
     public static let verseAttacksPerBar: Double = 6
+    /// Other songs whose main line has this rhythm in these hands, before it is worth a word: none.
+    /// The hands are few and a two-bar rhythm is most of what a bass line is to the ear.
+    public static let repeatsCeiling = 0.0
     public static let verseRestRatio: Double = 0.3
     /// Nothing is straight if the reference itself has moved more than this.
     public static let straightMS: Double = 10
@@ -145,6 +148,8 @@ public struct Bassist: Persona {
                            features: [.bassChromaticApproachRate]),
             ListeningPoint(7, "Where the line lives in the register.",
                            features: [.bassRegisterLow, .bassRegisterHigh]),
+            ListeningPoint(8, "Whether another song here already plays this line.",
+                           features: [.bassRhythmRepeats]),
         ],
 
         // MARK: Feature vocabulary
@@ -200,6 +205,11 @@ public struct Bassist: Persona {
                               meaning: "bars whose downbeat carries a bass attack",
                               engineField: "SongGraph.NoteEvent.start within a sixteenth of each bar's first beat",
                               noticeable: 0.25, evidence: .cited([pinoGuitarWorld])),
+            FeatureDefinition(.bassRhythmRepeats, unit: "songs",
+                              meaning: "how many of the library's other songs have a main bass line with the same two-bar rhythm in the same hands",
+                              engineField: "SongGraph.Library.songs, each main SongGraph.Bassline's first two bars as sixteen steps, by MrRobotoApp.SongsBefore",
+                              noticeable: 1,
+                              evidence: .inferred("a count of this library's own lines: nothing outside it bears on it")),
             FeatureDefinition(.bassEarlyAlternation, unit: "1 or 0",
                               meaning: "every other onset ahead of the grid by no more than 25 ms — the one sanctioned early pattern",
                               engineField: "Performance.BassRequest.earlyAlternation, read back from the onsets",
@@ -391,6 +401,13 @@ public struct Bassist: Persona {
                         threshold: nil,
                         engineAction: "the writer's phrase cycle, not built in M2",
                         evidence: .cited([Beatmaker.listeningGuide])),
+
+            PersonaRule("bassist.usual-line",
+                        when: "another song in the library has a bass line with this rhythm in the same hands",
+                        then: "name the songs and offer two ways out to hear — another figure of the hand, or another hand the genre allows; the same line twice running is a habit, and the house should hear that it has one",
+                        threshold: .atMost(.bassRhythmRepeats, repeatsCeiling, unit: "songs"),
+                        engineAction: "SongGraph.Library.songs read for each main SongGraph.Bassline's first two bars, by MrRobotoApp.SongsBefore",
+                        evidence: .inferred("a count of this library's own lines")),
 
             PersonaRule("bassist.swing-when-programmed",
                         when: "the line is programmed rather than played",
@@ -609,6 +626,16 @@ public struct Bassist: Persona {
                          alternative: "The corpus is the first task of M4, and it wants the nine records still owed.",
                          affects: ["bassist.density"],
                          evidence: .inferred("the numbers are a design proposal awaiting a transcription corpus")),
+            OpenQuestion("bassist.oq.say-the-usual",
+                         question: "Should the Bassist say when a line is another song's?",
+                         encoded: "Yes. Every other rule here reads the line alone, and a line that passes all of them "
+                                + "can be the line of the last three songs; something should say so, once, with a way "
+                                + "out to hear.",
+                         alternative: "No. A hand is a hand, a one drop under a one drop is the idiom, and a house that "
+                                    + "keeps its figures on purpose does not need telling each time — the reading stays, "
+                                    + "and stops being a flag.",
+                         affects: ["bassist.usual-line"],
+                         evidence: .inferred("the tension between a critic that reads one line and a library of thirty")),
             OpenQuestion("bassist.oq.octave-double",
                          question: "Should the writer double the phrase start an octave up at −6 dB, as on \"Playa Playa\"?",
                          encoded: "Not in M2's writer. G5's octave-double clause is left unexercised and says so.",
@@ -825,6 +852,32 @@ public struct Bassist: Persona {
                 holds: o.chromaticApproachRate >= 0.3,
                 says: String(format: "%.0f of %d root moves of a third or more are approached from the half-step below.",
                              o.chromaticApproachRate * Double(o.largeRootMoves), o.largeRootMoves)))
+        }
+
+        // 8. The other songs' lines, when they are in view.
+        if let before = o.before, !before.lines.isEmpty, let hands = o.hands, o.rhythm.contains("x") {
+            let same = before.sharing(line: o.rhythm, hands: hands)
+            let lineage = BassLineage(rawValue: hands)
+            let handsName = lineage?.name ?? hands
+            var says = same.isEmpty
+                ? "No other song here plays this rhythm in \(handsName)'s hands."
+                : "The line's rhythm is \(SongsBefore.list(same))'s, in the same hands."
+            if !same.isEmpty {
+                var ways: [String] = []
+                if lineage?.writesFigures == true {
+                    ways.append("another figure of the \(handsName) hand — Another figure on the Piano roll, or write it again with a fresh seed")
+                } else {
+                    ways.append("the same hand with a fresh seed")
+                }
+                let others = o.allowedHands.compactMap(BassLineage.init(rawValue:)).filter { $0 != lineage }
+                if let other = others.first {
+                    ways.append("the \(other.name) hands, which the genre allows")
+                }
+                says += " Two ways out to hear: " + ways.joined(separator: "; or ") + "."
+            }
+            notes.append(PersonaReading(
+                rule: "bassist.usual-line", feature: .bassRhythmRepeats, value: Double(same.count),
+                holds: Double(same.count) <= Self.repeatsCeiling, says: says))
         }
 
         return notes

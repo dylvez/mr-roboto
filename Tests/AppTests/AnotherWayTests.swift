@@ -31,8 +31,8 @@ enum AnotherWayFixture {
     static func reading(_ rule: String, in readings: [PersonaReading]) -> PersonaReading? { readings.first { $0.rule == rule } }
 
     /// A song the library holds: these chords, and a tune that comes in on this note at this beat.
-    static func song(_ title: String, chords: String, opening: (midi: Int, beat: Double)? = nil, key: Key = key,
-                     created: Date = Date()) throws -> Song {
+    static func song(_ title: String, chords: String, opening: (midi: Int, beat: Double)? = nil, bass: Bassline? = nil,
+                     key: Key = key, created: Date = Date()) throws -> Song {
         var song = Song(title: title, key: key, tempo: 100, createdAt: created)
         var versions = [PartVersion(partID: PartID(), kind: .progression(try sheet(chords, key: key)), author: .user,
                                     operation: Operation.written, note: chords)]
@@ -41,8 +41,24 @@ enum AnotherWayFixture {
                                                                              lengthInBars: 2)),
                                         author: .user, operation: Operation.written, note: "Its tune"))
         }
+        if let bass {
+            versions.append(PartVersion(partID: PartID(), kind: .bassline(bass), author: .user, operation: Operation.written, note: "Its bass"))
+        }
         try song.append(contentsOf: versions)
         return song
+    }
+
+    /// A bass line in the given hands under a two-bar kicking groove, by seed and figure.
+    static func bass(_ lineage: BassLineage, seed: UInt64 = 3, figure: Int? = 0) -> Bassline {
+        BassWriter.write(BassRequest(key: key, chords: [], groove: PianoRollTests.kicking(), tempo: 100,
+                                     lineage: lineage, density: 0.5, seed: seed, bars: 2, figure: figure))
+    }
+
+    static func heard(_ line: Bassline, before: SongsBefore?, hands: [String] = ["root-fifth", "motown"]) -> BassObservation {
+        var observation = BassObservation(label: "The bass", bassline: line, groove: PianoRollTests.kicking(), chords: [], tempo: 100)
+        observation.before = before
+        observation.allowedHands = hands
+        return observation
     }
 }
 
@@ -174,6 +190,109 @@ struct TheUsualTests {
             }
             #expect(question?.affects.count == 2)
         }
+        // And the Bassist's one, on the line.
+        let bassist = Bassist.bible.openQuestions.first { $0.id == "bassist.oq.say-the-usual" }
+        #expect(bassist?.affects == ["bassist.usual-line"])
+        #expect(Bassist.bible.rules.contains { $0.id == "bassist.usual-line" } && HouseBook.quietable.contains("bassist.usual-line"))
+    }
+}
+
+// MARK: - The usual line
+
+@Suite("The usual line: the Bassist on a line another song has") @MainActor
+struct TheUsualLineTests {
+
+    @Test("a line whose rhythm another song plays in the same hands is named, with two ways out; other hands or another rhythm are not")
+    func usualLine() throws {
+        let line = AnotherWayFixture.bass(.rootFifth)
+        let other = try AnotherWayFixture.song("First Light", chords: "Am | F | Dm | E", bass: line, key: Key(parsing: "A minor")!)
+        let apart = try AnotherWayFixture.song("Tidewater", chords: "Dm9 | Gm9 | Bbmaj7 | A7", bass: AnotherWayFixture.bass(.motown))
+        let before = SongsBefore.of(Library(songs: [other, apart]), besides: nil)
+        #expect(before.lines.count == 2)
+        #expect(before.lines.first { $0.title == "First Light" }?.rhythm == SongsBefore.signature(of: line, beatsPerBar: 4))
+        #expect(before.lines.allSatisfy { $0.rhythm.contains("x") && $0.rhythm.count == 33 })
+
+        let same = Bassist().read(AnotherWayFixture.heard(line, before: before))
+        let again = try #require(AnotherWayFixture.reading("bassist.usual-line", in: same))
+        #expect(!again.holds && again.value == 1, "\(again.says)")
+        #expect(again.says.contains("First Light") && !again.says.contains("Tidewater"), "\(again.says)")
+        #expect(again.says.contains("Two ways out to hear") && again.says.contains("Another figure") && again.says.contains("Motown hands"), "\(again.says)")
+
+        // The same rhythm in other hands is another line to the ear's expectations of the hand.
+        var motownOfIt = line
+        motownOfIt.hands = BassLineage.motown.rawValue
+        #expect(AnotherWayFixture.reading("bassist.usual-line", in: Bassist().read(AnotherWayFixture.heard(motownOfIt, before: before)))?.holds == true)
+        // Another figure of the hand is another rhythm.
+        let oomPah = AnotherWayFixture.bass(.rootFifth, figure: 4)
+        #expect(SongsBefore.signature(of: oomPah, beatsPerBar: 4) != SongsBefore.signature(of: line, beatsPerBar: 4))
+        let different = try #require(AnotherWayFixture.reading("bassist.usual-line", in: Bassist().read(AnotherWayFixture.heard(oomPah, before: before))))
+        #expect(different.holds && different.value == 0 && different.says.contains("No other song"), "\(different.says)")
+        // With no genre set, the one way out is the figure.
+        let noGenre = try #require(AnotherWayFixture.reading("bassist.usual-line", in: Bassist().read(AnotherWayFixture.heard(line, before: before, hands: []))))
+        #expect(noGenre.says.contains("Another figure") && !noGenre.says.contains("which the genre allows"), "\(noGenre.says)")
+        // Nothing to compare it with: the reading is not made.
+        #expect(AnotherWayFixture.reading("bassist.usual-line", in: Bassist().read(AnotherWayFixture.heard(line, before: nil))) == nil)
+        #expect(AnotherWayFixture.reading("bassist.usual-line", in: Bassist().read(AnotherWayFixture.heard(line, before: SongsBefore(entries: [])))) == nil)
+    }
+
+    @Test("the Bassist hears the whole library, not the last six, and the open song is left out")
+    func wholeLibrary() throws {
+        let start = Date(timeIntervalSince1970: 1_790_000_000)
+        let songs = try (0..<9).map { i in
+            try AnotherWayFixture.song("Song \(i)", chords: "Dm | Gm | A | Dm", opening: (62, 0), bass: AnotherWayFixture.bass(.rootFifth),
+                                       created: start.addingTimeInterval(Double(i) * 86_400))
+        }
+        let before = SongsBefore.of(Library(songs: songs), besides: songs[8].id)
+        #expect(before.entries.count == SongsBefore.kept)
+        #expect(before.lines.map(\.title) == (0..<8).reversed().map { "Song \($0)" })
+        let reading = try #require(AnotherWayFixture.reading("bassist.usual-line", in: Bassist().read(AnotherWayFixture.heard(AnotherWayFixture.bass(.rootFifth), before: before))))
+        #expect(reading.value == 8 && reading.says.contains("Song 0") && reading.says.contains("Song 7"), "\(reading.says)")
+    }
+
+    @Test("a house that keeps its figures on purpose is not told again")
+    func houseQuiets() throws {
+        let line = AnotherWayFixture.bass(.rootFifth)
+        let other = try AnotherWayFixture.song("First Light", chords: "Am | F", bass: line, key: Key(parsing: "A minor")!)
+        let readings = Bassist().read(AnotherWayFixture.heard(line, before: SongsBefore.of(Library(songs: [other]), besides: nil)))
+        #expect(HouseBook().settle(readings, by: Bassist.bible) == readings)
+        let book = HouseBook(library: [HouseCallRecord(question: "bassist.oq.say-the-usual", choice: "alternative",
+                                                       how: "the one drop is the one drop", decidedOn: "2026-10-29")])
+        #expect(book.quiets("bassist.usual-line", in: Bassist.bible))
+        #expect(!book.quiets("bassist.downbeat", in: Bassist.bible))
+        let settled = try #require(AnotherWayFixture.reading("bassist.usual-line", in: book.settle(readings, by: Bassist.bible)))
+        #expect(settled.holds && settled.value == 1 && settled.says.hasSuffix("on purpose.") && !settled.says.contains("Two ways"), "\(settled.says)")
+    }
+
+    @Test("write_bassline says when the line it wrote is another song's")
+    func writeBasslineSaysIt() async throws {
+        func write(in rig: WritingFixture.Rig) async throws -> (line: Bassline, result: ClaudeToolResult) {
+            _ = await WritingFixture.run(rig.box, "start_song", #"{"title":"Arrival","tempo":96,"key":"D minor","machine":"vintage"}"#)
+            let beat = WritingFixture.json(await WritingFixture.run(rig.box, "write_groove",
+                #"{"feel":"Motown","bars":2,"swing_percent":0,"rows":[],"note":"A beat","steps_per_bar":0,"parent":""}"#))
+            let groove = try #require(beat["version"] as? String)
+            _ = await WritingFixture.run(rig.box, "set_progression", #"{"chords":"Dm7 | Gm7 | Bbmaj7 | A7","key":"D minor"}"#)
+            let result = await WritingFixture.run(rig.box, "write_bassline",
+                #"{"groove":"\#(groove)","hands":"motown","lag_ms":0,"density":0.5,"seed":5,"sound":"","section":""}"#)
+            #expect(!result.isError, "\(result.content)")
+            let song = try #require(rig.app.song)
+            guard case .bassline(let line)? = Guidance.basslines(in: song).last?.kind else { throw NSError(domain: "no line", code: 0) }
+            return (line, result)
+        }
+        let alone = WritingFixture.rig(nil)
+        defer { alone.clean() }
+        let first = try await write(in: alone)
+        let readings = WritingFixture.json(first.result)["readings"] as? [String] ?? []
+        #expect(readings.isEmpty || !readings.contains { $0.contains("same hands") }, "no other song, nothing to say: \(readings)")
+        #expect((WritingFixture.json(first.result)["figure"] as? String ?? "").contains("profile"))
+
+        // The same line in another song of the library: said, and flagged.
+        let other = try AnotherWayFixture.song("First Light", chords: "Dm | Gm", bass: first.line)
+        let heard = WritingFixture.rig(nil, library: Library(songs: [other]))
+        defer { heard.clean() }
+        let second = try await write(in: heard)
+        #expect(second.line.notes == first.line.notes, "the same seed under the same groove is the same line")
+        let flags = WritingFixture.json(second.result)["flags"] as? [String] ?? []
+        #expect(flags.contains { $0.contains("First Light") && $0.contains("Two ways out") }, "\(flags)")
     }
 }
 

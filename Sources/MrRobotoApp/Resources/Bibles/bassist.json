@@ -336,6 +336,13 @@
       ],
       "priority" : 7,
       "what" : "Where the line lives in the register."
+    },
+    {
+      "features" : [
+        "bass.library.repeats"
+      ],
+      "priority" : 8,
+      "what" : "Whether another song here already plays this line."
     }
   ],
   "name" : "Bassist",
@@ -396,6 +403,18 @@
       },
       "id" : "bassist.oq.density-numbers",
       "question" : "Six attacks and 30% rest — where do those come from?"
+    },
+    {
+      "affects" : [
+        "bassist.usual-line"
+      ],
+      "alternative" : "No. A hand is a hand, a one drop under a one drop is the idiom, and a house that keeps its figures on purpose does not need telling each time — the reading stays, and stops being a flag.",
+      "encoded" : "Yes. Every other rule here reads the line alone, and a line that passes all of them can be the line of the last three songs; something should say so, once, with a way out to hear.",
+      "evidence" : {
+        "inferred" : "the tension between a critic that reads one line and a library of thirty"
+      },
+      "id" : "bassist.oq.say-the-usual",
+      "question" : "Should the Bassist say when a line is another song's?"
     },
     {
       "affects" : [
@@ -1115,6 +1134,21 @@
       "when" : "the loop is four bars"
     },
     {
+      "engineAction" : "SongGraph.Library.songs read for each main SongGraph.Bassline's first two bars, by MrRobotoApp.SongsBefore",
+      "evidence" : {
+        "inferred" : "a count of this library's own lines"
+      },
+      "id" : "bassist.usual-line",
+      "then" : "name the songs and offer two ways out to hear — another figure of the hand, or another hand the genre allows; the same line twice running is a habit, and the house should hear that it has one",
+      "threshold" : {
+        "comparison" : "atMost",
+        "feature" : "bass.library.repeats",
+        "unit" : "songs",
+        "value" : 0
+      },
+      "when" : "another song in the library has a bass line with this rhythm in the same hands"
+    },
+    {
       "engineAction" : "SongGraph.Groove.swing the line is placed on",
       "evidence" : {
         "cited" : [
@@ -1274,6 +1308,16 @@
       "meaning" : "bars whose downbeat carries a bass attack",
       "noticeable" : 0.25,
       "unit" : "fraction of bars"
+    },
+    {
+      "engineField" : "SongGraph.Library.songs, each main SongGraph.Bassline's first two bars as sixteen steps, by MrRobotoApp.SongsBefore",
+      "evidence" : {
+        "inferred" : "a count of this library's own lines: nothing outside it bears on it"
+      },
+      "feature" : "bass.library.repeats",
+      "meaning" : "how many of the library's other songs have a main bass line with the same two-bar rhythm in the same hands",
+      "noticeable" : 1,
+      "unit" : "songs"
     },
     {
       "engineField" : "Performance.BassRequest.earlyAlternation, read back from the onsets",

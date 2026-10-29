@@ -74,9 +74,12 @@ final class BassAdapter: PianoRollHosting {
             // A line longer than its groove is read against the groove repeated under it, as it
             // plays; read against one bar of kick, bars two to eight would have nothing under them.
             let heard = line.lengthInBars.map { groove.tiled(toBars: $0) } ?? groove
-            let observation = BassObservation(label: PartLabel.title(of: version), bassline: line, groove: heard,
+            var observation = BassObservation(label: PartLabel.title(of: version), bassline: line, groove: heard,
                                               chords: chords, tempo: song.tempo, timeSignature: song.timeSignature)
-            let readings = GenreLens.judge(Bassist().read(observation), by: Bassist.bible, in: GenreLens.of(song))
+            observation.before = SongsBefore.of(app.library, besides: song.id)
+            observation.allowedHands = GenreLens.of(song)?.profile.bassHands ?? []
+            let readings = app.houseBook.settle(GenreLens.judge(Bassist().read(observation), by: Bassist.bible, in: GenreLens.of(song)),
+                                                by: Bassist.bible)
             let flags = readings.filter { !$0.holds }
             // Only what went wrong, and only when it changes: the readings are on the surface
             // already, and a line kept as you go would otherwise be a line in the rail each time.

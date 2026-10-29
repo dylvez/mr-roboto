@@ -3,12 +3,13 @@ import MusicTheory
 import SongGraph
 
 /// What the library's other songs did, for a reading to be made against: each one's key, the
-/// loop its chords go round, and how its tune comes in.
+/// loop its chords go round, how its tune comes in, and the rhythm its bass plays.
 ///
 /// Every reading the band gives is of the song in front of it. Ten songs each read as fine can be
 /// the same song ten times — the same key, the same four chords, a tune that comes in on the same
-/// note in the same place — and nothing read alone will ever say so. This is the little of the
-/// other songs that the Harmonist and the Melodist need in view to say it.
+/// note in the same place, a bass that plays the same two bars — and nothing read alone will ever
+/// say so. This is the little of the other songs that the Harmonist, the Melodist and the Bassist
+/// need in view to say it.
 public struct SongsBefore: Hashable, Sendable {
 
     public struct Entry: Hashable, Sendable {
@@ -27,19 +28,44 @@ public struct SongsBefore: Hashable, Sendable {
         public var beat: Double
     }
 
+    /// A song's main bass line: whose hands, and the rhythm of its first two bars.
+    public struct Line: Hashable, Sendable {
+        public var title: String
+        public var hands: String
+        /// Sixteen steps a bar, two bars, `x` where the line attacks: what `signature(of:)` makes.
+        public var rhythm: String
+
+        public init(title: String, hands: String, rhythm: String) {
+            self.title = title
+            self.hands = hands
+            self.rhythm = rhythm
+        }
+    }
+
     /// The other songs, the newest first.
     public var entries: [Entry]
+    /// Every other song's main bass line, the newest first. The whole library, not the last few:
+    /// the hands are few, and a line heard thirty songs ago is still the line.
+    public var lines: [Line]
 
-    /// How many songs back a reading looks.
+    /// How many songs back a chord or tune reading looks.
     public static let kept = 6
 
-    public init(entries: [Entry]) { self.entries = entries }
+    public init(entries: [Entry], lines: [Line] = []) {
+        self.entries = entries
+        self.lines = lines
+    }
 
     /// The library's other songs that hold chords or a tune, the newest first.
     public static func of(_ library: Library, besides song: SongID?) -> SongsBefore {
         let others = library.songs.filter { $0.id != song }.sorted { $0.createdAt > $1.createdAt }
         var entries: [Entry] = []
+        var lines: [Line] = []
         for other in others {
+            if let version = Guidance.basslines(in: other).last, case .bassline(let line) = version.kind, let hands = line.hands {
+                lines.append(Line(title: other.title, hands: hands, rhythm: signature(of: line, beatsPerBar: other.timeSignature.beatsPerBar)))
+            }
+            guard entries.count < kept else { continue }
             let loop = Guidance.progressions(in: other).last.flatMap { version -> [Int]? in
                 if case .progression(let sheet) = version.kind { return Self.loop(of: sheet) }
                 return nil
@@ -50,9 +76,29 @@ public struct SongsBefore: Hashable, Sendable {
             }
             guard !loop.isEmpty || opening != nil else { continue }
             entries.append(Entry(title: other.title, key: other.key, loop: loop, opening: opening))
-            if entries.count >= kept { break }
         }
-        return SongsBefore(entries: entries)
+        return SongsBefore(entries: entries, lines: lines)
+    }
+
+    /// A line's rhythm: its first two bars as sixteen steps each, `x` where it attacks (a ghost
+    /// is not an attack), the bars separated by a space. The same rhythm in the same hands is the
+    /// same line to the ear, whatever the chords under it.
+    public static func signature(of line: Bassline, beatsPerBar: Int) -> String {
+        let beats = Double(max(1, beatsPerBar))
+        return (0..<2).map { bar -> String in
+            var steps = Array(repeating: "-", count: 16)
+            for note in line.notes where note.velocity > 60 {
+                let step = Int(((note.start - Double(bar) * beats) / beats * 16).rounded())
+                if (0..<16).contains(step) { steps[step] = "x" }
+            }
+            return steps.joined()
+        }.joined(separator: " ")
+    }
+
+    /// The songs whose main bass line has this rhythm in these hands.
+    public func sharing(line rhythm: String, hands: String) -> [String] {
+        guard rhythm.contains("x") else { return [] }
+        return lines.filter { $0.hands == hands && $0.rhythm == rhythm }.map(\.title)
     }
 
     /// A progression's roots above its own tonic, repeats run together.
@@ -107,6 +153,7 @@ extension HouseBook {
     public static let quietable: Set<String> = [
         "harmonist.something-of-its-own", "harmonist.not-the-last-song-again",
         "melodist.something-of-its-own", "melodist.not-the-same-opening-again",
+        "bassist.usual-line",
     ]
 
     /// Whether the house has said, on the question a rule answers to, that it means it.

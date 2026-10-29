@@ -432,10 +432,14 @@ public struct WriteBasslineTool: DirectorTool {
         }
         let (line, request) = written(under: chords)
         // Read against the groove as the line hears it, so a bar is a bar of the line.
-        let observation = BassObservation(label: "\(lineage.name) line", bassline: line, groove: request.lineGroove,
+        var observation = BassObservation(label: "\(lineage.name) line", bassline: line, groove: request.lineGroove,
                                           chords: chords, tempo: tempo, timeSignature: signature,
                                           kickDecaySeconds: kickDecay)
-        let readings = GenreLens.judge(Bassist().read(observation), by: Bassist.bible, in: lens)
+        // The other songs' lines, so a line the library has is said to be one.
+        observation.before = SongsBefore.of(await workspace.library, besides: song?.id)
+        observation.allowedHands = lens?.profile.bassHands ?? []
+        let readings = (await workspace.houseBook).settle(GenreLens.judge(Bassist().read(observation), by: Bassist.bible, in: lens),
+                                                          by: Bassist.bible)
         let flags = readings.filter { !$0.holds }
 
         var noteParts = ["\(lineage.name) line"]

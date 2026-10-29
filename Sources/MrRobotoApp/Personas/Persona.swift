@@ -195,6 +195,8 @@ public struct Feature: RawRepresentable, Hashable, Sendable, Codable, CustomStri
     public static let harmonyDepartures = Feature("harmony.departures")
     /// How many of the library's other recent songs go round the same loop.
     public static let harmonyRepeats = Feature("harmony.library.repeats")
+    /// How many of the library's other songs have a bass line with this rhythm in these hands.
+    public static let bassRhythmRepeats = Feature("bass.library.repeats")
 
     // The Melodist's: the tune.
     /// Lowest note to highest, in semitones.

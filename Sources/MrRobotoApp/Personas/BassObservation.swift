@@ -20,6 +20,13 @@ public struct BassObservation: Hashable, Sendable {
     /// Whose hands wrote the line, when the writer did: a genre's own figure — walking, octaves,
     /// the tumbao — is not held to a Palladino technique.
     public var hands: String?
+    /// The rhythm of the line's first two bars, as `SongsBefore.signature(of:)` writes it.
+    public var rhythm: String
+    /// The library's other songs, when a reading should hear them; nil reads the line alone.
+    public var before: SongsBefore?
+    /// The hands the song's genre allows, by `BassLineage` raw value: the other way out of a line
+    /// another song has. Empty when no genre is set.
+    public var allowedHands: [String] = []
 
     /// Milliseconds behind (positive) or ahead of (negative) the nearest kick, one per onset, in
     /// onset order. A bass with no kick to sit against measures against the beat grid instead.
@@ -101,6 +108,7 @@ public struct BassObservation: Hashable, Sendable {
         self.bars = max(1, groove.bars)
         self.sound = bassline.sound ?? "finger"
         self.hands = bassline.hands
+        self.rhythm = SongsBefore.signature(of: bassline, beatsPerBar: timeSignature.beatsPerBar)
         self.kickDecaySeconds = kickDecaySeconds
 
         let beatsPerBar = Double(max(1, timeSignature.beatsPerBar))

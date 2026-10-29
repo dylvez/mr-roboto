@@ -522,9 +522,12 @@ public final class PianoRollModel {
 
     public var observation: BassObservation? {
         guard let lineGroove else { return nil }
-        return BassObservation(label: title, bassline: bassline, groove: lineGroove, chords: chords,
-                               tempo: tempo, timeSignature: timeSignature, options: grooveOptions,
-                               kickDecaySeconds: kickDecaySeconds)
+        var observation = BassObservation(label: title, bassline: bassline, groove: lineGroove, chords: chords,
+                                          tempo: tempo, timeSignature: timeSignature, options: grooveOptions,
+                                          kickDecaySeconds: kickDecaySeconds)
+        observation.before = before()
+        observation.allowedHands = genre()?.profile.bassHands ?? []
+        return observation
     }
 
     /// Whether the line was written to the key's default harmony rather than stated chords.
@@ -1279,7 +1282,8 @@ public final class PianoRollModel {
             return
         }
         guard let observation else { readings = []; return }
-        readings = GenreLens.judge(bassist.read(observation), by: Bassist.bible, in: genre())
+        let judged = GenreLens.judge(bassist.read(observation), by: Bassist.bible, in: genre())
+        readings = house()?.settle(judged, by: Bassist.bible) ?? judged
     }
 
     /// The readings that did not hold: what the Bassist would say first.
