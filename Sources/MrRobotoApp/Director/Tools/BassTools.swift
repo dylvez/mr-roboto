@@ -296,6 +296,9 @@ public struct WriteBasslineTool: DirectorTool {
         public var chords: String
         public var noteCount: Int
         public var note: String
+        /// The figure the line is written in and how it turns, with where the figure is from;
+        /// empty for the players that write from the kick.
+        public var figure: String = ""
         /// Every reading the Bassist made of the line, holds and flags alike, in its own words.
         public var readings: [String]
         /// The readings that did not hold.
@@ -306,7 +309,7 @@ public struct WriteBasslineTool: DirectorTool {
         public var detail: String
 
         enum CodingKeys: String, CodingKey {
-            case version, part, groove, hands, seed, sound, chords, note, readings, flags, recorded, sections, detail
+            case version, part, groove, hands, seed, sound, chords, note, figure, readings, flags, recorded, sections, detail
             case lagMS = "lag_ms"
             case noteCount = "note_count"
         }
@@ -326,7 +329,9 @@ public struct WriteBasslineTool: DirectorTool {
         + "that section's own line, written under the chords that section plays and in place of the line it played, the "
         + "rest of the song keeping its — \"a busier bass in the hook\", the bass under an intro's own chords. Say whose hands — the genre's profile (read_genre) names the ones that fit: "
         + BassLineage.allCases.map { "\($0.rawValue) (\($0.about))" }.joined(separator: "; ")
-        + ". The Bassist refuses when nothing is straight, when pushed ahead of the kick, and when a played bass "
+        + ". Each of the genre players has a few figures from its records — the answer names the one the line is "
+        + "written in, with its source, and how its phrases turn; another seed is another figure. "
+        + "The Bassist refuses when nothing is straight, when pushed ahead of the kick, and when a played bass "
         + "would sit under a kick that rings past 400 ms; its reason comes back as the error. Each player has a "
         + "bass of their own; name a sound to put the line on another, and where the song's instruments are "
         + "recordings, on a recorded bass (an id beginning sfz-) rather than a synthesized one."
@@ -343,7 +348,8 @@ public struct WriteBasslineTool: DirectorTool {
                 "Milliseconds behind the kick. For palladino 40 is the default and 20 to 65 the documented window; "
                 + "every other player sits on the kick, 0; negative is ahead of it and refused.", maximum: 90)),
             ("density", Schema.number("How busy, 0 (bare) to 1 (every attack the budget allows).", maximum: 1)),
-            ("seed", Schema.integer("0 for a new line, which is nearly always. Only to write a line again: the seed an earlier write_bassline returned.")),
+            ("seed", Schema.integer("0 for a new line, which is nearly always: a fresh seed picks the hand's figure and turnaround afresh. "
+                                    + "Only to write a line again: the seed an earlier write_bassline returned.")),
             ("sound", Schema.string("The bass it plays on; empty for the player's own. "
                                     + Self.sounds.map { "\($0.id) (\($0.name))" }.joined(separator: ", ") + ".",
                                     enum: [""] + Self.sounds.map(\.id))),
@@ -433,6 +439,8 @@ public struct WriteBasslineTool: DirectorTool {
         let flags = readings.filter { !$0.holds }
 
         var noteParts = ["\(lineage.name) line"]
+        let phrase = BassWriter.phrase(for: request)
+        if let phrase { noteParts.append(phrase.about) }
         if lag != 0 { noteParts.append(String(format: "%+.0f ms behind the kick", lag)) }
         noteParts.append(String(format: "%.0f bpm", tempo))
         noteParts.append(BassVoiceSpec.resolve(id: sound)?.name ?? sound)
@@ -479,6 +487,7 @@ public struct WriteBasslineTool: DirectorTool {
                       chords: chords.isEmpty ? "none stated: the key's I–IV–V–I in \(key)"
                                              : chords.map { $0.chord.symbol(in: key) }.joined(separator: " "),
                       noteCount: line.notes.count, note: version.note ?? "",
+                      figure: phrase.map { "\($0.about) (\($0.figure.source))" } ?? "",
                       readings: readings.map(\.says), flags: flags.map(\.says), recorded: recorded, sections: placed,
                       detail: recorded
                           ? (whereItPlays == " " ? "" : whereItPlays) + (ownRecording.map { "It plays on \($0.name) (\($0.id)), the recording of \(lineage.name)'s own \(lineage.defaultSound) bass. " } ?? "")

@@ -289,11 +289,15 @@ struct GenreTests {
 
     // MARK: The bass players
 
-    private func line(_ lineage: BassLineage, density: Double = 0.6, bars: Int = 2) -> [NoteEvent] {
+    /// The hand's first figure — the one the genre is known by — and its body bar: the first,
+    /// since a two-bar line turns in its second.
+    private func line(_ lineage: BassLineage, density: Double = 0.6, bars: Int = 2, bar: Int? = 0) -> [NoteEvent] {
         let feel = FeelLibrary.standard.feel(named: "Four on the Floor")!
         let chords = [ChordSpan(Chord(.a, .minor), beats: 4), ChordSpan(Chord(.f, .major), beats: 4)]
-        return BassWriter.write(BassRequest(key: Key(tonic: NoteName(.a), mode: .aeolian), chords: chords, groove: feel.groove,
-                                            tempo: 120, lineage: lineage, density: density, seed: 7, bars: bars)).notes
+        let notes = BassWriter.write(BassRequest(key: Key(tonic: NoteName(.a), mode: .aeolian), chords: chords, groove: feel.groove,
+                                                 tempo: 120, lineage: lineage, density: density, seed: 7, bars: bars, figure: 0)).notes
+        guard let bar else { return notes }
+        return notes.filter { $0.start >= Double(bar) * 4 && $0.start < Double(bar + 1) * 4 }
     }
 
     private func beatInBar(_ note: NoteEvent) -> Double { note.start.truncatingRemainder(dividingBy: 4) }
@@ -301,7 +305,7 @@ struct GenreTests {
     @Test("every player writes a line in its register, on its default sound")
     func everyPlayerWrites() {
         for lineage in BassLineage.allCases {
-            let notes = line(lineage)
+            let notes = line(lineage, bar: nil)
             #expect(!notes.isEmpty, "\(lineage)")
             #expect(notes.allSatisfy { lineage.register.contains($0.pitch.midi) }, "\(lineage) leaves its register")
         }
@@ -318,7 +322,7 @@ struct GenreTests {
         #expect(Set(tumbao.map { beatInBar($0) }) == [1.5, 3], "the and of two, and four")
 
         let walking = line(.walking)
-        #expect(walking.count == 8 && Set(walking.map { beatInBar($0) }) == [0, 1, 2, 3], "a note a beat")
+        #expect(walking.count == 4 && Set(walking.map { beatInBar($0) }) == [0, 1, 2, 3], "a note a beat")
 
         let rootFifth = line(.rootFifth, density: 0.2)
         #expect(Set(rootFifth.map { beatInBar($0) }) == [0, 2])
@@ -326,11 +330,11 @@ struct GenreTests {
         #expect((first[0].pitch.midi - first[1].pitch.midi + 120) % 12 == 5, "the fifth below the root")
 
         let octave = line(.octave, density: 0.9)
-        #expect(octave.count == 16 && Set(octave.map { $0.pitch.midi % 12 }).count <= 2, "eighths on the root and its octave")
+        #expect(octave.count == 8 && Set(octave.map { $0.pitch.midi % 12 }).count <= 2, "eighths on the root and its octave")
         let sparseOctave = line(.octave, density: 0.2)
         #expect(sparseOctave.allSatisfy { abs(beatInBar($0).truncatingRemainder(dividingBy: 1) - 0.5) < 0.01 }, "sparse: the off-beats")
 
-        #expect(line(.rolling, density: 0.2).count == 2, "one long note a bar")
+        #expect(line(.rolling, density: 0.2).count == 1, "one long note a bar")
         #expect(line(.logDrum).allSatisfy { $0.duration < 0.3 }, "log-drum hits are short")
     }
 

@@ -244,6 +244,10 @@ struct BassLevers: View {
                 HStack(spacing: 4) {
                     RollChip("Rewrite", isOn: false) { model.rewrite() }
                         .help("Another line from the same levers")
+                    if model.hasFigures, let phrase = model.phrase {
+                        RollChip("Another figure", isOn: false) { model.nextFigure() }
+                            .help("The hand's next figure, the seed kept. Now \(phrase.about) — \(phrase.figure.source).")
+                    }
                     RollChip("Alternate early", isOn: model.earlyAlternation) { model.setEarlyAlternation(!model.earlyAlternation) }
                         .help("Every other note up to 25 ms ahead — the one early pattern on record")
                 }

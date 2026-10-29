@@ -159,6 +159,26 @@ struct PianoRollTests {
         #expect(editor.surface.bound.first == first.id)
     }
 
+    @Test("Another figure steps through the hand's vocabulary and round again; a new hand drops it")
+    func anotherFigure() throws {
+        let stub = RollStub()
+        let model = PianoRollModel(host: stub, groove: Self.kicking(), key: Self.key, tempo: 92)
+        #expect(!model.hasFigures && model.phrase == nil, "Palladino writes from the kick")
+        model.setLineage(.rootFifth)
+        #expect(model.hasFigures)
+        let first = try #require(model.phrase)
+        let written = model.notes
+        model.nextFigure()
+        #expect(model.figure == (first.figureIndex + 1) % BassLineage.rootFifth.figures.count)
+        #expect(model.notes != written, "another figure is another line")
+        #expect(model.phrase?.turnaround == first.turnaround, "the seed's turnaround stays")
+        for _ in 1..<BassLineage.rootFifth.figures.count { model.nextFigure() }
+        #expect(model.figure == first.figureIndex && model.notes == written, "round again is the line it was")
+        #expect(model.title.hasPrefix("Root–fifth line"))
+        model.setLineage(.motown)
+        #expect(model.figure == nil, "the figures were the other hand's")
+    }
+
     @Test("a host that refuses the version is reported, not ignored")
     func refused() async throws {
         let stub = RollStub()

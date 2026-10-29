@@ -60,15 +60,15 @@ public enum BassLineage: String, Codable, Sendable, Hashable, CaseIterable {
         case .thundercat: return "harmony and register, voicings on the change"
         case .programmed: return "the 808 as the bass: the kick's own pattern, re-pitched, through the sub (trap, drill)"
         case .octave: return "pumping eighth-note octaves on the root, on the grid (disco, house)"
-        case .oneDrop: return "beat one left empty, a melodic figure landing with the kick on three (reggae)"
-        case .tumbao: return "the and of two and beat four, anticipating the chord and tied over; never on one (salsa, son)"
+        case .oneDrop: return "beat one left empty and a figure landing with the kick on three, or the rockers' root held from one (reggae)"
+        case .tumbao: return "the and of two and beat four, anticipating the chord and tied over, one struck only to mark a bar (salsa, son)"
         case .walking: return "quarter notes, chord tones on the strong beats, a chromatic step into each change (jazz, swing blues)"
-        case .rootFifth: return "root on one, fifth on three, a walk-up into a change (country, folk)"
+        case .rootFifth: return "root on one, fifth on three — the two-beat, the alternating bass, the oom-pah — a walk-up into a change (country, folk, klezmer, cumbia)"
         case .motown: return "Jamerson's melodic eighths: syncopated pickups and chromatic passing tones (Motown, soul)"
         case .rolling: return "long sub notes, one to three a bar, moving under the breaks (drum & bass, dubstep, garage)"
         case .logDrum: return "short pitched log-drum hits off the beat (amapiano)"
         case .dub: return "a heavy riff with room in it: the root held from one, the fifth and the root again late in the bar (dub, roots reggae, trip-hop)"
-        case .afrobeat: return "a one-bar ostinato of short syncopated roots, sevenths and fifths, the same every bar, interlocking with the guitars (afrobeat)"
+        case .afrobeat: return "an ostinato of short syncopated roots, sevenths and fifths that comes round unchanged, interlocking with the guitars (afrobeat)"
         case .pedal: return "one long root a chord, held across the bars it lasts: a drone under the harmony (ambient, film score, a ballad's intro)"
         case .boomBap: return "a played bass on the kick's own hits, roots cut short, a pentatonic pickup into the next bar (boom-bap, lo-fi)"
         }
@@ -158,6 +158,10 @@ public struct BassRequest: Hashable, Sendable {
     /// The bass sound, by voice id. Nil takes the lineage's default.
     public var sound: String?
     public var seed: UInt64
+    /// Which figure of the hand's vocabulary the body of the line is, by its place in
+    /// `BassLineage.figures`, counted round. Nil lets the seed choose. The players that write from
+    /// the kick have no figures and ignore it.
+    public var figure: Int?
     /// How many bars the line is. Nil is the groove's own length, which is all a line could be
     /// before this: a one-bar groove gave a one-bar line, so an eight-bar phrase could not exist.
     /// Longer than the groove, the groove is read as it plays — repeated — so the kick is there in
@@ -167,7 +171,7 @@ public struct BassRequest: Hashable, Sendable {
     public init(key: Key, chords: [ChordSpan] = [], groove: Groove, tempo: Double,
                 timeSignature: TimeSignature = .fourFour, lineage: BassLineage = .palladino,
                 lagMS: Double? = nil, density: Double = 0.5, earlyAlternation: Bool = false,
-                sound: String? = nil, seed: UInt64 = 0xBA55_0001, bars: Int? = nil) {
+                sound: String? = nil, seed: UInt64 = 0xBA55_0001, bars: Int? = nil, figure: Int? = nil) {
         self.key = key
         self.chords = chords
         self.groove = groove
@@ -179,6 +183,7 @@ public struct BassRequest: Hashable, Sendable {
         self.earlyAlternation = earlyAlternation
         self.sound = sound
         self.seed = seed
+        self.figure = figure
         self.bars = bars.map { max(1, $0) }
     }
 
@@ -250,7 +255,7 @@ public enum BassWriter {
         case .boomBap:
             drafts = writeBoomBap(request, kicks: kicks, harmony: harmony, beatsPerBar: beatsPerBar, bars: bars, rng: &rng)
         case .octave, .oneDrop, .tumbao, .walking, .rootFifth, .motown, .rolling, .logDrum, .dub, .afrobeat, .pedal:
-            drafts = BassFigures.write(request, harmony: harmony, beatsPerBar: beatsPerBar, bars: bars, rng: &rng)
+            drafts = BassFigures.write(request, kicks: kicks, harmony: harmony, beatsPerBar: beatsPerBar, bars: bars, rng: &rng)
         }
 
         // A slide starts where the note before it stops: nothing rings through an approach.
@@ -284,6 +289,15 @@ public enum BassWriter {
         // programmed line whose last kick is early in the bar, is still `bars` long.
         return Bassline(notes: placed, sound: request.sound ?? request.lineage.defaultSound, key: request.key,
                         lengthInBars: bars, hands: request.lineage.rawValue)
+    }
+
+    /// The phrase a request is written in — the figure and the turnaround the seed chose, or the
+    /// figure asked for — so the line can be named before or after it is written. Nil for the
+    /// players that write from the kick.
+    public static func phrase(for request: BassRequest) -> BassPhrase? {
+        guard request.lineage.writesFigures else { return nil }
+        var rng = BassRandom(seed: request.seed)
+        return BassPhrase.choose(for: request, bars: request.lineBars, rng: &rng)
     }
 
     // MARK: Lineage A — Palladino

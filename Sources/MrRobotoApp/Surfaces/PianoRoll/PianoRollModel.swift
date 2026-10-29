@@ -105,6 +105,9 @@ public final class PianoRollModel {
     public private(set) var density: Double
     public private(set) var earlyAlternation: Bool
     public private(set) var seed: UInt64
+    /// Which figure of the hand's vocabulary the body of the line is, when one was stepped to;
+    /// nil leaves it to the seed. Dropped with the hand, whose figures these are.
+    public private(set) var figure: Int?
     /// Whether the line on screen was written by the writer with the current levers, or has been
     /// touched by hand since. Re-running the writer over a hand edit is a real loss, so the levers
     /// say so before they do it.
@@ -212,6 +215,7 @@ public final class PianoRollModel {
         var density: Double
         var earlyAlternation: Bool
         var seed: UInt64
+        var figure: Int?
         var isHandEdited: Bool
     }
 
@@ -224,7 +228,7 @@ public final class PianoRollModel {
     private var state: RollState {
         get {
             RollState(notes: notes, lengthInBars: lengthInBars, sound: sound, mode: mode, lineage: lineage, lagMS: lagMS, density: density,
-                      earlyAlternation: earlyAlternation, seed: seed, isHandEdited: isHandEdited)
+                      earlyAlternation: earlyAlternation, seed: seed, figure: figure, isHandEdited: isHandEdited)
         }
         set {
             notes = newValue.notes
@@ -236,6 +240,7 @@ public final class PianoRollModel {
             density = newValue.density
             earlyAlternation = newValue.earlyAlternation
             seed = newValue.seed
+            figure = newValue.figure
             isHandEdited = newValue.isHandEdited
             selectedNotes = []
             refreshReadings()
@@ -535,7 +540,7 @@ public final class PianoRollModel {
         guard let groove else { return nil }
         return BassRequest(key: key, chords: chords, groove: groove, tempo: tempo, timeSignature: timeSignature,
                            lineage: lineage, lagMS: lagMS, density: density, earlyAlternation: earlyAlternation,
-                           sound: sound, seed: seed, bars: lengthInBars)
+                           sound: sound, seed: seed, bars: lengthInBars, figure: figure)
     }
 
     /// Writes the line from the levers. Replaces whatever is on screen, hand edits included: the
@@ -577,9 +582,27 @@ public final class PianoRollModel {
         didEdit()
     }
 
+    /// The phrase the levers write: the figure and the turnaround, named. Nil for the players
+    /// that write from the kick, which have no figures to step through.
+    public var phrase: BassPhrase? { request.flatMap(BassWriter.phrase(for:)) }
+
+    /// Whether the hand has figures to step through.
+    public var hasFigures: Bool { lineage.writesFigures }
+
+    /// The next figure of the same hand, the seed and the turnaround as they are: a step through
+    /// the hand's vocabulary rather than a new roll of everything.
+    public func nextFigure() {
+        guard let phrase, !lineage.figures.isEmpty else { return }
+        willEdit("figure")
+        figure = (phrase.figureIndex + 1) % lineage.figures.count
+        writeUnlessHeld()
+        didEdit()
+    }
+
     public func setLineage(_ value: BassLineage) {
         willEdit("lineage")
         lineage = value
+        figure = nil
         lagMS = value.defaultLagMS
         sound = value.defaultSound
         writeUnlessHeld()

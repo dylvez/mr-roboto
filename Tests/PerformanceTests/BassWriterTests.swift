@@ -131,16 +131,21 @@ struct BassWriterTests {
         #expect(!line.notes.isEmpty)
         for note in line.notes {
             let chord = chords[min(chords.count - 1, Int(note.start / 4))].chord
-            #expect(chord.pitchClassSet.contains(note.pitch.pitchClass), "\(note.pitch) at beat \(note.start) is no note of \(chord.symbol())")
+            // The fourth bar is the phrase's turn, which may step through the key into the first chord.
+            let turning = note.start >= 12 && (request.key.pitchClasses.contains(note.pitch.pitchClass) || chords[0].chord.pitchClassSet.contains(note.pitch.pitchClass))
+            // A pickup on the and of four plays the chord it lands on.
+            let next = chords[(Int(note.start / 4) + 1) % chords.count].chord
+            let anticipating = note.start.truncatingRemainder(dividingBy: 4) >= 3.5 && next.pitchClassSet.contains(note.pitch.pitchClass)
+            #expect(chord.pitchClassSet.contains(note.pitch.pitchClass) || turning || anticipating, "\(note.pitch) at beat \(note.start) is no note of \(chord.symbol())")
         }
         // The line still starts each bar on the chord's bass note (a one drop leaves beat one empty).
         for (bar, span) in chords.enumerated() where lineage != .oneDrop {
             let first = try #require(line.notes.first { $0.start >= Double(bar) * 4 - 1e-6 && $0.start < Double(bar) * 4 + 1 })
             #expect(first.pitch.pitchClass == span.chord.bass, "bar \(bar + 1) starts on \(first.pitch)")
         }
-        // In root position nothing has moved.
+        // In root position nothing has moved (the second bar of a two-bar line is its turn).
         let plain = BassWriter.write(Self.request(lineage))
-        #expect(plain.notes.allSatisfy { note in Self.dm7g7[min(1, Int(note.start / 4))].chord.pitchClassSet.contains(note.pitch.pitchClass) }
+        #expect(plain.notes.filter { $0.start < 4 }.allSatisfy { note in Self.dm7g7[0].chord.pitchClassSet.contains(note.pitch.pitchClass) }
                 || lineage == .oneDrop)
     }
 

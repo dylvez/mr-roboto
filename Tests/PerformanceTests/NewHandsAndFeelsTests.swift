@@ -8,10 +8,11 @@ import Testing
 @Suite("New bass hands and feels")
 struct NewHandsAndFeelsTests {
 
+    /// The hand's first figure, the one it was written with before it had a vocabulary.
     static func request(_ lineage: BassLineage, density: Double = 0.6, chords: [ChordSpan] = BassWriterTests.dm7g7,
                         bars: Int? = nil) -> BassRequest {
         BassRequest(key: Key(tonic: NoteName(.d), mode: .aeolian), chords: chords, groove: BassWriterTests.groove(),
-                    tempo: 92, lineage: lineage, density: density, seed: 7, bars: bars)
+                    tempo: 92, lineage: lineage, density: density, seed: 7, bars: bars, figure: 0)
     }
 
     @Test("Every new hand writes a line in its register, and the same line twice", arguments: [BassLineage.dub, .afrobeat, .pedal, .boomBap])
@@ -34,10 +35,14 @@ struct NewHandsAndFeelsTests {
     @Test("The afrobeat ostinato is the same figure every bar")
     func afrobeat() {
         let chords = [ChordSpan(Chord(.d, .minorSeventh), beats: 8)]
-        let line = BassWriter.write(Self.request(.afrobeat, chords: chords))
+        var request = Self.request(.afrobeat, chords: chords)
+        request.bars = 4
+        let line = BassWriter.write(request)
         let first = line.notes.filter { $0.start < 4 }.map { ($0.start, $0.pitch.midi) }
-        let second = line.notes.filter { $0.start >= 4 }.map { ($0.start - 4, $0.pitch.midi) }
-        #expect(first.count == second.count && zip(first, second).allSatisfy { abs($0.0 - $1.0) < 1e-6 && $0.1 == $1.1 })
+        for bar in 1..<4 {
+            let other = line.notes.filter { $0.start >= Double(bar) * 4 && $0.start < Double(bar + 1) * 4 }.map { ($0.start - Double(bar) * 4, $0.pitch.midi) }
+            #expect(first.count == other.count && zip(first, other).allSatisfy { abs($0.0 - $1.0) < 1e-6 && $0.1 == $1.1 }, "bar \(bar + 1) differs")
+        }
     }
 
     @Test("A pedal is one note a chord, held across the bars the chord lasts")
