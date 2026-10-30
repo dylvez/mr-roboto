@@ -34,6 +34,9 @@ struct PersonaBeatmakerTests {
         let varied = FillChoosing.chosen(same, family: .kit, seed: 11, beatsPerBar: 4)
         let read = try #require(Beatmaker().readFills(of: varied, beatsPerBar: 4))
         #expect(read.holds && read.value >= 2, "\(read.says)")
+        // No fill is played twice running where another fits.
+        let fills = varied.dropLast().compactMap { $0.transitionOut?.fill(beatsPerBar: 4) }.filter { $0.shape != .none }
+        for (a, b) in zip(fills, fills.dropFirst()) { #expect(a != b, "\(a.name) twice running") }
         // A cut is not an edge that fills; a form of three filled edges is not read.
         let cuts = [section("A", Transition(kind: .cut)), section("B", Transition(kind: .cut)), section("C"), section("D"), section("E"), section("F")]
         #expect(Beatmaker().readFills(of: cuts, beatsPerBar: 4) == nil)

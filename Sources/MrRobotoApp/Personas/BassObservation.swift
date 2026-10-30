@@ -137,13 +137,15 @@ public struct BassObservation: Hashable, Sendable {
         // Kick offsets, in ms: each placed onset against whichever is nearer, the nearest kick or
         // the nearest eighth-note line, the kick winning a tie. A note 40 ms behind a kick is 40
         // behind it (the grid line is further); a pickup on the and of four is on its line even
-        // when a swung kick sits a fifth of a beat before it.
+        // when a swung kick sits a fifth of a beat before it. A note written exactly on a
+        // sixteenth is on its line too: the a of four is a pickup, not a note 160 ms early.
         var offsets: [Double] = []
         for onset in placed {
             let gridLine = (onset * 2).rounded() / 2
-            var reference = gridLine
+            let sixteenth = (onset * 4).rounded() / 4
+            var reference = abs(sixteenth - onset) < 0.02 ? sixteenth : gridLine
             if let nearestKick = kicks.min(by: { abs($0 - onset) < abs($1 - onset) }),
-               abs(nearestKick - onset) <= abs(gridLine - onset) + 1e-9 {
+               abs(nearestKick - onset) <= abs(reference - onset) + 1e-9 {
                 reference = nearestKick
             }
             offsets.append((onset - reference) * msPerBeat)

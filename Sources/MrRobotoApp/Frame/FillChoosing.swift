@@ -20,6 +20,8 @@ enum FillChoosing {
     /// nothing, and the rest get a fill of the family's by the rule in `SectionFill.choose`.
     static func chosen(_ sections: [Section], family: FillFamily, seed: UInt64, beatsPerBar: Int) -> [Section] {
         var out = sections
+        /// The last fill played, so the same one is not played twice running when another fits.
+        var last: Fill?
         for index in out.indices {
             let from = SectionRole.named(out[index].name)
             if from == .build || out[index].transitionOut?.kind == .riser {
@@ -30,8 +32,10 @@ enum FillChoosing {
             let next = out[index + 1]
             let to = SectionRole.named(next.name)
             let step = (next.intensity ?? to.intensity) - (out[index].intensity ?? from.intensity)
-            if let fill = SectionFill.choose(from: from, to: to, step: step, family: family, seed: seed, index: index) {
+            if let fill = SectionFill.choose(from: from, to: to, step: step, family: family, seed: seed, index: index,
+                                             avoiding: last?.shape == .none ? nil : last) {
                 out[index].transitionOut = Transition.fill(fill, beatsPerBar: beatsPerBar)
+                last = fill
             }
         }
         return out

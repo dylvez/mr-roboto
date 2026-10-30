@@ -231,12 +231,14 @@ public extension SectionFill {
     /// The fill for an edge of a form, by the feel's family, the roles either side and how far
     /// the intensity rises, the song's seed and the edge's place choosing among the shapes that
     /// fit — so two edges of one song differ and two songs differ. Nil for no next section, and
-    /// for a build, whose roll is its own way out.
+    /// for a build, whose roll is its own way out. `avoiding` is the fill the edge before played:
+    /// it is not played twice running when another fits.
     static func choose(from: SectionRole, to: SectionRole?, step: Double, family: FillFamily,
-                       seed: UInt64, index: Int) -> Fill? {
+                       seed: UInt64, index: Int, avoiding: Fill? = nil) -> Fill? {
         guard let to else { return nil }
         if from == .build { return nil }
-        let candidates = candidates(from: from, to: to, step: step, family: family)
+        var candidates = candidates(from: from, to: to, step: step, family: family)
+        if let avoiding, candidates.count > 1, candidates.contains(avoiding) { candidates.removeAll { $0 == avoiding } }
         guard !candidates.isEmpty else { return Fill(shape: .none) }
         var state = seed == 0 ? 0x9E37_79B9_7F4A_7C15 : seed
         state ^= UInt64(index &+ 1) &* 0x9E37_79B9_7F4A_7C15

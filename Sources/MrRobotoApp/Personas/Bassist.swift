@@ -835,14 +835,18 @@ public struct Bassist: Persona {
                              dense ? " — that is more than a verse at this tempo says. Speak less, say more" : "")))
         }
 
-        // 6. The downbeat.
+        // 6. The downbeat. The one drop and the tumbao leave it by design: their figures start
+        // after it, and a reading that wanted a note there would be asking for another hand.
+        let leavesOne = o.hands.flatMap(BassLineage.init(rawValue:)).map { $0 == .oneDrop || $0 == .tumbao } ?? false
         if !o.isSub {
             notes.append(PersonaReading(
                 rule: "bassist.downbeat", feature: .bassDownbeatCoverage, value: o.downbeatCoverage,
-                holds: o.downbeatCoverage >= 0.999,
+                holds: o.downbeatCoverage >= 0.999 || leavesOne,
                 says: o.downbeatCoverage >= 0.999
                     ? "Every downbeat has a note under it."
-                    : String(format: "%.0f%% of the downbeats are left alone.", (1 - o.downbeatCoverage) * 100)))
+                    : leavesOne ? String(format: "%.0f%% of the downbeats are left to the drums: the %@'s own figure.", (1 - o.downbeatCoverage) * 100,
+                                         o.hands.flatMap(BassLineage.init(rawValue:))?.name ?? "hand")
+                                : String(format: "%.0f%% of the downbeats are left alone.", (1 - o.downbeatCoverage) * 100)))
         }
 
         // 7. The approaches.

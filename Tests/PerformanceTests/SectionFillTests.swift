@@ -262,6 +262,14 @@ struct FillShapeTests {
         #expect(Set(songs.map { $0?.name ?? "" }).count >= 2)
         #expect(SectionFill.choose(from: .verse, to: .hook, step: 0.35, family: .kit, seed: 7, index: 3)
                 == SectionFill.choose(from: .verse, to: .hook, step: 0.35, family: .kit, seed: 7, index: 3), "the same song, the same fill")
+        // The fill the edge before played is not played twice running when another fits.
+        for seed in 1...12 {
+            let first = SectionFill.choose(from: .verse, to: .hook, step: 0.35, family: .kit, seed: UInt64(seed), index: 1)
+            let second = SectionFill.choose(from: .verse, to: .hook, step: 0.35, family: .kit, seed: UInt64(seed), index: 3, avoiding: first)
+            #expect(first != nil && second != nil && first != second, "seed \(seed): \(first?.name ?? "") twice")
+        }
+        #expect(SectionFill.choose(from: .verse, to: .breakdown, step: 0, family: .latin, seed: 3, index: 1, avoiding: Fill(shape: .dropOut, size: .halfBar))?.shape == .dropOut,
+                "with nothing else that fits, the same again")
         // A family from a feel's idioms: the most specific first.
         #expect(FillFamily.of(idioms: [.house, .electronic]) == .electronic && FillFamily.of(idioms: [.motown, .soul]) == .kit)
         #expect(FillFamily.of(idioms: [.dub, .reggae]) == .reggae && FillFamily.of(idioms: [.latin]) == .latin && FillFamily.of(idioms: [.jazz]) == .jazz)
