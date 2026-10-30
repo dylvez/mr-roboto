@@ -973,9 +973,9 @@ public struct Beatmaker: Persona {
 
     /// What the Beatmaker says of a form's fills: how many edges fill, and whether they are all
     /// one fill. Nil for a form with too few filled edges to say anything about.
-    public func readFills(of sections: [Section], beatsPerBar: Int) -> PersonaReading? {
+    public func readFills(of sections: [Section], beatsPerBar: Int, fillsOn: Bool = true) -> PersonaReading? {
         let fills = sections.dropLast().compactMap { section -> Fill? in
-            guard let way = section.transitionOut else { return .usual }
+            guard let way = section.transitionOut else { return fillsOn ? .usual : nil }
             guard way.kind == .fill else { return nil }
             return way.fill(beatsPerBar: beatsPerBar) ?? .usual
         }.filter { $0.shape != .none }

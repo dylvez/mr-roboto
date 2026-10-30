@@ -147,7 +147,9 @@ struct DirectorFormToolTests {
         for section in sections.dropLast() { #expect(section.transitionOut != nil, "\(section.name)") }
         #expect(sections[1].transitionOut?.fill(beatsPerBar: 4)?.shape == .dropOut, "into the break, the kit out")
         #expect((json(chosen)["sections"] as? [[String: Any]])?.count == 5)
-        #expect((json(chosen)["detail"] as? String ?? "").contains("The Beatmaker:"), "the form's fills read back")
+        // Every edge on the one fill: the Beatmaker says so in the answer.
+        let usual = await run([("section", .string("")), ("way_in", .string("")), ("way_out", .string("usual")), ("size", .string("")), ("reason", .string(""))])
+        #expect(!usual.isError && (json(usual)["detail"] as? String ?? "").contains("The Beatmaker: 4 edges, one fill"), "\(usual.content)")
 
         let bad = await run([("section", .string("verse")), ("way_in", .string("")), ("way_out", .string("tambourine")), ("size", .string("")), ("reason", .string(""))])
         #expect(bad.isError && bad.content.contains("not a way out"))

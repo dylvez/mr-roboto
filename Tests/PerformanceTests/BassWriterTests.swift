@@ -143,8 +143,11 @@ struct BassWriterTests {
             let first = try #require(line.notes.first { $0.start >= Double(bar) * 4 - 1e-6 && $0.start < Double(bar) * 4 + 1 })
             #expect(first.pitch.pitchClass == span.chord.bass, "bar \(bar + 1) starts on \(first.pitch)")
         }
-        // In root position nothing has moved (the second bar of a two-bar line is its turn).
-        let plain = BassWriter.write(Self.request(lineage))
+        // In root position nothing has moved (the second bar of a two-bar line is its turn; figure
+        // 0 is the plain one, a walk-up being scale steps by design).
+        var straight = Self.request(lineage)
+        straight.figure = 0
+        let plain = BassWriter.write(straight)
         #expect(plain.notes.filter { $0.start < 4 }.allSatisfy { note in Self.dm7g7[0].chord.pitchClassSet.contains(note.pitch.pitchClass) }
                 || lineage == .oneDrop)
     }

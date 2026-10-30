@@ -540,7 +540,8 @@ public enum Develop {
         // the feel's family, what the edge goes into and the song's own seed — so the way into a
         // hook is not the way into a verse, and this song's fills are not the last song's.
         let beatsPerBar = song.timeSignature.beatsPerBar
-        sections = FillChoosing.chosen(sections, family: FillChoosing.family(of: song), seed: Self.seed(for: song), beatsPerBar: beatsPerBar)
+        sections = FillChoosing.chosen(sections, family: FillChoosing.family(of: song), seed: Self.seed(for: song), beatsPerBar: beatsPerBar,
+                                       hasTimbales: FillChoosing.hasTimbales(in: song))
         let fills = FillChoosing.edges(sections, beatsPerBar: beatsPerBar)
 
         // MARK: The mix

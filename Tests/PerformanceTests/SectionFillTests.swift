@@ -270,10 +270,16 @@ struct FillShapeTests {
         }
         #expect(SectionFill.choose(from: .verse, to: .breakdown, step: 0, family: .latin, seed: 3, index: 1, avoiding: Fill(shape: .dropOut, size: .halfBar))?.shape == .dropOut,
                 "with nothing else that fits, the same again")
+        // A latin groove with no timbales has nobody to play them; a jazz band rolls into a shout on a big step.
+        let bare = SectionFill.candidates(from: .verse, to: .hook, step: 0.2, family: .latin, hasTimbales: false)
+        #expect(!bare.contains { $0.shape == .timbales } && bare.contains { $0.shape == .dropOut } && Set(bare.map(\.name)).count == bare.count, "\(bare.map(\.name))")
+        #expect(SectionFill.choose(from: .verse, to: .hook, step: 0.2, family: .latin, seed: 9, index: 2, hasTimbales: false)?.shape != .timbales)
+        #expect(shapes(.jazz, .verse, .hook, step: 0.4) == [FillShape.snareRoll, .flam])
         // A family from a feel's idioms: the most specific first.
         #expect(FillFamily.of(idioms: [.house, .electronic]) == .electronic && FillFamily.of(idioms: [.motown, .soul]) == .kit)
         #expect(FillFamily.of(idioms: [.dub, .reggae]) == .reggae && FillFamily.of(idioms: [.latin]) == .latin && FillFamily.of(idioms: [.jazz]) == .jazz)
         #expect(FillFamily.of(idioms: [.cinematic]) == .quiet && FillFamily.of(idioms: []) == .kit)
+        #expect(FillFamily.of(idioms: [.lofi, .hipHop]) == .electronic && FillFamily.of(idioms: [.tripHop]) == .electronic, "loop musics have no tom fills")
     }
 
     @Test("a way out carries its fill: the shape by name and the size in beats, round-tripped, and a way out written before reads as it did")

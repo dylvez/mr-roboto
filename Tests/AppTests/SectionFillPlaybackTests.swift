@@ -75,6 +75,52 @@ struct SectionFillPlaybackTests {
         #expect(SongPlayback.fills(out: song.sections[0]) && !SongPlayback.fills(out: Section(name: "V", stitch: [], lengthInBars: 4, transitionOut: Transition(kind: .riser))))
     }
 
+    @Test("with fills off, a section that names a fill still plays it, with a crash where it leads; the rest play as written")
+    func namedWithFillsOff() throws {
+        var song = song(fills: false)
+        song.sections[0].transitionOut = Transition.fill(Fill(shape: .snareRoll, size: .bar), beatsPerBar: 4)
+        let plan = SongPlayback.plan(for: song, mediaURL: resolver)
+        let verse = try groove(plan.segments[0]), hook = try groove(plan.segments[1])
+        #expect(hits(verse, .snare).filter { $0 >= 48 }.count == 12, "the roll plays")
+        #expect(hits(hook, .crash) == [0], "and the crash it leads to")
+        #expect(FillChoosing.wayOut(of: Section(name: "V", stitch: [], lengthInBars: 4), beatsPerBar: 4, fillsOn: false) == "no fill")
+        #expect(FillChoosing.wayOut(of: Section(name: "V", stitch: [], lengthInBars: 4), beatsPerBar: 4) == "the usual fill")
+    }
+
+    @Test("Choosing keeps a seam, reads the genre first, plays no timbales nobody has, and the way in follows the way out")
+    func choosing() throws {
+        func section(_ name: String, out: Transition? = nil, into: Transition? = nil, intensity: Double? = nil) -> Section {
+            Section(name: name, stitch: [], lengthInBars: 8, intensity: intensity, transitionIn: into, transitionOut: out)
+        }
+        let cut = Transition(kind: .cut)
+        // The two halves of one section stay a cut; a cut between two kinds of section gets its fill.
+        let form = [section("Verse", out: cut), section("Verse 2", out: cut, into: cut), section("Chorus", into: cut), section("Verse 3"), section("Outro")]
+        let chosen = FillChoosing.chosen(form, family: .kit, seed: 4, beatsPerBar: 4)
+        #expect(chosen[0].transitionOut?.kind == .cut && chosen[1].transitionIn?.kind == .cut, "the seam")
+        #expect(chosen[1].transitionOut?.fill(beatsPerBar: 4) != nil && chosen[2].transitionIn == nil, "into the chorus: a fill and a crash")
+        // No fill and no arrival: the groove goes on, with no crash on its one.
+        let seed = (1...40).map(UInt64.init).first { FillChoosing.chosen(form, family: .kit, seed: $0, beatsPerBar: 4)[2].transitionOut?.fill(beatsPerBar: 4)?.shape == FillShape.none }
+        let quiet = FillChoosing.chosen(form, family: .kit, seed: try #require(seed), beatsPerBar: 4)
+        #expect(quiet[3].transitionIn?.kind == .cut, "\(quiet[3])")
+        // The family: the genre said, then the feel, then whether anybody plays a snare.
+        var built = FormFixture.build(tempo: 122)
+        #expect(FillChoosing.family(of: built.song) == .kit)
+        built.song.genre = "house"
+        #expect(FillChoosing.family(of: built.song) == .electronic)
+        built.song.genre = "dub"
+        #expect(FillChoosing.family(of: built.song) == .reggae)
+        var machine = Song.new(title: "Signal", tempo: 122)
+        try machine.append(PartVersion(partID: PartID(), kind: .groove(Groove(stepsPerBar: 16, bars: 1, patterns: [GroovePattern(voice: .kick, steps: (0..<16).map { $0 % 4 == 0 ? .normal : .rest })])),
+                                       author: .user, operation: Operation.written))
+        #expect(FillChoosing.family(of: machine) == .electronic, "no snare, no drummer")
+        // A note that happens to name a feel is not a genre: only what was said, or stored, counts.
+        var noted = FormFixture.build(tempo: 131).song
+        try noted.append(PartVersion(partID: PartID(), kind: .groove(Groove(stepsPerBar: 16, bars: 1, patterns: [GroovePattern(voice: .snare, steps: (0..<16).map { $0 % 8 == 4 ? .normal : .rest })])),
+                                     author: .user, operation: Operation.written, note: "A shuffle over the Folk Strum"))
+        #expect(FillChoosing.family(of: noted) == .kit)
+        #expect(!FillChoosing.hasTimbales(in: machine))
+    }
+
     @Test("with fills off the sections play the groove as written")
     func off() throws {
         let song = song(fills: false)

@@ -90,12 +90,13 @@ struct DevelopTests {
         // The same song again chooses the same fills; the drop's way in is still its crash.
         let again = try #require(Develop.plan(for: loop.song, genre: breakbeat))
         #expect(again.sections.map(\.transitionOut) == sections.map(\.transitionOut))
-        // A kit family under the standard loop: a verse into a hook gets a kit fill of half a bar or a bar.
+        // The fixture's house loop has no snare, so it is a machine: a verse into a hook lifts the
+        // hats or drops the kit out, half a bar or a bar, and never walks the toms.
         let plain = try #require(Develop.plan(for: try DevelopFixture.loop().song))
         let edges = zip(plain.sections, plain.sections.dropFirst())
         let intoHook = try #require(edges.first { SectionRole.named($0.0.name) == .verse && SectionRole.named($0.1.name) == .hook }?.0)
         let fill = try #require(intoHook.transitionOut?.fill(beatsPerBar: 4))
-        #expect([FillShape.snareRoll, .tomWalkDown, .kickSnare].contains(fill.shape) && [FillSize.halfBar, .bar].contains(fill.size), "\(fill.name)")
+        #expect([FillShape.hatLift, .dropOut].contains(fill.shape) && [FillSize.halfBar, .bar].contains(fill.size), "\(fill.name)")
         #expect(FillChoosing.sentence(plain.sections, beatsPerBar: 4).contains(" into "))
     }
 
@@ -675,11 +676,11 @@ struct DevelopAppTests {
         #expect(development.sections[2].stitch == loop.song.sections[2].stitch)
         #expect(development.plays[2].parts == ["groove, as it was set", "chords, as it was set"])
         #expect(development.mix?.sectionGains.contains { $0.section == loop.song.sections[2].id } != true, "and levelled by nobody")
-        // What it plays is the version held there: no kick but what a drummer marks a section's
-        // edges with — under the crash it opens on, and in the fill it leaves by (the last half bar).
+        // What it plays is the version held there: no kick but the one under the crash it opens on.
+        // A house loop is a machine: its way out lifts the hats, and puts no kick of its own there.
         let kick = app.playback.segments[2].groove?.patterns.first { $0.voice == .kick }?.steps ?? []
         let kicks = kick.indices.filter { kick[$0] != .rest }
-        #expect(kicks.filter { $0 < 120 } == [0] && !kicks.filter { $0 >= 120 }.isEmpty, "\(kicks)")
+        #expect(kicks.filter { $0 < 120 } == [0], "\(kicks)")
         #expect(app.playback.segments[2].groove?.patterns.contains { $0.voice == .closedHat } == false)
         // The rest is developed round it.
         #expect(development.plays[0].parts == ["drums, thinned", "chords"])

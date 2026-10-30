@@ -973,12 +973,16 @@ public struct SongPlayback: Equatable, Sendable {
                 // slices of a record, and a fill made of them would be noise. A section that says
                 // how it leaves or enters is taken at its word: a build runs its roll to the bar
                 // line, and a fill down the toms over the last of it would be the roll stopping.
-                if song.playsFills, voice.kit == nil, case .groove(let groove) = voice.play {
-                    let beatsPerBar = song.timeSignature.beatsPerBar
+                // The song's switch turns off the fill every section would otherwise have; a
+                // section that names one has said so, and plays it, into a crash where it leads.
+                let beatsPerBar = song.timeSignature.beatsPerBar
+                let named = section.transitionOut?.fill(beatsPerBar: beatsPerBar)
+                let ledIn = index > 0 && song.sections[index - 1].transitionOut?.fill(beatsPerBar: beatsPerBar).map { $0.shape != .none } == true
+                if song.playsFills || named != nil || ledIn, voice.kit == nil, case .groove(let groove) = voice.play {
                     voice.play = .groove(SectionFill.arranged(
                         groove, bars: section.lengthInBars, beatsPerBar: beatsPerBar,
-                        fill: index < song.sections.count - 1 ? fill(out: section, beatsPerBar: beatsPerBar) : nil,
-                        crashIn: index > 0 && crashes(into: section)))
+                        fill: index < song.sections.count - 1 ? (song.playsFills ? fill(out: section, beatsPerBar: beatsPerBar) : named) : nil,
+                        crashIn: index > 0 && crashes(into: section) && (song.playsFills || ledIn)))
                 }
                 voices.append(voice)
             }

@@ -199,6 +199,35 @@ struct BassFiguresTests {
         }
     }
 
+    @Test("a change inside the bar is said on the new root, by a note of the figure or one of its own")
+    func changeInsideTheBar() throws {
+        let chords = [ChordSpan(Chord(.g, .major), beats: 2), ChordSpan(Chord(.c, .major), beats: 2)]
+        // The bossa has a note on three: there it plays the new chord's root, not the fifth below the old.
+        let bossa = BassWriter.write(Self.request(.rootFifth, density: 0.3, seed: 3, bars: 2, chords: chords, figure: 6))
+        let three = try #require(bossa.notes.first { abs($0.start - 2) < 0.01 })
+        #expect(three.pitch.pitchClass == .c, "\(three.pitch)")
+        // The three-three-two has none near it: it gets a root of its own, and every note stays the chord's.
+        let bulgar = BassWriter.write(Self.request(.rootFifth, density: 0.3, seed: 3, bars: 2, chords: chords, figure: 5))
+        #expect(bulgar.notes.contains { abs($0.start - 2) < 0.01 && $0.pitch.pitchClass == .c }, "\(bulgar.notes.map { ($0.start, $0.pitch.midi) })")
+        // A chord that lasts the bar changes nothing.
+        let held = [ChordSpan(Chord(.g, .major), beats: 4)]
+        #expect(BassFigures.changing([BassFigures.Note(at: 2, tone: .interval(-5), length: 1)], on: [], lineage: .rootFifth).count == 1)
+        #expect(BassWriter.write(Self.request(.rootFifth, density: 0.3, seed: 3, bars: 1, chords: held, figure: 5)).notes.map(\.start) == [0, 1.5, 3])
+    }
+
+    @Test("the figures the root–fifth hand was missing: the bulgar's 3+3+2, the bossa's bounce, the cumbia's long three")
+    func theGenresOwn() throws {
+        let hand = BassLineage.rootFifth.figures.map(\.name)
+        #expect(Array(hand.suffix(3)) == ["Three-three-two", "Bossa", "Cumbia"], "\(hand)")
+        func line(_ figure: Int) -> Bassline {
+            BassWriter.write(Self.request(.rootFifth, density: 0.4, seed: 5, bars: 1, chords: [ChordSpan(Chord(.d, .minor), beats: 4)], figure: figure))
+        }
+        #expect(line(5).notes.map(\.start) == [0, 1.5, 3], "3+3+2")
+        #expect(Array(line(6).notes.map(\.start).prefix(3)) == [0, 1.5, 2], "the long-short into three")
+        let cumbia = line(7).notes
+        #expect(cumbia.map(\.start) == [0, 1, 2, 3] && cumbia[0].duration < 0.5 && cumbia[2].duration > 0.9, "staccato, the three long")
+    }
+
     @Test("a tumbao's one is struck only to mark a bar; the one drop's figure leaves one empty")
     func idioms() {
         let tumbao = BassWriter.write(Self.request(.tumbao, seed: 4, figure: 0))

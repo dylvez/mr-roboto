@@ -166,7 +166,7 @@ public struct ReadSongTool: DirectorTool {
                                                 cuts: cuts.isEmpty ? nil : cuts,
                                                 wayIn: index > 0 ? FillChoosing.wayIn(of: section) : nil,
                                                 wayOut: index < song.sections.count - 1
-                                                    ? FillChoosing.wayOut(of: section, beatsPerBar: song.timeSignature.beatsPerBar) : nil)
+                                                    ? FillChoosing.wayOut(of: section, beatsPerBar: song.timeSignature.beatsPerBar, fillsOn: song.playsFills) : nil)
                       },
                       versions: song.versions.map { version in
                           Output.Version(id: version.id.description,

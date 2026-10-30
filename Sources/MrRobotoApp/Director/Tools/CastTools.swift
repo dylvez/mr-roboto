@@ -297,7 +297,7 @@ public struct ConveneTool: DirectorTool {
                     let beatmaker = Beatmaker(houseCalls: book.calls)
                     readings += beatmaker.read(observation).map { (id, $0) }
                     // The form's fills, read whole: one fill at every edge is heard across a library.
-                    if section == nil, let fills = beatmaker.readFills(of: song.sections, beatsPerBar: song.timeSignature.beatsPerBar) {
+                    if section == nil, let fills = beatmaker.readFills(of: song.sections, beatsPerBar: song.timeSignature.beatsPerBar, fillsOn: song.playsFills) {
                         readings.append((id, fills))
                     }
                 }

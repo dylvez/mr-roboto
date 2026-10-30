@@ -183,8 +183,8 @@ public extension Transition {
 public enum FillFamily: String, Sendable, Hashable, CaseIterable {
     /// A drummer at a kit: soul, funk, rock, pop, the hip-hop families on a kit, country, folk.
     case kit
-    /// A machine: house, techno, electronic, breakbeat, drum and bass, trap. No toms; the hats
-    /// lift or the kit drops out.
+    /// A machine: house, techno, electronic, breakbeat, drum and bass, trap, and the loop musics
+    /// of hip-hop. No toms; the hats lift or the kit drops out.
     case electronic
     /// Reggae, dub, ska, dancehall: a rim pickup, or the kit out.
     case reggae
@@ -210,7 +210,7 @@ public enum FillFamily: String, Sendable, Hashable, CaseIterable {
     public static func of(idioms: [Idiom]) -> FillFamily {
         for idiom in idioms {
             switch idiom {
-            case .house, .electronic, .breakbeat, .drumAndBass, .trap: return .electronic
+            case .house, .electronic, .breakbeat, .drumAndBass, .trap, .hipHop, .boomBap, .lofi, .tripHop: return .electronic
             case .reggae, .dub, .ska, .dancehall: return .reggae
             case .latin, .flamenco: return .latin
             case .jazz, .swing: return .jazz
@@ -232,12 +232,13 @@ public extension SectionFill {
     /// the intensity rises, the song's seed and the edge's place choosing among the shapes that
     /// fit — so two edges of one song differ and two songs differ. Nil for no next section, and
     /// for a build, whose roll is its own way out. `avoiding` is the fill the edge before played:
-    /// it is not played twice running when another fits.
+    /// it is not played twice running when another fits. `hasTimbales` says whether the groove
+    /// has any: a latin groove without them has nobody to play a timbale fill.
     static func choose(from: SectionRole, to: SectionRole?, step: Double, family: FillFamily,
-                       seed: UInt64, index: Int, avoiding: Fill? = nil) -> Fill? {
+                       seed: UInt64, index: Int, avoiding: Fill? = nil, hasTimbales: Bool = true) -> Fill? {
         guard let to else { return nil }
         if from == .build { return nil }
-        var candidates = candidates(from: from, to: to, step: step, family: family)
+        var candidates = candidates(from: from, to: to, step: step, family: family, hasTimbales: hasTimbales)
         if let avoiding, candidates.count > 1, candidates.contains(avoiding) { candidates.removeAll { $0 == avoiding } }
         guard !candidates.isEmpty else { return Fill(shape: .none) }
         var state = seed == 0 ? 0x9E37_79B9_7F4A_7C15 : seed
@@ -247,8 +248,18 @@ public extension SectionFill {
         return candidates[pick]
     }
 
-    /// The shapes that fit an edge, in the family's idiom.
-    static func candidates(from: SectionRole, to: SectionRole, step: Double, family: FillFamily) -> [Fill] {
+    /// The shapes that fit an edge, in the family's idiom. Without timbales, what a latin edge
+    /// would have played on them is the kit stopping for a beat: the percussion carries it.
+    static func candidates(from: SectionRole, to: SectionRole, step: Double, family: FillFamily, hasTimbales: Bool = true) -> [Fill] {
+        let fits = shapes(from: from, to: to, step: step, family: family)
+        guard !hasTimbales else { return fits }
+        return fits.reduce(into: [Fill]()) { out, fill in
+            let played = fill.shape == .timbales ? Fill(shape: .dropOut, size: .beat) : fill
+            if !out.contains(played) { out.append(played) }
+        }
+    }
+
+    private static func shapes(from: SectionRole, to: SectionRole, step: Double, family: FillFamily) -> [Fill] {
         func f(_ shape: FillShape, _ size: FillSize? = nil) -> Fill { Fill(shape: shape, size: size) }
         let none = f(.none)
         // Into a break: the kit out, whoever is playing.
@@ -279,7 +290,7 @@ public extension SectionFill {
                                          : [f(.hatLift, .halfBar), f(.dropOut, .halfBar)]
             case .reggae: return [f(.rimPickup), f(.dropOut, .halfBar)]
             case .latin: return [f(.timbales, .halfBar), f(.timbales, .beat), none]
-            case .jazz: return [none, f(.flam)]
+            case .jazz: return big ? [f(.snareRoll, .halfBar), f(.flam)] : [none, f(.flam)]
             case .quiet: return [none, f(.dropOut, .halfBar)]
             }
         }

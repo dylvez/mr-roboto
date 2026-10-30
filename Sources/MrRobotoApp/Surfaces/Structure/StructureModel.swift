@@ -195,6 +195,10 @@ public final class StructureModel {
     public private(set) var committed: [Section]
     /// What kind of player is at the kit, for the fills chosen: the song's main groove's feel.
     public private(set) var fillFamily: FillFamily = .kit
+    /// Whether a groove in the song has timbales to fill on.
+    private var fillHasTimbales = false
+    /// Whether a section that names no fill plays the usual one: the song's own switch.
+    public private(set) var fillsOn = true
     /// The song's own seed, so choosing fills for it twice chooses the same.
     private var fillSeed: UInt64 = 0
     public private(set) var selected: SectionID?
@@ -224,10 +228,14 @@ public final class StructureModel {
         sections = current.map { Self.normalised($0) }
         committed = current
         selected = current.first?.id
-        if let song {
-            fillFamily = FillChoosing.family(of: song)
-            fillSeed = Develop.seed(for: song)
-        }
+        if let song { readFills(of: song) }
+    }
+
+    private func readFills(of song: Song) {
+        fillFamily = FillChoosing.family(of: song)
+        fillHasTimbales = FillChoosing.hasTimbales(in: song)
+        fillsOn = song.playsFills
+        fillSeed = Develop.seed(for: song)
     }
 
     /// Follows the song: a part adopted or a section stitched from outside this surface — a drop, the
@@ -244,8 +252,7 @@ public final class StructureModel {
         if let song {
             tempo = song.tempo
             timeSignature = song.timeSignature
-            fillFamily = FillChoosing.family(of: song)
-            fillSeed = Develop.seed(for: song)
+            readFills(of: song)
         }
         let current = song?.sections ?? []
         guard current != committed else { return }
@@ -696,12 +703,12 @@ public final class StructureModel {
     /// the song's own seed. A build keeps its roll.
     public func chooseFills() {
         edit("choose fills") {
-            sections = FillChoosing.chosen(sections, family: fillFamily, seed: fillSeed, beatsPerBar: timeSignature.beatsPerBar)
+            sections = FillChoosing.chosen(sections, family: fillFamily, seed: fillSeed, beatsPerBar: timeSignature.beatsPerBar, hasTimbales: fillHasTimbales)
         }
     }
 
     public func wayIn(of section: Section) -> String { FillChoosing.wayIn(of: section) }
-    public func wayOut(of section: Section) -> String { FillChoosing.wayOut(of: section, beatsPerBar: timeSignature.beatsPerBar) }
+    public func wayOut(of section: Section) -> String { FillChoosing.wayOut(of: section, beatsPerBar: timeSignature.beatsPerBar, fillsOn: fillsOn) }
 
     /// The fill a section leaves on, when its way out is a fill of a named shape.
     public func fill(of section: Section) -> Fill? { section.transitionOut?.fill(beatsPerBar: timeSignature.beatsPerBar) }

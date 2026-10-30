@@ -304,10 +304,11 @@ public struct SetTransitionTool: DirectorTool {
         var sections = song.sections
         var was: [SectionID: String] = [:]
         for section in sections where ids.contains(section.id) {
-            was[section.id] = FillChoosing.wayOut(of: section, beatsPerBar: beatsPerBar)
+            was[section.id] = FillChoosing.wayOut(of: section, beatsPerBar: beatsPerBar, fillsOn: song.playsFills)
         }
         if wayOut == "choose" {
-            let all = FillChoosing.chosen(sections, family: FillChoosing.family(of: song), seed: Develop.seed(for: song), beatsPerBar: beatsPerBar)
+            let all = FillChoosing.chosen(sections, family: FillChoosing.family(of: song), seed: Develop.seed(for: song), beatsPerBar: beatsPerBar,
+                                          hasTimbales: FillChoosing.hasTimbales(in: song))
             for index in sections.indices where ids.contains(sections[index].id) { sections[index].transitionOut = all[index].transitionOut }
         } else if !wayOut.isEmpty {
             let way: Transition?
@@ -342,14 +343,14 @@ public struct SetTransitionTool: DirectorTool {
         let now = await workspace.song ?? song
         let edges = now.sections.filter { ids.contains($0.id) }.map { section in
             Edge(id: section.id.description, name: section.name, wayIn: FillChoosing.wayIn(of: section),
-                 wayOut: FillChoosing.wayOut(of: section, beatsPerBar: beatsPerBar))
+                 wayOut: FillChoosing.wayOut(of: section, beatsPerBar: beatsPerBar, fillsOn: now.playsFills))
         }
         var sentences = edges.map { edge -> String in
             let before = was[SectionID(rawValue: UUID(uuidString: edge.id) ?? UUID())] ?? ""
             return before == edge.wayOut ? "\(edge.name): \(edge.wayOut), in on \(edge.wayIn)."
                                         : "\(edge.name): \(before) becomes \(edge.wayOut), in on \(edge.wayIn)."
         }
-        let reading = Beatmaker().readFills(of: now.sections, beatsPerBar: beatsPerBar)
+        let reading = Beatmaker().readFills(of: now.sections, beatsPerBar: beatsPerBar, fillsOn: now.playsFills)
         if let reading { sentences.append("The Beatmaker: \(reading.says)") }
         if !input.reason.isEmpty { sentences.append("Because \(input.reason).") }
         return Output(sections: edges, recorded: recorded, reading: reading?.says,

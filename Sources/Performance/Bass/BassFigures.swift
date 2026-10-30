@@ -220,6 +220,7 @@ enum BassFigures {
                 figure = turned(figure, turn, bar: context, lineage: lineage)
             }
             figure = heard(figure, kicks: kicks, barStart: start, beats: beatsPerBar, budget: budget, reading: reading, lineage: lineage)
+            figure = changing(figure, on: context.changes, lineage: lineage)
 
             for note in figure {
                 let onset = start + note.at
@@ -286,6 +287,26 @@ enum BassFigures {
             drafts = dropOverlaps(drafts)
         }
         return drafts
+    }
+
+    // MARK: A change inside the bar
+
+    /// The bar with its chord changes said: the root has to move. A note on a change plays the new
+    /// chord's root whatever the figure had there, and a change the figure has nothing near gets
+    /// one. A pedal holds through its own way, and the tumbao says a change by anticipating it.
+    static func changing(_ notes: [Note], on changes: [Double], lineage: BassLineage) -> [Note] {
+        guard !changes.isEmpty, lineage != .pedal, lineage != .tumbao else { return notes }
+        var out = notes
+        for change in changes {
+            if let index = out.firstIndex(where: { abs(($0.anticipates ?? $0.at) - change) < 1e-6 }) {
+                if case .interval = out[index].tone { out[index].tone = .interval(0) }
+                if case .chordTone = out[index].tone { out[index].tone = .interval(0) }
+            } else if !out.contains(where: { abs($0.at - change) < 0.3 }) {
+                let next = out.map(\.at).filter { $0 > change }.min()
+                out.append(Note(at: change, tone: .interval(0), length: min(0.9, (next ?? change + 0.9) - change), velocity: 102, weight: 3))
+            }
+        }
+        return out.sorted { $0.at < $1.at }
     }
 
     // MARK: The turnaround
@@ -385,6 +406,8 @@ enum BassFigures {
 
     static let country = "the country profile: notreble, Mastering country bass lines — roots, fifths and chord function"
     static let klezmer = "the klezmer profile: Musik-for, Klezmergroove (Kap01)"
+    static let bossa = "the bossa-nova profile: Acoustic Guitar, Learn basic bossa nova patterns inside and out"
+    static let cumbia = "the cumbia profile: Bass Scales, How to play cumbia bass; Se7en Beat Lab, Cumbia"
     static let soul = "the soul profile: Ryan Madora, Easy Motown bass lines — James Jamerson for beginners; MusicRadar, Play bass like James Jamerson"
     static let reggae = "the reggae profile: Wayne & Wax, Roots riddim tutorial; Tunable, Reggae one drop; the ska profile: LargeUp, Reggae's ten greatest bassists"
     static let disco = "the disco profile: TalkingBass, Good Times — breakdown of a Bernard Edwards classic; Wikipedia, Disco"
@@ -449,6 +472,39 @@ enum BassFigures {
                          Note(at: 1, tone: .interval(-5), length: 0.45, velocity: 96, weight: 3),
                          Note(at: 2, tone: .interval(0), length: 0.45, velocity: 104, weight: 3)]
             if bar.density > 0.6 { notes.append(Note(at: 3, tone: .interval(-5), length: 0.45, velocity: 94, weight: 1)) }
+            return notes
+        },
+        BassFigure(name: "Three-three-two", lineage: .rootFifth,
+                   source: "the bulgar's 3+3+2, which the bass follows — \(klezmer)",
+                   about: "root on one, the fifth below on the and of two, the root on four: the bulgar's three-three-two") { bar, _ in
+            guard bar.beats >= 4 else { return [Note(at: 0, tone: .interval(0), length: 0.9, velocity: 108, weight: 3)] }
+            return [Note(at: 0, tone: .interval(0), length: 1.4, velocity: 110, weight: 3),
+                    Note(at: 1.5, tone: .interval(-5), length: 1.4, velocity: 100, weight: 3),
+                    Note(at: 3, tone: .interval(0), length: 0.9, velocity: 104, weight: 3)]
+        },
+        BassFigure(name: "Bossa", lineage: .rootFifth,
+                   source: "root and fifth on one and three with a bounce on the upbeat, a change anticipated on the and — \(bossa)",
+                   about: "root on one with a bounce on the and of two, the fifth below on three, and a change anticipated on the and of four") { bar, _ in
+            guard bar.beats >= 4 else { return [Note(at: 0, tone: .interval(0), length: 0.9, velocity: 104, weight: 3)] }
+            var notes = [Note(at: 0, tone: .interval(0), length: 1.4, velocity: 104, weight: 3),
+                         Note(at: 1.5, tone: .interval(0), length: 0.4, velocity: 84, weight: 2),
+                         Note(at: 2, tone: .interval(-5), length: 1.4, velocity: 98, weight: 3)]
+            if bar.changeNext {
+                notes.append(Note(at: 3.5, tone: .interval(0), length: 0.45, velocity: 96, weight: 3, anticipates: 4))
+            } else if bar.density > 0.45 {
+                notes.append(Note(at: 3.5, tone: .interval(-5), length: 0.4, velocity: 84, weight: 1))
+            }
+            return notes
+        },
+        BassFigure(name: "Cumbia", lineage: .rootFifth,
+                   source: "roots on one and three, fifths between, cut to half their value, the quarter on three left long — \(cumbia)",
+                   about: "staccato root and fifth, the root on three held its full value, which is what gives the swing") { bar, _ in
+            guard bar.beats >= 4 else { return [Note(at: 0, tone: .interval(0), length: 0.45, velocity: 108, weight: 3)] }
+            var notes = [Note(at: 0, tone: .interval(0), length: 0.45, velocity: 110, weight: 3),
+                         Note(at: 1, tone: .interval(-5), length: 0.45, velocity: 96, weight: 2),
+                         Note(at: 2, tone: .interval(0), length: 0.92, velocity: 106, weight: 3),
+                         Note(at: 3, tone: .interval(-5), length: 0.45, velocity: 96, weight: 2)]
+            if bar.density > 0.7 { notes.insert(Note(at: 1.5, tone: .interval(3), length: 0.4, velocity: 88, weight: 1), at: 2) }
             return notes
         },
     ]
